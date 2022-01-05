@@ -19,7 +19,7 @@ Akka.NET comes with several useful routers you can choose right out of the box, 
 
 Routers can be deployed in multiple ways, using code or configuration.
 
-### Code deployment
+### Code Deployment
 
 The example below shows how to deploy 5 workers using a round robin router:
 
@@ -35,7 +35,7 @@ The above code can also be written as:
 var props = new RoundRobinPool(5).Props(Props.Create<Worker>());
 ```
 
-### Configuration deployment
+### Configuration Deployment
 
 The same router may be defined using a [HOCON deployment configuration](xref:configuration).
 
@@ -640,7 +640,7 @@ Sending one of the following messages to a router can be used to manage its rout
 
 ## Advanced
 
-### How Routing is Designed within Akka.NET
+### How Routing Is Designed Within Akka.NET
 
 On the surface routers look like normal actors, but they are actually implemented differently. Routers are designed to be extremely efficient at receiving messages and passing them quickly on to routees.
 

@@ -25,7 +25,7 @@ You can access the singleton actor by using the provided `Akka.Cluster.Tools.Sin
 
 It's worth noting that messages can always be lost because of the distributed nature of these actors. As always, additional logic should be implemented in the singleton (acknowledgement) and in the client (retry) actors to ensure at-least-once message delivery.
 
-## Potential problems to be aware of
+## Potential Problems to Be Aware Of
 
 This pattern may seem to be very tempting to use at first, but it has several drawbacks, some of them are listed below:
 

@@ -2,7 +2,7 @@
 uid: cluster-sharding
 title: Akka.Cluster.Sharding module
 ---
-# Akka.Cluster.Sharding module
+# Akka.Cluster.Sharding Module
 
 Cluster sharding is useful in cases when you want to contact with cluster actors using their logical id's, but don't want to care about their physical location inside the cluster or manage their creation. Moreover it's able to re-balance them, as nodes join/leave the cluster. It's often used to represent i.e. Aggregate Roots in Domain Driven Design terminology.
 

@@ -1,11 +1,14 @@
 ---
 uid: building-and-distributing
-title: Building and Distributing Akka.NET
+title: Building Akka.NET Repositories
 ---
 
-# Building and Distributing Akka.NET
+# Building Akka.NET Repositories
 
 Akka.NET's build system is a modified version of [Petabridge's `dotnet new` template](https://github.com/petabridge/petabridge-dotnet-new), in particular [the Petabridge.Library template](https://github.com/petabridge/Petabridge.Library/) - we typically keep our build system in sync with the documentation you can find there.
+
+> [!TIP]
+> All repositories in the [Akka.NET Github organization](https://github.com/akkadotnet) use a nearly identical build process. Type `build.cmd help` or `build.sh help` in the root of any repository to see a full list of supported build instructions.
 
 ## Supported Commands
 
@@ -14,7 +17,7 @@ This project supports a wide variety of commands.
 To list on Windows:
 
 ```console
-C:\> build.cmd help
+build.cmd help
 ```
 
 To list on Linux / OS X:
@@ -31,16 +34,16 @@ However, please see this readme for full details.
 * `build.[cmd|sh] buildrelease` - compiles the solution in `Release` mode.
 * `build.[cmd|sh] runtests` - compiles the solution in `Release` mode and runs the unit test suite (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Framework configuration. All of the output will be published to the `./TestResults` folder.
 * `build.[cmd|sh] runtestsnetcore` - compiles the solution in `Release` mode and runs the unit test suite (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Core configuration. All of the output will be published to the `./TestResults` folder.
-* `build.[cmd|sh] MultiNodeTests` - compiles the solution in `Release` mode and runs the [multi-node unit test suite](../articles/testing/multi-node-testing.md) (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Framework configuration. All of the output will be published to the `./TestResults/multinode` folder.
-* `build.[cmd|sh] MultiNodeTestsNetCore` - compiles the solution in `Release` mode and runs the [multi-node unit test suite](../articles/testing/multi-node-testing.md) (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Core configuration. All of the output will be published to the `./TestResults/multinode` folder.
-* `build.[cmd|sh] MultiNodeTestsNetCore spec={className}` - compiles the solution in `Release` mode and runs the [multi-node unit test suite](../articles/testing/multi-node-testing.md) (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Core configuration. Only tests that match the `{className}` will run. All of the output will be published to the `./TestResults/multinode` folder. This is a very useful setting for running multi-node tests locally.
+* `build.[cmd|sh] MultiNodeTests` - compiles the solution in `Release` mode and runs the [multi-node unit test suite](xref:multi-node-testing) (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Framework configuration. All of the output will be published to the `./TestResults/multinode` folder.
+* `build.[cmd|sh] MultiNodeTestsNetCore` - compiles the solution in `Release` mode and runs the [multi-node unit test suite](xref:multi-node-testing) (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Core configuration. All of the output will be published to the `./TestResults/multinode` folder.
+* `build.[cmd|sh] MultiNodeTestsNetCore spec={className}` - compiles the solution in `Release` mode and runs the [multi-node unit test suite](xref:multi-node-testing) (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Core configuration. Only tests that match the `{className}` will run. All of the output will be published to the `./TestResults/multinode` folder. This is a very useful setting for running multi-node tests locally.
 * `build.[cmd|sh] nbench` - compiles the solution in `Release` mode and runs the [NBench](https://nbench.io/) performance test suite (all projects that end with the `.Tests.Performance.csproj` suffix). All of the output will be published to the `./PerfResults` folder.
 * `build.[cmd|sh] nuget` - compiles the solution in `Release` mode and creates Nuget packages from any project that does not have `<IsPackable>false</IsPackable>` set and uses the version number from `RELEASE_NOTES.md`.
 * `build.[cmd|sh] nuget nugetprerelease=dev` - compiles the solution in `Release` mode and creates Nuget packages from any project that does not have `<IsPackable>false</IsPackable>` set - but in this instance all projects will have a `VersionSuffix` of `-beta{DateTime.UtcNow.Ticks}`. It's typically used for publishing nightly releases.
 * `build.[cmd|sh] nuget nugetpublishurl=$(nugetUrl) nugetkey=$(nugetKey)` - compiles the solution in `Release` modem creates Nuget packages from any project that does not have `<IsPackable>false</IsPackable>` set using the version number from `RELEASE_NOTES.md`and then publishes those packages to the `$(nugetUrl)` using NuGet key `$(nugetKey)`.
 * `build.[cmd|sh] DocFx` - compiles the solution in `Release` mode and then uses [DocFx](http://dotnet.github.io/docfx/) to generate website documentation inside the `./docs/_site` folder. Use the `./serve-docs.cmd` on Windows to preview the documentation.
 
-This build script is powered by [FAKE](https://fake.build/); please see their API documentation should you need to make any changes to the [`build.fsx`](build.fsx) file.
+This build script is powered by [FAKE](https://fake.build/); please see their API documentation should you need to make any changes to the [`build.fsx`](https://github.com/akkadotnet/akka.net/blob/dev/build.fsx) file.
 
 ### Incremental Builds
 
@@ -54,7 +57,7 @@ This option will work locally on Linux or Windows.
 
 ### Release Notes, Version Numbers, Etc
 
-This project will automatically populate its release notes in all of its modules via the entries written inside [`RELEASE_NOTES.md`](RELEASE_NOTES.md) and will automatically update the versions of all assemblies and NuGet packages via the metadata included inside [`common.props`](src/common.props).
+This project will automatically populate its release notes in all of its modules via the entries written inside [`RELEASE_NOTES.md`](https://github.com/akkadotnet/akka.net/blob/dev/RELEASE_NOTES.md) and will automatically update the versions of all assemblies and NuGet packages via the metadata included inside [`common.props`](https://github.com/akkadotnet/akka.net/blob/dev/src/common.props).
 
 #### RELEASE_NOTES.md
 
@@ -88,44 +91,15 @@ The attached build script will automatically do the following based on the conve
 * Any project name ending with `.Tests.Performance` will automatically be treated as a [NBench](https://github.com/petabridge/NBench) project and will be included during the test stages of this build script; and
 * Any project meeting neither of these conventions will be treated as a NuGet packaging target and its `.nupkg` file will automatically be placed in the `bin\nuget` folder upon running the `build.[cmd|sh] all` command.
 
-### DocFx for Documentation
-
-This solution also supports [DocFx](http://dotnet.github.io/docfx/) for generating both API documentation and articles to describe the behavior, output, and usages of your project.
-
-All of the relevant articles you wish to write should be added to the `/docs/articles/` folder and any API documentation you might need will also appear there.
-
-All of the documentation will be statically generated and the output will be placed in the `/docs/_site/` folder.
-
-#### Previewing Documentation
-
-To preview the documentation for this project, execute the following command at the root of this folder:
-
-```console
-C:\> serve-docs.cmd
-```
-
-This will use the built-in `docfx.console` binary that is installed as part of the NuGet restore process from executing any of the usual `build.cmd` or `build.sh` steps to preview the fully-rendered documentation. For best results, do this immediately after calling `build.cmd buildRelease`.
-
 ## Triggering Builds and Updates on Akka.NET Github Repositories
 
-### Routine Updates and Pull Requests
+## Routine Updates and Pull Requests
 
 Akka.NET uses Azure DevOps to run its builds and the conventions it uses are rather sample:
 
 1. All pull requests should be created on their own feature branch and should be sent to Akka.NET's `dev` branch;
 2. Always review your own pull requests so other developers understand why you made the changes;
-3. Any pull request that gets merged into the `dev` branch will appear in the [Akka.NET Nightly Build that evening](../getting-access-to-nightly-builds.md); and
+3. Any pull request that gets merged into the `dev` branch will appear in the [Akka.NET Nightly Build that evening](xref:nightly-builds); and
 4. Always `squash` any merges into the `dev` branch in order to preserve a clean commit history.
 
 Please read "[How to Use Github Professionally](https://petabridge.com/blog/use-github-professionally/)" for some more general ideas on how to work with a project like Akka.NET on Github.
-
-### Creating New Akka.NET Releases
-
-The process for creating new NuGet releases of Akka.NET or any of its projects is standardized:
-
-1. Update the `RELEASE_NOTES.md` file to include a summary of all relevant changes and the new updated version number;
-2. Merge the `dev` branch into the `master` branch _by creating a merge commit_ to the history in `master` matches `dev`;
-3. Create a `git tag` that matches the version number in the `RELEASE_NOTES.md` file; and
-4. Push the `tag` to the main Github repository.
-
-This will trigger a new NuGet release to be created, with the release notes from the `RELEASE_NOTES.md` file copied into the body of the NuGet package description.

@@ -18,7 +18,7 @@ used to split the workload of consuming and updating a projection between `N` wo
 
 For cases where a single actor needs to be kept alive see [Cluster Singleton](cluster-singleton.md)
 
-## Basic example
+## Basic Example
 
 To set up a set of actors running with Sharded Daemon process each node in the cluster needs to run the same initialization
 when starting up:

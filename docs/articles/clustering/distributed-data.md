@@ -2,7 +2,7 @@
 uid: distributed-data
 title: Distributed Data
 ---
-# Distributed data
+# Distributed Data
 
 Akka.DistributedData plugin can be used as in-memory, highly-available, distributed key-value store, where values conform to so called [Conflict-Free Replicated Data Types](http://hal.upmc.fr/inria-00555588/document) (CRDT). Those data types can have replicas across multiple nodes in the cluster, where DistributedData plugin has been initialized. We are free to perform concurrent updates on replicas with the same corresponding key without need of coordination (distributed locks or transactions) - all state changes will eventually converge with conflicts being automatically resolved, thanks to the nature of CRDTs. To use distributed data plugin, simply install it via NuGet:
 
@@ -12,7 +12,7 @@ install-package Akka.DistributedData
 
 Keep in mind, that CRDTs are intended for high-availability, non-blocking read/write scenarios. However they are not a good fit, when you need strong consistency or are operating on big data. If you want to have millions of data entries, this is NOT a way to go. Keep in mind, that all data is kept in memory and, as state-based CRDTs, whole object state is replicated remotely across the nodes, when an update happens. A more efficient implementations (delta-based CRDTs) are considered for the future implementations.
 
-## Basic operations
+## Basic Operations
 
 Each CRDT defines few core operations, which are: reads, upserts and deletes. There's no explicit distinction between inserting a value and updating it.
 
@@ -44,7 +44,7 @@ In response, you should receive `Replicator.IGetResponse` message. There are sev
 
 All `Get` requests follows the read-your-own-write rule - if you updated the data, and want to read the state under the same key immediately after, you'll always retrieve modified value, even if the `IGetResponse` message will arrive before `IUpdateResponse`.
 
-#### Read consistency
+#### Read Consistency
 
 What is a mentioned read consistency? As we said at the beginning, all updates performed within distributed data module will eventually converge. This means, we're not speaking about immediate consistency of a given value across all nodes. Therefore we can precise, what degree of consistency are we expecting:
 
@@ -81,7 +81,7 @@ Just like in case of reads, there are several possible responses:
 
 You'll always see updates done on local node. When you perform two updates on the same key, second modify function will always see changes done by the first one.
 
-#### Write consistency
+#### Write Consistency
 
 Just like in case of reads, write consistency allows us to specify level of certainty of our updates before proceeding:
 
@@ -143,7 +143,7 @@ class Subscriber : ReceiveActor
 
 All subscribers are removed automatically when terminated. This can be also done explicitly by sending `Replicator.Unsubscribe` message.
 
-## Available replicated data types
+## Available Replicated Data Types
 
 Akka.DistributedData specifies several data types, sharing the same `IReplicatedData` interface. All of them share some common members, such as (default) empty value or `Merge` method used to merge two replicas of the same data with automatic conflict resolution. All of those values are also immutable - this means, that any operations, which are supposed to change their state, produce new instance in result:
 

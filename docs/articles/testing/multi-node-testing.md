@@ -1,3 +1,8 @@
+---
+uid: multi-node-testing
+title: Multi-Node Testing Distributed Akka.NET Applications
+---
+
 # Multi-Node Testing Distributed Akka.NET Applications
 
 One of the most powerful testing features of Akka.NET is its ability to create and simulate real-world network conditions such as latency, network partitions, process crashes, and more. Given that any of these can happen in a production environment it's important to be able to write tests which validate your application's ability to correctly recover.
