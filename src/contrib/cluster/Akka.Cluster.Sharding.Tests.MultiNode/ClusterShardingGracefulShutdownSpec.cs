@@ -16,6 +16,7 @@ using System.Collections.Immutable;
 using System.IO;
 using Akka.Util;
 using FluentAssertions;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Sharding.Tests
 {
