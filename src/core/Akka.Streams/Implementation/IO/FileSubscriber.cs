@@ -65,9 +65,8 @@ namespace Akka.Streams.Implementation.IO
         private FileStream _chan;
         private long _bytesWritten;        
         private Exception _upstreamError;
-        private Task _streamTask = Task.CompletedTask;
+        private Task _fileTask = null;
         private ByteString _bufferedByteString = ByteString.Empty;
-        private int _fileRequests = 0;
         private bool _flushRequested = false;
 
         private const int DefaultFileBufferSize = 4 * 1024; //regular file buffer size
@@ -135,7 +134,7 @@ namespace Akka.Streams.Implementation.IO
         {
             switch (message)
             {
-                case OnNext next when _fileRequests == 0:
+                case OnNext next when _fileTask is null:
                     {
                         var bytes = (ByteString)next.Element;
                         if (_bufferedByteString.Count > 0)
@@ -144,8 +143,7 @@ namespace Akka.Streams.Implementation.IO
                             _bufferedByteString = ByteString.Empty;
                             _requestStrategy.FileBufferCount = 0;
                         }
-                        _streamTask = WriteAsync(Self, bytes, _autoFlush);
-                        _fileRequests++;
+                        _fileTask = WriteAsync(Self, bytes, _autoFlush);
                     }
                     return true;
                 case OnNext next:
@@ -157,18 +155,16 @@ namespace Akka.Streams.Implementation.IO
                     {
                         var bytes = (ByteString)msg.Status;
                         _bytesWritten += bytes.Count;
-                        _fileRequests--;
-                        //System.Diagnostics.Debug.Assert(_fileRequests == 0);
+                        _fileTask = null;
 
                         if (_bufferedByteString.Count > 0 || _flushRequested)
                         {
-                            _streamTask = WriteAsync(Self, _bufferedByteString, _autoFlush || _flushRequested || IsCanceled);
+                            _fileTask = WriteAsync(Self, _bufferedByteString, _autoFlush || _flushRequested || IsCanceled);
                             _bufferedByteString = ByteString.Empty;
                             _requestStrategy.FileBufferCount = 0;
-                            _flushRequested = false;
-                            _fileRequests++;                            
+                            _flushRequested = false;                            
                         }
-                        else if (IsCanceled && _fileRequests == 0)
+                        else if (IsCanceled)
                         {
                             // close the channel/ file before completing the promise, allowing the
                             // file to be deleted, which would not work (on some systems) if the
@@ -186,7 +182,7 @@ namespace Akka.Streams.Implementation.IO
                     }
                     return true;
                 case Status.Failure msg:
-                    _fileRequests--;
+                    _fileTask = null;
                     // close the channel/ file before completing the promise, allowing the
                     // file to be deleted, which would not work (on some systems) if the
                     // file is still open for writing
@@ -200,7 +196,6 @@ namespace Akka.Streams.Implementation.IO
                     RequestFlush();
                     return true;
                 case OnComplete _:
-                    _flushRequested = true;
                     RequestFlush();
                     return true;
                 case FlushSignal _:
@@ -215,10 +210,10 @@ namespace Akka.Streams.Implementation.IO
         private void RequestFlush()
         {
             _flushRequested = true;
-            if (_fileRequests == 0)
+            if (_fileTask is null)
             {
-                Self.Tell(new Status.Success(ByteString.Empty));
-                _fileRequests++;
+                _fileTask = Task.CompletedTask;
+                Self.Tell(new Status.Success(ByteString.Empty));                
             }
         }
 
