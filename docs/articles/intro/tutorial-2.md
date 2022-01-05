@@ -61,7 +61,7 @@ These are the rules in Akka.NET for message sends:
 * At-most-once delivery, i.e. no guaranteed delivery.
 * Message ordering is maintained per sender, receiver pair.
 
-### What Does "at-most-once" Mean?
+### What Does "At-Most-Once" Mean?
 
 When it comes to describing the semantics of a delivery mechanism, there are three basic categories:
 
@@ -184,7 +184,7 @@ together:
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial2/DeviceSpec.cs?name=device-write-read-test)]
 
-## What is Next?
+## What Is Next?
 
 So far, we have started designing our overall architecture, and we wrote our first actor directly corresponding to the
 domain. We now have to create the component that is responsible for maintaining groups of devices and the device

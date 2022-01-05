@@ -7,7 +7,7 @@ title: Akka.NET v1.4 Upgrade Advisories
 
 This document contains specific upgrade suggestions, warnings, and notices that you will want to pay attention to when upgrading between versions within the Akka.NET v1.4 roadmap.
 
-## Upgrading to Akka.NET v1.4.20 from Older Versions
+## Upgrading to Akka.NET v1.4.20 From Older Versions
 
 > [!NOTE]
 > This is an edge-case issue that only affects users who are sending primitive data types (i.e. `int`, `long`, `string`) directly over Akka.Remote or Akka.Persistence.
@@ -29,7 +29,7 @@ To work around this issue, if you're affected by it (most users are not:)
 * Upgrade all of the nodes to v1.4.20 or later at once;
 * Or upgrade directly to Akka.NET v1.4.26 or later, which resolves this issue and prevents the regression from occurring.
 
-## Upgrading to Akka.NET v1.4.26 from Older Versions
+## Upgrading to Akka.NET v1.4.26 From Older Versions
 
 > [!NOTE]
 > This is an edge-case issue that only affects users who are sending primitive data types (i.e. `int`, `long`, `string`) directly over Akka.Remote or Akka.Persistence.
@@ -52,7 +52,7 @@ This setting is set of `on` by default and it resolves the backwards compatibili
 
 If you are running a mixed .NET Core and .NET Framework cluster, see the process below.
 
-### Deploying v1.4.26 into Mixed .NET Core and .NET Framework Environments
+### Deploying v1.4.26 Into Mixed .NET Core and .NET Framework Environments
 
 *However*, if you are attempting to run a mixed-mode cluster - i.e. some services running on .NET Framework and some running on .NET Core, you will eventually want to turn this setting to `off` in order to facilitate smooth operation between both platforms.
 

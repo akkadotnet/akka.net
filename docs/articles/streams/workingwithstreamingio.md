@@ -3,13 +3,13 @@ uid: streams-io
 title: Working with streaming IO
 ---
 
-# Working with streaming IO
+# Working with Streaming IO
 
 Akka Streams provides a way of handling File IO and TCP connections with Streams. While the general approach is very similar to the [Actor based TCP handling using Akka IO](xref:akka-io), by using Akka Streams you are freed of having to manually react to back-pressure signals, as the library does it transparently for you.
 
 ## Streaming TCP
 
-### Accepting connections: Echo Server
+### Accepting Connections: Echo Server
 
 In order to implement a simple EchoServer we bind to a given address, which returns a `Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>>`, which will emit an `IncomingConnection` element for each new connection that the Server should handle:
 
@@ -46,7 +46,7 @@ The `repl` flow we use to handle the server interaction first prints the servers
 
 A resilient REPL client would be more sophisticated than this, for example it should split out the input reading into a separate `SelectAsync` step and have a way to let the server write more data than one `ByteString` chunk at any given time, these improvements however are left as exercise for the reader.
 
-### Avoiding deadlocks and liveness issues in back-pressured cycles
+### Avoiding Deadlocks and Liveness Issues in Back-Pressured Cycles
 
 When writing such end-to-end back-pressured systems you may sometimes end up in a situation of a loop, in which either side is waiting for the other one to start the conversation. One does not need to look far to find examples of such back-pressure loops. In the two examples shown previously, we always assumed that the side we are connecting to would start the conversation, which effectively means both sides are back-pressured and can not get the conversation started. There are multiple ways of dealing with this which are explained in depth in [Graph cycles, liveness and deadlocks](xref:streams-working-with-graphs#graph-cycles-liveness-and-deadlocks), however in client-server scenarios it is often the simplest to make either side simply send an initial message.
 
@@ -61,7 +61,7 @@ To emit the initial message we merge a `Source` with a single element, after the
 
 In this example both client and server may need to close the stream based on a parsed command - `BYE` in the case of the server, and `q` in the case of the client. This is implemented by taking from the stream until `q` and and concatenating a `Source` with a single `BYE` element which will then be sent after the original source completed.
 
-### Using framing in your protocol
+### Using Framing in Your Protocol
 
 Streaming transport protocols like TCP just pass streams of bytes, and does not know what is a logical chunk of bytes from the application's point of view. Often when implementing network protocols you will want to introduce your own framing. This can be done in two ways: An end-of-frame marker, e.g. end line `\n`, can do framing via `Framing.Delimiter`. Or a length-field can be used to build a framing protocol.
 

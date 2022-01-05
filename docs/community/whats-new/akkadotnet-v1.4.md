@@ -3,7 +3,7 @@ uid: akkadotnet-v14-migration-guide
 title: What's new in Akka.NET v1.4.0?
 ---
 
-# What's new in Akka.NET v1.4.0?
+# What's New in Akka.NET v1.4.0?
 
 Akka.NET v1.4.0 is the culmination of many major architectural changes, improvements, bugfixes, and updates to the core Akka.NET runtime and its associated modules.
 
@@ -33,7 +33,7 @@ In Akka.NET v1.4.1-RC2 we rolled this change back in order to:
 
 More details in the next section below.
 
-#### Post Mortem: Stand-alone HOCON
+#### Post Mortem: Stand-Alone HOCON
 
 In the previous releases of HOCON, we let the OSS project do its own thing without any real top-down plan for integrating it into Akka.NET and replacing the stand-alone HOCON engine built into the `Akka.Configuration.Config` class.
 
@@ -45,7 +45,7 @@ The specific problems we had with stand-alone HOCON were:
 2. Performance - appending a new fallback to a `HOCON.Config` object kicked off a processes of recursive deep-copying, and this was quickly found to be non-performant.
 3. Inadequacies in the Akka.NET test suite - the Akka.NET test suite is very extensive, but as we discovered during the Akka.NET v1.4.1-RC1 process: our test configurations are not nearly as complex as real-world test cases are.
 
-#### Stand-alone HOCON Future
+#### Stand-Alone HOCON Future
 
 Over the course of the Akka.NET v1.4 development cycle, where we will begin introducing lots of the usual bug fixes, feature additions, and performance improvements we will begin the process of gradually introducing abstractions to make it desirable, safe, and backwards-compatible to introduce stand-alone HOCON.
 

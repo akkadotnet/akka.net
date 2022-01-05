@@ -25,13 +25,13 @@ A method call is considered synchronous if the caller cannot make progress until
 
 A synchronous API may use blocking to implement synchrony, but this is not a necessity. A very CPU intensive task might give a similar behavior as blocking. In general, it is preferred to use asynchronous APIs, as they guarantee that the system is able to progress. Actors are asynchronous by nature: an actor can progress after sending a message without waiting for the delivery to happen.
 
-## Non-blocking vs. Blocking
+## Non-Blocking vs. Blocking
 
 We talk about blocking if the delay of one thread can indefinitely delay some of the other threads. A good example is a resource which can be used exclusively by one thread using mutual exclusion. If a thread holds on to the resource indefinitely (for example accidentally running an infinite loop) other threads waiting on the resource can not progress. In contrast, non-blocking means that no thread is able to indefinitely delay others.
 
 Non-blocking operations are preferred to blocking ones, as the overall progress of the system is not trivially guaranteed when it contains blocking operations.
 
-## Deadlock vs. Starvation vs. Live-lock
+## Deadlock vs. Starvation vs. Live-Lock
 
 Deadlock arises when several participants are waiting on each other to reach a specific state to be able to progress. As none of them can progress without some other participant to reach a certain state (a "Catch-22" problem), all affected subsystems stall. Deadlock is closely related to blocking, as it is necessary that a participant thread be able to delay the progression of other threads indefinitely.
 
@@ -46,21 +46,21 @@ A Race condition is when an assumption about the ordering of a set of events mig
 > [!NOTE]
 > The only guarantee that Akka.NET provides about messages sent between a given pair of actors is that their order is always preserved. see [Message Delivery Reliability](xref:message-delivery-reliability)
 
-## Non-blocking Guarantees (Progress Conditions)
+## Non-Blocking Guarantees (Progress Conditions)
 
 As discussed in the previous sections, blocking is undesirable for several reasons, including the dangers of deadlocks and reduced throughput in the system. In the following sections we discuss various non-blocking properties with different strength.
 
-### Wait-freedom
+`### Wait-Freedom
 
 A method is wait-free if every call is guaranteed to finish in a finite number of steps. If a method is bounded wait-free, then the number of steps has a finite upper bound.
 
 From this definition it follows that wait-free methods are never blocking, therefore deadlock can not happen. Additionally, as each participant can progress after a finite number of steps (when the call finishes), wait-free methods are free of starvation.
 
-### Lock-freedom
+### Lock-Freedom
 
 Lock-freedom is a weaker property than wait-freedom. In the case of lock-free calls, infinitely often some method finishes in a finite number of steps. This definition implies that no deadlock is possible for lock-free calls. On the other hand, the guarantee that some call finishes in a finite number of steps is not enough to guarantee that all of them eventually finish. In other words, lock-freedom is not enough to guarantee the lack of starvation.
 
-### Obstruction-freedom
+### Obstruction-Freedom
 
 Obstruction-freedom is the weakest non-blocking guarantee discussed here. A method is called obstruction-free if there is a point in time after which it executes in isolation (other threads make no steps, e.g.: become suspended), it finishes in a bounded number of steps. All lock-free objects are obstruction-free, but the opposite is generally not true.
 

@@ -249,7 +249,7 @@ namespace Akka.Streams.Tests.Dsl
                 var (innerSourceMat, outerSinkMat) = Source.FromTaskSource(inner).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
 
                 // wait until the underlying tasks are completed
-                AwaitCondition(() => outerSinkMat.IsFaulted && innerSourceMat.IsFaulted, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100));
+                Thread.Sleep(100);
 
                 outerSinkMat.Exception.Flatten().InnerException.Should().Be(new TestException("INNER_FAILED"));
                 innerSourceMat.Exception.Flatten().InnerException.Should().Be(new TestException("INNER_FAILED"));

@@ -88,7 +88,8 @@ namespace Akka.Pattern
             GetAndSet(DateTime.UtcNow.Ticks);
             _breaker.Scheduler.Advanced.ScheduleOnce(_breaker.CurrentResetTimeout, () => _breaker.AttemptReset());
 
-            var nextResetTimeout = TimeSpan.FromTicks(_breaker.CurrentResetTimeout.Ticks * (long)_breaker.ExponentialBackoffFactor);
+            var rnd = 1.0 + ThreadLocalRandom.Current.NextDouble() * _breaker.RandomFactor;
+            var nextResetTimeout = TimeSpan.FromTicks(_breaker.CurrentResetTimeout.Ticks * (long)_breaker.ExponentialBackoffFactor * (long)rnd);
             if (nextResetTimeout < _breaker.MaxResetTimeout)
             {
                 _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, nextResetTimeout);

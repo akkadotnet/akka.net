@@ -176,7 +176,7 @@ Akka.NET makes it extremely easy to create custom serializers to handle a wide v
 All serializers in Akka.NET inherit from `Akka.Serialization.Serializer`.
 So, to create a custom serializer, all that is needed is a class that inherits from this base class.
 
-### Creating new Serializers
+### Creating New Serializers
 
 A custom `Serializer` has to inherit from `Akka.Serialization.Serializer` and can be defined like this:
 
@@ -186,7 +186,7 @@ The only thing left to do for this class would be to fill in the serialization l
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
-### programmatically change NewtonSoft JSON serializer settings
+### Programmatically Change NewtonSoft JSON Serializer Settings
 
 You can change the JSON serializer behavior by using the `NewtonSoftJsonSerializerSetup` class to programmatically
 change the settings used inside the Json serializer by passing it into the an `ActorSystemSetup`.
@@ -290,11 +290,11 @@ Sending messages to a reference pointing the old actor will not be delivered to 
 
 This requires that you know at least which type of address will be supported by the system which will deserialize the resulting actor reference; if you have no concrete address handy you can create a dummy one for the right protocol using `new Address(protocol, "", "", 0)` (assuming that the actual transport used is as lenient as Akka's `RemoteActorRefProvider`).
 
-### Deep serialization of Actors
+### Deep Serialization of Actors
 
 The recommended approach to do deep serialization of internal actor state is to use [Akka Persistence](xref:persistence-architecture).
 
-## How to setup Hyperion as default serializer
+## How to Setup Hyperion as the Default Serializer
 
 Starting from Akka.NET v1.5, default Newtonsoft.Json serializer will be replaced in the favor of [Hyperion](https://github.com/akkadotnet/Hyperion). This change may break compatibility with older actors still using json serializer for remoting or persistence. If it's possible, it's advised to migrate to it already. To do so, first you need to reference hyperion serializer as NuGet package inside your project:
 
@@ -315,7 +315,7 @@ akka {
 }
 ```
 
-## Danger of polymorphic serializer
+## Danger of Polymorphic Serializer
 
 One of the danger of polymorphic serializers is the danger of unsafe object type injection into
 the serialization/de-serialization chain. This issue applies to any type of polymorphic serializer,
@@ -370,7 +370,7 @@ akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
 > preferably inside a closed network system.
 <!-- markdownlint-enable MD028 -->
 
-## Cross platform serialization compatibility in Hyperion
+## Cross Platform Serialization Compatibility in Hyperion
 
 There are problems that can arise when migrating from old .NET Framework to the new .NET Core standard, mainly because of breaking namespace and assembly name changes between these platforms.
 Hyperion implements a generic way of addressing this issue by transforming the names of these incompatible names during deserialization.
@@ -451,7 +451,7 @@ var system = ActorSystem.Create("actorSystem", bootstrap);
 
 In the example above, we're using compiler directives to make sure that the correct name transform are used during compilation.
 
-## Complex object serialization using Hyperion
+## Complex Object Serialization Using Hyperion
 
 One of the limitation of a reflection based serializer is that it would fail to serialize
 objects with complex internal looping references in its properties or fields and ended up throwing
@@ -502,7 +502,7 @@ serializing and send across the wire:
         }
 ```
 
-### Creating and declaring `Surrogate`s via HOCON
+### Creating and Declaring `Surrogate` via HOCON
 
 To create a serializer surrogate in HOCON, we would first create a class that inherits from
 the `Surrogate` class:
@@ -539,7 +539,7 @@ akka.actor {
 }
 ```
 
-### Creating and declaring `Surrogate`s programmatically using `HyperionSerializerSetup`
+### Creating and Declaring `Surrogate` Programmatically Using `HyperionSerializerSetup`
 
 We can also use `HyperionSerializerSetup` to declare our surrogates:
 

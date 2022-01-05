@@ -149,7 +149,7 @@ In the `JoinInProgressMultiNodeConfig`, we define two `RoleName`s for the two no
 
 Also we configured each node to represent specific role `[frontend,backend]` in the cluster. You can attach arbitrary config instance(s) to individual node or group of nodes by calling `NodeConfig(IEnumerable<RoleName> roles, IEnumerable<Config> configs)`.
 
-#### Step 2 - Define a Class for Your Spec, Inherit from `MultiNodeSpec`
+#### Step 2 - Define a Class for Your Spec, Inherit From `MultiNodeSpec`
 
 The next step is to subclass `MultiNodeSpec` and create a class that each of your individual nodes will run.
 
