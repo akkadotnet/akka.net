@@ -7,7 +7,7 @@ title: Multi-Node Testing Distributed Akka.NET Applications
 
 > [!NOTE]
 > This documentation applies to the new `Akka.MultiNode.TestAdapter` multi-node test NuGet package.
-> 
+>
 > For the old `Akka.MultiNodeTestRunner` package, please check the [old documentation](xref:multi-node-testing-old)
 
 One of the most powerful testing features of Akka.NET is its ability to create and simulate real-world network conditions such as latency, network partitions, process crashes, and more. Given that any of these can happen in a production environment it's important to be able to write tests which validate your application's ability to correctly recover.
@@ -166,6 +166,7 @@ In order to make multi-node tests effective, we must have some means of synchron
 One of the most useful features of the multi-node testkit is its ability to simulate real-world networking issues, and this can be accomplished using some of the APIs found in the Akka.Remote.TestKit.
 
 ##### Creating Network Partitions
+
 In order to create a network partition between two or more nodes, the `TestTransport` must be enabled inside the `MultiNodeConfig` class constructor. This allows access to the `TestConductor`, which can be used to render two or more nodes unreachable:
 
 ```c#
@@ -195,6 +196,7 @@ EnterBarrier("repair-2");
 This will allow Akka.Remote to resume normal execution over the network.
 
 ##### Killing Nodes
+
 There are two ways to kill a node in a running multi-node test.
 
 The first is to call the `Shutdown` method on the `ActorSystem` of the node you wish to have exit the test. This will cause the `ActorSystem` to terminate gracefully - this simulates the planned shutdown of a node.
@@ -222,21 +224,21 @@ Once a node has exited the test, it will no longer be able to wait on `EnterBarr
 
 The `Akka.MultiNode.TestAdapter` NuGet package is a test adapter based on the popular XUnit that is compatible with `dotnet test`, Microsoft Visual Studio, and JetBrains Rider.
 
-### Turn off Xunit Parallelization
+### Turn Off Xunit Parallelization
 
 It is advised that you don't use any test parallelization when running multi node tests. To do this, you can do either of these methods.
 
-#### Using the convenience custom test framework
+#### Using The Convenience Custom Test Framework
   
 `Akka.MultiNode.TestAdapter` came with a convenience test framework that automatically ignores Xunit collection parallelization feature. To use it, you would need to declare a single assembly level attribute inside your project:
-   
+
 ```c#
 using Xunit;
 
 [assembly: TestFramework("Akka.MultiNode.TestAdapter.MultiNodeTestFramework", "Akka.MultiNode.TestAdapter")]
 ```
 
-#### Using Xunit configuration file
+#### Using Xunit Configuration File
 
 You can manually set Xunit to turn off collection parallelization by including a special json configuration file named `xunit.runner.json` inside your project. Make sure that the file will be copied to the output directory during build.
 
@@ -265,7 +267,7 @@ By default, MNTR will create a folder named `TestResults` inside the test assemb
 ```
 
 * **outputDirectory**: The directory path for all log output files. This can be a relative or an absolute folder path; if set as a relative path, it is relative to the test assembly folder.
-* **failedSpecsDirectory**: Determines output directory name for aggregated failed test logs. This 
+* **failedSpecsDirectory**: Determines output directory name for aggregated failed test logs. This will be the name of a folder inside the output directory, not a path to a directory.
 * **listenAddress**: Determines the address that this multi-node test runner will use to listen for log messages from individual spec.
 * **listenPort**: Determines the port number that this multi-node test runner will use to listen for log messages from individual spec.
 * **ClearOutputDirectory**: Clear the output directory before running the test session. If set to false, all test logs are appended to the out file.
