@@ -129,27 +129,7 @@ The `GetAddress` method accepts a `RoleName` and returns the `Address` that was 
 
 The most important tool in the `Akka.Remote.TestKit`, the base library where all multi-node testing tools are defined, is the `RunOn` method:
 
-```c#
-RunOn(() =>
-{
-    // seed1System is a separate ActorSystem, to be able to simulate restart
-    // we must transfer its address to seed2
-    Sys.ActorOf(Props.Create<Watcher>().WithDeploy(Deploy.Local), "address-receiver");
-    EnterBarrier("seed1-address-receiver-ready");
-}, _config.Seed2);
-
-
-RunOn(() =>
-{
-    EnterBarrier("seed1-address-receiver-ready");
-    seedNode1Address = Cluster.Get(seed1System.Value).SelfAddress;
-    foreach (var r in ImmutableList.Create(_config.Seed2))
-    {
-        Sys.ActorSelection(new RootActorPath(GetAddress(r)) / "user" / "address-receiver").Tell(seedNode1Address);
-        ExpectMsg("ok", TimeSpan.FromSeconds(5));
-    }
-}, _config.Seed1);
-```
+[!code-csharp[RestartNode2Spec.cs](../../../src/core/Akka.Cluster.Tests.MultiNode/RestartNode2Spec.cs?name=RunOnSample)]
 
 Notice that the first `RunOn` call takes an argument of `_config.Seed2`, whereas the second `RunOn` call takes an argument of `_config.Seed1`. The code in the first `RunOn` block will only execute on the node with `RoleName` "Seed2" and the code in the second block will only run on `RoleName` "Seed1."
 
