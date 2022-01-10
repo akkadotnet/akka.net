@@ -628,9 +628,9 @@ namespace Akka.Persistence
                     var sender = Sender;
                     Context.System.DeadLetters.Tell(new DeadLetter(currentMessage, sender, Self), Sender);
                 }
-                else if (strategy is ReplyToStrategy)
+                else if (strategy is ReplyToStrategy toStrategy)
                 {
-                    Sender.Tell(((ReplyToStrategy)strategy).Response);
+                    Sender.Tell(toStrategy.Response);
                 }
                 else if (strategy is ThrowOverflowExceptionStrategy)
                 {
