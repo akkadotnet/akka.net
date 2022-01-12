@@ -2,6 +2,7 @@
 uid: tutorial-overview
 title: Tutorial Overview
 ---
+
 # Tutorial Overview
  
 In this and the following chapters, we will build a sample Akka.NET application
@@ -50,7 +51,7 @@ The architecture of the application will look like this:
 
 This tutorial is divided into four parts:
 
-* **<a href="../getting-started/tutorial-1.html">Part 1: Top-level Architecture</a>**
-* **<a href="../getting-started/tutorial-2.html">Part 2. The Device Actor</a>**
-* **<a href="../getting-started/tutorial-3.html">Part 3. Device Groups and Manager</a>**
-* **<a href="../getting-started/tutorial-4.html">Part 4. Querying a Group of Devices</a>**
+* [Part 1: Top-level Architecture](../getting-started/tutorial-1.html)
+* [Part 2. The Device Actor](../getting-started/tutorial-2.html)
+* [Part 3. Device Groups and Manager](../getting-started/tutorial-3.html)
+* [Part 4. Querying a Group of Devices](../getting-started/tutorial-4.html)
