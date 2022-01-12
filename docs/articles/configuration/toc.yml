@@ -1,18 +1,8 @@
-- name: Index
+- name: Configuration
   href: index.md
 - name: HOCON Syntax and Practices in Akka.NET
   href: hocon.md
 - name: Akka
   href: akka.md
 - name: Modules
-  items:
-  - name: Akka.Cluster
-    href: modules/akka.cluster.md
-  - name: Akka.Remote
-    href: modules/akka.remote.md
-  - name: Akka.Persistence
-    href: modules/akka.persistence.md
-  - name: Akka.Streams
-    href: modules/akka.streams.md
-  - name: Akka.TestKit
-    href: modules/akka.testkit.md
+  href: modules/toc.yml
