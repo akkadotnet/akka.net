@@ -71,3 +71,45 @@ Thus there are a few ways we can fix this spec:
 1. Use `await` instead of `Task.Wait` - generally we should be doing this everywhere when possible;
 2. Relax the timing constraints either by increasing the wait period or by wrapping the assertion block inside an `AwaitAssert`; or
 3. Use the `TestScheduler` and manually advance the clock. That might cause other problems but it takes the non-determinism of the business of the CPU out of the picture.
+
+## Testing For Racy Unit Tests Locally
+
+A racy test under Azure DevOps might run fine locally, and we might need to force run a test until they fail. Here are some techniques you can use to force a test to fail.
+
+### Running Tests Under Very Limited Computing Resources
+
+Azure DevOps virtual machines ran under a very tight computing resource budget. It is sometime necessary
+for us to emulate that locally to test to see if our code changes would run under a very limited resource
+condition. The easiest way to do this is to leverage the Windows 10 WSL 2 Linux virtual machine feature.
+
+* Install SWL 2 by following these [instructions](https://docs.microsoft.com/en-us/windows/wsl/install)
+* Create a `.wslconfig` file in `C:\Users\[User Name]\`
+* Copy and paste these configuration.
+
+```ini
+[wsl2]
+memory=2GB   # Limits VM memory in WSL 2 up to 2GB
+processors=2 # Makes the WSL 2 VM use two virtual processors
+```
+
+### Repeating a Test Until It Fails
+
+If you're using JetBrains Rider, you can use their unit test feature to run a test until it fails.
+On the `Unit Tests` tab, click on the drop down arrow right beside the the play button and click on the
+`Run Selected Tests Until Failure` option.
+
+![JetBrains Rider Unit Test Repeat Until Failure](../../images/community/debugging/rider-repeat-until-failure.png)
+
+Another option is to leverage the Xunit `TheoryAttribute` to run a test multiple time. We provided a
+convenience `RepeatAttribute` to do this.
+
+```c#
+using Akka.Tests.Shared.Internals;
+
+[Theory]
+[Repeat(100)]
+public void RepeatedTest(int _)
+{
+    ...
+}
+```

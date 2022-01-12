@@ -142,8 +142,6 @@
     href: networking/io.md
   - name: Serialization
     href: networking/serialization.md
-  - name: Multi-Node TestKit
-    href: networking/multi-node-test-kit.md
 - name: Remoting
   items:
   - name: Overview
