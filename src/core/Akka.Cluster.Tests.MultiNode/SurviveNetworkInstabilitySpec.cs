@@ -19,6 +19,7 @@ using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {

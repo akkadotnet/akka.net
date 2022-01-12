@@ -309,8 +309,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         protected Exception TryUnwrapException(Exception e)
         {
-            var aggregateException = e as AggregateException;
-            if (aggregateException != null)
+            if (e is AggregateException aggregateException)
             {
                 aggregateException = aggregateException.Flatten();
                 if (aggregateException.InnerExceptions.Count == 1)
@@ -354,21 +353,21 @@ namespace Akka.Persistence.Journal
                 writeResult = Task.FromResult((IImmutableList<Exception>)Enumerable.Repeat(e, atomicWriteCount).ToImmutableList());
             }
 
-            Action<Func<IPersistentRepresentation, Exception, object>, IImmutableList<Exception>> resequence = (mapper, results) =>
+            void Resequence(Func<IPersistentRepresentation, Exception, object> mapper, IImmutableList<Exception> results)
             {
                 var i = 0;
                 var enumerator = results != null ? results.GetEnumerator() : null;
                 foreach (var resequencable in message.Messages)
                 {
-                    if (resequencable is AtomicWrite)
+                    if (resequencable is AtomicWrite aw)
                     {
-                        var aw = resequencable as AtomicWrite;
                         Exception exception = null;
                         if (enumerator != null)
                         {
                             enumerator.MoveNext();
                             exception = enumerator.Current;
                         }
+
                         foreach (var p in (IEnumerable<IPersistentRepresentation>)aw.Payload)
                         {
                             _resequencer.Tell(new Desequenced(mapper(p, exception), counter + i + 1, message.PersistentActor, p.Sender));
@@ -378,12 +377,11 @@ namespace Akka.Persistence.Journal
                     else
                     {
                         var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.ActorInstanceId);
-                        _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor,
-                            resequencable.Sender));
+                        _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor, resequencable.Sender));
                         i++;
                     }
                 }
-            };
+            }
 
             writeResult
                 .ContinueWith(t =>
@@ -394,7 +392,7 @@ namespace Akka.Persistence.Journal
                             throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. Expected [{atomicWriteCount}], but got [{t.Result.Count}].");
 
                         _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
-                        resequence((x, exception) => exception == null
+                        Resequence((x, exception) => exception == null
                             ? (object)new WriteMessageSuccess(x, message.ActorInstanceId)
                             : new WriteMessageRejected(x, exception, message.ActorInstanceId), t.Result);
                     }
@@ -407,7 +405,7 @@ namespace Akka.Persistence.Journal
                                 : new OperationCanceledException(
                                     "WriteMessagesAsync canceled, possibly due to timing out."));
                         _resequencer.Tell(new Desequenced(new WriteMessagesFailed(exception, atomicWriteCount), counter, message.PersistentActor, self));
-                        resequence((x, _) => new WriteMessageFailure(x, exception, message.ActorInstanceId), null);
+                        Resequence((x, _) => new WriteMessageFailure(x, exception, message.ActorInstanceId), null);
                     }
                 }, _continuationOptions);
         }

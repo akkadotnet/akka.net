@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Remote.TestKit;
 using Xunit;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Remote.Tests.MultiNode
 {
