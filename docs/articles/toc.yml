@@ -1,27 +1,5 @@
 - name: Introduction
-  items:
-  - name: What is Akka.NET?
-    href: intro/what-is-akka.md
-  - name: What problems does the actor model solve?
-    href: intro/what-problems-does-actor-model-solve.md
-  - name: Akka.NET Libraries and Modules
-    href: intro/modules.md
-  - name: Use-case and Deployment Scenarios
-    href: intro/use-case-and-deployment-scenarios.md
-  - name: Production Users and Use Cases for Akka.NET
-    href: intro/akka-users.md
-  - name: Getting Started
-    items:
-    - name: Tutorial Overview
-      href: intro/getting-started/tutorial-overview.md
-    - name: Part 1. Top-level Architecture
-      href: intro/getting-started/tutorial-1.md
-    - name: Part 2. The Device Actor
-      href: intro/getting-started/tutorial-2.md
-    - name: Part 3. Device Groups and Manager
-      href: intro/getting-started/tutorial-3.md
-    - name: Part 4. Querying a Group of Devices
-      href: intro/getting-started/tutorial-4.md
+  href: intro/toc.yml
 - name: Concepts
   items:
   - name: Terminology, Concepts
