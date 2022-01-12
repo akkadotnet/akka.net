@@ -52,7 +52,7 @@ from user, or system, actors end up.
 > has. This special entity is called the "Bubble-Walker". This special entity is
 > invisible for the user and only has uses internally.
 
-### Structure of an IActorRef and Paths of Actors
+## Structure of an IActorRef and Paths of Actors
 
 The easiest way to see this in action is to simply print `IActorRef` instances.
 In this small experiment, we print the reference of the first actor we create
@@ -95,7 +95,7 @@ The last part of the actor reference, like `#1053618476` is a unique identifier
 of the actor living under the path. This is usually not something the user needs
 to be concerned with, and we leave the discussion of this field for later.
 
-### Hierarchy and Lifecycle of Actors
+## Hierarchy and Lifecycle of Actors
 
 We have so far seen that actors are organized into a **strict hierarchy**. This
 hierarchy consists of a predefined upper layer of three actors (the root
@@ -150,7 +150,7 @@ The family of these lifecycle hooks is rich, and we recommend reading [the actor
 lifecycle](xref:untyped-actor-api#actor-lifecycle) section of the reference for
 all details.
 
-### Hierarchy and Failure Handling (Supervision)
+## Hierarchy and Failure Handling (Supervision)
 
 Parents and children are not only connected by their lifecycles. Whenever an
 actor fails (throws an exception or an unhandled exception bubbles out from
@@ -194,7 +194,7 @@ see how the output changes.
 For the impatient, we also recommend looking into the [supervision reference
 page](xref:supervision) for more in-depth details.
 
-### The First Actor
+## The First Actor
 
 Actors are organized into a strict tree, where the lifecycle of every child is
 tied to the parent and where parents are responsible for deciding the fate of
@@ -234,7 +234,7 @@ All we need now is to tie this up with a class with the `main` entry point:
 This application does very little for now, but we have the first actor in place
 and we are ready to extend it further.
 
-## What Is Next?
+# What Is Next?
 
 In the following chapters we will grow the application step-by-step:
 
