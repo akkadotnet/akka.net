@@ -186,7 +186,7 @@ namespace Akka.TestKit
             SynchronizationContext.SetSynchronizationContext(
                 new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
 
-            _testState.TestActor = testActor;            
+            _testState.TestActor = testActor;
         }
 
         /// <summary>

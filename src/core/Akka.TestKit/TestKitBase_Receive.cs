@@ -11,7 +11,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Internal;
-using FluentAssertions;
 
 namespace Akka.TestKit
 {
@@ -51,27 +50,30 @@ namespace Akka.TestKit
                 var left = end - Now;
                 var msg = ReceiveOne(left);
                 _assertions.AssertTrue(msg != null, "Timeout ({0}) during fishForMessage{1}", maxValue, string.IsNullOrEmpty(hint) ? "" : ", hint: " + hint);
-                if (msg is T && isMessage((T)msg))
+                if (msg is T msg1 && isMessage(msg1))
                 {
-                    return (T)msg;
+                    return msg1;
                 }
             }
         }
 
         /// <summary>
-        /// Receives messages until <paramref name="max"/>. Ignores all messages except for a message of type <typeparamref name="T"/>. Asserts that all messages are not of the of type <typeparamref name="T"/>. Note that when comparing types, inheritance is ignored, in other words, only perfectly matching types are asserted.
+        /// Receives messages until <paramref name="max"/>.
+        ///
+        /// Ignores all messages except for a message of type <typeparamref name="T"/>.
+        /// Asserts that all messages are not of the of type <typeparamref name="T"/>.
+        /// Note that when comparing types, inheritance is ignored, in other words, only perfectly matching types are asserted.
         /// </summary>
         /// <typeparam name="T">The type that the message is not supposed to be.</typeparam>
-        /// <param name="probe"></param>
-        /// <param name="max"></param>
-        public async static Task InverseFishForMessage<T>(TestProbe probe, TimeSpan? max = null)
+        /// <param name="max">Optional. The maximum wait duration. Defaults to <see cref="RemainingOrDefault"/> when unset.</param>
+        public async Task FishUntilMessage<T>(TimeSpan? max = null)
         {
             await Task.Run(() =>
             {
-                probe.ReceiveWhile<object>(max: max, shouldContinue: x =>
+                ReceiveWhile<object>(max: max, shouldContinue: x =>
                 {
-                    x.Should().NotBeOfType<T>();
-                    return false; // we are not returning anything
+                    _assertions.AssertFalse(x is T, "did not expect a message of type {0}", typeof(T));
+                    return true; // please continue receiving, don't stop
                 });
             });
         }

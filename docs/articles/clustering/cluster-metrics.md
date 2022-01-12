@@ -3,7 +3,7 @@ uid: cluster-metrics
 title: Akka.Cluster.Metrics module
 ---
 
-# Akka.Cluster.Metrics module
+# Akka.Cluster.Metrics Module
 
 The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes and
 to the registered subscribers on the system event bus with the help of Cluster Metrics Extension.

@@ -46,7 +46,7 @@ also underlies the `Ask` pattern):
 The first rule is typically found also in other actor implementations while the
 second is specific to Akka.NET.
 
-### Discussion: What does "at-most-once" mean?
+### Discussion: What Does "At-Most-Once" Mean?
 
 When it comes to describing the semantics of a delivery mechanism, there are
 three basic categories:
@@ -158,7 +158,7 @@ actor R1, send its reference to another remote actor R2 and have R2 send a
 message to R1. An example of well-defined ordering is a parent which creates
 an actor and immediately sends a message to it.
 
-### Communication of failure
+### Communication of Failure
 
 Please note, that the ordering guarantees discussed above only hold for user messages between actors. Failure of a child
 of an actor is communicated by special system messages that are not ordered relative to ordinary user messages. In
@@ -173,7 +173,7 @@ a user and system message cannot guarantee the ordering of their dequeue times.
 
 ## The Rules for In-App (Local) Message Sends
 
-### Be careful what you do with this section!
+### Be Careful What You Do With This Section!
 
 Relying on the stronger reliability in this section is not recommended since it
 will bind your application to local-only deployment: an application may have to
@@ -231,7 +231,7 @@ possibly non-exhaustive list of counter-indications is:
 This list has been compiled carefully, but other problematic scenarios may have
 escaped our analysis.
 
-### How does Local Ordering relate to Network Ordering
+### How Does Local Ordering Relate to Network Ordering
 
 The rule that for a given pair of actors, messages sent directly from the first to the second will not be received out-of-order holds for messages sent over the network with the TCP based Akka.NET remote transport protocol.
 
@@ -244,7 +244,7 @@ As explained in the previous section local message sends obey transitive causal 
 
 It might take longer time for M1 to "travel" to node-3 than it takes for M2 to "travel" to node-3 via node-2.
 
-## Higher-level abstractions
+## Higher-Level Abstractions
 
 Based on a small and consistent tool set in Akka's core, Akka.NET also provides
 powerful, higher-level abstractions on top it.
@@ -310,7 +310,7 @@ The dead letter service follows the same rules with respect to delivery
 guarantees as all other message sends, hence it cannot be used to implement
 guaranteed delivery.
 
-### How do I Receive Dead Letters?
+### How Do I Receive Dead Letters?
 
 An actor can subscribe to class `Akka.Actor.DeadLetter` on the event
 stream, see [Event stream](xref:event-bus) for how to do that. The subscribed actor will then receive all dead
@@ -322,7 +322,7 @@ determine that a send operation is failed, which for a remote send can be the
 local system (if no network connection can be established) or the remote one
 (if the actor you are sending to does not exist at that point in time).
 
-### Dead Letters Which are (Usually) not Worrisome
+### Dead Letters Which Are (Usually) Not Worrisome
 
 Every time an actor does not terminate by its own decision, there is a chance
 that some messages which it sends to itself are lost. There is one which

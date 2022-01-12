@@ -19,7 +19,7 @@ namespace Akka.TestKit
     /// <summary>
     /// TBD
     /// </summary>
-    sealed class ActorCellKeepingSynchronizationContext : SynchronizationContext
+    class ActorCellKeepingSynchronizationContext : SynchronizationContext
     {
         private readonly ActorCell _cell;
         
@@ -41,25 +41,23 @@ namespace Akka.TestKit
         /// <param name="state">TBD</param>
         public override void Post(SendOrPostCallback d, object state)
         {
-            ThreadPool.QueueUserWorkItem(s =>
+            ThreadPool.QueueUserWorkItem(_ =>
             {
-                var t = ((SendOrPostCallback, object, ActorCellKeepingSynchronizationContext, ActorCell))s;
-
                 var oldCell = InternalCurrentActorCellKeeper.Current;
                 var oldContext = Current;
-                SetSynchronizationContext(t.Item3);
-                InternalCurrentActorCellKeeper.Current = t.Item4;
+                SetSynchronizationContext(this);
+                InternalCurrentActorCellKeeper.Current = AsyncCache ?? _cell;
 
                 try
                 {
-                    t.Item1(t.Item2);
+                    d(state);
                 }
                 finally
                 {
                     InternalCurrentActorCellKeeper.Current = oldCell;
                     SetSynchronizationContext(oldContext);
                 }
-            }, (d, state, this, AsyncCache ?? _cell));
+            }, state);
         }
 
         /// <summary>
@@ -69,21 +67,6 @@ namespace Akka.TestKit
         /// <param name="state">TBD</param>
         public override void Send(SendOrPostCallback d, object state)
         {
-            if(ReferenceEquals(Current, this))
-            {
-                var oldCell = InternalCurrentActorCellKeeper.Current;
-                InternalCurrentActorCellKeeper.Current = AsyncCache ?? _cell;
-                try
-                {
-                    d(state);
-                }
-                finally
-                {
-                    InternalCurrentActorCellKeeper.Current = oldCell;
-                }
-                return;
-            }
-
             var tcs = new TaskCompletionSource<int>();
             Post(_ =>
             {

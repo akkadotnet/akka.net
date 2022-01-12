@@ -3,7 +3,7 @@ uid: tutorial-1
 title: Part 1. Top-level Architecture
 ---
 
-# Part 1: Top-level Architecture
+# Part 1: Top-Level Architecture
 
 In this and the following chapters, we will build a sample Akka.NET application
 to introduce you to the language of actors and how solutions can be formulated
@@ -280,7 +280,7 @@ All we need now is to tie this up with a class with the `main` entry point:
 This application does very little for now, but we have the first actor in place
 and we are ready to extend it further.
 
-## What is next?
+## What Is Next?
 
 In the following chapters we will grow the application step-by-step:
 
