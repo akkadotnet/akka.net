@@ -34,8 +34,6 @@
     href: concepts/location-transparency.md
   - name: Message Delivery Reliability
     href: concepts/message-delivery-reliability.md
-  - name: Configuration
-    href: concepts/configuration.md
 - name: Actors
   items:
   - name: ReceiveActor API
@@ -64,10 +62,6 @@
     href: actors/testing-actor-systems.md
   - name: Coordinated Shutdown
     href: actors/coordinated-shutdown.md
-- name: HOCON
-  items:
-  - name: HOCON Syntax and Practices in Akka.NET
-    href: hocon/index.md
 - name: Persistence
   items: 
   - name: Architecture
