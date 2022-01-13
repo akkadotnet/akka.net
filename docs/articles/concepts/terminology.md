@@ -50,7 +50,7 @@ A Race condition is when an assumption about the ordering of a set of events mig
 
 As discussed in the previous sections, blocking is undesirable for several reasons, including the dangers of deadlocks and reduced throughput in the system. In the following sections we discuss various non-blocking properties with different strength.
 
-`### Wait-Freedom
+### Wait-Freedom
 
 A method is wait-free if every call is guaranteed to finish in a finite number of steps. If a method is bounded wait-free, then the number of steps has a finite upper bound.
 

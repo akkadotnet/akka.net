@@ -92,6 +92,27 @@ memory=2GB   # Limits VM memory in WSL 2 up to 2GB
 processors=2 # Makes the WSL 2 VM use two virtual processors
 ```
 
+#### Rebooting `wsl` With Updated Settings
+
+Once you've made your changes to `.wslconfig` you'll need to reboot your instance for them to take effect.
+
+You can list all of your `wsl` distributions via `wsl -l` or `wsl --list`:
+
+```shell
+Windows Subsystem for Linux Distributions:
+Ubuntu (Default)
+docker-desktop-data
+docker-desktop
+```
+
+In this case we need to terminate our default `Ubuntu` `wsl` instance:
+
+```shell
+wsl --terminate Ubuntu
+```
+
+The next time we try to launch `wsl` our `.wslconfig` settings will be active inside the environment.
+
 ### Repeating a Test Until It Fails
 
 If you're using JetBrains Rider, you can use their unit test feature to run a test until it fails.

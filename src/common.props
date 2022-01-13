@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-2021 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.4.28</VersionPrefix>
+    <VersionPrefix>1.4.32</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
@@ -25,36 +25,14 @@
     <FsCheckVersion>2.16.3</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>4.7.0</ConfigurationManagerVersion>
-    <MultiNodeAdapterVersion>1.1.0-beta2</MultiNodeAdapterVersion>
+    <MultiNodeAdapterVersion>1.1.0</MultiNodeAdapterVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Maintenance Release for Akka.NET 1.4**
-Akka.NET v1.4.28 is a minor release that contains some enhancements for Akka.Streams and some bug fixes.
-New Akka.Streams Stages**
-Akka.NET v1.4.28 includes two new Akka.Streams stages:
-[`Source.Never`](https://getakka.net/articles/streams/builtinstages.html#never) - a utility stage that never emits any elements, never completes, and never fails. Designed primarily for unit testing.
-[`Flow.WireTap`](https://getakka.net/articles/streams/builtinstages.html#wiretap) - the `WireTap` stage attaches a given `Sink` to a `Flow` without affecting any of the upstream or downstream elements. This stage is designed for performance monitoring and instrumentation of Akka.Streams graphs.
-In addition to these, here are some other changes introduced Akka.NET v1.4.28:
-[Akka.Streams: `Source` that flattens a `Task` source and keeps the materialized value](https://github.com/akkadotnet/akka.net/pull/5338)
-[Akka.Streams: made `GraphStageLogic.LogSource` virtual and change default `StageLogic` `LogSource`](https://github.com/akkadotnet/akka.net/pull/5360)
-[Akka.IO: `UdpListener` Responds IPv6 Bound message with IPv4 Bind message](https://github.com/akkadotnet/akka.net/issues/5344)
-[Akka.MultiNodeTestRunner: now runs on Linux and as a `dotnet test` package](https://github.com/akkadotnet/Akka.MultiNodeTestRunner/releases/tag/1.0.0) - we will keep you posted on this, as we're still working on getting Rider / VS Code / Visual Studio debugger-attached support to work correctly.
-[Akka.Persistence.Sql.Common: Cancel `DBCommand` after finish reading events by PersistenceId ](https://github.com/akkadotnet/akka.net/pull/5311) - *massive* performance fix for Akka.Persistence with many log entries on SQL-based journals.
-[Akka.Actor: `DefaultResizer` does not reisize when `ReceiveAsync` is used](https://github.com/akkadotnet/akka.net/issues/5327)
-If you want to see the [full set of changes made in Akka.NET v1.4.28, click here](https://github.com/akkadotnet/akka.net/milestone/59).
-| COMMITS | LOC+ | LOC- | AUTHOR |
-| --- | --- | --- | --- |
-| 16 | 2707 | 1911 | Sean Killeen |
-| 8 | 1088 | 28 | Ismael Hamed |
-| 6 | 501 | 261 | Gregorius Soedharmo |
-| 5 | 8 | 8 | dependabot[bot] |
-| 4 | 36 | 86 | Aaron Stannard |
-| 1 | 1 | 0 | Jarl Sveinung Flø Rasmussen |
-Special thanks for @SeanKilleen for contributing extensive Markdown linting and automated CI checks for that to our documentation! https://github.com/akkadotnet/akka.net/issues/5312</PackageReleaseNotes>
+    <PackageReleaseNotes>Placeholder for nightlies**</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
