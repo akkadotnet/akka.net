@@ -21,7 +21,9 @@ namespace Akka.Persistence.Journal
     /// </summary>
     public abstract class AsyncWriteJournal : WriteJournalBase, IAsyncRecovery
     {
-        private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
+        private static readonly TaskContinuationOptions _continuationOptions =
+            TaskContinuationOptions.ExecuteSynchronously;
+
         protected readonly bool CanPublish;
         private readonly CircuitBreaker _breaker;
         private readonly ReplayFilterMode _replayFilterMode;
@@ -48,7 +50,8 @@ namespace Akka.Persistence.Journal
             var extension = Persistence.Instance.Apply(Context.System);
             if (extension == null)
             {
-                throw new ArgumentException("Couldn't initialize SyncWriteJournal instance, because associated Persistence extension has not been used in current actor system context.");
+                throw new ArgumentException(
+                    "Couldn't initialize SyncWriteJournal instance, because associated Persistence extension has not been used in current actor system context.");
             }
 
             CanPublish = extension.Settings.Internal.PublishPluginCommands;
@@ -75,8 +78,10 @@ namespace Akka.Persistence.Journal
                     _replayFilterMode = ReplayFilterMode.Warn;
                     break;
                 default:
-                    throw new ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
+                    throw new ConfigurationException(
+                        $"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
             }
+
             _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
             _replayFilterWindowSize = config.GetInt("replay-filter.window-size", 0);
             _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers", 0);
@@ -86,7 +91,8 @@ namespace Akka.Persistence.Journal
         }
 
         /// <inheritdoc/>
-        public abstract Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback);
+        public abstract Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr,
+            long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback);
 
         /// <inheritdoc/>
         public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
@@ -249,7 +255,8 @@ namespace Akka.Persistence.Journal
         private void HandleReplayMessages(ReplayMessages message)
         {
             var replyTo = _isReplayFilterEnabled
-                ? Context.ActorOf(ReplayFilter.Props(message.PersistentActor, _replayFilterMode, _replayFilterWindowSize,
+                ? Context.ActorOf(ReplayFilter.Props(message.PersistentActor, _replayFilterMode,
+                    _replayFilterWindowSize,
                     _replayFilterMaxOldWriters, _replayDebugEnabled))
                 : message.PersistentActor;
 
@@ -294,7 +301,8 @@ namespace Akka.Persistence.Journal
                 {
                     // operation failed because a CancellationToken was invoked
                     // wrap the original exception and throw it, with some additional callsite context
-                    var newEx = new OperationCanceledException("ReplayMessagesAsync canceled, possibly due to timing out.", cx);
+                    var newEx = new OperationCanceledException(
+                        "ReplayMessagesAsync canceled, possibly due to timing out.", cx);
                     promise.SetException(newEx);
                 }
                 catch (Exception ex)
@@ -302,14 +310,14 @@ namespace Akka.Persistence.Journal
                     promise.SetException(TryUnwrapException(ex));
                 }
             }
-            
+
             async Task ExecuteRecovery()
             {
                 try
                 {
                     var maxSeqNo = await promise.Task;
                     replyTo.Tell(new RecoverySuccess(maxSeqNo));
-                    
+
                     if (CanPublish)
                     {
                         eventStream.Publish(message);
@@ -341,7 +349,38 @@ namespace Akka.Persistence.Journal
                 if (aggregateException.InnerExceptions.Count == 1)
                     return aggregateException.InnerExceptions[0];
             }
+
             return e;
+        }
+
+        // ValueDelegate implementation for Func<IPersistentRepresentation, Exception, object> mapper
+        private interface IMapperDelegate
+        {
+            object Invoke(WriteMessages message, IPersistentRepresentation rep, Exception ex);
+        }
+
+        private sealed class SuccessDelegate : IMapperDelegate
+        {
+            public static readonly SuccessDelegate Instance = new SuccessDelegate(); 
+            
+            private SuccessDelegate(){}
+            
+            public object Invoke(WriteMessages message, IPersistentRepresentation rep, Exception ex)
+            {
+                if (ex == null)
+                    return new WriteMessageSuccess(rep, message.ActorInstanceId);
+                return new WriteMessageRejected(rep, ex, message.ActorInstanceId);
+            }
+        }
+
+        private sealed class FailureDelegate : IMapperDelegate
+        {
+            public static readonly FailureDelegate Instance = new FailureDelegate();
+            private FailureDelegate(){}
+            public object Invoke(WriteMessages message, IPersistentRepresentation rep, Exception ex)
+            {
+                return new WriteMessageFailure(rep, ex, message.ActorInstanceId);
+            }
         }
 
         private void HandleWriteMessages(WriteMessages message)
@@ -357,50 +396,22 @@ namespace Akka.Persistence.Journal
             _resequencerCounter += message.Messages.Aggregate(1, (acc, m) => acc + m.Size);
             var atomicWriteCount = message.Messages.OfType<AtomicWrite>().Count();
 
-            void Resequence(Func<IPersistentRepresentation, Exception, object> mapper, IImmutableList<Exception> results)
+            void ProcessResults(IImmutableList<Exception> results)
             {
-                var i = 0;
-                var enumerator = results?.GetEnumerator();
-                foreach (var resequencable in message.Messages)
-                {
-                    if (resequencable is AtomicWrite aw)
-                    {
-                        Exception exception = null;
-                        if (enumerator != null)
-                        {
-                            enumerator.MoveNext();
-                            exception = enumerator.Current;
-                        }
+                // there should be no circumstances under which `writeResult` can be `null`
+                if (results != null && results.Count != atomicWriteCount)
+                    throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. " +
+                                                    $"Expected [{atomicWriteCount}], but got [{results.Count}].");
 
-                        foreach (var p in (IEnumerable<IPersistentRepresentation>)aw.Payload)
-                        {
-                            _resequencer.Tell(new Desequenced(mapper(p, exception), counter + i + 1, message.PersistentActor, p.Sender), self);
-                            i++;
-                        }
-                    }
-                    else
-                    {
-                        var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.ActorInstanceId);
-                        _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor, resequencable.Sender), self);
-                        i++;
-                    }
-                }
+                _resequencer.Tell(
+                    new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self),
+                    self);
+                Resequence(SuccessDelegate.Instance, results, message, counter, self, _resequencer);
             }
-
+            
             async Task ExecuteBatch()
             {
-                void ProcessResults(IImmutableList<Exception> results)
-                {
-                    // there should be no circumstances under which `writeResult` can be `null`
-                    if (results != null && results.Count != atomicWriteCount)
-                        throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. " +
-                                                        $"Expected [{atomicWriteCount}], but got [{results.Count}].");
-
-                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self), self);
-                    Resequence((x, exception) => exception == null
-                        ? (object)new WriteMessageSuccess(x, message.ActorInstanceId)
-                        : new WriteMessageRejected(x, exception, message.ActorInstanceId), results);
-                }
+                
 
                 try
                 {
@@ -415,8 +426,10 @@ namespace Akka.Persistence.Journal
                     }
                     catch (Exception e) // this is the old writeMessagesAsyncException
                     {
-                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(e, atomicWriteCount), counter, message.PersistentActor, self), self);
-                        Resequence((x, _) => new WriteMessageFailure(x, e, message.ActorInstanceId), null);
+                        _resequencer.Tell(
+                            new Desequenced(new WriteMessagesFailed(e, atomicWriteCount), counter,
+                                message.PersistentActor, self), self);
+                        Resequence(FailureDelegate.Instance, null, message, counter, self ,_resequencer);
                     }
                 }
                 catch (Exception ex)
@@ -430,6 +443,40 @@ namespace Akka.Persistence.Journal
 #pragma warning disable CS4014
             ExecuteBatch();
 #pragma warning restore CS4014
+        }
+
+        private static void Resequence(IMapperDelegate mapper, IImmutableList<Exception> results, WriteMessages message, long counter, IActorRef self, IActorRef resequencer)
+        {
+            var i = 0;
+            var enumerator = results?.GetEnumerator();
+            foreach (var resequencable in message.Messages)
+            {
+                if (resequencable is AtomicWrite aw)
+                {
+                    Exception exception = null;
+                    if (enumerator != null)
+                    {
+                        enumerator.MoveNext();
+                        exception = enumerator.Current;
+                    }
+
+                    foreach (var p in (IEnumerable<IPersistentRepresentation>)aw.Payload)
+                    {
+                        resequencer.Tell(
+                            new Desequenced(mapper.Invoke(message, p, exception), counter + i + 1, message.PersistentActor,
+                                p.Sender), self);
+                        i++;
+                    }
+                }
+                else
+                {
+                    var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.ActorInstanceId);
+                    resequencer.Tell(
+                        new Desequenced(loopMsg, counter + i + 1, message.PersistentActor, resequencable.Sender),
+                        self);
+                    i++;
+                }
+            }
         }
 
         internal sealed class Desequenced
@@ -465,8 +512,10 @@ namespace Akka.Persistence.Journal
                     {
                         d = Resequence(d);
                     } while (d != null);
+
                     return true;
                 }
+
                 return false;
             }
 

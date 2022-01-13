@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Akka.Cluster.Benchmarks.Persistence.JournalWriteBenchmarks-20220113-164724</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.13.1, OS=Windows 10.0.19041.1415 (2004/May2020Update/20H1)
+AMD Ryzen 7 1700, 1 CPU, 16 logical and 8 physical cores
+.NET SDK=6.0.100
+  [Host]     : .NET 6.0.0 (6.0.21.52210), X64 RyuJIT
+  Job-DVMTLJ : .NET 6.0.0 (6.0.21.52210), X64 RyuJIT
+</code></pre>
+<pre><code>InvocationCount=1  UnrollFactor=1  
+</code></pre>
+
+<table>
+<thead><tr><th>      Method</th><th>PersistentActors</th><th>WriteMsgCount</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Median</th><th>Gen 0</th><th>Gen 1</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>WriteToPersistence</td><td>1</td><td>100</td><td>2.110 ms</td><td>0.0776 ms</td><td>0.2123 ms</td><td>2.032 ms</td><td>-</td><td>-</td><td>631 KB</td>
+</tr><tr><td>WriteToPersistence</td><td>10</td><td>100</td><td>23.042 ms</td><td>0.9491 ms</td><td>2.7686 ms</td><td>21.977 ms</td><td>1000.0000</td><td>1000.0000</td><td>6,410 KB</td>
+</tr><tr><td>WriteToPersistence</td><td>100</td><td>100</td><td>196.058 ms</td><td>1.9166 ms</td><td>1.6004 ms</td><td>196.414 ms</td><td>14000.0000</td><td>3000.0000</td><td>63,377 KB</td>
+</tr></tbody></table>
+</body>
+</html>
