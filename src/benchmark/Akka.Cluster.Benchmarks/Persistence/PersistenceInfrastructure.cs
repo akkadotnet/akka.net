@@ -15,7 +15,7 @@ using Akka.Persistence;
 
 namespace Akka.Cluster.Benchmarks.Persistence
 {
-public sealed class Init
+    public sealed class Init
     {
         public static readonly Init Instance = new Init();
         private Init() { }
@@ -26,11 +26,13 @@ public sealed class Init
         public static readonly Finish Instance = new Finish();
         private Finish() { }
     }
+
     public sealed class Done
     {
         public static readonly Done Instance = new Done();
         private Done() { }
     }
+
     public sealed class Finished
     {
         public readonly long State;
@@ -39,6 +41,13 @@ public sealed class Init
         {
             State = state;
         }
+    }
+
+    public sealed class RecoveryFinished
+    {
+        public static readonly RecoveryFinished Instance = new RecoveryFinished();
+
+        private RecoveryFinished() { }
     }
 
     public sealed class Store
@@ -77,10 +86,9 @@ public sealed class Init
 
         public BenchmarkDoneActor(int expected)
         {
-            _expected = expected;
-
             Receive<IsFinished>(_ =>
             {
+                _expected = expected;
                 _asker = Sender;
             });
 
@@ -89,6 +97,13 @@ public sealed class Init
                 // this will terminate the benchmark
                 if(--_expected <= 0)
                     _asker.Tell(Done.Instance);
+            });
+
+            Receive<RecoveryFinished>(f =>
+            {
+                // this will terminate the benchmark
+                if (--_expected <= 0)
+                    _asker?.Tell(RecoveryFinished.Instance);
             });
         }
     }
@@ -117,6 +132,11 @@ public sealed class Init
             }
 
             return true;
+        }
+
+        protected override void OnReplaySuccess()
+        {
+            _doneActor.Tell(RecoveryFinished.Instance);
         }
 
         protected override bool ReceiveCommand(object message){
