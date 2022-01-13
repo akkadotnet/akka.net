@@ -363,14 +363,14 @@ namespace Akka.Persistence.Journal
 
                         foreach (var p in (IEnumerable<IPersistentRepresentation>)aw.Payload)
                         {
-                            _resequencer.Tell(new Desequenced(mapper(p, exception), counter + i + 1, message.PersistentActor, p.Sender));
+                            _resequencer.Tell(new Desequenced(mapper(p, exception), counter + i + 1, message.PersistentActor, p.Sender), self);
                             i++;
                         }
                     }
                     else
                     {
                         var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.ActorInstanceId);
-                        _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor, resequencable.Sender));
+                        _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor, resequencable.Sender), self);
                         i++;
                     }
                 }
@@ -385,7 +385,7 @@ namespace Akka.Persistence.Journal
                         throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. " +
                                                         $"Expected [{atomicWriteCount}], but got [{results.Count}].");
 
-                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
+                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self), self);
                     Resequence((x, exception) => exception == null
                         ? (object)new WriteMessageSuccess(x, message.ActorInstanceId)
                         : new WriteMessageRejected(x, exception, message.ActorInstanceId), results);
@@ -404,7 +404,7 @@ namespace Akka.Persistence.Journal
                     }
                     catch (Exception e) // this is the old writeMessagesAsyncException
                     {
-                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(e, atomicWriteCount), counter, message.PersistentActor, self));
+                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(e, atomicWriteCount), counter, message.PersistentActor, self), self);
                         Resequence((x, _) => new WriteMessageFailure(x, e, message.ActorInstanceId), null);
                     }
                 }
