@@ -122,7 +122,7 @@ public sealed class Init
         protected override bool ReceiveCommand(object message){
             switch(message){
                 case Store store:
-                     PersistAsync(new Stored(store.Value), s =>
+                    PersistAsync(new Stored(store.Value), s =>
                     {
                         _state += s.Value;
                         if(_state >= _target)

@@ -18,9 +18,10 @@ using static Akka.Cluster.Benchmarks.Persistence.PersistenceInfrastructure;
 namespace Akka.Cluster.Benchmarks.Persistence
 {
     [Config(typeof(MonitoringConfig))]
-    [SimpleJob(launchCount: 1, warmupCount: 3, targetCount: 5, invocationCount: 10)]
     public class JournalWriteBenchmarks
     {
+        private static readonly Store Message = new Store(1);
+
         [Params(1, 10, 100)] public int PersistentActors;
 
         [Params(100)] public int WriteMsgCount;
@@ -36,12 +37,12 @@ namespace Akka.Cluster.Benchmarks.Persistence
         * Database is automatically deleted once the last connection to it is closed.
         */
 
-        [GlobalSetup]
-        public async Task Setup()
+        [IterationSetup]
+        public void Setup()
         {
             var (connectionStr, config) = GenerateJournalConfig();
             _sys1 = ActorSystem.Create("MySys", config);
-            _doneActor = _sys1.ActorOf(Props.Create(() => new BenchmarkDoneActor(WriteMsgCount)), "done");
+            _doneActor = _sys1.ActorOf(Props.Create(() => new BenchmarkDoneActor(PersistentActors)), "done");
             _persistentActors = new HashSet<IActorRef>();
             _msgs = new HashSet<Store>();
 
@@ -61,13 +62,13 @@ namespace Akka.Cluster.Benchmarks.Persistence
             }
 
             // all persistence actors have started and successfully communicated with journal
-            await Task.WhenAll<Done>(tasks);
+            Task.WhenAll(tasks).Wait(startupCts.Token);
         }
 
-        [GlobalCleanup]
-        public async Task Cleanup()
+        [IterationCleanup]
+        public void Cleanup()
         {
-            await _sys1.Terminate();
+            _sys1.Terminate().Wait();
         }
 
         [Benchmark]
@@ -77,10 +78,10 @@ namespace Akka.Cluster.Benchmarks.Persistence
 
             var completionTask = _doneActor.Ask<Finished>(IsFinished.Instance, startupCts.Token);
 
-            foreach (var i in _msgs)
+            foreach(var _ in Enumerable.Range(0, WriteMsgCount))
             foreach (var a in _persistentActors)
             {
-                a.Tell(i);
+                a.Tell(Message);
             }
 
             await completionTask;
