@@ -1,5 +1,5 @@
-- name: Configuration
-  href: index.md
+- name: Configurations
+  href: config.md
 - name: HOCON Syntax and Practices in Akka.NET
   href: hocon.md
 - name: Akka
