@@ -322,7 +322,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="e">TBD</param>
         /// <returns>TBD</returns>
-        protected static Exception TryUnwrapException(Exception e)
+        protected Exception TryUnwrapException(Exception e)
         {
             if (e is AggregateException aggregateException)
             {
@@ -345,33 +345,11 @@ namespace Akka.Persistence.Journal
             var self = Self;
             _resequencerCounter += message.Messages.Aggregate(1, (acc, m) => acc + m.Size);
             var atomicWriteCount = message.Messages.OfType<AtomicWrite>().Count();
-            AtomicWrite[] prepared;
-            Task<IImmutableList<Exception>> writeResult;
-            Exception writeMessagesAsyncException = null;
-            try
-            {
-                prepared = PreparePersistentBatch(message.Messages).ToArray();
-                // try in case AsyncWriteMessages throws
-                try
-                {
-                    writeResult = _breaker.WithCircuitBreaker(() => WriteMessagesAsync(prepared));
-                }
-                catch (Exception e)
-                {
-                    writeResult = Task.FromResult((IImmutableList<Exception>) null);
-                    writeMessagesAsyncException = e;
-                }
-            }
-            catch (Exception e)
-            {
-                // exception from PreparePersistentBatch => rejected
-                writeResult = Task.FromResult((IImmutableList<Exception>)Enumerable.Repeat(e, atomicWriteCount).ToImmutableList());
-            }
 
             void Resequence(Func<IPersistentRepresentation, Exception, object> mapper, IImmutableList<Exception> results)
             {
                 var i = 0;
-                var enumerator = results != null ? results.GetEnumerator() : null;
+                var enumerator = results?.GetEnumerator();
                 foreach (var resequencable in message.Messages)
                 {
                     if (resequencable is AtomicWrite aw)
@@ -398,31 +376,49 @@ namespace Akka.Persistence.Journal
                 }
             }
 
-            writeResult
-                .ContinueWith(t =>
+            async Task ExecuteBatch()
+            {
+                void ProcessResults(IImmutableList<Exception> results)
                 {
-                    if (!t.IsFaulted && !t.IsCanceled && writeMessagesAsyncException == null)
-                    {
-                        if (t.Result != null && t.Result.Count != atomicWriteCount)
-                            throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. Expected [{atomicWriteCount}], but got [{t.Result.Count}].");
+                    // there should be no circumstances under which `writeResult` can be `null`
+                    if (results != null && results.Count != atomicWriteCount)
+                        throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. " +
+                                                        $"Expected [{atomicWriteCount}], but got [{results.Count}].");
 
-                        _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
-                        Resequence((x, exception) => exception == null
-                            ? (object)new WriteMessageSuccess(x, message.ActorInstanceId)
-                            : new WriteMessageRejected(x, exception, message.ActorInstanceId), t.Result);
-                    }
-                    else
+                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
+                    Resequence((x, exception) => exception == null
+                        ? (object)new WriteMessageSuccess(x, message.ActorInstanceId)
+                        : new WriteMessageRejected(x, exception, message.ActorInstanceId), results);
+                }
+
+                try
+                {
+                    var prepared = PreparePersistentBatch(message.Messages).ToArray();
+                    // try in case AsyncWriteMessages throws
+                    try
                     {
-                        var exception = writeMessagesAsyncException != null
-                            ? writeMessagesAsyncException
-                            : (t.IsFaulted
-                                ? TryUnwrapException(t.Exception)
-                                : new OperationCanceledException(
-                                    "WriteMessagesAsync canceled, possibly due to timing out."));
-                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(exception, atomicWriteCount), counter, message.PersistentActor, self));
-                        Resequence((x, _) => new WriteMessageFailure(x, exception, message.ActorInstanceId), null);
+                        var writeResult =
+                            await _breaker.WithCircuitBreaker(() => WriteMessagesAsync(prepared)).ConfigureAwait(false);
+
+                        ProcessResults(writeResult);
                     }
-                }, _continuationOptions);
+                    catch (Exception e) // this is the old writeMessagesAsyncException
+                    {
+                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(e, atomicWriteCount), counter, message.PersistentActor, self));
+                        Resequence((x, _) => new WriteMessageFailure(x, e, message.ActorInstanceId), null);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // exception from PreparePersistentBatch => rejected
+                    ProcessResults(Enumerable.Repeat(ex, atomicWriteCount).ToImmutableList());
+                }
+            }
+
+            // Using an async local function instead of ContinueWith
+#pragma warning disable CS4014
+            ExecuteBatch();
+#pragma warning restore CS4014
         }
 
         internal sealed class Desequenced
@@ -476,7 +472,7 @@ namespace Akka.Persistence.Journal
                 }
 
                 var delivered = _delivered + 1;
-                if (_delayed.TryGetValue(delivered, out Desequenced d))
+                if (_delayed.TryGetValue(delivered, out var d))
                 {
                     _delayed.Remove(delivered);
                     return d;
