@@ -264,10 +264,19 @@ namespace Akka.Persistence.Journal
             var eventStream = Context.System.EventStream;
 
             var readHighestSequenceNrFrom = Math.Max(0L, message.FromSequenceNr - 1);
-            var promise = new TaskCompletionSource<long>();
 
             async Task ExecuteHighestSequenceNr()
             {
+                void CompleteHighSeqNo(long highSeqNo)
+                {
+                    replyTo.Tell(new RecoverySuccess(highSeqNo));
+
+                    if (CanPublish)
+                    {
+                        eventStream.Publish(message);
+                    }
+                }
+                
                 try
                 {
                     var highSequenceNr = await _breaker.WithCircuitBreaker(() =>
@@ -275,7 +284,7 @@ namespace Akka.Persistence.Journal
                     var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
                     if (toSequenceNr <= 0L || message.FromSequenceNr > toSequenceNr)
                     {
-                        promise.SetResult(highSequenceNr);
+                        CompleteHighSeqNo(highSequenceNr);
                     }
                     else
                     {
@@ -294,7 +303,7 @@ namespace Akka.Persistence.Journal
                                 }
                             });
 
-                        promise.SetResult(highSequenceNr);
+                        CompleteHighSeqNo(highSequenceNr);
                     }
                 }
                 catch (OperationCanceledException cx)
@@ -303,36 +312,17 @@ namespace Akka.Persistence.Journal
                     // wrap the original exception and throw it, with some additional callsite context
                     var newEx = new OperationCanceledException(
                         "ReplayMessagesAsync canceled, possibly due to timing out.", cx);
-                    promise.SetException(newEx);
-                }
-                catch (Exception ex)
-                {
-                    promise.SetException(TryUnwrapException(ex));
-                }
-            }
-
-            async Task ExecuteRecovery()
-            {
-                try
-                {
-                    var maxSeqNo = await promise.Task;
-                    replyTo.Tell(new RecoverySuccess(maxSeqNo));
-
-                    if (CanPublish)
-                    {
-                        eventStream.Publish(message);
-                    }
+                    replyTo.Tell(new ReplayMessagesFailure(newEx));
                 }
                 catch (Exception ex)
                 {
                     replyTo.Tell(new ReplayMessagesFailure(TryUnwrapException(ex)));
                 }
             }
-
+            
             // instead of ContinueWith
 #pragma warning disable CS4014
             ExecuteHighestSequenceNr();
-            ExecuteRecovery();
 #pragma warning restore CS4014
         }
 
