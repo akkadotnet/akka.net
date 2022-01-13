@@ -17,7 +17,7 @@ using static Akka.Cluster.Benchmarks.Persistence.PersistenceInfrastructure;
 
 namespace Akka.Cluster.Benchmarks.Persistence
 {
-    [Config(typeof(MonitoringConfig))]
+    [Config(typeof(MicroBenchmarkConfig))]
     public class JournalWriteBenchmarks
     {
         private static readonly Store Message = new Store(1);
@@ -30,7 +30,6 @@ namespace Akka.Cluster.Benchmarks.Persistence
 
         private IActorRef _doneActor;
         private HashSet<IActorRef> _persistentActors;
-        private HashSet<Store> _msgs;
 
         /*
         * Don't need to worry about cleaning up in-memory SQLite databases: https://www.sqlite.org/inmemorydb.html
@@ -44,7 +43,6 @@ namespace Akka.Cluster.Benchmarks.Persistence
             _sys1 = ActorSystem.Create("MySys", config);
             _doneActor = _sys1.ActorOf(Props.Create(() => new BenchmarkDoneActor(PersistentActors)), "done");
             _persistentActors = new HashSet<IActorRef>();
-            _msgs = new HashSet<Store>();
 
             var tasks = new List<Task<Done>>();
             var startupCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
@@ -53,12 +51,6 @@ namespace Akka.Cluster.Benchmarks.Persistence
                 var myRef = _sys1.ActorOf(Props.Create(() => new PerformanceTestActor(i.ToString(), _doneActor, WriteMsgCount)), i.ToString());
                 _persistentActors.Add(myRef);
                 tasks.Add(myRef.Ask<Done>(Init.Instance, startupCts.Token));
-            }
-
-            // precalculate all messages sent to actors
-            foreach (var i in Enumerable.Range(0, WriteMsgCount))
-            {
-                _msgs.Add(new Store(i));
             }
 
             // all persistence actors have started and successfully communicated with journal
@@ -76,7 +68,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
         {
             var startupCts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
 
-            var completionTask = _doneActor.Ask<Finished>(IsFinished.Instance, startupCts.Token);
+            var completionTask = _doneActor.Ask<Done>(IsFinished.Instance, startupCts.Token);
 
             foreach(var _ in Enumerable.Range(0, WriteMsgCount))
             foreach (var a in _persistentActors)
