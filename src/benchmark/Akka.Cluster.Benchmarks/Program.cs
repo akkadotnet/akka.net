@@ -10,9 +10,9 @@ namespace Akka.Cluster.Benchmarks
         static void Main(string[] args)
         {
 #if (DEBUG)
-            BenchmarkSwitcher.FromAssembly(Assembly.GetExecutingAssembly()).Run(args, new DebugInProcessConfig());
+            BenchmarkSwitcher.FromAssembly(typeof(Program).Assemnbly).Run(args, new DebugInProcessConfig());
 #else
-            BenchmarkSwitcher.FromAssembly(Assembly.GetExecutingAssembly()).Run(args);
+            BenchmarkSwitcher.FromAssembly(typeof(Program).Assemnbly).Run(args);
 #endif
 
         }
