@@ -135,8 +135,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
-            var persistenceIds = new HashSet<string>();
-            var allTags = new HashSet<string>();
+            var allTags = ImmutableHashSet<string>.Empty;
 
             var writeTasks = messages.Select(async message =>
             {
@@ -145,16 +144,16 @@ namespace Akka.Persistence.Sql.Common.Journal
                     await connection.OpenAsync();
 
                     var eventToTags = new Dictionary<IPersistentRepresentation, IImmutableSet<string>>();
-                    var persistentMessages = ((IImmutableList<IPersistentRepresentation>)message.Payload).ToArray();
-                    for (int i = 0; i < persistentMessages.Length; i++)
+                    var persistentMessages = (IImmutableList<IPersistentRepresentation>)message.Payload;
+                    for (var i = 0; i < persistentMessages.Count; i++)
                     {
                         var p = persistentMessages[i];
                         if (p.Payload is Tagged tagged)
                         {
-                            persistentMessages[i] = p = p.WithPayload(tagged.Payload);
+                            p = p.WithPayload(tagged.Payload);
                             if (tagged.Tags.Count != 0)
                             {
-                                allTags.UnionWith(tagged.Tags);
+                                allTags = allTags.Union(tagged.Tags);
                                 eventToTags.Add(p, tagged.Tags);
                             }
                             else eventToTags.Add(p, ImmutableHashSet<string>.Empty);
@@ -167,7 +166,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                     var batch = new WriteJournalBatch(eventToTags);
                     using(var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                        await QueryExecutor.InsertBatchAsync(connection, cancellationToken.Token, batch);
+                        await QueryExecutor.InsertBatchAsync(connection, cancellationToken.Token, batch).ConfigureAwait(false);
                 }
             }).ToArray();
 
@@ -175,15 +174,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 .Factory
                 .ContinueWhenAll(writeTasks,
                     tasks => tasks.Select(t => t.IsFaulted ? TryUnwrapException(t.Exception) : null).ToImmutableList());
-
-            if (HasPersistenceIdSubscribers)
-            {
-                foreach (var persistenceId in persistenceIds)
-                {
-                    NotifyPersistenceIdChange(persistenceId);
-                }
-            }
-
+            
             if (HasTagSubscribers && allTags.Count != 0)
             {
                 foreach (var tag in allTags)
