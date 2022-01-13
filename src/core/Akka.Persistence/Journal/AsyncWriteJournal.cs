@@ -247,23 +247,25 @@ namespace Akka.Persistence.Journal
 
             var readHighestSequenceNrFrom = Math.Max(0L, message.FromSequenceNr - 1);
             var promise = new TaskCompletionSource<long>();
-            _breaker.WithCircuitBreaker(() => ReadHighestSequenceNrAsync(message.PersistenceId, readHighestSequenceNrFrom))
-                .ContinueWith(t =>
+
+            async Task ExecuteHighestSequenceNr()
+            {
+                try
                 {
-                    if (!t.IsFaulted && !t.IsCanceled)
+                    var highSequenceNr = await _breaker.WithCircuitBreaker(() =>
+                        ReadHighestSequenceNrAsync(message.PersistenceId, readHighestSequenceNrFrom));
+                    var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
+                    if (toSequenceNr <= 0L || message.FromSequenceNr > toSequenceNr)
                     {
-                        var highSequenceNr = t.Result;
-                        var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
-                        if (toSequenceNr <= 0L || message.FromSequenceNr > toSequenceNr)
-                        {
-                            promise.SetResult(highSequenceNr);
-                        }
-                        else
-                        {
-                            // Send replayed messages and replay result to persistentActor directly. No need
-                            // to resequence replayed messages relative to written and looped messages.
-                            // not possible to use circuit breaker here
-                            ReplayMessagesAsync(context, message.PersistenceId, message.FromSequenceNr, toSequenceNr, message.Max, p =>
+                        promise.SetResult(highSequenceNr);
+                    }
+                    else
+                    {
+                        // Send replayed messages and replay result to persistentActor directly. No need
+                        // to resequence replayed messages relative to written and looped messages.
+                        // not possible to use circuit breaker here
+                        await ReplayMessagesAsync(context, message.PersistenceId, message.FromSequenceNr, toSequenceNr,
+                            message.Max, p =>
                             {
                                 if (!p.IsDeleted) // old records from pre 1.0.7 may still have the IsDeleted flag
                                 {
@@ -272,34 +274,47 @@ namespace Akka.Persistence.Journal
                                         replyTo.Tell(new ReplayedMessage(adaptedRepresentation), ActorRefs.NoSender);
                                     }
                                 }
-                            })
-                            .ContinueWith(replayTask =>
-                            {
-                                if (!replayTask.IsFaulted && !replayTask.IsCanceled)
-                                    promise.SetResult(highSequenceNr);
-                                else
-                                    promise.SetException(replayTask.IsFaulted
-                                        ? TryUnwrapException(replayTask.Exception)
-                                        : new OperationCanceledException("ReplayMessagesAsync canceled, possibly due to timing out."));
-                            }, _continuationOptions);
-                        }
+                            });
+
+                        promise.SetResult(highSequenceNr);
                     }
-                    else
-                    {
-                        promise.SetException(t.IsFaulted
-                            ? TryUnwrapException(t.Exception)
-                            : new OperationCanceledException("ReadHighestSequenceNrAsync canceled, possibly due to timing out."));
-                    }
-                }, _continuationOptions);
-            promise.Task
-                .ContinueWith(t => !t.IsFaulted
-                    ? new RecoverySuccess(t.Result) as IJournalResponse
-                    : new ReplayMessagesFailure(TryUnwrapException(t.Exception)), _continuationOptions)
-                .PipeTo(replyTo)
-                .ContinueWith(t =>
+                }
+                catch (OperationCanceledException cx)
                 {
-                    if (!t.IsFaulted && CanPublish) eventStream.Publish(message);
-                }, _continuationOptions);
+                    // operation failed because a CancellationToken was invoked
+                    // wrap the original exception and throw it, with some additional callsite context
+                    var newEx = new OperationCanceledException("ReplayMessagesAsync canceled, possibly due to timing out.", cx);
+                    promise.SetException(newEx);
+                }
+                catch (Exception ex)
+                {
+                    promise.SetException(TryUnwrapException(ex));
+                }
+            }
+            
+            async Task ExecuteRecovery()
+            {
+                try
+                {
+                    var maxSeqNo = await promise.Task;
+                    replyTo.Tell(new RecoverySuccess(maxSeqNo));
+                    
+                    if (CanPublish)
+                    {
+                        eventStream.Publish(message);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    replyTo.Tell(new ReplayMessagesFailure(TryUnwrapException(ex)));
+                }
+            }
+
+            // instead of ContinueWith
+#pragma warning disable CS4014
+            ExecuteHighestSequenceNr();
+            ExecuteRecovery();
+#pragma warning restore CS4014
         }
 
         /// <summary>
@@ -307,7 +322,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="e">TBD</param>
         /// <returns>TBD</returns>
-        protected Exception TryUnwrapException(Exception e)
+        protected static Exception TryUnwrapException(Exception e)
         {
             if (e is AggregateException aggregateException)
             {
