@@ -217,22 +217,33 @@ namespace Akka.Persistence.Journal
         private void HandleDeleteMessagesTo(DeleteMessagesTo message)
         {
             var eventStream = Context.System.EventStream;
-            _breaker.WithCircuitBreaker(() => DeleteMessagesToAsync(message.PersistenceId, message.ToSequenceNr))
-                .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
-                        ? new DeleteMessagesSuccess(message.ToSequenceNr) as object
-                        : new DeleteMessagesFailure(
-                            t.IsFaulted
-                                ? TryUnwrapException(t.Exception)
-                                : new OperationCanceledException(
-                                    "DeleteMessagesToAsync canceled, possibly due to timing out."),
-                            message.ToSequenceNr),
-                    _continuationOptions)
-                .PipeTo(message.PersistentActor)
-                .ContinueWith(t =>
+            var self = Context.Self;
+
+            async Task ProcessDelete()
+            {
+                try
                 {
-                    if (!t.IsFaulted && !t.IsCanceled && CanPublish)
+                    await _breaker.WithCircuitBreaker(() =>
+                        DeleteMessagesToAsync(message.PersistenceId, message.ToSequenceNr));
+
+                    message.PersistentActor.Tell(new DeleteMessagesSuccess(message.ToSequenceNr), self);
+
+                    if (CanPublish)
+                    {
                         eventStream.Publish(message);
-                }, _continuationOptions);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    message.PersistentActor.Tell(
+                        new DeleteMessagesFailure(TryUnwrapException(ex), message.ToSequenceNr), self);
+                }
+            }
+
+            // instead of ContinueWith
+#pragma warning disable CS4014
+            ProcessDelete();
+#pragma warning restore CS4014
         }
 
         private void HandleReplayMessages(ReplayMessages message)
