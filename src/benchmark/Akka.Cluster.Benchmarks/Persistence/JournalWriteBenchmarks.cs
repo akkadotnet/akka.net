@@ -19,7 +19,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
 {
     [Config(typeof(MonitoringConfig))]
     [SimpleJob(launchCount: 1, warmupCount: 3, targetCount: 5, invocationCount: 10)]
-    public sealed class JournalWriteBenchmarks
+    public class JournalWriteBenchmarks
     {
         [Params(1, 10, 100)] public int PersistentActors;
 
@@ -27,6 +27,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
 
         private ActorSystem _sys1;
 
+        private IActorRef _doneActor;
         private HashSet<IActorRef> _persistentActors;
         private HashSet<Store> _msgs;
 
@@ -35,11 +36,12 @@ namespace Akka.Cluster.Benchmarks.Persistence
         * Database is automatically deleted once the last connection to it is closed.
         */
 
-        [IterationSetup]
+        [GlobalSetup]
         public async Task Setup()
         {
             var (connectionStr, config) = GenerateJournalConfig();
             _sys1 = ActorSystem.Create("MySys", config);
+            _doneActor = _sys1.ActorOf(Props.Create(() => new BenchmarkDoneActor(WriteMsgCount)), "done");
             _persistentActors = new HashSet<IActorRef>();
             _msgs = new HashSet<Store>();
 
@@ -47,7 +49,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
             var startupCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             foreach (var i in Enumerable.Range(0, PersistentActors))
             {
-                var myRef = _sys1.ActorOf(Props.Create(() => new PerformanceTestActor(i.ToString())), i.ToString());
+                var myRef = _sys1.ActorOf(Props.Create(() => new PerformanceTestActor(i.ToString(), _doneActor, WriteMsgCount)), i.ToString());
                 _persistentActors.Add(myRef);
                 tasks.Add(myRef.Ask<Done>(Init.Instance, startupCts.Token));
             }
@@ -62,7 +64,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
             await Task.WhenAll<Done>(tasks);
         }
 
-        [IterationCleanup]
+        [GlobalCleanup]
         public async Task Cleanup()
         {
             await _sys1.Terminate();
@@ -72,7 +74,8 @@ namespace Akka.Cluster.Benchmarks.Persistence
         public async Task WriteToPersistence()
         {
             var startupCts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
-            var tasks = new List<Task<Finished>>();
+
+            var completionTask = _doneActor.Ask<Finished>(IsFinished.Instance, startupCts.Token);
 
             foreach (var i in _msgs)
             foreach (var a in _persistentActors)
@@ -80,12 +83,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
                 a.Tell(i);
             }
 
-            foreach (var a in _persistentActors)
-            {
-                tasks.Add(a.Ask<Finished>(Finish.Instance, startupCts.Token));
-            }
-
-            await Task.WhenAll<Finished>(tasks);
+            await completionTask;
         }
     }
 }

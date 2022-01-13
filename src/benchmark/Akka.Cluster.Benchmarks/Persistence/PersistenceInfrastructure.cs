@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Util;
@@ -60,12 +61,48 @@ public sealed class Init
         }
     }
 
+    /// <summary>
+    /// Query to <see cref="BenchmarkDoneActor"/> that will be used to signal termination
+    /// </summary>
+    public sealed class IsFinished
+    {
+        public static readonly IsFinished Instance = new IsFinished();
+        private IsFinished(){}
+    }
+
+    public sealed class BenchmarkDoneActor : ReceiveActor
+    {
+        private int _expected;
+        private IActorRef _asker;
+
+        public BenchmarkDoneActor(int expected)
+        {
+            _expected = expected;
+
+            Receive<IsFinished>(_ =>
+            {
+                _asker = Sender;
+            });
+
+            Receive<Finished>(f =>
+            {
+                // this will terminate the benchmark
+                if(--_expected <= 0)
+                    _asker.Tell(Done.Instance);
+            });
+        }
+    }
+
     public sealed class PerformanceTestActor : PersistentActor
     {
-        private long state = 0L;
-        public PerformanceTestActor(string persistenceId)
+        private long _state = 0L;
+        private readonly long _target;
+        private readonly IActorRef _doneActor;
+        public PerformanceTestActor(string persistenceId, IActorRef doneActor, long target)
         {
+            _doneActor = doneActor;
             PersistenceId = persistenceId;
+            _target = target;
         }
 
         public sealed override string PersistenceId { get; }
@@ -73,7 +110,7 @@ public sealed class Init
         protected override bool ReceiveRecover(object message) {
             switch(message){
                 case Stored s:
-                    state += s.Value;
+                    _state += s.Value;
                 break;
                 default:
                     return false;
@@ -85,21 +122,23 @@ public sealed class Init
         protected override bool ReceiveCommand(object message){
             switch(message){
                 case Store store:
-                     Persist(new Stored(store.Value), s =>
+                     PersistAsync(new Stored(store.Value), s =>
                     {
-                        state += s.Value;
+                        _state += s.Value;
+                        if(_state >= _target)
+                            _doneActor.Tell(new Finished(_state));
                     });
                     break;
                 case Init _:
                     var sender = Sender;
-                    Persist(new Stored(0), s =>
+                    PersistAsync(new Stored(0), s =>
                     {
-                        state += s.Value;
+                        _state += s.Value;
                         sender.Tell(Done.Instance);
                     });
                     break;
                 case Finish _:
-                    Sender.Tell(new Finished(state));
+                    Sender.Tell(new Finished(_state));
                     break;
                 default:
                     return false;
