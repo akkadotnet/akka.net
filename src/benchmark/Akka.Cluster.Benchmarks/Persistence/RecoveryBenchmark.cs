@@ -18,7 +18,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
 
         [Params(1, 10, 100)] public int PersistentActors;
 
-        [Params(100)] public int WriteMsgCount;
+        [Params(100, 1000)] public int WriteMsgCount;
 
         private ActorSystem _sys1;
 
@@ -33,7 +33,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
         [GlobalSetup]
         public async Task GlobalSetup()
         {
-            var (connectionStr, config) = GenerateJournalConfig();
+            var config = GenerateJournalConfig();
             _sys1 = ActorSystem.Create("MySys", config);
             _doneActor = _sys1.ActorOf(Props.Create(() => new BenchmarkDoneActor(PersistentActors)), "done");
             _persistentActors = new HashSet<IActorRef>();

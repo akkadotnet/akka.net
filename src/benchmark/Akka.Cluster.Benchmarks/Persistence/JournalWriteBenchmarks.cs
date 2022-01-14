@@ -39,7 +39,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
         [IterationSetup]
         public void Setup()
         {
-            var (connectionStr, config) = GenerateJournalConfig();
+            var config = GenerateJournalConfig();
             _sys1 = ActorSystem.Create("MySys", config);
             _doneActor = _sys1.ActorOf(Props.Create(() => new BenchmarkDoneActor(PersistentActors)), "done");
             _persistentActors = new HashSet<IActorRef>();
