@@ -87,7 +87,8 @@ namespace Akka.Serialization
                     knownTypes: provider.GetKnownTypes(),
                     ignoreISerializable:true,
                     packageNameOverrides: settings.PackageNameOverrides,
-                    disallowUnsafeTypes: settings.DisallowUnsafeType));
+                    disallowUnsafeTypes: settings.DisallowUnsafeType,
+                    typeFilter: settings.TypeFilter));
         }
 
         /// <summary>
@@ -166,7 +167,8 @@ namespace Akka.Serialization
             knownTypesProvider: typeof(NoKnownTypes), 
             packageNameOverrides: new List<Func<string, string>>(),
             surrogates: new Surrogate[0],
-            disallowUnsafeType: true);
+            disallowUnsafeType: true,
+            typeFilter: DisabledTypeFilter.Instance);
 
         /// <summary>
         /// Creates a new instance of <see cref="HyperionSerializerSettings"/> using provided HOCON config.
@@ -227,7 +229,22 @@ namespace Akka.Serialization
 
                 surrogates.Add((Surrogate)Activator.CreateInstance(surrogateType));
             }
-            
+
+            var typeFilter = (ITypeFilter) DisabledTypeFilter.Instance;
+            var allowedList = config.GetStringList("allowed-types");
+            if (allowedList.Count > 0)
+            {
+                var filterBuilder = TypeFilterBuilder.Create();
+                foreach (var allowedFqcn in allowedList)
+                {
+                    var allowedType = Type.GetType(allowedFqcn);
+                    if (allowedType is null)
+                        throw new ConfigurationException($"Could not load type [{allowedFqcn}] from allowed-type.");
+                    filterBuilder.Include(allowedType);
+                }
+
+                typeFilter = filterBuilder.Build();
+            }
 
             return new HyperionSerializerSettings(
                 preserveObjectReferences: config.GetBoolean("preserve-object-references", true),
@@ -235,7 +252,8 @@ namespace Akka.Serialization
                 knownTypesProvider: type,
                 packageNameOverrides: packageNameOverrides,
                 surrogates: surrogates,
-                disallowUnsafeType: config.GetBoolean("disallow-unsafe-type", true));
+                disallowUnsafeType: config.GetBoolean("disallow-unsafe-type", true),
+                typeFilter: typeFilter);
         }
 
         /// <summary>
@@ -279,6 +297,12 @@ namespace Akka.Serialization
         public readonly bool DisallowUnsafeType;
 
         /// <summary>
+        /// If set, Hyperion serializer will use the <see cref="ITypeFilter"/> to filter the types that are
+        /// being deserialized during run-time
+        /// </summary>
+        public readonly ITypeFilter TypeFilter;
+
+        /// <summary>
         /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
         /// </summary>
         /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
@@ -287,7 +311,7 @@ namespace Akka.Serialization
         /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
         [Obsolete]
         public HyperionSerializerSettings(bool preserveObjectReferences, bool versionTolerance, Type knownTypesProvider)
-            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, new List<Func<string, string>>(), new Surrogate[0], true)
+            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, new List<Func<string, string>>(), new Surrogate[0], true, DisabledTypeFilter.Instance)
         { }
 
         /// <summary>
@@ -304,7 +328,7 @@ namespace Akka.Serialization
             bool versionTolerance, 
             Type knownTypesProvider, 
             IEnumerable<Func<string, string>> packageNameOverrides)
-            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, new Surrogate[0], true)
+            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, new Surrogate[0], true, DisabledTypeFilter.Instance)
         { }
 
         /// <summary>
@@ -322,9 +346,9 @@ namespace Akka.Serialization
             Type knownTypesProvider, 
             IEnumerable<Func<string, string>> packageNameOverrides,
             IEnumerable<Surrogate> surrogates)
-            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, surrogates, true)
+            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, surrogates, true, DisabledTypeFilter.Instance)
         { }
-        
+
         /// <summary>
         /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
         /// </summary>
@@ -336,12 +360,34 @@ namespace Akka.Serialization
         /// <param name="disallowUnsafeType">Block unsafe types from being deserialized.</param>
         /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
         public HyperionSerializerSettings(
+            bool preserveObjectReferences,
+            bool versionTolerance,
+            Type knownTypesProvider,
+            IEnumerable<Func<string, string>> packageNameOverrides,
+            IEnumerable<Surrogate> surrogates,
+            bool disallowUnsafeType)
+            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, surrogates, disallowUnsafeType, DisabledTypeFilter.Instance)
+        { }
+        
+        /// <summary>
+        /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
+        /// </summary>
+        /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
+        /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
+        /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
+        /// <param name="packageNameOverrides">An array of package name overrides for cross platform compatibility</param>
+        /// <param name="surrogates">A list of <see cref="Surrogate"/> instances that are used to de/serialize complex objects into a much simpler serialized objects.</param>
+        /// <param name="disallowUnsafeType">Block unsafe types from being deserialized.</param>
+        /// <param name="typeFilter">A <see cref="ITypeFilter"/> instance that will filter types from being deserialized.</param>
+        /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
+        public HyperionSerializerSettings(
             bool preserveObjectReferences, 
             bool versionTolerance, 
             Type knownTypesProvider, 
             IEnumerable<Func<string, string>> packageNameOverrides,
             IEnumerable<Surrogate> surrogates, 
-            bool disallowUnsafeType)
+            bool disallowUnsafeType,
+            ITypeFilter typeFilter)
         {
             knownTypesProvider = knownTypesProvider ?? typeof(NoKnownTypes);
             if (!typeof(IKnownTypesProvider).IsAssignableFrom(knownTypesProvider))
@@ -353,6 +399,7 @@ namespace Akka.Serialization
             PackageNameOverrides = packageNameOverrides;
             Surrogates = surrogates;
             DisallowUnsafeType = disallowUnsafeType;
+            TypeFilter = typeFilter;
         }
     }
 }
