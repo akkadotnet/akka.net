@@ -140,7 +140,11 @@ namespace Akka.Cluster
             _readView = new ClusterReadView(this);
 
             // force the underlying system to start
-            _clusterCore = GetClusterCoreRef().Result;
+            // and hard block the current thread
+            var clusterCoreTask = Task.Run(GetClusterCoreRef);
+            if (!clusterCoreTask.Wait(System.Settings.CreationTimeout))
+                throw new TimeoutException("cluster startup");
+            _clusterCore = clusterCoreTask.Result;
 
             system.RegisterOnTermination(Shutdown);
 
