@@ -120,17 +120,13 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
         [Fact]
         public void ShouldFailIfMoreExceptionsThenSpecifiedAreLogged()
         {
-            //todo fix logging race
             var exception = XAssert.Throws<TrueException>(() =>
-            {
                 EventFilter.Exception<SomeException>().Expect(2, () =>
                 {
                     Log.Error(new SomeException(), "whatever");
                     Log.Error(new SomeException(), "whatever");
                     Log.Error(new SomeException(), "whatever");
-                });
-            });
-                
+                }));
             Assert.Contains("1 message too many", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
 

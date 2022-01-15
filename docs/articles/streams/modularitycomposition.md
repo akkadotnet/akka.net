@@ -7,7 +7,7 @@ title: Modularity, Composition and Hierarchy
 
 Akka Streams provide a uniform model of stream processing graphs, which allows flexible composition of reusable components. In this chapter we show how these look like from the conceptual and API perspective, demonstrating the modularity aspects of the library.
 
-## Basics of composition and modularity
+## Basics of Composition and Modularity
 
 Every processing stage used in Akka Streams can be imagined as a "box" with input and output ports where elements to be processed arrive and leave the stage. In this view, a `Source` is nothing else than a "box" with a single output port, or, a `BidiFlow` is a "box" with exactly two input and two output ports. In the figure below we illustrate the most common used stages viewed as "boxes".
 
@@ -107,7 +107,7 @@ var runnableGraph = nestedSource.To(nestedSink);
 var runnableGraph2 = Source.Single(0).To(Sink.Aggregate<int, int>(0, (sum, x) => sum + x));
 ```
 
-## Composing complex systems
+## Composing Complex Systems
 
 In the previous section we explored the possibility of composition, and hierarchy, but we stayed away from non-linear,
 generalized graph components. There is nothing in Akka Streams though that enforces that stream processing layouts
@@ -280,7 +280,7 @@ We have also seen, that every module has a `Shape` (for example a `Sink` has a `
 independently which DSL was used to create it. This uniform representation enables the rich composability of various
 stream processing entities in a convenient way.
 
-## Materialized values
+## Materialized Values
 
 After realizing that `RunnableGraph` is nothing more than a module with no unused ports (it is an island), it becomes clear that
 after materialization the only way to communicate with the running stream processing logic is via some side-channel.

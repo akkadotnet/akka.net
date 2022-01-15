@@ -126,7 +126,7 @@ You have complete flexibility here in mixing and matching the `TestKit` faciliti
 > [!WARNING]
 > Any message send from a `TestProbe` to another actor which runs on the `CallingThreadDispatcher` runs the risk of dead-lock, if that other actor might also send to this probe. The implementation of `TestProbe.Watch` and `TestProbe.Unwatch` will also send a message to the watchee, which means that it is dangerous to try watching e.g. `TestActorRef` from a `TestProbe`.
 
-### Watching Other Actors from probes
+### Watching Other Actors From Probes
 
 A `TestProbe` can register itself for DeathWatch of any other actor:
 
@@ -161,11 +161,11 @@ Receiving messages in a queue for later inspection is nice, but in order to keep
 The `run` method must return the auto-pilot for the next message. There are multiple options here:
 You can return the `AutoPilot.NoAutoPilot` to stop the autopilot, or `AutoPilot.KeepRunning` to keep using the current `AutoPilot`. Obviously you can also chain a new `AutoPilot` instance to switch behaviors.
 
-### Caution about Timing Assertions
+### Caution About Timing Assertions
 
 The behavior of `Within` blocks when using test probes might be perceived as counter-intuitive: you need to remember that the nicely scoped deadline as described **above** is local to each probe. Hence, probes do not react to each other's deadlines or to the deadline set in an enclosing `TestKit` instance.
 
-## Testing parent-child relationships
+## Testing Parent-Child Relationships
 
 The parent of an actor is always the actor that created it. At times this leads to a coupling between the two that may not be straightforward to test. There are several approaches to improve testability of a child actor that needs to refer to its parent:
 
@@ -181,25 +181,25 @@ For example, the structure of the code you want to test may follow this pattern:
 
 [!code-csharp[ParentStructure](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=ParentStructure_0)]
 
-### Introduce child to its parent
+### Introduce Child to Its Parent
 
 The first option is to avoid use of the `context.parent` function and create a child with a custom parent by passing an explicit reference to its parent instead.
 
 [!code-csharp[DependentChild](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=DependentChild_0)]
 
-### Create the child using the TestProbe
+### Create the Child Using the TestProbe
 
 The `TestProbe` class can directly create child actors using the `ChildActorOf` methods.  
 
 [!code-csharp[TestProbeChild](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=TestProbeChild_0)]
 
-### Using a fabricated parent
+### Using a Fabricated Parent
 
 If you prefer to avoid modifying the parent or child constructor you can create a fabricated parent in your test. This, however, does not enable you to test the parent actor in isolation.
 
 [!code-csharp[FabrikatedParent](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=FabrikatedParent_0)]
 
-### Externalize child making from the parent
+### Externalize Child Making From the Parent
 
 Alternatively, you can tell the parent how to create its child. There are two ways to do this: by giving it a `Props` object or by giving it a function which takes care of creating the child actor:
 
@@ -225,7 +225,7 @@ Which of these methods is the best depends on what is most important to test. Th
 
 The `CallingThreadDispatcher` serves good purposes in unit testing, as described above, but originally it was conceived in order to allow contiguous stack traces to be generated in case of an error. As this special dispatcher runs everything which would normally be queued directly on the current thread, the full history of a message's processing chain is recorded on the call stack, so long as all intervening actors run on this dispatcher.
 
-### How to use it
+### How to Use It
 
 Just set the dispatcher as you normally would
 
@@ -233,7 +233,7 @@ Just set the dispatcher as you normally would
 Sys.ActorOf(Props.Create<MyActor>().WithDispatcher(CallingThreadDispatcher.Id));
 ```
 
-### How it works
+### How It Works
 
 When receiving an invocation, the `CallingThreadDispatcher` checks whether the receiving actor is already active on the current thread. The simplest example for this situation is an actor which sends a message to itself. In this case, processing cannot continue immediately as that would violate the actor model, so the invocation is queued and will be processed when the active invocation on that actor finishes its processing; thus, it will be processed on the calling thread, but simply after the actor finishes its previous work. In the other case, the invocation is simply processed immediately on the current thread. Tasks scheduled via this dispatcher are also executed immediately.
 
@@ -327,7 +327,7 @@ Assert.False(fsm.IsTimerActive("test"));
 
 All methods shown above directly access the FSM state without any synchronization; this is perfectly alright if the `CallingThreadDispatcher` is used and no other threads are involved, but it may lead to surprises if you were to actually exercise timer events, because those are executed on the `Scheduler` thread.
 
-## Testing the Actor's behavior
+## Testing the Actor's Behavior
 
 When the dispatcher invokes the processing behavior of an actor on a message, it actually calls apply on the current behavior registered for the actor. This starts out with the return value of the declared receive method, but it may also be changed using become and unbecome in response to external messages. All of this contributes to the overall actor behavior and it does not lend itself to easy testing on the `Actor` itself. Therefore the TestActorRef offers a different mode of operation to complement the `Actor` testing: it supports all operations also valid on normal `IActorRef`. Messages sent to the actor are processed synchronously on the current thread and answers may be sent back as usual. This trick is made possible by the `CallingThreadDispatcher` described below; this dispatcher is set implicitly for any actor instantiated into a `TestActorRef`.
 

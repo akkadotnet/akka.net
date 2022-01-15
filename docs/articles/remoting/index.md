@@ -23,7 +23,7 @@ Akka.Remote introduces the following capabilities to Akka.NET applications:
 
 Everything in Akka.NET is designed to work in a distributed setting: all interactions of actors use purely message passing and everything is asynchronous. This effort has been undertaken to ensure that all functions are available equally when running within a single machine or on a cluster of hundreds of machines. The key for enabling this is to go from remote to local by way of optimization instead of trying to go from local to remote by way of generalization. See [this classic paper](http://doc.akka.io/docs/misc/smli_tr-94-29.pdf) for a detailed discussion on why the second approach is bound to fail.
 
-## Ways in which Transparency is Broken
+## Ways in Which Transparency Is Broken
 
 What is true of Akka need not be true of the application which uses it, since designing for distributed execution poses some restrictions on what is possible. The most obvious one is that all messages sent over the wire must be serializable. While being a little less obvious this includes closures which are used as actor factories (i.e. within Props) if the actor is to be created on a remote node.
 
@@ -44,7 +44,7 @@ Messages exceeding the maximum size will be dropped.
 
 You also have to be aware that some protocols (e.g. UDP) might not support arbitrarily large messages.
 
-## How is Remoting Used?
+## How Is Remoting Used?
 
 We took the idea of transparency to the limit in that there is nearly no API for the remoting layer of Akka.NET: it is purely driven by configuration. Just write your application according to the principles outlined in the previous sections, then specify remote deployment of actor sub-trees in the configuration file. This way, your application can be scaled out without having to touch the code. The only piece of the API which allows programmatic influence on remote deployment is that Props contain a field which may be set to a specific Deploy instance; this has the same effect as putting an equivalent deployment into the configuration file (if both are given, configuration file wins).
 
@@ -120,7 +120,7 @@ These terms form the basis for all remote interaction between `ActorSystem` inst
 
 So in the case of our previous example, `localhost:8080` is the inbound (listening) endpoint for the `DotNetty` TCP transport of the `ActorSystem` we configured.
 
-## How to Form Associations between Remote Systems
+## How to Form Associations Between Remote Systems
 
 So imagine we have the following two actor systems configured to both use the `dot-netty.tcp` Akka.Remote transport:
 

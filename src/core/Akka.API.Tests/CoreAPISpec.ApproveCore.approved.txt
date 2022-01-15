@@ -897,7 +897,7 @@ namespace Akka.Actor
         protected override void PreStart() { }
         protected override bool Receive(object message) { }
     }
-    public sealed class HashedWheelTimerScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
+    public class HashedWheelTimerScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
     {
         public HashedWheelTimerScheduler(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
         public override System.TimeSpan HighResMonotonicClock { get; }
@@ -1072,13 +1072,9 @@ namespace Akka.Actor
     }
     public interface IIndirectActorProducer
     {
-        Akka.Actor.ActorBase Produce(Akka.Actor.Props props);
-        void Release(Akka.Actor.ActorBase actor);
-    }
-    [System.ObsoleteAttribute("Do not use this interface")]
-    public interface IIndirectActorProducerWithActorType : Akka.Actor.IIndirectActorProducer
-    {
         System.Type ActorType { get; }
+        Akka.Actor.ActorBase Produce();
+        void Release(Akka.Actor.ActorBase actor);
     }
     public interface IInternalActor
     {
@@ -1413,9 +1409,11 @@ namespace Akka.Actor
         public System.Exception RestartException { get; }
         public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
-    public sealed class Props : Akka.Util.ISurrogated, System.IEquatable<Akka.Actor.Props>
+    public class Props : Akka.Util.ISurrogated, System.IEquatable<Akka.Actor.Props>
     {
         public static readonly Akka.Actor.Props None;
+        protected Props() { }
+        protected Props(Akka.Actor.Props copy) { }
         public Props(System.Type type, object[] args) { }
         public Props(System.Type type) { }
         public Props(System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, System.Collections.Generic.IEnumerable<object> args) { }
@@ -1423,7 +1421,7 @@ namespace Akka.Actor
         public Props(Akka.Actor.Deploy deploy, System.Type type, System.Collections.Generic.IEnumerable<object> args) { }
         public Props(Akka.Actor.Deploy deploy, System.Type type, params object[] args) { }
         public object[] Arguments { get; }
-        public Akka.Actor.Deploy Deploy { get; }
+        public Akka.Actor.Deploy Deploy { get; set; }
         [Newtonsoft.Json.JsonIgnoreAttribute()]
         public string Dispatcher { get; }
         public static Akka.Actor.Props Empty { get; }
@@ -1431,11 +1429,11 @@ namespace Akka.Actor
         public string Mailbox { get; }
         [Newtonsoft.Json.JsonIgnoreAttribute()]
         public Akka.Routing.RouterConfig RouterConfig { get; }
-        public Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
-        public static Akka.Actor.Props Terminated { get; }
+        public Akka.Actor.SupervisorStrategy SupervisorStrategy { get; set; }
         [Newtonsoft.Json.JsonIgnoreAttribute()]
         public System.Type Type { get; }
         public string TypeName { get; }
+        protected virtual Akka.Actor.Props Copy() { }
         public static Akka.Actor.Props Create<TActor>(System.Linq.Expressions.Expression<System.Func<TActor>> factory, Akka.Actor.SupervisorStrategy supervisorStrategy = null)
             where TActor : Akka.Actor.ActorBase { }
         public static Akka.Actor.Props Create<TActor>(params object[] args)
@@ -1445,20 +1443,20 @@ namespace Akka.Actor
         public static Akka.Actor.Props Create(System.Type type, params object[] args) { }
         [System.ObsoleteAttribute("Do not use this method. Call CreateBy(IIndirectActorProducer, params object[] arg" +
             "s) instead")]
-        public static Akka.Actor.Props CreateBy<TProducer>(System.Type type, params object[] args)
+        public static Akka.Actor.Props CreateBy<TProducer>(params object[] args)
             where TProducer :  class, Akka.Actor.IIndirectActorProducer { }
-        public static Akka.Actor.Props CreateBy(Akka.Actor.IIndirectActorProducer producer, System.Type type, params object[] args) { }
+        public static Akka.Actor.Props CreateBy(Akka.Actor.IIndirectActorProducer producer, params object[] args) { }
         public bool Equals(Akka.Actor.Props other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
-        public Akka.Actor.ActorBase NewActor() { }
+        public virtual Akka.Actor.ActorBase NewActor() { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.Props WithDeploy(Akka.Actor.Deploy deploy) { }
         public Akka.Actor.Props WithDispatcher(string dispatcher) { }
         public Akka.Actor.Props WithMailbox(string mailbox) { }
         public Akka.Actor.Props WithRouter(Akka.Routing.RouterConfig routerConfig) { }
         public Akka.Actor.Props WithSupervisorStrategy(Akka.Actor.SupervisorStrategy supervisorStrategy) { }
-        public sealed class PropsSurrogate : Akka.Util.ISurrogate
+        public class PropsSurrogate : Akka.Util.ISurrogate
         {
             public PropsSurrogate() { }
             public object[] Arguments { get; set; }
@@ -1784,6 +1782,11 @@ namespace Akka.Actor
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
+    }
+    public class TerminatedProps : Akka.Actor.Props
+    {
+        public TerminatedProps() { }
+        public override Akka.Actor.ActorBase NewActor() { }
     }
     [System.ObsoleteAttribute("TypedActor in its current shape will be removed in v1.5")]
     public abstract class TypedActor : Akka.Actor.ActorBase
@@ -4020,6 +4023,7 @@ namespace Akka.Pattern
     {
         public CircuitBreaker(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
         public CircuitBreaker(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout, System.TimeSpan maxResetTimeout, double exponentialBackoffFactor) { }
+        public CircuitBreaker(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout, System.TimeSpan maxResetTimeout, double exponentialBackoffFactor, double randomFactor) { }
         public System.TimeSpan CallTimeout { get; }
         public long CurrentFailureCount { get; }
         public double ExponentialBackoffFactor { get; }
@@ -4029,6 +4033,7 @@ namespace Akka.Pattern
         public System.Exception LastCaughtException { get; }
         public int MaxFailures { get; }
         public System.TimeSpan MaxResetTimeout { get; }
+        public double RandomFactor { get; }
         public System.TimeSpan ResetTimeout { get; }
         public Akka.Actor.IScheduler Scheduler { get; }
         public static Akka.Pattern.CircuitBreaker Create(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
@@ -4040,6 +4045,7 @@ namespace Akka.Pattern
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.Tasks.Task<T>> body) { }
         public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.Tasks.Task> body) { }
         public Akka.Pattern.CircuitBreaker WithExponentialBackoff(System.TimeSpan maxResetTimeout) { }
+        public Akka.Pattern.CircuitBreaker WithRandomFactor(double randomFactor) { }
         public void WithSyncCircuitBreaker(System.Action body) { }
         public T WithSyncCircuitBreaker<T>(System.Func<T> body) { }
     }
@@ -5033,7 +5039,7 @@ namespace Akka.Util
         protected Resolve() { }
         public abstract System.Type ActorType { get; }
         protected static Akka.Util.IResolver Resolver { get; }
-        public abstract Akka.Actor.ActorBase Produce(Akka.Actor.Props props);
+        public abstract Akka.Actor.ActorBase Produce();
         public void Release(Akka.Actor.ActorBase actor) { }
         public static void SetResolver(Akka.Util.IResolver resolver) { }
     }
@@ -5043,7 +5049,7 @@ namespace Akka.Util
         public Resolve(params object[] args) { }
         public override System.Type ActorType { get; }
         public object[] Arguments { get; }
-        public override Akka.Actor.ActorBase Produce(Akka.Actor.Props props) { }
+        public override Akka.Actor.ActorBase Produce() { }
     }
     public class static Result
     {

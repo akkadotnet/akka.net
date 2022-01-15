@@ -423,6 +423,10 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
+        public static readonly Attributes LazyFlow = Attributes.CreateName("lazyFlow");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Attributes LazySource = Attributes.CreateName("lazySource");
         /// <summary>
         /// TBD

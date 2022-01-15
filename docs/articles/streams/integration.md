@@ -225,7 +225,7 @@ var saveTweets = akkaTweets
 Note that if the ``Ask`` is not completed within the given timeout the stream is completed with failure.
 If that is not desired outcome you can use ``Recover`` on the ``Ask`` `Task`.
 
-### Illustrating ordering and parallelism
+### Illustrating Ordering and Parallelism
 
 Let us look at another example to get a better understanding of the ordering
 and parallelism characteristics of ``SelectAsync`` and ``SelectAsyncUnordered``.
@@ -437,7 +437,7 @@ You may notice two extra parameters here. One of the advantages of Akka.Streams 
 
 Any other `OverflowStrategy` option is not supported by `Source.FromObservable` stage.
 
-### Integrating with event handlers
+### Integrating with Event Handlers
 
 C# events can also be used as a potential source of an Akka.NET stream. It's possible using `Source.FromEvent` methods. Example:
 

@@ -16,6 +16,7 @@ using Akka.TestKit;
 using FluentAssertions;
 using Akka.TestKit.TestEvent;
 using Akka.TestKit.Internal;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {

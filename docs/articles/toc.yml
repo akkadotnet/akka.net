@@ -1,23 +1,5 @@
 - name: Introduction
-  items:
-  - name: What is Akka.NET?
-    href: intro/what-is-akka.md
-  - name: What problems does the actor model solve?
-    href: intro/what-problems-does-actor-model-solve.md
-  - name: Akka.NET Libraries and Modules
-    href: intro/modules.md
-  - name: Part 1. Top-level Architecture
-    href: intro/tutorial-1.md
-  - name: Part 2. The Device Actor
-    href: intro/tutorial-2.md
-  - name: Part 3. Device Groups and Manager
-    href: intro/tutorial-3.md
-  - name: Part 4. Querying a Group of Devices
-    href: intro/tutorial-4.md
-  - name: Use-case and Deployment Scenarios
-    href: intro/use-case-and-deployment-scenarios.md
-  - name: Production Users and Use Cases for Akka.NET
-    href: intro/akka-users.md
+  href: intro/toc.yml
 - name: Concepts
   items:
   - name: Terminology, Concepts
@@ -34,8 +16,6 @@
     href: concepts/location-transparency.md
   - name: Message Delivery Reliability
     href: concepts/message-delivery-reliability.md
-  - name: Configuration
-    href: concepts/configuration.md
 - name: Actors
   items:
   - name: ReceiveActor API
@@ -64,10 +44,6 @@
     href: actors/testing-actor-systems.md
   - name: Coordinated Shutdown
     href: actors/coordinated-shutdown.md
-- name: HOCON
-  items:
-  - name: HOCON Syntax and Practices in Akka.NET
-    href: hocon/index.md
 - name: Persistence
   items: 
   - name: Architecture
@@ -138,8 +114,6 @@
     href: networking/io.md
   - name: Serialization
     href: networking/serialization.md
-  - name: Multi-Node TestKit
-    href: networking/multi-node-test-kit.md
 - name: Remoting
   items:
   - name: Overview

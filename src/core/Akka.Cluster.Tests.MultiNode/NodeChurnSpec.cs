@@ -14,6 +14,7 @@ using Akka.Event;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {

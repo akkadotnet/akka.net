@@ -84,7 +84,7 @@ akka {
 }
 ```
 
-## Logging Unhandled messages
+## Logging Unhandled Messages
 
 It is possible to configure akka so that Unhandled messages are logged as Debug log events for debug purposes. This can be achieved using the following configuration setting:
 
@@ -94,7 +94,7 @@ akka {
 }
 ```
 
-## Example configuration
+## Example Configuration
 
 ```hocon
 akka {

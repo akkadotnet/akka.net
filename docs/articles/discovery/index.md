@@ -10,7 +10,7 @@ Akka.NET Discovery provides an interface around various ways of locating service
 * DNS
 * Aggregate
 
-## How it works
+## How It Works
 
 Loading the extension:
 
@@ -75,7 +75,7 @@ akka.discovery.config.services = {
 
 Where the above block defines two services, `service1` and `service2`. Each service can have multiple endpoints.
 
-## Discovery Method: Aggregate multiple discovery methods
+## Discovery Method: Aggregate Multiple Discovery Methods
 
 Aggregate discovery allows multiple discovery methods to be aggregated e.g. try and resolve
 via DNS and fall back to configuration.
