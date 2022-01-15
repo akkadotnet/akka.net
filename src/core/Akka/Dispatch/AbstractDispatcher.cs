@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -59,9 +58,9 @@ namespace Akka.Dispatch
         /// <param name="settings">TBD</param>
         /// <param name="mailboxes">TBD</param>
         public DefaultDispatcherPrerequisites(
-            EventStream eventStream, 
-            IScheduler scheduler, 
-            Settings settings, 
+            EventStream eventStream,
+            IScheduler scheduler,
+            Settings settings,
             Mailboxes mailboxes)
         {
             Mailboxes = mailboxes;
@@ -120,8 +119,26 @@ namespace Akka.Dispatch
     {
         public ChannelExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
         {
-            var cfg = config.GetConfig("channel-executor");
-            Priority = (TaskSchedulerPriority)Enum.Parse(typeof(TaskSchedulerPriority), cfg.GetString("priority", "normal"), true);
+            var priorityName = config.GetString("channel-executor.priority", "None") ?? "None";
+            Priority = (TaskSchedulerPriority)Enum.Parse(typeof(TaskSchedulerPriority), priorityName, true);
+            if (Priority == TaskSchedulerPriority.None)
+            {
+                var dispatcherName = config.Root.GetObject().GetKey("name").ToString();
+                switch (dispatcherName)
+                {
+                    case "internal-dispatcher":
+                    case "default-remote-dispatcher":
+                        Priority = TaskSchedulerPriority.High;
+                        break;
+                    case "backoff-remote-dispatcher":
+                        Priority = TaskSchedulerPriority.Low;
+                        break;
+                    default:
+                        Priority = TaskSchedulerPriority.Normal;
+                        break;
+                };
+            }
+                
         }
 
         public TaskSchedulerPriority Priority { get; }
@@ -133,6 +150,8 @@ namespace Akka.Dispatch
             var scheduler = ChannelTaskScheduler.Get(Prerequisites.Settings.System).GetScheduler(Priority);
             return new TaskSchedulerExecutor(id, scheduler);
         }
+
+
     }
 
     /// <summary>
@@ -157,7 +176,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="config">TBD</param>
         /// <param name="prerequisites">TBD</param>
-        public DefaultTaskSchedulerExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) 
+        public DefaultTaskSchedulerExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
         }
@@ -225,13 +244,13 @@ namespace Akka.Dispatch
             {
                 var settings = new DedicatedThreadPoolSettings(
                     ThreadPoolConfig.ScaledPoolSize(
-                        fje.GetInt("parallelism-min"), 
-                        1.0, 
+                        fje.GetInt("parallelism-min"),
+                        1.0,
                         fje.GetInt("parallelism-max")),
-                        name:config.GetString("id"));
+                        name: config.GetString("id"));
                 return settings;
             }
-            
+
         }
     }
 

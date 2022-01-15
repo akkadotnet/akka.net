@@ -62,14 +62,17 @@ namespace Akka.Dispatch
             //config channel-scheduler
             var config = system.Settings.Config.GetConfig("akka.channel-scheduler");
             _maximumConcurrencyLevel = ThreadPoolConfig.ScaledPoolSize(
-                        config.GetInt("parallelism-min"),
-                        config.GetDouble("parallelism-factor", 1.0D), // the scalar-based factor to scale the threadpool size to 
-                        config.GetInt("parallelism-max"));
+                        config?.GetInt("parallelism-min", 4) ?? 4,
+                        config?.GetDouble("parallelism-factor", 1.0D) ?? 1.0D, // the scalar-based factor to scale the threadpool size to 
+                        config?.GetInt("parallelism-max", 64) ?? 64);
             _maximumConcurrencyLevel = Math.Max(_maximumConcurrencyLevel, 1);
-            _maxWork = Math.Max(config.GetInt("work-max", _maxWork), 3); //min 3 normal work in work-loop
-
-            _workInterval = config.GetInt("work-interval", _workInterval);
-            _workStep = config.GetInt("work-step", _workStep);
+            
+            if (config != null)
+            {
+                _maxWork = Math.Max(config.GetInt("work-max", _maxWork), 3); //min 3 normal work in work-loop
+                _workInterval = config.GetInt("work-interval", _workInterval);
+                _workStep = config.GetInt("work-step", _workStep);
+            }                
 
             //create task schedulers
             var channelOptions = new UnboundedChannelOptions()
@@ -276,7 +279,7 @@ namespace Akka.Dispatch
             //the work loop
             _threadPriority = TaskSchedulerPriority.Idle;
             try
-            {   
+            {
                 do
                 {
                     rounds++;
