@@ -111,10 +111,10 @@ Journals should aim to persist events in-order for a given `persistenceId` as ot
 
 Each `AtomicWrite` message contains:
 
-* a single `IPersistentRepresentation` that corresponds to the event that was passed to the `Eventsourced.Persist<TEvent>(TEvent, Action<TEvent>)` method of the `PersistentActor`, or 
+* a single `IPersistentRepresentation` that corresponds to the event that was passed to the `Eventsourced.Persist<TEvent>(TEvent, Action<TEvent>)` method of the `PersistentActor`, or
 * it contains several `IPersistentRepresentation` that correspond to the events that were passed to the `Eventsourced.PersistAll<TEvent>(IEnumerable<TEvent>, Action<TEvent>)` method of the `PersistentActor`.
 
-All `Persistent` of the `AtomicWrite` must be written to the data store atomically, i.e. all or none must be stored. 
+All `Persistent` of the `AtomicWrite` must be written to the data store atomically, i.e. all or none must be stored.
 
 If the journal (data store) cannot support atomic writes of multiple events it should reject such writes with a `NotSupportedException` describing the issue. This limitation should also be documented by the journal plugin.
 
