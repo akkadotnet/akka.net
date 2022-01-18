@@ -1,8 +1,38 @@
-#### 1.4.32 December 20 2021 ####
-**Placeholder for nightlies**
+#### 1.4.32 January 19 2022 ####
+Akka.NET v1.4.32 is a minor release that contains some API improvements. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code. One big improvement in this version release is the Hyperion serialization update. 
+
+Hyperion 0.12.0 introduces a new deserialization security mechanism to allow users to selectively filter allowed types during deserialization to prevent deserialization of untrusted data described [here](https://cwe.mitre.org/data/definitions/502.html). This new feature is exposed in Akka.NET in HOCON through the new [`akka.actor.serialization-settings.hyperion.allowed-types`](https://github.com/akkadotnet/akka.net/blob/dev/src/contrib/serializers/Akka.Serialization.Hyperion/reference.conf#L33-L35) settings or programmatically through the new `WithTypeFilter` method in the `HyperionSerializerSetup` class.
+
+The simplest way to programmatically describe the type filter is to use the convenience class `TypeFilterBuilder`:
+
+```c#
+var typeFilter = TypeFilterBuilder.Create()
+    .Include<AllowedClassA>()
+    .Include<AllowedClassB>()
+    .Build();
+var setup = HyperionSerializerSetup.Default
+    .WithTypeFilter(typeFilter);
+```
+
+You can also create your own implementation of `ITypeFilter` and pass an instance of it into the `WithTypeFilter` method.
+
+For complete documentation, please read the Hyperion [readme on filtering types for secure deserialization.](https://github.com/akkadotnet/Hyperion#whitelisting-types-on-deserialization)
+
+* [Akka.Streams: Added Flow.LazyInitAsync and Sink.LazyInitSink to replace Sink.LazyInit](https://github.com/akkadotnet/akka.net/pull/5476)
+* [Akka.Serialization.Hyperion: Implement the new ITypeFilter security feature](https://github.com/akkadotnet/akka.net/pull/5510)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 11 | 1752 | 511 | Aaron Stannard |
+| 8 | 1433 | 534 | Gregorius Soedharmo |
+| 3 | 754 | 222 | Ismael Hamed |
+| 2 | 3 | 6 | Brah McDude |
+| 2 | 227 | 124 | Ebere Abanonu |
+| 1 | 331 | 331 | Sean Killeen |
+| 1 | 1 | 1 | TangkasOka |
 
 #### 1.4.31 December 20 2021 ####
-Akka.NET v1.4.30 is a minor release that contains some bug fixes.
+Akka.NET v1.4.31 is a minor release that contains some bug fixes.
 
 Akka.NET v1.4.30 contained a breaking change that broke binary compatibility with all Akka.DI plugins.
 Even though those plugins are deprecated that change is not compatible with our SemVer standards 
