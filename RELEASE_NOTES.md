@@ -21,6 +21,8 @@ For complete documentation, please read the Hyperion [readme on filtering types 
 * [Akka.Streams: Added Flow.LazyInitAsync and Sink.LazyInitSink to replace Sink.LazyInit](https://github.com/akkadotnet/akka.net/pull/5476)
 * [Akka.Serialization.Hyperion: Implement the new ITypeFilter security feature](https://github.com/akkadotnet/akka.net/pull/5510)
 
+If you want to see the [full set of changes made in Akka.NET v1.4.32, click here](https://github.com/akkadotnet/akka.net/milestone/63).
+
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
 | 11 | 1752 | 511 | Aaron Stannard |
