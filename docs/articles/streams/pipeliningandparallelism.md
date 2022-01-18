@@ -59,7 +59,7 @@ not be able to operate at full capacity [^foot-note-1].
 For more details about the behavior of these and how to add additional buffers refer to
 [Buffers and working with rate](xref:streams-buffers).
 
-## Parallel processing
+## Parallel Processing
 
 Chris uses the two frying pans symmetrically. He uses both pans to fully fry a pancake on both sides, then puts
 the results on a shared plate. Whenever a pan becomes empty, he takes the next scoop from the shared bowl of batter.
@@ -97,7 +97,7 @@ by strict round-robin balancing and merging stages that put in and take out panc
 A more detailed example of creating a worker pool can be found in the cookbook:
 [Balancing jobs to a fixed pool of workers](xref:streams-cookbook#balancing-jobs-to-a-fixed-pool-of-workers)
 
-## Combining pipelining and parallel processing
+## Combining Pipelining and Parallel Processing
 
 The two concurrency patterns that we demonstrated as means to increase throughput are not exclusive.
 In fact, it is rather simple to combine the two approaches and streams provide

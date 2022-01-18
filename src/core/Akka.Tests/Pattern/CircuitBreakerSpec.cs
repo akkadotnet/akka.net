@@ -494,7 +494,7 @@ namespace Akka.Tests.Pattern
         
         public TestBreaker NonOneFactorCb()
         {
-            return new TestBreaker(new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromMilliseconds(2000), TimeSpan.FromMilliseconds(1000), TimeSpan.FromDays(1), 5));
+            return new TestBreaker(new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromMilliseconds(2000), TimeSpan.FromMilliseconds(1000), TimeSpan.FromDays(1), 5, 0));
         }
     }
 

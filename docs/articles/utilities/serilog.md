@@ -83,7 +83,7 @@ var logger = new LoggerConfiguration()
     .CreateLogger();
 ```
 
-## HOCON configuration
+## HOCON Configuration
 
 In order to be able to change log level without the need to recompile, we need to employ some sort of application configuration.  To use Serilog via HOCON configuration, add the following to the __App.config__ of the project.
 

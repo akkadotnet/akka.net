@@ -2,7 +2,7 @@
 uid: use-case-and-deployment-scenarios
 title: Use-case and Deployment Scenarios
 ---
-# Use-case and Deployment Scenarios
+# Use-Case and Deployment Scenarios
 
 ## Console Application
 
@@ -41,7 +41,7 @@ namespace Foo.Bar
 
 ## ASP.NET
 
-### Creating the Akka.NET resources
+### Creating the Akka.NET Resources
 
 Hosting inside an ASP.NET application is easy. The `Global.asax` would be the designated place to start.
 
@@ -71,7 +71,7 @@ As you can see the main point here is keeping a static reference to your `ActorS
 
 Typically you use a very lightweight `ActorSystem` inside ASP.NET applications, and offload heavy-duty work to a separate Windows Service via Akka.Remote / Akka.Cluster.
 
-### Interaction between Controllers and Akka.NET
+### Interaction Between Controllers and Akka.NET
 
 In the sample below, we use an Web API Controller:
 

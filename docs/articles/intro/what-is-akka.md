@@ -2,7 +2,7 @@
 uid: what-is-akka
 title: What is Akka
 ---
-# What is Akka.NET?
+# What Is Akka.NET?
 
 Welcome to Akka.NET, a set of open-source libraries for designing scalable, resilient systems that
 span processor cores and networks. Akka allows you to focus on meeting business needs instead
@@ -32,7 +32,7 @@ By learning Akka.NET and its actor model, you will gain access to a vast and dee
 distributed/parallel systems problems in a uniform programming model where everything fits together tightly and
 efficiently.
 
-## What is the Actor Model?
+## What Is the Actor Model?
 
 The characteristics of today's computing environments are vastly different from the ones in use when the programming
 models of yesterday were conceived. Actors were invented decades ago by [Carl Hewitt](https://en.wikipedia.org/wiki/Carl_Hewitt#Actor_model).

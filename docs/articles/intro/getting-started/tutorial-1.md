@@ -3,53 +3,7 @@ uid: tutorial-1
 title: Part 1. Top-level Architecture
 ---
 
-# Part 1: Top-level Architecture
-
-In this and the following chapters, we will build a sample Akka.NET application
-to introduce you to the language of actors and how solutions can be formulated
-with them. It is a common hurdle for beginners to translate their project into
-actors even though they don't understand what they do on the high-level. We will
-build the core logic of a small application and this will serve as a guide for
-common patterns that will help to kickstart Akka.NET projects.
-
-The application we aim to write will be a simplified IoT system where devices,
-installed at the home of users, can report temperature data from sensors. Users
-will be able to query the current state of these sensors. To keep things simple,
-we will not actually expose the application via HTTP or any other external API,
-we will, instead, concentrate only on the core logic. However, we will write
-tests for the pieces of the application to get comfortable and proficient with
-testing actors early on.
-
-## Our Goals for the IoT System
-
-We will build a simple IoT application with the bare essentials to demonstrate
-designing an Akka.NET-based system. The application will consist of two main
-components:
-
-* **Device data collection:** This component has the responsibility to maintain
-   a local representation of the otherwise remote devices. The devices will be
-   organized into device groups, grouping together sensors belonging to a home.
-* **User dashboards:** This component has the responsibility to periodically
-   collect data from the devices for a logged in user and present the results as
-   a report.
-
-For simplicity, we will only collect temperature data for the devices, but in a
-real application our local representations for a remote device, which we will
-model as an actor, would have many more responsibilities. Among others; reading
-the configuration of the device, changing the configuration, checking if the
-devices are unresponsive, etc. We leave these complexities for now as they can
-be easily added as an exercise.
-
-We will also not address the means by which the remote devices communicate with
-the local representations (actors). Instead, we just build an actor based API
-that such a network protocol could use. We will use tests for our API everywhere
-though.
-
-The architecture of the application will look like this:
-
-![box diagram of the architecture](/images/arch_boxes_diagram.png)
-
-## Top Level Architecture
+# Part 1: Top Level Architecture
 
 When writing prose, the hardest part is usually to write the first couple of
 sentences. There is a similar feeling when trying to build an Akka.NET system:
@@ -98,7 +52,7 @@ from user, or system, actors end up.
 > has. This special entity is called the "Bubble-Walker". This special entity is
 > invisible for the user and only has uses internally.
 
-### Structure of an IActorRef and Paths of Actors
+## Structure of an IActorRef and Paths of Actors
 
 The easiest way to see this in action is to simply print `IActorRef` instances.
 In this small experiment, we print the reference of the first actor we create
@@ -141,7 +95,7 @@ The last part of the actor reference, like `#1053618476` is a unique identifier
 of the actor living under the path. This is usually not something the user needs
 to be concerned with, and we leave the discussion of this field for later.
 
-### Hierarchy and Lifecycle of Actors
+## Hierarchy and Lifecycle of Actors
 
 We have so far seen that actors are organized into a **strict hierarchy**. This
 hierarchy consists of a predefined upper layer of three actors (the root
@@ -196,7 +150,7 @@ The family of these lifecycle hooks is rich, and we recommend reading [the actor
 lifecycle](xref:untyped-actor-api#actor-lifecycle) section of the reference for
 all details.
 
-### Hierarchy and Failure Handling (Supervision)
+## Hierarchy and Failure Handling (Supervision)
 
 Parents and children are not only connected by their lifecycles. Whenever an
 actor fails (throws an exception or an unhandled exception bubbles out from
@@ -240,7 +194,7 @@ see how the output changes.
 For the impatient, we also recommend looking into the [supervision reference
 page](xref:supervision) for more in-depth details.
 
-### The First Actor
+## The First Actor
 
 Actors are organized into a strict tree, where the lifecycle of every child is
 tied to the parent and where parents are responsible for deciding the fate of
@@ -280,7 +234,7 @@ All we need now is to tie this up with a class with the `main` entry point:
 This application does very little for now, but we have the first actor in place
 and we are ready to extend it further.
 
-## What is next?
+# What Is Next?
 
 In the following chapters we will grow the application step-by-step:
 

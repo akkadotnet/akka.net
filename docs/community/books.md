@@ -11,7 +11,7 @@ title: Books
 * [Akka in action](https://www.manning.com/books/akka-in-action) (Raymond Roestenburg, Rob Bakker, and Rob Williams, September 2016)
 * [Reactive Applications with Akka.NET](https://www.manning.com/books/reactive-applications-with-akka-net) (Anthony Brown, September 2018)
 
-## Reactive programming
+## Reactive Programming
 
 * [Reactive Messaging Patterns with the Actor Model](https://www.amazon.com/dp/B011S8YC5G) (Vaughn Vernon, July 2015)
 * [Functional Reactive Programming](https://www.manning.com/books/functional-reactive-programming) (Stephen Blackheath and Anthony Jones, July 2016)
