@@ -172,31 +172,22 @@ namespace Akka.Cluster.Benchmarks.Persistence
     public static class PersistenceInfrastructure{
         public static readonly AtomicCounter DbCounter = new AtomicCounter(0);
 
-        public static (string connectionString, Config hoconConfig) GenerateJournalConfig(){
-            return GenerateJournalConfig(DbCounter.GetAndIncrement().ToString());
-        }
-
-        public static (string connectionString, Config hoconConfig) GenerateJournalConfig(string databaseId){
-            // need to create a unique database instance each time benchmark is run so we don't pollute
-            // might need to disable shared cache
-            var connectionString = $"Datasource=memdb-journal-{databaseId}.db;Mode=Memory;Cache=Shared";
-
+        public static Config GenerateJournalConfig(){
             var config = ConfigurationFactory.ParseString(@"
             akka {
                 persistence.journal {
-                    plugin = ""akka.persistence.journal.sqlite""
-                    sqlite {
-                        class = ""Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite""
+                    plugin = ""akka.persistence.journal.inmem""
+                    # In-memory journal plugin.
+                    akka.persistence.journal.inmem {
+                        # Class name of the plugin.
+                        class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
+                        # Dispatcher for the plugin actor.
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
-                        table-name = event_journal
-                        metadata-table-name = journal_metadata
-                        auto-initialize = on
-                        connection-string = """+ connectionString +@"""
                     }
                 }
             }");
 
-            return (connectionString, config);
+            return config;
         } 
     }
     
