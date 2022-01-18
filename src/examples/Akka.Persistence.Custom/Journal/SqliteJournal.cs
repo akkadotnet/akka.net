@@ -135,6 +135,14 @@ namespace Akka.Persistence.Custom.Journal
             BecomeStacked(WaitingForInitialization);
         }
 
+        protected override void PostStop()
+        {
+            base.PostStop();
+
+            // stop all operations executed in the background
+            _pendingRequestsCancellation.Cancel();
+        }
+
         private bool WaitingForInitialization(object message)
         {
             switch (message)
