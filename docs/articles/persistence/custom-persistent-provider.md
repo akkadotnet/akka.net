@@ -2,8 +2,8 @@
 
 ## Implementing Akka.Persistence Journal
 
-- Discuss design goals
-- Discuss Journal responsibility
+* Discuss design goals
+* Discuss Journal responsibility
 
 Akka.Persistence journal is responsible for storing all events for playback in the event of a recovery.
 
@@ -41,18 +41,18 @@ Task ReplayMessagesAsync(
     Action<IPersistentRepresentation> recoveryCallback)
 ```
 
-- **`context`**: The contextual information about the actor processing the replayed messages.
-- **`persistenceId`**: Persistent actor identifier
-- **`fromSequenceNr`**: Inclusive sequence number where replay should start
-- **`toSequenceNr`**: Inclusive sequence number where replay should end
-- **`max`**: Maximum number of messages to be replayed
-- **`recoveryCallback`**: Called to replay a message, may be called from any thread.
+* **`context`**: The contextual information about the actor processing the replayed messages.
+* **`persistenceId`**: Persistent actor identifier
+* **`fromSequenceNr`**: Inclusive sequence number where replay should start
+* **`toSequenceNr`**: Inclusive sequence number where replay should end
+* **`max`**: Maximum number of messages to be replayed
+* **`recoveryCallback`**: Called to replay a message, may be called from any thread.
 
 This method should asynchronously replay persistent messages:
 
-- Implementations replay a message by calling `recoveryCallback`.
-- The returned `Task` must be completed when all messages (matching the sequence number bounds) have been replayed.
-- The `Task` must be completed with a failure if any of the persistent messages could not be replayed.
+* Implementations replay a message by calling `recoveryCallback`.
+* The returned `Task` must be completed when all messages (matching the sequence number bounds) have been replayed.
+* The `Task` must be completed with a failure if any of the persistent messages could not be replayed.
 
 The `toSequenceNr` is the lowest of what was returned by `ReadHighestSequenceNrAsync` and what the user specified as the recovery `Recovery` parameter. This does imply that this call is always preceded by reading the highest sequence number for the given `persistenceId`.
 
@@ -75,6 +75,7 @@ SELECT e.persistence_id as PersistenceId,
 ```
 
 Semi pseudo-code example:
+
 ```c#
 public override async Task ReplayMessagesAsync(
     IActorContext context, 
@@ -135,14 +136,14 @@ public override async Task ReplayMessagesAsync(
 
 #### ReadHighestSequenceNrAsync
 
-```
+```c#
 Task<long> ReadHighestSequenceNrAsync(
     string persistenceId, 
     long fromSequenceNr)
 ```
 
-- **`persistenceId`**: Persistent actor identifier
-- **`fromSequenceNr`**: Hint where to start searching for the highest sequence number. When a persistent actor is recovering this `fromSequenceNr` will the sequence number of the used snapshot, or `0L` if no snapshot is used.
+* **`persistenceId`**: Persistent actor identifier
+* **`fromSequenceNr`**: Hint where to start searching for the highest sequence number. When a persistent actor is recovering this `fromSequenceNr` will the sequence number of the used snapshot, or `0L` if no snapshot is used.
 
 This method should asynchronously reads the highest stored sequence number for provided `persistenceId`. The persistent actor will use the highest sequence number after recovery as the starting point when persisting new events. This sequence number is also used as `toSequenceNr` in subsequent calls to `ReplayMessagesAsync` unless the user has specified a lower `toSequenceNr`. Journal must maintain the highest sequence number and never decrease it.
 
@@ -184,7 +185,7 @@ public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId
 
 #### WriteMessagesAsync
 
-```
+```c#
 protected abstract Task<IImmutableList<Exception>> WriteMessagesAsync(
     IEnumerable<AtomicWrite> messages)
 ```
@@ -236,6 +237,7 @@ INSERT INTO event_journal (
 ```
 
 Semi pseudo-code example:
+
 ```c#
 protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(
     IEnumerable<AtomicWrite> messages)
@@ -326,7 +328,7 @@ protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(
 
 #### DeleteMessagesToAsync
 
-```
+```c#
 protected abstract Task DeleteMessagesToAsync(
     string persistenceId, 
     long toSequenceNr)
@@ -424,17 +426,17 @@ protected override async Task DeleteMessagesToAsync(string persistenceId, long t
 
 ### Detail Implementation
 
-#### Reading HOCON settings
+#### Reading HOCON Settings
 
 #### Pre-Start Requirement
 
-- Making sure all messages are processed during start-up
-- Discuss delay during database connection
-- Discuss stashing and initialization steps
+* Making sure all messages are processed during start-up
+* Discuss delay during database connection
+* Discuss stashing and initialization steps
 
 #### Creating And Processing Custom Commands
 
-- Discuss ReceivePluginInternal and IJournalRequest
+* Discuss ReceivePluginInternal and IJournalRequest
 
 #### Best Practices
 
@@ -444,68 +446,22 @@ protected override async Task DeleteMessagesToAsync(string persistenceId, long t
 
 #### LoadAsync
 
-- Discuss what this method is for
+* Discuss what this method is for
 
 #### SaveAsync
 
-- Discuss what this method is for
+* Discuss what this method is for
 
 #### DeleteAsync
 
-- Discuss what this method is for
-
+* Discuss what this method is for
 
 #### DeleteAsync
 
-- Discuss what this method is for
-
+* Discuss what this method is for
 
 ### Detail Implementation
 
-- This should be very similar to Journal
-
+* This should be very similar to Journal
 
 ## Unit Testing Journal and SnapshotStore
-
-
-## Implementing Akka.Persistence.Query Support (stretch goal?)
-
-
-### Implementing a Read Journal
-
-- Discuss that journal does not need to implement all query types
-
-
-### Handling Event Subscription For Current Queries
-
-- Discuss ReceivePluginInternal and ISubscriptionCommand
-
-
-### Supporting Tags
-
-
-### Events By Tag Query
-
-
-### Current Events By Tag Query
-
-
-### All Events Query
-
-
-### Current All Events Query
-
-
-### Events By Persistence Id Query
-
-
-### Current Events By Persistence Id Query
-
-
-### Persistence Ids Query
-
-
-### Current Persistence Ids Query
-
-
-## Unit Testing Query
