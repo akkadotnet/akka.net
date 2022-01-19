@@ -128,10 +128,17 @@ namespace Akka.Persistence.Custom.Journal
 
         public IStash Stash { get; set; }
         
+        //<Startup>
         protected override void PreStart()
         {
             base.PreStart();
+            
+            // Call the Initialize method and pipe the result back to signal that
+            // database schemas are ready to use, if it needs to be initialized
             Initialize().PipeTo(Self);
+            
+            // WaitingForInitialization receive handler will wait for a success/fail
+            // result back from the Initialize method
             BecomeStacked(WaitingForInitialization);
         }
 
@@ -147,15 +154,22 @@ namespace Akka.Persistence.Custom.Journal
         {
             switch (message)
             {
+                // Tables are already created or successfully created all needed tables
                 case Status.Success _:
                     UnbecomeStacked();
+                    // Unstash all messages received when we were initializing our tables
                     Stash.UnstashAll();
                     break;
+                
                 case Status.Failure fail:
+                    // Failed creating tables. Log an error and stop the actor.
                     _log.Error(fail.Cause, "Failure during {0} initialization.", Self);
                     Context.Stop(Self);
                     break;
+                
                 default:
+                    // By default, stash all received messages while we're waiting for the
+                    // Initialize method.
                     Stash.Stash();
                     break;
             }
@@ -167,10 +181,12 @@ namespace Akka.Persistence.Custom.Journal
             if (!_settings.AutoInitialize) 
                 return new Status.Success(NotUsed.Instance);
 
+            // Create SQLite journal tables 
             try
             {
                 using (var connection = new SqliteConnection(_connectionString))
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                using (var cts = CancellationTokenSource
+                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
                     await connection.OpenAsync(cts.Token);
                     using (var command = GetCommand(connection, CreateEventsJournalSql, _timeout))
@@ -185,8 +201,10 @@ namespace Akka.Persistence.Custom.Journal
             {
                 return new Status.Failure(e);
             }
+            
             return new Status.Success(NotUsed.Instance);
         }
+        //</Startup>
         
         // <ReplayMessagesAsync>
         public sealed override async Task ReplayMessagesAsync(

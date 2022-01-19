@@ -70,9 +70,9 @@ Task<long> ReadHighestSequenceNrAsync(
 * **`persistenceId`**: Persistent actor identifier
 * **`fromSequenceNr`**: Hint where to start searching for the highest sequence number. When a persistent actor is recovering this `fromSequenceNr` will the sequence number of the used snapshot, or `0L` if no snapshot is used.
 
-This method should asynchronously reads the highest stored sequence number for provided `persistenceId`. The persistent actor will use the highest sequence number after recovery as the starting point when persisting new events. This sequence number is also used as `toSequenceNr` in subsequent calls to `ReplayMessagesAsync` unless the user has specified a lower `toSequenceNr`. Journal must maintain the highest sequence number and never decrease it.
-
 This call is protected with a circuit-breaker.
+
+This method should asynchronously reads the highest stored sequence number for provided `persistenceId`. The persistent actor will use the highest sequence number after recovery as the starting point when persisting new events. This sequence number is also used as `toSequenceNr` in subsequent calls to `ReplayMessagesAsync` unless the user has specified a lower `toSequenceNr`. Journal must maintain the highest sequence number and never decrease it.
 
 Please also note that requests for the highest sequence number may be made concurrently to writes executing for the same `persistenceId`, in particular it is possible that a restarting actor tries to recover before its outstanding writes have completed.
 
@@ -153,8 +153,8 @@ protected abstract Task DeleteMessagesToAsync(
     long toSequenceNr)
 ```
 
-* **`persistenceId`**: TODO: Add this
-* **`toSequenceNr`**: TODO: Add this
+* **`persistenceId`**: Persistent actor identifier
+* **`toSequenceNr`**: Inclusive sequence number of the last event to be deleted
 
 This call is protected with a circuit-breaker.
 
@@ -182,17 +182,131 @@ SQLite code example:
 
 #### Reading HOCON Settings
 
-#### Pre-Start Requirement
+There are some HOCON settings that are by default loaded by the journal base class and these can be overriden in your HOCON settings. The minimum HOCON settings that need to be defined for your custom provider are:
 
-* TODO: Making sure all messages are processed during start-up
-* TODO: Discuss delay during database connection
-* TODO: Discuss stashing and initialization steps
+```hocon
+akka.persistence{
+	journal {
+		plugin = "akka.persistence.journal.custom-sqlite"
+		custom-sqlite {
+			# qualified type name of the SQLite persistence journal actor
+			class = "Akka.Persistence.Custom.Journal.SqliteJournal, Akka.Persistence.Custom"
+		}
+	}
+
+	snapshot-store {
+		plugin = "akka.persistence.snapshot-store.custom-sqlite"
+		custom-sqlite {
+			# qualified type name of the SQLite persistence journal actor
+			class = "Akka.Persistence.Custom.Snapshot.SqliteSnapshotStore, Akka.Persistence.Custom"
+		}
+	}
+}
+```
+
+The default HOCON settings are:
+
+```hocon
+# Fallback settings for journal plugin configurations.
+# These settings are used if they are not defined in plugin config section.
+journal-plugin-fallback {
+
+    # Fully qualified class name providing journal plugin api implementation.
+    # It is mandatory to specify this property.
+    # The class must have a constructor without parameters or constructor with
+    # one `Akka.Configuration.Config` parameter.
+    class = ""
+
+    # Dispatcher for the plugin actor.
+    plugin-dispatcher = "akka.persistence.dispatchers.default-plugin-dispatcher"
+
+    # Dispatcher for message replay.
+    replay-dispatcher = "akka.persistence.dispatchers.default-replay-dispatcher"
+
+    # Default serializer used as manifest serializer when applicable 
+    # and payload serializer when no specific binding overrides are specified
+    serializer = "json"
+
+    # Removed: used to be the Maximum size of a persistent message batch 
+    # written to the journal.
+    # Now this setting is without function, PersistentActor will write 
+    # as many messages as it has accumulated since the last write.
+    max-message-batch-size = 200
+
+    # If there is more time in between individual events gotten from the Journal
+    # recovery than this the recovery will fail.
+    # Note that it also affect reading the snapshot before replaying events on
+    # top of it, even though iti is configured for the journal.
+    recovery-event-timeout = 30s
+
+    circuit-breaker {
+        max-failures = 10
+        call-timeout = 10s
+        reset-timeout = 30s
+    }
+
+    # The replay filter can detect a corrupt event stream by inspecting
+    # sequence numbers and writerUuid when replaying events.
+    replay-filter {
+        # What the filter should do when detecting invalid events.
+        # Supported values:
+        # `repair-by-discard-old` : discard events from old writers,
+        #                           warning is logged
+        # `fail` : fail the replay, error is logged
+        # `warn` : log warning but emit events untouche
+        # `off` : disable this feature completely
+        mode = repair-by-discard-old
+
+        # It uses a look ahead buffer for analyzing the events.
+        # This defines the size (in number of events) of the buffer.
+        window-size = 100
+
+        # How many old writerUuid to remember
+        max-old-writers = 10
+
+        # Set this to `on` to enable detailed debug logging of each
+        # replayed event.
+        debug = off
+    }
+}
+
+# Fallback settings for snapshot store plugin configurations
+# These settings are used if they are not defined in plugin config section.
+snapshot-store-plugin-fallback {
+
+    # Fully qualified class name providing snapshot store plugin api
+    # implementation. It is mandatory to specify this property if
+    # snapshot store is enabled.
+    # The class must have a constructor without parameters or constructor with
+    # one `Akka.Configuration.Config` parameter.
+    class = ""
+
+    # Dispatcher for the plugin actor.
+    plugin-dispatcher = "akka.persistence.dispatchers.default-plugin-dispatcher"
+
+    # Default serializer used as manifest serializer when applicable 
+    # and payload serializer when no specific binding overrides are specified
+    serializer = "json"
+
+    circuit-breaker {
+        max-failures = 5
+        call-timeout = 20s
+        reset-timeout = 60s
+    }
+}
+```
 
 #### Creating And Processing Custom Commands
 
 * TODO: Discuss ReceivePluginInternal and IJournalRequest
 
-#### Best Practices
+#### Pre-Start Requirement
+
+It is a good practice to allow user of your custom plugin to be able to auto initialize their back end event source from a blank slate. In order to do that, it is good practice to support `auto-initialize` setting in your journal HOCON settings.
+
+In order to support this, we will have to be able to stash all incoming messages while we're creating the tables in the event source. Here's an implementation that we use in our example code:  
+
+[!code-csharp[Startup](../../../src/examples/Akka.Persistence.Custom/Journal/SqliteJournal.cs?name=Startup "Journal startup sequence")]
 
 ## Implementing Akka.Persistence SnapshotStore
 
@@ -200,19 +314,54 @@ SQLite code example:
 
 #### LoadAsync
 
-* TODO: Discuss what this method is for
+```c#
+Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+```
+
+* **`persistenceId`**: Identification of the persistent actor
+* **`criteria`**: Selection criteria for event loading
+
+This call is protected with a circuit-breaker.
+
+Asynchronously loads a snapshot.
 
 #### SaveAsync
 
-* TODO: Discuss what this method is for
+```c#
+Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+```
+
+* **`metadata`**: Snapshot metadata
+* **`snapshot`**: The snapshot object instance to be stored
+
+This call is protected with a circuit-breaker
+
+Asynchronously saves a snapshot.
 
 #### DeleteAsync
 
-* TODO: Discuss what this method is for
+```c#
+Task DeleteAsync(SnapshotMetadata metadata);
+```
+
+* **`metadata`**: Snapshot metadata
+
+This call is protected with a circuit-breaker
+
+Deletes the snapshot identified by by the provided `Metadata`
 
 #### DeleteAsync
 
-* TODO: Discuss what this method is for
+```c#
+Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria);
+```
+
+* **`persistenceId`**: Identification of the persistent actor
+* **`criteria`**: Selection criteria for event deletion
+
+This call is protected with a circuit-breaker
+
+Deletes all snapshots matching the provided `criteria`
 
 ### Detail Implementation
 
