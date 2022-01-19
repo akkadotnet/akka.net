@@ -10,6 +10,10 @@ using Xunit;
 
 namespace Akka.Remote.TestKit
 {
+    [Obsolete(
+        "This attribute and the Akka.MultiNodeTestRunner NuGet package is being deprecated in favor of the new " +
+        "Akka.MultiNode.TestAdapter NuGet package. To migrate your multi node test to the new package, please read " +
+        "https://github.com/akkadotnet/akka.net/discussions/5482")]
     public class MultiNodeFactAttribute : FactAttribute
     {
         /// <summary>

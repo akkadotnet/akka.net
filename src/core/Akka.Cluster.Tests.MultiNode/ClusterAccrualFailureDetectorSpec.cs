@@ -13,6 +13,7 @@ using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.Cluster.Tests.MultiNode;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {

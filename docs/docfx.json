@@ -16,7 +16,7 @@
             "src": "../src"
         }],
         "dest": "api",
-        "filter": "filterConfig.yml",
+        "filter": "filterConfig.yml"
     }],
     "build": {
         "content": [{
@@ -27,9 +27,7 @@
         }, {
             "files": [
                 "articles/**.md",
-                "articles/**.html",
                 "articles/**/toc.yml",
-                "community/**.html",
                 "community/**.md",
                 "community/**/toc.yml",
                 "toc.yml",
@@ -44,7 +42,9 @@
             "files": [
                 "images/**",
                 "web.config",
-                "xrefmap.yml"
+                "xrefmap.yml",
+                "articles/**.html",
+                "community/**.html"
             ],
             "exclude": [
                 "obj/**",

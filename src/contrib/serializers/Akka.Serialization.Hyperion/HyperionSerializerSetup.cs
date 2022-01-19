@@ -17,20 +17,20 @@ namespace Akka.Serialization.Hyperion
     public class HyperionSerializerSetup : Setup
     {
         public static readonly HyperionSerializerSetup Empty =
-            new HyperionSerializerSetup(Option<bool>.None, Option<bool>.None, null, null, null, Option<bool>.None);
+            new HyperionSerializerSetup(Option<bool>.None, Option<bool>.None, null, null, null, Option<bool>.None, DisabledTypeFilter.Instance);
 
         public static HyperionSerializerSetup Create(
             bool preserveObjectReferences, 
             bool versionTolerance, 
             Type knownTypesProvider)
-            => new HyperionSerializerSetup(preserveObjectReferences, versionTolerance, knownTypesProvider, null, null, Option<bool>.None);
+            => new HyperionSerializerSetup(preserveObjectReferences, versionTolerance, knownTypesProvider, null, null, Option<bool>.None, DisabledTypeFilter.Instance);
 
         public static HyperionSerializerSetup Create(
             bool preserveObjectReferences, 
             bool versionTolerance, 
             Type knownTypesProvider, 
             IEnumerable<Func<string, string>> packageNameOverrides)
-            => new HyperionSerializerSetup(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, null, Option<bool>.None);
+            => new HyperionSerializerSetup(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, null, Option<bool>.None, DisabledTypeFilter.Instance);
 
         public static HyperionSerializerSetup Create(
             bool preserveObjectReferences, 
@@ -38,7 +38,7 @@ namespace Akka.Serialization.Hyperion
             Type knownTypesProvider, 
             IEnumerable<Func<string, string>> packageNameOverrides,
             IEnumerable<Surrogate> surrogates)
-            => new HyperionSerializerSetup(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, surrogates, Option<bool>.None);
+            => new HyperionSerializerSetup(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, surrogates, Option<bool>.None, DisabledTypeFilter.Instance);
         
         public static HyperionSerializerSetup Create(
             bool preserveObjectReferences, 
@@ -47,7 +47,17 @@ namespace Akka.Serialization.Hyperion
             IEnumerable<Func<string, string>> packageNameOverrides,
             IEnumerable<Surrogate> surrogates,
             bool disallowUnsafeType)
-            => new HyperionSerializerSetup(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, surrogates, disallowUnsafeType);
+            => new HyperionSerializerSetup(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, surrogates, disallowUnsafeType, DisabledTypeFilter.Instance);
+
+        public static HyperionSerializerSetup Create(
+            bool preserveObjectReferences, 
+            bool versionTolerance, 
+            Type knownTypesProvider, 
+            IEnumerable<Func<string, string>> packageNameOverrides,
+            IEnumerable<Surrogate> surrogates,
+            bool disallowUnsafeType,
+            ITypeFilter typeFilter)
+            => new HyperionSerializerSetup(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, surrogates, disallowUnsafeType, typeFilter);
         
         private HyperionSerializerSetup(
             Option<bool> preserveObjectReferences, 
@@ -55,7 +65,8 @@ namespace Akka.Serialization.Hyperion
             Type knownTypesProvider, 
             IEnumerable<Func<string, string>> packageNameOverrides,
             IEnumerable<Surrogate> surrogates,
-            Option<bool> disallowUnsafeType)
+            Option<bool> disallowUnsafeType,
+            ITypeFilter typeFilter)
         {
             PreserveObjectReferences = preserveObjectReferences;
             VersionTolerance = versionTolerance;
@@ -63,6 +74,7 @@ namespace Akka.Serialization.Hyperion
             PackageNameOverrides = packageNameOverrides;
             Surrogates = surrogates;
             DisallowUnsafeType = disallowUnsafeType;
+            TypeFilter = typeFilter;
         }
 
         /// <summary>
@@ -105,6 +117,8 @@ namespace Akka.Serialization.Hyperion
         /// from being deserialized during run-time. Defaults to true.
         /// </summary>
         public Option<bool> DisallowUnsafeType { get; }
+        
+        public ITypeFilter TypeFilter { get; }
 
         internal HyperionSerializerSettings ApplySettings(HyperionSerializerSettings settings)
             => new HyperionSerializerSettings(
@@ -113,7 +127,8 @@ namespace Akka.Serialization.Hyperion
                 KnownTypesProvider ?? settings.KnownTypesProvider,
                 PackageNameOverrides ?? settings.PackageNameOverrides,
                 Surrogates ?? settings.Surrogates,
-                DisallowUnsafeType.HasValue ? DisallowUnsafeType.Value : settings.DisallowUnsafeType
+                DisallowUnsafeType.HasValue ? DisallowUnsafeType.Value : settings.DisallowUnsafeType,
+                TypeFilter ?? settings.TypeFilter
             );
 
         public HyperionSerializerSetup WithPreserveObjectReference(bool preserveObjectReference)
@@ -137,13 +152,17 @@ namespace Akka.Serialization.Hyperion
         public HyperionSerializerSetup WithDisallowUnsafeType(bool disallowUnsafeType)
             => Copy(disallowUnsafeType: disallowUnsafeType);
 
+        public HyperionSerializerSetup WithTypeFilter(ITypeFilter typeFilter)
+            => Copy(typeFilter: typeFilter);
+        
         private HyperionSerializerSetup Copy(
             bool? preserveObjectReferences = null,
             bool? versionTolerance = null,
             Type knownTypesProvider = null,
             IEnumerable<Func<string, string>> packageNameOverrides = null,
             IEnumerable<Surrogate> surrogates = null,
-            bool? disallowUnsafeType = null
+            bool? disallowUnsafeType = null,
+            ITypeFilter typeFilter = null
             )
             => new HyperionSerializerSetup(
                 preserveObjectReferences ?? PreserveObjectReferences,
@@ -151,6 +170,7 @@ namespace Akka.Serialization.Hyperion
                 knownTypesProvider ?? KnownTypesProvider,
                 packageNameOverrides ?? PackageNameOverrides,
                 surrogates ?? Surrogates,
-                disallowUnsafeType ?? DisallowUnsafeType);
+                disallowUnsafeType ?? DisallowUnsafeType,
+                typeFilter ?? TypeFilter);
     }
 }
