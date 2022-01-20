@@ -1,15 +1,9 @@
-version: "3.2"
+version: "2.4"
 
 services:
   akka-test:
-    image: akka-test
+    image: akka-test-2
     build: 
       context: .
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1g
-        reservations:
-          cpus: '0.25'
-          memory: 200M
+    cpu_count: 1
+    mem_limit: 1g
