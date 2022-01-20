@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:6.0 
 ENV test_file="Akka.Streams.Tests.csproj"
-ENV test_dir=src/core
+ENV test_dir="src/core"
 RUN mkdir akka
 COPY . ./akka
 RUN ls
