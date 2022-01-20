@@ -9,4 +9,4 @@ services:
     mem_limit: 1g
     environment:
       test_file: Akka.Remote.Tests.csproj
-      test_dir: src/core/Akka.Remote.Tests
+      test_dir: "src/core/Akka.Remote.Tests"
