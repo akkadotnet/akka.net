@@ -1,5 +1,4 @@
 FROM mcr.microsoft.com/dotnet/sdk:6.0 
-ENV trx_path=/home/ebere/backup
 ENV test_name="Akka.Streams.Tests"
 ENV test_name_file_extension="csproj"
 ENV dir=src/core
