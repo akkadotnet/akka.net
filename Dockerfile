@@ -5,4 +5,4 @@ RUN mkdir akka
 COPY . ./akka
 RUN ls
 WORKDIR /akka/${test_dir}
-CMD ["/bin/bash", "-c", "dotnet restore ${test_file} && dotnet test ${test_file} --logger trx; exit 0"]
+CMD ["/bin/bash", "-c", "dotnet restore ${test_dir}/${test_file} && dotnet test ${test_dir}/${test_file} --logger trx; exit 0"]
