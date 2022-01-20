@@ -178,7 +178,8 @@ namespace Akka.Persistence.Custom.Journal
         
         private async Task<object> Initialize()
         {
-            // No database initialization needed, the user explicitly asked us not to initialize anything.
+            // No database initialization needed, the user explicitly asked us
+            // not to initialize anything.
             if (!_settings.AutoInitialize) 
                 return new Status.Success(NotUsed.Instance);
 
@@ -442,13 +443,15 @@ namespace Akka.Persistence.Custom.Journal
                                 using (var updateCommand = GetCommand(connection, UpdateSequenceNrSql, 
                                            _timeout))
                                 {
-                                    // This update is still part of the same transaction as everything else
-                                    // in this process
+                                    // This update is still part of the same transaction as everything
+                                    // else in this process
                                     updateCommand.Transaction = tx;
 
                                     // Populate the SQL parameters
-                                    AddParameter(updateCommand, "@PersistenceId", DbType.String, persistenceId);
-                                    AddParameter(updateCommand, "@SequenceNr", DbType.Int64, highestSeqNr);
+                                    AddParameter(
+                                        updateCommand, "@PersistenceId", DbType.String, persistenceId);
+                                    AddParameter(
+                                        updateCommand, "@SequenceNr", DbType.Int64, highestSeqNr);
 
                                     // Execute the update SQL statement
                                     await updateCommand.ExecuteNonQueryAsync(cts.Token);

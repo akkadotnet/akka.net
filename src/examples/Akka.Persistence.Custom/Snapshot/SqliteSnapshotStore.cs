@@ -315,7 +315,9 @@ namespace Akka.Persistence.Custom.Snapshot
                        .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))    
             {
                 await connection.OpenAsync(cts.Token);
-                var timestamp = metadata.Timestamp != DateTime.MinValue ? metadata.Timestamp : (DateTime?)null;
+                var timestamp = metadata.Timestamp != DateTime.MinValue 
+                    ? metadata.Timestamp 
+                    : (DateTime?)null;
                 
                 var sql = timestamp.HasValue
                     ? DeleteSnapshotRangeSql + " AND { Configuration.TimestampColumnName} = @Timestamp"
@@ -347,7 +349,9 @@ namespace Akka.Persistence.Custom.Snapshot
         //</DeleteAsync>
 
         //<DeleteAsync2>
-        protected sealed override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected sealed override async Task DeleteAsync(
+            string persistenceId, 
+            SnapshotSelectionCriteria criteria)
         {
             // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
