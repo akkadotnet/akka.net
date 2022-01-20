@@ -18,21 +18,17 @@ namespace Akka.Persistence.Custom
         /// <summary>
         /// Returns a default configuration for akka persistence SQLite-based journals and snapshot stores.
         /// </summary>
-        /// <returns>TBD</returns>
         public static Config DefaultConfiguration()
         {
             return ConfigurationFactory.FromResource<SqlitePersistence>("Akka.Persistence.Custom.sqlite.conf");
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        //<Get-Instance>
         public static SqlitePersistence Get(ActorSystem system)
         {
             return system.WithExtension<SqlitePersistence, SqlitePersistenceProvider>();
         }
+        //</Get-Instance>
 
         /// <summary>
         /// Journal-related settings loaded from HOCON configuration.
@@ -54,10 +50,7 @@ namespace Akka.Persistence.Custom
         /// </summary>
         public readonly Config DefaultSnapshotConfig;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
+        //<Constructor>
         public SqlitePersistence(ExtendedActorSystem system)
         {
             var defaultConfig = DefaultConfiguration();
@@ -68,21 +61,16 @@ namespace Akka.Persistence.Custom
             SnapshotConfig = system.Settings.Config.GetConfig(SnapshotConfigPath);
             DefaultSnapshotConfig = defaultConfig.GetConfig(SnapshotConfigPath);
         }
+        //</Constructor>
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
+    //<ExtensionIdProvider>
     public class SqlitePersistenceProvider : ExtensionIdProvider<SqlitePersistence>
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
         public override SqlitePersistence CreateExtension(ExtendedActorSystem system)
         {
             return new SqlitePersistence(system);
         }
     }
+    //</ExtensionIdProvider>
 }

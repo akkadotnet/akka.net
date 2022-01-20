@@ -22,6 +22,7 @@ namespace Akka.Persistence.Custom.Snapshot
 {
     public class SqliteSnapshotStore: SnapshotStore, IWithUnboundedStash
     {
+        //<CreateSnapshotTableSql>
         private const string CreateSnapshotTableSql = @"
                 CREATE TABLE IF NOT EXISTS snapshot (
                     persistence_id VARCHAR(255) NOT NULL,
@@ -31,7 +32,9 @@ namespace Akka.Persistence.Custom.Snapshot
                     payload BLOB NOT NULL,
                     serializer_id INTEGER(4),
                     PRIMARY KEY (persistence_id, sequence_nr));";
+        //</CreateSnapshotTableSql>
 
+        //<SelectSnapshotSql>
         private const string SelectSnapshotSql = @"
             SELECT persistence_id,
                 sequence_nr, 
@@ -45,18 +48,24 @@ namespace Akka.Persistence.Custom.Snapshot
                 AND timestamp <= @Timestamp
             ORDER BY sequence_nr DESC
             LIMIT 1";
+        //</SelectSnapshotSql>
 
+        //<DeleteSnapshotSql>
         private const string DeleteSnapshotSql = @"
             DELETE FROM snapshot
             WHERE persistence_id = @PersistenceId
                 AND sequence_nr = @SequenceNr";
+        //</DeleteSnapshotSql>
 
+        //<DeleteSnapshotRangeSql>
         private const string DeleteSnapshotRangeSql = @"
             DELETE FROM snapshot
             WHERE persistence_id = @PersistenceId
                 AND sequence_nr <= @SequenceNr
                 AND timestamp <= @Timestamp";
+        //</DeleteSnapshotRangeSql>
 
+        //<InsertSnapshotSql>
         private const string InsertSnapshotSql = @"
                 UPDATE snapshot
                 SET timestamp = @Timestamp, 
@@ -68,6 +77,7 @@ namespace Akka.Persistence.Custom.Snapshot
                 INSERT OR IGNORE INTO snapshot 
                     (persistence_id, sequence_nr, timestamp, manifest, payload, serializer_id)
                 VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload, @SerializerId)";
+        //</InsertSnapshotSql>
         
         private readonly SnapshotStoreSettings _settings;
         private readonly string _connectionString;
@@ -91,12 +101,18 @@ namespace Akka.Persistence.Custom.Snapshot
         
         public IStash Stash { get; set; }
 
+        //<Startup>
         protected override void PreStart()
         {
             base.PreStart();
             if (_settings.AutoInitialize)
             {
+                // Call the Initialize method and pipe the result back to signal that
+                // database schemas are ready to use, if it needs to be initialized
                 Initialize().PipeTo(Self);
+            
+                // WaitingForInitialization receive handler will wait for a success/fail
+                // result back from the Initialize method
                 BecomeStacked(WaitingForInitialization);
             }
         }
@@ -111,10 +127,16 @@ namespace Akka.Persistence.Custom.Snapshot
 
         private async Task<object> Initialize()
         {
+            // No database initialization needed, the user explicitly asked us not to initialize anything.
+            if (!_settings.AutoInitialize) 
+                return new Status.Success(NotUsed.Instance);
+
+            // Create SQLite journal tables 
             try
             {
                 using (var connection = new SqliteConnection(_connectionString))
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                using (var cts = CancellationTokenSource
+                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
                     await connection.OpenAsync(cts.Token);
                     
@@ -139,34 +161,54 @@ namespace Akka.Persistence.Custom.Snapshot
         {
             switch(message)
             {
+                // Tables are already created or successfully created all needed tables
                 case Status.Success _:
                     UnbecomeStacked();
+                    // Unstash all messages received when we were initializing our tables
                     Stash.UnstashAll();
                     return true;
+                
                 case Status.Failure msg:
+                    // Failed creating tables. Log an error and stop the actor.
                     _log.Error(msg.Cause, "Error during snapshot store initialization");
                     Context.Stop(Self);
                     return true;
+                
                 default:
+                    // By default, stash all received messages while we're waiting for the
+                    // Initialize method.
                     Stash.Stash();
                     return true;
             }
         }
+        //</Startup>
         
-        protected sealed override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        //<LoadAsync>
+        protected sealed override async Task<SelectedSnapshot> LoadAsync(
+            string persistenceId,
+            SnapshotSelectionCriteria criteria)
         {
+            // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using (var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(cts.Token);
+                
+                // Create new DbCommand instance
                 using (var command = GetCommand(connection, SelectSnapshotSql, _timeout))
                 {
+                    // Populate the SQL parameters
                     AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
                     AddParameter(command, "@SequenceNr", DbType.Int64, criteria.MaxSequenceNr);
                     AddParameter(command, "@Timestamp", DbType.DateTime2, criteria.MaxTimeStamp);
 
-                    using (var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cts.Token))
+                    // Create a DbDataReader to sequentially read the returned query result
+                    using (var reader = await command.ExecuteReaderAsync(
+                               CommandBehavior.SequentialAccess,
+                               cts.Token))
                     {
+                        // Return null if no snapshot is found
                         if (!await reader.ReadAsync(cts.Token)) 
                             return null;
                         
@@ -178,73 +220,99 @@ namespace Akka.Persistence.Custom.Snapshot
                             
                         var manifest = reader.GetString(3);
                         var binary = (byte[])reader[4];
-
-                        object snapshot;
-                        if (reader.IsDBNull(5))
-                        {
-                            var type = Type.GetType(manifest, true);
-                            var serializer = _serialization.FindSerializerForType(type, _defaultSerializer);
-                            snapshot = Akka.Serialization.Serialization.WithTransport(
-                                _serialization.System, 
-                                () => serializer.FromBinary(binary, type));
-                        }
-                        else
-                        {
-                            var serializerId = reader.GetInt32(5);
-                            snapshot = _serialization.Deserialize(binary, serializerId, manifest);
-                        }
+                        
+                        var serializerId = reader.GetInt32(5);
+                        
+                        // Deserialize the snapshot payload using the data we read from the reader
+                        var snapshot = _serialization.Deserialize(binary, serializerId, manifest);
 
                         return new SelectedSnapshot(metadata, snapshot);
                     }
                 }
             }
-
         }
+        //</LoadAsync>
 
-        protected sealed override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        //<SaveAsync>
+        protected sealed override async Task SaveAsync(
+            SnapshotMetadata metadata,
+            object snapshot)
         {
+            // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using (var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(cts.Token);
-                //await QueryExecutor.InsertAsync(connection, nestedCancellationTokenSource.Token, snapshot, metadata);
-                using (var command = GetCommand(connection, InsertSnapshotSql, _timeout))
+                
+                // Create new DbCommand instance
+                using (var command = GetCommand(connection, InsertSnapshotSql, _timeout)) 
+                // Create a new DbTransaction instance
                 using (var tx = connection.BeginTransaction())
                 {
                     command.Transaction = tx;
+                    
+                    var snapshotType = snapshot.GetType();
+                    
+                    // Get the serializer associated with the payload type,
+                    // else use a default serializer
+                    var serializer = _serialization.FindSerializerForType(
+                        objectType: snapshotType,
+                        defaultSerializerName: _defaultSerializer);
+
+                    // This WithTransport method call is important, it allows for proper
+                    // local IActorRef serialization by switching the serialization information
+                    // context during the serialization process
+                    var (binary, manifest) = Akka.Serialization.Serialization.WithTransport(
+                        system: _serialization.System,
+                        state: (snapshot, serializer),
+                        action: state =>
+                        {
+                            var (thePayload, theSerializer) = state;
+                            var thisManifest = "";
+                                    
+                            // There are two kinds of serializer when it comes to manifest
+                            // support, we have to support both of them for proper payload
+                            // serialization
+                            if (theSerializer is SerializerWithStringManifest stringManifest)
+                            {
+                                thisManifest = stringManifest.Manifest(thePayload);
+                            }
+                            else if (theSerializer.IncludeManifest)
+                            {
+                                thisManifest = thePayload.GetType().TypeQualifiedName();
+                            }
+                                    
+                            // Return the serialized byte array and the manifest for the
+                            // serialized data
+                            return (theSerializer.ToBinary(thePayload), thisManifest);
+                        });
+                    
+                    // Populate the SQL parameters
                     AddParameter(command, "@PersistenceId", DbType.String, metadata.PersistenceId);
                     AddParameter(command, "@SequenceNr", DbType.Int64, metadata.SequenceNr);
                     AddParameter(command, "@Timestamp", DbType.DateTime2, metadata.Timestamp);
-
-                    var snapshotType = snapshot.GetType();
-                    var serializer = _serialization.FindSerializerForType(snapshotType, _defaultSerializer);
-
-                    var manifest = "";
-                    if (serializer is SerializerWithStringManifest serializerWithStringManifest)
-                    {
-                        manifest = serializerWithStringManifest.Manifest(snapshot);
-                    }
-                    else if (serializer.IncludeManifest)
-                    {
-                        manifest = snapshotType.TypeQualifiedName();
-                    }
                     AddParameter(command, "@Manifest", DbType.String, manifest);
                     AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
-                    
-                    var binary = Akka.Serialization.Serialization.WithTransport(_serialization.System, () => serializer.ToBinary(snapshot));
                     AddParameter(command, "@Payload", DbType.Binary, binary);
 
+                    // Execute the SQL query
                     await command.ExecuteNonQueryAsync(cts.Token);
 
+                    // Commit the DbTransaction
                     tx.Commit();
                 }
             }
         }
+        //</SaveAsync>
 
+        //<DeleteAsync>
         protected sealed override async Task DeleteAsync(SnapshotMetadata metadata)
         {
+            // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))    
+            using (var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))    
             {
                 await connection.OpenAsync(cts.Token);
                 var timestamp = metadata.Timestamp != DateTime.MinValue ? metadata.Timestamp : (DateTime?)null;
@@ -253,47 +321,62 @@ namespace Akka.Persistence.Custom.Snapshot
                     ? DeleteSnapshotRangeSql + " AND { Configuration.TimestampColumnName} = @Timestamp"
                     : DeleteSnapshotSql;
 
+                // Create new DbCommand instance
                 using (var command = GetCommand(connection, sql, _timeout))
+                // Create a new DbTransaction instance
                 using (var tx = connection.BeginTransaction())
                 {
                     command.Transaction = tx;
+                    
+                    // Populate the SQL parameters
                     AddParameter(command, "@PersistenceId", DbType.String, metadata.PersistenceId);
                     AddParameter(command, "@SequenceNr", DbType.Int64, metadata.SequenceNr);
-
                     if (timestamp.HasValue)
                     {
                         AddParameter(command, "@Timestamp", DbType.DateTime2, metadata.Timestamp);
                     }
 
+                    // Execute the SQL query
                     await command.ExecuteNonQueryAsync(cts.Token);
 
+                    // Commit the DbTransaction
                     tx.Commit();
                 }
-                
             }
         }
+        //</DeleteAsync>
 
+        //<DeleteAsync2>
         protected sealed override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
+            // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using (var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(cts.Token);
+                
+                // Create new DbCommand instance
                 using (var command = GetCommand(connection, DeleteSnapshotRangeSql, _timeout))
+                // Create a new DbTransaction instance
                 using (var tx = connection.BeginTransaction())
                 {
                     command.Transaction = tx;
+                    
+                    // Populate the SQL parameters
                     AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
                     AddParameter(command, "@SequenceNr", DbType.Int64, criteria.MaxSequenceNr);
                     AddParameter(command, "@Timestamp", DbType.DateTime2, criteria.MaxTimeStamp);
                     
+                    // Execute the SQL query
                     await command.ExecuteNonQueryAsync(cts.Token);
 
+                    // Commit the DbTransaction
                     tx.Commit();
                 }
-                
             }
         }
+        //</DeleteAsync2>
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void AddParameter(DbCommand command, string parameterName, DbType parameterType, object value)

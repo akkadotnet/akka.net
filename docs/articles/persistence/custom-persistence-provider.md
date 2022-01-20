@@ -5,14 +5,17 @@ title: Writing A Custom Persistent Provider
 
 # Writing A Custom Akka.Persistence Provider
 
-## Implementing Akka.Persistence Journal
+For an introduction to event sourcing, you can read this [article](https://docs.microsoft.com/en-us/previous-versions/msp-n-p/jj591559%28v=pandp.10%29) at MSDN.
 
-* TODO: Discuss design goals
-* TODO: Discuss Journal responsibility
+Persistence or event source provider in Akka.NET are divided into two plugins, the journal and snapshot store plugins, each with their own API and responsibility. The goal of `Akka.Persistence` event sourcing plugin is to provide a consistent event sourcing API that provides an abstraction layer over the underlying storage mechanism.
+
+## Implementing Akka.Persistence Journal
 
 Akka.Persistence journal is responsible for storing all events for playback in the event of a recovery.
 
-All of the code examples in this documentation will assume a SQLite database and the `Journal` table schemas we will be using are:
+All of the code examples in this documentation will assume a SQLite database. You can view the complete sample project in `/src/examples/Akka.Persistence.Custom`.
+
+The `Journal` table schemas we will be using are:
 
 [!code-csharp[Schema](../../../src/examples/Akka.Persistence.Custom/Journal/SqliteJournal.cs?name=schema "Journal table schemas")]
 
@@ -109,10 +112,12 @@ Journals should aim to persist events in-order for a given `persistenceId` as ot
 
 ##### AtomicWrite
 
-Each `AtomicWrite` message contains:
+Each `AtomicWrite` message contains a `Payload` property that contains:
 
 * a single `IPersistentRepresentation` that corresponds to the event that was passed to the `Eventsourced.Persist<TEvent>(TEvent, Action<TEvent>)` method of the `PersistentActor`, or
 * it contains several `IPersistentRepresentation` that correspond to the events that were passed to the `Eventsourced.PersistAll<TEvent>(IEnumerable<TEvent>, Action<TEvent>)` method of the `PersistentActor`.
+
+Note that while `AtomicWrite.Payload` is declared as an object property, the type of this object instance will always be an `ImmutableList<IPersistentRepresentation>`.
 
 All `Persistent` of the `AtomicWrite` must be written to the data store atomically, i.e. all or none must be stored.
 
@@ -182,25 +187,15 @@ SQLite code example:
 
 #### Reading HOCON Settings
 
-There are some HOCON settings that are by default loaded by the journal base class and these can be overriden in your HOCON settings. The minimum HOCON settings that need to be defined for your custom provider are:
+There are some HOCON settings that are by default loaded by the journal base class and these can be overriden in your HOCON settings. The minimum HOCON settings that need to be defined for your custom plugin are:
 
 ```hocon
-akka.persistence{
-	journal {
-		plugin = "akka.persistence.journal.custom-sqlite"
-		custom-sqlite {
-			# qualified type name of the SQLite persistence journal actor
-			class = "Akka.Persistence.Custom.Journal.SqliteJournal, Akka.Persistence.Custom"
-		}
-	}
-
-	snapshot-store {
-		plugin = "akka.persistence.snapshot-store.custom-sqlite"
-		custom-sqlite {
-			# qualified type name of the SQLite persistence journal actor
-			class = "Akka.Persistence.Custom.Snapshot.SqliteSnapshotStore, Akka.Persistence.Custom"
-		}
-	}
+akka.persistence.journal {
+    plugin = "akka.persistence.journal.custom-sqlite"
+    custom-sqlite {
+        # qualified type name of the SQLite persistence journal actor
+        class = "Akka.Persistence.Custom.Journal.SqliteJournal, Akka.Persistence.Custom"
+    }
 }
 ```
 
@@ -209,8 +204,7 @@ The default HOCON settings are:
 ```hocon
 # Fallback settings for journal plugin configurations.
 # These settings are used if they are not defined in plugin config section.
-journal-plugin-fallback {
-
+akka.persistence.journal-plugin-fallback {
     # Fully qualified class name providing journal plugin api implementation.
     # It is mandatory to specify this property.
     # The class must have a constructor without parameters or constructor with
@@ -269,36 +263,7 @@ journal-plugin-fallback {
         debug = off
     }
 }
-
-# Fallback settings for snapshot store plugin configurations
-# These settings are used if they are not defined in plugin config section.
-snapshot-store-plugin-fallback {
-
-    # Fully qualified class name providing snapshot store plugin api
-    # implementation. It is mandatory to specify this property if
-    # snapshot store is enabled.
-    # The class must have a constructor without parameters or constructor with
-    # one `Akka.Configuration.Config` parameter.
-    class = ""
-
-    # Dispatcher for the plugin actor.
-    plugin-dispatcher = "akka.persistence.dispatchers.default-plugin-dispatcher"
-
-    # Default serializer used as manifest serializer when applicable 
-    # and payload serializer when no specific binding overrides are specified
-    serializer = "json"
-
-    circuit-breaker {
-        max-failures = 5
-        call-timeout = 20s
-        reset-timeout = 60s
-    }
-}
 ```
-
-#### Creating And Processing Custom Commands
-
-* TODO: Discuss ReceivePluginInternal and IJournalRequest
 
 #### Pre-Start Requirement
 
@@ -325,6 +290,16 @@ This call is protected with a circuit-breaker.
 
 Asynchronously loads a snapshot.
 
+##### Code Sample
+
+`SelectSnapshotSql` in this example refers to this SQL query statement:
+
+[!code-csharp[SelectSnapshotSql](../../../src/examples/Akka.Persistence.Custom/Snapshot/SqliteSnapshotStore.cs?name=SelectSnapshotSql "SelectSnapshotSql SQL Statement")]
+
+SQLite code example:
+
+[!code-csharp[LoadAsync](../../../src/examples/Akka.Persistence.Custom/Snapshot/SqliteSnapshotStore.cs?name=LoadAsync "LoadAsync method implementation")]
+
 #### SaveAsync
 
 ```c#
@@ -338,6 +313,16 @@ This call is protected with a circuit-breaker
 
 Asynchronously saves a snapshot.
 
+##### Code Sample
+
+`InsertSnapshotSql` in this example refers to this SQL query statement:
+
+[!code-csharp[InsertSnapshotSql](../../../src/examples/Akka.Persistence.Custom/Snapshot/SqliteSnapshotStore.cs?name=InsertSnapshotSql "InsertSnapshotSql SQL Statement")]
+
+SQLite code example:
+
+[!code-csharp[SaveAsync](../../../src/examples/Akka.Persistence.Custom/Snapshot/SqliteSnapshotStore.cs?name=SaveAsync "SaveAsync method implementation")]
+
 #### DeleteAsync
 
 ```c#
@@ -349,6 +334,20 @@ Task DeleteAsync(SnapshotMetadata metadata);
 This call is protected with a circuit-breaker
 
 Deletes the snapshot identified by by the provided `Metadata`
+
+##### Code Sample
+
+`DeleteSnapshotSql` in this example refers to this SQL query statement:
+
+[!code-csharp[DeleteSnapshotSql](../../../src/examples/Akka.Persistence.Custom/Snapshot/SqliteSnapshotStore.cs?name=DeleteSnapshotSql "DeleteSnapshotSql SQL Statement")]
+
+`DeleteSnapshotRangeSql` in this example refers to this SQL query statement:
+
+[!code-csharp[DeleteSnapshotRangeSql](../../../src/examples/Akka.Persistence.Custom/Snapshot/SqliteSnapshotStore.cs?name=DeleteSnapshotRangeSql "DeleteSnapshotRangeSql SQL Statement")]
+
+SQLite code example:
+
+[!code-csharp[DeleteAsync](../../../src/examples/Akka.Persistence.Custom/Snapshot/SqliteSnapshotStore.cs?name=DeleteAsync "DeleteAsync method implementation")]
 
 #### DeleteAsync
 
@@ -363,8 +362,106 @@ This call is protected with a circuit-breaker
 
 Deletes all snapshots matching the provided `criteria`
 
+##### Code Sample
+
+`DeleteSnapshotRangeSql` in this example refers to this SQL query statement:
+
+[!code-csharp[DeleteSnapshotRangeSql](../../../src/examples/Akka.Persistence.Custom/Snapshot/SqliteSnapshotStore.cs?name=DeleteSnapshotRangeSql "DeleteSnapshotRangeSql SQL Statement")]
+
+SQLite code example:
+
+[!code-csharp[DeleteAsync2](../../../src/examples/Akka.Persistence.Custom/Snapshot/SqliteSnapshotStore.cs?name=DeleteAsync2 "DeleteAsync method implementation")]
+
 ### Detail Implementation
 
-* TODO: This should be very similar to Journal
+#### Reading HOCON Settings
+
+There are some HOCON settings that are by default loaded by the snapshot store base class and these can be overriden in your HOCON settings. The minimum HOCON settings that need to be defined for your custom plugin are:
+
+```hocon
+akka.persistence{
+	snapshot-store {
+		plugin = "akka.persistence.snapshot-store.custom-sqlite"
+		custom-sqlite {
+			# qualified type name of the SQLite persistence journal actor
+			class = "Akka.Persistence.Custom.Snapshot.SqliteSnapshotStore, Akka.Persistence.Custom"
+		}
+	}
+}
+```
+
+The default HOCON settings are:
+
+```hocon
+# Fallback settings for snapshot store plugin configurations
+# These settings are used if they are not defined in plugin config section.
+akka.persistence.snapshot-store-plugin-fallback {
+
+    # Fully qualified class name providing snapshot store plugin api
+    # implementation. It is mandatory to specify this property if
+    # snapshot store is enabled.
+    # The class must have a constructor without parameters or constructor with
+    # one `Akka.Configuration.Config` parameter.
+    class = ""
+
+    # Dispatcher for the plugin actor.
+    plugin-dispatcher = "akka.persistence.dispatchers.default-plugin-dispatcher"
+
+    # Default serializer used as manifest serializer when applicable 
+    # and payload serializer when no specific binding overrides are specified
+    serializer = "json"
+
+    circuit-breaker {
+        max-failures = 5
+        call-timeout = 20s
+        reset-timeout = 60s
+    }
+}
+```
+
+#### Pre-Start Requirement
+
+It is a good practice to allow user of your custom plugin to be able to auto initialize their back end event source from a blank slate. In order to do that, it is good practice to support `auto-initialize` setting in your journal HOCON settings.
+
+In order to support this, we will have to be able to stash all incoming messages while we're creating the tables in the event source. Here's an implementation that we use in our example code:
+
+[!code-csharp[Startup](../../../src/examples/Akka.Persistence.Custom/Snapshot/SqliteSnapshotStore.cs?name=Startup "SnapshotStore startup sequence")]
+
+## Tying Everything Together Into An Akka.NET Extension
+
+The last thing you need to do to make the new custom persistence provider to work is to create an Akka.NET extension that wraps the journal and snapshot storage so that it can be seamlessly used from inside Akka.NET.
+
+In order to do this, you will need to extend two things, `IExtension` and `ExtensionIdProvider<T>`.
+
+### Extending `IExtension`
+
+`IExtension` is a marker interface that marks a class as an Akka.NET extension. It is the class instance that all user will use to interact with your custom extension.
+
+There are two conventions that needs to be implemented when you extend `IExtension`:
+
+* Any class extending this interface is __required__ to provide a single constructor that takes a single `ExtendedActorSystem` as its argument.
+
+[!code-csharp[Constructor](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=Constructor "Extension constructor")]
+
+* It is strongly recommended to create a static `Get` method that returns an instance of this class. This method is responsible for registering the extension with the Akka.NET extension manager and instantiates a new instance for users to use.
+
+[!code-csharp[Get-Instance](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=Get-Instance "Extension static Get method")]
+
+### Extending `ExtensionIdProvider<T>`
+
+`ExtensionIdProvider<T>` is a factory class that is responsible for creating new instances for your extension. This class is quite straight forward, all you need to do is to override a single method to make it work:
+
+[!code-csharp[ExtensionIdProvider](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=ExtensionIdProvider "ExtensionIdProvider implementation")]
 
 ## Unit Testing Journal and SnapshotStore
+
+Akka.Persistence came with a standardized Technology Compatibility Kit (TCK) test kit that can be readily incorporated into your unit testing suite to test that a custom provider adheres to a basic compatibility requirement.
+
+To do this, you will need to create an XUnit unit test project and reference your custom persistence project and the `Akka.Persistence.TCK` package. There are four abstract classes that can be implemented to test your persistence implementation:
+
+* JournalSerializationSpec
+* JournalSpec
+* SnapshotStoreSerializationSpec
+* SnapshotStoreSpec
+
+For an implementation sample, please see the `/src/examples/Akka.Persistence.Custom.Tests` example project.

@@ -178,6 +178,7 @@ namespace Akka.Persistence.Custom.Journal
         
         private async Task<object> Initialize()
         {
+            // No database initialization needed, the user explicitly asked us not to initialize anything.
             if (!_settings.AutoInitialize) 
                 return new Status.Success(NotUsed.Instance);
 
@@ -221,6 +222,7 @@ namespace Akka.Persistence.Custom.Journal
                        .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(cts.Token);
+                
                 // Create new DbCommand instance
                 using (var command = GetCommand(connection, ByPersistenceIdSql, _timeout))
                 {
@@ -309,6 +311,7 @@ namespace Akka.Persistence.Custom.Journal
                            .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
                     await connection.OpenAsync(cts.Token);
+                    
                     // Create new DbCommand instance
                     using (var command = GetCommand(connection, InsertEventSql, _timeout))
                     // Create a new DbTransaction instance for this AtomicWrite
@@ -340,8 +343,9 @@ namespace Akka.Persistence.Custom.Journal
                                 {
                                     var (thePayload, theSerializer) = state;
                                     var thisManifest = "";
+                                    
                                     // There are two kinds of serializer when it comes to manifest
-                                    // support,we have to support both of them for proper payload
+                                    // support, we have to support both of them for proper payload
                                     // serialization
                                     if (theSerializer is SerializerWithStringManifest stringManifest)
                                     {
