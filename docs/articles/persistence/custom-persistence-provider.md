@@ -380,13 +380,13 @@ There are some HOCON settings that are by default loaded by the snapshot store b
 
 ```hocon
 akka.persistence{
-	snapshot-store {
-		plugin = "akka.persistence.snapshot-store.custom-sqlite"
-		custom-sqlite {
-			# qualified type name of the SQLite persistence journal actor
-			class = "Akka.Persistence.Custom.Snapshot.SqliteSnapshotStore, Akka.Persistence.Custom"
-		}
-	}
+    snapshot-store {
+        plugin = "akka.persistence.snapshot-store.custom-sqlite"
+        custom-sqlite {
+            # qualified type name of the SQLite persistence journal actor
+            class = "Akka.Persistence.Custom.Snapshot.SqliteSnapshotStore, Akka.Persistence.Custom"
+        }
+    }
 }
 ```
 
