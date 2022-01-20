@@ -7,3 +7,7 @@ services:
       context: .
     cpu_count: 1
     mem_limit: 1g
+    environment:
+      test_name: Akka.Remote.Tests
+      test_name_file_extension: csproj
+      test_dir: src/core
