@@ -8,4 +8,5 @@ services:
     cpu_count: 1
     mem_limit: 1g
     environment:
+      run_count: 2
       test_file: core/Akka.Remote.Tests/Akka.Remote.Tests.csproj
