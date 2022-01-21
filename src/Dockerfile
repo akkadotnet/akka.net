@@ -5,5 +5,5 @@ ENV run_count=2
 RUN mkdir akka
 COPY . ./akka
 RUN ls
-WORKDIR /akka/src
+WORKDIR /akka
 CMD ["/bin/bash", "-c", "x=0; while [ $x -le ${run_count} ]; do dotnet test ${test_file} ${test_filter} --framework net6.0 --logger trx;  x=$(( $x + 1 )); sleep 5s; done"]
