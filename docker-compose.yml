@@ -9,4 +9,5 @@ services:
     mem_limit: 1g
     environment:
       run_count: 2
-      test_file: core/Akka.Remote.Tests/Akka.Remote.Tests.csproj
+      test_filter: "--filter FullyQualifiedName=Akka.Cluster.Tests.ClusterLogVerboseEnabledSpec.A_cluster_must_log_verbose_cluster_events_when_log_info_verbose_is_on"
+      test_file: core/Akka.Cluster.Tests/Akka.Cluster.Tests.csproj
