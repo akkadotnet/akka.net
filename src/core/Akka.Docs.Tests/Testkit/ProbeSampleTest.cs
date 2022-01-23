@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
@@ -14,7 +15,7 @@ namespace DocsExamples.Testkit
 {
     public class ProbeSampleTest : TestKit
     {
-#region ProbeSample_0
+        #region ProbeSample_0
         public class Forwarder : ReceiveActor
         {
             private IActorRef target;
@@ -32,7 +33,7 @@ namespace DocsExamples.Testkit
         {
             //create a test probe
             var probe = CreateTestProbe();
-            
+
             //create a forwarder, injecting the probo's testActor
             var props = Props.Create(() => new Forwarder(probe));
             var forwarder = Sys.ActorOf(props, "forwarder");
@@ -42,9 +43,9 @@ namespace DocsExamples.Testkit
             probe.ExpectMsg(43);
             Assert.Equal(TestActor, probe.LastSender);
         }
-#endregion ProbeSample_0
+        #endregion ProbeSample_0
 
-#region MultipleProbeSample_0
+        #region MultipleProbeSample_0
         [Fact]
         public void MultipleProbes()
         {
@@ -54,9 +55,9 @@ namespace DocsExamples.Testkit
             Assert.StartsWith("worker", worker.Ref.Path.Name);
             Assert.StartsWith("aggregator", aggregator.Ref.Path.Name);
         }
-#endregion MultipleProbeSample_0
+        #endregion MultipleProbeSample_0
 
-#region ReplyingToProbeMessages_0
+        #region ReplyingToProbeMessages_0
         [Fact]
         public void ReplyingToProbeMessages()
         {
@@ -68,9 +69,46 @@ namespace DocsExamples.Testkit
             ExpectMsg("world");
             Assert.Equal(probe.Ref, LastSender);
         }
-#endregion ReplyingToProbeMessages_0
 
-#region ForwardingProbeMessages_0
+        /// <summary>
+        /// this test is a true positive
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task ReplyingToProbeMessagesAction()
+        {
+            await EventFilter.Error().ExpectAsync(0, action: () =>
+            {
+                var probe = CreateTestProbe();
+                probe.Tell("hello");
+                probe.ExpectMsg("hello");
+                probe.Reply("world");
+                ExpectMsg("world2");
+                Assert.Equal(probe.Ref, LastSender);
+            });
+        }
+
+        /// <summary>
+        /// this test is a false positive
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task ReplyingToProbeMessagesFunc()
+        {
+            await EventFilter.Error().ExpectAsync(0, actionAsync: async () =>
+            {
+                var probe = CreateTestProbe();
+                probe.Tell("hello");
+                probe.ExpectMsg("hello");
+                probe.Reply("world");
+                await Task.Run(() => { ExpectMsg("world2"); });
+                Assert.Equal(probe.Ref, LastSender);
+            });
+        }
+
+        #endregion ReplyingToProbeMessages_0
+
+        #region ForwardingProbeMessages_0
         [Fact]
         public void ForwardingProbeMessages()
         {
@@ -81,9 +119,9 @@ namespace DocsExamples.Testkit
             ExpectMsg("hello");
             Assert.Equal(TestActor, LastSender);
         }
-#endregion ForwardingProbeMessages_0
+        #endregion ForwardingProbeMessages_0
 
-#region ProbeAutopilot_0
+        #region ProbeAutopilot_0
         [Fact]
         public void ProbeAutopilot()
         {
@@ -101,7 +139,7 @@ namespace DocsExamples.Testkit
             probe.Tell("world");
             ExpectNoMsg();
         }
-#endregion ProbeAutopilot_0
+        #endregion ProbeAutopilot_0
 
     }
 }
