@@ -65,7 +65,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="T">The type that the message is not supposed to be.</typeparam>
         /// <param name="max">Optional. The maximum wait duration. Defaults to <see cref="RemainingOrDefault"/> when unset.</param>
-        public async Task FishUntilMessage<T>(TimeSpan? max = null)
+        public async Task FishUntilMessageAsync<T>(TimeSpan? max = null)
         {
             await Task.Run(() =>
             {
