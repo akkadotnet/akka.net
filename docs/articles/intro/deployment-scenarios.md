@@ -37,6 +37,7 @@ namespace Foo.Bar
 ## ASP.NET Core
 
 When deploying Akka.NET in ASP.NET Core, one major concern is how to expose `actor` in ASP.NET Core controllers. We will design an `interface` for this!
+
 ```csharp
 public interface IActorBridge
 {
@@ -44,6 +45,7 @@ public interface IActorBridge
 	Task Ask<T>(object message);
 }
 ```
+
 ### Host Akka.NET with `IHostedService`
 
 With the `IActorBridge` created, next is to host Akka.NET with `IHostedService` which will also implement the `IActorBridge`:
@@ -113,6 +115,7 @@ namespace WebApplication1
 }
 
 ```
+
 Typically you use a very lightweight `ActorSystem` inside ASP.NET applications, and offload heavy-duty work to a separate Windows Service via Akka.Remote / Akka.Cluster.
 
 ### Interaction Between Controllers and Akka.NET
@@ -147,7 +150,9 @@ public class WriteApiController : ControllerBase
 ```
 
 ### Wire up Akka.NET and ASP.NET Core in `Startup.cs`
+
 We need to replace the default `IHostedService` with `AkkaService` and also inject `IActorBridge` and we do that with `Startup.cs`
+
 ```csharp
 public class Startup
     {
@@ -196,6 +201,7 @@ public class Startup
         }
     }
 ```
+
 Visit our site's blog post for [Best Practices for Integrating Akka.NET with ASP.NET Core and SignalR](https://petabridge.com/blog/akkadotnet-aspnetcore/) 
 
 ## Windows Service
