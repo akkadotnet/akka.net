@@ -1,0 +1,8 @@
+- name: Scenarios
+  href: scenarios.md
+- name: Console Application
+  href: console.md
+- name: ASP.NET Core
+  href: aspnet-core.md
+- name: Headless Services
+  href: headless-service.md
