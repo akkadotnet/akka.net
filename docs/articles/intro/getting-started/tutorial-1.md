@@ -67,8 +67,8 @@ Creating a non-top-level actor is possible from any actor, by invoking
 `Context.ActorOf()` which has the exact same signature as its top-level
 counterpart. This is how it looks like in practice:
 
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=print-refs)]
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=print-refs2)]
+[!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=print-refs)]
+[!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=print-refs2)]
 
 We see that the following two lines are printed
 
@@ -129,8 +129,8 @@ override. The most commonly used are `PreStart()` and `PostStop()`.
 
 Again, we can try out all this with a simple experiment:
 
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=start-stop)]
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=start-stop2)]
+[!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=start-stop)]
+[!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=start-stop2)]
 
 After running it, we get the output
 
@@ -160,8 +160,8 @@ The default _supervisor strategy_ is to stop and restart the child. If you don't
 change the default strategy all failures result in a restart. We won't change
 the default strategy in this simple experiment:
 
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=supervise)]
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=supervise2)]
+[!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=supervise)]
+[!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=supervise2)]
 
 After running the snippet, we see the following output on the console:
 
@@ -225,11 +225,11 @@ the logging facility built into Akka.NET directly. Furthermore, we are using a
 recommended pattern for creating actors; define a static `Props()` method in
 the the actor:
 
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/IotSupervisor.cs?name=iot-supervisor)]
+[!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial1/IotSupervisor.cs?name=iot-supervisor)]
 
 All we need now is to tie this up with a class with the `main` entry point:
 
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/IotApp.cs?name=iot-app)]
+[!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial1/IotApp.cs?name=iot-app)]
 
 This application does very little for now, but we have the first actor in place
 and we are ready to extend it further.
