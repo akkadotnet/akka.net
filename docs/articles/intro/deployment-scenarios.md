@@ -85,9 +85,9 @@ namespace WebApplication1
             var actorSystemSetup = bootstrap.And(diSetup);
 
             // start ActorSystem
-            _actorSystem = ActorSystem.Create("akka-system", actorSystemSetup);	
+			_actorSystem = ActorSystem.Create("akka-system", actorSystemSetup);
 			
-            _actorRef = _actorSystem.ActorOf(MyActor.Prop());
+			_actorRef = _actorSystem.ActorOf(MyActor.Prop());
 			
 			// add a continuation task that will guarantee shutdown of application if ActorSystem terminates
             await _actorSystem.WhenTerminated.ContinueWith(tr => {
@@ -97,19 +97,19 @@ namespace WebApplication1
 		
 		public async Task StopAsync(CancellationToken cancellationToken)
 		{
-			// strictly speaking this may not be necessary - terminating the ActorSystem would also work
+		    // strictly speaking this may not be necessary - terminating the ActorSystem would also work
 			// but this call guarantees that the shutdown of the cluster is graceful regardless
-			await CoordinatedShutdown.Get(_actorSystem).Run(CoordinatedShutdown.ClrExitReason.Instance);
+			await CoordinatedShutdown.Get(_actorSystem).Run(CoordinatedShutdown.ClrExitReason.Instance); 
 		}
 		
 		public void Tell(object message)
 		{
-			_actorRef.Tell(message);    
+		   _actorRef.Tell(message);
 		}
 		
 		public async Task<T> Ask<T>(object message)
 		{
-			return await _actorRef.Ask<T>(message);   
+		   return await _actorRef.Ask<T>(message);
 		}
 	}
 }
