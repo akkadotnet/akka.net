@@ -85,33 +85,33 @@ namespace WebApplication1
             var actorSystemSetup = bootstrap.And(diSetup);
 
             // start ActorSystem
-			_actorSystem = ActorSystem.Create("akka-system", actorSystemSetup);
-			
-			_actorRef = _actorSystem.ActorOf(MyActor.Prop());
-			
-			// add a continuation task that will guarantee shutdown of application if ActorSystem terminates
+            _actorSystem = ActorSystem.Create("akka-system", actorSystemSetup);
+
+            _actorRef = _actorSystem.ActorOf(MyActor.Prop());
+
+            // add a continuation task that will guarantee shutdown of application if ActorSystem terminates
             await _actorSystem.WhenTerminated.ContinueWith(tr => {
                 _applicationLifetime.StopApplication();
             });
         }
-		
-		public async Task StopAsync(CancellationToken cancellationToken)
-		{
-		    // strictly speaking this may not be necessary - terminating the ActorSystem would also work
-			// but this call guarantees that the shutdown of the cluster is graceful regardless
-			await CoordinatedShutdown.Get(_actorSystem).Run(CoordinatedShutdown.ClrExitReason.Instance); 
-		}
-		
-		public void Tell(object message)
-		{
-		   _actorRef.Tell(message);
-		}
-		
-		public async Task<T> Ask<T>(object message)
-		{
-		   return await _actorRef.Ask<T>(message);
-		}
-	}
+
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+           // strictly speaking this may not be necessary - terminating the ActorSystem would also work
+           // but this call guarantees that the shutdown of the cluster is graceful regardless
+           await CoordinatedShutdown.Get(_actorSystem).Run(CoordinatedShutdown.ClrExitReason.Instance); 
+        }
+
+        public void Tell(object message)
+        {
+          _actorRef.Tell(message);
+        }
+
+        public async Task<T> Ask<T>(object message)
+        {
+          return await _actorRef.Ask<T>(message);
+        }
+    }
 }
 
 ```
@@ -142,7 +142,7 @@ public class WriteApiController : ControllerBase
    public async Task<IActionResult> Post([FromBody] object data)
    {
        _bridge.Tell(data);
-	   //you can use Ask if you need response from the Actor
+       //you can use Ask if you need response from the Actor
        //await _bridge.Ask<T>(data);
        return Ok();
    }
