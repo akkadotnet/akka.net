@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using Akka.Annotations;
 
@@ -58,13 +59,18 @@ namespace Akka.Util
         [InternalApi]
         public static string TypeQualifiedName(this Type type)
         {
-            string shortened;
-            if (ShortenedTypeNames.TryGetValue(type, out shortened))
+            if (ShortenedTypeNames.TryGetValue(type, out var shortened))
             {
                 return shortened;
             }
 
-            shortened = cleanAssemblyVersionRegex.Replace(type.AssemblyQualifiedName, string.Empty);
+            // Defensive coding. `type.AssemblyQualifiedName` can return null if type is of generic type parameter type
+            shortened = type.AssemblyQualifiedName;
+            if (shortened == null)
+                throw new SerializationException(
+                    $"Could not get a type qualified name for type [{type}], most likely because it is not a concrete type, but a generic type parameter type.");
+
+            shortened = cleanAssemblyVersionRegex.Replace(shortened, string.Empty);
             ShortenedTypeNames.TryAdd(type, shortened);
             
             return shortened;

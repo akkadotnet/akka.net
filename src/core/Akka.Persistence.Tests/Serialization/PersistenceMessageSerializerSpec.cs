@@ -12,6 +12,7 @@ using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.Serialization;
 using Akka.TestKit;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -76,6 +77,18 @@ namespace Akka.Persistence.Tests.Serialization
         }
 
         [Fact]
+        public void MessageSerializer_should_serialize_state_change_event_with_old_type_manifest()
+        {
+            var p1 = new Persistent(new PersistentFSM.StateChangeEvent("a", TimeSpan.FromSeconds(10)), sender: TestActor);
+            var bytes = _serializer.ToBinary(p1);
+            var back = (Persistent) _serializer.FromBinary(bytes, typeof(Persistent).TypeQualifiedName());
+            var payload = back.Payload as PersistentFSM.StateChangeEvent;
+            payload.Should().NotBeNull();
+            payload.StateIdentifier.Should().Be("a");
+            payload.Timeout.Should().Be(TimeSpan.FromSeconds(10));
+        }
+
+        [Fact]
         public void MessageSerializer_should_serialize_AtLeastOnceDeliverySnapshot()
         {
             var unconfirmed = new[]
@@ -93,11 +106,40 @@ namespace Akka.Persistence.Tests.Serialization
         }
 
         [Fact]
+        public void MessageSerializer_should_serialize_AtLeastOnceDeliverySnapshot_with_old_type_manifest()
+        {
+            var unconfirmed = new[]
+            {
+                new UnconfirmedDelivery(1, TestActor.Path, "a"),
+                new UnconfirmedDelivery(2, TestActor.Path, "b"),
+                new UnconfirmedDelivery(3, TestActor.Path, "big string")
+            };
+            var atLeastOnceDeliverySnapshot = new AtLeastOnceDeliverySnapshot(17, unconfirmed);
+
+            var bytes = _serializer.ToBinary(atLeastOnceDeliverySnapshot);
+            var backSnapshot = _serializer.FromBinary(bytes, typeof(AtLeastOnceDeliverySnapshot).TypeQualifiedName());
+            backSnapshot.Should().NotBeNull();
+            backSnapshot.Should().Be(atLeastOnceDeliverySnapshot);
+        }
+
+        [Fact]
         public void MessageSerializer_should_serialize_fsm_snapshot()
         {
             var snapshot = new PersistentFSM.PersistentFSMSnapshot<MyPayload>("a", new MyPayload("b"), TimeSpan.FromSeconds(10));
             var bytes = _serializer.ToBinary(snapshot);
             var backSnapshot = _serializer.FromBinary<PersistentFSM.PersistentFSMSnapshot<MyPayload>>(bytes);
+            backSnapshot.Should().NotBeNull();
+            backSnapshot.StateIdentifier.Should().Be("a");
+            backSnapshot.Data.Data.Should().Be(".b.");    // custom MyPayload serializer prepends and appends .
+            backSnapshot.Timeout.Should().Be(TimeSpan.FromSeconds(10));
+        }
+
+        [Fact]
+        public void MessageSerializer_should_serialize_fsm_snapshot_with_old_type_manifest()
+        {
+            var snapshot = new PersistentFSM.PersistentFSMSnapshot<MyPayload>("a", new MyPayload("b"), TimeSpan.FromSeconds(10));
+            var bytes = _serializer.ToBinary(snapshot);
+            var backSnapshot = (PersistentFSM.PersistentFSMSnapshot<MyPayload>) _serializer.FromBinary(bytes, typeof(PersistentFSM.PersistentFSMSnapshot<MyPayload>).AssemblyQualifiedName);
             backSnapshot.Should().NotBeNull();
             backSnapshot.StateIdentifier.Should().Be("a");
             backSnapshot.Data.Data.Should().Be(".b.");    // custom MyPayload serializer prepends and appends .
@@ -117,7 +159,7 @@ namespace Akka.Persistence.Tests.Serialization
             };
 
             deserializeAction.Should().Throw<SerializationException>()
-                .WithMessage($"Unimplemented deserialization of message with type [{typeof(string)}] in [{typeof(PersistenceMessageSerializer)}]");
+                .WithMessage($"Unimplemented deserialization of message with manifest [{typeof(string).TypeQualifiedName()}] in [{typeof(PersistenceMessageSerializer)}]");
         }
     }
 }
