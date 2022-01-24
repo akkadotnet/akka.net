@@ -38,11 +38,11 @@ namespace Foo.Bar
 
 When deploying Akka.NET in ASP.NET Core, one major concern is how to expose `actor` in ASP.NET Core controllers. We will design an `interface` for this!
 
-```csharp	
+```csharp
 public interface IActorBridge
 {
     void Tell(object message);
-	Task Ask<T>(object message);
+    Task Ask<T>(object message);
 }
 ```
 
@@ -85,9 +85,11 @@ namespace WebApplication1
             var actorSystemSetup = bootstrap.And(diSetup);
 
             // start ActorSystem
-            _actorSystem = ActorSystem.Create("akka-system", actorSystemSetup);			
-            _actorRef = _actorSystem.ActorOf(MyActor.Prop());			
-            // add a continuation task that will guarantee shutdown of application if ActorSystem terminates
+            _actorSystem = ActorSystem.Create("akka-system", actorSystemSetup);	
+			
+            _actorRef = _actorSystem.ActorOf(MyActor.Prop());
+			
+			// add a continuation task that will guarantee shutdown of application if ActorSystem terminates
             await _actorSystem.WhenTerminated.ContinueWith(tr => {
                 _applicationLifetime.StopApplication();
             });
