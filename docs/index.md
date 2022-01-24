@@ -30,7 +30,7 @@ h2:before{
       <h1 class="title"><small class="subtitle">Follow our tutorial and build your first Akka.NET application today.</small></h1>
       <div class="options">
         <a class="btn btn-lg btn-primary" href="community/whats-new/akkadotnet-v1.4.md">What's new in Akka.NET v1.4.0?</a>
-        <a class="btn btn-lg btn-primary" href="articles/intro/getting-started/tutorial-1.html">Get Started Now</a> <a class="btn btn-lg btn-primary" href="articles/intro/what-is-akka.md">Read the documentation</a>
+        <a class="btn btn-lg btn-primary" href="articles/intro/getting-started/tutorial-overview.html">Get Started Now</a> <a class="btn btn-lg btn-primary" href="articles/intro/what-is-akka.md">Read the documentation</a>
       </div>
     </div>
 </div>
