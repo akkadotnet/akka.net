@@ -485,13 +485,14 @@ namespace Akka.Actor
         public Akka.Actor.BootstrapSetup WithConfig(Akka.Configuration.Config config) { }
         public Akka.Actor.BootstrapSetup WithConfigFallback(Akka.Configuration.Config config) { }
     }
-    public class Cancelable : Akka.Actor.ICancelable, System.IDisposable
+    public sealed class Cancelable : Akka.Actor.ICancelable, System.IDisposable
     {
         public Cancelable(Akka.Actor.IActionScheduler scheduler, System.TimeSpan delay) { }
         public Cancelable(Akka.Actor.IScheduler scheduler, System.TimeSpan delay) { }
         public Cancelable(Akka.Actor.IScheduler scheduler, int millisecondsDelay) { }
         public Cancelable(Akka.Actor.IScheduler scheduler) { }
         public Cancelable(Akka.Actor.IActionScheduler scheduler) { }
+        public long Deadline { get; }
         public bool IsCancellationRequested { get; }
         public System.Threading.CancellationToken Token { get; }
         public void Cancel() { }
@@ -502,7 +503,6 @@ namespace Akka.Actor
         public static Akka.Actor.ICancelable CreateLinkedCancelable(Akka.Actor.IScheduler scheduler, params Akka.Actor.ICancelable[] cancelables) { }
         public static Akka.Actor.ICancelable CreateLinkedCancelable(Akka.Actor.IActionScheduler scheduler, params Akka.Actor.ICancelable[] cancelables) { }
         public void Dispose() { }
-        protected virtual void Dispose(bool disposing) { }
     }
     public class static CancelableExtensions
     {

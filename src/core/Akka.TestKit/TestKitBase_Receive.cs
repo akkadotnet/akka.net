@@ -187,12 +187,15 @@ namespace Akka.TestKit
                 _testState.LastMessage = envelope;
                 return true;
             }
+
+            if (_testState.TerminatedReason != null)
+                throw new Exception("test probe terminated", _testState.TerminatedReason);
+
             ConditionalLog(shouldLog, "Received no message after {0}.{1}", Now - start, cancellationToken.IsCancellationRequested ? " Was canceled" : "");
             envelope = NullMessageEnvelope.Instance;
             _testState.LastMessage = envelope;
             return false;
         }
-
 
         /// <summary>
         /// Receive a series of messages until the function returns null or the overall

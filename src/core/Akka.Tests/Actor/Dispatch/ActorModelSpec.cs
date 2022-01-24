@@ -336,7 +336,7 @@ namespace Akka.Tests.Actor.Dispatch
 
         protected void AssertDispatcher(MessageDispatcherInterceptor dispatcher, long stops)
         {
-            var deadline = MonotonicClock.GetMilliseconds() + (long)(dispatcher.ShutdownTimeout.TotalMilliseconds * 5);
+            var deadline = MonotonicClock.GetMilliseconds() + (long)(dispatcher.ShutdownTimeout.TotalMilliseconds * 12);
             try
             {
                 Await(deadline, () => stops == dispatcher.Stops.Current);

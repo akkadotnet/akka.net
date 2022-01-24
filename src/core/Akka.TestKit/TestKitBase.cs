@@ -41,6 +41,8 @@ namespace Akka.TestKit
             public bool LastWasNoMsg { get; set; } //if last assertion was expectNoMsg, disable timing failure upon within() block end.
             public ILoggingAdapter Log { get; set; }
             public EventFilterFactory EventFilterFactory { get; set; }
+
+            public Exception TerminatedReason { get; set; }
         }
 
         private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.Reference.conf");
@@ -558,7 +560,8 @@ namespace Akka.TestKit
 
         private IActorRef CreateTestActor(ActorSystem system, string name)
         {
-            var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue)))
+            Action<Exception> terminate = (Exception ex) => _testState.TerminatedReason = ex;
+            var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue, terminate)))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;

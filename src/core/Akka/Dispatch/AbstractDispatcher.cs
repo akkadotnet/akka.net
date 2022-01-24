@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -59,9 +58,9 @@ namespace Akka.Dispatch
         /// <param name="settings">TBD</param>
         /// <param name="mailboxes">TBD</param>
         public DefaultDispatcherPrerequisites(
-            EventStream eventStream, 
-            IScheduler scheduler, 
-            Settings settings, 
+            EventStream eventStream,
+            IScheduler scheduler,
+            Settings settings,
             Mailboxes mailboxes)
         {
             Mailboxes = mailboxes;
@@ -157,7 +156,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="config">TBD</param>
         /// <param name="prerequisites">TBD</param>
-        public DefaultTaskSchedulerExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) 
+        public DefaultTaskSchedulerExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
         }
@@ -225,13 +224,13 @@ namespace Akka.Dispatch
             {
                 var settings = new DedicatedThreadPoolSettings(
                     ThreadPoolConfig.ScaledPoolSize(
-                        fje.GetInt("parallelism-min"), 
-                        1.0, 
+                        fje.GetInt("parallelism-min"),
+                        1.0,
                         fje.GetInt("parallelism-max")),
-                        name:config.GetString("id"));
+                        name: config.GetString("id"));
                 return settings;
             }
-            
+
         }
     }
 
@@ -448,7 +447,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// The number of actors attached to this <see cref="MessageDispatcher"/>
         /// </summary>
-        protected long Inhabitants => Volatile.Read(ref _inhabitantsDoNotCallMeDirectly);
+        protected long Inhabitants => _inhabitantsDoNotCallMeDirectly;
 
         private long AddInhabitants(long add)
         {
@@ -465,7 +464,7 @@ namespace Akka.Dispatch
             return ret;
         }
 
-        private int ShutdownSchedule => Volatile.Read(ref _shutdownScheduleDoNotCallMeDirectly);
+        private int ShutdownSchedule => _shutdownScheduleDoNotCallMeDirectly;
 
         private bool UpdateShutdownSchedule(int expected, int update)
         {
@@ -563,44 +562,64 @@ namespace Akka.Dispatch
 
             public void Run()
             {
-                var sched = _dispatcher.ShutdownSchedule;
-                if (sched == Scheduled)
+                var spin = new SpinWait();
+
+                while (true)
                 {
-                    try
+                    var sched = _dispatcher.ShutdownSchedule;
+                    if (sched == Scheduled)
                     {
-                        if (_dispatcher.Inhabitants == 0) _dispatcher.Shutdown(); // Warning, racy
+                        try
+                        {
+                            if (_dispatcher.Inhabitants == 0)
+                                _dispatcher.Shutdown(); // Warning, racy
+                        }
+                        finally
+                        {
+                            while (!_dispatcher.UpdateShutdownSchedule(_dispatcher.ShutdownSchedule, Unscheduled))
+                                spin.SpinOnce();
+                        }
+                        return;
                     }
-                    finally
+                    else if (sched == Rescheduled)
                     {
-                        while (!_dispatcher.UpdateShutdownSchedule(_dispatcher.ShutdownSchedule, Unscheduled)) { }
+                        if (_dispatcher.UpdateShutdownSchedule(Rescheduled, Scheduled))
+                        {
+                            _dispatcher.ScheduleShutdownAction();
+                            return;
+                        }
                     }
-                }
-                else if (sched == Rescheduled)
-                {
-                    if (_dispatcher.UpdateShutdownSchedule(Rescheduled, Scheduled)) _dispatcher.ScheduleShutdownAction();
-                    else Run();
+                    else
+                    {
+                        return;
+                    }
+                    spin.SpinOnce();
                 }
             }
         }
 
         private void IfSensibleToDoSoThenScheduleShutdown()
         {
-            // Don't shutdown if we have inhabitants
-            if (Inhabitants > 0) return;
+            var spin = new SpinWait();
 
-            var sched = ShutdownSchedule;
-            if (sched == Unscheduled)
+            while (true)
             {
-                if (UpdateShutdownSchedule(Unscheduled, Scheduled)) ScheduleShutdownAction();
-                else IfSensibleToDoSoThenScheduleShutdown();
-            }
-            if (sched == Scheduled)
-            {
-                if (UpdateShutdownSchedule(Scheduled, Rescheduled)) { }
-                else IfSensibleToDoSoThenScheduleShutdown();
-            }
+                // Don't shutdown if we have inhabitants
+                if (Inhabitants > 0) return;
 
-            // don't care about rescheduled
+                if (UpdateShutdownSchedule(Unscheduled, Scheduled))
+                {
+                    ScheduleShutdownAction();
+                    return;
+                }
+                if (UpdateShutdownSchedule(Scheduled, Rescheduled))
+                {
+                    // don't care about rescheduled
+                    return;
+                }
+
+                spin.SpinOnce();
+            }
         }
 
         private void ScheduleShutdownAction()
