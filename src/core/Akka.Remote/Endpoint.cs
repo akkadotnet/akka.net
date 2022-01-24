@@ -1902,7 +1902,7 @@ namespace Akka.Remote
         {
             if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out var resendState))
             {
-                if(resendState.Uid == _uid)
+                if (resendState.Uid == _uid)
                 {
                     _ackedReceiveBuffer = resendState.Buffer;
                     DeliverAndAck();
@@ -1920,7 +1920,7 @@ namespace Akka.Remote
 
         private void Reading()
         {
-           
+
             Receive<InboundPayload>(inbound =>
             {
                 var payload = inbound.Payload;

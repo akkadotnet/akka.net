@@ -225,5 +225,10 @@ namespace Akka.Event
                 return list;
             }
         }
+
+        public bool HasSubscribers(TClassifier eventClass)
+        {
+            return _classifiers.ContainsKey(eventClass);
+        }
     }
 }

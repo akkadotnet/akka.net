@@ -3030,6 +3030,7 @@ namespace Akka.Event
         protected EventBus() { }
         protected abstract bool Classify(TEvent @event, TClassifier classifier);
         protected abstract TClassifier GetClassifier(TEvent @event);
+        public bool HasSubscribers(TClassifier eventClass);
         protected abstract bool IsSubClassification(TClassifier parent, TClassifier child);
         protected abstract void Publish(TEvent @event, TSubscriber subscriber);
         public virtual void Publish(TEvent @event) { }
