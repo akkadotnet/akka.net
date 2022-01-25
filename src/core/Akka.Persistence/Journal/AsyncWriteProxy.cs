@@ -301,22 +301,28 @@ namespace Akka.Persistence.Journal
                 if (!(message is InitTimeout))
                     return base.AroundReceive(receive, message);
             }
-            else if (message is SetStore)
+            else switch (message)
             {
-                _store = ((SetStore) message).Store;
-                Stash.UnstashAll();
-                _isInitialized = true;
+                case SetStore store:
+                    _store = store.Store;
+                    Stash.UnstashAll();
+                    _isInitialized = true;
+                    break;
+                case InitTimeout _:
+                    _isInitTimedOut = true;
+                    Stash.UnstashAll(); // will trigger appropriate failures
+                    break;
+                default:
+                {
+                    if (_isInitTimedOut)
+                    {
+                        return base.AroundReceive(receive, message);
+                    }
+                    else Stash.Stash();
+
+                    break;
+                }
             }
-            else if (message is InitTimeout)
-            {
-                _isInitTimedOut = true;
-                Stash.UnstashAll(); // will trigger appropriate failures
-            }
-            else if (_isInitTimedOut)
-            {
-                return base.AroundReceive(receive, message);
-            }
-            else Stash.Stash();
             return true;
         }
 

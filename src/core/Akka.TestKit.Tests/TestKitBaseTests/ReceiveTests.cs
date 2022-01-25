@@ -68,20 +68,20 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         }
 
         [Fact]
-        public async Task FishUntilMessage_should_succeed_with_good_input()
+        public async Task FishUntilMessageAsync_should_succeed_with_good_input()
         {
             var probe = CreateTestProbe("probe");
             probe.Ref.Tell(1d, TestActor);
-            await probe.FishUntilMessage<int>(max: TimeSpan.FromMilliseconds(10));
+            await probe.FishUntilMessageAsync<int>(max: TimeSpan.FromMilliseconds(10));
         }
 
 
         [Fact]
-        public async Task FishUntilMessage_should_fail_with_bad_input()
+        public async Task FishUntilMessageAsync_should_fail_with_bad_input()
         {
             var probe = CreateTestProbe("probe");
             probe.Ref.Tell(3, TestActor);
-            Func<Task> func = () => probe.FishUntilMessage<int>(max: TimeSpan.FromMilliseconds(10));
+            Func<Task> func = () => probe.FishUntilMessageAsync<int>(max: TimeSpan.FromMilliseconds(10));
             await func.Should().ThrowAsync<Exception>();
         }
 

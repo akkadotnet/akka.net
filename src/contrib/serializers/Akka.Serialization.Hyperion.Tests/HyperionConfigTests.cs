@@ -8,10 +8,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using FluentAssertions;
 using Hyperion;
+using Hyperion.Internal;
 using Xunit;
 
 namespace Akka.Serialization.Hyperion.Tests
@@ -36,6 +38,7 @@ namespace Akka.Serialization.Hyperion.Tests
                 Assert.True(serializer.Settings.PreserveObjectReferences);
                 Assert.Equal("NoKnownTypes", serializer.Settings.KnownTypesProvider.Name);
                 Assert.True(serializer.Settings.DisallowUnsafeType);
+                Assert.Equal(serializer.Settings.TypeFilter, DisabledTypeFilter.Instance);
             }
         }
 
@@ -52,6 +55,7 @@ namespace Akka.Serialization.Hyperion.Tests
                         preserve-object-references = false
                         version-tolerance = false
                         disallow-unsafe-type = false
+                        allowed-types = [""Akka.Serialization.Hyperion.Tests.HyperionConfigTests+ClassA, Akka.Serialization.Hyperion.Tests""]
                     }
                 }
             ");
@@ -62,9 +66,52 @@ namespace Akka.Serialization.Hyperion.Tests
                 Assert.False(serializer.Settings.PreserveObjectReferences);
                 Assert.Equal("NoKnownTypes", serializer.Settings.KnownTypesProvider.Name);
                 Assert.False(serializer.Settings.DisallowUnsafeType);
+                Assert.Equal("Akka.Serialization.Hyperion.Tests.HyperionConfigTests+ClassA, Akka.Serialization.Hyperion.Tests", ((TypeFilter) serializer.Settings.TypeFilter).FilteredTypes.First());
             }
         }
 
+        [Theory]
+        [MemberData(nameof(TypeFilterObjectFactory))]
+        public void TypeFilter_defined_in_config_should_filter_serializer_properly(object sampleObject, bool shouldSucceed)
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.actor {
+                    serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                    serialization-bindings {
+                        ""System.Object"" = hyperion
+                    }
+                    serialization-settings.hyperion {
+                        preserve-object-references = false
+                        version-tolerance = false
+                        disallow-unsafe-type = true
+                        allowed-types = [
+                            ""Akka.Serialization.Hyperion.Tests.HyperionConfigTests+ClassA, Akka.Serialization.Hyperion.Tests""
+                            ""Akka.Serialization.Hyperion.Tests.HyperionConfigTests+ClassB, Akka.Serialization.Hyperion.Tests""
+                        ]
+                    }
+                }
+            ");
+            using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
+            {
+                var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+            
+                ((TypeFilter)serializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
+                var serialized = serializer.ToBinary(sampleObject);
+                object deserialized = null;
+                Action act = () => deserialized = serializer.FromBinary<object>(serialized);
+                if (shouldSucceed)
+                {
+                    act.Should().NotThrow();
+                    deserialized.GetType().Should().Be(sampleObject.GetType());
+                }
+                else
+                {
+                    act.Should().Throw<SerializationException>()
+                        .WithInnerException<UserEvilDeserializationException>();
+                }
+            }
+        }
+        
         [Fact]
         public void Hyperion_serializer_should_allow_to_setup_custom_types_provider_with_default_constructor()
         {
@@ -198,6 +245,18 @@ namespace Akka.Serialization.Hyperion.Tests
             }
         }
 
+        public static IEnumerable<object[]> TypeFilterObjectFactory()
+        {
+            yield return new object[] { new ClassA(), true };
+            yield return new object[] { new ClassB(), true };
+            yield return new object[] { new ClassC(), false };
+        }
+
+        public class ClassA { }
+        
+        public class ClassB { }
+    
+        public class ClassC { }
     }
 
     class DummyTypesProvider : IKnownTypesProvider

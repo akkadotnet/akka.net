@@ -16,6 +16,7 @@ using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
 using Hyperion;
+using Hyperion.Internal;
 
 namespace Akka.Serialization.Hyperion.Tests
 {
@@ -134,6 +135,35 @@ akka.actor {
             serializer.Invoking(s => s.FromBinary(serialized, type)).Should().Throw<SerializationException>();
         }
 
+        [Theory]
+        [MemberData(nameof(TypeFilterObjectFactory))]
+        public void Setup_TypeFilter_should_filter_types_properly(object sampleObject, bool shouldSucceed)
+        {
+            var setup = HyperionSerializerSetup.Empty
+                .WithTypeFilter(TypeFilterBuilder.Create()
+                    .Include<ClassA>()
+                    .Include<ClassB>()
+                    .Build());
+            
+            var settings = setup.ApplySettings(HyperionSerializerSettings.Default);
+            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, settings);
+            
+            ((TypeFilter)serializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
+            var serialized = serializer.ToBinary(sampleObject);
+            object deserialized = null;
+            Action act = () => deserialized = serializer.FromBinary<object>(serialized);
+            if (shouldSucceed)
+            {
+                act.Should().NotThrow();
+                deserialized.GetType().Should().Be(sampleObject.GetType());
+            }
+            else
+            {
+                act.Should().Throw<SerializationException>()
+                    .WithInnerException<UserEvilDeserializationException>();
+            }
+        }
+
         public static IEnumerable<object[]> DangerousObjectFactory()
         {
             var isWindow = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
@@ -150,5 +180,18 @@ akka.actor {
 #endif
             yield return new object[]{ new ClaimsIdentity(), typeof(ClaimsIdentity)};
         }
+
+        public static IEnumerable<object[]> TypeFilterObjectFactory()
+        {
+            yield return new object[] { new ClassA(), true };
+            yield return new object[] { new ClassB(), true };
+            yield return new object[] { new ClassC(), false };
+        }
+
+        public class ClassA { }
+
+        public class ClassB { }
+
+        public class ClassC { }
     }
 }
