@@ -18,7 +18,7 @@ The Azure PaaS Worker Role implementation is very similar to the [Windows Servic
 The quickest way to get started with Akka.Net is to create a simple Worker Role which invokes the top-level
 user-actor in the RunAsync() method, as follows:
 
-### WorkerRole.cs
+## WorkerRole.cs
 
 ```csharp
 using Akka.Actor;
