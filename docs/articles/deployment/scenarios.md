@@ -7,7 +7,7 @@ title: Deployment Scenarios
 
 The console application gives immediate feedback on how a piece of software works. That how most developers test out, quickly, new products to understand its entry and exit point!
 
-[Console Application](../deployment/console.html) 
+[Console Application](../deployment/console.html)
 
 # ASP.NET Core
 
