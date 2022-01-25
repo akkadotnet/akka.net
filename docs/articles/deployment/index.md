@@ -17,8 +17,8 @@ By using Akka.NET in your ASP.NET Core project, you can make your `Controllers` 
 
 # Headless Service
 
-A “headless” service is one that doesn’t expose a public-facing API or UI of any kind - no HTTP APIs, no gRPC, etc. 
+A “headless” service is one that doesn’t expose a public-facing API or UI of any kind - no HTTP APIs, no gRPC, etc.
+ 
 Headless services can still communicate with other services via private messaging systems such as Akka.Remote, Kafka, Apache Pulsar, RabbitMQ, and so forth - but they run in the background of most networked applications.
 
 [Headless Service](../deployment/headless-service.html)
-
