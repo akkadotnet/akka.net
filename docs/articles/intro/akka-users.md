@@ -28,6 +28,8 @@ Share of an article by Joel Mueller, Software Architect, SNL Financial
 
 ### Simulation
 
+* [Vertech Using Akka.NET for Device Simulation](https://petabridge.com/blog/akkadotnet-vertech-device-simulation/)
+
 Master/Worker, Compute Grid, MapReduce etc.
 
 ### Batch Processing (Any Industry)
