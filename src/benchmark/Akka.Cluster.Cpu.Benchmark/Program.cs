@@ -56,7 +56,7 @@ namespace Akka.Cluster.Cpu.Benchmark
                     s => { clusterSize = int.Parse(s); })
                 .Add(
                     "w|warm-up-count=",
-                    "Sets how many blank samples to be performed as benchmark warm-up before benchmark starts. Default: 5 seconds",
+                    "Sets how many blank samples to be performed as benchmark warm-up before benchmark starts. Default: 5 samples",
                     s => { warmUp = int.Parse(s); })
                 .Add(
                     "h|?|help",
@@ -70,6 +70,7 @@ namespace Akka.Cluster.Cpu.Benchmark
                 Console.WriteLine("Usage: dotnet run -c Release");
                 Console.WriteLine("Usage: dotnet run -c Release -- [OPTIONS]");
                 Console.WriteLine("Usage: Akka.Cluster.Cpu.Benchmark [OPTIONS]");
+                Console.WriteLine("Options:");
                 optionSet.WriteOptionDescriptions(Console.Out);
                 return 0;
             }
