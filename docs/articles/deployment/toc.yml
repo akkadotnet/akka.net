@@ -6,3 +6,5 @@
   href: aspnet-core.md
 - name: Headless Service
   href: headless-service.md
+- name: Azure Cloud Service (Deprecated)
+  href: azure-cloud-service.md

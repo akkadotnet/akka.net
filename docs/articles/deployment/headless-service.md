@@ -18,6 +18,6 @@ title: Headless Service
 
 ## What About Windows Service?
 
-Well, quickly, we have a sample application, [Windows Service](../deployment/windows-service.html), to show how `Windows Services` are now being built with `BackgroundService`!
+Well, quickly, we have a sample application, [Windows Service](xref:windows-service), to show how `Windows Services` are now being built with `BackgroundService`!
 
 [learn more](https://docs.microsoft.com/en-us/dotnet/core/extensions/windows-service)

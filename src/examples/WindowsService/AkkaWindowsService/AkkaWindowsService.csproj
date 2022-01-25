@@ -12,4 +12,9 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\contrib\dependencyinjection\Akka.DependencyInjection\Akka.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
+  </ItemGroup>
+
 </Project>

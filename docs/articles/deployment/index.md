@@ -7,13 +7,13 @@ title: Deployment Scenarios
 
 The console application gives immediate feedback on how a piece of software works. That how most developers test out, quickly, new products to understand its entry and exit point!
 
-[Console Application](../deployment/console.html)
+[Console Application](xref:console-scenario)
 
 # ASP.NET Core
 
 By using Akka.NET in your ASP.NET Core project, you can make your `Controllers` lightweight while Akka.NET handles the heavyweights.
 
-[ASP.NET Core](../deployment/aspnet-core.html)
+[ASP.NET Core](xref:aspnet-core-scenario)
 
 # Headless Service
 
@@ -21,4 +21,8 @@ A “headless” service is one that doesn’t expose a public-facing API or UI 
  
 Headless services can still communicate with other services via private messaging systems such as Akka.Remote, Kafka, Apache Pulsar, RabbitMQ, and so forth - but they run in the background of most networked applications.
 
-[Headless Service](../deployment/headless-service.html)
+[Headless Service](xref:headless-service)
+
+# Azure Cloud Service (Deprecated)
+
+[Azure Cloud Service](xref:azure-cloud-service)
