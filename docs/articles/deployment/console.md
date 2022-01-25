@@ -4,7 +4,7 @@ title: Console Application
 ---
 # Console Application
 
-## Create message class `Greet`
+## Create Message Class `Greet`
 
 The way to tell an actor to do something is by sending it a message. `Greet` is the message type to be sent!
 
@@ -16,6 +16,6 @@ The way to tell an actor to do something is by sending it a message. `Greet` is 
 
 `PreStart` will be called by the Akka framework when the actor is getting started. The `PostStop` will be called after the actor is stopped.
 
-## Creating a Console host
+## Creating a Console Host
 
 [!code-csharp[Main](../../../src/examples/HelloAkka/HelloWorld/Program.cs?name=akka-hello-world-main)]

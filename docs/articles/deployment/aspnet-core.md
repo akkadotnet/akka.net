@@ -28,4 +28,4 @@ We need to replace the default `IHostedService` with `AkkaService` and also inje
 [!code-csharp[Main](../../../src/examples/AspNetCore/Akka.AspNetCore/Program.cs?name=akka-asp-net-program)]
 
 > [!NOTE]
-> Visit our site's blog post for [Best Practices for Integrating Akka.NET with ASP.NET Core and SignalR](https://petabridge.com/blog/akkadotnet-aspnetcore/)
+> Visit our site's blog post for [Best Practices for Integrating Akka.NET with ASP.NET Core and SignalR](https://petabridge.com/blog/akkadotnet-aspnetcore)

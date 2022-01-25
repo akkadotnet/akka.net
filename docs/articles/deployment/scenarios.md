@@ -6,13 +6,14 @@ title: Deployment Scenarios
 # Console Application
 
 The console application gives immediate feedback on how a piece of software works. That how most developers test out, quickly, new products to understand its entry and exit point!
+
 [Console Application](../deployment/console.html) 
 
 # ASP.NET Core
 
 By using Akka.NET in your ASP.NET Core project, you can make your `Controllers` lightweight while Akka.NET handles the heavyweights.
-[ASP.NET Core](../deployment/aspnet-core.html)
 
+[ASP.NET Core](../deployment/aspnet-core.html)
 
 ## Windows Service
 
