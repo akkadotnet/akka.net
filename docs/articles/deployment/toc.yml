@@ -4,5 +4,5 @@
   href: console.md
 - name: ASP.NET Core
   href: aspnet-core.md
-- name: Headless Services
+- name: Headless Service
   href: headless-service.md
