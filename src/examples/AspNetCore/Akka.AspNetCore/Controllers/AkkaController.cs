@@ -19,9 +19,6 @@ namespace Akka.AspNetCore.Controllers
             _bridge = bridge;
         }
 
-        [HttpPost]
-        [Route("post")]
-        // GET: api/<AkkaController>
         [HttpGet]
         public async Task<IEnumerable<string>> Get()
         {

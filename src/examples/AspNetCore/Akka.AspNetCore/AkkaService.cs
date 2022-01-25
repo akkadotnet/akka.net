@@ -39,9 +39,13 @@ namespace Akka.AspNetCore
             _actorRef = _actorSystem.ActorOf(Worker.Prop(), "heavy-weight-word");
 
             // add a continuation task that will guarantee shutdown of application if ActorSystem terminates
-            await _actorSystem.WhenTerminated.ContinueWith(tr => {
+            //await _actorSystem.WhenTerminated.ContinueWith(tr => {
+            //   _applicationLifetime.StopApplication();
+            //});
+            _actorSystem.WhenTerminated.ContinueWith(tr => {
                 _applicationLifetime.StopApplication();
-            });
+              });
+            await Task.CompletedTask;
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
