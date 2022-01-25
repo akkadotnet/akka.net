@@ -29,6 +29,7 @@ namespace HelloAkka
             greeter.Tell(new Greet("World"));
 
             //this is for demostration purposes
+            Thread.Sleep(5000);
             system.Stop(greeter);
 
             // prevent the application from exiting before message is handled            
