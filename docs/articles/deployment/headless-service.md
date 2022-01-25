@@ -16,7 +16,7 @@ title: Headless Service
 
 [!code-csharp[Main](../../../src/examples/HeadlessService/AkkaHeadlesssService/Program.cs?name=headless-service-program)]
 
-## What Abount Windows Service?
+## What About Windows Service?
 
-Well, quickly, we have a sample application, [Windows Service](../deployment/windows-service.html), to demostrate how `Windows Services` are now being built with `BackgroundService`!
+Well, quickly, we have a sample application, [Windows Service](../deployment/windows-service.html), to show how `Windows Services` are now being built with `BackgroundService`!
 [learn more](https://docs.microsoft.com/en-us/dotnet/core/extensions/windows-service)
