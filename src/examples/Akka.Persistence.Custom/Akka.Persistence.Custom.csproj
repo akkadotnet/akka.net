@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <LangVersion>8.0</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Data.SQLite" Version="5.0.11" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <EmbeddedResource Include="sqlite.conf" />
+    </ItemGroup>
+
+</Project>
