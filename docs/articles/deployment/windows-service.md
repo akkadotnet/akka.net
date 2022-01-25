@@ -2,11 +2,37 @@
 uid: deployment-scenarios
 title: Deployment Scenarios
 ---
+# Deployment Scenarios
 
-# Console Application
+## Console Application
 
-The console application gives immediate feedback on how a piece of sofwtare works. That how most developers test out, quickly, new products to understand its entry and exit point!
-[Console Application](../deployment/console.html) 
+```csharp
+PM> install-package Akka
+PM> install-package Akka.Remote
+```
+
+```csharp
+using Akka;
+using Akka.Actor;
+using Akka.Configuration;
+
+namespace Foo.Bar
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            using (var system = ActorSystem.Create("my-actor-server"))
+            {
+                //start two services
+                var service1= system.ActorOf(ServiceOne.Prop(), "service1");
+                var service2 = system.ActorOf(ServiceTwo.Prop(), "service2");
+                Console.ReadKey();
+            }
+        }
+    }
+}
+```
 
 ## ASP.NET Core
 
