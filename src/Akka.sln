@@ -260,6 +260,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HeadlessService", "Headless
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AkkaHeadlesssService", "examples\HeadlessService\AkkaHeadlesssService\AkkaHeadlesssService.csproj", "{073AE790-6D6E-434C-8AFA-26866B532A53}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Persistence", "Persistence", "{A640E39E-F45C-4AE9-AABF-7F1432D357DA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Custom", "examples\Akka.Persistence.Custom\Akka.Persistence.Custom.csproj", "{B9091AE9-B257-4D3A-A9BC-EE2B43AF57A8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Custom.Tests", "examples\Akka.Persistence.Custom.Tests\Akka.Persistence.Custom.Tests.csproj", "{F6C974B8-48F8-41C7-95AC-3CFAA720E0E4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
