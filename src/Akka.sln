@@ -254,6 +254,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HelloAkka", "HelloAkka", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorld", "examples\HelloAkka\HelloWorld\HelloWorld.csproj", "{01DB0B0E-E458-426A-A705-6D159EDFBFC1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.AspNetCore", "examples\AspNetCore\Akka.AspNetCore\Akka.AspNetCore.csproj", "{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1181,6 +1183,18 @@ Global
 		{01DB0B0E-E458-426A-A705-6D159EDFBFC1}.Release|x64.Build.0 = Release|Any CPU
 		{01DB0B0E-E458-426A-A705-6D159EDFBFC1}.Release|x86.ActiveCfg = Release|Any CPU
 		{01DB0B0E-E458-426A-A705-6D159EDFBFC1}.Release|x86.Build.0 = Release|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Debug|x64.Build.0 = Debug|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Debug|x86.Build.0 = Debug|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Release|x64.ActiveCfg = Release|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Release|x64.Build.0 = Release|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Release|x86.ActiveCfg = Release|Any CPU
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1293,6 +1307,7 @@ Global
 		{9F8CCEDE-E871-473A-9C9A-DDDDE69E5130} = {CF2704C6-3A27-450F-9C60-081341D88C1D}
 		{1B513910-F5AF-4E8B-AECD-A9BBB4B1E3FA} = {D3AF8295-AEB5-4324-AA82-FCC0014AC310}
 		{01DB0B0E-E458-426A-A705-6D159EDFBFC1} = {1B513910-F5AF-4E8B-AECD-A9BBB4B1E3FA}
+		{46C7EC90-9B2E-40B3-BE02-1CDDD3C2768C} = {162F5991-EA57-4221-9B70-F9B6FEC18036}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {03AD8E21-7507-4E68-A4E9-F4A7E7273164}

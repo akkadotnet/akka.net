@@ -1,7 +1,8 @@
 ---
-uid: console-application
+uid: console-scenario
 title: Console Application
 ---
+# Console Application
 
 ## Create message class `Greet`
 
