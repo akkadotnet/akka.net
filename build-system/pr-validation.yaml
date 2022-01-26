@@ -128,7 +128,7 @@ jobs:
     parameters:
       name: "docfx_test"
       displayName: "DocFX warning check"
-      vmImage: "ubuntu-18.04"
+      vmImage: "windows-2019"
       scriptFileName: "./build.sh"
       scriptArgs: docfx incremental
       outputDirectory: "TestResults"
