@@ -126,6 +126,16 @@ jobs:
 
   - template: azure-pipeline.template.yaml
     parameters:
+      name: "docfx_test"
+      displayName: "DocFX warning check"
+      vmImage: "ubuntu-18.04"
+      scriptFileName: "./build.sh"
+      scriptArgs: docfx incremental
+      outputDirectory: "TestResults"
+      artifactName: "docfx_test-$(Build.BuildId)"
+      
+  - template: azure-pipeline.template.yaml
+    parameters:
       name: "net_5_tests_windows"
       displayName: ".NET 5 Unit Tests (Windows)"
       vmImage: "windows-2019"
