@@ -14,7 +14,7 @@ namespace Akka.Tests.Dispatch
             var config = @"
                           akka.actor.default-dispatcher = { 
                               executor = channel-executor
-                              channel-executor.priority = normal
+                              # channel-executor.priority = normal
                           }";
             var actorSytem = ActorSystem.Create("ce", config);
         }
