@@ -185,8 +185,8 @@ The `ChannelExectuor` re-uses the same threading settings as the `ForkJoinExecut
 akka.actor.default-dispatcher = {
     executor = channel-executor	
 	# channel executor priority to use
-    # - available: "none", "normal", "idle", "background", "low", "belowNormal", "aboveNormal", "high", "realTime"
-	channel-executor.priority = "normal"
+    # - available: none, normal, idle, background, low, belownormal, abovenormal, high, realtime
+	channel-executor.priority = normal
     fork-join-executor { #channelexecutor will re-use these settings
       parallelism-min = 2
       parallelism-factor = 1
@@ -198,8 +198,8 @@ akka.actor.internal-dispatcher = {
     executor = channel-executor
     throughput = 5
 	# channel executor priority to use
-    # - available: "none", "normal", "idle", "background", "low", "belowNormal", "aboveNormal", "high", "realTime"
-	channel-executor.priority = "normal"
+    # - available: none, normal, idle, background, low, belownormal, abovenormal, high, realtime
+	channel-executor.priority = normal
     fork-join-executor {
       parallelism-min = 4
       parallelism-factor = 1.0
@@ -211,8 +211,8 @@ akka.remote.default-remote-dispatcher {
     type = Dispatcher
     executor = channel-executor
 	# channel executor priority to use
-    # - available: "none", "normal", "idle", "background", "low", "belowNormal", "aboveNormal", "high", "realTime"
-	channel-executor.priority = "normal"
+    # - available: none, normal, idle, background, low, belownormal, abovenormal, high, realtime
+	channel-executor.priority = normal
     fork-join-executor {
       parallelism-min = 2
       parallelism-factor = 0.5
@@ -223,8 +223,8 @@ akka.remote.default-remote-dispatcher {
 akka.remote.backoff-remote-dispatcher {
   executor = channel-executor
   # channel executor priority to use
-  # - available: "none", "normal", "idle", "background", "low", "belowNormal", "aboveNormal", "high", "realTime"
-  channel-executor.priority = "normal"
+  # - available: none, normal, idle, background, low, belownormal, abovenormal, high, realtime
+  channel-executor.priority = normal
   fork-join-executor {
     parallelism-min = 2
     parallelism-max = 2
