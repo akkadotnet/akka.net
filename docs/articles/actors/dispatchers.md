@@ -183,7 +183,7 @@ The `ChannelExectuor` re-uses the same threading settings as the `ForkJoinExecut
 
 ```hocon
 akka.actor.default-dispatcher = {
-    executor = channel-executor	
+    executor = channel-executor
     # channel executor priority to use
     # - available: none, normal, idle, background, low, belownormal, abovenormal, high, realtime
     channel-executor.priority = normal
