@@ -114,20 +114,19 @@ namespace Akka.Actor
         private readonly HashSet<SchedulerRegistration> _unprocessedRegistrations = new HashSet<SchedulerRegistration>();
         private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new HashSet<SchedulerRegistration>();
 
-        private Thread _worker;
+        private Task _worker;
 
         private void Start()
         {
             if (_workerState == WORKER_STATE_STARTED) { } // do nothing
             else if (_workerState == WORKER_STATE_INIT)
             {
-                _worker = new Thread(Run) { IsBackground = true };
 #pragma warning disable 420
                 if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
 #pragma warning restore 420
                     WORKER_STATE_INIT)
                 {
-                    _worker.Start();
+                    _worker = Run();
                 }
             }
 
@@ -149,7 +148,7 @@ namespace Akka.Actor
         /// <summary>
         /// Scheduler thread entry method
         /// </summary>
-        private void Run()
+        private async Task Run()
         {
             // Initialize the clock
             _startTime = HighResMonotonicClock.Ticks;
@@ -159,11 +158,15 @@ namespace Akka.Actor
                 _startTime = 1;
             }
 
+            // we've already started - need to prevent duplicates.
+            if (_workerInitialized.IsSet)
+                return;
+            
             _workerInitialized.Signal();
 
             do
             {
-                var deadline = WaitForNextTick();
+                var deadline = await WaitForNextTick();
                 if (deadline > 0)
                 {
                     var idx = (int)(_tick & _mask);
@@ -203,14 +206,14 @@ namespace Akka.Actor
             _rescheduleRegistrations.Clear();
         }
 
-        private long WaitForNextTick()
+        private async ValueTask<long> WaitForNextTick()
         {
             var deadline = _tickDuration * (_tick + 1);
             unchecked // just to avoid trouble with long-running applications
             {
                 for (;;)
                 {
-                    long currentTime = HighResMonotonicClock.Ticks - _startTime;
+                    var currentTime = HighResMonotonicClock.Ticks - _startTime;
                     var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond);
 
                     if (sleepMs <= 0) // no need to sleep
@@ -218,10 +221,9 @@ namespace Akka.Actor
                         if (currentTime == long.MinValue) // wrap-around
                             return -long.MaxValue;
                         return currentTime;
-
                     }
 
-                    Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
+                    await Task.Delay(TimeSpan.FromMilliseconds(sleepMs));
                 }
             }
         }
@@ -403,6 +405,7 @@ namespace Akka.Actor
             }
 
             _unprocessedRegistrations.Clear();
+            _worker = null;
         }
 
         /// <summary>
