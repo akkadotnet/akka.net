@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -58,13 +59,13 @@ namespace Akka.Cluster.Tests
         /// <summary>
         /// The expected log info pattern to intercept after a <see cref="Cluster.Join(Address)"/>.
         /// </summary>
-        protected void Join(string expected)
+        protected async Task Join(string expected)
         {
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                EventFilter
+                await EventFilter
                     .Info(contains: expected)
-                    .ExpectOne(() => _cluster.Join(_selfAddress));
+                    .ExpectOneAsync(TimeSpan.FromMinutes(1), () => _cluster.Join(_selfAddress));
             });
         }
 
@@ -90,11 +91,11 @@ namespace Akka.Cluster.Tests
         { }
 
         [Fact]
-        public void A_cluster_must_log_a_message_when_becoming_and_stopping_being_a_leader()
+        public async Task A_cluster_must_log_a_message_when_becoming_and_stopping_being_a_leader()
         {
             _cluster.Settings.LogInfo.ShouldBeTrue();
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            Join("is the new leader");
+            await Join("is the new leader");
             AwaitUp();
             Down("is no longer leader");
         }
@@ -110,7 +111,7 @@ namespace Akka.Cluster.Tests
         public void A_cluster_must_not_log_verbose_cluster_events_by_default()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            Intercept<TrueException>(() => Join(upLogMessage));
+            Intercept<TrueException>(async () => await Join(upLogMessage));
             AwaitUp();
             Intercept<TrueException>(() => Down(downLogMessage));
         }
@@ -125,10 +126,10 @@ namespace Akka.Cluster.Tests
         { }
 
         [Fact]
-        public void A_cluster_must_log_verbose_cluster_events_when_log_info_verbose_is_on()
+        public async Task A_cluster_must_log_verbose_cluster_events_when_log_info_verbose_is_on()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeTrue();
-            Join(upLogMessage);
+            await Join(upLogMessage);
             AwaitUp();
             Down(downLogMessage);
         }
