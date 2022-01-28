@@ -117,6 +117,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 await a;
             }
+            catch (StreamDetachedException e) 
+            { 
+                thrown = true; 
+            } 
             catch (AbruptTerminationException e)
             {
                 thrown = true;

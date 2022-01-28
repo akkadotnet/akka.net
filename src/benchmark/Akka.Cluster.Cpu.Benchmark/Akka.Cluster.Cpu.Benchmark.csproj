@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NDesk.Options.Core" Version="1.2.5" />
+        <PackageReference Include="Tmds.ExecFunction" Version="0.5.0" />
+        <PackageReference Include="Universe.CpuUsage" Version="2.2.497.598" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
+    </ItemGroup>
+    
+</Project>

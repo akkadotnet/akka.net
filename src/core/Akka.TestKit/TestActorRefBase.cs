@@ -39,6 +39,10 @@ namespace Akka.TestKit
         /// Directly inject messages into actor receive behavior. Any exceptions
         /// thrown will be available to you, while still being able to use
         /// become/unbecome.
+        /// Note: This method violates the actor model and could cause unpredictable 
+        /// behavior. For example, a Receive call to an actor could run simultaneously 
+        /// (2 simultaneous threads running inside the actor) with the actor's handling 
+        /// of a previous Tell call. 
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
