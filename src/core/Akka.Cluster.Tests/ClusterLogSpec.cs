@@ -59,7 +59,19 @@ namespace Akka.Cluster.Tests
         /// <summary>
         /// The expected log info pattern to intercept after a <see cref="Cluster.Join(Address)"/>.
         /// </summary>
-        protected async Task Join(string expected)
+        protected void Join(string expected)
+        {
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                EventFilter
+                    .Info(contains: expected)
+                    .ExpectOne(() => _cluster.Join(_selfAddress));
+            });
+        }
+        /// <summary>
+        /// The expected log info pattern to intercept after a <see cref="Cluster.Join(Address)"/>.
+        /// </summary>
+        protected async Task JoinAsync(string expected)
         {
             await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
@@ -82,6 +94,20 @@ namespace Akka.Cluster.Tests
                 .ExpectOne(() => _cluster.Down(_selfAddress));
             });
         }
+
+        /// <summary>
+        /// The expected log info pattern to intercept after a <see cref="Cluster.Down(Address)"/>.
+        /// </summary>
+        /// <param name="expected"></param>
+        protected async Task DownAsync(string expected)
+        {
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+            {
+                await EventFilter
+                .Info(contains: expected)
+                .ExpectOneAsync(() => _cluster.Down(_selfAddress));
+            });
+        }
     }
 
     public class ClusterLogDefaultSpec : ClusterLogSpec
@@ -95,7 +121,7 @@ namespace Akka.Cluster.Tests
         {
             _cluster.Settings.LogInfo.ShouldBeTrue();
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            await Join("is the new leader");
+            await JoinAsync("is the new leader");
             AwaitUp();
             Down("is no longer leader");
         }
@@ -111,7 +137,7 @@ namespace Akka.Cluster.Tests
         public void A_cluster_must_not_log_verbose_cluster_events_by_default()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            Intercept<TrueException>(async () => await Join(upLogMessage));
+            Intercept<TrueException>(() => Join(upLogMessage));
             AwaitUp();
             Intercept<TrueException>(() => Down(downLogMessage));
         }
@@ -129,9 +155,9 @@ namespace Akka.Cluster.Tests
         public async Task A_cluster_must_log_verbose_cluster_events_when_log_info_verbose_is_on()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeTrue();
-            await Join(upLogMessage);
+            await JoinAsync(upLogMessage);
             AwaitUp();
-            Down(downLogMessage);
+            await DownAsync(downLogMessage);
         }
     }
 }
