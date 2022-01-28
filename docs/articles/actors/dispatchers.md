@@ -185,7 +185,7 @@ The `ChannelExectuor` re-uses the same threading settings as the `ForkJoinExecut
 akka.actor.default-dispatcher = {
     executor = channel-executor
     # channel executor priority to use
-    # - available: none, normal, idle, background, low, belownormal, abovenormal, high, realtime
+    # - available: idle, low, normal, high
     channel-executor.priority = normal
     fork-join-executor { #channelexecutor will re-use these settings
       parallelism-min = 2
@@ -198,7 +198,7 @@ akka.actor.internal-dispatcher = {
     executor = channel-executor
     throughput = 5
     # channel executor priority to use
-    # - available: none, normal, idle, background, low, belownormal, abovenormal, high, realtime
+    # - available: idle, low, normal, high
     channel-executor.priority = normal
     fork-join-executor {
       parallelism-min = 4
@@ -211,7 +211,7 @@ akka.remote.default-remote-dispatcher {
     type = Dispatcher
     executor = channel-executor
     # channel executor priority to use
-    # - available: none, normal, idle, background, low, belownormal, abovenormal, high, realtime
+    # - available: idle, low, normal, high
     channel-executor.priority = normal
     fork-join-executor {
       parallelism-min = 2
@@ -223,7 +223,7 @@ akka.remote.default-remote-dispatcher {
 akka.remote.backoff-remote-dispatcher {
   executor = channel-executor
   # channel executor priority to use
-  # - available: none, normal, idle, background, low, belownormal, abovenormal, high, realtime
+  # - available: idle, low, normal, high
   channel-executor.priority = normal
   fork-join-executor {
     parallelism-min = 2
