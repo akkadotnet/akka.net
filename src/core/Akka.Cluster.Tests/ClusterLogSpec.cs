@@ -123,7 +123,7 @@ namespace Akka.Cluster.Tests
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
             await JoinAsync("is the new leader");
             AwaitUp();
-            Down("is no longer leader");
+            await DownAsync("is no longer leader");
         }
     }
 
