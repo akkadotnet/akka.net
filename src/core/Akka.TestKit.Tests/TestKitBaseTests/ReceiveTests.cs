@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
@@ -65,6 +66,20 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             TestActor.Tell("1");
             TestActor.Tell("2");
             Intercept(() => FishForMessage(_ => false, TimeSpan.FromMilliseconds(100)));
+        }
+
+        [Fact]
+        public async Task FishForMessage_should_fill_the_all_messages_param_if_not_null()
+        {
+            await Task.Run(delegate
+            {
+                var probe = base.CreateTestProbe("probe");
+                probe.Tell("hello");
+                probe.Tell("world");
+                var allMessages = new List<object>();
+                probe.FishForMessage<string>(isMessage: s => s == "world", allMessages: allMessages);
+                allMessages.Should().BeEquivalentTo(new List<object> { "hello" });
+            });
         }
 
         [Fact]

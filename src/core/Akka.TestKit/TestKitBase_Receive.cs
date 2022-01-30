@@ -40,8 +40,9 @@ namespace Akka.TestKit
         /// <param name="isMessage">The is message.</param>
         /// <param name="max">The maximum.</param>
         /// <param name="hint">The hint.</param>
+        /// <param name="allMessages">If null then will be ignored. If not null then will be filled with all the messages until <paramref name="isMessage"/> returns <c>true</c></param>
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
-        public T FishForMessage<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "")
+        public T FishForMessage<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "", List<object> allMessages = null)
         {
             var maxValue = RemainingOrDilated(max);
             var end = Now + maxValue;
@@ -54,6 +55,7 @@ namespace Akka.TestKit
                 {
                     return msg1;
                 }
+                allMessages?.Add(msg);
             }
         }
 
