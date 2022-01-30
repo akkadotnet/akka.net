@@ -75,10 +75,11 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             {
                 var probe = base.CreateTestProbe("probe");
                 probe.Tell("hello");
+                probe.Tell(2);
                 probe.Tell("world");
                 var allMessages = new List<object>();
                 probe.FishForMessage<string>(isMessage: s => s == "world", allMessages: allMessages);
-                allMessages.Should().BeEquivalentTo(new List<object> { "hello" });
+                allMessages.Should().BeEquivalentTo(new List<object> { "hello", 2 });
             });
         }
 
