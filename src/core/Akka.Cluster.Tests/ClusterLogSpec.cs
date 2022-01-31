@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -67,6 +68,18 @@ namespace Akka.Cluster.Tests
                     .ExpectOne(() => _cluster.Join(_selfAddress));
             });
         }
+        /// <summary>
+        /// The expected log info pattern to intercept after a <see cref="Cluster.Join(Address)"/>.
+        /// </summary>
+        protected async Task JoinAsync(string expected)
+        {
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+            {
+                await EventFilter
+                    .Info(contains: expected)
+                    .ExpectOneAsync(TimeSpan.FromMinutes(1), () => _cluster.Join(_selfAddress));
+            });
+        }
 
         /// <summary>
         /// The expected log info pattern to intercept after a <see cref="Cluster.Down(Address)"/>.
@@ -81,6 +94,20 @@ namespace Akka.Cluster.Tests
                 .ExpectOne(() => _cluster.Down(_selfAddress));
             });
         }
+
+        /// <summary>
+        /// The expected log info pattern to intercept after a <see cref="Cluster.Down(Address)"/>.
+        /// </summary>
+        /// <param name="expected"></param>
+        protected async Task DownAsync(string expected)
+        {
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+            {
+                await EventFilter
+                .Info(contains: expected)
+                .ExpectOneAsync(() => _cluster.Down(_selfAddress));
+            });
+        }
     }
 
     public class ClusterLogDefaultSpec : ClusterLogSpec
@@ -90,13 +117,13 @@ namespace Akka.Cluster.Tests
         { }
 
         [Fact]
-        public void A_cluster_must_log_a_message_when_becoming_and_stopping_being_a_leader()
+        public async Task A_cluster_must_log_a_message_when_becoming_and_stopping_being_a_leader()
         {
             _cluster.Settings.LogInfo.ShouldBeTrue();
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            Join("is the new leader");
+            await JoinAsync("is the new leader");
             AwaitUp();
-            Down("is no longer leader");
+            await DownAsync("is no longer leader");
         }
     }
 
@@ -125,12 +152,12 @@ namespace Akka.Cluster.Tests
         { }
 
         [Fact]
-        public void A_cluster_must_log_verbose_cluster_events_when_log_info_verbose_is_on()
+        public async Task A_cluster_must_log_verbose_cluster_events_when_log_info_verbose_is_on()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeTrue();
-            Join(upLogMessage);
+            await JoinAsync(upLogMessage);
             AwaitUp();
-            Down(downLogMessage);
+            await DownAsync(downLogMessage);
         }
     }
 }
