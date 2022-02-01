@@ -62,11 +62,10 @@ namespace Akka.TestKit
         ///
         /// Ignores all messages except for a message of type <typeparamref name="T"/>.
         /// Asserts that all messages are not of the of type <typeparamref name="T"/>.
-        /// Note that when comparing types, inheritance is ignored, in other words, only perfectly matching types are asserted.
         /// </summary>
         /// <typeparam name="T">The type that the message is not supposed to be.</typeparam>
         /// <param name="max">Optional. The maximum wait duration. Defaults to <see cref="RemainingOrDefault"/> when unset.</param>
-        public async Task FishUntilMessage<T>(TimeSpan? max = null)
+        public async Task FishUntilMessageAsync<T>(TimeSpan? max = null)
         {
             await Task.Run(() =>
             {
