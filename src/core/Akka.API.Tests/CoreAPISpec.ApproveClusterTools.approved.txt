@@ -208,9 +208,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         [System.ObsoleteAttribute("Obsolete - please us the full constructor instead. This constructor only exists f" +
             "or backwards API compatibility.")]
         public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements) { }
-        public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers) { }
+        public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan pruneInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers) { }
         public System.TimeSpan GossipInterval { get; }
         public int MaxDeltaElements { get; }
+        public System.TimeSpan PruneInterval { get; }
         public System.TimeSpan RemovedTimeToLive { get; }
         public string Role { get; }
         public Akka.Routing.RoutingLogic RoutingLogic { get; }
@@ -219,6 +220,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithGossipInterval(System.TimeSpan gossipInterval) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithMaxDeltaElements(int maxDeltaElements) { }
+        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithPruneInterval(System.TimeSpan pruneInterval) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRemovedTimeToLive(System.TimeSpan removedTtl) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRole(string role) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRoutingLogic(Akka.Routing.RoutingLogic routingLogic) { }

@@ -122,6 +122,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private long deltaCount = 0L;
         private ILoggingAdapter _log;
         private IDictionary<Address, Bucket> _registry = new Dictionary<Address, Bucket>();
+        private IDictionary<IActorRef, List<string>> _unscribingActors = new Dictionary<IActorRef, List<string>>();    
 
         /// <summary>
         /// TBD
@@ -159,7 +160,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
             //Start periodic gossip to random nodes in cluster
             _gossipCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.GossipInterval, _settings.GossipInterval, Self, GossipTick.Instance, Self);
-            _pruneInterval = new TimeSpan(_settings.RemovedTimeToLive.Ticks / 2);
+            _pruneInterval = _settings.PruneInterval;
             _pruneCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_pruneInterval, _pruneInterval, Self, Prune.Instance, Self);
             _buffer = new PerGroupingBuffer();
 
@@ -278,6 +279,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                         // no such topic here
                     }
                 });
+                AddSenderToUnscribingActors(Sender, encodedTopic);
             });
             Receive<Unsubscribed>(unsubscribed =>
             {
@@ -403,7 +405,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 });
             });
         }
-
         private bool OtherHasNewerVersions(IImmutableDictionary<Address, long> versions)
         {
             return versions.Any(entry =>
@@ -414,7 +415,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 return entry.Value > 0L;
             });
         }
-
+        private void AddSenderToUnscribingActors(IActorRef sender, string topic)
+        {
+            if (_unscribingActors.ContainsKey(sender))
+                _unscribingActors[sender].Add(topic);
+            else
+                _unscribingActors.Add(sender, new List<string> { topic });
+        }
+        private void RemoveSenderToUnscribingActors(IActorRef sender, string topic)
+        {
+            if (_unscribingActors.ContainsKey(sender))
+                _unscribingActors[sender].Add(topic);
+            else
+                _unscribingActors.Add(sender, new List<string> { topic });
+        }
         private IEnumerable<Bucket> CollectDelta(IImmutableDictionary<Address, long> versions)
         {
             // missing entries are represented by version 0
