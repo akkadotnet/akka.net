@@ -12,6 +12,8 @@ using Akka.Actor.Dsl;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.TestKit;
 using Xunit;
+using Akka.Event;
+using System.Threading;
 
 namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 {
@@ -54,5 +56,58 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
                 a.ShouldNotBe(ActorRefs.Nobody);
             });
         }
+
+        [Fact]
+        public void DistributedPubSubMediator_should_get_dead_letter()
+        {
+            EventFilter.Exception<NullReferenceException>().Expect(0, () =>
+            {
+                var actor = Sys.ActorOf((dsl, context) =>
+                {
+                    IActorRef mediator = null;
+                    ICancelable cancelable = null;
+                    dsl.OnPreStart = actorContext =>
+                    {
+                        Sys.EventStream.Subscribe(context.Self, typeof(DeadLetter));
+                        mediator = DistributedPubSub.Get(actorContext.System).Mediator;
+                        mediator.Tell(new Subscribe("pub-sub", context.Self));
+                    };
+
+                    dsl.Receive<string>(s => s.Equals("UnSub"), (s, actorContext) =>
+                    {
+                        mediator.Tell(new Unsubscribe("pub-sub", context.Self));
+                    }); 
+                    dsl.Receive<SubscribeAck>((s, actorContext) =>
+                    {
+                        actorContext.System.Log.Info($"{s.Subscribe.Topic}");
+                        cancelable = context.System.Scheduler.ScheduleTellOnceCancelable(TimeSpan.FromSeconds(5), context.Self, "UnSub", context.Self);
+                    }); 
+                    dsl.Receive<PublishTopic>((s, actorContext) =>
+                    {
+                        mediator.Tell(new Publish("pub-sub", "Good"));
+                    }); 
+                    dsl.Receive<DeadLetter>((s, actorContext) =>
+                    {
+                        actorContext.System.Log.Info($"Received deadletter {s.Message}");
+                    }); 
+                    dsl.Receive<UnsubscribeAck>((s, actorContext) =>
+                    {
+                        actorContext.System.Log.Info($"{s.Unsubscribe.Topic}");
+                        cancelable = context.System.Scheduler.ScheduleTellOnceCancelable(TimeSpan.FromMinutes(3), context.Self, PublishTopic.Instance, context.Self);
+                    });
+
+                }, "childActor");
+                Thread.Sleep(TimeSpan.FromMinutes(5));
+            });
+        }
+    }
+    public sealed class QueryTopics
+    {
+        public static QueryTopics Instance = new QueryTopics();
+    }
+
+    public sealed class PublishTopic
+    {
+        public static PublishTopic Instance = new PublishTopic();
     }
 }
