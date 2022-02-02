@@ -22,7 +22,6 @@ namespace Akka.Actor
     public class LocalActorRef : ActorRefWithCell, ILocalRef
     {
         private readonly ActorSystemImpl _system;
-        private readonly Props _props;
         private readonly MessageDispatcher _dispatcher;
         private readonly IInternalActorRef _supervisor;
         private readonly ActorPath _path;
@@ -57,7 +56,6 @@ namespace Akka.Actor
             IInternalActorRef supervisor, ActorPath path)
         {
             _system = system;
-            _props = props;
             _dispatcher = dispatcher;
             MailboxType = mailboxType;
             _supervisor = supervisor;
@@ -74,7 +72,7 @@ namespace Akka.Actor
              * object from another thread as soon as we run init.
              */
             // ReSharper disable once VirtualMemberCallInConstructor 
-            _cell = NewActorCell(_system, this, _props, _dispatcher,
+            _cell = NewActorCell(_system, this, props, _dispatcher,
                 _supervisor); // _cell needs to be assigned before Init is called. 
             _cell.Init(true, MailboxType);
         }
@@ -168,7 +166,7 @@ namespace Akka.Actor
         /// <summary>
         /// The <see cref="Props"/> used to create this actor.
         /// </summary>
-        protected Props Props => _props;
+        protected Props Props => _cell.Props;
 
         /// <summary>
         /// The <see cref="MessageDispatcher"/> this actor will use to execute its message-processing.

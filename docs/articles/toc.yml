@@ -64,6 +64,8 @@
     href: persistence/storage-plugins.md
   - name: Custom serialization
     href: persistence/custom-serialization.md
+  - name: Writing A Custom Persistent Provider
+    href: persistence/custom-persistence-provider.md
   - name: Persistence Query
     href: persistence/persistence-query.md
   - name: Persistence Testing
