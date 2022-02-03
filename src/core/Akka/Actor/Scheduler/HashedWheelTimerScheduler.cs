@@ -170,7 +170,7 @@ namespace Akka.Actor
             
             _workerInitialized.Signal();
             
-            await _schedulerTaskFactory.StartNew(Run).Unwrap();
+            await _schedulerTaskFactory.StartNew(Run).Unwrap().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -180,7 +180,7 @@ namespace Akka.Actor
         {
             do
             {
-                var deadline = await WaitForNextTick();
+                var deadline = await WaitForNextTick().ConfigureAwait(false);
                 if (deadline > 0)
                 {
                     var idx = (int)(_tick & _mask);
