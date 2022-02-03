@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#region ClusterSingletonConfigSpec
+
 using System;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -54,3 +56,4 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
     }
 }
+#endregion

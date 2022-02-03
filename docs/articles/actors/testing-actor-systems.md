@@ -277,7 +277,11 @@ akka {
 
 There are several configuration properties for the TestKit module, please refer to the [reference configuration](https://github.com/akkadotnet/akka.net/blob/master/src/core/Akka.TestKit/Configs/TestScheduler.conf)
 
-TODO describe how to pass custom config
+### How To Pass Custom Configuration To Akka.TestKit
+
+[!code-csharp[Main](../../../src/contrib/cluster/Akka.Cluster.Tools.Tests/Singleton/ClusterSingletonConfigSpec.cs?name=ClusterSingletonConfigSpec)]
+
+From the above sample, custom configuration, `GetConfig()`, is passed to `Akka.TestKit` via the base class constructor!
 
 ## Synchronous Testing: TestActorRef
 
