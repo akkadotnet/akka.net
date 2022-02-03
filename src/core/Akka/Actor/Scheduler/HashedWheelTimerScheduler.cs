@@ -66,6 +66,12 @@ namespace Akka.Actor
                     $"akka.scheduler.tick-duration: {_tickDuration} (expected: 0 < tick-duration in ticks < {long.MaxValue / _wheel.Length}");
 
             _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
+            
+            _pair = new ConcurrentExclusiveSchedulerPair(TaskScheduler.Current, 1);
+            _shutdownCts = new CancellationTokenSource();
+            _schedulerTaskFactory = new TaskFactory(_shutdownCts.Token, TaskCreationOptions.DenyChildAttach,
+                TaskContinuationOptions.None, _pair.ExclusiveScheduler);
+
         }
 
         private long _startTime = 0;
@@ -115,6 +121,9 @@ namespace Akka.Actor
         private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new HashSet<SchedulerRegistration>();
 
         private Task _worker;
+        private ConcurrentExclusiveSchedulerPair _pair;
+        private TaskFactory _schedulerTaskFactory;
+        private CancellationTokenSource _shutdownCts = new CancellationTokenSource();
 
         private void Start()
         {
@@ -126,7 +135,7 @@ namespace Akka.Actor
 #pragma warning restore 420
                     WORKER_STATE_INIT)
                 {
-                    _worker = Run();
+                    _worker = Launch();
                 }
             }
 
@@ -145,10 +154,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// Scheduler thread entry method
-        /// </summary>
-        private async Task Run()
+        private async Task Launch()
         {
             // Initialize the clock
             _startTime = HighResMonotonicClock.Ticks;
@@ -163,7 +169,15 @@ namespace Akka.Actor
                 return;
             
             _workerInitialized.Signal();
+            
+            await _schedulerTaskFactory.StartNew(Run).Unwrap();
+        }
 
+        /// <summary>
+        /// Scheduler thread entry method
+        /// </summary>
+        private async Task Run()
+        {
             do
             {
                 var deadline = await WaitForNextTick();
@@ -406,6 +420,11 @@ namespace Akka.Actor
 
             _unprocessedRegistrations.Clear();
             _worker = null;
+            
+            // shutdown custom TaskFactory
+            _shutdownCts.Cancel();
+            _pair = null;
+            _schedulerTaskFactory = null;
         }
 
         /// <summary>
