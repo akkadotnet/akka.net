@@ -456,7 +456,7 @@ namespace Akka.TestKit.Internal
         /// </summary>
         private async Task InternalExpectAsync(Func<Task> actionAsync, ActorSystem actorSystem, int expectedCount, TimeSpan? timeout = null)
         {
-            await InterceptAsync<object>(() => { actionAsync(); return Task.FromResult<object>(null); }, actorSystem, timeout, expectedCount);
+            await InterceptAsync<object>(async () => { await actionAsync(); return Task.FromResult<object>(null); }, actorSystem, timeout, expectedCount);
         }
         
         /// <summary>
