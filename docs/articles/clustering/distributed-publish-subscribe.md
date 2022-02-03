@@ -209,11 +209,11 @@ Typical usage of this mode is to broadcast messages to all replicas with the sam
 
 There are three factors that determine when or if a message is published to DeadLetter, namely: `send-to-dead-letters-when-no-subscribers`, zero existing subscribers and terminated topic!
 
-- **`Send-to-dead-letters-when-no-subscribers`**: this is a `DistributedPubSub` setting that, if turned off or set to false (it is on/true by default), causes the sending of messages to the DeadLetter to be skipped, when there are zero subscribers or the topic Actor is terminated!
+* **`Send-to-dead-letters-when-no-subscribers`**: this is a `DistributedPubSub` setting that, if turned off or set to false (it is on/true by default), causes the sending of messages to the DeadLetter to be skipped, when there are zero subscribers or the topic Actor is terminated!
 
-- **Zero Existing Subscribers**: A message is sent to the DeadLetter if **`Send-to-dead-letters-when-no-subscribers`** is on/true and there are no existing subscriber(s) to receive it. `Akka.Cluster` distributed pubsub does not support queueing up messages while there are no existing subscribers!
+* **Zero Existing Subscribers**: A message is sent to the DeadLetter if **`Send-to-dead-letters-when-no-subscribers`** is on/true and there are no existing subscriber(s) to receive it. `Akka.Cluster` distributed pubsub does not support queueing up messages while there are no existing subscribers!
 
-- **Terminated Topic Actor**: When there are no existing subscribers and no new subscription for a duration of, say 2 minutes (the default for `removed-time-to-live`), the Topic Actor is terminated and if **`Send-to-dead-letters-when-no-subscribers`** is on/true, messages are sent to DeadLetter.
+* **Terminated Topic Actor**: When there are no existing subscribers and no new subscription for a duration of, say 2 minutes (the default for `removed-time-to-live`), the Topic Actor is terminated and if **`Send-to-dead-letters-when-no-subscribers`** is on/true, messages are sent to DeadLetter.
 
 ## DistributedPubSub Extension
 
