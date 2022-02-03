@@ -30,7 +30,7 @@ You register actors to the local mediator with `DistributedPubSubMediator.Subscr
 
 You publish messages by sending `DistributedPubSubMediator.Publish` message to the local mediator.
 
-Actors are automatically removed from the registry when they are terminated, or you can explicitly remove entries with `DistributedPubSubMediator.Unsubscribe`.
+Topic Actors are automatically removed from the registry when they are terminated - they are terminated if there are zero existing subscribers and no new subscription within a given deadline (the default is 2 minutes). You can change the deadline by setting `removed-time-to-live` to a desired duration. You can `Unsubscribe` from a topic with `DistributedPubSubMediator.Unsubscribe`.
 
 An example of a subscriber actor:
 
@@ -204,6 +204,18 @@ RunOn(() =>
 It is also possible to broadcast messages to the actors that have been registered with `Put`. Send `DistributedPubSubMediator.SendToAll` message to the local mediator and the wrapped message will then be delivered to all recipients with a matching path. Actors with the same path, without address information, can be registered on different nodes. On each node there can only be one such actor, since the path is unique within one local actor system.
 
 Typical usage of this mode is to broadcast messages to all replicas with the same path, e.g. 3 actors on different nodes that all perform the same actions, for redundancy. You can also optionally specify a property (`AllButSelf`) deciding if the message should be sent to a matching path on the self node or not.
+
+
+## Deadletter
+
+There are three factors that determine when or if a message is published to Deadletter, namely: `send-to-dead-letters-when-no-subscribers`, zero existing subscribers and terminated topic!
+
+- **`Send-to-dead-letters-when-no-subscribers`**: this is a `DistributedPubSub` setting that, if turned off or set to false (it is on/true by default), causes the sending of messages to the Deadletter to be skipped, when there are zero subscribers or the topic Actor is terminated!
+
+- **Zero Existing Subscribers**: A message is sent to the Deadletter if **`Send-to-dead-letters-when-no-subscribers`** is on/true and there are no existing subscriber(s) to receive it. `Akka.Cluster` distributed pubsub does not support queueing up messages while there are no existing subscribers!
+
+- **Terminated Topic Actor**: When there are no existing subscribers and no new subscription for a duration of, say 2 minutes (the default for `removed-time-to-live`), the Topic Actor is terminated and if **`Send-to-dead-letters-when-no-subscribers`** is on/true, messages are sent to Deadletter.
+
 
 ## DistributedPubSub Extension
 
