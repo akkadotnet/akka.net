@@ -79,9 +79,6 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             _ = ExpectMsg<UnsubscribeAck>();
 
             // assert
-
-            // slightly racey, since the 0-subscriber topics are removed on a scheduled task that runs once per second
-            // hence why we use AwaitAssert to re-run the assertion
             await EventFilter.DeadLetter<object>().ExpectAsync(1,
                 () => { mediator.Tell(new Publish("pub-sub", $"hit")); });
         }
