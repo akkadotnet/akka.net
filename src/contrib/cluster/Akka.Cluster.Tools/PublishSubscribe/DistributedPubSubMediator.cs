@@ -643,7 +643,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private IActorRef NewTopicActor(string encodedTopic)
         {
-            var t = Context.ActorOf(Actor.Props.Create(() => new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic)), encodedTopic);
+            var t = Context.ActorOf(Actor.Props.Create(() => new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic, _settings.SendToDeadLettersWhenNoSubscribers)), encodedTopic);
             HandleRegisterTopic(t);
             return t;
         }
