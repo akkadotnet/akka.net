@@ -123,7 +123,7 @@ namespace Akka.Actor
         private Task _worker;
         private ConcurrentExclusiveSchedulerPair _pair;
         private TaskFactory _schedulerTaskFactory;
-        private CancellationTokenSource _shutdownCts = new CancellationTokenSource();
+        private readonly CancellationTokenSource _shutdownCts;
 
         private void Start()
         {
