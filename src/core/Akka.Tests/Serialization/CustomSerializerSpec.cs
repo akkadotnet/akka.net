@@ -87,6 +87,38 @@ namespace Akka.Tests.Serialization
             }
         }
         
+        // Fix for issue #5569, could not declare multiple serializer identifier
+        [Fact]
+        public void Configuration_should_be_able_to_override_serialization_identifiers()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.actor {
+                    serializers {
+                        custom = ""Akka.Tests.Serialization.CustomThrowingSerializer, Akka.Tests""
+                    }
+                    serialization-bindings {
+                        ""Akka.Tests.Serialization.MessageBase, Akka.Tests"" = custom
+                    }
+                    serialization-identifiers {
+	                    ""Akka.Tests.Serialization.CustomThrowingSerializer, Akka.Tests"" = 1
+                    }
+                }
+            ");
+            
+            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
+            {
+                var firstMessage = new FirstMessage("First message");
+                var serialization = system.Serialization;
+                var serializer = (CustomThrowingSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializerById = serialization.GetSerializerById(1);
+
+                serializer.Should().Be(serializerById);
+                
+                Action act = () => serializer.ToBinary(firstMessage);
+                act.Should().Throw<Exception>().WithMessage(nameof(CustomThrowingSerializer));
+            }
+        }
+        
         [Fact]
         public void Custom_programmatic_SerializerWithStringManifest_should_work_with_base_class_binding()
         {
@@ -231,4 +263,23 @@ namespace Akka.Tests.Serialization
             throw new NotImplementedException();
         }
     }
+    
+    public class CustomThrowingSerializer : Serializer
+    {
+        public CustomThrowingSerializer(ExtendedActorSystem system) : base(system)
+        {
+        }
+
+        public override bool IncludeManifest => false;
+
+        public override byte[] ToBinary(object obj)
+        {
+            throw new Exception(nameof(CustomThrowingSerializer));
+        }
+
+        public override object FromBinary(byte[] bytes, Type type)
+        {
+            throw new NotImplementedException();
+        }
+    }    
 }

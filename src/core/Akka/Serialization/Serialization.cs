@@ -337,8 +337,8 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(string name, Serializer serializer)
         {
-            _serializersById.Add(serializer.Identifier, serializer);
-            _serializersByName.Add(name, serializer);
+            _serializersById[serializer.Identifier] = serializer;
+            _serializersByName[name] = serializer;
         }
 
         /// <summary>
