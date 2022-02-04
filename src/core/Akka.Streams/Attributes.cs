@@ -62,17 +62,9 @@ namespace Akka.Streams
                 if (string.IsNullOrEmpty(value)) throw new ArgumentNullException(nameof(value), "Name attribute cannot be empty");
                 Value = value;
             }
-
-            /// <inheritdoc cref="IEquatable{T}.Equals(T)"/>
             public bool Equals(Name other) => !ReferenceEquals(other, null) && Equals(Value, other.Value);
-
-            /// <inheritdoc cref="object.Equals(object)"/>
             public override bool Equals(object obj) => obj is Name && Equals((Name)obj);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Value.GetHashCode();
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"Name({Value})";
         }
 
@@ -104,8 +96,6 @@ namespace Akka.Streams
                 Initial = initial;
                 Max = max;
             }
-
-            /// <inheritdoc cref="object.Equals(object)"/>
             public bool Equals(InputBuffer other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -113,10 +103,7 @@ namespace Akka.Streams
                 return Initial == other.Initial && Max == other.Max;
             }
 
-            /// <inheritdoc cref="object.Equals(object)"/>
             public override bool Equals(object obj) => obj is InputBuffer && Equals((InputBuffer)obj);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode()
             {
                 unchecked
@@ -124,8 +111,6 @@ namespace Akka.Streams
                     return (Initial * 397) ^ Max;
                 }
             }
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"InputBuffer(initial={Initial}, max={Max})";
         }
 
@@ -165,7 +150,6 @@ namespace Akka.Streams
                 OnFailure = onFailure;
             }
 
-            /// <inheritdoc cref="IEquatable{T}.Equals(T)"/>
             public bool Equals(LogLevels other)
             {
                 if (ReferenceEquals(other, null))
@@ -175,11 +159,7 @@ namespace Akka.Streams
 
                 return OnElement == other.OnElement && OnFinish == other.OnFinish && OnFailure == other.OnFailure;
             }
-
-            /// <inheritdoc cref="object.Equals(object)"/>
             public override bool Equals(object obj) => obj is LogLevels && Equals((LogLevels)obj);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode()
             {
                 unchecked
@@ -191,7 +171,6 @@ namespace Akka.Streams
                 }
             }
 
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"LogLevel(element={OnElement}, finish={OnFinish}, failure={OnFailure})";
         }
 
@@ -205,14 +184,8 @@ namespace Akka.Streams
             /// </summary>
             public static readonly AsyncBoundary Instance = new AsyncBoundary();
             private AsyncBoundary() { }
-
-            /// <inheritdoc cref="IEquatable{T}.Equals(T)"/>
             public bool Equals(AsyncBoundary other) => other is AsyncBoundary;
-
-            /// <inheritdoc cref="object.Equals(object)"/>
             public override bool Equals(object obj) => obj is AsyncBoundary;
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => "AsyncBoundary";
         }
 
@@ -522,8 +495,6 @@ namespace Akka.Streams
                 ? copy.Attributes.And(copy.CopyOf.Attributes).GetNameOrDefault(defaultIfNotFound)
                 : module.Attributes.GetNameOrDefault(defaultIfNotFound);
         }
-
-        /// <inheritdoc cref="object.ToString"/>
         public override string ToString() => $"Attributes({string.Join(", ", _attributes as IEnumerable<IAttribute>)})";
     }
 
@@ -552,8 +523,6 @@ namespace Akka.Streams
             {
                 Name = name;
             }
-
-            /// <inheritdoc cref="object.Equals(object)"/>
             public bool Equals(Dispatcher other)
             {
                 if (ReferenceEquals(other, null))
@@ -562,14 +531,8 @@ namespace Akka.Streams
                     return true;
                 return Equals(Name, other.Name);
             }
-
-            /// <inheritdoc cref="object.Equals(object)"/>
             public override bool Equals(object obj) => obj is Dispatcher && Equals((Dispatcher)obj);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Name?.GetHashCode() ?? 0;
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"Dispatcher({Name})";
         }
 
@@ -591,8 +554,6 @@ namespace Akka.Streams
             {
                 Decider = decider;
             }
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => "SupervisionStrategy";
         }
 
@@ -613,22 +574,14 @@ namespace Akka.Streams
             {
                 Enabled = enabled;
             }
-
-            /// <inheritdoc cref="object.Equals(object)"/>
             public bool Equals(DebugLogging other)
             {
                 if (other is null) return false;
                 if (ReferenceEquals(this, other)) return true;
                 return Enabled == other.Enabled;
             }
-
-            /// <inheritdoc cref="object.Equals(object)"/>
             public override bool Equals(object obj) => obj is DebugLogging attr && Equals(attr);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Enabled.GetHashCode();
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"DebugLogging(enabled={Enabled})";
         }
 
@@ -658,11 +611,7 @@ namespace Akka.Streams
                 if (ReferenceEquals(this, other)) return true;
                 return Timeout.Equals(other.Timeout) && Mode.Equals(other.Mode);
             }
-
-            /// <inheritdoc cref="object.ToString"/>
             public override bool Equals(object obj) => obj is StreamSubscriptionTimeout attr && Equals(attr);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode()
             {
                 unchecked
@@ -671,8 +620,6 @@ namespace Akka.Streams
                     return (initial * 397) ^ Mode.GetHashCode();
                 }
             }
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"StreamSubscriptionTimeout(timeout={Timeout.TotalMilliseconds}ms, mode={Mode})";
         }
 
@@ -699,13 +646,8 @@ namespace Akka.Streams
                 return Limit == other.Limit;
             }
 
-            /// <inheritdoc cref="object.Equals(object)"/>
             public override bool Equals(object obj) => obj is OutputBurstLimit attr && Equals(attr);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Limit.GetHashCode();
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"OutputBurstLimit(limit={Limit})";
         }
 
@@ -733,13 +675,8 @@ namespace Akka.Streams
                 return Enabled == other.Enabled;
             }
 
-            /// <inheritdoc cref="object.Equals(object)"/>
             public override bool Equals(object obj) => obj is FuzzingMode attr && Equals(attr);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Enabled.GetHashCode();
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"FuzzingMode(enabled={Enabled})";
         }
 
@@ -768,13 +705,8 @@ namespace Akka.Streams
                 return Size == other.Size;
             }
 
-            /// <inheritdoc cref="object.Equals(object)"/>
             public override bool Equals(object obj) => obj is MaxFixedBufferSize attr && Equals(attr);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Size.GetHashCode();
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"MaxFixedBufferSize(size={Size})";
         }
 
@@ -802,13 +734,8 @@ namespace Akka.Streams
                 return Limit == other.Limit;
             }
 
-            /// <inheritdoc cref="object.Equals(object)"/>
             public override bool Equals(object obj) => obj is SyncProcessingLimit attr && Equals(attr);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Limit.GetHashCode();
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"SyncProcessingLimit(limit={Limit})";
         }
 
@@ -921,13 +848,8 @@ namespace Akka.Streams
                 return Timeout.Equals(other.Timeout);
             }
 
-            /// <inheritdoc cref="IEquatable{T}.Equals(T)"/>
             public override bool Equals(object obj) => obj is SubscriptionTimeout attr && Equals(attr);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Timeout.GetHashCode();
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"SubscriptionTimeout(timeout={Timeout.TotalMilliseconds}ms)";
         }
 
@@ -951,13 +873,9 @@ namespace Akka.Streams
                 return Capacity == other.Capacity;
             }
 
-            /// <inheritdoc cref="IEquatable{T}.Equals(T)"/>
             public override bool Equals(object obj) => obj is BufferCapacity attr && Equals(attr);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Capacity.GetHashCode();
 
-            /// <inheritdoc cref="object.ToString" />
             public override string ToString() => $"BufferCapacity(capacity={Capacity})";
         }
 
@@ -983,13 +901,10 @@ namespace Akka.Streams
                 return Timeout.Equals(other.Timeout);
             }
 
-            /// <inheritdoc cref="IEquatable{T}.Equals(T)"/>
             public override bool Equals(object obj) => obj is DemandRedeliveryInterval attr && Equals(attr);
 
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Timeout.GetHashCode();
 
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"DemandRedeliveryInterval(timeout={Timeout.TotalMilliseconds}ms)";
         }
 
@@ -1014,14 +929,8 @@ namespace Akka.Streams
                 if (ReferenceEquals(this, other)) return true;
                 return Timeout.Equals(other.Timeout);
             }
-
-            /// <inheritdoc cref="IEquatable{T}.Equals(T)"/>
             public override bool Equals(object obj) => obj is FinalTerminationSignalDeadline attr && Equals(attr);
-
-            /// <inheritdoc cref="object.GetHashCode"/>
             public override int GetHashCode() => Timeout.GetHashCode();
-
-            /// <inheritdoc cref="object.ToString"/>
             public override string ToString() => $"FinalTerminationSignalDeadline(timeout={Timeout.TotalMilliseconds}ms)";
         }
 
