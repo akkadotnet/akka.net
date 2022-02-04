@@ -69,7 +69,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         }
 
         [Fact]
-        public async Task FishForMessage2_should_fill_the_all_messages_param_if_not_null()
+        public async Task FishForMessage_should_fill_the_all_messages_param_if_not_null()
         {
             await Task.Run(delegate
             {
@@ -78,7 +78,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
                 probe.Tell(2);
                 probe.Tell("world");
                 var allMessages = new List<object>();
-                probe.FishForMessage2<string>(isMessage: s => s == "world", allMessages: allMessages);
+                probe.FishForMessage<string>(isMessage: s => s == "world", allMessages: allMessages);
                 allMessages.Should().BeEquivalentTo(new List<object> { "hello", 2 });
             });
         }
