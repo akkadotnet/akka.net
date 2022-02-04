@@ -335,8 +335,9 @@ namespace Akka.Serialization
             if(_serializersById.ContainsKey(serializer.Identifier))
             {
                 LogWarning(
-                    $"Overriding serializer with identifier [{serializer.Identifier}] " +
-                    $"from [{_serializersById[serializer.Identifier].GetType()}] to [{serializer.GetType()}]");
+                    $"Serializer with identifier [{serializer.Identifier}] are being overriden  " +
+                    $"from [{_serializersById[serializer.Identifier].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
             }
             
             _serializersById[serializer.Identifier] = serializer;
@@ -351,13 +352,15 @@ namespace Akka.Serialization
         {
             if(_serializersById.ContainsKey(serializer.Identifier))
                 LogWarning(
-                    $"Overriding serializer with identifier [{serializer.Identifier}] " +
-                    $"from [{_serializersById[serializer.Identifier].GetType()}] to [{serializer.GetType()}]");
+                    $"Serializer with identifier [{serializer.Identifier}] are being overriden  " +
+                    $"from [{_serializersById[serializer.Identifier].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
             
             if(_serializersByName.ContainsKey(name))
                 LogWarning(
-                    $"Overriding serializer with name [{name}] " +
-                    $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]");
+                    $"Serializer with name [{serializer.Identifier}] are being overriden  " +
+                    $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
             
             _serializersById[serializer.Identifier] = serializer;
             _serializersByName[name] = serializer;
@@ -374,8 +377,9 @@ namespace Akka.Serialization
         {
             if(_serializerMap.ContainsKey(type))
                 LogWarning(
-                    $"Overriding serializer for type [{type}] " +
-                    $"from [{_serializerMap[type].GetType()}] to [{serializer.GetType()}]");
+                    $"Serializer for type [{type}] are being overriden  " +
+                    $"from [{_serializerMap[type].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
             
             _serializerMap[type] = serializer;
         }
