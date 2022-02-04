@@ -84,6 +84,19 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         }
 
         [Fact]
+        public async Task FishForMessage_should_clear_the_all_messages_param_if_not_null_before_filling_it()
+        {
+            await Task.Run(delegate
+            {
+                var probe = base.CreateTestProbe("probe");
+                probe.Tell("anything");
+                var allMessages = new List<object>() { "pre filled data" };
+                probe.FishForMessage<int>(isMessage: x => true, allMessages: allMessages);
+                allMessages.Should().BeEmpty();
+            });
+        }
+
+        [Fact]
         public async Task FishUntilMessageAsync_should_succeed_with_good_input()
         {
             var probe = CreateTestProbe("probe");
