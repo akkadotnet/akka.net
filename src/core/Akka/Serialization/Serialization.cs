@@ -332,15 +332,16 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(Serializer serializer)
         {
-            if(_serializersById.ContainsKey(serializer.Identifier))
+            var id = serializer.Identifier;
+            if(_serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
             {
                 LogWarning(
-                    $"Serializer with identifier [{serializer.Identifier}] are being overriden  " +
-                    $"from [{_serializersById[serializer.Identifier].GetType()}] to [{serializer.GetType()}]. " +
+                    $"Serializer with identifier [{id}] are being overriden  " +
+                    $"from [{_serializersById[id].GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
             }
             
-            _serializersById[serializer.Identifier] = serializer;
+            _serializersById[id] = serializer;
         }
 
         /// <summary>
@@ -350,19 +351,22 @@ namespace Akka.Serialization
         /// <param name="serializer">Serializer instance</param>
         public void AddSerializer(string name, Serializer serializer)
         {
-            if(_serializersById.ContainsKey(serializer.Identifier))
+            var id = serializer.Identifier;
+            if(_serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
+            {
                 LogWarning(
-                    $"Serializer with identifier [{serializer.Identifier}] are being overriden  " +
-                    $"from [{_serializersById[serializer.Identifier].GetType()}] to [{serializer.GetType()}]. " +
+                    $"Serializer with identifier [{id}] are being overriden  " +
+                    $"from [{_serializersById[id].GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
+            }
             
-            if(_serializersByName.ContainsKey(name))
+            if(_serializersByName.ContainsKey(name) && _serializersByName[name].GetType() != serializer.GetType())
                 LogWarning(
                     $"Serializer with name [{serializer.Identifier}] are being overriden  " +
                     $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
             
-            _serializersById[serializer.Identifier] = serializer;
+            _serializersById[id] = serializer;
             _serializersByName[name] = serializer;
         }
 
@@ -375,7 +379,7 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializationMap(Type type, Serializer serializer)
         {
-            if(_serializerMap.ContainsKey(type))
+            if(_serializerMap.ContainsKey(type) && _serializerMap[type].GetType() != serializer.GetType())
                 LogWarning(
                     $"Serializer for type [{type}] are being overriden  " +
                     $"from [{_serializerMap[type].GetType()}] to [{serializer.GetType()}]. " +
