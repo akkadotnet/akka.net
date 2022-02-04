@@ -12,17 +12,27 @@ using System.Text;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Serialization;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Internals;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Xunit;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Serialization
 {
     public class CustomSerializerSpec
     {
+        private readonly ITestOutputHelper _output;
+
+        public CustomSerializerSpec(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
         /// <summary>
         /// Here we basically verify that a serializer decides where its Serializer Identifier is coming
         /// from. When using the default Serializer base class, it read from hocon config. But this should not be 
@@ -92,6 +102,7 @@ namespace Akka.Tests.Serialization
         public void Configuration_should_be_able_to_override_serialization_identifiers()
         {
             var config = ConfigurationFactory.ParseString(@"
+                akka.stdout-logger-class = ""Akka.Tests.Serialization.XunitOutputHelperLogger, Akka.Tests""
                 akka.actor {
                     serializers {
                         custom = ""Akka.Tests.Serialization.CustomThrowingSerializer, Akka.Tests""
@@ -104,6 +115,7 @@ namespace Akka.Tests.Serialization
                     }
                 }
             ");
+            XunitOutputHelperLogger.Output = _output;
             
             using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
             {
@@ -281,5 +293,15 @@ namespace Akka.Tests.Serialization
         {
             throw new NotImplementedException();
         }
-    }    
+    }
+
+    public class XunitOutputHelperLogger : MinimalLogger
+    {
+        public static ITestOutputHelper Output;
+
+        protected override void Log(object message)
+        {
+            Output?.WriteLine(message.ToString());
+        }
+    }
 }

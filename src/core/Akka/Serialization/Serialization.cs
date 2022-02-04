@@ -19,6 +19,7 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
 using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.Serialization
 {
@@ -147,6 +148,7 @@ namespace Akka.Serialization
         private readonly Dictionary<string, Serializer> _serializersByName = new Dictionary<string, Serializer>();
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
+        private readonly MinimalLogger _initializationLogger;
 
         /// <summary>
         /// Serialization module. Contains methods for serialization and deserialization as well as
@@ -155,6 +157,10 @@ namespace Akka.Serialization
         /// <param name="system">The ActorSystem to which this serializer belongs.</param>
         public Serialization(ExtendedActorSystem system)
         {
+            // We have to use stdout-logger here because serialization system is set up before 
+            // the logging system were set up
+            _initializationLogger = system.Settings.StdoutLogger;
+            
             System = system;
             _nullSerializer = new NullSerializer(system);
             AddSerializer("null", _nullSerializer);
@@ -326,7 +332,14 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(Serializer serializer)
         {
-            _serializersById.Add(serializer.Identifier, serializer);
+            if(_serializersById.ContainsKey(serializer.Identifier))
+            {
+                LogWarning(
+                    $"Overriding serializer with identifier [{serializer.Identifier}] " +
+                    $"from [{_serializersById[serializer.Identifier].GetType()}] to [{serializer.GetType()}]");
+            }
+            
+            _serializersById[serializer.Identifier] = serializer;
         }
 
         /// <summary>
@@ -334,9 +347,18 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="name">Configuration name of the serializer</param>
         /// <param name="serializer">Serializer instance</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(string name, Serializer serializer)
         {
+            if(_serializersById.ContainsKey(serializer.Identifier))
+                LogWarning(
+                    $"Overriding serializer with identifier [{serializer.Identifier}] " +
+                    $"from [{_serializersById[serializer.Identifier].GetType()}] to [{serializer.GetType()}]");
+            
+            if(_serializersByName.ContainsKey(name))
+                LogWarning(
+                    $"Overriding serializer with name [{name}] " +
+                    $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]");
+            
             _serializersById[serializer.Identifier] = serializer;
             _serializersByName[name] = serializer;
         }
@@ -350,7 +372,18 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializationMap(Type type, Serializer serializer)
         {
+            if(_serializerMap.ContainsKey(type))
+                LogWarning(
+                    $"Overriding serializer for type [{type}] " +
+                    $"from [{_serializerMap[type].GetType()}] to [{serializer.GetType()}]");
+            
             _serializerMap[type] = serializer;
+        }
+
+        private void LogWarning(string str)
+        {
+            // Logging.StandardOutLogger is a MinimalActorRef, i.e. not a "real" actor
+            _initializationLogger.Tell(new Warning(nameof(Serialization), typeof(Serialization), str), ActorRefs.Nobody);
         }
 
         /// <summary>
