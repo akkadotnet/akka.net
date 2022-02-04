@@ -9,7 +9,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -644,7 +643,7 @@ namespace Akka.Remote
             * */
             Receive<Listen>(listen =>
             {
-                Listens.ContinueWith<INoSerializationVerificationNeeded>(listens =>
+                _ = Listens.ContinueWith<INoSerializationVerificationNeeded>(listens =>
                 {
                     if (listens.IsFaulted)
                     {
@@ -713,7 +712,7 @@ namespace Akka.Remote
                      */
                     var sender = Sender;
                     var allStatuses = _transportMapping.Values.Select(x => x.ManagementCommand(mc.Cmd));
-                    Task.WhenAll(allStatuses)
+                    _ = Task.WhenAll(allStatuses)
                         .ContinueWith(x =>
                         {
                             return new ManagementCommandAck(x.Result.All(y => y));
@@ -816,8 +815,8 @@ namespace Akka.Remote
             Receive<Send>(send =>
             {
                 var recipientAddress = send.Recipient.Path.Address;
-                IActorRef CreateAndRegisterWritingEndpoint() => _endpoints.RegisterWritableEndpoint(recipientAddress, 
-                    CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse, _transportMapping[send.Recipient.LocalAddressToUse], 
+                IActorRef CreateAndRegisterWritingEndpoint() => _endpoints.RegisterWritableEndpoint(recipientAddress,
+                    CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse, _transportMapping[send.Recipient.LocalAddressToUse],
                         _settings, writing: true, handleOption: null), uid: null);
 
                 // pattern match won't throw a NullReferenceException if one is returned by WritableEndpointWithPolicyFor
@@ -899,17 +898,18 @@ namespace Akka.Remote
                             return result.Result.All(x => x);
                         }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
-                shutdownStatus.ContinueWith(tr => Task.WhenAll(_transportMapping.Values.Select(x => x.Shutdown())).ContinueWith(
-                          result =>
-                          {
-                              if (result.IsFaulted || result.IsCanceled)
-                              {
-                                  if (result.Exception != null)
-                                      result.Exception.Handle(e => true);
-                                  return false;
-                              }
-                              return result.Result.All(x => x) && tr.Result;
-                          }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)).Unwrap().PipeTo(sender);
+                _ = shutdownStatus.ContinueWith(tr => Task.WhenAll(_transportMapping.Values.Select(x => x.Shutdown())).ContinueWith(
+                        result =>
+                        {
+                            if (result.IsFaulted || result.IsCanceled)
+                            {
+                                if (result.Exception != null)
+                                    result.Exception.Handle(e => true);
+                                return false;
+                            }
+                            return result.Result.All(x => x) && tr.Result;
+                        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default))
+                    .Unwrap().PipeTo(sender);
 
 
                 foreach (var handoff in _pendingReadHandoffs.Values)
@@ -1041,13 +1041,13 @@ namespace Akka.Remote
 
                             if (!typeof(Transport.Transport).IsAssignableFrom(driverType))
                                 throw new TypeLoadException(
-                                    $"Cannot instantiate transport [{transportSettings.TransportClass}]. It does not implement [{typeof (Transport.Transport).FullName}].");
+                                    $"Cannot instantiate transport [{transportSettings.TransportClass}]. It does not implement [{typeof(Transport.Transport).FullName}].");
 
                             var constructorInfo = driverType.GetConstructor(new[] { typeof(ActorSystem), typeof(Config) });
                             if (constructorInfo == null)
                                 throw new TypeLoadException(
                                     $"Cannot instantiate transport [{transportSettings.TransportClass}]. " +
-                                    $"It has no public constructor with [{typeof (ActorSystem).FullName}] and [{typeof (Config).FullName}] parameters");
+                                    $"It has no public constructor with [{typeof(ActorSystem).FullName}] and [{typeof(Config).FullName}] parameters");
 
                             // ReSharper disable once AssignNullToNotNullAttribute
                             driver = (Transport.Transport)Activator.CreateInstance(driverType, args);

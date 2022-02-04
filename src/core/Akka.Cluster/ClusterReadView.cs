@@ -64,8 +64,7 @@ namespace Akka.Cluster
         }
 
         readonly IActorRef _eventBusListener;
-
-        private readonly Cluster _cluster;
+        readonly Cluster _cluster;
 
         /// <summary>
         /// TBD
@@ -81,9 +80,14 @@ namespace Akka.Cluster
 
             _eventBusListener =
                 cluster.System.SystemActorOf(
-                    Props.Create(() => new EventBusListener(cluster, this))
+                    Props.Create(() => new EventBusListener(this))
                         .WithDispatcher(cluster.Settings.UseDispatcher)
                         .WithDeploy(Deploy.Local), "clusterEventBusListener");
+        }
+
+        internal void Connect()
+        {
+            _cluster.Subscribe(_eventBusListener, new[] { typeof(ClusterEvent.IClusterDomainEvent) });
         }
 
         /// <summary>
@@ -91,8 +95,7 @@ namespace Akka.Cluster
         /// </summary>
         private class EventBusListener : ReceiveActor
         {
-            readonly Cluster _cluster;
-            private readonly ClusterReadView _readView;
+            readonly ClusterReadView _readView;
 
             private ClusterEvent.CurrentClusterState State
             {
@@ -100,9 +103,8 @@ namespace Akka.Cluster
                 set { _readView._state = value; }
             }
 
-            public EventBusListener(Cluster cluster, ClusterReadView readView)
+            public EventBusListener(ClusterReadView readView)
             {
-                _cluster = cluster;
                 _readView = readView;
 
                 Receive<ClusterEvent.IClusterDomainEvent>(clusterDomainEvent =>
@@ -150,14 +152,14 @@ namespace Akka.Cluster
                         })
                         .With<ClusterEvent.CurrentInternalStats>(stats =>
                         {
-                            readView._latestStats = stats;
+                            _readView._latestStats = stats;
                         })
                         .With<ClusterEvent.ClusterShuttingDown>(_ => { });
 
                     // once captured, optional verbose logging of event
-                    if (!(clusterDomainEvent is ClusterEvent.SeenChanged) && _cluster.Settings.LogInfoVerbose)
+                    if (!(clusterDomainEvent is ClusterEvent.SeenChanged) && _readView._cluster.Settings.LogInfoVerbose)
                     {
-                        _cluster.LogInfo("event {0}", clusterDomainEvent.GetType().Name);
+                        _readView._cluster.LogInfo("event {0}", clusterDomainEvent.GetType().Name);
                     }
                 });
 
@@ -165,18 +167,6 @@ namespace Akka.Cluster
                 {
                     State = state;
                 });
-            }
-
-            protected override void PreStart()
-            {
-                //subscribe to all cluster domain events
-                _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IClusterDomainEvent) });
-            }
-
-            protected override void PostStop()
-            {
-                //unsubscribe from all cluster domain events
-                _cluster.Unsubscribe(Self);
             }
         }
 
@@ -293,6 +283,9 @@ namespace Akka.Cluster
         {
             if (disposing)
             {
+                //unsubscribe from all cluster domain events
+                _cluster.Unsubscribe(_eventBusListener);
+
                 //shutdown
                 _eventBusListener.Tell(PoisonPill.Instance);
             }

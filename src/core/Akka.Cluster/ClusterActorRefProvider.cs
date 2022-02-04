@@ -52,17 +52,10 @@ namespace Akka.Cluster
             Deployer = new ClusterDeployer(settings);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        public override void Init(ActorSystemImpl system)
+        protected override void OnInitialize()
         {
-            //Complete the usual RemoteActorRefProvider initializations - need access to transports and RemoteWatcher before clustering can work
-            base.Init(system);
-
-            // initialize/load the Cluster extension
-            Cluster.Get(system);
+            // make sure Cluster extension is initialized/loaded from init thread
+            Cluster.Get(Settings.System);
         }
 
         /// <summary>
@@ -72,9 +65,6 @@ namespace Akka.Cluster
         /// <returns>TBD</returns>
         protected override IActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
-            // make sure Cluster extension is initialized/loaded from init thread
-            Cluster.Get(system);
-
             var failureDetector = CreateRemoteWatcherFailureDetector(system);
             return system.SystemActorOf(ClusterRemoteWatcher.Props(
                 failureDetector,

@@ -59,7 +59,7 @@ namespace Akka.Cluster
     {
         public ClusterActorRefProvider(string systemName, Akka.Actor.Settings settings, Akka.Event.EventStream eventStream) { }
         protected override Akka.Actor.IActorRef CreateRemoteWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
-        public override void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
+        protected override void OnInitialize() { }
     }
     public class ClusterEvent
     {
