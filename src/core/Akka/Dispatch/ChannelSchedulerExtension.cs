@@ -60,7 +60,7 @@ namespace Akka.Dispatch
         public ChannelTaskScheduler(ExtendedActorSystem system)
         {
             //config channel-scheduler
-            var config = system.Settings.Config.GetConfig("akka.channel-scheduler");
+            var config = system.Settings.Config.GetConfig("akka.actor.channel-scheduler");
             _maximumConcurrencyLevel = ThreadPoolConfig.ScaledPoolSize(
                         config.GetInt("parallelism-min"),
                         config.GetDouble("parallelism-factor", 1.0D), // the scalar-based factor to scale the threadpool size to 
@@ -349,7 +349,7 @@ namespace Akka.Dispatch
         /// and to help execute queued works internaly. 
         /// It supports task-inlining only for task equal or above the own priority
         /// </summary>
-        sealed class PriorityTaskScheduler : TaskScheduler, IDisposable
+        internal sealed class PriorityTaskScheduler : TaskScheduler, IDisposable
         {
             readonly Channel<Task> _channel;
 
