@@ -211,36 +211,7 @@ In the example above the mediator is started and accessed with the `Akka.Cluster
 
 The `DistributedPubSub` extension can be configured with the following properties:
 
-```hocon
-# Settings for the DistributedPubSub extension
-akka.cluster.pub-sub {
-  # Actor name of the mediator actor, /system/distributedPubSubMediator
-  name = distributedPubSubMediator
- 
-  # Start the mediator on members tagged with this role.
-  # All members are used if undefined or empty.
-  role = ""
- 
-  # The routing logic to use for 'Send'
-  # Possible values: random, round-robin, broadcast
-  routing-logic = random
- 
-  # How often the DistributedPubSubMediator should send out gossip information
-  gossip-interval = 1s
- 
-  # Removed entries are pruned after this duration
-  removed-time-to-live = 120s
- 
-  # Maximum number of elements to transfer in one message when synchronizing the registries.
-  # Next chunk will be transferred in next round of gossip.
-  max-delta-elements = 3000
-  
-  # The id of the dispatcher to use for DistributedPubSubMediator actors. 
-  # If not specified default dispatcher is used.
-  # If specified you need to define the settings of the actual dispatcher.
-  use-dispatcher = ""
-}
-```
+[!code-hocon[Main](../../../src/contrib/cluster/Akka.Cluster.Tools/PublishSubscribe/reference.conf)]
 
 It is recommended to load the extension when the actor system is started by defining it in akka.extensions configuration property. Otherwise it will be activated when first used and then it takes a while for it to be populated.
 
