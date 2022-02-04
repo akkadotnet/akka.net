@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#region ClusterSingletonConfigSpec
+
 
 using System;
 using Akka.Cluster.Tools.Singleton;
@@ -15,6 +15,7 @@ using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
+    // <ClusterSingletonConfigSpec>
     public class ClusterSingletonConfigSpec : TestKit.Xunit2.TestKit
     {
         public ClusterSingletonConfigSpec() : base(GetConfig())
@@ -26,7 +27,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
                                                       akka.remote.dot-netty.tcp.port = 0");
         }
-
+        // </ClusterSingletonConfigSpec>
         [Fact]
         public void ClusterSingletonManagerSettings_must_have_default_config()
         {
@@ -56,4 +57,4 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
     }
 }
-#endregion
+
