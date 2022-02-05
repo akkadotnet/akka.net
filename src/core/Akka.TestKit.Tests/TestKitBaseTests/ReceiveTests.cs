@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -74,12 +75,13 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             await Task.Run(delegate
             {
                 var probe = base.CreateTestProbe("probe");
-                probe.Tell("hello");
+                probe.Tell("1");
                 probe.Tell(2);
-                probe.Tell("world");
-                var allMessages = new List<object>();
-                probe.FishForMessage<string>(isMessage: s => s == "world", allMessages: allMessages);
-                allMessages.Should().BeEquivalentTo(new List<object> { "hello", 2 });
+                probe.Tell("3");
+                probe.Tell(4);
+                var allMessages = new ArrayList();
+                probe.FishForMessage<string>(isMessage: s => s == "3", allMessages: allMessages);
+                allMessages.Should().BeEquivalentTo(new ArrayList { "1", 2 });
             });
         }
 
@@ -89,10 +91,13 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             await Task.Run(delegate
             {
                 var probe = base.CreateTestProbe("probe");
-                probe.Tell("anything");
-                var allMessages = new List<object>() { "pre filled data" };
-                probe.FishForMessage<int>(isMessage: x => true, allMessages: allMessages);
-                allMessages.Should().BeEmpty();
+                probe.Tell("1");
+                probe.Tell(2);
+                probe.Tell("3");
+                probe.Tell(4);
+                var allMessages = new ArrayList() { "pre filled data" };
+                probe.FishForMessage<string>(isMessage: x => x == "3", allMessages: allMessages);
+                allMessages.Should().BeEquivalentTo(new ArrayList { "1", 2 });
             });
         }
 

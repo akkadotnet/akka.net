@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -54,12 +55,13 @@ namespace Akka.TestKit
         /// <param name="isMessage">The is message.</param>
         /// <param name="max">The maximum.</param>
         /// <param name="hint">The hint.</param>
-        /// <param name="allMessages">If null then will be ignored. If not null then will be filled with all the messages until <paramref name="isMessage"/> returns <c>true</c></param>
+        /// <param name="allMessages">If null then will be ignored. If not null then will be initially cleared, then filled with all the messages until <paramref name="isMessage"/> returns <c>true</c></param>
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
-        public T FishForMessage<T>(Predicate<T> isMessage, List<object> allMessages, TimeSpan? max = null, string hint = "")
+        public T FishForMessage<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "")
         {
             var maxValue = RemainingOrDilated(max);
             var end = Now + maxValue;
+            allMessages?.Clear();
             while (true)
             {
                 var left = end - Now;
