@@ -1,0 +1,1 @@
+# Akka.NET Docker container test setup
