@@ -95,7 +95,7 @@ namespace Akka.TestKit
 
                 for (uint i = 0; ; i++)
                 {
-                    _assertions.AssertFalse(maxIterations.HasValue && i >= maxIterations.Value, $"{nameof(maxIterations)} violated (current iteration: {i}).");
+                    _assertions.AssertFalse(maxIterations.HasValue && i > maxIterations.Value, $"{nameof(maxIterations)} violated (current iteration: {i}).");
 
                     var currentMessages = ReceiveWhile<object>(shouldContinue: x => true, max: max);
 

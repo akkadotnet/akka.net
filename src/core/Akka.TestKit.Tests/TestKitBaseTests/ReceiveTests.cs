@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
@@ -86,14 +87,53 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         }
 
         [Fact]
-        public async Task WaitForRadioSilenceAsync_should_succeed_with_good_input()
+        public async Task WaitForRadioSilenceAsync_should_succeed_immediately_with_null_good_input()
         {
             var probe = CreateTestProbe("probe");
-            await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0));
+            var messages = await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0));
+            messages.Should().BeEquivalentTo(new ArrayList());
         }
 
         [Fact]
-        public async Task WaitForRadioSilenceAsync_should_fail_with_bad_input()
+        public async Task WaitForRadioSilenceAsync_should_succeed_immediately_with_good_pre_input()
+        {
+            var probe = CreateTestProbe("probe");
+            probe.Ref.Tell(1, TestActor);
+            var messages = await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0));
+            messages.Should().BeEquivalentTo(new ArrayList { 1 });
+        }
+
+        [Fact]
+        public async Task WaitForRadioSilenceAsync_should_succeed_later_with_good_post_input()
+        {
+            var probe = CreateTestProbe("probe");
+            var task = probe.WaitForRadioSilenceAsync();
+            probe.Ref.Tell(1, TestActor);
+            var messages = await task;
+            messages.Should().BeEquivalentTo(new ArrayList { 1 });
+        }
+
+        [Fact]
+        public async Task WaitForRadioSilenceAsync_should_succeed_after_second_iteration_with_good_post_input()
+        {
+            /// in this test we are going to try to "ruin" the radio silence in the middle of the third 1-second periods
+            /// in other words: we will be making "noise" every quarter second for the first 2.5 seconds
+            var quarterSecond = TimeSpan.FromSeconds(.25);
+            var twoAndAHalfSeconds = TimeSpan.FromSeconds(2.5);
+            var numberOfIterations = twoAndAHalfSeconds.TotalMilliseconds / quarterSecond.TotalMilliseconds;
+            var probe = CreateTestProbe("probe");
+            var task = probe.WaitForRadioSilenceAsync(max: TimeSpan.FromSeconds(1), maxIterations: 3);
+            for (var i = 0; i < numberOfIterations; i++)
+            {
+                await Task.Delay(quarterSecond);
+                probe.Ref.Tell(i, TestActor);
+            }
+            var messages = await task;
+            messages.Should().BeEquivalentTo(new ArrayList { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+        }
+
+        [Fact]
+        public async Task WaitForRadioSilenceAsync_should_fail_immediately_with_bad_input()
         {
             var probe = CreateTestProbe("probe");
             probe.Ref.Tell(3, TestActor);
