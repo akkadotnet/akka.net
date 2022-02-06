@@ -86,6 +86,26 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         }
 
         [Fact]
+        public async Task WaitForRadioSilenceAsync_should_succeed_with_good_input()
+        {
+            var probe = CreateTestProbe("probe");
+            await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0));
+        }
+
+        [Fact]
+        public async Task WaitForRadioSilenceAsync_should_fail_with_bad_input()
+        {
+            var probe = CreateTestProbe("probe");
+            probe.Ref.Tell(3, TestActor);
+            try
+            {
+                await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0), maxIterations: 0);
+                Assert.True(false, "we should never get here");
+            }
+            catch (XunitException) { }
+        }
+
+        [Fact]
         public void ReceiveWhile_Filter_should_on_a_timeout_return_no_messages()
         {
             ReceiveWhile<object>(_ => _, TimeSpan.FromMilliseconds(10)).Count.ShouldBe(0);

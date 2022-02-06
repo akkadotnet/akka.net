@@ -78,6 +78,39 @@ namespace Akka.TestKit
         }
 
         /// <summary>
+        /// Waits for a <paramref name="max"/> period of 'radio-silence' a number of <paramref name="maxIterations"/> iterations.
+        /// Note: 'radio-silence' definition: period when no messages arrive at.
+        /// </summary>
+        /// <param name="max">A temporary period of 'radio-silence'.</param>
+        /// <param name="maxIterations">The method asserts that <paramref name="maxIterations"/> is never reached.</param>
+        /// If set to null then this method will loop for an infinite number of <paramref name="max"/> periods. 
+        /// NOTE: If set to null and radio-silence is never reached then this method will never return.  
+        /// <returns>Returns all the messages encountered before 'radio-silence' was reached.</returns>
+        public async Task<IReadOnlyList<object>> WaitForRadioSilenceAsync(TimeSpan? max = null, uint? maxIterations = null)
+        {
+            return await Task.Run(() =>
+            {
+                // create an empty read only list of messages
+                var allMessages = new List<object>().AsReadOnly();
+
+                for (uint i = 0; ; i++)
+                {
+                    _assertions.AssertFalse(maxIterations.HasValue && i >= maxIterations.Value, $"{nameof(maxIterations)} violated (current iteration: {i}).");
+
+                    var currentMessages = ReceiveWhile<object>(shouldContinue: x => true, max: max);
+
+                    if (currentMessages.Count == 0)
+                    {
+                        return allMessages;
+                    }
+
+                    // concatinate current messages with all messages thus far
+                    allMessages = allMessages.Concat(currentMessages).ToList().AsReadOnly();
+                }
+            });
+        }
+
+        /// <summary>
         /// Receive one message from the internal queue of the TestActor.
         /// This method blocks the specified duration or until a message
         /// is received. If no message was received, <c>null</c> is returned.
