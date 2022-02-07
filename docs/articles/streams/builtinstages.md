@@ -709,7 +709,7 @@ This stage can recover the failure signal, but not the skipped elements, which w
 
 ### SelectError
 
-While similar to `Recover` this stage can be used to transform an error signal to a different one *without* logging
+While similar to `Recover` this stage can be used to transform an error signal to a different one _without_ logging
 it as an error in the process. So in that sense it is NOT exactly equivalent to ``Recover(e -> throw e2)`` since recover
 would log the `e2` error.
 

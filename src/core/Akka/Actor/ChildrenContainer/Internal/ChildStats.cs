@@ -29,7 +29,7 @@ namespace Akka.Actor.Internal
         /// TBD
         /// </summary>
         public static ChildNameReserved Instance { get { return _instance; } }
-        /// <inheritdoc/>
+
         public override string ToString()
         {
             return "Name Reserved";
