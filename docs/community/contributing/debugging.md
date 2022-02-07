@@ -30,7 +30,7 @@ How do we fix this? Two possible ways.
 
 [!code-csharp[FixedMsgOrdering](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=FixedMsgOrdering)]
 
-The simplest way in this case is to just change the assertion to an `ExpectMsgAllOf` call, which expects an array of messages back _but doesn't care about the order in which they arrive_. This approach may not work in all cases, so the second approach we recommend to fixing these types of buggy tests will usually do the trick.
+The simplest way in this case is to just change the assertion to an `ExpectMsgAllOf` call, which expects an array of messages back *but doesn't care about the order in which they arrive*. This approach may not work in all cases, so the second approach we recommend to fixing these types of buggy tests will usually do the trick.
 
 [!code-csharp[SplitMsgOrdering](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=SplitMsgOrdering)]
 
