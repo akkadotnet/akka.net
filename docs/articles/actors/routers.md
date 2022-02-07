@@ -90,13 +90,13 @@ There are two types of routers:
 
 ### Supervision
 
-Routers are implemented as actors, so a router is supervised by it's parent, and they may supervise children.
+Routers are implemented as actors, so a router is supervised by its parent, and they may supervise children.
 
 *Group routers* use routees created somewhere else, it doesn't have children of its own. If a routee dies, a group router will have no knowledge of it.
 
 *Pool routers* on the other hand create their own children. The router is therefore also the routee's supervisor.
 
-By default, pool routers use a custom strategy that only returns `Escalate` for all exceptions, the router supervising the failing worker will then escalate to it's own parent, if the parent of the router decides to restart the router, all the pool workers will also be recreated as a result of this.
+By default, pool routers use a custom strategy that only returns `Escalate` for all exceptions, the router supervising the failing worker will then escalate to its own parent, if the parent of the router decides to restart the router, all the pool workers will also be recreated as a result of this.
 
 ## Routing Strategies
 
