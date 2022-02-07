@@ -319,7 +319,6 @@ namespace Akka.Actor
             return true;
         }
 
-        /// <inheritdoc />
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -328,7 +327,7 @@ namespace Akka.Actor
             return Equals((Props)obj);
         }
 
-        /// <inheritdoc />
+       
         public override int GetHashCode()
         {
             unchecked
