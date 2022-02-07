@@ -131,6 +131,43 @@ namespace Akka.Tests.Serialization
             }
         }
         
+        // Fix for issue #5569, could not declare multiple serializer identifier
+        [Fact]
+        public void Hardwired_serialization_identifiers_should_override_HOCON_configuration()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.stdout-logger-class = ""Akka.Tests.Serialization.XunitOutputHelperLogger, Akka.Tests""
+                akka.actor {
+                    serializers {
+                        custom = ""Akka.Tests.Serialization.CustomSerializer, Akka.Tests""
+                    }
+                    serialization-bindings {
+                        ""Akka.Tests.Serialization.MessageBase, Akka.Tests"" = custom
+                    }
+                    serialization-identifiers {
+                        # this will fail because you can't assign the CustomSerializer identifier
+	                    ""Akka.Tests.Serialization.CustomSerializer, Akka.Tests"" = 1
+                    }
+                }
+            ");
+            XunitOutputHelperLogger.Output = _output;
+            
+            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
+            {
+                var firstMessage = new FirstMessage("First message");
+                var serialization = system.Serialization;
+                var serializer = (CustomSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializerById = serialization.GetSerializerById(1);
+
+                serializer.Identifier.Should().Be(666); // This is because identifier is hardwired, so it could not be
+                                                        // used to override other serializer identifier
+                serializer.Should().NotBeEquivalentTo(serializerById);
+                
+                serializerById.Identifier.Should().Be(1); // This should be the JSON serializer
+                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
+            }
+        }
+        
         [Fact]
         public void Custom_programmatic_SerializerWithStringManifest_should_work_with_base_class_binding()
         {
