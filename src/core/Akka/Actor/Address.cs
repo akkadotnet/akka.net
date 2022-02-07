@@ -135,7 +135,6 @@ namespace Akka.Actor
             return Comparer.Compare(this, other);
         }
 
-        /// <inheritdoc/>
         public override string ToString()
         {
             if (_toString == null)
@@ -146,7 +145,7 @@ namespace Akka.Actor
             return _toString;
         }
 
-        /// <inheritdoc/>
+
         public bool Equals(Address other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -154,10 +153,9 @@ namespace Akka.Actor
             return Port == other.Port && string.Equals(Host, other.Host) && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
         }
 
-        /// <inheritdoc/>
+
         public override bool Equals(object obj) => Equals(obj as Address);
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
