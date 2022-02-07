@@ -30,7 +30,7 @@ You register actors to the local mediator with `DistributedPubSubMediator.Subscr
 
 You publish messages by sending `DistributedPubSubMediator.Publish` message to the local mediator.
 
-Topic actors are automatically removed from the registry when they are terminated; they are terminated if there are no subscribers for the duration configured by `akka.cluster.pub-sub.removed-time-to-live`, which defaults to 2 minutes. You can change the deadline by setting `removed-time-to-live` to a custom duration. 
+Topic actors are automatically removed from the registry when they are terminated; they are terminated if there are no subscribers for the duration configured by `akka.cluster.pub-sub.removed-time-to-live`, which defaults to 2 minutes. You can change the deadline by setting `removed-time-to-live` to a custom duration.
 
 You can `Unsubscribe` from a topic with `DistributedPubSubMediator.Unsubscribe`.
 
@@ -93,7 +93,7 @@ It is also possible to broadcast messages to the actors that have been registere
 
 Typical usage of this mode is to broadcast messages to all replicas with the same path, e.g. 3 actors on different nodes that all perform the same actions, for redundancy. You can also optionally specify a property (`AllButSelf`) deciding if the message should be sent to a matching path on the self node or not.
 
-## DeadLetters from `DistributedPubSub`
+## DeadLetters From `DistributedPubSub`
 
 There are three factors that determine when or if a message is published to `/system/deadletters`, namely: `send-to-dead-letters-when-no-subscribers`, zero existing subscribers, or if the topic does not exist / has been terminated.
 
