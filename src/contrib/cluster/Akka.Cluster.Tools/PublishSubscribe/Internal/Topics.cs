@@ -11,13 +11,35 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Remote;
 using Akka.Routing;
 
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 {
     /// <summary>
-    /// TBD
+    /// A <see cref="DeadLetter"/> published when there are no subscribers
+    /// for a topic that has received a <see cref="Publish"/> event.
+    /// </summary>
+    internal readonly struct NoSubscribersDeadLetter
+    {
+        public NoSubscribersDeadLetter(string topic, object message)
+        {
+            Topic = topic;
+            Message = message;
+        }
+
+        public string Topic { get; }
+        public object Message { get; }
+
+        public override string ToString()
+        {
+            return $"NoSubscribersDeadLetter(Topic=[{Topic}],Message=[{Message}])";
+        }
+    }
+
+    /// <summary>
+    /// Base class for both topics and groups.
     /// </summary>
     internal abstract class TopicLike : ActorBase
     {
@@ -25,14 +47,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// TBD
         /// </summary>
         protected readonly TimeSpan PruneInterval;
+
         /// <summary>
         /// TBD
         /// </summary>
         protected readonly ICancelable PruneCancelable;
+
         /// <summary>
         /// TBD
         /// </summary>
         protected readonly ISet<IActorRef> Subscribers;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -44,20 +69,28 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         protected Deadline PruneDeadline = null;
 
         /// <summary>
-        /// TBD
+        /// Used to toggle what we do during publication when there are no subscribers
         /// </summary>
-        /// <param name="emptyTimeToLive">TBD</param>
-        protected TopicLike(TimeSpan emptyTimeToLive)
+        protected readonly bool SendToDeadLettersWhenNoSubscribers;
+
+        /// <summary>
+        /// Creates a new instance of a topic or group actor.
+        /// </summary>
+        /// <param name="emptyTimeToLive">The TTL for how often this actor will be removed.</param>
+        /// <param name="sendToDeadLettersWhenNone">When set to <c>true</c>, this actor will
+        /// publish a <see cref="DeadLetter"/> for each message if the total number of subscribers == 0.</param>
+        protected TopicLike(TimeSpan emptyTimeToLive, bool sendToDeadLettersWhenNone)
         {
             Subscribers = new HashSet<IActorRef>();
             EmptyTimeToLive = emptyTimeToLive;
+            SendToDeadLettersWhenNoSubscribers = sendToDeadLettersWhenNone;
             PruneInterval = new TimeSpan(emptyTimeToLive.Ticks / 2);
-            PruneCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(PruneInterval, PruneInterval, Self, Prune.Instance, Self);
+            PruneCancelable =
+                Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(PruneInterval, PruneInterval, Self,
+                    Prune.Instance, Self);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase.PostStop"/>
         protected override void PostStop()
         {
             base.PostStop();
@@ -65,10 +98,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Default <see cref="Receive"/> method for <see cref="DistributedPubSub"/> messages.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message we're going to process.</param>
+        /// <returns>true if we handled it, false otherwise.</returns>
         protected bool DefaultReceive(object message)
         {
             switch (message)
@@ -96,6 +129,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                         PruneDeadline = null;
                         Context.Parent.Tell(NoMoreSubscribers.Instance);
                     }
+
                     return true;
 
                 case TerminateRequest _:
@@ -107,6 +141,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     {
                         Context.Parent.Tell(NewSubscriberArrived.Instance);
                     }
+
                     return true;
 
                 case Count _:
@@ -116,22 +151,23 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                 default:
                     foreach (var subscriber in Subscribers)
                         subscriber.Forward(message);
+
+                    // no subscribers
+                    if (Subscribers.Count == 0 && SendToDeadLettersWhenNoSubscribers)
+                    {
+                        var noSubs = new NoSubscribersDeadLetter(Context.Self.Path.Name, message);
+                        var deadLetter = new DeadLetter(noSubs, Sender, Self);
+                        Context.System.EventStream.Publish(deadLetter);
+                    }
+
                     return true;
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="TopicLike.Business"/>
         protected abstract bool Business(object message);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="ActorBase.Receive"/>
         protected override bool Receive(object message)
         {
             return Business(message) || DefaultReceive(message);
@@ -149,7 +185,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Actor responsible for owning a single topic.
     /// </summary>
     internal class Topic : TopicLike
     {
@@ -157,21 +193,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         private readonly PerGroupingBuffer _buffer;
 
         /// <summary>
-        /// TBD
+        /// Creates a new topic actor
         /// </summary>
-        /// <param name="emptyTimeToLive">TBD</param>
-        /// <param name="routingLogic">TBD</param>
-        public Topic(TimeSpan emptyTimeToLive, RoutingLogic routingLogic) : base(emptyTimeToLive)
+        /// <param name="emptyTimeToLive">The TTL for how often this actor will be removed.</param>
+        /// <param name="sendToDeadLettersWhenNone">When set to <c>true</c>, this actor will
+        /// publish a <see cref="DeadLetter"/> for each message if the total number of subscribers == 0.</param>
+        /// <param name="routingLogic">The routing logic to use for distributing messages to subscribers.</param>
+        public Topic(TimeSpan emptyTimeToLive, RoutingLogic routingLogic, bool sendToDeadLettersWhenNone) : base(emptyTimeToLive, sendToDeadLettersWhenNone)
         {
             _routingLogic = routingLogic;
             _buffer = new PerGroupingBuffer();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="TopicLike.Business"/>
         protected override bool Business(object message)
         {
             switch (message)
@@ -234,12 +268,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     Remove(terminated.ActorRef);
                     return true;
             }
+
             return false;
         }
 
         private IActorRef NewGroupActor(string encodedGroup)
         {
-            var g = Context.ActorOf(Props.Create(() => new Group(EmptyTimeToLive, _routingLogic)), encodedGroup);
+            var g = Context.ActorOf(Props.Create(() => new Group(EmptyTimeToLive, _routingLogic, SendToDeadLettersWhenNoSubscribers)), encodedGroup);
             Context.Watch(g);
             Context.Parent.Tell(new RegisterTopic(g));
             return g;
@@ -247,27 +282,25 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Actor that handles "group" subscribers to a topic.
     /// </summary>
     internal class Group : TopicLike
     {
         private readonly RoutingLogic _routingLogic;
 
         /// <summary>
-        /// TBD
+        /// Creates a new group actor.
         /// </summary>
-        /// <param name="emptyTimeToLive">TBD</param>
-        /// <param name="routingLogic">TBD</param>
-        public Group(TimeSpan emptyTimeToLive, RoutingLogic routingLogic) : base(emptyTimeToLive)
+        /// <param name="emptyTimeToLive">The TTL for how often this actor will be removed.</param>
+        /// <param name="sendToDeadLettersWhenNone">When set to <c>true</c>, this actor will
+        /// publish a <see cref="DeadLetter"/> for each message if the total number of subscribers == 0.</param>
+        /// <param name="routingLogic">The routing logic to use for distributing messages to subscribers.</param>
+        public Group(TimeSpan emptyTimeToLive, RoutingLogic routingLogic, bool sendToDeadLettersWhenNone) : base(emptyTimeToLive, sendToDeadLettersWhenNone)
         {
             _routingLogic = routingLogic;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="TopicLike.Business"/>
         protected override bool Business(object message)
         {
             if (message is SendToOneSubscriber send)
@@ -279,16 +312,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                 }
             }
             else return false;
+
             return true;
         }
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    ///
+    /// Used for generating Uri-safe topic and group names.
     /// </summary>
     internal static class Utils
     {
-        private static System.Text.RegularExpressions.Regex _pathRegex = new System.Text.RegularExpressions.Regex("^/remote/.+(/user/.+)");
+        private static System.Text.RegularExpressions.Regex _pathRegex =
+            new System.Text.RegularExpressions.Regex("^/remote/.+(/user/.+)");
 
         /// <summary>
         /// <para>

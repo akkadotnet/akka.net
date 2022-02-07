@@ -28,7 +28,7 @@ namespace Akka.Streams.Util
             _enumeratorFactory = enumeratorFactory;
         }
 
-        /// <inheritdoc/>
+        
         public IEnumerator<T> GetEnumerator() => _enumeratorFactory();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -57,7 +57,7 @@ namespace Akka.Streams.Util
                 _enumeratorFactory = enumeratorFactory;
             }
 
-            /// <inheritdoc/>
+           
             public void Dispose() => _enumeratorFactory = null;
 
             /// <inheritdoc/>
@@ -76,10 +76,10 @@ namespace Akka.Streams.Util
                 return true;
             }
 
-            /// <inheritdoc/>
+           
             public void Reset() => _current = _enumeratorFactory();
 
-            /// <inheritdoc/>
+           
             public T Current => _current.Current;
 
             object IEnumerator.Current => Current;
@@ -96,7 +96,7 @@ namespace Akka.Streams.Util
             _continuallyEnumerator = new ContinuallyEnumerator(enumeratorFactory);
         }
 
-        /// <inheritdoc/>
+       
         public IEnumerator<T> GetEnumerator() => _continuallyEnumerator;
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
