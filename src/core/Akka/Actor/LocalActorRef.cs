@@ -92,7 +92,7 @@ namespace Akka.Actor
             return new ActorCell(system, self, props, dispatcher, supervisor);
         }
 
-        /// <inheritdoc/>
+        
         public override ICell Underlying
         {
             get { return _cell; }
@@ -104,19 +104,19 @@ namespace Akka.Actor
             get { return _cell; }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="IActorRefProvider"/>
         public override IActorRefProvider Provider
         {
             get { return _cell.SystemImpl.Provider; }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="IInternalActorRef"/>
         public override IInternalActorRef Parent
         {
             get { return _cell.Parent; }
         }
 
-        /// <inheritdoc/>
+        
         public override IEnumerable<IActorRef> Children
         {
             get { return _cell.GetChildren(); }

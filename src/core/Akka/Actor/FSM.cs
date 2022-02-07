@@ -58,7 +58,7 @@ namespace Akka.Actor
                 return Equals(FsmRef, other.FsmRef) && EqualityComparer<TS>.Default.Equals(State, other.State);
             }
 
-            /// <inheritdoc/>
+           
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -66,7 +66,7 @@ namespace Akka.Actor
                 return obj is CurrentState<TS> && Equals((CurrentState<TS>)obj);
             }
 
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 unchecked
@@ -75,7 +75,7 @@ namespace Akka.Actor
                 }
             }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"CurrentState <{State}>";
@@ -124,7 +124,7 @@ namespace Akka.Actor
                 return Equals(FsmRef, other.FsmRef) && EqualityComparer<TS>.Default.Equals(From, other.From) && EqualityComparer<TS>.Default.Equals(To, other.To);
             }
 
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -132,7 +132,7 @@ namespace Akka.Actor
                 return obj is Transition<TS> && Equals((Transition<TS>)obj);
             }
 
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 unchecked
@@ -144,7 +144,7 @@ namespace Akka.Actor
                 }
             }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"Transition({From}, {To})";
@@ -249,7 +249,7 @@ namespace Akka.Actor
             /// </summary>
             public object Cause { get; }
 
-            /// <inheritdoc/>
+            
             public override string ToString() => $"Failure({Cause})";
         }
 
@@ -408,7 +408,7 @@ namespace Akka.Actor
             /// </summary>
             public object FsmEvent { get; }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"StateName: <{StateName}>, StateData: <{StateData}>, FsmEvent: <{FsmEvent}>";
@@ -542,13 +542,13 @@ namespace Akka.Actor
                 return new State<TS, TD>(StateName, StateData, Timeout, StopReason, Replies, notifies);
             }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"{StateName}, {StateData}";
             }
 
-            /// <inheritdoc/>
+            
             public bool Equals(State<TS, TD> other)
             {
                 if (ReferenceEquals(null, other)) return false;
@@ -556,7 +556,7 @@ namespace Akka.Actor
                 return EqualityComparer<TS>.Default.Equals(StateName, other.StateName) && EqualityComparer<TD>.Default.Equals(StateData, other.StateData) && Timeout.Equals(other.Timeout) && Equals(StopReason, other.StopReason) && Equals(Replies, other.Replies);
             }
 
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -565,7 +565,7 @@ namespace Akka.Actor
                 return Equals((State<TS, TD>)obj);
             }
 
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 unchecked
@@ -608,7 +608,7 @@ namespace Akka.Actor
             /// </summary>
             public TD StateData { get; }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"Event: <{FsmEvent}>, StateData: <{StateData}>";
@@ -650,7 +650,7 @@ namespace Akka.Actor
             /// </summary>
             public TD StateData { get; }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"Reason: <{Reason}>, TerminatedState: <{TerminatedState}>, StateData: <{StateData}>";

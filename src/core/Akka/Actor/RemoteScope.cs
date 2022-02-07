@@ -36,7 +36,7 @@ namespace Akka.Actor
         /// </summary>
         public Address Address { get; set; }
 
-        /// <inheritdoc/>
+       
         public bool Equals(RemoteScope other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -44,7 +44,7 @@ namespace Akka.Actor
             return Equals(Address, other.Address);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -53,7 +53,7 @@ namespace Akka.Actor
             return Equals((RemoteScope) obj);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             return (Address != null ? Address.GetHashCode() : 0);
