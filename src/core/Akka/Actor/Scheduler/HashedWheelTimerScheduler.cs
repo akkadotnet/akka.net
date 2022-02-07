@@ -370,7 +370,6 @@ namespace Akka.Actor
             return Completed;
         }
 
-        /// <inheritdoc/>
         public void Dispose()
         {
             var stopped = Stop();
