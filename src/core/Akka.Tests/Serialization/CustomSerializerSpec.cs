@@ -145,7 +145,9 @@ namespace Akka.Tests.Serialization
                         ""Akka.Tests.Serialization.MessageBase, Akka.Tests"" = custom
                     }
                     serialization-identifiers {
-                        # this will fail because you can't assign the CustomSerializer identifier
+                        # this will fail because you can't assign the CustomSerializer identifier (hardwired)
+                        # the original NewtonsoftJsonSerializer would NOT be overriden and CustomSerializer
+                        # identifier will be 666
 	                    ""Akka.Tests.Serialization.CustomSerializer, Akka.Tests"" = 1
                     }
                 }
