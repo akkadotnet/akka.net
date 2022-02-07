@@ -97,7 +97,7 @@ Typical usage of this mode is to broadcast messages to all replicas with the sam
 
 There are three factors that determine when or if a message is published to `/system/deadletters`, namely: `send-to-dead-letters-when-no-subscribers`, zero existing subscribers, or if the topic does not exist / has been terminated.
 
-* **`akka.cluster.pub-sub.send-to-dead-letters-when-no-subscribers`**: this is a `DistributedPubSub` setting that, if turned off or set to `false` (it is `on`/`true` by default), will not produce `Deadletter`s when there are no subscibers or the topic does not exist.
+* **`akka.cluster.pub-sub.send-to-dead-letters-when-no-subscribers`**: this is a `DistributedPubSub` setting that, if turned off or set to `false` (it is `on`/`true` by default), will not produce `Deadletter`s when there are no subscribers or the topic does not exist.
 
 * **Zero Existing Subscribers**: A message is sent to the DeadLetter if **`Send-to-dead-letters-when-no-subscribers`** is on/true and there are no existing subscriber(s) to receive it. `Akka.Cluster.DistributedPubSub` does not support queueing up messages while there are no existing subscribers!
 
