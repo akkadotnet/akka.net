@@ -108,6 +108,7 @@ namespace Akka.Tests.Serialization
                         custom = ""Akka.Tests.Serialization.CustomThrowingSerializer, Akka.Tests""
                     }
                     serialization-bindings {
+                        ""System.Object"" = custom
                         ""Akka.Tests.Serialization.MessageBase, Akka.Tests"" = custom
                     }
                     serialization-identifiers {
@@ -119,15 +120,13 @@ namespace Akka.Tests.Serialization
             
             using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
             {
-                var firstMessage = new FirstMessage("First message");
                 var serialization = system.Serialization;
-                var serializer = (CustomThrowingSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
+                var objectSerializer = serialization.FindSerializerFor(new object());
                 var serializerById = serialization.GetSerializerById(1);
 
                 serializer.Should().Be(serializerById);
-                
-                Action act = () => serializer.ToBinary(firstMessage);
-                act.Should().Throw<Exception>().WithMessage(nameof(CustomThrowingSerializer));
+                serializer.Should().Be(objectSerializer);
             }
         }
         
@@ -167,6 +166,78 @@ namespace Akka.Tests.Serialization
                 
                 serializerById.Identifier.Should().Be(1); // This should be the JSON serializer
                 serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
+            }
+        }
+        
+        // BAD ILLEGAL SERIALIZATION IDENTIFIER SPEC
+        // This still works, but will break as soon as the HOCON object merging implementation changed.
+        // In a freakish way, HOCON fallback got injected first. The original object actually appears last if enumerated
+        [Fact]
+        public void Illegal_hardwired_serialization_identifiers_should_override_HOCON_configuration_if_defined_first()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.stdout-logger-class = ""Akka.Tests.Serialization.XunitOutputHelperLogger, Akka.Tests""
+                akka.actor {
+                    serializers {
+                        custom = ""Akka.Tests.Serialization.CustomIllegalSerializer, Akka.Tests""
+                    }
+                    serialization-bindings {
+                        ""System.Object"" = custom
+                        ""Akka.Tests.Serialization.MessageBase, Akka.Tests"" = custom
+                    }
+                }
+            ");
+            XunitOutputHelperLogger.Output = _output;
+            
+            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
+            {
+                var serialization = system.Serialization;
+                var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
+                var objectSerializer = serialization.FindSerializerFor(new object());
+                var serializerById = serialization.GetSerializerById(1);
+
+                serializer.Should().Be(serializerById);
+                serializer.Should().Be(objectSerializer);
+                serializer.Should().BeOfType<CustomIllegalSerializer>();
+                serializerById.Should().BeOfType<CustomIllegalSerializer>();
+                objectSerializer.Should().BeOfType<CustomIllegalSerializer>();
+            }
+        }
+        
+        // BAD ILLEGAL SERIALIZATION IDENTIFIER SPEC
+        // This is undefined, bad thing will happens during deserialization because the serializer ID would never match
+        [Fact]
+        public void Illegal_hardwired_serialization_identifiers_will_cause_problems_if_not_defined_first()
+        {
+            var config = 
+                ConfigurationFactory.Default()
+                    .WithFallback(ConfigurationFactory.ParseString(@"
+                akka.stdout-logger-class = ""Akka.Tests.Serialization.XunitOutputHelperLogger, Akka.Tests""
+                akka.actor {
+                    serializers {
+                        custom = ""Akka.Tests.Serialization.CustomIllegalSerializer, Akka.Tests""
+                    }
+                    serialization-bindings {
+                        ""System.Object"" = custom
+                        ""Akka.Tests.Serialization.MessageBase, Akka.Tests"" = custom
+                    }
+                }"));
+            XunitOutputHelperLogger.Output = _output;
+            
+            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
+            {
+                var serialization = system.Serialization;
+                var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
+                var objectSerializer = serialization.FindSerializerFor(new object());
+                var serializerById = serialization.GetSerializerById(1);
+                var invalidSerializerById = serialization.GetSerializerById(serializer.Identifier);
+
+                serializer.Should().BeOfType<CustomIllegalSerializer>();
+                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
+                objectSerializer.Should().BeOfType<NewtonSoftJsonSerializer>();
+                
+                invalidSerializerById.Should().NotBeOfType<CustomIllegalSerializer>(); // This is the bad part
+                invalidSerializerById.Identifier.Should().Be(serializerById.Identifier); // This is the bad part
             }
         }
         
@@ -326,6 +397,26 @@ namespace Akka.Tests.Serialization
         public override byte[] ToBinary(object obj)
         {
             throw new Exception(nameof(CustomThrowingSerializer));
+        }
+
+        public override object FromBinary(byte[] bytes, Type type)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class CustomIllegalSerializer : Serializer
+    {
+        public CustomIllegalSerializer(ExtendedActorSystem system) : base(system)
+        {
+        }
+
+        public override bool IncludeManifest => false;
+        public override int Identifier => 1; // This is illegal, all ID below 100 are reserved 
+
+        public override byte[] ToBinary(object obj)
+        {
+            throw new NotImplementedException();
         }
 
         public override object FromBinary(byte[] bytes, Type type)
