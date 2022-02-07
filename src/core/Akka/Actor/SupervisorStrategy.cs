@@ -449,7 +449,6 @@ namespace Akka.Actor
 
         #region Equals
 
-        /// <inheritdoc/>
         public bool Equals(OneForOneStrategy other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -460,13 +459,13 @@ namespace Akka.Actor
                    Decider.Equals(other.Decider);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as OneForOneStrategy);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -715,7 +714,6 @@ namespace Akka.Actor
 
         #region Equals
 
-        /// <inheritdoc/>
         public bool Equals(AllForOneStrategy other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -726,13 +724,11 @@ namespace Akka.Actor
                    Decider.Equals(other.Decider);
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as AllForOneStrategy);
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -977,7 +973,6 @@ namespace Akka.Actor
             return DefaultDirective;
         }
 
-        /// <inheritdoc/>
         public bool Equals(DeployableDecider other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -987,13 +982,11 @@ namespace Akka.Actor
                    Pairs.SequenceEqual(other.Pairs);
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeployableDecider);
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
