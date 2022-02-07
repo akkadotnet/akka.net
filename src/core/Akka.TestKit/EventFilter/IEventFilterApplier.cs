@@ -184,13 +184,14 @@ namespace Akka.TestKit
         /// <param name="func">The function.</param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
         T Expect<T>(int expectedCount, Func<T> func);
-        
+
         /// <summary>
         /// Executes <paramref name="func"/> and expects the specified number
         /// of events to be logged during the execution.
         /// This function fails and throws an exception if more events than expected are logged,
         /// or if a timeout occurs. The timeout is taken from the config value
         /// "akka.test.filter-leeway", see <see cref="TestKitSettings.TestEventFilterLeeway"/>.
+        /// Note: <paramref name="func"/> might not get awaited.
         /// </summary>
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="expectedCount">The expected number of events</param>

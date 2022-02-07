@@ -198,6 +198,7 @@ namespace Akka.TestKit.Internal
         
         /// <summary>
         /// Async version of Expect
+        /// Note: <paramref name="func"/> might not get awaited.
         /// </summary>
         public async Task<T> ExpectAsync<T>(int expectedCount, TimeSpan timeout, Func<T> func)
         {
