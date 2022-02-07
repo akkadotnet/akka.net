@@ -48,7 +48,7 @@ jobs:
       - task: Npm@1
         inputs:
           command: "custom"
-          customCommand: "install -g markdownlint-cli markdownlint-rule-titlecase"
+          customCommand: "install -g markdownlint-cli@0.31.0 markdownlint-rule-titlecase@0.1.0"
       - task: CmdLine@2
         inputs:
           script: 'markdownlint "docs/**/*.md" --rules "markdownlint-rule-titlecase"'
