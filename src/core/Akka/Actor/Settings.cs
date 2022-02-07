@@ -391,7 +391,6 @@ namespace Akka.Actor
 
         public bool CoordinatedShutdownRunByActorSystemTerminate { get; private set; }
 
-        /// <inheritdoc/>
         public override string ToString()
         {
             return Config.Root.ToString();
