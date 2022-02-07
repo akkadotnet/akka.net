@@ -195,13 +195,13 @@ namespace Akka.Actor
         /// <returns>The extension created using the given actor system.</returns>
         public abstract T CreateExtension(ExtendedActorSystem system);
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj is T;
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return typeof (T).GetHashCode();
