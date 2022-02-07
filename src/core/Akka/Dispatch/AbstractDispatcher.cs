@@ -118,10 +118,16 @@ namespace Akka.Dispatch
 
     internal sealed class ChannelExecutorConfigurator : ExecutorServiceConfigurator
     {
+        private static readonly Config PriorityDefault = ConfigurationFactory.ParseString(@"
+executor = channel-executor 
+channel-executor.priority = normal");
+        
         public ChannelExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
         {
-            var cfg = config.GetConfig("channel-executor");
-            Priority = (TaskSchedulerPriority)Enum.Parse(typeof(TaskSchedulerPriority), cfg.GetString("priority", "normal"), true);
+            config = config == null ? PriorityDefault : config.WithFallback(PriorityDefault);
+            
+            var priority = config.GetString("channel-executor.priority", "normal");
+            Priority = (TaskSchedulerPriority)Enum.Parse(typeof(TaskSchedulerPriority), priority, true);
         }
 
         public TaskSchedulerPriority Priority { get; }

@@ -109,7 +109,7 @@ namespace Akka.Actor
             return Equals(MessageId, other.MessageId);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -117,13 +117,13 @@ namespace Akka.Actor
             return obj is Identify && Equals((Identify)obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return (MessageId != null ? MessageId.GetHashCode() : 0);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"<Identify>: {MessageId}";
@@ -164,7 +164,7 @@ namespace Akka.Actor
             return Equals(MessageId, other.MessageId) && Equals(Subject, other.Subject);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -172,7 +172,7 @@ namespace Akka.Actor
             return obj is ActorIdentity && Equals((ActorIdentity)obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -181,7 +181,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"<ActorIdentity>: {Subject} - MessageId={MessageId}";
@@ -206,7 +206,7 @@ namespace Akka.Actor
         /// </summary>
         public static PoisonPill Instance { get; } = new PoisonPill();
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return "<PoisonPill>";
@@ -229,7 +229,7 @@ namespace Akka.Actor
         /// </summary>
         public static Kill Instance { get; } = new Kill();
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return "<Kill>";
@@ -262,7 +262,7 @@ namespace Akka.Actor
         /// </summary>
         public Address Address { get; }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"<AddressTerminated>: {Address}";

@@ -385,7 +385,6 @@ namespace Akka.Actor
 
         private bool _isDisposed; //Automatically initialized to false;
 
-        /// <inheritdoc/>
         public void Dispose()
         {
             Dispose(true);

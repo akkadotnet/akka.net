@@ -54,7 +54,7 @@ akka.cluster {
 This will cause the [`Akka.Cluster.SBR.SplitBrainResolverProvider`](xref:Akka.Cluster.SBR.SplitBrainResolverProvider) to be loaded by Akka.Cluster at startup and it will automatically begin executing your configured `active-strategy` on each member node that joins the cluster.
 
 > [!IMPORTANT]
-> _The cluster leader_ on either side of the partition is the only one who actually downs unreachable nodes in the event of a split brain - so it is _essential_ that every node in the cluster be configured using the same split brain resolver settings. Otherwise there's no way to guarantee predictable behavior when network partitions occur.
+> *The cluster leader* on either side of the partition is the only one who actually downs unreachable nodes in the event of a split brain - so it is *essential* that every node in the cluster be configured using the same split brain resolver settings. Otherwise there's no way to guarantee predictable behavior when network partitions occur.
 
 The following strategies are supported:
 
@@ -105,7 +105,7 @@ There is no simple way to decide the value of `stable-after`, as:
 > [!NOTE]
 > The rule of thumb for this setting is to set `stable-after` to `log10(maxExpectedNumberOfNodes) * 10`.
 
-The `down-all-when-unstable` option, which is _enabled by default_, will terminate the entire cluster in the event that cluster instability lasts for longer than the `stable-after` + 3/4 of the `stable-after` value in seconds - so by default, 35 seconds.
+The `down-all-when-unstable` option, which is *enabled by default*, will terminate the entire cluster in the event that cluster instability lasts for longer than the `stable-after` + 3/4 of the `stable-after` value in seconds - so by default, 35 seconds.
 
 > [!IMPORTANT]
 > If you are running in an environment where processes are not automatically restarted in the event of an unplanned termination (i.e. Kubernetes), we strongly recommend that you disable this setting by setting `akka.cluster.split-brain-resolver.down-all-when-unstable = off`.

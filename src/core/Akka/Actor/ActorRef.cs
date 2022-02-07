@@ -284,14 +284,14 @@ namespace Akka.Actor
         /// <param name="sender">TBD</param>
         protected abstract void TellInternal(object message, IActorRef sender);
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             if (Path.Uid == ActorCell.UndefinedUid) return $"[{Path}]";
             return $"[{Path}#{Path.Uid}]";
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (obj is IActorRef other)
@@ -300,7 +300,6 @@ namespace Akka.Actor
             return false;
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -312,7 +311,6 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc/>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="obj"/> isn't an <see cref="IActorRef"/>.
         /// </exception>
@@ -344,7 +342,7 @@ namespace Akka.Actor
                 && Path.Equals(other.Path);
         }
 
-        /// <inheritdoc/>
+        
         public int CompareTo(IActorRef other)
         {
             if (other is null) return 1;
@@ -901,7 +899,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
                 _enumerator = enumerator;
             }
 
-            /// <inheritdoc/>
+            
             public IEnumerator<T> GetEnumerator()
             {
                 return _enumerator;
