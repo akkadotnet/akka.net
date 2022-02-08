@@ -116,20 +116,19 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         [Fact]
         public async Task WaitForRadioSilenceAsync_should_succeed_after_second_iteration_with_good_post_input()
         {
-            /// in this test we are going to try to "ruin" the radio silence in the middle of the third 1-second periods
-            /// in other words: we will be making "noise" every quarter second for the first 2.5 seconds
-            var quarterSecond = TimeSpan.FromSeconds(.25);
-            var twoAndAHalfSeconds = TimeSpan.FromSeconds(2.5);
-            var numberOfIterations = twoAndAHalfSeconds.TotalMilliseconds / quarterSecond.TotalMilliseconds;
             var probe = CreateTestProbe("probe");
-            var task = probe.WaitForRadioSilenceAsync(max: TimeSpan.FromSeconds(1), maxMessages: null);
-            for (var i = 0; i < numberOfIterations; i++)
-            {
-                await Task.Delay(quarterSecond);
-                probe.Ref.Tell(i, TestActor);
-            }
+            var max = TimeSpan.FromMilliseconds(100);
+            var halfMax = TimeSpan.FromMilliseconds(max.TotalMilliseconds / 2);
+            var doubleMax = TimeSpan.FromMilliseconds(max.TotalMilliseconds * 2);
+            var task = probe.WaitForRadioSilenceAsync(max: max, maxMessages: 2);
+            await Task.Delay(halfMax);
+            probe.Ref.Tell(1, TestActor);
+            await Task.Delay(halfMax);
+            probe.Ref.Tell(2, TestActor);
+            await Task.Delay(doubleMax);
+            probe.Ref.Tell(3, TestActor);
             var messages = await task;
-            messages.Should().BeEquivalentTo(new ArrayList { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+            messages.Should().BeEquivalentTo(new ArrayList { 1, 2 });
         }
 
         [Fact]
