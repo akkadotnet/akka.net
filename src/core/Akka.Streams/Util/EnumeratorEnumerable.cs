@@ -60,7 +60,9 @@ namespace Akka.Streams.Util
            
             public void Dispose() => _enumeratorFactory = null;
 
-            
+            /// <exception cref="ArgumentException">
+            /// This exception is thrown when the enumerator has passed the end of an enumerable.
+            /// </exception>
             public bool MoveNext()
             {
                 if (_current == null || !_current.MoveNext())
