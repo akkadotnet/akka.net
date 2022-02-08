@@ -810,7 +810,7 @@ namespace Akka.Remote.Transport
             return Equals(_address, other._address) && _direction == other._direction && Equals(_mode, other._mode);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -818,7 +818,7 @@ namespace Akka.Remote.Transport
             return obj is SetThrottle && Equals((SetThrottle)obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
