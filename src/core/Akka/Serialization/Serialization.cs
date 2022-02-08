@@ -19,6 +19,7 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
 using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.Serialization
 {
@@ -147,6 +148,7 @@ namespace Akka.Serialization
         private readonly Dictionary<string, Serializer> _serializersByName = new Dictionary<string, Serializer>();
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
+        private readonly MinimalLogger _initializationLogger;
 
         /// <summary>
         /// Serialization module. Contains methods for serialization and deserialization as well as
@@ -155,6 +157,10 @@ namespace Akka.Serialization
         /// <param name="system">The ActorSystem to which this serializer belongs.</param>
         public Serialization(ExtendedActorSystem system)
         {
+            // We have to use stdout-logger here because serialization system is set up before 
+            // the logging system were set up
+            _initializationLogger = system.Settings.StdoutLogger;
+            
             System = system;
             _nullSerializer = new NullSerializer(system);
             AddSerializer("null", _nullSerializer);
@@ -326,7 +332,16 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(Serializer serializer)
         {
-            _serializersById.Add(serializer.Identifier, serializer);
+            var id = serializer.Identifier;
+            if(_serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
+            {
+                LogWarning(
+                    $"Serializer with identifier [{id}] are being overriden  " +
+                    $"from [{_serializersById[id].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
+            }
+            
+            _serializersById[id] = serializer;
         }
 
         /// <summary>
@@ -334,11 +349,25 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="name">Configuration name of the serializer</param>
         /// <param name="serializer">Serializer instance</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(string name, Serializer serializer)
         {
-            _serializersById.Add(serializer.Identifier, serializer);
-            _serializersByName.Add(name, serializer);
+            var id = serializer.Identifier;
+            if(_serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
+            {
+                LogWarning(
+                    $"Serializer with identifier [{id}] are being overriden  " +
+                    $"from [{_serializersById[id].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
+            }
+            
+            if(_serializersByName.ContainsKey(name) && _serializersByName[name].GetType() != serializer.GetType())
+                LogWarning(
+                    $"Serializer with name [{serializer.Identifier}] are being overriden  " +
+                    $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
+            
+            _serializersById[id] = serializer;
+            _serializersByName[name] = serializer;
         }
 
         /// <summary>
@@ -350,7 +379,19 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializationMap(Type type, Serializer serializer)
         {
+            if(_serializerMap.ContainsKey(type) && _serializerMap[type].GetType() != serializer.GetType())
+                LogWarning(
+                    $"Serializer for type [{type}] are being overriden  " +
+                    $"from [{_serializerMap[type].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
+            
             _serializerMap[type] = serializer;
+        }
+
+        private void LogWarning(string str)
+        {
+            // Logging.StandardOutLogger is a MinimalActorRef, i.e. not a "real" actor
+            _initializationLogger.Tell(new Warning(nameof(Serialization), typeof(Serialization), str), ActorRefs.Nobody);
         }
 
         /// <summary>
