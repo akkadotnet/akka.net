@@ -106,7 +106,7 @@ namespace Akka.Routing
             return Actor.Ask(message, timeout);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -118,7 +118,7 @@ namespace Akka.Routing
         /// <inheritdoc/>
         protected bool Equals(ActorRefRoutee other) => Equals(Actor, other.Actor);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Actor?.GetHashCode() ?? 0;
     }
 
@@ -150,7 +150,7 @@ namespace Akka.Routing
             return Selection.Ask(message, timeout);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -162,7 +162,7 @@ namespace Akka.Routing
         /// <inheritdoc/>
         protected bool Equals(ActorSelectionRoutee other) => Equals(Selection, other.Selection);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Selection?.GetHashCode() ?? 0;
     }
 
