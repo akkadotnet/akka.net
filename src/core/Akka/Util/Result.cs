@@ -53,7 +53,7 @@ namespace Akka.Util
             Exception = exception;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(Result<T> other)
         {
             if (IsSuccess ^ other.IsSuccess) return false;
@@ -62,14 +62,14 @@ namespace Akka.Util
                 : Equals(Exception, other.Exception);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (obj is Result<T>) return Equals((Result<T>) obj);
             return false;
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return IsSuccess
