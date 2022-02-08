@@ -47,7 +47,7 @@ namespace Akka.Persistence
         /// </summary>
         public long ToSequenceNr { get; }
 
-        /// <inheritdoc/>
+        
         public bool Equals(DeleteMessagesSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -56,13 +56,13 @@ namespace Akka.Persistence
             return ToSequenceNr == other.ToSequenceNr;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as DeleteMessagesSuccess);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => ToSequenceNr.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"DeleteMessagesSuccess<toSequenceNr: {ToSequenceNr}>";
     }
 
@@ -99,7 +99,7 @@ namespace Akka.Persistence
         /// </summary>
         public long ToSequenceNr { get; }
 
-        /// <inheritdoc/>
+        
         public bool Equals(DeleteMessagesFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -108,10 +108,10 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause) && ToSequenceNr == other.ToSequenceNr;
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj) => Equals(obj as DeleteMessagesFailure);
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -120,7 +120,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"DeleteMessagesFailure<cause: {Cause}, toSequenceNr: {ToSequenceNr}>";
     }
 
@@ -164,7 +164,7 @@ namespace Akka.Persistence
         /// </summary>
         public IActorRef PersistentActor { get; }
 
-        /// <inheritdoc/>
+       
         public bool Equals(DeleteMessagesTo other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -175,10 +175,10 @@ namespace Akka.Persistence
                    Equals(PersistentActor, other.PersistentActor);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj) => Equals(obj as DeleteMessagesTo);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -190,7 +190,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"DeleteMessagesTo<pid: {PersistenceId}, seqNr: {ToSequenceNr}, persistentActor: {PersistentActor}>";
     }
 
@@ -228,7 +228,7 @@ namespace Akka.Persistence
         /// </summary>
         public int ActorInstanceId { get; }
 
-        /// <inheritdoc/>
+       
         public bool Equals(WriteMessages other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -239,10 +239,10 @@ namespace Akka.Persistence
                    && Equals(Messages, other.Messages);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as WriteMessages);
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -254,7 +254,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"WriteMessages<actorInstanceId: {ActorInstanceId}, actor: {PersistentActor}>";
     }
 
@@ -317,7 +317,7 @@ namespace Akka.Persistence
         /// </summary>
         public int WriteCount { get; }
 
-        /// <inheritdoc/>
+        
         public bool Equals(WriteMessagesFailed other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -326,13 +326,13 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as WriteMessagesFailed);
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode() => Cause != null ? Cause.GetHashCode() : 0;
 
-        /// <inheritdoc/>
+       
         public override string ToString() => $"WriteMessagesFailed<cause: {Cause}>";
     }
 
@@ -364,7 +364,7 @@ namespace Akka.Persistence
         /// </summary>
         public int ActorInstanceId { get; }
 
-        /// <inheritdoc/>
+       
         public bool Equals(WriteMessageSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -374,10 +374,10 @@ namespace Akka.Persistence
                    && Equals(Persistent, other.Persistent);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as WriteMessageSuccess);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -386,7 +386,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString() => $"WriteMessageSuccess<actorInstanceId: {ActorInstanceId}, message: {Persistent}>";
     }
 
@@ -432,7 +432,7 @@ namespace Akka.Persistence
         /// </summary>
         public int ActorInstanceId { get; }
 
-        /// <inheritdoc/>
+        
         public bool Equals(WriteMessageRejected other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -443,10 +443,10 @@ namespace Akka.Persistence
                    && Equals(Cause, other.Cause);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as WriteMessageRejected);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -458,7 +458,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"WriteMessageRejected<actorInstanceId: {ActorInstanceId}, message: {Persistent}, cause: {Cause}>";
     }
 
@@ -503,7 +503,7 @@ namespace Akka.Persistence
         /// </summary>
         public int ActorInstanceId { get; }
 
-        /// <inheritdoc/>
+        
         public bool Equals(WriteMessageFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -514,10 +514,10 @@ namespace Akka.Persistence
                    && Equals(Cause, other.Cause);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj) => Equals(obj as WriteMessageFailure);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -529,7 +529,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"WriteMessageFailure<actorInstanceId: {ActorInstanceId}, message: {Persistent}, cause: {Cause}>";
     }
 
@@ -560,7 +560,7 @@ namespace Akka.Persistence
         /// </summary>
         public int ActorInstanceId { get; }
 
-        /// <inheritdoc/>
+       
         public bool Equals(LoopMessageSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -570,10 +570,10 @@ namespace Akka.Persistence
                    && Equals(Message, other.Message);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as LoopMessageSuccess);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -582,7 +582,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"LoopMessageSuccess<actorInstanceId: {ActorInstanceId}, message: {Message}>";
     }
 
@@ -634,7 +634,7 @@ namespace Akka.Persistence
         /// </summary>
         public IActorRef PersistentActor { get; }
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReplayMessages other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -647,10 +647,10 @@ namespace Akka.Persistence
                    && Equals(Max, other.Max);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as ReplayMessages);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -664,7 +664,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReplayMessages<fromSequenceNr: {FromSequenceNr}, toSequenceNr: {ToSequenceNr}, max: {Max}, persistenceId: {PersistenceId}>";
     }
 
@@ -688,7 +688,7 @@ namespace Akka.Persistence
         /// </summary>
         public IPersistentRepresentation Persistent { get; }
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReplayedMessage other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -697,13 +697,13 @@ namespace Akka.Persistence
             return Equals(Persistent, other.Persistent);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as ReplayedMessage);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Persistent != null ? Persistent.GetHashCode() : 0;
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReplayedMessage<message: {Persistent}>";
     }
 
@@ -731,7 +731,7 @@ namespace Akka.Persistence
         /// </summary>
         public long HighestSequenceNr { get; }
 
-        /// <inheritdoc/>
+       
         public bool Equals(RecoverySuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -740,13 +740,13 @@ namespace Akka.Persistence
             return Equals(HighestSequenceNr, other.HighestSequenceNr);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as RecoverySuccess);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => HighestSequenceNr.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"RecoverySuccess<highestSequenceNr: {HighestSequenceNr}>";
     }
 
@@ -777,7 +777,7 @@ namespace Akka.Persistence
         /// </summary>
         public Exception Cause { get; }
 
-        /// <inheritdoc/>
+       
         public bool Equals(ReplayMessagesFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -786,13 +786,13 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as ReplayMessagesFailure);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Cause.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReplayMessagesFailure<cause: {Cause}>";
     }
 }
