@@ -122,7 +122,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             var twoAndAHalfSeconds = TimeSpan.FromSeconds(2.5);
             var numberOfIterations = twoAndAHalfSeconds.TotalMilliseconds / quarterSecond.TotalMilliseconds;
             var probe = CreateTestProbe("probe");
-            var task = probe.WaitForRadioSilenceAsync(max: TimeSpan.FromSeconds(1), maxIterations: 3);
+            var task = probe.WaitForRadioSilenceAsync(max: TimeSpan.FromSeconds(1), maxMessages: null);
             for (var i = 0; i < numberOfIterations; i++)
             {
                 await Task.Delay(quarterSecond);
@@ -139,7 +139,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             probe.Ref.Tell(3, TestActor);
             try
             {
-                await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0), maxIterations: 0);
+                await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0), maxMessages: 0);
                 Assert.True(false, "we should never get here");
             }
             catch (XunitException) { }
