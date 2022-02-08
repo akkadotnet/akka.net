@@ -40,7 +40,7 @@ Task ReplayMessagesAsync(
 * **`max`**: Maximum number of messages to be replayed
 * **`recoveryCallback`**: Called to replay a message, may be called from any thread.
 
-This call is __NOT__ protected with a circuit-breaker.
+This call is **NOT** protected with a circuit-breaker.
 
 This method should asynchronously replay persistent messages:
 
@@ -438,7 +438,7 @@ In order to do this, you will need to extend two things, `IExtension` and `Exten
 
 There are two conventions that needs to be implemented when you extend `IExtension`:
 
-* Any class extending this interface is __required__ to provide a single constructor that takes a single `ExtendedActorSystem` as its argument.
+* Any class extending this interface is **required** to provide a single constructor that takes a single `ExtendedActorSystem` as its argument.
 
 [!code-csharp[Constructor](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=Constructor "Extension constructor")]
 

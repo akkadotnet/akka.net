@@ -557,7 +557,7 @@ namespace Akka.Actor
             return Receiver.Ask(new Get(_system.Scheduler.MonotonicClock + timeout), Timeout.InfiniteTimeSpan);
         }
 
-        /// <inheritdoc/>
+      
         public void Dispose()
         {
             Dispose(true);

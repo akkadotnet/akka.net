@@ -27,31 +27,30 @@ namespace Akka
         {
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return 0;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj is NotUsed;
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return "()";
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(NotUsed other)
         {
             return true;
         }
 
-        /// <inheritdoc/>
+        
         public int CompareTo(NotUsed other)
         {
             return 0;

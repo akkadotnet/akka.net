@@ -289,7 +289,6 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -298,13 +297,13 @@ namespace Akka.Actor
             return Equals((ActorSelection)obj);
         }
 
-        /// <inheritdoc/>
+        
         protected bool Equals(ActorSelection other)
         {
             return Equals(Anchor, other.Anchor) && Equals(PathString, other.PathString);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -313,7 +312,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             var builder = new StringBuilder();
@@ -358,7 +357,7 @@ namespace Akka.Actor
         /// </summary>
         public bool WildCardFanOut { get; }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             var elements = string.Join<SelectionPathElement>("/", Elements);
@@ -405,13 +404,13 @@ namespace Akka.Actor
         /// </summary>
         public string Name { get; }
 
-        /// <inheritdoc/>
+        
         protected bool Equals(SelectChildName other)
         {
             return string.Equals(Name, other.Name);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -420,10 +419,10 @@ namespace Akka.Actor
             return Equals((SelectChildName)obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Name?.GetHashCode() ?? 0;
 
-        /// <inheritdoc/>
+        
         public override string ToString() => Name;
     }
 
@@ -446,10 +445,10 @@ namespace Akka.Actor
         /// </summary>
         public string PatternStr { get; }
 
-        /// <inheritdoc/>
+        
         protected bool Equals(SelectChildPattern other) => string.Equals(PatternStr, other.PatternStr);
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -458,16 +457,16 @@ namespace Akka.Actor
             return Equals((SelectChildPattern)obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => PatternStr?.GetHashCode() ?? 0;
 
-        /// <inheritdoc/>
+        
         public override string ToString() => PatternStr;
     }
 
     public class SelectChildRecursive : SelectionPathElement
     {
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (obj is null) return false;
@@ -481,10 +480,10 @@ namespace Akka.Actor
         /// </summary>
         public static readonly SelectChildRecursive Instance = new SelectChildRecursive();
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => "**".GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => "**";
 
     }
@@ -499,13 +498,13 @@ namespace Akka.Actor
         /// </summary>
         public static readonly SelectParent Instance = new SelectParent();
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is SelectParent;
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => nameof(SelectParent).GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => "..";
     }
 }

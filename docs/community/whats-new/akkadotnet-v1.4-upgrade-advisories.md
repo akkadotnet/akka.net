@@ -54,7 +54,7 @@ If you are running a mixed .NET Core and .NET Framework cluster, see the process
 
 ### Deploying v1.4.26 Into Mixed .NET Core and .NET Framework Environments
 
-*However*, if you are attempting to run a mixed-mode cluster - i.e. some services running on .NET Framework and some running on .NET Core, you will eventually want to turn this setting to `off` in order to facilitate smooth operation between both platforms.
+_However_, if you are attempting to run a mixed-mode cluster - i.e. some services running on .NET Framework and some running on .NET Core, you will eventually want to turn this setting to `off` in order to facilitate smooth operation between both platforms.
 
 #### Already Deployed v1.4.20 or Later
 
