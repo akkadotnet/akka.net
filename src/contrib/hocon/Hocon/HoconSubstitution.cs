@@ -6,8 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using Hocon.Abstraction;
 
-namespace Akka.Configuration.Hocon
+namespace Hocon
 {
     /// <summary>
     /// This class represents a substitution element in a HOCON (Human-Optimized Config Object Notation)
@@ -23,15 +24,8 @@ namespace Akka.Configuration.Hocon
     /// }
     /// </code>
     /// </summary>
-    public class HoconSubstitution : IHoconElement, IMightBeAHoconObject
+    public class HoconSubstitution : IHoconSubstitution
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="HoconSubstitution"/> class.
-        /// </summary>
-        protected HoconSubstitution()
-        {
-        }
-
         /// <summary>
         ///     Initializes a new instance of the <see cref="HoconSubstitution" /> class.
         /// </summary>
@@ -44,12 +38,12 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         ///     The full path to the value which should substitute this instance.
         /// </summary>
-        public string Path { get; set; }
+        public string Path { get; internal set; }
 
         /// <summary>
         ///     The evaluated value from the Path property
         /// </summary>
-        public HoconValue ResolvedValue { get; set; }
+        public IHoconValue? ResolvedValue { get; internal set; }
 
         /// <summary>
         /// Determines whether this element is a string.
@@ -57,16 +51,16 @@ namespace Akka.Configuration.Hocon
         /// <returns><c>true</c> if this element is a string; otherwise <c>false</c></returns>
         public bool IsString()
         {
-            return ResolvedValue.IsString();
+            return ResolvedValue?.IsString() ?? false;
         }
 
         /// <summary>
         /// Retrieves the string representation of this element.
         /// </summary>
         /// <returns>The string representation of this element.</returns>
-        public string GetString()
+        public string? GetString()
         {
-            return ResolvedValue.GetString();
+            return ResolvedValue?.GetString();
         }
 
         /// <summary>
@@ -75,16 +69,16 @@ namespace Akka.Configuration.Hocon
         /// <returns><c>true</c> if this element is aan array; otherwise <c>false</c></returns>
         public bool IsArray()
         {
-            return ResolvedValue.IsArray();
+            return ResolvedValue?.IsArray() ?? false;
         }
 
         /// <summary>
         /// Retrieves a list of elements associated with this element.
         /// </summary>
         /// <returns>A list of elements associated with this element.</returns>
-        public IList<HoconValue> GetArray()
+        public IEnumerable<IHoconValue> GetArray()
         {
-            return ResolvedValue.GetArray();
+            return ResolvedValue?.IsArray() ?? false ? ResolvedValue.GetArray() : new List<IHoconValue>();
         }
 
         /// <summary>
@@ -100,9 +94,9 @@ namespace Akka.Configuration.Hocon
         /// Retrieves the HOCON object representation of this element.
         /// </summary>
         /// <returns>The HOCON object representation of this element.</returns>
-        public HoconObject GetObject()
+        public IHoconObject? GetObject()
         {
-            return ResolvedValue.GetObject();
+            return ResolvedValue?.GetObject();
         }
     }
 }

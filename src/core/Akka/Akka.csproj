@@ -41,6 +41,11 @@
     </Compile>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\contrib\hocon\Hocon.Common\Hocon.Common.csproj" />
+    <ProjectReference Include="..\..\contrib\hocon\Hocon\Hocon.csproj" />
+  </ItemGroup>
+
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>

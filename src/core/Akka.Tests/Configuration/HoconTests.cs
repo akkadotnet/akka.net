@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.TestKit;
+using Hocon;
 using Xunit;
 
 namespace Akka.Tests.Configuration

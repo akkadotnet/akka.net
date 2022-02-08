@@ -8,8 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Hocon.Abstraction;
 
-namespace Akka.Configuration.Hocon
+namespace Hocon
 {
     /// <summary>
     /// This class contains methods used to parse HOCON (Human-Optimized Config Object Notation)
@@ -17,11 +18,20 @@ namespace Akka.Configuration.Hocon
     /// </summary>
     public class Parser
     {
-        private readonly List<HoconSubstitution> _substitutions = new List<HoconSubstitution>();
+        private static readonly Func<string, HoconRoot?> EmptyIncludeCallback = s => null;
+        private static readonly HoconTokenizer EmptyTokenizer = new HoconTokenizer("");
+        
+        private readonly List<IHoconSubstitution> _substitutions = new List<IHoconSubstitution>();
         private HoconTokenizer _reader;
-        private HoconValue _root;
-        private Func<string, HoconRoot> _includeCallback;
+        private HoconValue? _root;
+        private Func<string, HoconRoot?> _includeCallback;
 
+        private Parser()
+        {
+            _reader = EmptyTokenizer;
+            _includeCallback = EmptyIncludeCallback;
+        }
+        
         /// <summary>
         /// Parses the supplied HOCON configuration string into a root element.
         /// </summary>
@@ -30,31 +40,31 @@ namespace Akka.Configuration.Hocon
         /// <exception cref="FormatException">This exception is thrown if an unresolved substitution or an unknown token is encountered.</exception>
         /// <exception cref="Exception">This exception is thrown if the end of the file has been reached while trying to read a value.</exception>
         /// <returns>The root element created from the supplied HOCON configuration string.</returns>
-        public static HoconRoot Parse(string text,Func<string,HoconRoot> includeCallback)
+        public static HoconRoot Parse(string text, Func<string,HoconRoot?>? includeCallback)
         {
             return new Parser().ParseText(text,includeCallback);
         }
 
-        private HoconRoot ParseText(string text,Func<string,HoconRoot> includeCallback)
+        private HoconRoot ParseText(string text, Func<string,HoconRoot?>? includeCallback)
         {
-            _includeCallback = includeCallback;
+            _includeCallback = includeCallback ?? EmptyIncludeCallback;
             _root = new HoconValue();
             _reader = new HoconTokenizer(text);
             _reader.PullWhitespaceAndComments();
             ParseObject(_root, true,"");
 
-            var c = new Config(new HoconRoot(_root, Enumerable.Empty<HoconSubstitution>()));
-            foreach (HoconSubstitution sub in _substitutions)
+            var r = new HoconRoot(_root);
+            foreach (var sub in _substitutions)
             {
-                HoconValue res = c.GetValue(sub.Path);
+                var res = r.GetNode(sub.Path);
                 if (res == null)
                     throw new FormatException($"Unresolved substitution: {sub.Path}");
-                sub.ResolvedValue = res;
+                ((HoconSubstitution)sub).ResolvedValue = res;
             }
             return new HoconRoot(_root, _substitutions);
         }
 
-        private void ParseObject(HoconValue owner, bool root,string currentPath)
+        private void ParseObject(IHoconValue owner, bool root,string currentPath)
         {
             if (owner.IsObject())
             {
@@ -66,30 +76,34 @@ namespace Akka.Configuration.Hocon
                 owner.NewValue(new HoconObject());
             }
 
-            HoconObject currentObject = owner.GetObject();
+            var currentObject = owner.GetObject();
 
             while (!_reader.EoF)
             {
-                Token t = _reader.PullNext();
+                var t = _reader.PullNext();
                 switch (t.Type)
                 {
                     case TokenType.Include:
                         var included = _includeCallback(t.Value);
-                        var substitutions = included.Substitutions;
+                        if (included == null)
+                            break;
+                        
+                        var substitutions = included.Substitutions.ToList();
                         foreach (var substitution in substitutions)
                         {
                             //fixup the substitution, add the current path as a prefix to the substitution path
-                            substitution.Path = currentPath + "." + substitution.Path;
+                            ((HoconSubstitution)substitution).Path = currentPath + "." + substitution.Path;
                         }
                         _substitutions.AddRange(substitutions);
                         var otherObj = included.Value.GetObject();
-                        owner.GetObject().Merge(otherObj);
+                        if(otherObj != null)
+                            currentObject!.Merge(otherObj);
 
                         break;
                     case TokenType.EoF:
                         break;
                     case TokenType.Key:
-                        HoconValue value = currentObject.GetOrCreateKey(t.Value);
+                        var value = currentObject!.GetOrCreateKey(t.Value);
                         var nextPath = currentPath == "" ? t.Value : currentPath + "." + t.Value;
                         ParseKeyContent(value, nextPath);
                         if (!root)
@@ -102,11 +116,11 @@ namespace Akka.Configuration.Hocon
             }
         }
 
-        private void ParseKeyContent(HoconValue value,string currentPath)
+        private void ParseKeyContent(IHoconValue value,string currentPath)
         {
             while (!_reader.EoF)
             {
-                Token t = _reader.PullNext();
+                var t = _reader.PullNext();
                 switch (t.Type)
                 {
                     case TokenType.Dot:
@@ -136,7 +150,7 @@ namespace Akka.Configuration.Hocon
         /// <param name="owner">The element to append the next token.</param>
         /// <param name="currentPath">The location in the HOCON object hierarchy that the parser is currently reading.</param>
         /// <exception cref="Exception">This exception is thrown if the end of the file has been reached while trying to read a value.</exception>
-        public void ParseValue(HoconValue owner, string currentPath)
+        private void ParseValue(IHoconValue owner, string currentPath)
         {
             if (_reader.EoF)
                 throw new Exception("End of file reached while trying to read a value");
@@ -144,7 +158,7 @@ namespace Akka.Configuration.Hocon
             _reader.PullWhitespaceAndComments();
             while (_reader.IsValue())
             {
-                Token t = _reader.PullValue();
+                var t = _reader.PullValue();
 
                 switch (t.Type)
                 {
@@ -156,10 +170,8 @@ namespace Akka.Configuration.Hocon
                             //needed to allow for override objects
                             owner.Clear();
                         }
-                        var lit = new HoconLiteral
-                        {
-                            Value = t.Value
-                        };
+
+                        var lit = new HoconLiteral(t.Value);
                         owner.AppendValue(lit);
 
                         break;
@@ -167,11 +179,11 @@ namespace Akka.Configuration.Hocon
                         ParseObject(owner, true,currentPath);
                         break;
                     case TokenType.ArrayStart:
-                        HoconArray arr = ParseArray(currentPath);
+                        var arr = ParseArray(currentPath);
                         owner.AppendValue(arr);
                         break;
                     case TokenType.Substitute:
-                        HoconSubstitution sub = ParseSubstitution(t.Value);
+                        var sub = ParseSubstitution(t.Value);
                         _substitutions.Add(sub);
                         owner.AppendValue(sub);
                         break;
@@ -185,16 +197,13 @@ namespace Akka.Configuration.Hocon
             IgnoreComma();
         }
 
-        private void ParseTrailingWhitespace(HoconValue owner)
+        private void ParseTrailingWhitespace(IHoconValue owner)
         {
-            Token ws = _reader.PullSpaceOrTab();
+            var ws = _reader.PullSpaceOrTab();
             //single line ws should be included if string concat
             if (ws.Value.Length > 0)
             {
-                var wsLit = new HoconLiteral
-                {
-                    Value = ws.Value,
-                };
+                var wsLit = new HoconLiteral(ws.Value);
                 owner.AppendValue(wsLit);
             }
         }
@@ -209,7 +218,7 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         /// <param name="currentPath">The location in the HOCON object hierarchy that the parser is currently reading.</param>
         /// <returns>An array of elements retrieved from the token.</returns>
-        public HoconArray ParseArray(string currentPath)
+        private HoconArray ParseArray(string currentPath)
         {
             var arr = new HoconArray();
             while (!_reader.EoF && !_reader.IsArrayEnd())

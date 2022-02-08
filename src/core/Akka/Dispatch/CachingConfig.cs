@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Akka.Annotations;
 using Akka.Configuration;
-using Akka.Configuration.Hocon;
+using Hocon.Abstraction;
 
 namespace Akka.Dispatch
 {
@@ -133,8 +133,7 @@ namespace Akka.Dispatch
         /// <param name="config">TBD</param>
         public CachingConfig(Config config)
         {
-            var cachingConfig = config as CachingConfig;
-            if (cachingConfig != null)
+            if (config is CachingConfig cachingConfig)
             {
                 _config = cachingConfig._config;
                 _entryMap = cachingConfig._entryMap;
@@ -189,7 +188,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// TBD
         /// </summary>
-        public override HoconValue Root
+        public override IHoconValue Root
         {
             get { return _config.Root; }
         }
@@ -228,7 +227,7 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public override IEnumerable<KeyValuePair<string, HoconValue>> AsEnumerable()
+        public override IEnumerable<KeyValuePair<string, IHoconValue>> AsEnumerable()
         {
             return _config.AsEnumerable();
         }
@@ -286,9 +285,9 @@ namespace Akka.Dispatch
         public override string GetString(string path, string @default = null)
         {
             var pathEntry = GetPathEntry(path);
-            if (pathEntry is StringPathEntry)
+            if (pathEntry is StringPathEntry entry)
             {
-                return ((StringPathEntry)pathEntry).Value;
+                return entry.Value;
             }
             else
             {
@@ -331,10 +330,11 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         /// <param name="path">TBD</param>
+        /// <param name="def">TBF</param>
         /// <returns>TBD</returns>
-        public override long? GetByteSize(string path)
+        public override long? GetByteSize(string path, long? def = null)
         {
-            return _config.GetByteSize(path);
+            return _config.GetByteSize(path, def);
         }
 
         /// <summary>

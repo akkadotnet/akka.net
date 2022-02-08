@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using Akka.Configuration.Hocon;
+using Hocon;
 using Newtonsoft.Json;
 
 namespace Akka.Configuration
@@ -38,7 +39,7 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the supplied HOCON string.</returns>
         public static Config ParseString(string hocon, Func<string,HoconRoot> includeCallback)
         {
-            HoconRoot res = Parser.Parse(hocon, includeCallback);
+            var res = Parser.Parse(hocon, includeCallback);
             return new Config(res);
         }
 

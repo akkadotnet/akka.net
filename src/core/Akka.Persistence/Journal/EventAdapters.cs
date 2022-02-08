@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.Pattern;
+using Hocon;
 
 namespace Akka.Persistence.Journal
 {

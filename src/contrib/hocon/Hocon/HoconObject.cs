@@ -9,10 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json;
 using System.Text.RegularExpressions;
+using Hocon.Abstraction;
+using Newtonsoft.Json;
 
-namespace Akka.Configuration.Hocon
+namespace Hocon
 {
     /// <summary>
     /// This class represents an object element in a HOCON (Human-Optimized Config Object Notation)
@@ -31,7 +32,7 @@ namespace Akka.Configuration.Hocon
     /// }
     /// </code>
     /// </summary>
-    public class HoconObject : IHoconElement
+    public class HoconObject : IHoconObject
     {
         private static readonly Regex EscapeRegex = new Regex("[ \t:]{1}", RegexOptions.Compiled);
 
@@ -40,7 +41,7 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         public HoconObject()
         {
-            Items = new Dictionary<string, HoconValue>();
+            Items = new Dictionary<string, IHoconValue>();
         }
 
         /// <summary>
@@ -54,7 +55,7 @@ namespace Akka.Configuration.Hocon
             {
                 return Items.ToDictionary(k => k.Key, v =>
                 {
-                    HoconObject obj = v.Value.GetObject();
+                    var obj = v.Value.GetObject();
                     if (obj != null)
                         return (object) obj.Unwrapped;
                     return v.Value;
@@ -65,7 +66,7 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Retrieves the underlying map that this element is based on.
         /// </summary>
-        public Dictionary<string, HoconValue> Items { get; private set; }
+        public IDictionary<string, IHoconValue> Items { get; private set; }
 
         /// <summary>
         /// Determines whether this element is a string.
@@ -104,7 +105,7 @@ namespace Akka.Configuration.Hocon
         /// <exception cref="NotImplementedException">
         /// This exception is thrown automatically since this element is an object and not an array.
         /// </exception>
-        public IList<HoconValue> GetArray()
+        public IEnumerable<IHoconValue> GetArray()
         {
             throw new NotImplementedException("This element is an object and not an array.");
         }
@@ -117,7 +118,7 @@ namespace Akka.Configuration.Hocon
         /// The value associated with the supplied key or null
         /// if they key does not exist.
         /// </returns>
-        public HoconValue GetKey(string key)
+        public IHoconValue? GetKey(string key)
         {
             Items.TryGetValue(key, out var value);
             return value;
@@ -130,7 +131,7 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         /// <param name="key">The key associated with the value to retrieve.</param>
         /// <returns>The value associated with the supplied key.</returns>
-        public HoconValue GetOrCreateKey(string key)
+        public IHoconValue GetOrCreateKey(string key)
         {
             if (Items.TryGetValue(key, out var value))
                 return value;
@@ -159,13 +160,13 @@ namespace Akka.Configuration.Hocon
             var sb = new StringBuilder();
             foreach (var kvp in Items)
             {
-                string key = QuoteIfNeeded(kvp.Key);
+                var key = QuoteIfNeeded(kvp.Key);
                 sb.AppendFormat("{0}{1} : {2}\r\n", i, key, kvp.Value.ToString(indent));
             }
             return sb.ToString();
         }
 
-        private string QuoteIfNeeded(string text)
+        private string QuoteIfNeeded(string? text)
         {
             if (text == null) return "";
 
@@ -181,11 +182,14 @@ namespace Akka.Configuration.Hocon
         /// Merges the specified object into this instance.
         /// </summary>
         /// <param name="other">The object to merge into this instance.</param>
-        public void Merge(HoconObject other)
+        public void Merge(IHoconObject? other)
         {
+            if(other == null)
+                return;
+            
             var thisItems = Items;
             var otherItems = other.Items;
-            var modified = new List<KeyValuePair<string, HoconValue>>();
+            var modified = new List<KeyValuePair<string, IHoconValue>>();
 
             foreach (var otherItem in otherItems)
             {
@@ -196,18 +200,18 @@ namespace Akka.Configuration.Hocon
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())
                     {
-                        var newObject = thisItem.GetObject().MergeImmutable(otherItem.Value.GetObject());
+                        var newObject = ((HoconObject?) thisItem.GetObject())!.MergeImmutable(otherItem.Value.GetObject());
                         var value = new HoconValue();
                         value.Values.Add(newObject);
-                        modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, value));
+                        modified.Add(new KeyValuePair<string, IHoconValue>(otherItem.Key, value));
                     }
                     else
-                        modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, otherItem.Value));
+                        modified.Add(new KeyValuePair<string, IHoconValue>(otherItem.Key, otherItem.Value));
                 }
                 else
                 {
                     //other key was not present in this object, just copy it over
-                    modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, otherItem.Value));
+                    modified.Add(new KeyValuePair<string, IHoconValue>(otherItem.Key, otherItem.Value));
                 }
             }
 
@@ -222,9 +226,12 @@ namespace Akka.Configuration.Hocon
         /// Merges the specified object with this instance producing new one.
         /// </summary>
         /// <param name="other">The object to merge into this instance.</param>
-        internal HoconObject MergeImmutable(HoconObject other)
+        public HoconObject MergeImmutable(IHoconObject? other)
         {
-            var thisItems = new Dictionary<string, HoconValue>(Items);
+            if (other == null)
+                return this;
+            
+            var thisItems = new Dictionary<string, IHoconValue>(Items);
             var otherItems = other.Items;
 
             foreach (var otherItem in otherItems)
@@ -236,7 +243,7 @@ namespace Akka.Configuration.Hocon
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())
                     {
-                        var mergedObject = thisItem.GetObject().MergeImmutable(otherItem.Value.GetObject());
+                        var mergedObject = ((HoconObject?) thisItem.GetObject())!.MergeImmutable(otherItem.Value.GetObject());
                         var mergedValue = new HoconValue();
                         mergedValue.AppendValue(mergedObject);
                         thisItems[otherItem.Key] = mergedValue;

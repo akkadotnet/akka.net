@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Akka.Configuration.Hocon
+namespace Hocon
 {
     /// <summary>
     /// This enumeration defines the different types of tokens found within
@@ -88,17 +88,11 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Initializes a new instance of the <see cref="Token"/> class.
         /// </summary>
-        protected Token()
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Token"/> class.
-        /// </summary>
         /// <param name="type">The type of token to associate with.</param>
         public Token(TokenType type)
         {
             Type = type;
+            Value = string.Empty;
         }
 
         /// <summary>
@@ -108,6 +102,17 @@ namespace Akka.Configuration.Hocon
         public Token(string value)
         {
             Type = TokenType.LiteralValue;
+            Value = value;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Token"/> class.
+        /// </summary>
+        /// <param name="type">The type of token to associate with.</param>
+        /// <param name="value">The string literal value to associate with this token.</param>
+        public Token(TokenType type, string value)
+        {
+            Type = type;
             Value = value;
         }
 
@@ -130,11 +135,7 @@ namespace Akka.Configuration.Hocon
         /// <returns>A key token with the given key.</returns>
         public static Token Key(string key)
         {
-            return new Token
-            {
-                Type = TokenType.Key,
-                Value = key,
-            };
+            return new Token(TokenType.Key, key);
         }
 
         /// <summary>
@@ -144,11 +145,7 @@ namespace Akka.Configuration.Hocon
         /// <returns>A substitution token with the given path.</returns>
         public static Token Substitution(string path)
         {
-            return new Token
-            {
-                Type = TokenType.Substitute,
-                Value = path,
-            };
+            return new Token(TokenType.Substitute, path);
         }
 
         /// <summary>
@@ -158,20 +155,12 @@ namespace Akka.Configuration.Hocon
         /// <returns>A string literal token with the given value.</returns>
         public static Token LiteralValue(string value)
         {
-            return new Token
-            {
-                Type = TokenType.LiteralValue,
-                Value = value,
-            };
+            return new Token(TokenType.LiteralValue, value);
         }
 
         internal static Token Include(string path)
         {
-            return new Token
-            {
-                Value = path,
-                Type = TokenType.Include
-            };
+            return new Token(TokenType.Include, path);
         }
     }
 }
