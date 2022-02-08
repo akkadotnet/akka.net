@@ -143,31 +143,31 @@ namespace Akka.TestKit
             _internalRef.Unwatch(subject);
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return _internalRef.ToString();
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return _internalRef.Equals(obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return _internalRef.GetHashCode();
         }
 
-        /// <inheritdoc/>
+        
         public int CompareTo(object obj)
         {
             return ((IComparable) _internalRef).CompareTo(obj);
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(IActorRef other)
         {
             return _internalRef.Equals(other);

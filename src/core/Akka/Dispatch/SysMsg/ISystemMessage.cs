@@ -306,7 +306,6 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class NoMessage : SystemMessage
     {
-        /// <inheritdoc cref="object"/>
         public override string ToString()
         {
             return "NoMessage";
@@ -349,7 +348,7 @@ namespace Akka.Dispatch.SysMsg
         /// <value><c>true</c> if [address terminated]; otherwise, <c>false</c>.</value>
         public bool AddressTerminated { get; private set; }
 
-        /// <inheritdoc cref="object"/>
+        
         public override string ToString()
         {
             return "<DeathWatchNotification>: " + Actor + ", ExistenceConfirmed=" + ExistenceConfirmed + ", AddressTerminated=" + AddressTerminated;

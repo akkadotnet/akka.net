@@ -8,7 +8,7 @@ title: Basics and working with Flows
 ## Core Concepts
 
 Akka Streams is a library to process and transfer a sequence of elements using bounded buffer space.
-This latter property is what we refer to as _boundedness_ and it is the defining feature of Akka Streams.
+This latter property is what we refer to as *boundedness* and it is the defining feature of Akka Streams.
 Translated to everyday terms it is possible to express a chain (or as we see later, graphs)
 of processing entities, each executing independently (and possibly concurrently) from the others while only buffering a limited number of elements at any given time.
 This property of bounded buffers is one of the differences from the actor model, where each actor usually has an unbounded, or a bounded, but dropping mailbox.
@@ -25,7 +25,7 @@ Buffer sizes are always expressed as number of elements independently from the a
   
 **Back-pressure**  
 A means of flow-control, a way for consumers of data to notify a producer about their current availability, effectively slowing down the upstream producer to match their consumption speeds.
-In the context of Akka Streams back-pressure is always understood as _non-blocking_ and _asynchronous_.
+In the context of Akka Streams back-pressure is always understood as *non-blocking* and *asynchronous*.
   
 **Non-Blocking**  
 Means that a certain operation does not hinder the progress of the calling thread,
@@ -39,7 +39,7 @@ The common name for all building blocks that build up a `Graph`.
 Examples of a processing stage would be operations like `Select()`, `Where()`, custom `GraphStage's` and graph junctions like `Merge` or `Broadcast`.
 For the full list of built-in processing stages see [stages overview](xref:streams-builtin-stages)
   
-When we talk about _asynchronous, non-blocking backpressure_ we mean that the processing stages available in Akka Streams
+When we talk about *asynchronous, non-blocking backpressure* we mean that the processing stages available in Akka Streams
 will not use blocking calls but asynchronous message passing to exchange messages between each other,
 and they will use asynchronous means to slow down a fast producer, without blocking its thread.
 This is a thread-pool friendly design, since entities that need to wait (a fast producer waiting on a slow consumer)
@@ -50,13 +50,13 @@ will not block the thread but can hand it back for further use to an underlying 
 Linear processing pipelines can be expressed in Akka Streams using the following core abstractions:  
   
 **Source**  
-A processing stage with _exactly one output_, emitting data elements whenever downstream processing stages are ready to receive them.
+A processing stage with *exactly one output*, emitting data elements whenever downstream processing stages are ready to receive them.
   
 **Sink**  
-A processing stage with _exactly one input_, requesting and accepting data elements possibly slowing down the upstream producer of elements
+A processing stage with *exactly one input*, requesting and accepting data elements possibly slowing down the upstream producer of elements
   
 **Flow**  
-A processing stage which has _exactly one input and output_, which connects its up- and downstreams by transforming the data elements flowing through it.
+A processing stage which has *exactly one input and output*, which connects its up- and downstreams by transforming the data elements flowing through it.
   
 **RunnableGraph**  
 A Flow that has both ends "attached" to a `Source` and `Sink` respectively, and is ready to be `run()`.
