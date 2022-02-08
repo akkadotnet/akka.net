@@ -12,17 +12,27 @@ using System.Text;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Serialization;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Internals;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Xunit;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Serialization
 {
     public class CustomSerializerSpec
     {
+        private readonly ITestOutputHelper _output;
+
+        public CustomSerializerSpec(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
         /// <summary>
         /// Here we basically verify that a serializer decides where its Serializer Identifier is coming
         /// from. When using the default Serializer base class, it read from hocon config. But this should not be 
@@ -84,6 +94,150 @@ namespace Akka.Tests.Serialization
                 var deserializedSecondMessage = serializer.FromBinary(serialized, manifest);
                 manifest.Should().Be(SecondMessage.Manifest);
                 deserializedSecondMessage.Should().Be(secondMessage);
+            }
+        }
+        
+        // Fix for issue #5569, could not declare multiple serializer identifier
+        [Fact]
+        public void Configuration_should_be_able_to_override_serialization_identifiers()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.stdout-logger-class = ""Akka.Tests.Serialization.XunitOutputHelperLogger, Akka.Tests""
+                akka.actor {
+                    serializers {
+                        custom = ""Akka.Tests.Serialization.CustomThrowingSerializer, Akka.Tests""
+                    }
+                    serialization-bindings {
+                        ""System.Object"" = custom
+                        ""Akka.Tests.Serialization.MessageBase, Akka.Tests"" = custom
+                    }
+                    serialization-identifiers {
+	                    ""Akka.Tests.Serialization.CustomThrowingSerializer, Akka.Tests"" = 1
+                    }
+                }
+            ");
+            XunitOutputHelperLogger.Output = _output;
+            
+            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
+            {
+                var serialization = system.Serialization;
+                var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
+                var objectSerializer = serialization.FindSerializerFor(new object());
+                var serializerById = serialization.GetSerializerById(1);
+
+                serializer.Should().Be(serializerById);
+                serializer.Should().Be(objectSerializer);
+            }
+        }
+        
+        // Fix for issue #5569, could not declare multiple serializer identifier
+        [Fact]
+        public void Hardwired_serialization_identifiers_should_override_HOCON_configuration()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.stdout-logger-class = ""Akka.Tests.Serialization.XunitOutputHelperLogger, Akka.Tests""
+                akka.actor {
+                    serializers {
+                        custom = ""Akka.Tests.Serialization.CustomSerializer, Akka.Tests""
+                    }
+                    serialization-bindings {
+                        ""Akka.Tests.Serialization.MessageBase, Akka.Tests"" = custom
+                    }
+                    serialization-identifiers {
+                        # this will fail because you can't assign the CustomSerializer identifier (hardwired)
+                        # the original NewtonsoftJsonSerializer would NOT be overriden and CustomSerializer
+                        # identifier will be 666
+	                    ""Akka.Tests.Serialization.CustomSerializer, Akka.Tests"" = 1
+                    }
+                }
+            ");
+            XunitOutputHelperLogger.Output = _output;
+            
+            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
+            {
+                var firstMessage = new FirstMessage("First message");
+                var serialization = system.Serialization;
+                var serializer = (CustomSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializerById = serialization.GetSerializerById(1);
+
+                serializer.Identifier.Should().Be(666); // This is because identifier is hardwired, so it could not be
+                                                        // used to override other serializer identifier
+                serializer.Should().NotBeEquivalentTo(serializerById);
+                
+                serializerById.Identifier.Should().Be(1); // This should be the JSON serializer
+                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
+            }
+        }
+        
+        // BAD ILLEGAL SERIALIZATION IDENTIFIER SPEC
+        // This still works, but will break as soon as the HOCON object merging implementation changed.
+        // In a freakish way, HOCON fallback got injected first. The original object actually appears last if enumerated
+        [Fact]
+        public void Illegal_hardwired_serialization_identifiers_should_override_HOCON_configuration_if_defined_first()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.stdout-logger-class = ""Akka.Tests.Serialization.XunitOutputHelperLogger, Akka.Tests""
+                akka.actor {
+                    serializers {
+                        custom = ""Akka.Tests.Serialization.CustomIllegalSerializer, Akka.Tests""
+                    }
+                    serialization-bindings {
+                        ""System.Object"" = custom
+                        ""Akka.Tests.Serialization.MessageBase, Akka.Tests"" = custom
+                    }
+                }
+            ");
+            XunitOutputHelperLogger.Output = _output;
+            
+            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
+            {
+                var serialization = system.Serialization;
+                var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
+                var objectSerializer = serialization.FindSerializerFor(new object());
+                var serializerById = serialization.GetSerializerById(1);
+
+                serializer.Should().Be(serializerById);
+                serializer.Should().Be(objectSerializer);
+                serializer.Should().BeOfType<CustomIllegalSerializer>();
+                serializerById.Should().BeOfType<CustomIllegalSerializer>();
+                objectSerializer.Should().BeOfType<CustomIllegalSerializer>();
+            }
+        }
+        
+        // BAD ILLEGAL SERIALIZATION IDENTIFIER SPEC
+        // This is undefined, bad thing will happens during deserialization because the serializer ID would never match
+        [Fact]
+        public void Illegal_hardwired_serialization_identifiers_will_cause_problems_if_not_defined_first()
+        {
+            var config = 
+                ConfigurationFactory.Default()
+                    .WithFallback(ConfigurationFactory.ParseString(@"
+                akka.stdout-logger-class = ""Akka.Tests.Serialization.XunitOutputHelperLogger, Akka.Tests""
+                akka.actor {
+                    serializers {
+                        custom = ""Akka.Tests.Serialization.CustomIllegalSerializer, Akka.Tests""
+                    }
+                    serialization-bindings {
+                        ""System.Object"" = custom
+                        ""Akka.Tests.Serialization.MessageBase, Akka.Tests"" = custom
+                    }
+                }"));
+            XunitOutputHelperLogger.Output = _output;
+            
+            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
+            {
+                var serialization = system.Serialization;
+                var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
+                var objectSerializer = serialization.FindSerializerFor(new object());
+                var serializerById = serialization.GetSerializerById(1);
+                var invalidSerializerById = serialization.GetSerializerById(serializer.Identifier);
+
+                serializer.Should().BeOfType<CustomIllegalSerializer>();
+                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
+                objectSerializer.Should().BeOfType<NewtonSoftJsonSerializer>();
+                
+                invalidSerializerById.Should().NotBeOfType<CustomIllegalSerializer>(); // This is the bad part
+                invalidSerializerById.Identifier.Should().Be(serializerById.Identifier); // This is the bad part
             }
         }
         
@@ -229,6 +383,55 @@ namespace Akka.Tests.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             throw new NotImplementedException();
+        }
+    }
+    
+    public class CustomThrowingSerializer : Serializer
+    {
+        public CustomThrowingSerializer(ExtendedActorSystem system) : base(system)
+        {
+        }
+
+        public override bool IncludeManifest => false;
+
+        public override byte[] ToBinary(object obj)
+        {
+            throw new Exception(nameof(CustomThrowingSerializer));
+        }
+
+        public override object FromBinary(byte[] bytes, Type type)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class CustomIllegalSerializer : Serializer
+    {
+        public CustomIllegalSerializer(ExtendedActorSystem system) : base(system)
+        {
+        }
+
+        public override bool IncludeManifest => false;
+        public override int Identifier => 1; // This is illegal, all ID below 100 are reserved 
+
+        public override byte[] ToBinary(object obj)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override object FromBinary(byte[] bytes, Type type)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class XunitOutputHelperLogger : MinimalLogger
+    {
+        public static ITestOutputHelper Output;
+
+        protected override void Log(object message)
+        {
+            Output?.WriteLine(message.ToString());
         }
     }
 }
