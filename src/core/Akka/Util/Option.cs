@@ -84,7 +84,7 @@ namespace Akka.Util
         public bool Equals(Option<T> other)
             => HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             if (obj is null)
@@ -92,7 +92,7 @@ namespace Akka.Util
             return obj is Option<T> opt && Equals(opt);
         }
         
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -101,7 +101,7 @@ namespace Akka.Util
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => HasValue ? $"Some<{Value}>" : "None";
 
         /// <summary>
