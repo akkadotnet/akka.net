@@ -178,7 +178,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         {
             await Assert.ThrowsAnyAsync<FalseException>(async () =>
             {
-                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(0, async () =>
+                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(0, actionAsync: async () =>
                 {
                     Assert.False(true);
                     await Task.CompletedTask;
