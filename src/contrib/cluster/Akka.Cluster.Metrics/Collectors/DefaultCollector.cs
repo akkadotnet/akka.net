@@ -44,7 +44,7 @@ namespace Akka.Cluster.Metrics.Collectors
         {
         }
 
-        /// <inheritdoc />
+        
         public void Dispose()
         {
             _cpuWatch.Stop();
