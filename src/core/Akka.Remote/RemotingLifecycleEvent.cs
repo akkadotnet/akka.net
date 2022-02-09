@@ -250,7 +250,7 @@ namespace Akka.Remote
             return Event.LogLevel.InfoLevel;
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return "Remoting shut down";

@@ -104,7 +104,8 @@
         "mergetool",
         "titlecase",
         "Varghese",
-		"Vertech"
+		"Vertech",
+		"DeadLetter"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links

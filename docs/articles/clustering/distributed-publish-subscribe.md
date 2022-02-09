@@ -30,85 +30,25 @@ You register actors to the local mediator with `DistributedPubSubMediator.Subscr
 
 You publish messages by sending `DistributedPubSubMediator.Publish` message to the local mediator.
 
-Actors are automatically removed from the registry when they are terminated, or you can explicitly remove entries with `DistributedPubSubMediator.Unsubscribe`.
+Topic actors are automatically removed from the registry when they are terminated; they are terminated if there are no subscribers for the duration configured by `akka.cluster.pub-sub.removed-time-to-live`, which defaults to 2 minutes. You can change the deadline by setting `removed-time-to-live` to a custom duration.
+
+You can `Unsubscribe` from a topic with `DistributedPubSubMediator.Unsubscribe`.
 
 An example of a subscriber actor:
 
-```csharp
-public class Subscriber : ReceiveActor
-{
-    private readonly ILoggingAdapter log = Context.GetLogger();
-
-    public Subscriber()
-    {
-        var mediator = DistributedPubSub.Get(Context.System).Mediator;
-
-        // subscribe to the topic named "content"
-        mediator.Tell(new Subscribe("content", Self));
-
-        Receive<string>(s =>
-        {
-            log.Info($"Got {s}");
-        });
-
-        Receive<SubscribeAck>(subscribeAck =>
-        {
-            if (subscribeAck.Subscribe.Topic.Equals("content")
-                && subscribeAck.Subscribe.Ref.Equals(Self)
-                && subscribeAck.Subscribe.Group == null)
-            {
-                log.Info("subscribing");
-            }
-        });
-    }
-}
-```
+[!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SamplePublishSubscribe/Subscriber.cs?name=SampleSubscriber)]
 
 Subscriber actors can be started on several nodes in the cluster, and all will receive messages published to the "content" topic.
 
-```csharp
-RunOn(() =>
-{
-    Sys.ActorOf(Props.Create<Subscriber>(), "subscriber1");
-}, _first);
-
-RunOn(() =>
-{
-    Sys.ActorOf(Props.Create<Subscriber>(), "subscriber2");
-    Sys.ActorOf(Props.Create<Subscriber>(), "subscriber3");
-}, _second);
-```
+[!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SamplePublishSubscribe/Program.cs?name=subscriber)]
 
 A simple actor that publishes to this "content" topic:
 
-```csharp
-public class Publisher : ReceiveActor
-{
-    public Publisher()
-    {
-        // activate the extension
-        var mediator = DistributedPubSub.Get(Context.System).Mediator;
-
-        Receive<string>(str =>
-        {
-            var upperCase = str.ToUpper();
-            mediator.Tell(new Publish("content", upperCase));
-        });
-    }
-}
-```
+[!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SamplePublisher/Publisher.cs?name=SamplePublisher)]
 
 It can publish messages to the topic from anywhere in the cluster:
 
-```csharp
-RunOn(() =>
-{
-    var publisher = Sys.ActorOf(Props.Create<Publisher>(), "publisher");
-
-    // after a while the subscriptions are replicated
-    publisher.Tell("hello");
-}, _third);
-```
+[!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SamplePublisher/Program.cs?name=publisher)]
 
 ### Topic Groups
 
@@ -135,75 +75,33 @@ Actors are automatically removed from the registry when they are terminated, or 
 
 An example of a destination actor:
 
-```csharp
-public class Destination : ReceiveActor
-{
-    private readonly ILoggingAdapter log = Context.GetLogger();
-
-    public Destination()
-    {
-        // activate the extension
-        var mediator = DistributedPubSub.Get(Context.System).Mediator;
-
-        // register to the path
-        mediator.Tell(new Put(Self));
-
-        Receive<string>(s =>
-        {
-            log.Info($"Got {s}");
-        });
-    }
-}
-```
+[!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SampleDestination/Destination.cs?name=SampleDestination)]
 
 Destination actors can be started on several nodes in the cluster, and all will receive messages sent to the path (without address information).
 
-```csharp
-RunOn(() =>
-{
-    Sys.ActorOf(Props.Create<Destination>(), "destination");
-}, _first);
-
-RunOn(() =>
-{
-    Sys.ActorOf(Props.Create<Destination>(), "destination");
-}, _second);
-```
+[!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SampleDestination/Program.cs?name=destination)]
 
 A simple actor that sends to the path:
 
-```csharp
-public class Sender : ReceiveActor
-{
-    public Sender()
-    {
-        // activate the extension
-        var mediator = DistributedPubSub.Get(Context.System).Mediator;
-
-        Receive<string>(str =>
-        {
-            var upperCase = str.ToUpper();
-            mediator.Tell(new Send(path: "/user/destination", message: upperCase, localAffinity: true));
-        });
-    }
-}
-```
+[!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SampleSender/Sender.cs?name=samplesender)]
 
 It can send messages to the path from anywhere in the cluster:
 
-```csharp
-RunOn(() =>
-{
-    var sender = Sys.ActorOf(Props.Create<Sender>(), "sender");
-
-    // after a while the destinations are replicated
-    sender.Tell("hello");
-}, _third);
-```
+[!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SampleSender/Program.cs?name=sender)]
 
 It is also possible to broadcast messages to the actors that have been registered with `Put`. Send `DistributedPubSubMediator.SendToAll` message to the local mediator and the wrapped message will then be delivered to all recipients with a matching path. Actors with the same path, without address information, can be registered on different nodes. On each node there can only be one such actor, since the path is unique within one local actor system.
 
 Typical usage of this mode is to broadcast messages to all replicas with the same path, e.g. 3 actors on different nodes that all perform the same actions, for redundancy. You can also optionally specify a property (`AllButSelf`) deciding if the message should be sent to a matching path on the self node or not.
+
+## DeadLetters From `DistributedPubSub`
+
+There are three factors that determine when or if a message is published to `/system/deadletters`, namely: `send-to-dead-letters-when-no-subscribers`, zero existing subscribers, or if the topic does not exist / has been terminated.
+
+* **`akka.cluster.pub-sub.send-to-dead-letters-when-no-subscribers`**: this is a `DistributedPubSub` setting that, if turned off or set to `false` (it is `on`/`true` by default), will not produce `Deadletter`s when there are no subscribers or the topic does not exist.
+
+* **Zero Existing Subscribers**: A message is sent to the DeadLetter if **`Send-to-dead-letters-when-no-subscribers`** is on/true and there are no existing subscriber(s) to receive it. `Akka.Cluster.DistributedPubSub` does not support queueing up messages while there are no existing subscribers!
+
+* **Terminated Topic Actor**: When there are no existing subscribers and no new subscription for a duration of, say 2 minutes (the default for `removed-time-to-live`), the Topic Actor is terminated and if **`Send-to-dead-letters-when-no-subscribers`** is on/true, messages are sent to DeadLetter.
 
 ## DistributedPubSub Extension
 

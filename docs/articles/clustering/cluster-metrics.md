@@ -72,11 +72,11 @@ Let’s take a look at this router in action. What can be more demanding than ca
 
 The backend worker that performs the factorial calculation:
 
-[!code-csharp[RouterUsageSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RouterUsageSample.cs?name=FactorialBackend)]
+[!code-csharp[RoutersUsageSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RoutersUsageSample.cs?name=FactorialBackend)]
 
 The frontend that receives user jobs and delegates to the backends via the router:
 
-[!code-csharp[RouterUsageSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RouterUsageSample.cs?name=FactorialFrontend)]
+[!code-csharp[RoutersUsageSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RoutersUsageSample.cs?name=FactorialFrontend)]
 
 As you can see, the router is defined in the same way as other routers, and in this case it is configured as follows:
 

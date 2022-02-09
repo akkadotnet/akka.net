@@ -11,6 +11,7 @@ using Akka.Util.Internal;
 
 namespace DocsExamples.Networking.IO
 {
+    // <echoConnection>
     public class EchoConnection : UntypedActor
     {
         private readonly IActorRef _connection;
@@ -33,4 +34,6 @@ namespace DocsExamples.Networking.IO
             else Unhandled(message);
         }
     }
+
+    // </echoConnection>
 }

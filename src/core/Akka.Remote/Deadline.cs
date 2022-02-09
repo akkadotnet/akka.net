@@ -56,7 +56,7 @@ namespace Akka.Remote
 
         #region Overrides
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             var deadlineObj = ((Deadline) obj);
@@ -68,7 +68,7 @@ namespace Akka.Remote
             return When.Equals(deadlineObj.When);
         }
 
-        /// <inheritdoc/>
+      
         public override int GetHashCode()
         {
             return When.GetHashCode();

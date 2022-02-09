@@ -75,7 +75,7 @@ namespace Akka.Coordination
             return new LeaseSettings(LeaseName, OwnerName, timeoutSettings, LeaseConfig);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"LeaseSettings({ LeaseName }, { OwnerName }, { TimeoutSettings })";
