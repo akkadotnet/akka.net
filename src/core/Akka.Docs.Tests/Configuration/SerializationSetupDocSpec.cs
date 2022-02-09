@@ -125,5 +125,84 @@ namespace DocsExamples.Configuration
             }
             // </Verification>
         }
+        [Fact]
+        public void UnsolvableSubstitutionWillThrowSample()
+        {
+            // <UnsolvableSubstitutionWillThrowSample>
+            // This substitution will throw an exception because it is a required substitution,
+            // and we can not resolve it.
+            
+            var hoconString = "from_environment = ${does-not-exist}";
+
+            Assert.Throws<FormatException>(() =>
+               {
+                   Config config = hoconString;
+               }).Message.Should().StartWith("Unresolved substitution");
+            // </UnsolvableSubstitutionWillThrowSample>
+        }
+        [Fact]
+        public void StringSubstitutionSample()
+        {
+            // <StringSubstitutionSample>
+            // ${string_bar} will be substituted by 'bar' and concatenated with `foo` into `foobar`
+            var hoconString = @"
+            string_bar = bar
+            string_foobar = foo${string_bar}
+            ";
+            var config = ConfigurationFactory.ParseString(hoconString); // This config uses ConfigurationFactory as a helper
+            config.GetString("string_foobar").Should().Be("foobar");
+            // </StringSubstitutionSample>
+        }
+        [Fact]
+        public void ArraySubstitutionSample()
+        {
+            // <ArraySubstitutionSample>
+            // ${a} will be substituted by the array [1, 2] and concatenated with [3, 4] to create [1, 2, 3, 4]
+            var hoconString = @"
+            a = [1,2]
+            b = ${a} [3, 4]";
+            Config config = hoconString; // This Config uses implicit conversion from string directly into a Config object
+            (new[] { 1, 2, 3, 4 }).Should().BeEquivalentTo(config.GetIntList("b"));
+            // </ArraySubstitutionSample>
+        }
+        [Fact]
+        public void SelfReferencingSubstitutionWithArray()
+        {
+            // <SelfReferencingSubstitutionWithArray>
+            // This is not an invalid substitution, it is a self referencing substitution, you can think of it as `a = a + [3, 4]`
+            // ${a} will be substituted with its previous value, which is [1, 2], concatenated with [3, 4] to make [1, 2, 3, 4], 
+            // and then stored back into a
+            var hoconString = @"
+            a = [1, 2]
+            a = ${a} [3, 4]
+            ";
+            Config config = hoconString;
+            var list = config.GetIntList("a");
+            (new int[] { 1, 2, 3, 4 }).Should().BeEquivalentTo(list);
+            // </SelfReferencingSubstitutionWithArray>
+        }
+        [Fact]
+        public void ObjectMergeSubstitutionSample()
+        {
+            // <ObjectMergeSubstitutionSample>
+            // ${a} will be substituted by hocon object 'a' and merged with object 'b'
+            var hoconString = @"
+            a.a : 1
+            b.b : 2
+            b : ${a}
+            ";
+            var expectedHoconString = @"{
+              a : {
+                a : 1
+              },
+              b : {
+                b : 2,
+                a : 1
+              }
+            }";                        
+            Config config = hoconString;
+            //expectedHoconString.Should().BeEquivalentTo(config.Value.ToString(1, 2));
+            // </ObjectMergeSubstitutionSample>
+        }
     }
 }

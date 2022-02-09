@@ -255,7 +255,7 @@ If a key has been specified more than once, the substitution will always evaluat
 
 If a substitution does not match any value present in the configuration and is not resolved by an external source, then it is undefined. An undefined _required substitution_ is invalid and will generate an error.
 
-[!code-csharp[ConfigurationSample](../../../src/core/Akka.Docs.Tests/Configuration/ConfigurationSample.cs?name=UnsolvableSubstitutionWillThrowSample)]
+[!code-csharp[SerializationSetupDocSpec](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=UnsolvableSubstitutionWillThrowSample)]
 
 If an _optional substitution_ is undefined:
 
@@ -271,9 +271,8 @@ A substitution is replaced with any value type (number, object, string, array, t
 
 Examples:
 
-[!code-csharp[ConfigurationSample](../../../src/core/Akka.Docs.Tests/Configuration/ConfigurationSample.cs?name=StringSubstitutionSample)]
-[!code-csharp[ConfigurationSample](../../../src/core/Akka.Docs.Tests/Configuration/ConfigurationSample.cs?name=ArraySubstitutionSample)]
-[!code-csharp[ConfigurationSample](../../../src/core/Akka.Docs.Tests/Configuration/ConfigurationSample.cs?name=ObjectMergeSubstitutionSample)]
+[!code-csharp[SerializationSetupDocSpec](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=StringSubstitutionSample)]
+[!code-csharp[SerializationSetupDocSpec](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=ArraySubstitutionSample)]
 
 #### Using Substitution to Access Environment Variables
 

@@ -207,7 +207,7 @@
 //        [Fact]
 //        public void UnsolvableSubstitutionWillThrowSample()
 //        {
-//            // <UnsolvableSubstitutionWillThrowSample>
+            // <UnsolvableSubstitutionWillThrowSample>
 //            // This substitution will throw an exception because it is a required substitution,
 //            // and we can not resolve it, even when checking for environment variables.
 //            var hoconString = "from_environment = ${MY_ENV_VAR}";
@@ -216,7 +216,7 @@
 //            {
 //                Config config = hoconString;
 //            }).Message.Should().StartWith("Unresolved substitution");
-//            // </UnsolvableSubstitutionWillThrowSample>
+            // </UnsolvableSubstitutionWillThrowSample>
 //        }
 //    }
 //}
