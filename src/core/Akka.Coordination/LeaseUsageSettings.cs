@@ -35,7 +35,7 @@ namespace Akka.Coordination
             LeaseRetryInterval = leaseRetryInterval;
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"LeaseUsageSettings({ LeaseImplementation }, { LeaseRetryInterval })";
