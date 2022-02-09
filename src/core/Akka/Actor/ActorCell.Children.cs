@@ -349,10 +349,10 @@ namespace Akka.Actor
         // In Akka JVM there is a getAllChildStats here. Use ChildrenRefs.Stats instead
 
         /// <summary>
-        /// Obsolete. Use <see cref="TryGetSingleChild(string, out IInternalActorRef)"/> instead.
+        /// Get a single child matching the name supplied
         /// </summary>
-        /// <param name="name">N/A</param>
-        /// <returns>N/A</returns>
+        /// <param name="name">the child's name</param>
+        /// <returns>IInternalActorRef</returns>
         public IInternalActorRef GetSingleChild(string name)
         {
             if (name.IndexOf('#') < 0)
