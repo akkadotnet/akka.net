@@ -164,7 +164,7 @@ namespace Akka.Persistence
         /// </summary>
         public long HighestSequenceNr { get; }
 
-        /// <inheritdoc/>
+       
         public bool Equals(AtomicWrite other)
         {
             return Equals(Payload, other.Payload)
@@ -175,7 +175,7 @@ namespace Akka.Persistence
                    && HighestSequenceNr == other.HighestSequenceNr;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -183,7 +183,7 @@ namespace Akka.Persistence
             return obj is AtomicWrite && Equals((AtomicWrite)obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -198,7 +198,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
             => $"AtomicWrite<pid: {PersistenceId}, lowSeqNr: {LowestSequenceNr}, highSeqNr: {HighestSequenceNr}, size: {Size}, sender: {Sender}>";
     }
@@ -372,7 +372,7 @@ namespace Akka.Persistence
             return new Persistent(payload: Payload, sequenceNr: sequenceNr, persistenceId: persistenceId, manifest: Manifest, isDeleted: isDeleted, sender: sender, writerGuid: writerGuid);
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(IPersistentRepresentation other)
         {
             if (other == null) return false;
@@ -388,13 +388,13 @@ namespace Akka.Persistence
                    && string.Equals(WriterGuid, other.WriterGuid);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as IPersistentRepresentation);
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(Persistent other)
         {
             return Equals(Payload, other.Payload)
@@ -406,7 +406,7 @@ namespace Akka.Persistence
                    && string.Equals(WriterGuid, other.WriterGuid);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -423,7 +423,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
             => $"Persistent<pid: {PersistenceId}, seqNr: {SequenceNr}, deleted: {IsDeleted}, manifest: {Manifest}, sender: {Sender}, payload: {Payload}, writerGuid: {WriterGuid}>";
     }

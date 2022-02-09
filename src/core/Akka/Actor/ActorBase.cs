@@ -79,7 +79,6 @@ namespace Akka.Actor
                 State = state;
             }
 
-            /// <inheritdoc/>
             public override string ToString()
                 => State is null ? $"Failure: {Cause}" : $"Failure[{State}]: {Cause}";
         }

@@ -438,16 +438,16 @@ namespace Akka.Streams.Dsl
             Duration = duration;
         }
             
-        /// <inheritdoc/>
+        
         public bool Equals(Delay other) => !ReferenceEquals(other, null) && Equals(Duration, other.Duration);
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj) => obj is Delay && Equals((Delay)obj);
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode() => Duration.GetHashCode();
 
-        /// <inheritdoc/>
+       
         public override string ToString() => $"Duration({Duration})";
     }
     }

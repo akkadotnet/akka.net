@@ -270,6 +270,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WIndowsService", "WIndowsSe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AkkaWindowsService", "examples\WindowsService\AkkaWindowsService\AkkaWindowsService.csproj", "{81851799-31D0-4C61-B862-6E75EB7FBF3D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Cpu.Benchmark", "benchmark\Akka.Cluster.Cpu.Benchmark\Akka.Cluster.Cpu.Benchmark.csproj", "{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
