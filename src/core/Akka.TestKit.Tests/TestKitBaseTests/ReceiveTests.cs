@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
@@ -83,6 +84,64 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             probe.Ref.Tell(3, TestActor);
             Func<Task> func = () => probe.FishUntilMessageAsync<int>(max: TimeSpan.FromMilliseconds(10));
             await func.Should().ThrowAsync<Exception>();
+        }
+
+        [Fact]
+        public async Task WaitForRadioSilenceAsync_should_succeed_immediately_with_null_good_input()
+        {
+            var probe = CreateTestProbe("probe");
+            var messages = await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0));
+            messages.Should().BeEquivalentTo(new ArrayList());
+        }
+
+        [Fact]
+        public async Task WaitForRadioSilenceAsync_should_succeed_immediately_with_good_pre_input()
+        {
+            var probe = CreateTestProbe("probe");
+            probe.Ref.Tell(1, TestActor);
+            var messages = await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0));
+            messages.Should().BeEquivalentTo(new ArrayList { 1 });
+        }
+
+        [Fact]
+        public async Task WaitForRadioSilenceAsync_should_succeed_later_with_good_post_input()
+        {
+            var probe = CreateTestProbe("probe");
+            var task = probe.WaitForRadioSilenceAsync();
+            probe.Ref.Tell(1, TestActor);
+            var messages = await task;
+            messages.Should().BeEquivalentTo(new ArrayList { 1 });
+        }
+
+        [Fact]
+        public async Task WaitForRadioSilenceAsync_should_reset_timer_twice_only()
+        {
+            var probe = CreateTestProbe("probe");
+            var max = TimeSpan.FromMilliseconds(100);
+            var halfMax = TimeSpan.FromMilliseconds(max.TotalMilliseconds / 2);
+            var doubleMax = TimeSpan.FromMilliseconds(max.TotalMilliseconds * 2);
+            var task = probe.WaitForRadioSilenceAsync(max: max, maxMessages: 2);
+            await Task.Delay(halfMax);
+            probe.Ref.Tell(1, TestActor);
+            await Task.Delay(halfMax);
+            probe.Ref.Tell(2, TestActor);
+            await Task.Delay(doubleMax);
+            probe.Ref.Tell(3, TestActor);
+            var messages = await task;
+            messages.Should().BeEquivalentTo(new ArrayList { 1, 2 });
+        }
+
+        [Fact]
+        public async Task WaitForRadioSilenceAsync_should_fail_immediately_with_bad_input()
+        {
+            var probe = CreateTestProbe("probe");
+            probe.Ref.Tell(3, TestActor);
+            try
+            {
+                await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0), maxMessages: 0);
+                Assert.True(false, "we should never get here");
+            }
+            catch (XunitException) { }
         }
 
         [Fact]

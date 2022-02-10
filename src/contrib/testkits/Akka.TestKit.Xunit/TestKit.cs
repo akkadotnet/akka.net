@@ -128,7 +128,7 @@ namespace Akka.TestKit.Xunit
             }
         }
 
-        /// <inheritdoc/>
+        
         public void Dispose()
         {
             Dispose(true);
