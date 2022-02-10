@@ -107,7 +107,7 @@ namespace Akka.Serialization.Hyperion
         public IEnumerable<Func<string, string>> PackageNameOverrides { get; }
         
         /// <summary>
-        /// A list of <see cref="Surrogate"/> instances that are used to de/serialize complex objects
+        /// A list of Surrogate instances that are used to de/serialize complex objects
         /// into a much simpler serialized objects.
         /// </summary>
         public IEnumerable<Surrogate> Surrogates { get; }

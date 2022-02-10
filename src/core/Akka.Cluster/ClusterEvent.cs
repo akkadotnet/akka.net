@@ -262,7 +262,7 @@ namespace Akka.Cluster
                 get { return _member; }
             }
 
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 var other = obj as MemberStatusChange;
@@ -270,7 +270,7 @@ namespace Akka.Cluster
                 return _member.Equals(other._member);
             }
 
-            /// <inheritdoc/>
+           
             public override int GetHashCode()
             {
                 unchecked
@@ -281,7 +281,7 @@ namespace Akka.Cluster
                 }
             }
 
-            /// <inheritdoc/>
+           
             public override string ToString()
             {
                 return $"{GetType()}(Member={Member})";
@@ -467,7 +467,7 @@ namespace Akka.Cluster
                 get { return _leader; }
             }
 
-            /// <inheritdoc/>
+           
             public override bool Equals(object obj)
             {
                 var other = obj as LeaderChanged;
@@ -475,7 +475,7 @@ namespace Akka.Cluster
                 return (_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader));
             }
 
-            /// <inheritdoc/>
+           
             public override int GetHashCode()
             {
                 unchecked
@@ -486,7 +486,7 @@ namespace Akka.Cluster
                 }
             }
 
-            /// <inheritdoc/>
+           
             public override string ToString()
             {
                 return $"LeaderChanged(NewLeader={Leader})";
@@ -529,7 +529,7 @@ namespace Akka.Cluster
                 get { return _role; }
             }
 
-            /// <inheritdoc/>
+           
             public override int GetHashCode()
             {
                 unchecked
@@ -541,7 +541,7 @@ namespace Akka.Cluster
                 }
             }
 
-            /// <inheritdoc/>
+           
             public override bool Equals(object obj)
             {
                 var other = obj as RoleLeaderChanged;
@@ -550,7 +550,7 @@ namespace Akka.Cluster
                     && ((_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader)));
             }
 
-            /// <inheritdoc/>
+           
             public override string ToString()
             {
                 return $"RoleLeaderChanged(Leader={Leader}, Role={Role})";
@@ -571,7 +571,7 @@ namespace Akka.Cluster
             /// </summary>
             public static readonly IClusterDomainEvent Instance = new ClusterShuttingDown();
 
-            /// <inheritdoc/>
+           
             public override string ToString()
             {
                 return "ClusterShuttingDown";
@@ -610,7 +610,7 @@ namespace Akka.Cluster
                 get { return _member; }
             }
 
-            /// <inheritdoc/>
+           
             public override bool Equals(object obj)
             {
                 var other = obj as ReachabilityEvent;
@@ -618,7 +618,7 @@ namespace Akka.Cluster
                 return _member.Equals(other._member);
             }
 
-            /// <inheritdoc/>
+           
             public override int GetHashCode()
             {
                 unchecked
@@ -629,7 +629,7 @@ namespace Akka.Cluster
                 }
             }
 
-            /// <inheritdoc/>
+           
             public override string ToString()
             {
                 return $"{GetType()}(Member={Member})";

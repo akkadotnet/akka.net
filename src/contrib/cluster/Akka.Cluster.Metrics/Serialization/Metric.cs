@@ -170,7 +170,7 @@ namespace Akka.Cluster.Metrics.Serialization
                  */
 
 
-                /// <inheritdoc />
+                
                 public bool Equals(Metric other)
                 {
                     if (ReferenceEquals(null, other)) return false;
@@ -178,7 +178,7 @@ namespace Akka.Cluster.Metrics.Serialization
                     return Name == other.Name;
                 }
 
-                /// <inheritdoc />
+                
                 public override int GetHashCode()
                 {
                     return (Name != null ? Name.GetHashCode() : 0);

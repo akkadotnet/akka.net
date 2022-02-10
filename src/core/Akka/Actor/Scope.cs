@@ -37,7 +37,6 @@ namespace Akka.Actor
         /// <returns>The newly created <see cref="Akka.Actor.Scope"/></returns>
         public abstract Scope Copy();
 
-        /// <inheritdoc/>
         public virtual bool Equals(Scope other)
         {
             if (other == null) return false;
