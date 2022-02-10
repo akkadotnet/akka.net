@@ -33,13 +33,13 @@ namespace Akka.Persistence.Serialization
         /// </summary>
         public object Data { get; private set; }
 
-        /// <inheritdoc/>
+       
         private bool Equals(Snapshot other)
         {
             return Equals(Data, other.Data);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -47,7 +47,7 @@ namespace Akka.Persistence.Serialization
             return obj is Snapshot && Equals((Snapshot)obj);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             return (Data != null ? Data.GetHashCode() : 0);

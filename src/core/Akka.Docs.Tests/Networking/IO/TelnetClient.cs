@@ -14,6 +14,7 @@ using Akka.IO;
 
 namespace DocsExamples.Networking.IO
 {
+    // <telnetClient>
     public class TelnetClient : UntypedActor
     {
         public TelnetClient(string host, int port)
@@ -68,4 +69,6 @@ namespace DocsExamples.Networking.IO
             Task.Factory.StartNew(self => Console.In.ReadLineAsync().PipeTo((ICanTell)self), Self);
         }
     }
+
+    // </telnetClient>
 }

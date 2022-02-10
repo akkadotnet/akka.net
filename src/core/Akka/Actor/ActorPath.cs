@@ -64,21 +64,18 @@ namespace Akka.Actor
 
             #region Equality
 
-            /// <inheritdoc/>
             public bool Equals(Surrogate other)
             {
                 if (other is null) return false;
                 return ReferenceEquals(this, other) || StringComparer.Ordinal.Equals(Path, other.Path);
             }
 
-            /// <inheritdoc/>
             public bool Equals(ActorPath other)
             {
                 if (other is null) return false;
                 return StringComparer.Ordinal.Equals(Path, other.ToSerializationFormat());
             }
 
-            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (obj is null) return false;
@@ -87,7 +84,6 @@ namespace Akka.Actor
                 return Equals(obj as Surrogate);
             }
 
-            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return Path.GetHashCode();
@@ -262,7 +258,6 @@ namespace Akka.Actor
         [JsonIgnore]
         public ActorPath Root => ParentOf(0);
 
-        /// <inheritdoc/>
         public bool Equals(ActorPath other)
         {
             if (other is null || _depth != other._depth)
@@ -290,7 +285,6 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc/>
         public int CompareTo(ActorPath other)
         {
             if (_depth == 0)
@@ -613,7 +607,6 @@ namespace Akka.Actor
             return Join(ReadOnlySpan<char>.Empty);
         }
 
-        /// <inheritdoc/>
         public override string ToString()
         {
             return Join(_address.ToString().AsSpan());
@@ -650,7 +643,6 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as ActorPath);

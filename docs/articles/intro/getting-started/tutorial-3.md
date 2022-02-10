@@ -146,8 +146,8 @@ we will need a way to remove those from the `Dictionary<string, IActorRef>`. We 
 is simply stopped. We need some way for the parent to be notified when one of the device actors are stopped. Unfortunately,
 supervision will not help because it is used for error scenarios, not graceful stopping.
 
-There is a feature in Akka.NET that is exactly what we need here. It is possible for an actor to _watch_ another actor
-and be notified if the other actor is stopped. This feature is called _Death Watch_ and it is an important tool for
+There is a feature in Akka.NET that is exactly what we need here. It is possible for an actor to *watch* another actor
+and be notified if the other actor is stopped. This feature is called *Death Watch* and it is an important tool for
 any Akka.NET application. Unlike supervision, watching is not limited to parent-child relationships, any actor can watch
 any other actor given its `IActorRef`. After a watched actor stops, the watcher receives a `Terminated(ref)` message
 which also contains the reference to the watched actor. The watcher can either handle this message explicitly or, if
@@ -176,7 +176,7 @@ We almost have everything to test the removal of devices. What is missing is:
 
 * Stopping a device actor from our test case, from the outside: any actor can be stopped by simply sending a special
    built-in message, `PoisonPill`, which instructs the actor to stop.
-* Be notified once the device actor is stopped: we can use the _Death Watch_ facility for this purpose, too. Thankfully
+* Be notified once the device actor is stopped: we can use the *Death Watch* facility for this purpose, too. Thankfully
    the `TestProbe` has two messages that we can easily use, `Watch()` to watch a specific actor, and `ExpectTerminated`
    to assert that the watched actor has been terminated.
 

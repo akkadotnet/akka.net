@@ -227,7 +227,7 @@ namespace Akka.Streams.Stage
     /// <summary>
     /// An asynchronous callback holder that is attached to an <see cref="IAsyncContext{TOut,TExt}"/>.
     /// 
-    /// Invoking <see cref="Invoke"/> will eventually lead to <see cref="GraphInterpreter.OnAsyncInput"/>
+    /// Invoking will eventually lead to <see cref="GraphInterpreter.OnAsyncInput"/>
     /// being called.
     /// 
     /// Dispatch an asynchronous notification. This method is thread-safe and

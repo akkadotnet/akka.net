@@ -134,7 +134,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         public ByteString Payload { get; private set; }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"InboundPayload(size = {Payload.Length} bytes)";
@@ -404,7 +404,7 @@ namespace Akka.Remote.Transport
 #pragma warning restore 618
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -413,13 +413,13 @@ namespace Akka.Remote.Transport
             return Equals((AssociationHandle) obj);
         }
 
-        /// <inheritdoc/>
+        
         protected bool Equals(AssociationHandle other)
         {
             return Equals(LocalAddress, other.LocalAddress) && Equals(RemoteAddress, other.RemoteAddress);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked

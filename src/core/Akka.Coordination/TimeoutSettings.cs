@@ -103,7 +103,7 @@ namespace Akka.Coordination
             return new TimeoutSettings(heartbeatInterval ?? HeartbeatInterval, heartbeatTimeout ?? HeartbeatTimeout, operationTimeout ?? OperationTimeout);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"TimeoutSettings({ HeartbeatInterval }, { HeartbeatTimeout }, { OperationTimeout })";
