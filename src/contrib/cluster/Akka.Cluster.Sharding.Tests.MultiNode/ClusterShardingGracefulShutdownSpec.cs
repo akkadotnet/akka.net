@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Remote.TestKit;
 using FluentAssertions;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -30,7 +30,6 @@ namespace Akka.Cluster.Sharding.Tests
             }
             # don't leak ddata state across runs
             akka.cluster.sharding.distributed-data.durable.keys = []
-            akka.persistence.journal.leveldb-shared.store.native = off
 
             # We set this high to allow pausing coordinated shutdown make sure the handoff completes 'immediately' and not
             # relies on the member removal, which could make things take longer then necessary

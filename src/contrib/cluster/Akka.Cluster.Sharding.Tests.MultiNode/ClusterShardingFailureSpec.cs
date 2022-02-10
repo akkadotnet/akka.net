@@ -31,7 +31,6 @@ namespace Akka.Cluster.Sharding.Tests
             }
             # don't leak ddata state across runs
             akka.cluster.sharding.distributed-data.durable.keys = []
-            akka.persistence.journal.leveldb-shared.store.native = off
             ")
         {
             Controller = Role("controller");
