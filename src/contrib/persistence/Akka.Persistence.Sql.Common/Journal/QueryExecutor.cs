@@ -888,9 +888,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// Override this to customize <see cref="DbParameter"/> creation used for building database queries
+        /// Override this to customize <see cref="@DbParameter"/> creation used for building database queries
         /// </summary>
-        /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
+        /// <param name="command"><see cref="@DbCommand"/> used to define a parameter in.</param>
         /// <param name="param">Parameter to customize</param>
         protected virtual void PreAddParameterToCommand(DbCommand command, DbParameter param) { }
     }

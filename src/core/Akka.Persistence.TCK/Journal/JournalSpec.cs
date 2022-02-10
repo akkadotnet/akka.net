@@ -97,8 +97,7 @@ namespace Akka.Persistence.TCK.Journal
 
         /// <summary>
         /// Implementation may override and return false if it does not support
-        /// atomic writes of several events, as emitted by
-        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent})"/>.
+        /// atomic writes of several events, as emitted by <see cref="@Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent})"/>.
         /// </summary>
         protected virtual bool SupportsAtomicPersistAllOfSeveralEvents { get { return true; } }
 

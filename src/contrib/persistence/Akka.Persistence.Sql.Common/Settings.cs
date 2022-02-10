@@ -60,7 +60,7 @@ namespace Akka.Persistence.Sql.Common
         /// Initializes a new instance of the <see cref="JournalSettings"/> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the settings.</param>
-        /// <exception cref="ArgumentNullException">
+        /// <exception  cref="@ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="config"/> is undefined.
         /// </exception>
         public JournalSettings(Config config)
@@ -123,7 +123,7 @@ namespace Akka.Persistence.Sql.Common
         /// Initializes a new instance of the <see cref="SnapshotStoreSettings"/> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the settings.</param>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="@ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="config"/> is undefined.
         /// </exception>
         public SnapshotStoreSettings(Config config)

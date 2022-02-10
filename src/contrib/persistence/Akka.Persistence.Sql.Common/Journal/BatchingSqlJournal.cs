@@ -60,14 +60,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         public bool IsEnabled => Mode != ReplayFilterMode.Disabled;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ReplayFilterSettings" /> class.
+        /// Initializes a new instance of the @ReplayFilterSettings /> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the replay filter.</param>
-        /// <exception cref="ConfigurationException">
+        /// <exception  cref="@ConfigurationException">
         /// This exception is thrown when an invalid <c>replay-filter.mode</c> is read from the specified <paramref name="config"/>.
         /// Acceptable <c>replay-filter.mode</c> values include: off | repair-by-discard-old | fail | warn
         /// </exception>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="@ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="config"/> is undefined.
         /// </exception>
         public ReplayFilterSettings(Config config)
@@ -109,7 +109,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     /// <summary>
-    /// Settings used by <see cref="CircuitBreaker"/> used internally by
+    /// Settings used by <see cref="@CircuitBreaker"/> used internally by
     /// the batching journal when executing event batches.
     /// </summary>
     public sealed class CircuitBreakerSettings
@@ -121,22 +121,22 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         /// <summary>
         /// Maximum time available for operation to execute before 
-        /// <see cref="CircuitBreaker"/> considers it a failure.
+        /// <see cref="@CircuitBreaker"/> considers it a failure.
         /// </summary>
         public TimeSpan CallTimeout { get; }
 
         /// <summary>
-        /// Timeout that has to pass before <see cref="CircuitBreaker"/>
+        /// Timeout that has to pass before <see cref="@CircuitBreaker"/>
         /// moves into half-closed state, trying to eventually close 
         /// after sampling an operation.
         /// </summary>
         public TimeSpan ResetTimeout { get; }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="CircuitBreakerSettings"/> from provided HOCON <paramref name="config"/>.
+        /// Creates a new instance of the <see cref="@CircuitBreakerSettings"/> from provided HOCON <paramref name="config"/>.
         /// </summary>
         /// <param name="config">The configuration used to configure the circuit breaker.</param>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="@ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="config"/> is undefined.
         /// </exception>
         public CircuitBreakerSettings(Config config)
@@ -150,14 +150,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="CircuitBreakerSettings" /> class.
+        /// Initializes a new instance of the <see cref="@CircuitBreakerSettings"/> class.
         /// </summary>
         /// <param name="maxFailures">The maximum number of failures that can happen before the circuit opens.</param>
         /// <param name="callTimeout">
-        /// The maximum time available for operation to execute before <see cref="CircuitBreaker"/> considers it a failure.
+        /// The maximum time available for operation to execute before <see cref="@CircuitBreaker"/> considers it a failure.
         /// </param>
         /// <param name="resetTimeout">
-        /// The amount of time before <see cref="CircuitBreaker"/> moves into the half-closed state.
+        /// The amount of time before <see cref="@CircuitBreaker"/> moves into the half-closed state.
         /// </param>
         public CircuitBreakerSettings(int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
         {
@@ -180,13 +180,13 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         /// <summary>
         /// Maximum number of batch operations allowed to be executed at the same time.
-        /// Each batch operation must acquire a <see cref="DbConnection"/>, so this setting
+        /// Each batch operation must acquire a <see cref="@DbConnection"/>, so this setting
         /// can be effectively used to limit the usage of ADO.NET connection pool by current journal.
         /// </summary>
         public int MaxConcurrentOperations { get; }
 
         /// <summary>
-        /// Maximum size of single batch of operations to be executed over a single <see cref="DbConnection"/>.
+        /// Maximum size of single batch of operations to be executed over a single <see cref="@DbConnection"/>.
         /// </summary>
         public int MaxBatchSize { get; }
 
@@ -205,7 +205,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public bool AutoInitialize { get; }
 
         /// <summary>
-        /// Maximum time given for executed <see cref="DbCommand"/> to complete.
+        /// Maximum time given for executed <see cref="@DbCommand"/> to complete.
         /// </summary>
         public TimeSpan ConnectionTimeout { get; }
 
@@ -215,7 +215,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public IsolationLevel IsolationLevel { get; }
 
         /// <summary>
-        /// Settings specific to <see cref="CircuitBreaker"/>, which is used internally 
+        /// Settings specific to <see cref="@CircuitBreaker"/>, which is used internally 
         /// for executing request batches.
         /// </summary>
         public CircuitBreakerSettings CircuitBreakerSettings { get; }
@@ -246,7 +246,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="config">The configuration used to configure the journal.</param>
         /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
-        /// <exception cref="ConfigurationException">
+        /// <exception cref="@ConfigurationException">
         /// This exception is thrown for a couple of reasons.
         /// <ul>
         /// <li>A connection string for the SQL event journal was not specified.</li>
@@ -256,7 +256,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </li>
         /// </ul>
         /// </exception>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="@ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="config"/> is undefined.
         /// </exception>
         protected BatchingSqlJournalSetup(Config config, QueryConfiguration namingConventions)
@@ -307,17 +307,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="connectionString">The connection string used to connect to the database.</param>
         /// <param name="maxConcurrentOperations">The maximum number of batch operations allowed to be executed at the same time.</param>
-        /// <param name="maxBatchSize">The maximum size of single batch of operations to be executed over a single <see cref="DbConnection"/>.</param>
+        /// <param name="maxBatchSize">The maximum size of single batch of operations to be executed over a single <see cref="@DbConnection"/>.</param>
         /// <param name="maxBufferSize">The maximum size of requests stored in journal buffer.</param>
         /// <param name="autoInitialize">
         /// If set to <c>true</c>, the journal executes all SQL scripts stored under the
         /// <see cref="BatchingSqlJournal{TConnection,TCommand}.Initializers"/> collection prior
         /// to starting executing any requests.
         /// </param>
-        /// <param name="connectionTimeout">The maximum time given for executed <see cref="DbCommand"/> to complete.</param>
+        /// <param name="connectionTimeout">The maximum time given for executed <see cref="@DbCommand"/> to complete.</param>
         /// <param name="isolationLevel">The isolation level of transactions used during query execution.</param>
         /// <param name="circuitBreakerSettings">
-        /// The settings used by the <see cref="CircuitBreaker"/> when for executing request batches.
+        /// The settings used by the <see cref="@CircuitBreaker"/> when for executing request batches.
         /// </param>
         /// <param name="replayFilterSettings">The settings used when replaying events from database back to the persistent actors.</param>
         /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
@@ -341,7 +341,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// <summary>
     /// An abstract journal used by <see cref="PersistentActor"/>s to read/write events to a database.
     /// 
-    /// This implementation uses horizontal batching to recycle usage of the <see cref="DbConnection"/> 
+    /// This implementation uses horizontal batching to recycle usage of the <see cref="@DbConnection"/> 
     /// and to optimize writes made to a database. Batching journal is not going to acquire a new DB
     /// connection on every request. Instead it will batch incoming requests and execute them only when
     /// a previous operation batch has been completed. This means that requests coming from many 
@@ -356,8 +356,8 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// will start to apply <see cref="OnBufferOverflow"/> logic on each incoming requests, until a
     /// buffer gets freed again. This may be used for overflow strategies, request denials or backpressure.
     /// </summary>
-    /// <typeparam name="TConnection">A concrete implementation of <see cref="DbConnection"/> for targeted database provider.</typeparam>
-    /// <typeparam name="TCommand">A concrete implementation of <see cref="DbCommand"/> for targeted database provider.</typeparam>
+    /// <typeparam name="TConnection">A concrete implementation of <see cref="@DbConnection"/> for targeted database provider.</typeparam>
+    /// <typeparam name="TCommand">A concrete implementation of <see cref="@DbCommand"/> for targeted database provider.</typeparam>
     public abstract class BatchingSqlJournal<TConnection, TCommand> : WriteJournalBase
         where TConnection : DbConnection
         where TCommand : DbCommand
@@ -443,7 +443,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected const int PayloadIndex = 5;
 
         /// <summary>
-        /// Default index of <see cref="Serializer.Identifier"/>
+        /// Default index of <see cref="@Serializer.Identifier"/>
         /// </summary>
         protected const int SerializerIdIndex = 6;
 
@@ -892,7 +892,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         #endregion
 
         /// <summary>
-        /// Tries to add incoming <paramref name="message"/> to <see cref="Buffer"/>.
+        /// Tries to add incoming <paramref name="message"/> to <see cref="@Buffer"/>.
         /// Also checks if any DB connection has been released and next batch can be processed.
         /// </summary>
         /// <param name="message">TBD</param>
@@ -917,7 +917,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// Method called, once given <paramref name="request"/> couldn't be added to <see cref="Buffer"/>
+        /// Method called, once given <paramref name="request"/> couldn't be added to <see cref="@Buffer"/>
         /// due to buffer overflow. Overflow is controlled by max buffer size and can be set using 
         /// <see cref="BatchingSqlJournalSetup.MaxBufferSize"/> setting.
         /// </summary>
@@ -1394,7 +1394,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Helper method used to add a parameter to existing database <paramref name="command"/>.
         /// </summary>
-        /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
+        /// <param name="command"><see cref="@DbCommand"/> used to define a parameter in.</param>
         /// <param name="paramName">Query or procedure parameter name.</param>
         /// <param name="dbType">Database type of a query or procedure parameter.</param>
         /// <param name="value">Value of a query or procedure parameter.</param>
@@ -1412,9 +1412,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// Override this to customize <see cref="DbParameter"/> creation used for building database queries
+        /// Override this to customize <see cref="@DbParameter"/> creation used for building database queries
         /// </summary>
-        /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
+        /// <param name="command"><see cref="@DbCommand"/> used to define a parameter in.</param>
         /// <param name="param">Parameter to customize</param>
         protected virtual void PreAddParameterToCommand(TCommand command, DbParameter param) { }
         
@@ -1550,8 +1550,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Initializes a new instance of the <see cref="JournalBufferOverflowException" /> class.
         /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        /// <param name="info">The <see cref="@SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="@StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected JournalBufferOverflowException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {

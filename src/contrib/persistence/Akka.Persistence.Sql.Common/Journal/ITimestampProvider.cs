@@ -24,7 +24,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
     
     /// <summary>
-    /// Default implementation of timestamp provider. Returns <see cref="DateTime.UtcNow"/> for any message.
+    /// Default implementation of timestamp provider. Returns <see cref="@DateTime.UtcNow"/> for any message.
     /// </summary>
     public sealed class DefaultTimestampProvider : ITimestampProvider
     {

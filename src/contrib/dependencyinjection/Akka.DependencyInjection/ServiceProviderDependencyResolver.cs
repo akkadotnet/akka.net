@@ -14,7 +14,7 @@ namespace Akka.DependencyInjection
     /// <summary>
     /// INTERNAL API.
     ///
-    /// <see cref="IDependencyResolver"/> implementation backed by <see cref="IServiceProvider"/>
+    /// <see cref="IDependencyResolver"/> implementation backed by <see cref="@IServiceProvider"/>
     /// </summary>
     public class ServiceProviderDependencyResolver : IDependencyResolver
     {

@@ -131,7 +131,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// 'akka.persistence.journal.sql-server' scope with 'schema-name' and 'table-name' keys.
         /// </summary>
         /// <param name="messages">TBD</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <exception cref="@InvalidOperationException">TBD</exception>
         /// <returns>TBD</returns>
         protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {

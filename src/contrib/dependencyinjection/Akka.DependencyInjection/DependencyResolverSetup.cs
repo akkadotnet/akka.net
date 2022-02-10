@@ -13,9 +13,9 @@ namespace Akka.DependencyInjection
 {
     /// <summary>
     /// Used to help bootstrap an <see cref="ActorSystem"/> with dependency injection (DI)
-    /// support via a <see cref="IServiceProvider"/> reference.
+    /// support via a <see cref="@IServiceProvider"/> reference.
     ///
-    /// The <see cref="IServiceProvider"/> will be used to access previously registered services
+    /// The <see cref="@IServiceProvider"/> will be used to access previously registered services
     /// in the creation of actors and other pieces of infrastructure inside Akka.NET.
     ///
     /// The constructor is internal. Please use <see cref="Create"/> to create a new instance.
@@ -58,8 +58,8 @@ namespace Akka.DependencyInjection
         }
 
         /// <summary>
-        /// Creates a new instance of DependencyResolverSetup, passing in <see cref="IServiceProvider"/>
-        /// here creates an <see cref="IDependencyResolver"/> that resolves dependencies from the specified <see cref="IServiceProvider"/>
+        /// Creates a new instance of DependencyResolverSetup, passing in <see cref="@IServiceProvider"/>
+        /// here creates an <see cref="IDependencyResolver"/> that resolves dependencies from the specified <see cref="@IServiceProvider"/>
         /// </summary>
         public static DependencyResolverSetup Create(IServiceProvider provider)
         {

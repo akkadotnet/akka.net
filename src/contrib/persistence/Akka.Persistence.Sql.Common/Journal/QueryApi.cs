@@ -199,7 +199,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="toOffset">TBD</param>
         /// <param name="max">TBD</param>
         /// <param name="replyTo">TBD</param>
-        /// <exception cref="ArgumentException">
+        /// <exception cref="@ArgumentException">
         /// This exception is thrown for a number of reasons. These include the following:
         /// <ul>
         /// <li>The specified <paramref name="fromOffset"/> is less than zero.</li>
@@ -351,7 +351,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="max">TBD</param>
         /// <param name="tag">TBD</param>
         /// <param name="replyTo">TBD</param>
-        /// <exception cref="ArgumentException">
+        /// <exception cref="@ArgumentException">
         /// This exception is thrown for a number of reasons. These include the following:
         /// <ul>
         /// <li>The specified <paramref name="fromOffset"/> is less than zero.</li>
@@ -359,7 +359,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
         /// </ul>
         /// </exception>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="@ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="tag"/> is null or empty.
         /// </exception>
         public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, IActorRef replyTo)

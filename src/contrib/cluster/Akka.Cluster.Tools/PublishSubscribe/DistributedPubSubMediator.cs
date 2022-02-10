@@ -145,7 +145,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// TBD
         /// </summary>
         /// <param name="settings">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="@ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
         public DistributedPubSubMediator(DistributedPubSubSettings settings)
         {

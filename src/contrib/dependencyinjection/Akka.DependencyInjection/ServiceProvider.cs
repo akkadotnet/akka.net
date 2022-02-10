@@ -14,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Akka.DependencyInjection
 {
     /// <summary>
-    /// Provides users with immediate access to the <see cref="IServiceProvider"/> bound to
+    /// Provides users with immediate access to the <see cref="@IServiceProvider"/> bound to
     /// this <see cref="ActorSystem"/>, if any.
     /// </summary>
     /// <remarks>
@@ -29,11 +29,11 @@ namespace Akka.DependencyInjection
         }
 
         /// <summary>
-        /// The globally scoped <see cref="IServiceProvider"/>.
+        /// The globally scoped <see cref="@IServiceProvider"/>.
         /// </summary>
         /// <remarks>
         /// Per https://docs.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines - please use
-        /// the appropriate <see cref="IServiceScope"/> for your actors and the dependencies they consume. DI is typically
+        /// the appropriate <see cref="@IServiceScope"/> for your actors and the dependencies they consume. DI is typically
         /// not used for long-lived, stateful objects such as actors. 
         ///
         /// Therefore, injecting transient dependencies via constructors is a bad idea in most cases. You'd be far better off
