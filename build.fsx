@@ -1,3 +1,5 @@
+open System.Runtime.ExceptionServices
+
 #I @"tools/FAKE/tools"
 #r "FakeLib.dll"
 
@@ -26,7 +28,7 @@ let outputMultiNode = outputTests @@ "multinode"
 let outputFailedMultiNode = outputTests @@ "multinode" @@ "FAILED_SPECS_LOGS"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard2.0"
-let outputBinariesNet = outputBinaries @@ "net5.0"
+let outputBinariesNet = outputBinaries @@ "net6.0"
 
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
 let hasTeamCity = (not (buildNumber = "0")) // check if we have the TeamCity environment variable for build # set
@@ -55,7 +57,7 @@ let incrementalistReport = output @@ "incrementalist.txt"
 // Configuration values for tests
 let testNetFrameworkVersion = "net471"
 let testNetCoreVersion = "netcoreapp3.1"
-let testNetVersion = "net5.0"
+let testNetVersion = "net6.0"
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -238,7 +240,11 @@ Target "RunTests" (fun _ ->
         let rawProjects = match (isWindows) with
                             | true -> !! "./src/**/*.Tests.*sproj"
                                       ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                      -- "./src/**/*.Tests.MultiNode.csproj"
+                                      -- "./src/examples/**"
                             | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                   -- "./src/**/*.Tests.MultiNode.csproj"
+                                   -- "./src/examples/**"
         rawProjects |> Seq.choose filterProjects
 
     let runSingleProject project =
@@ -264,7 +270,11 @@ Target "RunTestsNetCore" (fun _ ->
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.*sproj"
                                           ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                          -- "./src/**/*.Tests.MultiNode.csproj"
+                                          -- "./src/examples/**"
                                 | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                       -- "./src/**/*.Tests.MultiNode.csproj"
+                                       -- "./src/examples/**"
             rawProjects |> Seq.choose filterProjects
 
         let runSingleProject project =
@@ -290,7 +300,11 @@ Target "RunTestsNet" (fun _ ->
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.*sproj"
                                           ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                          -- "./src/**/*.Tests.MultiNode.csproj"
+                                          -- "./src/examples/**"
                                 | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                       -- "./src/**/*.Tests.MultiNode.csproj"
+                                       -- "./src/examples/**"
             rawProjects |> Seq.choose filterProjects
 
         let runSingleProject project =
@@ -310,124 +324,84 @@ Target "RunTestsNet" (fun _ ->
         projects |> Seq.iter (runSingleProject)
 )
 
-Target "MultiNodeTests" (fun _ ->
-    if not skipBuild.Value then
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetFrameworkVersion)
-
-        let projects =
-            let rawProjects = match (isWindows) with
-                                | true -> !! "./src/**/*.Tests.MultiNode.csproj"
-                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
-            rawProjects |> Seq.choose filterProjects
-
-        let multiNodeTestAssemblies =
-            projects |> Seq.choose (getTestAssembly Runtime.NetFramework)
-
-        printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
-
-        let runMultiNodeSpec assembly =
-            let spec = getBuildParam "spec"
-
-            let args = StringBuilder()
-                    |> append assembly
-                    |> append (sprintf "-Dmultinode.reporter=%s" (if hasTeamCity then "teamcity" else "trx"))
-                    |> append "-Dmultinode.enable-filesink=on"
-                    |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
-                    |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
-                    |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
-                    |> toText
-
-            let result = ExecProcess(fun info ->
-                info.FileName <- multiNodeTestPath
-                info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
-                info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
-            if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
-
-        multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
-)
-
 Target "MultiNodeTestsNetCore" (fun _ ->
     if not skipBuild.Value then
         setEnvironVar "AKKA_CLUSTER_ASSERT" "on" // needed to enable assert invariants for Akka.Cluster
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ "win10-x64" @@ "publish")
 
         let projects =
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
-                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                | _ -> !! "./src/**/*.Tests.MultiNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
             rawProjects |> Seq.choose filterProjects
 
-        let multiNodeTestAssemblies =
-            projects |> Seq.choose (getTestAssembly Runtime.NetCore)
+        let projectDlls = projects |> Seq.map ( fun project ->
+                let assemblyName = fileNameWithoutExt project
+                (directory project) @@ "bin" @@ "Release" @@ testNetCoreVersion @@ assemblyName + ".dll" 
+            )
+        
+        let runSingleProject projectDll =
+            let arguments =
+                match (hasTeamCity) with
+                | true -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -teamcity" projectDll testNetCoreVersion outputMultiNode)
+                | false -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\"" projectDll testNetCoreVersion outputMultiNode)
 
-        printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
+            let resultPath = (directory projectDll)
+            File.WriteAllText(
+                (resultPath @@ "xunit.multinode.runner.json"),
+                (sprintf "{\"outputDirectory\":\"%s\"}" outputMultiNode).Replace("\\", "\\\\"))
+            
+            let result = ExecProcess(fun info ->
+                info.FileName <- "dotnet"
+                info.WorkingDirectory <- outputMultiNode
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 90.0)
 
-        let runMultiNodeSpec assembly =
-            match assembly with
-            | null -> ()
-            | _ ->
-                let spec = getBuildParam "spec"
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
-                let args = StringBuilder()
-                        |> append multiNodeTestPath
-                        |> append assembly
-                        |> append "-Dmultinode.reporter=trx"
-                        |> append "-Dmultinode.enable-filesink=on"
-                        |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
-                        |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
-                        |> append "-Dmultinode.platform=netcore"
-                        |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
-                        |> toText
-
-                let result = ExecProcess(fun info ->
-                    info.FileName <- "dotnet"
-                    info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
-                    info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
-                if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
-
-        multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+        CreateDir outputMultiNode
+        projectDlls |> Seq.iter ( fun projectDll -> 
+            runSingleProject projectDll
+        )
 )
+
 Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
         setEnvironVar "AKKA_CLUSTER_ASSERT" "on" // needed to enable assert invariants for Akka.Cluster
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "win10-x64" @@ "publish")
 
         let projects =
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
-                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                | _ -> !! "./src/**/*.Tests.MultiNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
             rawProjects |> Seq.choose filterProjects
 
-        let multiNodeTestAssemblies =
-            projects |> Seq.choose (getTestAssembly Runtime.Net)
+        let projectDlls = projects |> Seq.map ( fun project ->
+                let assemblyName = fileNameWithoutExt project
+                (directory project) @@ "bin" @@ "Release" @@ testNetVersion @@ assemblyName + ".dll" 
+            )
+        
+        let runSingleProject projectDll =
+            let arguments =
+                match (hasTeamCity) with
+                | true -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -teamcity" projectDll testNetVersion outputMultiNode)
+                | false -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\"" projectDll testNetVersion outputMultiNode)
 
-        printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
+            let resultPath = (directory projectDll)
+            File.WriteAllText(
+                (resultPath @@ "xunit.multinode.runner.json"),
+                (sprintf "{\"outputDirectory\":\"%s\"}" outputMultiNode).Replace("\\", "\\\\"))
+            
+            let result = ExecProcess(fun info ->
+                info.FileName <- "dotnet"
+                info.WorkingDirectory <- outputMultiNode
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 90.0)
 
-        let runMultiNodeSpec assembly =
-            match assembly with
-            | null -> ()
-            | _ ->
-                let spec = getBuildParam "spec"
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
-                let args = StringBuilder()
-                        |> append multiNodeTestPath
-                        |> append assembly
-                        |> append "-Dmultinode.reporter=trx"
-                        |> append "-Dmultinode.enable-filesink=on"
-                        |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
-                        |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
-                        |> append "-Dmultinode.platform=net5"
-                        |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
-                        |> toText
-
-                let result = ExecProcess(fun info ->
-                    info.FileName <- "dotnet"
-                    info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
-                    info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
-                if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
-
-        multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+        CreateDir outputMultiNode
+        projectDlls |> Seq.iter ( fun projectDll -> 
+            runSingleProject projectDll
+        )
 )
+
 Target "NBench" (fun _ ->
     ensureDirectory outputPerfTests
     let projects =
@@ -746,7 +720,6 @@ Target "RunTestsNetCoreFull" DoNothing
 
 "BuildRelease" ==> "MultiNodeTestsNetCore"
 "BuildRelease" ==> "MultiNodeTestsNet"
-"BuildRelease" ==> "MultiNodeTests"
 
 // nuget dependencies
 "BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
@@ -759,7 +732,6 @@ Target "RunTestsNetCoreFull" DoNothing
 "RunTests" ==> "All"
 "RunTestsNetCore" ==> "All"
 "RunTestsNet" ==> "All"
-"MultiNodeTests" ==> "All"
 "MultiNodeTestsNetCore" ==> "All"
 "MultiNodeTestsNet" ==> "All"
 "NBench" ==> "All"

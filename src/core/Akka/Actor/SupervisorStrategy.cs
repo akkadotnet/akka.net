@@ -449,7 +449,6 @@ namespace Akka.Actor
 
         #region Equals
 
-        /// <inheritdoc/>
         public bool Equals(OneForOneStrategy other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -460,13 +459,13 @@ namespace Akka.Actor
                    Decider.Equals(other.Decider);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as OneForOneStrategy);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -715,7 +714,6 @@ namespace Akka.Actor
 
         #region Equals
 
-        /// <inheritdoc/>
         public bool Equals(AllForOneStrategy other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -726,13 +724,11 @@ namespace Akka.Actor
                    Decider.Equals(other.Decider);
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as AllForOneStrategy);
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -750,6 +746,7 @@ namespace Akka.Actor
     /// <summary>
     /// Collection of failures, used to keep track of how many times a given actor has failed.
     /// </summary>
+    [Obsolete("Use List of Akka.Actor.Status.Failure")]
     public class Failures
     {
         /// <summary>
@@ -769,6 +766,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Represents a single failure.
     /// </summary>
+    [Obsolete("Use Akka.Actor.Status.Failure")]
     public class Failure
     {
         /// <summary>
@@ -975,7 +973,6 @@ namespace Akka.Actor
             return DefaultDirective;
         }
 
-        /// <inheritdoc/>
         public bool Equals(DeployableDecider other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -985,13 +982,11 @@ namespace Akka.Actor
                    Pairs.SequenceEqual(other.Pairs);
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeployableDecider);
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked

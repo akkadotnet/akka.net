@@ -224,3 +224,4 @@ launchSettings.json
 # NDepend
 *.ndproj
 /[Nn][Dd]epend[Oo]ut
+.ionide/symbolCache.db

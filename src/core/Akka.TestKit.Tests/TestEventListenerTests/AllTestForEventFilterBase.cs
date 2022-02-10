@@ -7,7 +7,9 @@
 
 using System;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Event;
+using Akka.TestKit.Xunit2.Internals;
 using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
@@ -170,6 +172,27 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             ex.Should().NotBeNull("Expected 0 errors logged, but there are error logs");
         }
 
+        /// <summary>
+        /// issue: InternalExpectAsync does not await actionAsync() - causing actionAsync to run as a detached task #5537
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task ExpectAsync_should_await_actionAsync()
+        {
+            /// the following assert failed before the fix and passed after the fix
+            await Assert.ThrowsAnyAsync<AkkaEqualException>(async () =>
+            {
+                await EventFilter.Error().ExpectAsync(0, actionAsync: async () =>
+                {
+                    var probe = CreateTestProbe();
+                    probe.Tell("hello");
+                    probe.ExpectMsg("hello");
+                    probe.Reply("world");
+                    await Task.Run(() => { ExpectMsg("world2"); });
+                });
+            });
+        }
+
         [Fact]
         public void Messages_can_be_muted()
         {
@@ -220,12 +243,12 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
                 .ForLogLevel(LogLevel,message:"Message 1").And
                 .ForLogLevel(LogLevel,message:"Message 3")
                 .Expect(2,() =>
-                {
-                    LogMessage("Message 1");
-                    LogMessage("Message 2");
-                    LogMessage("Message 3");
+                 {
+                     LogMessage("Message 1");
+                     LogMessage("Message 2");
+                     LogMessage("Message 3");
 
-                });
+                 });
             ExpectMsg<TLogEvent>(m => (string) m.Message == "Message 2");
         }
 

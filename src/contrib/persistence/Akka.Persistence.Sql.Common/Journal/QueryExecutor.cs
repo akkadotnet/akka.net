@@ -343,9 +343,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             HighestSequenceNrSql = $@"
                 SELECT MAX(u.SeqNr) as SequenceNr 
                 FROM (
-                    SELECT e.{Configuration.SequenceNrColumnName} as SeqNr FROM {Configuration.FullJournalTableName} e WHERE e.{Configuration.PersistenceIdColumnName} = @PersistenceId
+                    SELECT MAX(e.{Configuration.SequenceNrColumnName}) as SeqNr FROM {Configuration.FullJournalTableName} e WHERE e.{Configuration.PersistenceIdColumnName} = @PersistenceId
                     UNION
-                    SELECT m.{Configuration.SequenceNrColumnName} as SeqNr FROM {Configuration.FullMetaTableName} m WHERE m.{Configuration.PersistenceIdColumnName} = @PersistenceId) as u";
+                    SELECT MAX(m.{Configuration.SequenceNrColumnName}) as SeqNr FROM {Configuration.FullMetaTableName} m WHERE m.{Configuration.PersistenceIdColumnName} = @PersistenceId) as u";
 
             DeleteBatchSql = $@"
                 DELETE FROM {Configuration.FullJournalTableName}
@@ -543,6 +543,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                         var persistent = ReadEvent(reader);
                         callback(persistent);
                     }
+                    command.Cancel();
                 }
             }
         }

@@ -177,7 +177,7 @@ namespace Akka.Persistence.TCK.Query
             });
         }
 
-        [Fact]
+        [Fact(Skip = "Not a good test - tightly couples to private implementation details")]
         public virtual async Task ReadJournal_should_deallocate_AllPersistenceIds_publisher_when_the_last_subscriber_left()
         {
             if (AllocatesAllPersistenceIDsPublisher)

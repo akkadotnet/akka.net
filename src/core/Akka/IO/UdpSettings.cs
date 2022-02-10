@@ -41,20 +41,37 @@ namespace Akka.IO
                 bufferPoolConfigPath: config.GetString("buffer-pool", null),
                 traceLogging: config.GetBoolean("trace-logging", false),
                 initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),
-                directBufferSize: config.GetInt("direct-buffer-size", 0),
-                maxDirectBufferPoolSize: config.GetInt("direct-buffer-pool-limit", 0),
                 batchReceiveLimit: config.GetInt("receive-throughput", 0),
                 managementDispatcher: config.GetString("management-dispatcher", "akka.actor.default-dispatcher"),
                 fileIoDispatcher: config.GetString("file-io-dispatcher", "akka.actor.default-dispatcher"));
         }
         
-        public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int directBufferSize, int maxDirectBufferPoolSize, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher)
+        // directBufferSize and maxDirectBufferPoolSize parameter are byterot, remove this in v1.5
+        [Obsolete("Please the constructor without directBufferSize and maxDirectBufferPoolSize parameter")]
+        public UdpSettings(
+            string bufferPoolConfigPath, 
+            bool traceLogging,
+            int initialSocketAsyncEventArgs,
+            int directBufferSize,
+            int maxDirectBufferPoolSize,
+            int batchReceiveLimit,
+            string managementDispatcher,
+            string fileIoDispatcher) 
+            : this(
+                bufferPoolConfigPath,
+                traceLogging,
+                initialSocketAsyncEventArgs,
+                batchReceiveLimit,
+                managementDispatcher,
+                fileIoDispatcher)
+        {
+        }
+
+        public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher)
         {
             BufferPoolConfigPath = bufferPoolConfigPath;
             TraceLogging = traceLogging;
             InitialSocketAsyncEventArgs = initialSocketAsyncEventArgs;
-            DirectBufferSize = directBufferSize;
-            MaxDirectBufferPoolSize = maxDirectBufferPoolSize;
             BatchReceiveLimit = batchReceiveLimit;
             ManagementDispatcher = managementDispatcher;
             FileIODispatcher = fileIoDispatcher;
@@ -79,13 +96,6 @@ namespace Akka.IO
         /// will grow infinitely if needed.
         /// </summary>
         public int InitialSocketAsyncEventArgs { get; }
-
-        public int DirectBufferSize { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int MaxDirectBufferPoolSize { get; }
 
         /// <summary>
         /// TBD

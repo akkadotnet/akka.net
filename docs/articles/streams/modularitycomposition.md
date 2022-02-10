@@ -7,7 +7,7 @@ title: Modularity, Composition and Hierarchy
 
 Akka Streams provide a uniform model of stream processing graphs, which allows flexible composition of reusable components. In this chapter we show how these look like from the conceptual and API perspective, demonstrating the modularity aspects of the library.
 
-## Basics of composition and modularity
+## Basics of Composition and Modularity
 
 Every processing stage used in Akka Streams can be imagined as a "box" with input and output ports where elements to be processed arrive and leave the stage. In this view, a `Source` is nothing else than a "box" with a single output port, or, a `BidiFlow` is a "box" with exactly two input and two output ports. In the figure below we illustrate the most common used stages viewed as "boxes".
 
@@ -107,7 +107,8 @@ var runnableGraph = nestedSource.To(nestedSink);
 var runnableGraph2 = Source.Single(0).To(Sink.Aggregate<int, int>(0, (sum, x) => sum + x));
 ```
 
-## Composing complex systems
+## Composing Complex Systems
+
 In the previous section we explored the possibility of composition, and hierarchy, but we stayed away from non-linear,
 generalized graph components. There is nothing in Akka Streams though that enforces that stream processing layouts
 can only be linear. The DSL for `Source` and friends is optimized for creating such linear chains, as they are
@@ -119,7 +120,7 @@ As a first example, let's look at a more complex layout:
 
 ![Compose graph](/images/compose_graph.png)
 
-The diagram shows a `RunnableGraph` (remember, if there are no unwired ports, the graph is closed, and therefore
+The diagram shows a `RunnableGraph` (remember, if there are no un-wired ports, the graph is closed, and therefore
 can be materialized) that encapsulates a non-trivial stream processing network. It contains fan-in, fan-out stages,
 directed and non-directed cycles. The ``Runnable()`` method of the `GraphDSL` object allows the creation of a
 general, closed, and runnable graph. For example the network on the diagram can be realized like this:
@@ -279,7 +280,8 @@ We have also seen, that every module has a `Shape` (for example a `Sink` has a `
 independently which DSL was used to create it. This uniform representation enables the rich composability of various
 stream processing entities in a convenient way.
 
-## Materialized values
+## Materialized Values
+
 After realizing that `RunnableGraph` is nothing more than a module with no unused ports (it is an island), it becomes clear that
 after materialization the only way to communicate with the running stream processing logic is via some side-channel.
 This side channel is represented as a *materialized value*. The situation is similar to `Actor`'s, where the
@@ -292,8 +294,8 @@ encoded in the provided `RunnableGraph`. To be able to interact with the running
 needs to return a different object that provides the necessary interaction capabilities. In other words, the
 `RunnableGraph` can be seen as a factory, which creates:
 
-  * a network of running processing entities, inaccessible from the outside
-  * a materialized value, optionally providing a controlled interaction capability with the network
+* a network of running processing entities, inaccessible from the outside
+* a materialized value, optionally providing a controlled interaction capability with the network
 
 Unlike actors though, each of the processing stages might provide a materialized value, so when we compose multiple
 stages or modules, we need to combine the materialized value as well (there are default rules which make this easier,
@@ -378,6 +380,7 @@ var runnableGraph = nestedSource.ToMaterialized(nestedSink, (completion, rest) =
 > The nested structure in the above example is not necessary for combining the materialized values, it just demonstrates how the two features work together. See [Combining materialized values](xref:streams-basics#combining-materialized-values) for further examples of combining materialized values without nesting and hierarchy involved.
 
 ## Attributes
+
 We have seen that we can use ``Named()`` to introduce a nesting level in the fluid DSL (and also explicit nesting by using
 ``Create()`` from :class:`GraphDSL`). Apart from having the effect of adding a nesting level, ``Named()`` is actually
 a shorthand for calling ``WithAttributes(Attributes.CreateName("someName"))``. Attributes provide a way to fine-tune certain

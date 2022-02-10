@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Remote.TestKit;
 using Akka.Util;
 using FluentAssertions;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -221,8 +222,8 @@ namespace Akka.Cluster.Sharding.Tests
                 }).ToImmutableDictionary();
 
                 shardLocations.Tell(new Locations(locations));
-                Sys.Log.Debug("Original locations: [{0}]", string.Join(", ", locations.Select(i => $"{i.Key}: {i.Value}")));
-            }, config.First);
+                Sys.Log.Debug("Original locations: {0}", string.Join(",", locations.Select(x => $"{x.Key}->{x.Value}")));
+            }, _config.First);
             EnterBarrier("after-3");
         }
 
@@ -244,9 +245,12 @@ namespace Akka.Cluster.Sharding.Tests
 
             RunOn(() =>
             {
-                Watch(_region.Value);
-                ExpectTerminated(_region.Value, TimeSpan.FromSeconds(15));
-            }, leavingRoles);
+                var region = _region.Value;
+                Watch(region);
+                ExpectTerminated(region, TimeSpan.FromSeconds(15));
+            }, _config.First);
+            EnterBarrier("stopped");
+            
             // more stress by not having the barrier here
 
             RunOn(() =>
@@ -261,13 +265,16 @@ namespace Akka.Cluster.Sharding.Tests
                         {
                             var id = kv.Key;
                             var r = kv.Value;
+
                             _region.Value.Tell(new Ping(id), probe.Ref);
 
                             if (leavingNodes.Contains(r.Path.Address))
                             {
                                 var newRef = probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1));
-                                newRef.Should().NotBe(r);
+                                // have to log before we assert
                                 Sys.Log.Debug("Moved [{0}] from [{1}] to [{2}]", id, r, newRef);
+                                newRef.Should().NotBe(r);
+
                             }
                             else
                                 probe.ExpectMsg(r, TimeSpan.FromSeconds(1)); // should not move

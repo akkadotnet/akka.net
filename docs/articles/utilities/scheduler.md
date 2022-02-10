@@ -21,7 +21,7 @@ The Akka scheduler is **not** designed for long-term scheduling (see [Akka.Quart
 > [!WARNING]
 > The default implementation of Scheduler used by Akka is based on job buckets which are emptied according to a fixed schedule. It does not execute tasks at the exact time, but on every tick, it will run everything that is (over)due. The accuracy of the default Scheduler can be modified by the `akka.scheduler.tick-duration` configuration property.
 
-## Some examples
+## Some Examples
 
 ```csharp
 var system = ActorSystem.Create("MySystem");
@@ -45,20 +45,22 @@ invocation it is better to use the `Schedule()` variant accepting a message
 and an `IActorRef` to schedule a message to self (containing the necessary
 parameters) and then call the method when the message is received.
 
-## From inside the actor
+## From Inside the Actor
 
-```
+```csharp
 Context.System.Scheduler.ScheduleTellRepeatedly(....);
 ```
+
 > [!WARNING]
 > All scheduled task will be executed when the `ActorSystem` is terminated. i.e. the task may execute before its timeout.
 
-## The scheduler interface
+## The Scheduler Interface
+
 The actual scheduler implementation is defined by config and loaded upon ActorSystem start-up, which means that it is possible to provide a different one using the `akka.scheduler.implementation` configuration property. The referenced class must implement the `Akka.Actor.IScheduler` and `Akka.Actor.IAdvancedScheduler` interfaces
 
-## The cancellable interface
+## The Cancellable Interface
 
 Scheduling a task will result in a `ICancellable` or (or throw an `Exception` if attempted after the scheduler's shutdown). This allows you to cancel something that has been scheduled for execution.
 
 > [!WARNING]
-> If the task has already been started, then this does not abort the task's execution. 
+> If the task has already been started, then this does not abort the task's execution.

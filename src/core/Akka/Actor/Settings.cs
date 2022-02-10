@@ -11,6 +11,7 @@ using System.Threading;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Event;
 using Akka.Routing;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
@@ -18,7 +19,7 @@ namespace Akka.Actor
 {
     /// <summary>
     /// This class represents the overall <see cref="ActorSystem"/> settings which also provides a convenient
-    /// access to the <see cref="Hocon.Config"/> object. For more detailed information about the
+    /// access to the <see cref="Configuration.Config"/> object. For more detailed information about the
     /// different possible configuration options, look in the Akka.NET Documentation under Configuration
     /// (http://getakka.net/docs/concepts/configuration).
     /// </summary>
@@ -109,6 +110,31 @@ namespace Akka.Actor
 
             LogLevel = Config.GetString("akka.loglevel", null);
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel", null);
+
+            var stdoutClassName = Config.GetString("akka.stdout-logger-class", null);
+            if (string.IsNullOrWhiteSpace(stdoutClassName))
+            {
+                StdoutLogger = new StandardOutLogger();
+            }
+            else
+            {
+                var stdoutLoggerType = Type.GetType(stdoutClassName);
+                if (stdoutLoggerType == null)
+                    throw new ArgumentException($"Could not load type of {stdoutClassName} for standard out logger.");
+                if(!typeof(MinimalLogger).IsAssignableFrom(stdoutLoggerType))
+                    throw new ArgumentException("Standard out logger type must inherit from the MinimalLogger abstract class.");
+
+                try
+                {
+                    StdoutLogger = (MinimalLogger)Activator.CreateInstance(stdoutLoggerType);
+                }
+                catch (MissingMethodException)
+                {
+                    throw new MissingMethodException(
+                        "Standard out logger type must inherit from the MinimalLogger abstract class and have an empty constructor.");
+                }
+            }
+            
             Loggers = Config.GetStringList("akka.loggers", new string[] { });
             LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
@@ -248,6 +274,11 @@ namespace Akka.Actor
         public string StdoutLogLevel { get; private set; }
 
         /// <summary>
+        /// Returns a singleton instance of the standard out logger.
+        /// </summary>
+        public MinimalLogger StdoutLogger { get; }
+        
+        /// <summary>
         ///     Gets the loggers.
         /// </summary>
         /// <value>The loggers.</value>
@@ -360,7 +391,6 @@ namespace Akka.Actor
 
         public bool CoordinatedShutdownRunByActorSystemTerminate { get; private set; }
 
-        /// <inheritdoc/>
         public override string ToString()
         {
             return Config.Root.ToString();

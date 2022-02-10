@@ -33,7 +33,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Ref = @ref;
         }
 
-        /// <inheritdoc/>
+            
         public bool Equals(Put other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -41,19 +41,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return Equals(Ref, other.Ref);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as Put);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             return (Ref != null ? Ref.GetHashCode() : 0);
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"Put<ref:{Ref}>";
@@ -80,7 +80,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Path = path;
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(Remove other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -88,19 +88,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return Equals(Path, other.Path);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as Remove);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             return (Path != null ? Path.GetHashCode() : 0);
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"Remove<path:{Path}>";
@@ -146,7 +146,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Ref = @ref;
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(Subscribe other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -156,13 +156,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                    Equals(Ref, other.Ref);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as Subscribe);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -174,7 +174,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"Subscribe<topic:{Topic}, group:{Group}, ref:{Ref}>";
@@ -220,7 +220,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Ref = @ref;
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(Unsubscribe other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -230,13 +230,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                    Equals(Ref, other.Ref);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as Unsubscribe);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -248,7 +248,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"Unsubscribe<topic:{Topic}, group:{Group}, ref:{Ref}>";
@@ -276,7 +276,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Subscribe = subscribe;
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(SubscribeAck other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -284,19 +284,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return Equals(Subscribe, other.Subscribe);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as SubscribeAck);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             return (Subscribe != null ? Subscribe.GetHashCode() : 0);
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"SubscribeAck<{Subscribe}>";
@@ -322,7 +322,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Unsubscribe = unsubscribe;
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(UnsubscribeAck other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -330,19 +330,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return Equals(Unsubscribe, other.Unsubscribe);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as UnsubscribeAck);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             return (Unsubscribe != null ? Unsubscribe.GetHashCode() : 0);
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"UnsubscribeAck<{Unsubscribe}>";
@@ -381,7 +381,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             SendOneMessageToEachGroup = sendOneMessageToEachGroup;
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(Publish other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -391,13 +391,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                    Equals(Message, other.Message);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as Publish);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -409,7 +409,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"Publish<topic:{Topic}, sendOneToEachGroup:{SendOneMessageToEachGroup}, message:{Message}>";
@@ -448,7 +448,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             LocalAffinity = localAffinity;
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(Send other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -458,13 +458,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                    Equals(Message, other.Message);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as Send);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -476,7 +476,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"Send<path:{Path}, localAffinity:{LocalAffinity}, message:{Message}>";
@@ -517,7 +517,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             ExcludeSelf = excludeSelf;
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(SendToAll other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -527,13 +527,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                    Equals(Message, other.Message);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as SendToAll);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -545,7 +545,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"SendToAll<path:{Path}, excludeSelf:{ExcludeSelf}, message:{Message}>";
@@ -585,7 +585,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Topics = topics ?? ImmutableHashSet<string>.Empty;
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(CurrentTopics other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -594,19 +594,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return Topics.SequenceEqual(other.Topics);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as CurrentTopics);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             return (Topics != null ? Topics.GetHashCode() : 0);
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"CurrentTopics<{string.Join(",", Topics)}>";

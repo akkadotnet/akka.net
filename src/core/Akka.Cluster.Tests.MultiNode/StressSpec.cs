@@ -28,6 +28,7 @@ using Akka.Util;
 using FluentAssertions;
 using Google.Protobuf.WellKnownTypes;
 using Environment = System.Environment;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -46,71 +47,74 @@ namespace Akka.Cluster.Tests.MultiNode
                 Role("node-" + i);
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.test.cluster-stress-spec {
-      infolog = on
-      # scale the nr-of-nodes* settings with this factor
-      nr-of-nodes-factor = 1
-      # not scaled
-      nr-of-seed-nodes = 3
-      nr-of-nodes-joining-to-seed-initially = 2
-      nr-of-nodes-joining-one-by-one-small = 2
-      nr-of-nodes-joining-one-by-one-large = 2
-      nr-of-nodes-joining-to-one = 2
-      nr-of-nodes-leaving-one-by-one-small = 1
-      nr-of-nodes-leaving-one-by-one-large = 1
-      nr-of-nodes-leaving = 2
-      nr-of-nodes-shutdown-one-by-one-small = 1
-      nr-of-nodes-shutdown-one-by-one-large = 1
-      nr-of-nodes-partition = 2
-      nr-of-nodes-shutdown = 2
-      nr-of-nodes-join-remove = 2
-      # not scaled
-      # scale the *-duration settings with this factor
-      duration-factor = 1
-      join-remove-duration = 90s
-      idle-gossip-duration = 10s
-      expected-test-duration = 600s
-      # scale convergence within timeouts with this factor
-      convergence-within-factor = 1.0
-    }
-    akka.actor.provider = cluster
+akka.test.cluster-stress-spec {
+    infolog = on
+    # scale the nr-of-nodes* settings with this factor
+    nr-of-nodes-factor = 1
+    # not scaled
+    nr-of-seed-nodes = 3
+    nr-of-nodes-joining-to-seed-initially = 2
+    nr-of-nodes-joining-one-by-one-small = 2
+    nr-of-nodes-joining-one-by-one-large = 2
+    nr-of-nodes-joining-to-one = 2
+    nr-of-nodes-leaving-one-by-one-small = 1
+    nr-of-nodes-leaving-one-by-one-large = 1
+    nr-of-nodes-leaving = 2
+    nr-of-nodes-shutdown-one-by-one-small = 1
+    nr-of-nodes-shutdown-one-by-one-large = 1
+    nr-of-nodes-partition = 2
+    nr-of-nodes-shutdown = 2
+    nr-of-nodes-join-remove = 2
+    # not scaled
+    # scale the *-duration settings with this factor
+    duration-factor = 1
+    join-remove-duration = 90s
+    idle-gossip-duration = 10s
+    expected-test-duration = 600s
+    # scale convergence within timeouts with this factor
+    convergence-within-factor = 1.0
+}
+akka.actor.provider = cluster
     
-    akka.cluster {
-      failure-detector.acceptable-heartbeat-pause = 3s
-      downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
-      split-brain-resolver {
-          active-strategy = keep-majority #TODO: remove this once it's been made default
-          stable-after = 10s
-      }
-      publish-stats-interval = 1s
+akka.cluster {
+    failure-detector.acceptable-heartbeat-pause = 3s
+    downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
+    split-brain-resolver {
+        active-strategy = keep-majority #TODO: remove this once it's been made default
+        stable-after = 10s
     }
-    akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
-            akka.loglevel = INFO
-            akka.remote.log-remote-lifecycle-events = off
-            akka.actor.default-dispatcher = {
-                executor = channel-executor
-              fork-join-executor {
-                parallelism-min = 2
-                parallelism-factor = 1
-                parallelism-max = 64
-              }
-            }
-            akka.actor.internal-dispatcher = {
-              executor = channel-executor
-              fork-join-executor {
-                parallelism-min = 2
-                parallelism-factor = 1
-                parallelism-max = 64
-              }
-            }
+    publish-stats-interval = 1s
+}
+
+akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
+akka.loglevel = INFO
+akka.remote.log-remote-lifecycle-events = off
+akka.actor.default-dispatcher = {
+    executor = fork-join-executor
+    fork-join-executor {
+        parallelism-min = 2
+        parallelism-factor = 1
+        parallelism-max = 64
+    }
+}
+
+akka.actor.internal-dispatcher = {
+    executor = fork-join-executor
+    fork-join-executor {
+        parallelism-min = 2
+        parallelism-factor = 1
+        parallelism-max = 64
+    }
+}
+
 akka.remote.default-remote-dispatcher {
-	  executor = channel-executor
-      fork-join-executor {
+    executor = fork-join-executor
+    fork-join-executor {
         parallelism-min = 2
         parallelism-factor = 0.5
         parallelism-max = 16
-      }
-            ");
+    }
+}");
 
             TestTransport = true;
         }

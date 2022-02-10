@@ -11,7 +11,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Util;
 using Newtonsoft.Json;
-using static System.String;
 
 namespace Akka.Actor
 {
@@ -36,7 +35,7 @@ namespace Akka.Actor
         /// This class represents a surrogate of an <see cref="ActorPath"/>.
         /// Its main use is to help during the serialization process.
         /// </summary>
-        public class Surrogate : ISurrogate, IEquatable<Surrogate>, IEquatable<ActorPath>
+        public sealed class Surrogate : ISurrogate, IEquatable<Surrogate>, IEquatable<ActorPath>
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="Surrogate"/> class.
@@ -59,42 +58,32 @@ namespace Akka.Actor
             /// <returns>The <see cref="ActorPath"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                if (TryParse(Path, out var path))
-                {
-                    return path;
-                }
-
-                return null;
+                TryParse(Path, out var path);
+                return path;
             }
 
             #region Equality
 
-            /// <inheritdoc/>
             public bool Equals(Surrogate other)
             {
-                if (ReferenceEquals(null, other)) return false;
-                if (ReferenceEquals(this, other)) return true;
-                return string.Equals(Path, other.Path);
+                if (other is null) return false;
+                return ReferenceEquals(this, other) || StringComparer.Ordinal.Equals(Path, other.Path);
             }
 
-            /// <inheritdoc/>
             public bool Equals(ActorPath other)
             {
-                if (other == null) return false;
-                return Equals(other.ToSurrogate(null)); //TODO: not so sure if this is OK
+                if (other is null) return false;
+                return StringComparer.Ordinal.Equals(Path, other.ToSerializationFormat());
             }
 
-            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
+                if (obj is null) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                var actorPath = obj as ActorPath;
-                if (actorPath != null) return Equals(actorPath);
+                if (obj is ActorPath actorPath) return Equals(actorPath);
                 return Equals(obj as Surrogate);
             }
 
-            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return Path.GetHashCode();
@@ -117,11 +106,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static bool IsValidPathElement(string s)
         {
-            if (IsNullOrEmpty(s))
-            {
-                return false;
-            }
-            return !s.StartsWith("$") && Validate(s);
+            return !string.IsNullOrEmpty(s) && !s.StartsWith("$") && Validate(s);
         }
 
         private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
@@ -132,17 +117,17 @@ namespace Akka.Actor
 
         private static bool Validate(string chars)
         {
-            int len = chars.Length;
+            var len = chars.Length;
             var pos = 0;
             while (pos < len)
             {
                 if (IsValidChar(chars[pos]))
                 {
-                    pos = pos + 1;
+                    pos += 1;
                 }
                 else if (chars[pos] == '%' && pos + 2 < len && IsHexChar(chars[pos + 1]) && IsHexChar(chars[pos + 2]))
                 {
-                    pos = pos + 3;
+                    pos += 3;
                 }
                 else
                 {
@@ -152,43 +137,93 @@ namespace Akka.Actor
             return true;
         }
 
+        private readonly Address _address;
+        private readonly ActorPath _parent;
+        private readonly int _depth;
+
+        private readonly string _name;
+        private readonly long _uid;
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="ActorPath" /> class.
+        /// Initializes a new instance of the <see cref="ActorPath" /> class as root.
         /// </summary>
         /// <param name="address"> The address. </param>
         /// <param name="name"> The name. </param>
         protected ActorPath(Address address, string name)
         {
-            Name = name;
-            Address = address;
+            _address = address;
+            _parent = null;
+            _depth = 0;
+            _name = name;
+            _uid = ActorCell.UndefinedUid;
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ActorPath" /> class.
+        /// Initializes a new instance of the <see cref="ActorPath" /> class as child.
         /// </summary>
-        /// <param name="parentPath"> The parent path. </param>
+        /// <param name="parentPath"> The parentPath. </param>
         /// <param name="name"> The name. </param>
         /// <param name="uid"> The uid. </param>
         protected ActorPath(ActorPath parentPath, string name, long uid)
         {
-            Address = parentPath.Address;
-            Uid = uid;
-            Name = name;
+            _parent = parentPath;
+            _address = parentPath._address;
+            _depth = parentPath._depth + 1;
+            _name = name;
+            _uid = uid;
         }
+
+        /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <value> The name. </value>
+        public string Name => _name;
+
+        /// <summary>
+        /// The Address under which this path can be reached; walks up the tree to
+        /// the RootActorPath.
+        /// </summary>
+        /// <value> The address. </value>
+        public Address Address => _address;
 
         /// <summary>
         /// Gets the uid.
         /// </summary>
         /// <value> The uid. </value>
-        public long Uid { get; }
+        public long Uid => _uid;
 
-        internal static readonly string[] EmptyElements = { };
+        /// <summary>
+        /// The path of the parent to this actor.
+        /// </summary>
+        public ActorPath Parent => _parent;
+
+        /// <summary>
+        /// The the depth of the actor.
+        /// </summary>
+        public int Depth => _depth;
 
         /// <summary>
         /// Gets the elements.
         /// </summary>
         /// <value> The elements. </value>
-        public abstract IReadOnlyList<string> Elements { get; }
+        public IReadOnlyList<string> Elements
+        {
+            get
+            {
+                if (_depth == 0)
+                    return ImmutableArray<string>.Empty;
+
+                var b = ImmutableArray.CreateBuilder<string>(_depth);
+                b.Count = _depth;
+                var p = this;
+                for (var i = 0; i < _depth; i++)
+                {
+                    b[_depth - i - 1] = p._name;
+                    p = p._parent;
+                }
+                return b.MoveToImmutable();
+            }
+        }
 
         /// <summary>
         /// INTERNAL API.
@@ -202,70 +237,101 @@ namespace Akka.Actor
         {
             get
             {
-                if (this is RootActorPath) return EmptyElements;
-                var elements = (List<string>)Elements;
-                elements[elements.Count - 1] = AppendUidFragment(Name);
-                return elements;
+                if (_depth == 0)
+                    return ImmutableArray<string>.Empty;
+
+                var b = ImmutableArray.CreateBuilder<string>(_depth);
+                b.Count = _depth;
+                var p = this;
+                for (var i = 0; i < _depth; i++)
+                {
+                    b[_depth - i - 1] = i > 0 ? p._name : AppendUidFragment(p._name);
+                    p = p._parent;
+                }
+                return b.MoveToImmutable();
             }
         }
-
-        /// <summary>
-        /// Gets the name.
-        /// </summary>
-        /// <value> The name. </value>
-        public string Name { get; }
-
-        /// <summary>
-        /// The Address under which this path can be reached; walks up the tree to
-        /// the RootActorPath.
-        /// </summary>
-        /// <value> The address. </value>
-        public Address Address { get; }
 
         /// <summary>
         /// The root actor path.
         /// </summary>
-        public abstract ActorPath Root { get; }
+        [JsonIgnore]
+        public ActorPath Root => ParentOf(0);
 
-        /// <summary>
-        /// The path of the parent to this actor.
-        /// </summary>
-        public abstract ActorPath Parent { get; }
-
-        /// <inheritdoc/>
         public bool Equals(ActorPath other)
         {
-            if (other == null)
+            if (other is null || _depth != other._depth)
                 return false;
+
+            if (ReferenceEquals(this, other))
+                return true;
 
             if (!Address.Equals(other.Address))
                 return false;
 
-            ActorPath a = this;
-            ActorPath b = other;
-            for (; ; )
+            var a = this;
+            var b = other;
+            while (true)
             {
                 if (ReferenceEquals(a, b))
                     return true;
-                else if (a == null || b == null)
+                else if (a is null || b is null)
                     return false;
-                else if (a.Name != b.Name)
+                else if (a._name != b._name)
                     return false;
 
-                a = a.Parent;
-                b = b.Parent;
+                a = a._parent;
+                b = b._parent;
             }
         }
 
-        /// <inheritdoc/>
-        public abstract int CompareTo(ActorPath other);
+        public int CompareTo(ActorPath other)
+        {
+            if (_depth == 0)
+            {
+                if (other is null || other._depth > 0) return 1;
+                return StringComparer.Ordinal.Compare(ToString(), other.ToString());
+            }
+            return InternalCompareTo(this, other);
+        }
+
+        private int InternalCompareTo(ActorPath left, ActorPath right)
+        {
+            if (ReferenceEquals(left, right))
+                return 0;
+            if (right is null)
+                return 1;
+            if (left is null)
+                return -1;
+
+            if (left._depth == 0)
+                return left.CompareTo(right);
+
+            if (right._depth == 0)
+                return -right.CompareTo(left);
+
+            var nameCompareResult = StringComparer.Ordinal.Compare(left._name, right._name);
+            if (nameCompareResult != 0)
+                return nameCompareResult;
+
+            return InternalCompareTo(left._parent, right._parent);
+        }
 
         /// <summary>
-        /// Withes the uid.
+        /// Creates a copy of the given ActorPath and applies a new Uid
         /// </summary>
         /// <param name="uid"> The uid. </param>
         /// <returns> ActorPath. </returns>
-        public abstract ActorPath WithUid(long uid);
+        public ActorPath WithUid(long uid)
+        {
+            if (_depth == 0)
+            {
+                if (uid != 0) throw new NotSupportedException("RootActorPath must have undefined Uid");
+                return this;
+            }
+
+            return uid != _uid ? new ChildActorPath(_parent, Name, uid) : this;
+        }
 
         /// <summary>
         /// Creates a new <see cref="ChildActorPath"/> with the specified parent <paramref name="path"/>
@@ -290,12 +356,33 @@ namespace Akka.Actor
         public static ActorPath operator /(ActorPath path, IEnumerable<string> name)
         {
             var a = path;
-            foreach (string element in name)
+            foreach (var element in name)
             {
                 if (!string.IsNullOrEmpty(element))
-                    a = a / element;
+                    a /= element;
             }
             return a;
+        }
+
+        /// <summary>
+        /// Returns a parent of depth
+        /// 0: Root, 1: Guardian, ..., -1: Parent, -2: GrandParent
+        /// </summary>
+        /// <param name="depth">The parent depth, negative depth for reverse lookup</param>
+        public ActorPath ParentOf(int depth)
+        {
+            var current = this;
+            if (depth >= 0)
+            {
+                while (current._depth > depth)
+                    current = current._parent;
+            }
+            else
+            {
+                for (var i = depth; i < 0 && current._depth > 0; i++)
+                    current = current._parent;
+            }
+            return current;
         }
 
         /// <summary>
@@ -308,12 +395,9 @@ namespace Akka.Actor
         /// <returns>A newly created <see cref="ActorPath"/></returns>
         public static ActorPath Parse(string path)
         {
-            ActorPath actorPath;
-            if (TryParse(path, out actorPath))
-            {
-                return actorPath;
-            }
-            throw new UriFormatException($"Can not parse an ActorPath: {path}");
+            return TryParse(path, out var actorPath)
+                ? actorPath
+                : throw new UriFormatException($"Can not parse an ActorPath: {path}");
         }
 
         /// <summary>
@@ -325,42 +409,71 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static bool TryParse(string path, out ActorPath actorPath)
         {
-            actorPath = null;
+            if (!TryParseAddress(path, out var address, out var absoluteUri))
+            {
+                actorPath = null;
+                return false;
+            }
 
-            if (!TryParseAddress(path, out var address, out var absoluteUri)) return false;
-            var spanified = absoluteUri;
+            return TryParse(new RootActorPath(address), absoluteUri, out actorPath);
+        }
+
+        /// <summary>
+        /// Tries to parse the uri, which should be a uri not containing protocol.
+        /// For example "/user/my-actor"
+        /// </summary>
+        /// <param name="basePath">the base path, normaly a root path</param>
+        /// <param name="absoluteUri">TBD</param>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
+        public static bool TryParse(ActorPath basePath, string absoluteUri, out ActorPath actorPath)
+        {
+            return TryParse(basePath, absoluteUri.AsSpan(), out actorPath);
+        }
+
+        /// <summary>
+        /// Tries to parse the uri, which should be a uri not containing protocol.
+        /// For example "/user/my-actor"
+        /// </summary>
+        /// <param name="basePath">the base path, normaly a root path</param>
+        /// <param name="absoluteUri">TBD</param>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
+        public static bool TryParse(ActorPath basePath, ReadOnlySpan<char> absoluteUri, out ActorPath actorPath)
+        {
+            actorPath = basePath;
 
             // check for Uri fragment here
-            var nextSlash = 0;
-
-            actorPath = new RootActorPath(address);
+            int nextSlash;
 
             do
             {
-                nextSlash = spanified.IndexOf('/');
+                nextSlash = absoluteUri.IndexOf('/');
                 if (nextSlash > 0)
                 {
-                    actorPath /= spanified.Slice(0, nextSlash).ToString();
+                    var name = absoluteUri.Slice(0, nextSlash).ToString();
+                    actorPath = new ChildActorPath(actorPath, name, ActorCell.UndefinedUid);
                 }
-                else if (nextSlash < 0 && spanified.Length > 0) // final segment
+                else if (nextSlash < 0 && absoluteUri.Length > 0) // final segment
                 {
-                    var fragLoc = spanified.IndexOf('#');
+                    var fragLoc = absoluteUri.IndexOf('#');
                     if (fragLoc > -1)
                     {
-                        var fragment = spanified.Slice(fragLoc+1);
+                        var fragment = absoluteUri.Slice(fragLoc + 1);
                         var fragValue = SpanHacks.Parse(fragment);
-                        spanified = spanified.Slice(0, fragLoc);
-                        actorPath = new ChildActorPath(actorPath, spanified.ToString(), fragValue);
+                        absoluteUri = absoluteUri.Slice(0, fragLoc);
+                        actorPath = new ChildActorPath(actorPath, absoluteUri.ToString(), fragValue);
                     }
                     else
                     {
-                        actorPath /= spanified.ToString();
+                        actorPath = new ChildActorPath(actorPath, absoluteUri.ToString(), ActorCell.UndefinedUid);
                     }
-                    
+
                 }
 
-                spanified = spanified.Slice(nextSlash + 1);
-            } while (nextSlash >= 0);
+                absoluteUri = absoluteUri.Slice(nextSlash + 1);
+            }
+            while (nextSlash >= 0);
 
             return true;
         }
@@ -383,153 +496,104 @@ namespace Akka.Actor
         /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
         /// <param name="absoluteUri">A <see cref="ReadOnlySpan{T}"/> containing the path following the address.</param>
         /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
-        private static bool TryParseAddress(string path, out Address address, out ReadOnlySpan<char> absoluteUri)
+        public static bool TryParseAddress(string path, out Address address, out ReadOnlySpan<char> absoluteUri)
         {
-            address = null;
+            address = default;
 
-            var spanified = path.AsSpan();
-            absoluteUri = spanified;
-
-            var firstColonPos = spanified.IndexOf(':');
-
-            if (firstColonPos == -1) // not an absolute Uri
+            if (!TryParseParts(path.AsSpan(), out var addressSpan, out absoluteUri))
                 return false;
 
-            var fullScheme = SpanHacks.ToLowerInvariant(spanified.Slice(0, firstColonPos));
-            if (!fullScheme.StartsWith("akka"))
+            if (!Address.TryParse(addressSpan, out address))
                 return false;
 
-            spanified = spanified.Slice(firstColonPos + 1);
-            if (spanified.Length < 2 || !(spanified[0] == '/' && spanified[1] == '/'))
+            return true;
+        }
+
+        /// <summary>
+        /// Attempts to parse an <see cref="Address"/> from a stringified <see cref="ActorPath"/>.
+        /// </summary>
+        /// <param name="path">The string representation of the <see cref="ActorPath"/>.</param>
+        /// <param name="address">A <see cref="ReadOnlySpan{T}"/> containing the address part.</param>
+        /// <param name="absoluteUri">A <see cref="ReadOnlySpan{T}"/> containing the path following the address.</param>
+        /// <returns><c>true</c> if the path parts could be parsed, <c>false</c> otherwise.</returns>
+        public static bool TryParseParts(ReadOnlySpan<char> path, out ReadOnlySpan<char> address, out ReadOnlySpan<char> absoluteUri)
+        {
+            var firstAtPos = path.IndexOf(':');
+            if (firstAtPos < 4 || 255 < firstAtPos)
+            {
+                //missing or invalid scheme
+                address = default;
+                absoluteUri = path;
                 return false;
-
-            spanified = spanified.Slice(2); // move past the double //
-            var firstAtPos = spanified.IndexOf('@');
-            var sysName = string.Empty;
-
-            if (firstAtPos == -1)
-            { // dealing with an absolute local Uri
-                var nextSlash = spanified.IndexOf('/');
-
-                if (nextSlash == -1)
-                {
-                    sysName = spanified.ToString();
-                    absoluteUri = "/".AsSpan(); // RELY ON THE JIT
-                }
-                else
-                {
-                    sysName = spanified.Slice(0, nextSlash).ToString();
-                    absoluteUri = spanified.Slice(nextSlash);
-                }
-
-                address = new Address(fullScheme, sysName);
-                return true;
             }
 
-            // dealing with a remote Uri
-            sysName = spanified.Slice(0, firstAtPos).ToString();
-            spanified = spanified.Slice(firstAtPos + 1);
-
-            /*
-             * Need to check for:
-             * - IPV4 / hostnames
-             * - IPV6 (must be surrounded by '[]') according to spec.
-             */
-            var host = string.Empty;
-
-            // check for IPV6 first
-            var openBracket = spanified.IndexOf('[');
-            var closeBracket = spanified.IndexOf(']');
-            if (openBracket > -1 && closeBracket > openBracket)
+            var doubleSlash = path.Slice(firstAtPos + 1);
+            if (doubleSlash.Length < 2 || !(doubleSlash[0] == '/' && doubleSlash[1] == '/'))
             {
-                // found an IPV6 address
-                host = spanified.Slice(openBracket, closeBracket - openBracket + 1).ToString();
-                spanified = spanified.Slice(closeBracket + 1); // advance past the address
+                //missing double slash
+                address = default;
+                absoluteUri = path;
+                return false;
+            }
 
-                // need to check for trailing colon
-                var secondColonPos = spanified.IndexOf(':');
-                if (secondColonPos == -1)
-                    return false;
-
-                spanified = spanified.Slice(secondColonPos + 1);
+            var nextSlash = path.Slice(firstAtPos + 3).IndexOf('/');
+            if (nextSlash == -1)
+            {
+                address = path;
+                absoluteUri = "/".AsSpan(); // RELY ON THE JIT
             }
             else
             {
-                var secondColonPos = spanified.IndexOf(':');
-                if (secondColonPos == -1)
-                    return false;
-
-                host = spanified.Slice(0, secondColonPos).ToString();
-
-                // move past the host
-                spanified = spanified.Slice(secondColonPos + 1);
+                address = path.Slice(0, firstAtPos + 3 + nextSlash);
+                absoluteUri = path.Slice(address.Length);
             }
 
-            var actorPathSlash = spanified.IndexOf('/');
-            ReadOnlySpan<char> strPort;
-            if (actorPathSlash == -1)
-            {
-                strPort = spanified;
-            }
-            else
-            {
-                strPort = spanified.Slice(0, actorPathSlash);
-            }
-
-            if (SpanHacks.TryParse(strPort, out var port))
-            {
-                address = new Address(fullScheme, sysName, host, port);
-
-                // need to compute the absolute path after the Address
-                if (actorPathSlash == -1)
-                {
-                    absoluteUri = "/".AsSpan();
-                }
-                else
-                {
-                    absoluteUri = spanified.Slice(actorPathSlash);
-                }
-
-                return true;
-            }
-
-            return false;
+            return true;
         }
 
 
         /// <summary>
         /// Joins this instance.
         /// </summary>
+        /// <param name="prefix">the address or empty</param>
         /// <returns> System.String. </returns>
-        private string Join()
+        private string Join(ReadOnlySpan<char> prefix)
         {
-            if (this is RootActorPath)
-                return "/";
-
-            // Resolve length of final string
-            var totalLength = 0;
-            var p = this;
-            while (!(p is RootActorPath))
+            if (_depth == 0)
             {
-                totalLength += p.Name.Length + 1;
-                p = p.Parent;
+                Span<char> buffer = prefix.Length < 1024 ? stackalloc char[prefix.Length + 1] : new char[prefix.Length + 1];
+                prefix.CopyTo(buffer);
+                buffer[buffer.Length - 1] = '/';
+                return buffer.ToString(); //todo use string.Create() when available
             }
-
-            // Concatenate segments (in reverse order) into buffer with '/' prefixes
-            char[] buffer = new char[totalLength];
-            int offset = buffer.Length;
-            p = this;
-            while (!(p is RootActorPath))
+            else
             {
-                offset -= p.Name.Length + 1;
-                buffer[offset] = '/';
+                // Resolve length of final string
+                var totalLength = prefix.Length;
+                var p = this;
+                while (p._depth > 0)
+                {
+                    totalLength += p._name.Length + 1;
+                    p = p._parent;
+                }
 
-                p.Name.CopyTo(0, buffer, offset + 1, p.Name.Length);
+                // Concatenate segments (in reverse order) into buffer with '/' prefixes                
+                Span<char> buffer = totalLength < 1024 ? stackalloc char[totalLength] : new char[totalLength];
+                prefix.CopyTo(buffer);
 
-                p = p.Parent;
+                var offset = buffer.Length;
+                ReadOnlySpan<char> name;
+                p = this;
+                while (p._depth > 0)
+                {
+                    name = p._name.AsSpan();
+                    offset -= name.Length + 1;
+                    buffer[offset] = '/';
+                    name.CopyTo(buffer.Slice(offset + 1, name.Length));
+                    p = p._parent;
+                }
+                return buffer.ToString(); //todo use string.Create() when available
             }
-
-            return new string(buffer);
         }
 
         /// <summary>
@@ -540,13 +604,12 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithoutAddress()
         {
-            return Join();
+            return Join(ReadOnlySpan<char>.Empty);
         }
 
-        /// <inheritdoc/>
         public override string ToString()
         {
-            return $"{Address}{Join()}";
+            return Join(_address.ToString().AsSpan());
         }
 
         /// <summary>
@@ -555,10 +618,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public string ToStringWithUid()
         {
-            var uid = Uid;
-            if (uid == ActorCell.UndefinedUid)
-                return ToStringWithAddress();
-            return ToStringWithAddress() + "#" + uid;
+            return _uid != ActorCell.UndefinedUid ? $"{ToStringWithAddress()}#{_uid}" : ToStringWithAddress();
         }
 
         /// <summary>
@@ -571,24 +631,21 @@ namespace Akka.Actor
             return this / childName;
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
             {
                 var hash = 17;
                 hash = (hash * 23) ^ Address.GetHashCode();
-                foreach (var e in Elements)
-                    hash = (hash * 23) ^ e.GetHashCode();
+                for (var p = this; !(p is null); p = p._parent)
+                    hash = (hash * 23) ^ p._name.GetHashCode();
                 return hash;
             }
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            var other = obj as ActorPath;
-            return Equals(other);
+            return Equals(obj as ActorPath);
         }
 
         /// <summary>
@@ -599,7 +656,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both actor paths are equal; otherwise <c>false</c></returns>
         public static bool operator ==(ActorPath left, ActorPath right)
         {
-            return Equals(left, right);
+            return left?.Equals(right) ?? right is null;
         }
 
         /// <summary>
@@ -610,7 +667,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both actor paths are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(ActorPath left, ActorPath right)
         {
-            return !Equals(left, right);
+            return !(left == right);
         }
 
         /// <summary>
@@ -619,7 +676,7 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithAddress()
         {
-            return ToStringWithAddress(Address);
+            return ToStringWithAddress(_address);
         }
 
         /// <summary>
@@ -650,10 +707,7 @@ namespace Akka.Actor
 
         private string AppendUidFragment(string withAddress)
         {
-            if (Uid == ActorCell.UndefinedUid)
-                return withAddress;
-
-            return String.Concat(withAddress, "#", Uid.ToString());
+            return _uid != ActorCell.UndefinedUid ? $"{withAddress}#{_uid}" : withAddress;
         }
 
         /// <summary>
@@ -670,10 +724,10 @@ namespace Akka.Actor
                 // we never change address for IgnoreActorRef
                 return ToString();
             }
-            if (Address.Host != null && Address.Port.HasValue)
-                return $"{Address}{Join()}";
+            if (_address.Host != null && _address.Port.HasValue)
+                return Join(_address.ToString().AsSpan());
 
-            return $"{address}{Join()}";
+            return Join(address.ToString().AsSpan());
         }
 
         /// <summary>
@@ -683,7 +737,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static string FormatPathElements(IEnumerable<string> pathElements)
         {
-            return String.Join("/", pathElements);
+            return string.Join("/", pathElements);
         }
 
         /// <summary>
@@ -700,7 +754,7 @@ namespace Akka.Actor
     /// <summary>
     /// Actor paths for root guardians, such as "/user" and "/system"
     /// </summary>
-    public class RootActorPath : ActorPath
+    public sealed class RootActorPath : ActorPath
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RootActorPath" /> class.
@@ -712,39 +766,13 @@ namespace Akka.Actor
         {
         }
 
-        /// <inheritdoc/>
-        public override ActorPath Parent => null;
-
-        public override IReadOnlyList<string> Elements => EmptyElements;
-
-        /// <inheritdoc/>
-        [JsonIgnore]
-        public override ActorPath Root => this;
-
-        /// <inheritdoc/>
-        public override ActorPath WithUid(long uid)
-        {
-            if (uid == 0)
-                return this;
-            throw new NotSupportedException("RootActorPath must have undefined Uid");
-        }
-
-        /// <inheritdoc/>
-        public override int CompareTo(ActorPath other)
-        {
-            if (other is ChildActorPath) return 1;
-            return Compare(ToString(), other.ToString(), StringComparison.Ordinal);
-        }
     }
 
     /// <summary>
     /// Actor paths for child actors, which is to say any non-guardian actor.
     /// </summary>
-    public class ChildActorPath : ActorPath
+    public sealed class ChildActorPath : ActorPath
     {
-        private readonly string _name;
-        private readonly ActorPath _parent;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ChildActorPath" /> class.
         /// </summary>
@@ -754,87 +782,6 @@ namespace Akka.Actor
         public ChildActorPath(ActorPath parentPath, string name, long uid)
             : base(parentPath, name, uid)
         {
-            _name = name;
-            _parent = parentPath;
-        }
-
-        /// <inheritdoc/>
-        public override ActorPath Parent => _parent;
-
-        public override IReadOnlyList<string> Elements
-        {
-            get
-            {
-                ActorPath p = this;
-                var acc = new Stack<string>();
-                while (true)
-                {
-                    if (p is RootActorPath)
-                        return acc.ToList();
-                    acc.Push(p.Name);
-                    p = p.Parent;
-                }
-            }
-        }
-
-        /// <inheritdoc/>
-        public override ActorPath Root
-        {
-            get
-            {
-                var current = _parent;
-                while (current is ChildActorPath child)
-                {
-                    current = child._parent;
-                }
-                return current.Root;
-            }
-        }
-
-        /// <summary>
-        /// Creates a copy of the given ActorPath and applies a new Uid
-        /// </summary>
-        /// <param name="uid"> The uid. </param>
-        /// <returns> ActorPath. </returns>
-        public override ActorPath WithUid(long uid)
-        {
-            if (uid == Uid)
-                return this;
-            return new ChildActorPath(_parent, _name, uid);
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                var hash = 17;
-                hash = (hash * 23) ^ Address.GetHashCode();
-                for (ActorPath p = this; p != null; p = p.Parent)
-                    hash = (hash * 23) ^ p.Name.GetHashCode();
-                return hash;
-            }
-        }
-
-        /// <inheritdoc/>
-        public override int CompareTo(ActorPath other)
-        {
-            return InternalCompareTo(this, other);
-        }
-
-        private int InternalCompareTo(ActorPath left, ActorPath right)
-        {
-            if (ReferenceEquals(left, right)) return 0;
-            var leftRoot = left as RootActorPath;
-            if (leftRoot != null)
-                return leftRoot.CompareTo(right);
-            var rightRoot = right as RootActorPath;
-            if (rightRoot != null)
-                return -rightRoot.CompareTo(left);
-            var nameCompareResult = Compare(left.Name, right.Name, StringComparison.Ordinal);
-            if (nameCompareResult != 0)
-                return nameCompareResult;
-            return InternalCompareTo(left.Parent, right.Parent);
         }
     }
 }

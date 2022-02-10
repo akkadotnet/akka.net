@@ -3,7 +3,7 @@ uid: may-change
 title: Modules marked May Change
 ---
 
-# Modules marked "May Change"
+# Modules Marked "May Change"
 
 To be able to introduce new modules and APIs without freezing them the moment they
 are released we have introduced
@@ -11,9 +11,9 @@ the term **may change**.
 
 Concretely **may change** means that an API or module is in early access mode and that it:
 
- * is not guaranteed to be binary compatible in minor releases
- * may have its API change in breaking ways in minor releases
- * may be entirely dropped from Akka in a minor release
+* is not guaranteed to be binary compatible in minor releases
+* may have its API change in breaking ways in minor releases
+* may be entirely dropped from Akka in a minor release
 
 Complete modules can be marked as **may change**, this will can be found in their module description and in the docs.
 
@@ -30,4 +30,3 @@ make them easily available and improve based on feedback, or even discover
 that the module or API wasn't useful.
 
 These are the current complete modules marked as **may change**:
-

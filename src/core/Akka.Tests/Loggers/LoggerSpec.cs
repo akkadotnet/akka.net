@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internal;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
@@ -26,12 +29,12 @@ akka.stdout-loglevel = DEBUG");
         { }
 
         [Fact]
-        public void TestOutputLogger_WithBadFormattingMustNotThrow()
+        public async Task TestOutputLogger_WithBadFormattingMustNotThrow()
         {
             var events = new List<LogEvent>();
 
             // Need to wait until TestOutputLogger initializes
-            Thread.Sleep(200);
+            await Task.Delay(500);
             Sys.EventStream.Subscribe(TestActor, typeof(LogEvent));
 
             Sys.Log.Error(new FakeException("BOOM"), Case.t, Case.p);
@@ -65,7 +68,7 @@ akka.stdout-loglevel = DEBUG");
         }
 
         [Fact]
-        public void DefaultLogger_WithBadFormattingMustNotThrow()
+        public async Task DefaultLogger_WithBadFormattingMustNotThrow()
         {
             var config = ConfigurationFactory.ParseString("akka.loggers = [\"Akka.Event.DefaultLogger\"]");
             var sys2 = ActorSystem.Create("DefaultLoggerTest", config.WithFallback(Sys.Settings.Config));
@@ -85,11 +88,11 @@ akka.stdout-loglevel = DEBUG");
             sys2.Log.Debug(Case.t, Case.p);
             probe.ExpectMsg<Debug>();
 
-            sys2.Terminate().Wait();
+            await sys2.Terminate();
         }
 
         [Fact]
-        public void StandardOutLogger_WithBadFormattingMustNotThrow()
+        public async Task StandardOutLogger_WithBadFormattingMustNotThrow()
         {
             var config = ConfigurationFactory.ParseString("akka.loggers = [\"Akka.Event.StandardOutLogger\"]");
             var sys2 = ActorSystem.Create("StandardOutLoggerTest", config.WithFallback(Sys.Settings.Config));
@@ -109,7 +112,7 @@ akka.stdout-loglevel = DEBUG");
             sys2.Log.Debug(Case.t, Case.p);
             probe.ExpectMsg<Debug>();
 
-            sys2.Terminate().Wait();
+            await sys2.Terminate();
         }
 
         [Theory]
@@ -142,5 +145,26 @@ akka.stdout-loglevel = DEBUG");
             public FakeException(string message) : base(message)
             { }
         }
+        
+        [Fact]
+        public async Task ShouldBeAbleToReplaceStandardOutLoggerWithCustomMinimalLogger()
+        {
+            var config = ConfigurationFactory
+                .ParseString("akka.stdout-logger-class = \"Akka.Tests.Loggers.LoggerSpec+CustomLogger, Akka.Tests\"")
+                .WithFallback(ConfigurationFactory.Default()); 
+            
+            var system = ActorSystem.Create("MinimalLoggerTest", config);
+            system.Settings.StdoutLogger.Should().BeOfType<CustomLogger>();
+            await system.Terminate();
+        }
+        
+        public class CustomLogger : MinimalLogger
+        {
+            protected override void Log(object message)
+            {
+                Console.WriteLine(message);
+            }
+        }
+        
     }
 }

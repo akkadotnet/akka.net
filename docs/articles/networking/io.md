@@ -7,6 +7,7 @@ title: I/O
 The I/O extension provides an non-blocking, event driven API that matches the underlying transports mechanism.
 
 ## Getting Started
+
 Every I/O Driver has a special actor, called the `manager`, that serves as an entry point for the API.
 The `manager` for a particular driver is accessible through an extension method on `ActorSystem`. The following example shows how to get a reference to the TCP manager.
 
@@ -35,7 +36,7 @@ The following diagram illustrate the actors involved in establishing and handlin
 
 The following example shows a simple Telnet client. The client send lines entered in the console to the TCP connection, and write data received from the network to the console.
 
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/TelnetClient.cs?name=telnet-client)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/TelnetClient.cs?name=telnetClient)]
 
 ### Server Connection
 
@@ -50,6 +51,6 @@ The following diagram illustrate the actor and messages.
 
 The following code example shows a simple server that echo's data received from the network.
 
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoServer.cs?name=echo-server)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoServer.cs?name=echoServer)]
 
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoConnection.cs?name=echo-connection)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoConnection.cs?name=echoConnection)]

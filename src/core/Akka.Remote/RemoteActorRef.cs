@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Remote
 {
@@ -106,17 +107,16 @@ namespace Akka.Remote
         /// <param name="name">The name.</param>
         /// <returns>ActorRef.</returns>
         /// <exception cref="System.NotImplementedException">TBD</exception>
-        public override IActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IReadOnlyList<string> name)
         {
-            var items = name.ToList();
-            switch (items.FirstOrDefault())
+            switch (name.FirstOrDefault())
             {
                 case null:
                     return this;
                 case "..":
-                    return Parent.GetChild(items.Skip(1));
+                    return Parent.GetChild(name.NoCopySlice(1));
                 default:
-                    return new RemoteActorRef(Remote, LocalAddressToUse, Path / items, ActorRefs.Nobody, Props.None, Deploy.None);
+                    return new RemoteActorRef(Remote, LocalAddressToUse, Path / name, ActorRefs.Nobody, Props.None, Deploy.None);
             }
         }
 
@@ -154,7 +154,7 @@ namespace Akka.Remote
             SendSystemMessage(new Akka.Dispatch.SysMsg.Suspend());
         }
 
-        /// <inheritdoc cref="IInternalActorRef"/>
+        /// <inheritdoc/>
         public override bool IsLocal => false;
 
         /// <inheritdoc cref="IActorRef"/>

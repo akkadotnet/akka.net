@@ -118,21 +118,26 @@ namespace Akka.Dispatch
 
     internal sealed class ChannelExecutorConfigurator : ExecutorServiceConfigurator
     {
+        private static readonly Config PriorityDefault = ConfigurationFactory.ParseString(@"
+executor = channel-executor 
+channel-executor.priority = normal");
+        
         public ChannelExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
         {
-            var fje = config.GetConfig("fork-join-executor");
-            MaxParallelism = ThreadPoolConfig.ScaledPoolSize(
-                        fje.GetInt("parallelism-min"), 
-                        fje.GetDouble("parallelism-factor", 1.0D), // the scalar-based factor to scale the threadpool size to 
-                        fje.GetInt("parallelism-max"));
+            config = config == null ? PriorityDefault : config.WithFallback(PriorityDefault);
+            
+            var priority = config.GetString("channel-executor.priority", "normal");
+            Priority = (TaskSchedulerPriority)Enum.Parse(typeof(TaskSchedulerPriority), priority, true);
         }
 
-        public int MaxParallelism {get;}
+        public TaskSchedulerPriority Priority { get; }
 
         public override ExecutorService Produce(string id)
         {
-            Prerequisites.EventStream.Publish(new Debug($"ChannelExecutor-[id]", typeof(FixedConcurrencyTaskScheduler), $"Launched Dispatcher [{id}] with MaxParallelism=[{MaxParallelism}]"));
-            return new TaskSchedulerExecutor(id, new FixedConcurrencyTaskScheduler(MaxParallelism));
+            Prerequisites.EventStream.Publish(new Debug($"ChannelExecutor-[{id}]", typeof(TaskSchedulerExecutor), $"Launched Dispatcher [{id}] with Priority[{Priority}]"));
+
+            var scheduler = ChannelTaskScheduler.Get(Prerequisites.Settings.System).GetScheduler(Priority);
+            return new TaskSchedulerExecutor(id, scheduler);
         }
     }
 

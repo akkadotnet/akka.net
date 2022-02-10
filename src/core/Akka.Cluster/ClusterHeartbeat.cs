@@ -277,6 +277,7 @@ namespace Akka.Cluster
 
         #region Messaging classes
 
+        // <Heartbeat>
         /// <summary>
         /// Sent at regular intervals for failure detection
         /// </summary>
@@ -318,6 +319,7 @@ namespace Akka.Cluster
                 }
             }
         }
+        // </Heartbeat>
 
         /// <summary>
         /// Sends replies to <see cref="Heartbeat"/> messages

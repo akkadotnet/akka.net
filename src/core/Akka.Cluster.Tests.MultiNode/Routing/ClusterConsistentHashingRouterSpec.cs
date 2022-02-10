@@ -18,6 +18,7 @@ using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode.Routing
 {

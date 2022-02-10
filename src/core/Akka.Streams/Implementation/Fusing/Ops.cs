@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
-using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
@@ -526,7 +525,7 @@ namespace Akka.Streams.Implementation.Fusing
             private class NotApplied
             {
                 public static readonly NotApplied Instance = new NotApplied();
-                private NotApplied() {}
+                private NotApplied() { }
             }
         }
 
@@ -659,7 +658,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Recover;
-        
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -1952,7 +1951,7 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly Buffer<T> _stage;
             private readonly Action<T> _enqueue;
             private IBuffer<T> _buffer;
-            
+
 
             public Logic(Buffer<T> stage) : base(stage.Shape)
             {
@@ -2130,7 +2129,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void PostStop()
             {
-                if(!_completionSignalled)
+                if (!_completionSignalled)
                     _stage._failure(new AbruptStageTerminationException(this));
             }
         }
@@ -2148,7 +2147,7 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, NotUsed>(In, Out);
         }
 
-        public Inlet<T> In { get;  } = new Inlet<T>("OnCompleted.in");
+        public Inlet<T> In { get; } = new Inlet<T>("OnCompleted.in");
 
         public Outlet<NotUsed> Out { get; } = new Outlet<NotUsed>("OnCompleted.out");
 
@@ -3493,7 +3492,7 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(Sum<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
-                
+
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
@@ -3832,5 +3831,257 @@ namespace Akka.Streams.Implementation.Fusing
         /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "StatefulSelectMany";
+    }
+
+    [InternalApi]
+    public sealed class LazyFlow<TIn, TOut, TMat> : GraphStageWithMaterializedValue<FlowShape<TIn, TOut>, Task<Option<TMat>>>
+    {
+        #region Internal Logic
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly LazyFlow<TIn, TOut, TMat> _stage;
+            private readonly TaskCompletionSource<Option<TMat>> _promise;
+            private bool _switching;
+
+            public Logic(LazyFlow<TIn, TOut, TMat> stage, TaskCompletionSource<Option<TMat>> promise)
+                : base(stage.Shape)
+            {
+                _stage = stage;
+                _promise = promise;
+
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
+            }
+
+            public override void OnPush()
+            {
+                var element = Grab(_stage.In);
+                _switching = true;
+
+                var cb = GetAsyncCallback<Result<Flow<TIn, TOut, TMat>>>(result =>
+                {
+                    if (result.IsSuccess && result.Value != null)
+                    {
+                        // check if the stage is still in need for the lazy flow
+                        // (there could have been an OnUpstreamFailure or OnDownstreamFinish in the meantime that has completed the promise)
+                        if (!_promise.Task.IsCompleted)
+                        {
+                            try
+                            {
+                                var mat = SwitchTo(result.Value, element);
+                                _promise.TrySetResult(mat);
+                            }
+                            catch (Exception ex)
+                            {
+                                _promise.TrySetException(ex);
+                                FailStage(ex);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _promise.TrySetException(result.Exception);
+                        FailStage(result.Exception);
+                    }
+                });
+
+                try
+                {
+                    _stage._flowFactory(element)
+                        .ContinueWith(t => cb(Result.FromTask(t)), TaskContinuationOptions.ExecuteSynchronously);
+                }
+                catch (Exception ex)
+                {
+                    _promise.TrySetException(ex);
+                    FailStage(ex);
+                }
+            }
+
+            public override void OnPull() => Pull(_stage.In);
+
+            public override void OnUpstreamFinish()
+            {
+                // ignore OnUpstreamFinish while the stage is switching but SetKeepGoing
+                if (_switching)
+                    SetKeepGoing(true);
+                else
+                {
+                    _promise.TrySetResult(Option<TMat>.None);
+                    base.OnUpstreamFinish();
+                }
+            }
+
+            public override void OnUpstreamFailure(Exception ex)
+            {
+                _promise.TrySetException(ex);
+                base.OnUpstreamFailure(ex);
+            }
+
+            public override void OnDownstreamFinish()
+            {
+                _promise.TrySetResult(Option<TMat>.None);
+                base.OnDownstreamFinish();
+            }
+
+            private TMat SwitchTo(Flow<TIn, TOut, TMat> flow, TIn firstElement)
+            {
+                var firstElementPushed = false;
+
+                //
+                // ports are wired in the following way:
+                //
+                // in ~> subOutlet ~> lazyFlow ~> subInlet ~> out
+                //
+
+                var subInlet = new SubSinkInlet<TOut>(this, "LazyFlowSubSink");
+                var subOutlet = new SubSourceOutlet<TIn>(this, "LazyFlowSubSource");
+
+                // The lazily materialized flow may be constructed from a sink and a source. Therefore termination
+                // signals (completion, cancellation, and errors) are not guaranteed to pass through the flow. This
+                // means that this stage must not be completed as soon as one side of the flow is finished.
+                //
+                // Invariant: IsClosed(Out) == subInlet.IsClosed after each event because termination signals (i.e.
+                // completion, cancellation, and failure) between these two ports are always forwarded.
+                //
+                // However, IsClosed(In) and subOutlet.IsClosed may be different. This happens if upstream completes before
+                // the cached element was pushed.
+                void MaybeCompleteStage()
+                {
+                    if (IsClosed(_stage.In) && subOutlet.IsClosed && IsClosed(_stage.Out))
+                        CompleteStage();
+                }
+
+                var matVal = Source.FromGraph(subOutlet.Source)
+                    .ViaMaterialized(flow, Keep.Right)
+                    .ToMaterialized(subInlet.Sink, Keep.Left)
+                    .Run(Interpreter.SubFusingMaterializer);
+
+                // The stage must not be shut down automatically; it is completed when MaybeCompleteStage decides
+                SetKeepGoing(true);
+
+                SetHandler(_stage.In, new LambdaInHandler(
+                    () => subOutlet.Push(Grab(_stage.In)),
+                    () =>
+                    {
+                        if (firstElementPushed)
+                        {
+                            subOutlet.Complete();
+                            MaybeCompleteStage();
+                        }
+                    },
+                    ex =>
+                    {
+                        // propagate exception irrespective if the cached element has been pushed or not
+                        subOutlet.Fail(ex);
+                        MaybeCompleteStage();
+                    }));
+
+                SetHandler(_stage.Out, new LambdaOutHandler(
+                    () => subInlet.Pull(),
+                    () =>
+                    {
+                        subInlet.Cancel();
+                        MaybeCompleteStage();
+                    }));
+
+                subOutlet.SetHandler(new LambdaOutHandler(
+                    () =>
+                    {
+                        if (firstElementPushed)
+                            Pull(_stage.In);
+                        else
+                        {
+                            // the demand can be satisfied right away by the cached element
+                            firstElementPushed = true;
+                            subOutlet.Push(firstElement);
+                            // In.OnUpstreamFinished was not propagated if it arrived before the cached element was pushed
+                            // -> check if the completion must be propagated now
+                            if (IsClosed(_stage.In))
+                            {
+                                subOutlet.Complete();
+                                MaybeCompleteStage();
+                            }
+                        }
+                    },
+                    () =>
+                    {
+                        if (!IsClosed(_stage.In)) Cancel(_stage.In);
+                        MaybeCompleteStage();
+                    }));
+
+                subInlet.SetHandler(new LambdaInHandler(
+                    () => Push(_stage.Out, subInlet.Grab()),
+                    () =>
+                    {
+                        Complete(_stage.Out);
+                        MaybeCompleteStage();
+                    },
+                    ex =>
+                    {
+                        Fail(_stage.Out, ex);
+                        MaybeCompleteStage();
+                    }));
+
+                if (IsClosed(_stage.Out))
+                {
+                    // downstream may have been canceled while the stage was switching
+                    subInlet.Cancel();
+                }
+                else
+                {
+                    subInlet.Pull();
+                }
+
+                return matVal;
+            }
+        }
+
+        #endregion
+
+        private readonly Func<TIn, Task<Flow<TIn, TOut, TMat>>> _flowFactory;
+
+        public LazyFlow(Func<TIn, Task<Flow<TIn, TOut, TMat>>> flowFactory)
+        {
+            _flowFactory = flowFactory;
+            Shape = new FlowShape<TIn, TOut>(In, Out);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Inlet<TIn> In { get; } = new Inlet<TIn>("lazySink.In");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("lazySink.Out");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.LazyFlow;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override FlowShape<TIn, TOut> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        public override ILogicAndMaterializedValue<Task<Option<TMat>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var promise = new TaskCompletionSource<Option<TMat>>();
+            var stageLogic = new Logic(this, promise);
+            return new LogicAndMaterializedValue<Task<Option<TMat>>>(stageLogic, promise.Task);
+        }
+
+        /// <summary>
+        /// Returns a <see cref="string" /> that represents this instance.
+        /// </summary>
+        public override string ToString() => "LazyFlow";
     }
 }

@@ -22,6 +22,7 @@ using Akka.TestKit.TestEvent;
 using Akka.Util;
 using FluentAssertions;
 using static Akka.Cluster.Sharding.ShardCoordinator;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Sharding.Tests
 {

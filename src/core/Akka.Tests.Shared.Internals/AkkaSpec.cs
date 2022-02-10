@@ -115,9 +115,12 @@ namespace Akka.TestKit
         public static Config AkkaSpecConfig { get { return _akkaSpecConfig; } }
 
         protected T ExpectMsgPf<T>(TimeSpan? timeout, string hint, Func<object, T> function)
+            => ExpectMsgPf(timeout, hint, this, function);
+        
+        protected T ExpectMsgPf<T>(TimeSpan? timeout, string hint, TestKitBase probe, Func<object, T> function)
         {
             MessageEnvelope envelope;
-            var success = TryReceiveOne(out envelope, timeout);
+            var success = probe.TryReceiveOne(out envelope, timeout);
 
             if(!success)
                 Assertions.Fail(string.Format("expected message of type {0} but timed out after {1}", typeof(T), GetTimeoutOrDefault(timeout)));
@@ -129,8 +132,11 @@ namespace Akka.TestKit
         }
 
         protected T ExpectMsgPf<T>(string hint, Func<object, T> pf)
+            => ExpectMsgPf(hint, this, pf);
+
+        protected T ExpectMsgPf<T>(string hint, TestKitBase probe, Func<object, T> pf)
         {
-            var t = ExpectMsg<T>();
+            var t = probe.ExpectMsg<T>();
             //TODO: Check if this really is needed:
             Assertions.AssertTrue(pf.GetMethodInfo().GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
             return pf.Invoke(t);

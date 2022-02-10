@@ -23,7 +23,7 @@ namespace Akka.Cluster.Metrics
     [Akka.Annotations.InternalApiAttribute()]
     public class AdaptiveLoadBalancingMetricsListener : Akka.Actor.ActorBase
     {
-        public AdaptiveLoadBalancingMetricsListener(Akka.Cluster.Metrics.AdaptiveLoadBalancingRoutingLogic routingLogic) { }
+        public AdaptiveLoadBalancingMetricsListener(Akka.Cluster.Metrics.IClusterMetricsRoutingLogic routingLogic) { }
         protected override void PostStop() { }
         protected override void PreStart() { }
         protected override bool Receive(object message) { }
@@ -52,7 +52,7 @@ namespace Akka.Cluster.Metrics
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public sealed class AdaptiveLoadBalancingRoutingLogic : Akka.Routing.RoutingLogic
+    public sealed class AdaptiveLoadBalancingRoutingLogic : Akka.Routing.RoutingLogic, Akka.Cluster.Metrics.IClusterMetricsRoutingLogic
     {
         public AdaptiveLoadBalancingRoutingLogic(Akka.Actor.ActorSystem system, Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null) { }
         public void MetricsChanged(Akka.Cluster.Metrics.Events.ClusterMetricsChanged @event) { }
@@ -119,6 +119,10 @@ namespace Akka.Cluster.Metrics
         public static readonly Akka.Cluster.Metrics.CpuMetricsSelector Instance;
         public CpuMetricsSelector() { }
         public override System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, double> Capacity(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> nodeMetrics) { }
+    }
+    public interface IClusterMetricsRoutingLogic
+    {
+        void MetricsChanged(Akka.Cluster.Metrics.Events.ClusterMetricsChanged @event);
     }
     public interface IMetricsCollector : System.IDisposable
     {

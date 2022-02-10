@@ -265,8 +265,7 @@ namespace Akka.Actor
         {
             get
             {
-                var terminating = ChildrenContainer as TerminatingChildrenContainer;
-                return terminating != null && terminating.Reason is SuspendReason.IWaitingForChildren;
+                return ChildrenContainer is TerminatingChildrenContainer terminating && terminating.Reason is SuspendReason.IWaitingForChildren;
             }
         }
 
@@ -325,8 +324,7 @@ namespace Akka.Actor
         /// </summary>
         private bool TryGetChildRestartStatsByName(string name, out ChildRestartStats child)
         {
-            IChildStats stats;
-            if (ChildrenContainer.TryGetByName(name, out stats))
+            if (ChildrenContainer.TryGetByName(name, out var stats))
             {
                 child = stats as ChildRestartStats;
                 if (child != null)
@@ -351,60 +349,41 @@ namespace Akka.Actor
         // In Akka JVM there is a getAllChildStats here. Use ChildrenRefs.Stats instead
 
         /// <summary>
-        /// Obsolete. Use <see cref="TryGetSingleChild(string, out IInternalActorRef)"/> instead.
+        /// Get a single child matching the name supplied
         /// </summary>
-        /// <param name="name">N/A</param>
-        /// <returns>N/A</returns>
-        [Obsolete("Use TryGetSingleChild [0.7.1]")]
+        /// <param name="name">the child's name</param>
+        /// <returns>IInternalActorRef</returns>
         public IInternalActorRef GetSingleChild(string name)
-        {
-            IInternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
-        public bool TryGetSingleChild(string name, out IInternalActorRef child)
         {
             if (name.IndexOf('#') < 0)
             {
                 // optimization for the non-uid case
-                if (TryGetChildRestartStatsByName(name, out var stats))
+                if (ChildrenContainer.TryGetByName(name, out var stats) && stats is ChildRestartStats r)
                 {
-                    child = stats.Child;
-                    return true;
+                    return r.Child;
                 }
-                else if (TryGetFunctionRef(name, out var functionRef))
+
+                if (TryGetFunctionRef(name, out var functionRef))
                 {
-                    child = functionRef;
-                    return true;
+                    return functionRef;
                 }
             }
             else
             {
                 var (s, uid) = GetNameAndUid(name);
-                if (TryGetChildRestartStatsByName(s, out var stats))
+                if (TryGetChildRestartStatsByName(s, out var stats) && (uid == ActorCell.UndefinedUid || uid == stats.Uid))
                 {
-                    if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
-                    {
-                        child = stats.Child;
-                        return true;
-                    }
+                    return stats.Child;
                 }
-                else if (TryGetFunctionRef(s, uid, out var functionRef))
+
+                if (TryGetFunctionRef(s, uid, out var functionRef))
                 {
-                    child = functionRef;
-                    return true;
+                    return functionRef;
                 }
             }
-            child = ActorRefs.Nobody;
-            return false;
+            return ActorRefs.Nobody;
         }
-
+        
         /// <summary>
         /// TBD
         /// </summary>

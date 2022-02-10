@@ -16,10 +16,7 @@
             "src": "../src"
         }],
         "dest": "api",
-        "filter": "filterConfig.yml",
-        "properties": {
-            "TargetFramework": "net45"
-        }
+        "filter": "filterConfig.yml"
     }],
     "build": {
         "content": [{
@@ -45,7 +42,9 @@
             "files": [
                 "images/**",
                 "web.config",
-                "xrefmap.yml"
+                "xrefmap.yml",
+                "articles/**.html",
+                "community/**.html"
             ],
             "exclude": [
                 "obj/**",

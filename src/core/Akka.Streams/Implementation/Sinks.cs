@@ -806,7 +806,7 @@ namespace Akka.Streams.Implementation
             }
 
             public override void PostStop() => 
-                StopCallback(promise => promise.SetException(StreamDetachedException.Instance));
+                StopCallback(promise => promise.SetException(new StreamDetachedException()));
 
             private Action<TaskCompletionSource<Option<T>>> Callback()
             {
@@ -931,179 +931,167 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TMat">TBD</typeparam>
-    internal sealed class LazySink<TIn, TMat> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TMat>>
+    internal sealed class LazySink<TIn, TMat> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<Option<TMat>>>
     {
         #region Logic
 
         private sealed class Logic : InGraphStageLogic
         {
             private readonly LazySink<TIn, TMat> _stage;
-            private readonly TaskCompletionSource<TMat> _completion;
-            private readonly Lazy<Decider> _decider;
+            private readonly TaskCompletionSource<Option<TMat>> _completion;
+            private bool _switching;
 
-            private bool _completed;
-
-            public Logic(LazySink<TIn, TMat> stage, Attributes inheritedAttributes,
-                TaskCompletionSource<TMat> completion) : base(stage.Shape)
+            public Logic(LazySink<TIn, TMat> stage, Attributes inheritedAttributes, TaskCompletionSource<Option<TMat>> completion) 
+                : base(stage.Shape)
             {
                 _stage = stage;
                 _completion = completion;
-                _decider = new Lazy<Decider>(() =>
-                {
-                    var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
-                    return attr != null ? attr.Decider : Deciders.StoppingDecider;
-                });
 
                 SetHandler(stage.In, this);
             }
 
-            public override void OnPush()
-            {
-                try
-                {
-                    var element = Grab(_stage.In);
-                    var callback = GetAsyncCallback<Result<Sink<TIn, TMat>>>(result =>
-                    {
-                        if (result.IsSuccess)
-                            InitInternalSource(result.Value, element);
-                        else
-                            Failure(result.Exception);
-                    });
-                    _stage._sinkFactory(element)
-                        .ContinueWith(t => callback(Result.FromTask(t)),
-                            TaskContinuationOptions.ExecuteSynchronously);
-                    SetHandler(_stage.In, new LambdaInHandler(
-                            onPush: () => { },
-                            onUpstreamFinish: GotCompletionEvent,
-                            onUpstreamFailure: Failure
-                        ));
-                }
-                catch (Exception ex)
-                {
-                    if (_decider.Value(ex) == Directive.Stop)
-                        Failure(ex);
-                    else
-                        Pull(_stage.In);
-                }
-            }
-
-            public override void OnUpstreamFinish()
-            {
-                CompleteStage();
-                try
-                {
-                    _completion.TrySetResult(_stage._zeroMaterialised());
-                }
-                catch (Exception ex)
-                {
-                    _completion.SetException(ex);
-                }
-            }
-
-            public override void OnUpstreamFailure(Exception e) => Failure(e);
-
-            private void GotCompletionEvent()
-            {
-                SetKeepGoing(true);
-                _completed = true;
-            }
-
             public override void PreStart() => Pull(_stage.In);
 
-            private void Failure(Exception ex)
+            public override void OnPush()
             {
-                FailStage(ex);
-                _completion.SetException(ex);
-            }
+                var element = Grab(_stage.In);
+                _switching = true;
 
-            private void InitInternalSource(Sink<TIn, TMat> sink, TIn firstElement)
-            {
-                var sourceOut = new SubSource(this, firstElement);
+                var callback = GetAsyncCallback<Result<Sink<TIn, TMat>>>(result =>
+                {
+                    if (result.IsSuccess)
+                    {
+                        // check if the stage is still in need for the lazy sink
+                        // (there could have been an OnUpstreamFailure in the meantime that has completed the promise)
+                        if (!_completion.Task.IsCompleted)
+                        {
+                            try
+                            {
+                                var mat = SwitchTo(result.Value, element);
+                                _completion.TrySetResult(mat);
+                                SetKeepGoing(true);
+                            }
+                            catch (Exception ex)
+                            {
+                                _completion.TrySetException(ex);
+                                FailStage(ex);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _completion.TrySetException(result.Exception);
+                        FailStage(result.Exception);
+                    }
+                });
 
                 try
                 {
-                    var matVal = Source.FromGraph(sourceOut.Source)
-                        .RunWith(sink, Interpreter.SubFusingMaterializer);
-                    _completion.TrySetResult(matVal);
+                    _stage._sinkFactory(element)
+                        .ContinueWith(t => callback(Result.FromTask(t)), TaskContinuationOptions.ExecuteSynchronously);
                 }
                 catch (Exception ex)
                 {
                     _completion.TrySetException(ex);
                     FailStage(ex);
                 }
-
             }
 
-            #region SubSource
-
-            private sealed class SubSource : SubSourceOutlet<TIn>
+            public override void OnUpstreamFinish()
             {
-                private readonly Logic _logic;
-                private readonly LazySink<TIn, TMat> _stage;
-
-                public SubSource(Logic logic, TIn firstElement) : base(logic, "LazySink")
+                // ignore OnUpstreamFinish while the stage is switching but SetKeepGoing
+                if (_switching)
                 {
-                    _logic = logic;
-                    _stage = logic._stage;
-
-                    SetHandler(new LambdaOutHandler(onPull: () =>
-                    {
-                        Push(firstElement);
-                        if (_logic._completed)
-                            SourceComplete();
-                        else
-                            SwitchToFinalHandler();
-                    }, onDownstreamFinish: SourceComplete));
-
-                    logic.SetHandler(_stage.In, new LambdaInHandler(
-                        onPush: () => Push(logic.Grab(_stage.In)),
-                        onUpstreamFinish: logic.GotCompletionEvent,
-                        onUpstreamFailure: SourceFailure));
-                }
-
-                private void SourceFailure(Exception ex)
+                    // there is a cached element -> the stage must not be shut down automatically because IsClosed(In) is satisfied
+                    SetKeepGoing(true);
+                }                
+                else
                 {
-                    Fail(ex);
-                    _logic.FailStage(ex);
-                }
-
-                private void SwitchToFinalHandler()
-                {
-                    SetHandler(new LambdaOutHandler(
-                        onPull: () => _logic.Pull(_stage.In),
-                        onDownstreamFinish: SourceComplete));
-
-                    _logic.SetHandler(_stage.In, new LambdaInHandler(
-                        onPush: () => Push(_logic.Grab(_stage.In)),
-                        onUpstreamFinish: SourceComplete,
-                        onUpstreamFailure: SourceFailure));
-                }
-
-                private void SourceComplete()
-                {
-                    Complete();
-                    _logic.CompleteStage();
+                    _completion.TrySetResult(Option<TMat>.None);
+                    base.OnUpstreamFinish();
                 }
             }
 
-            #endregion
+            public override void OnUpstreamFailure(Exception ex)
+            {
+                _completion.TrySetException(ex);
+                base.OnUpstreamFailure(ex);
+            }
+
+            private TMat SwitchTo(Sink<TIn, TMat> sink, TIn firstElement)
+            {
+                var firstElementPushed = false;
+
+                var subOutlet = new SubSourceOutlet<TIn>(this, "LazySink");
+
+                var matVal = Source.FromGraph(subOutlet.Source).RunWith(sink, Interpreter.SubFusingMaterializer);
+
+                void MaybeCompleteStage()
+                {
+                    if (IsClosed(_stage.In) && subOutlet.IsClosed)
+                        CompleteStage();
+                }
+
+                // The stage must not be shut down automatically; it is completed when MaybeCompleteStage decides
+                SetKeepGoing(true);
+
+                SetHandler(_stage.In, new LambdaInHandler(
+                    () => subOutlet.Push(Grab(_stage.In)),
+                    () =>
+                    {
+                        if (firstElementPushed)
+                        {
+                            subOutlet.Complete();
+                            MaybeCompleteStage();
+                        }
+                    },
+                    ex =>
+                    {
+                        // propagate exception irrespective if the cached element has been pushed or not
+                        subOutlet.Fail(ex);
+                        MaybeCompleteStage();
+                    }));
+
+                subOutlet.SetHandler(new LambdaOutHandler(
+                    () =>
+                    {
+                        if (firstElementPushed)
+                            Pull(_stage.In);
+                        else
+                        {
+                            // the demand can be satisfied right away by the cached element
+                            firstElementPushed = true;
+                            subOutlet.Push(firstElement);
+                            // In.OnUpstreamFinished was not propagated if it arrived before the cached element was pushed
+                            // -> check if the completion must be propagated now
+                            if (IsClosed(_stage.In))
+                            {
+                                subOutlet.Complete();
+                                MaybeCompleteStage();
+                            }
+                        }
+                    },
+                    () =>
+                    {
+                        if (!IsClosed(_stage.In)) Cancel(_stage.In);
+                        MaybeCompleteStage();
+                    }));
+
+                return matVal;
+            }
         }
 
         #endregion
 
         private readonly Func<TIn, Task<Sink<TIn, TMat>>> _sinkFactory;
-        private readonly Func<TMat> _zeroMaterialised;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="sinkFactory">TBD</param>
-        /// <param name="zeroMaterialised">TBD</param>
-        public LazySink(Func<TIn, Task<Sink<TIn, TMat>>> sinkFactory, Func<TMat> zeroMaterialised)
+        public LazySink(Func<TIn, Task<Sink<TIn, TMat>>> sinkFactory)
         {
             _sinkFactory = sinkFactory;
-            _zeroMaterialised = zeroMaterialised;
-
             Shape = new SinkShape<TIn>(In);
         }
 
@@ -1127,11 +1115,11 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="inheritedAttributes">TBD</param>
         /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Task<Option<TMat>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var completion = new TaskCompletionSource<TMat>();
+            var completion = new TaskCompletionSource<Option<TMat>>();
             var stageLogic = new Logic(this, inheritedAttributes, completion);
-            return new LogicAndMaterializedValue<Task<TMat>>(stageLogic, completion.Task);
+            return new LogicAndMaterializedValue<Task<Option<TMat>>>(stageLogic, completion.Task);
         }
 
         /// <summary>

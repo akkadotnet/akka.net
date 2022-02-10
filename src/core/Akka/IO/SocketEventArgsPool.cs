@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using Akka.Annotations;
 using Akka.IO.Buffers;
 using Akka.Util;
 
@@ -21,67 +22,62 @@ namespace Akka.IO
     {
         SocketAsyncEventArgs Acquire(IActorRef actor);
         void Release(SocketAsyncEventArgs e);
+        
+        BufferPoolInfo BufferPoolInfo { get; }
     }
 
+    // This class __does not__ pool and reuse SocketAsyncEventArgs anymore. Reusing SocketAsyncEventArgs with
+    // multiple Socket instances is dangerous because SocketAsyncEventArgs is not a simple struct or POCO,
+    // it actually held internal states that can wreak havoc if being used in another socket instance.
+    // It is impossible to clear a SocketAsyncEventArgs object and the hassle of trying to handle every single
+    // edge case outweigh the speed and memory gain of pooling the instances.
     internal class PreallocatedSocketEventAgrsPool : ISocketEventArgsPool
     {
+        // Byte buffer pool is moved here to reduce the chance that a memory segment got mis-managed
+        // and not released properly. We only need to worry about acquiring and releasing SocketAsyncEventArgs
+        // and not worry about having to check to see if we need to rent or release any buffer.
+        //
+        // There is no reason why users or developers would need to touch memory management code because it is
+        // very specific for providing byte buffers for SocketAsyncEventArgs
+        private readonly IBufferPool _bufferPool;
+        
         private readonly EventHandler<SocketAsyncEventArgs> _onComplete;
-        private readonly ConcurrentStack<SocketAsyncEventArgs> _pool = new ConcurrentStack<SocketAsyncEventArgs>();
 
-        public PreallocatedSocketEventAgrsPool(int initSize, EventHandler<SocketAsyncEventArgs> onComplete)
+        public PreallocatedSocketEventAgrsPool(int initSize, IBufferPool bufferPool, EventHandler<SocketAsyncEventArgs> onComplete)
         {
+            _bufferPool = bufferPool;
             _onComplete = onComplete;
-            for (var i = 0; i < initSize; i++)
-            {
-                var e = CreateSocketAsyncEventArgs();
-                _pool.Push(e);
-            }
         }
 
+        
         public SocketAsyncEventArgs Acquire(IActorRef actor)
         {
-            if (!_pool.TryPop(out var e))
-                e = CreateSocketAsyncEventArgs();
+            var buffer = _bufferPool.Rent();
+            var e = new SocketAsyncEventArgs();
 
+            e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
             e.UserToken = actor;
+            e.Completed += _onComplete;
             return e;
         }
 
         public void Release(SocketAsyncEventArgs e)
         {
-            e.UserToken = null;
-            e.AcceptSocket = null;
-
-            try
+            if (e.Buffer != null)
             {
-                e.SetBuffer(null, 0, 0);
-                if (e.BufferList != null)
+                _bufferPool.Release(new ArraySegment<byte>(e.Buffer, e.Offset, e.Count));
+            }
+            if (e.BufferList != null)
+            {
+                foreach (var segment in e.BufferList)
                 {
-                    e.BufferList = null;
-                }
-                
-                if (_pool.Count < 2048) // arbitrary taken max amount of free SAEA stored
-                {
-                    _pool.Push(e);
-                }
-                else
-                {
-                    e.Dispose();
+                    _bufferPool.Release(segment);
                 }
             }
-            catch (InvalidOperationException)
-            {
-                // it can be that for some reason socket is in use and haven't closed yet. Dispose anyway to avoid leaks.
-                e.Dispose();
-            }
+            e.Dispose();
         }
 
-        private SocketAsyncEventArgs CreateSocketAsyncEventArgs()
-        {
-            var e = new SocketAsyncEventArgs { UserToken = null };
-            e.Completed += _onComplete;
-            return e;
-        }
+        public BufferPoolInfo BufferPoolInfo => _bufferPool.Diagnostics();
     }
 
     internal static class SocketAsyncEventArgsExtensions

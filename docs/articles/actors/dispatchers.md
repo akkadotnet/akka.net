@@ -6,11 +6,12 @@ title: Dispatchers
 # Dispatchers
 
 ## What Do Dispatchers Do?
+
 Dispatchers are responsible for scheduling all code that run inside the `ActorSystem`. Dispatchers are one of the most important parts of Akka.NET, as they control the throughput and time share for each of the actors, giving each one a fair share of resources.
 
 By default, all actors share a single **Global Dispatcher**. Unless you change the configuration, this dispatcher uses the *.NET Thread Pool* behind the scenes, which is optimized for most common scenarios. **That means the default configuration should be *good enough* for most cases.**
 
-#### Why should I use different dispatchers?
+### Why Should I Use Different Dispatchers?
 
 When messages arrive in the [actor's mailbox](xref:mailboxes), the dispatcher schedules the delivery of messages in batches, and tries to deliver the entire batch before releasing the thread to another actor. While the default configuration is *good enough* for most scenarios, you may want to change ([through configuration](#configuring-dispatchers)) how much time the scheduler should spend running each actor.
 
@@ -20,7 +21,7 @@ There are some other common reasons to select a different dispatcher. These reas
   * ensure high-load actors don't starve the system by consuming too much cpu-time;
   * ensure important actors always have a dedicated thread to do their job;
   * create [bulkheads](http://skife.org/architecture/fault-tolerance/2009/12/31/bulkheads.html), ensuring problems created in one part of the system do not leak to others;
-* allow actors to execute in a specific SyncrhonizationContext;
+* allow actors to execute in a specific SynchronizationContext;
 
 > [!NOTE]
 > Consider using custom dispatchers for special cases only. Correctly configuring dispatchers requires some understanding of how the framework works. Custom dispatchers *should not* be considered the default solution for performance problems. It's considered normal for complex applications to have one or a few custom dispatchers, it's not usual for most or all actors in a system to require a custom dispatcher configuration.
@@ -29,9 +30,9 @@ There are some other common reasons to select a different dispatcher. These reas
 
 Throughout this documentation and most Akka literature available, the term *dispatcher* is used to refer to *dispatcher configurations*, but they are in fact different things.
 
-- **Dispatchers** are low level components that are responsible for scheduling code execution in the system. These components are built into Akka.NET, there is a fixed number of them and you don't need to create or change them.
+* **Dispatchers** are low level components that are responsible for scheduling code execution in the system. These components are built into Akka.NET, there is a fixed number of them and you don't need to create or change them.
 
-- **Dispatcher Configurations** are custom settings you can create to *make use of dispatchers* in specific ways. There are some built-in dispatcher configurations, and you can create as many as you need for your applications.
+* **Dispatcher Configurations** are custom settings you can create to *make use of dispatchers* in specific ways. There are some built-in dispatcher configurations, and you can create as many as you need for your applications.
 
 Therefore, when you read about *"creating a custom dispatcher"* it usually means "*using a custom configuration for one of the built-in dispatchers*".
 
@@ -65,7 +66,7 @@ Or you can also set it up in code:
 system.ActorOf(Props.Create<MyActor>().WithDispatcher("my-dispatcher"), "my-actor");
 ```
 
-#### Built-in Dispatcher Configurations
+### Built-in Dispatcher Configurations
 
 Some dispatcher configurations are available out-of-the-box for convenience. You can use them during actor deployment, [as described above](#configuring-dispatchers).
 
@@ -126,11 +127,11 @@ This is the configuration for the [*default-fork-join-dispatcher*](#built-in-dis
 ```hocon
 default-fork-join-dispatcher {
   type = ForkJoinDispatcher
-  throughput = 100
+  throughput = 30
   dedicated-thread-pool {
-	  thread-count = 3
-	  deadlock-timeout = 3s
-	  threadtype = background
+      thread-count = 3
+      deadlock-timeout = 3s
+      threadtype = background
   }
 }
 ```
@@ -167,11 +168,12 @@ private void Form1_Load(object sender, System.EventArgs e)
 ```
 
 ### `ChannelExecutor`
+
 In Akka.NET v1.4.19 we will be introducing an opt-in feature, the `ChannelExecutor` - a new dispatcher type that re-uses the same configuration as a `ForkJoinDispatcher` but runs entirely on top of the .NET `ThreadPool` and is able to take advantage of dynamic thread pool scaling to size / resize workloads on the fly.
 
 During its initial development and benchmarks, we observed the following:
 
-1. The `ChannelExecutor` tremendously reduced idle CPU and max busy CPU even during peak message throughput, primarily as a result of dynamically shrinking the total `ThreadPool` to only the necessary size. This resolves one of the largest complaints large users of Akka.NET have today. 
+1. The `ChannelExecutor` tremendously reduced idle CPU and max busy CPU even during peak message throughput, primarily as a result of dynamically shrinking the total `ThreadPool` to only the necessary size. This resolves one of the largest complaints large users of Akka.NET have today.
 2. The `ChannelExecutor` actually beat the `ForkJoinDispatcher` and others on performance even in environments like Docker and bare metal on Windows.
 
 > [!NOTE]
@@ -179,7 +181,7 @@ During its initial development and benchmarks, we observed the following:
 
 The `ChannelExectuor` re-uses the same threading settings as the `ForkJoinExecutor` to determine its effective upper and lower parallelism limits, and you can configure the `ChannelExecutor` to run inside your `ActorSystem` via the following HOCON configuration:
 
-```
+```hocon
 akka.actor.default-dispatcher = {
     executor = channel-executor
     fork-join-executor { #channelexecutor will re-use these settings
@@ -225,15 +227,15 @@ This will enable the `ChannelExecutor` to run everywhere and all Akka.NET loads,
 The following configuration keys are available for any dispatcher configuration:
 
 * `type` - (Required) The type of dispatcher to be used: `Dispatcher`, `TaskDispatcher`, `PinnedDispatcher`, `ForkJoinDispatcher` or `SynchronizedDispatcher`.
-* `throughput` - (Required) The maximum # of messages processed each time the actor is activated. Most dispatchers default to `100`.
+* `throughput` - (Required) The maximum # of messages processed each time the actor is activated. Most dispatchers default to `30`.
 * `throughput-deadline-time` - The maximum amount of time to process messages when the actor is activated, or `0` for no limit. The default is `0`.
 
 > [!NOTE]
 > The throughput-deadline-time is used as a *best effort*, not as a *hard limit*. This means that if a message takes more time than the deadline allows, Akka.NET won't interrupt the process. Instead it will wait for it to finish before giving turn to the next actor.
 
-## Dispatcher aliases
+## Dispatcher Aliases
 
-When a dispatcher is looked up, and the given setting contains a string rather than a dispatcher config block, 
+When a dispatcher is looked up, and the given setting contains a string rather than a dispatcher config block,
 the lookup will treat it as an alias, and follow that string to an alternate location for a dispatcher config.
 If the dispatcher config is referenced both through an alias and through the absolute path only one dispatcher will
 be used and shared among the two ids.

@@ -102,7 +102,7 @@ namespace Akka.Event
                     throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
                 }
 
-                if (loggerType == typeof(StandardOutLogger))
+                if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
                 {
                     shouldRemoveStandardOutLogger = false;
                     continue;
@@ -143,8 +143,9 @@ namespace Akka.Event
 
             if (shouldRemoveStandardOutLogger)
             {
-                Publish(new Debug(logName, GetType(), "StandardOutLogger being removed"));
-                Unsubscribe(Logging.StandardOutLogger);
+                var stdOutLogger = system.Settings.StdoutLogger;
+                Publish(new Debug(logName, GetType(), $"{Logging.SimpleName(stdOutLogger)} being removed"));
+                Unsubscribe(stdOutLogger);
             }
 
             Publish(new Debug(logName, GetType(), "Default Loggers started"));
@@ -157,19 +158,18 @@ namespace Akka.Event
         internal void StopDefaultLoggers(ActorSystem system)
         {
             var level = LogLevel; // volatile access before reading loggers
-            if (!_loggers.Any(c => c is StandardOutLogger))
+            if (!_loggers.Any(c => c is MinimalLogger))
             {
                 SetUpStdoutLogger(system.Settings);
-                Publish(new Debug(SimpleName(this), GetType(), "Shutting down: StandardOutLogger started"));
+                Publish(new Debug(SimpleName(this), GetType(), $"Shutting down: {Logging.SimpleName(system.Settings.StdoutLogger)} started"));
             }
 
             foreach (var logger in _loggers)
             {
-                if (!(logger is StandardOutLogger))
+                if (!(logger is MinimalLogger))
                 {
                     Unsubscribe(logger);
-                    var internalActorRef = logger as IInternalActorRef;
-                    if (internalActorRef != null)
+                    if (logger is IInternalActorRef internalActorRef)
                     {
                         internalActorRef.Stop();
                     }
@@ -214,9 +214,9 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Starts the <see cref="StandardOutLogger"/> logger.
+        /// Starts the <see cref="MinimalLogger"/> logger.
         /// </summary>
-        /// <param name="config">The configuration used to configure the <see cref="StandardOutLogger"/>.</param>
+        /// <param name="config">The configuration used to configure the <see cref="MinimalLogger"/>.</param>
         public void StartStdoutLogger(Settings config)
         {
             SetUpStdoutLogger(config);
@@ -226,7 +226,7 @@ namespace Akka.Event
         private void SetUpStdoutLogger(Settings config)
         {
             var logLevel = Logging.LogLevelFor(config.StdoutLogLevel);
-            SubscribeLogLevelAndAbove(logLevel, Logging.StandardOutLogger);
+            SubscribeLogLevelAndAbove(logLevel, config.StdoutLogger);
         }
 
         /// <summary>

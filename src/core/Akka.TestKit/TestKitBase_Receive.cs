@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
@@ -49,13 +50,32 @@ namespace Akka.TestKit
                 var left = end - Now;
                 var msg = ReceiveOne(left);
                 _assertions.AssertTrue(msg != null, "Timeout ({0}) during fishForMessage{1}", maxValue, string.IsNullOrEmpty(hint) ? "" : ", hint: " + hint);
-                if (msg is T && isMessage((T)msg))
+                if (msg is T msg1 && isMessage(msg1))
                 {
-                    return (T)msg;
+                    return msg1;
                 }
             }
         }
 
+        /// <summary>
+        /// Receives messages until <paramref name="max"/>.
+        ///
+        /// Ignores all messages except for a message of type <typeparamref name="T"/>.
+        /// Asserts that all messages are not of the of type <typeparamref name="T"/>.
+        /// </summary>
+        /// <typeparam name="T">The type that the message is not supposed to be.</typeparam>
+        /// <param name="max">Optional. The maximum wait duration. Defaults to <see cref="RemainingOrDefault"/> when unset.</param>
+        public async Task FishUntilMessageAsync<T>(TimeSpan? max = null)
+        {
+            await Task.Run(() =>
+            {
+                ReceiveWhile<object>(max: max, shouldContinue: x =>
+                {
+                    _assertions.AssertFalse(x is T, "did not expect a message of type {0}", typeof(T));
+                    return true; // please continue receiving, don't stop
+                });
+            });
+        }
 
         /// <summary>
         /// Receive one message from the internal queue of the TestActor.
@@ -266,7 +286,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Receive a series of messages.
-        /// It will continue to receive messages until the <paramref name="shouldIgnore"/> predicate returns <c>false</c> or the idle 
+        /// It will continue to receive messages until the <paramref name="shouldContinue"/> predicate returns <c>false</c> or the idle 
         /// timeout is met (disabled by default) or the overall
         /// maximum duration is elapsed or expected messages count is reached.
         /// If a message that isn't of type <typeparamref name="T"/> the parameter <paramref name="shouldIgnoreOtherMessageTypes"/> 
@@ -277,13 +297,13 @@ namespace Akka.TestKit
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        /// <param name="shouldIgnore">TBD</param>
+        /// <param name="shouldContinue">TBD</param>
         /// <param name="max">TBD</param>
         /// <param name="idle">TBD</param>
         /// <param name="msgs">TBD</param>
         /// <param name="shouldIgnoreOtherMessageTypes">TBD</param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldIgnore, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
+        public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldContinue, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
         {
             var start = Now;
             var maxValue = RemainingOrDilated(max);
@@ -307,7 +327,7 @@ namespace Akka.TestKit
                 var shouldStop = false;
                 if (typedMessage != null)
                 {
-                    if (shouldIgnore(typedMessage))
+                    if (shouldContinue(typedMessage))
                     {
                         acc.Add(typedMessage);
                         count++;

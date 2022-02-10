@@ -1,0 +1,18 @@
+- name: Contributing to Akka.NET
+  href: index.md
+- name: Build Process
+  href: build-process.md
+- name: Release Process
+  href: release-process.md
+- name: API Compatibility Guidelines
+  href: api-changes-compatibility.md
+- name: Wire Compatibility Guidelines
+  href: wire-compatibility.md
+- name: Code Guidelines
+  href: code-guidelines.md
+- name: Scala To C# Conversion Guide
+  href: porting-guide.md
+- name: Documentation Guidelines
+  href: documentation-guidelines.md
+- name: Debugging Akka.NET
+  href: debugging.md

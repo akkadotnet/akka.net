@@ -97,6 +97,8 @@ namespace Akka.Cluster.Serialization
             }
         }
 
+        // DocFx tag for documentation below - MsgRead
+        // <MsgRead>
         public override object FromBinary(byte[] bytes, string manifest)
         {
             switch (manifest)
@@ -136,6 +138,7 @@ namespace Akka.Cluster.Serialization
                     throw new ArgumentException($"Unknown manifest [{manifest}] in [{nameof(ClusterMessageSerializer)}]");
             }
         }
+        // </MsgRead>
 
         public override string Manifest(object o)
         {

@@ -319,7 +319,6 @@ namespace Akka.Actor
             return true;
         }
 
-        /// <inheritdoc />
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -328,7 +327,7 @@ namespace Akka.Actor
             return Equals((Props)obj);
         }
 
-        /// <inheritdoc />
+       
         public override int GetHashCode()
         {
             unchecked
@@ -359,7 +358,7 @@ namespace Akka.Actor
             if (newExpression == null)
                 throw new ArgumentException("The create function must be a 'new T (args)' expression");
 
-            var args = newExpression.GetArguments();
+            var args = newExpression.Arguments.Count > 0 ? newExpression.GetArguments() : NoArgs;
 
             return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy, args){ SupervisorStrategy = supervisorStrategy };
         }

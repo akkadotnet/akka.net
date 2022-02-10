@@ -7,21 +7,22 @@ title: Serialization
 
 One of the core concepts of any actor system like Akka.NET is the notion of message passing between actors.
 Since Akka.NET is network transparent, these actors can be located locally or remotely. As such the system needs a common
-exchange format to package messages into so that it can send them to receiving actors. 
-In Akka.NET, messages are plain objects and thus easily converted to a byte array. 
+exchange format to package messages into so that it can send them to receiving actors.
+In Akka.NET, messages are plain objects and thus easily converted to a byte array.
 The process of converting objects into byte arrays is known as serialization.
 
-Akka.NET itself uses `Protocol Buffers` to serialize internal messages (i.e. cluster gossip messages). 
+Akka.NET itself uses `Protocol Buffers` to serialize internal messages (i.e. cluster gossip messages).
 However, the serialization mechanism in Akka.NET allows you to write custom serializers and to define which serializer to use for what.
 As shown in the examples further down this page, these serializers can be mixed and matched depending on preference or need.
 
-There are many other uses for serialization other than messaging. 
+There are many other uses for serialization other than messaging.
 It's possible to use these serializers for ad-hoc purposes as well.
 
 ## Usage
 
 ### Configuration
-For Akka.NET to know which `Serializer` to use when (de-)serializing objects, two sections need to be defined in the application's configuration. 
+
+For Akka.NET to know which `Serializer` to use when (de-)serializing objects, two sections need to be defined in the application's configuration.
 The `akka.actor.serializers` section is where names are associated to implementations of the `Serializer` to use.
 
 ```hocon
@@ -55,13 +56,14 @@ akka {
 }
 ```
 
-In case of ambiguity, such as a message implements several of the configured classes, the most specific configured class will be used, i.e. the one of which all other candidates are superclasses. 
+In case of ambiguity, such as a message implements several of the configured classes, the most specific configured class will be used, i.e. the one of which all other candidates are superclasses.
 If this condition cannot be met, because e.g. `ISerializable` and `MyOwnSerializable` both apply and neither is a
 subtype of the other, a warning will be issued.
 
 Akka.NET provides serializers for POCO's (Plain Old C# Objects) and for `Google.Protobuf.IMessage` by default, so you don't usually need to add configuration for that.
 
 ### Configuring Serialization Bindings Programmatically
+
 As of Akka.NET v1.4 it is now possible to bind serializers to their target types programmatically using the [`SerializationSetup` class](xref:Akka.Serialization.SerializationSetup).
 
 First, we define a set of messages that all implement a common protocol and will be handled by the same serializer:
@@ -84,7 +86,7 @@ The `SerializationSetup` takes a function with the following signature:
 Func<ExtendedActorSystem, ImmutableHashSet<SerializerDetails>>
 ```
 
-The `ExtendedActorSystem` passed into this method is the `ActorSystem` you're configuring, as all `Serializer` classes in Akka.NET require an `ExtendedActorSystem` as a construtor argument.
+The `ExtendedActorSystem` passed into this method is the `ActorSystem` you're configuring, as all `Serializer` classes in Akka.NET require an `ExtendedActorSystem` as a constructor argument.
 
 For each serialization binding you wish to create, you need to create [a `SerializerDetails` object](xref:Akka.Serialization.SerializerDetails) using the `SerializerDetails.Create` method:
 
@@ -110,8 +112,9 @@ And that's how you can configure Akka.NET serialization programmatically.
 > There are other parts of Akka.NET that are possible to configure programmatically via `ActorSystemSetup`. [Read more about them here](xref:configuration).
 
 ### Verification
+
 Normally, messages sent between local actors (i.e. same CLR) do not undergo serialization.
-For testing, it may be desirable to force serialization on all messages, both remote and local. 
+For testing, it may be desirable to force serialization on all messages, both remote and local.
 If you want to do this to verify that your messages are serializable, you can enable the following config option:
 
 ```hocon
@@ -121,6 +124,7 @@ akka {
   }
 }
 ```
+
 If you want to verify that your `Props` are serializable, you can enable the following config option:
 
 ```hocon
@@ -132,12 +136,13 @@ akka {
 ```
 
 > [!WARNING]
-> We recommend having these config options turned on only when you're running tests. 
+> We recommend having these config options turned on only when you're running tests.
 Turning these options on in production is pointless, as it would negatively impact the performance of local message passing without giving any gain.
 
 ### Programmatic
+
 As mentioned previously, Akka.NET uses serialization for message passing.
-However the system is much more robust than that. 
+However the system is much more robust than that.
 To programmatically (de-)serialize objects using Akka.NET serialization, a reference to the main serialization class is all that is needed.
 
 ```csharp
@@ -166,21 +171,24 @@ Assert.AreEqual(original, back);
 ```
 
 ## Customization
-Akka.NET makes it extremely easy to create custom serializers to handle a wide variety of scenarios. 
-All serializers in Akka.NET inherit from `Akka.Serialization.Serializer`. 
+
+Akka.NET makes it extremely easy to create custom serializers to handle a wide variety of scenarios.
+All serializers in Akka.NET inherit from `Akka.Serialization.Serializer`.
 So, to create a custom serializer, all that is needed is a class that inherits from this base class.
 
-### Creating new Serializers
+### Creating New Serializers
+
 A custom `Serializer` has to inherit from `Akka.Serialization.Serializer` and can be defined like this:
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/CreateCustomSerializer.cs?name=CustomSerialization)]
 
-The only thing left to do for this class would be to fill in the serialization logic in the ``ToBinary(object)`` method and the deserialization logic in the ``FromBinary(byte[], Type)``. 
+The only thing left to do for this class would be to fill in the serialization logic in the ``ToBinary(object)`` method and the deserialization logic in the ``FromBinary(byte[], Type)``.
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
-### Programatically change NewtonSoft JSON serializer settings
-You can change the JSON serializer behaviour by using the `NewtonSoftJsonSerializerSetup` class to programatically
+### Programmatically Change NewtonSoft JSON Serializer Settings
+
+You can change the JSON serializer behavior by using the `NewtonSoftJsonSerializerSetup` class to programmatically
 change the settings used inside the Json serializer by passing it into the an `ActorSystemSetup`.
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ProgrammaticJsonSerializerSetup.cs?name=CustomJsonSetup)]
@@ -189,13 +197,14 @@ Note that, while we try to keep everything to be compatible, there are no guaran
 Akka.NET serialization schemes; please test your system in a development environment before deploying it into production.
 
 There are a couple limitation with this method, in that you can not change the `ObjectCreationHandling` and the `ContractResolver` settings
-in the Json settings object. Those settings, by default, will always be overriden with `ObjectCreationHandling.Replace` and the [`AkkaContractResolver`](xref:Akka.Serialization.NewtonSoftJsonSerializer.AkkaContractResolver) 
+in the Json settings object. Those settings, by default, will always be overridden with `ObjectCreationHandling.Replace` and the [`AkkaContractResolver`](xref:Akka.Serialization.NewtonSoftJsonSerializer.AkkaContractResolver)
 object respectively.
 
 ### Serializer with String Manifest
-The `Serializer` illustrated above supports a class-based manifest (type hint). 
-For serialization of data that need to evolve over time, the [`SerializerWithStringManifest`](xref:Akka.Serialization.SerializerWithStringManifest) is recommended instead of `Serializer` because the manifest (type hint) is a `String` instead of a `Type`. 
-This means that the class can be moved/removed and the serializer can still deserialize old data by matching on the String. 
+
+The `Serializer` illustrated above supports a class-based manifest (type hint).
+For serialization of data that need to evolve over time, the [`SerializerWithStringManifest`](xref:Akka.Serialization.SerializerWithStringManifest) is recommended instead of `Serializer` because the manifest (type hint) is a `String` instead of a `Type`.
+This means that the class can be moved/removed and the serializer can still deserialize old data by matching on the String.
 This is especially useful for `Persistence`.
 
 The manifest string can also encode a version number that can be used in `FromBinary` to deserialize in different ways to migrate old data to new domain objects.
@@ -210,7 +219,8 @@ You must also bind it to a name in your `Configuration` and then list which clas
 It's recommended to throw `SerializationException` in `FromBinary` if the manifest is unknown. This makes it possible to introduce new message types and send them to nodes that don't know about them. This is typically needed when performing rolling upgrades, i.e. running a cluster with mixed versions for while. `SerializationException` is treated as a transient problem in the TCP based remoting layer. The problem will be logged and message is dropped. Other exceptions will tear down the TCP connection because it can be an indication of corrupt bytes from the underlying transport.
 
 ### Serializing ActorRefs
-All actors are serializable using the default protobuf serializer, but in cases where custom serializers are used, we need to know how to (de-)serialize them properly. 
+
+All actors are serializable using the default protobuf serializer, but in cases where custom serializers are used, we need to know how to (de-)serialize them properly.
 In the general case, the local address to be used depends on the type of remote address which shall be the recipient of the serialized
 information.
 Use `Serialization.SerializedActorPath(actorRef)` like this:
@@ -230,10 +240,10 @@ IActorRef deserializedActorRef = extendedSystem.Provider.ResolveActorRef(id);
 // Then just use the IActorRef
 ```
 
-This assumes that serialization happens in the context of sending a message through the remote transport. 
+This assumes that serialization happens in the context of sending a message through the remote transport.
 There are other uses of serialization, though, e.g. storing actor references outside of an actor application (database, etc.).
 In this case, it is important to keep in mind that the address part of an actor's path determines how that actor is communicated with. Storing a local actor path might be the right choice if the retrieval happens in the same logical context, but it is not enough when deserializing it on a different network host: for that it would need to include the system's remote transport address.
-An actor system is not limited to having just one remote transport per se, which makes this question a bit more interesting. 
+An actor system is not limited to having just one remote transport per se, which makes this question a bit more interesting.
 To find out the appropriate address to use when sending to `remoteAddr` you can use `IActorRefProvider.GetExternalAddressFor(remoteAddr)` like this:
 
 ```csharp
@@ -280,10 +290,11 @@ Sending messages to a reference pointing the old actor will not be delivered to 
 
 This requires that you know at least which type of address will be supported by the system which will deserialize the resulting actor reference; if you have no concrete address handy you can create a dummy one for the right protocol using `new Address(protocol, "", "", 0)` (assuming that the actual transport used is as lenient as Akka's `RemoteActorRefProvider`).
 
-### Deep serialization of Actors
+### Deep Serialization of Actors
+
 The recommended approach to do deep serialization of internal actor state is to use [Akka Persistence](xref:persistence-architecture).
 
-## How to setup Hyperion as default serializer
+## How to Setup Hyperion as the Default Serializer
 
 Starting from Akka.NET v1.5, default Newtonsoft.Json serializer will be replaced in the favor of [Hyperion](https://github.com/akkadotnet/Hyperion). This change may break compatibility with older actors still using json serializer for remoting or persistence. If it's possible, it's advised to migrate to it already. To do so, first you need to reference hyperion serializer as NuGet package inside your project:
 
@@ -291,7 +302,7 @@ Starting from Akka.NET v1.5, default Newtonsoft.Json serializer will be replaced
 
 Then bind `hyperion` serializer using following HOCON configuration in your actor system settings:
 
-```
+```hocon
 akka {
   actor {
     serializers {
@@ -304,70 +315,77 @@ akka {
 }
 ```
 
-## Danger of polymorphic serializer
-One of the danger of polymorphic serializers is the danger of unsafe object type injection into 
-the serialization-deserialization chain. This issue applies to any type of polymorphic serializer,
-including JSON, BinaryFormatter, etc. In Akka, this issue primarily affects developers who allow third parties to pass messages directly 
+## Danger of Polymorphic Serializer
+
+One of the danger of polymorphic serializers is the danger of unsafe object type injection into
+the serialization/de-serialization chain. This issue applies to any type of polymorphic serializer,
+including JSON, BinaryFormatter, etc. In Akka, this issue primarily affects developers who allow third parties to pass messages directly
 to unsecured Akka.Remote endpoints, a [practice that we do not encourage](https://getakka.net/articles/remoting/security.html#akkaremote-with-virtual-private-networks).
 
 Generally, there are two approaches you can take to alleviate this problem:
+
 1. Implement a schema-based serialization that are contract bound, which is more expensive to setup at first but fundamentally faster and more secure.
 2. Implement a filtering or blacklist to block dangerous types.
 
-An example of using a schema-based serialization in Akka can be read under the title "Using Google 
+An example of using a schema-based serialization in Akka can be read under the title "Using Google
 Protocol Buffers to Version State and Messages" in [this documentation](https://petabridge.com/cluster/lesson3)
 
-Hyperion chose to implement the second approach by blacklisting a set of potentially dangerous types 
+Hyperion chose to implement the second approach by blacklisting a set of potentially dangerous types
 from being deserialized:
 
-- System.Security.Claims.ClaimsIdentity
-- System.Windows.Forms.AxHost.State
-- System.Windows.Data.ObjectDataProvider
-- System.Management.Automation.PSObject
-- System.Web.Security.RolePrincipal
-- System.IdentityModel.Tokens.SessionSecurityToken
-- SessionViewStateHistoryItem
-- TextFormattingRunProperties
-- ToolboxItemContainer
-- System.Security.Principal.WindowsClaimsIdentity
-- System.Security.Principal.WindowsIdentity
-- System.Security.Principal.WindowsPrincipal
-- System.CodeDom.Compiler.TempFileCollection
-- System.IO.FileSystemInfo
-- System.Activities.Presentation.WorkflowDesigner
-- System.Windows.ResourceDictionary
-- System.Windows.Forms.BindingSource
-- Microsoft.Exchange.Management.SystemManager.WinForms.ExchangeSettingsProvider
-- System.Diagnostics.Process
-- System.Management.IWbemClassObjectFreeThreaded
+* `System.Security.Claims.ClaimsIdentity`
+* `System.Windows.Forms.AxHost.State`
+* `System.Windows.Data.ObjectDataProvider`
+* `System.Management.Automation.PSObject`
+* `System.Web.Security.RolePrincipal`
+* `System.IdentityModel.Tokens.SessionSecurityToken`
+* `SessionViewStateHistoryItem`
+* `TextFormattingRunProperties`
+* `ToolboxItemContainer`
+* `System.Security.Principal.WindowsClaimsIdentity`
+* `System.Security.Principal.WindowsIdentity`
+* `System.Security.Principal.WindowsPrincipal`
+* `System.CodeDom.Compiler.TempFileCollection`
+* `System.IO.FileSystemInfo`
+* `System.Activities.Presentation.WorkflowDesigner`
+* `System.Windows.ResourceDictionary`
+* `System.Windows.Forms.BindingSource`
+* `Microsoft.Exchange.Management.SystemManager.WinForms.ExchangeSettingsProvider`
+* `System.Diagnostics.Process`
+* `System.Management.IWbemClassObjectFreeThreaded`
 
-Be warned that these class can be used as a man in the middle attack vector, but if you need 
+Be warned that these class can be used as a man in the middle attack vector, but if you need
 to serialize one of these class, you can turn off this feature using this inside your HOCON settings:
-```
+
+```hocon
 akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
 ```
-
+<!-- markdownlint-disable MD028 -->
 > [!IMPORTANT]
 > This feature is turned on as default since Akka.NET v1.4.24
 
 > [!WARNING]
-> Hyperion is __NOT__ designed as a safe serializer to be used in an open network as a client-server 
-> communication protocol, instead it is designed to be used as a server-server communication protocol, 
+> Hyperion is __NOT__ designed as a safe serializer to be used in an open network as a client-server
+> communication protocol, instead it is designed to be used as a server-server communication protocol,
 > preferably inside a closed network system.
+<!-- markdownlint-enable MD028 -->
 
-## Cross platform serialization compatibility in Hyperion
+## Cross Platform Serialization Compatibility in Hyperion
+
 There are problems that can arise when migrating from old .NET Framework to the new .NET Core standard, mainly because of breaking namespace and assembly name changes between these platforms.
 Hyperion implements a generic way of addressing this issue by transforming the names of these incompatible names during deserialization.
 
 There are two ways to set this up, one through the HOCON configuration file, and the other by using the `HyperionSerializerSetup` class.
 
 > [!NOTE]
-> Only the first successful name transformation is applied, the rest are ignored. 
+> Only the first successful name transformation is applied, the rest are ignored.
 > If you are matching several similar names, make sure that you order them from the most specific match to the least specific one.
 
 ### HOCON
+
 HOCON example:
-```
+
+```hocon
 akka.actor.serialization-settings.hyperion.cross-platform-package-name-overrides = {
   netfx = [
     {
@@ -391,23 +409,24 @@ akka.actor.serialization-settings.hyperion.cross-platform-package-name-overrides
 ```
 
 In the example above, we're addressing the classic case where the core library name was changed between `mscorlib` in .NET Framework to `System.Private.CoreLib` in .NET Core.
-This transform is already included inside Hyperion as the default cross platform support, and used here as an illustration only. 
+This transform is already included inside Hyperion as the default cross platform support, and used here as an illustration only.
 
 The HOCON configuration section is composed of three object arrays named `netfx`, `netcore`, and `net`, each corresponds, respectively, to .NET Framework, .NET Core, and the new .NET 5.0 and beyond.
-The Hyperion serializer will automatically detects the platform it is running on currently and uses the correct array to use inside its deserializer. For example, if Hyperion detects 
+The Hyperion serializer will automatically detects the platform it is running on currently and uses the correct array to use inside its deserializer. For example, if Hyperion detects
 that it is running under .NET framework, then it will use the `netfx` array to do its deserialization transformation.
 
 The way it works that when the serializer detects that the type name contains the `fingerprint` string, it will replace the string declared in the `rename-from`
 property into the string declared in the `rename-to`.
 
-In code, we can write this behaviour as:
+In code, we can write this behavior as:
+
 ```csharp
 if(packageName.Contains(fingerprint)) packageName = packageName.Replace(rename-from, rename-to);
 ```
 
 ### HyperionSerializerSetup
 
-This behaviour can also be implemented programatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
+This behavior can also be implemented programmatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
 
 ```csharp
 #if NETFRAMEWORK
@@ -430,20 +449,20 @@ var bootstrap = BootstrapSetup.Create().And(hyperionSetup);
 var system = ActorSystem.Create("actorSystem", bootstrap);
 ```
 
-In the example above, we're using compiler directives to make sure that the correct name transform are used during compilation. 
+In the example above, we're using compiler directives to make sure that the correct name transform are used during compilation.
 
-## Complex object serialization using Hyperion
+## Complex Object Serialization Using Hyperion
 
-One of the limitation of a reflection based serializer is that it would fail to serialize 
+One of the limitation of a reflection based serializer is that it would fail to serialize
 objects with complex internal looping references in its properties or fields and ended up throwing
-a stack overflow exception as it tries to recurse through all the looping references, for example, 
+a stack overflow exception as it tries to recurse through all the looping references, for example,
 an `XmlDocument` class, but we needed to send them over the wire to another remote node in our
 cluster.
 
-While having a very complex internal structure, an `XmlDocument` object can be simplified into a 
-string that can be sent safely across the wire, but we would need to create a special code that 
-handles all of `XmlDocument` occurrences or make it so that it is stored in string format inside 
-our messages, and converting XML documents every time we needed to access this information is 
+While having a very complex internal structure, an `XmlDocument` object can be simplified into a
+string that can be sent safely across the wire, but we would need to create a special code that
+handles all of `XmlDocument` occurrences or make it so that it is stored in string format inside
+our messages, and converting XML documents every time we needed to access this information is
 an expensive operation that we would like to avoid while working with our code.
 
 Hyperion introduces a simple adapter called `Surrogate` that can help with de/serializing these
@@ -483,7 +502,7 @@ serializing and send across the wire:
         }
 ```
 
-### Creating and declaring `Surrogate`s via HOCON
+### Creating and Declaring `Surrogate` via HOCON
 
 To create a serializer surrogate in HOCON, we would first create a class that inherits from
 the `Surrogate` class:
@@ -501,12 +520,12 @@ the `Surrogate` class:
     }
 ```
 
-This class will inform the Hyperion serializer to intercept any `Foo` class and instead of 
-reflecting actual fields and properties of `Foo` class, it will use the much simpler 
+This class will inform the Hyperion serializer to intercept any `Foo` class and instead of
+reflecting actual fields and properties of `Foo` class, it will use the much simpler
 `FooSurrogate` class instead. To tell Hyperion to use this information, we need to pass the
 surrogate information inside the HOCON settings:
 
-```
+```hocon
 akka.actor {
     serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
     serialization-bindings {
@@ -520,7 +539,7 @@ akka.actor {
 }
 ```
 
-### Creating and declaring `Surrogate`s programatically using `HyperionSerializerSetup`
+### Creating and Declaring `Surrogate` Programmatically Using `HyperionSerializerSetup`
 
 We can also use `HyperionSerializerSetup` to declare our surrogates:
 
@@ -535,5 +554,5 @@ var bootstrap = BootstrapSetup.Create().And(hyperionSetup);
 var system = ActorSystem.Create("actorSystem", bootstrap);
 ```
 
-Note that we do not need to declare any bindings in HOCON for this to work, and if you do, 
-`HyperionSerializerSetup` will override the HOCON settings with the one programatically declared.
+Note that we do not need to declare any bindings in HOCON for this to work, and if you do,
+`HyperionSerializerSetup` will override the HOCON settings with the one programmatically declared.

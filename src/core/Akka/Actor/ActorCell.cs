@@ -236,12 +236,15 @@ namespace Akka.Actor
         [Obsolete("Use TryGetChildStatsByName [0.7.1]", true)]
         public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
-            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
+            return GetSingleChild(name);
         }
 
         IActorRef IActorContext.Child(string name)
         {
-            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
+            if (TryGetChildStatsByName(name, out var child) && child is ChildRestartStats s)
+                return s.Child;
+            
+            return ActorRefs.Nobody;
         }
 
         /// <summary>

@@ -106,7 +106,7 @@ namespace Akka.Routing
             return Actor.Ask(message, timeout);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -118,7 +118,7 @@ namespace Akka.Routing
         /// <inheritdoc/>
         protected bool Equals(ActorRefRoutee other) => Equals(Actor, other.Actor);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Actor?.GetHashCode() ?? 0;
     }
 
@@ -150,7 +150,7 @@ namespace Akka.Routing
             return Selection.Ask(message, timeout);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -162,7 +162,7 @@ namespace Akka.Routing
         /// <inheritdoc/>
         protected bool Equals(ActorSelectionRoutee other) => Equals(Selection, other.Selection);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Selection?.GetHashCode() ?? 0;
     }
 
@@ -327,7 +327,7 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="message">The message to send.</param>
         /// <param name="sender">The sender of this message - which will be propagated to the routee.</param>
-        public void Route(object message, IActorRef sender)
+        public virtual void Route(object message, IActorRef sender)
         {
             if (message is Broadcast)
             {

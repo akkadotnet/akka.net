@@ -48,18 +48,19 @@ basically doing the same as Bartosz with his frying pans:
  4. at this point fryingPan1 already takes the next scoop, without waiting for fryingPan2 to finish
 
 The benefit of pipelining is that it can be applied to any sequence of processing steps that are otherwise not
-parallelisable (for example because the result of a processing step depends on all the information from the previous
+parallelizable (for example because the result of a processing step depends on all the information from the previous
 step). One drawback is that if the processing times of the stages are very different then some of the stages will not
 be able to operate at full throughput because they will wait on a previous or subsequent stage most of the time. In the
 pancake example frying the second half of the pancake is usually faster than frying the first half, ``fryingPan2`` will
-not be able to operate at full capacity <a href="#foot-note-1">[1]</a>.
+not be able to operate at full capacity [^foot-note-1].
 
 > [!NOTE]
 > Asynchronous stream processing stages have internal buffers to make communication between them more efficient.
-For more details about the behavior of these and how to add additional buffers refer to 
+For more details about the behavior of these and how to add additional buffers refer to
 [Buffers and working with rate](xref:streams-buffers).
 
-## Parallel processing
+## Parallel Processing
+
 Chris uses the two frying pans symmetrically. He uses both pans to fully fry a pancake on both sides, then puts
 the results on a shared plate. Whenever a pan becomes empty, he takes the next scoop from the shared bowl of batter.
 In essence he parallelizes the same process over multiple pans. This is how this setup will look like if implemented
@@ -84,6 +85,7 @@ var pancakeChef = Flow.FromGraph(GraphDsl.Create(b =>
     return new FlowShape<ScoopOfBatter, Pancake>(dispatchBatter.In, mergePancakes.Out);
 }));
 ```
+
 The benefit of parallelizing is that it is easy to scale. In the pancake example
 it is easy to add a third frying pan with Chris' method, but Bartosz cannot add a third frying pan,
 since that would require a third processing step, which is not practically possible in the case of frying pancakes.
@@ -92,10 +94,10 @@ One drawback of the example code above that it does not preserve the ordering of
 if children like to track their "own" pancakes. In those cases the ``Balance`` and ``Merge`` stages should be replaced
 by strict round-robin balancing and merging stages that put in and take out pancakes in a strict order.
 
-A more detailed example of creating a worker pool can be found in the cookbook: 
+A more detailed example of creating a worker pool can be found in the cookbook:
 [Balancing jobs to a fixed pool of workers](xref:streams-cookbook#balancing-jobs-to-a-fixed-pool-of-workers)
 
-## Combining pipelining and parallel processing
+## Combining Pipelining and Parallel Processing
 
 The two concurrency patterns that we demonstrated as means to increase throughput are not exclusive.
 In fact, it is rather simple to combine the two approaches and streams provide
@@ -128,9 +130,9 @@ in sequence.
 
 It is also possible to organize parallelized stages into pipelines. This would mean employing four chefs:
 
- - the first two chefs prepare half-cooked pancakes from batter, in parallel, then putting those on a large enough
+* the first two chefs prepare half-cooked pancakes from batter, in parallel, then putting those on a large enough
    flat surface.
- - the second two chefs take these and fry their other side in their own pans, then they put the pancakes on a shared
+* the second two chefs take these and fry their other side in their own pans, then they put the pancakes on a shared
    plate.
 
 This is again straightforward to implement with the streams API:
@@ -167,9 +169,9 @@ var kitchen = pancakeChefs1.Via(pancakeChefs2);
 
 This usage pattern is less common but might be usable if a certain step in the pipeline might take wildly different
 times to finish different jobs. The reason is that there are more balance-merge steps in this pattern
-compared to the parallel pipelines. This pattern rebalances after each step, while the previous pattern only balances
+compared to the parallel pipelines. This pattern re-balances after each step, while the previous pattern only balances
 at the entry point of the pipeline. This only matters however if the processing time distribution has a large
 deviation.
 
-<a name="foot-note-1">[1]</a> Bartosz's reason for this seemingly suboptimal procedure is that he prefers the temperature of the second pan
+[^foot-note-1]: Bartosz's reason for this seemingly suboptimal procedure is that he prefers the temperature of the second pan
        to be slightly lower than the first in order to achieve a more homogeneous result.

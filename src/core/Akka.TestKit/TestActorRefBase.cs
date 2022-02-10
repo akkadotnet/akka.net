@@ -39,6 +39,10 @@ namespace Akka.TestKit
         /// Directly inject messages into actor receive behavior. Any exceptions
         /// thrown will be available to you, while still being able to use
         /// become/unbecome.
+        /// Note: This method violates the actor model and could cause unpredictable 
+        /// behavior. For example, a Receive call to an actor could run simultaneously 
+        /// (2 simultaneous threads running inside the actor) with the actor's handling 
+        /// of a previous Tell call. 
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
@@ -139,31 +143,31 @@ namespace Akka.TestKit
             _internalRef.Unwatch(subject);
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return _internalRef.ToString();
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return _internalRef.Equals(obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return _internalRef.GetHashCode();
         }
 
-        /// <inheritdoc/>
+        
         public int CompareTo(object obj)
         {
             return ((IComparable) _internalRef).CompareTo(obj);
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(IActorRef other)
         {
             return _internalRef.Equals(other);
@@ -258,7 +262,7 @@ namespace Akka.TestKit
 
         bool IInternalActorRef.IsTerminated { get { return _internalRef.IsTerminated; } }
 
-        IActorRef IInternalActorRef.GetChild(IEnumerable<string> name)
+        IActorRef IInternalActorRef.GetChild(IReadOnlyList<string> name)
         {
             return _internalRef.GetChild(name);
         }

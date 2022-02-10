@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Reflection;
+using Akka.Cluster.Benchmarks.Persistence;
+using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Running;
 
 namespace Akka.Cluster.Benchmarks
@@ -8,7 +10,13 @@ namespace Akka.Cluster.Benchmarks
     {
         static void Main(string[] args)
         {
-            BenchmarkSwitcher.FromAssembly(Assembly.GetExecutingAssembly()).Run(args);
+#if (DEBUG)
+            BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly)
+                .Run(args, new DebugInProcessConfig());
+#else
+            BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+#endif
+
         }
     }
 }
