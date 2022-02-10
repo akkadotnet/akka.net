@@ -127,6 +127,7 @@ namespace Akka.Cluster.Sharding.Tests
                     remember-entities-store = ""eventsourced""
                     state-store-mode = ""ddata""
                 }
+                akka.cluster.sharding.distributed-data.durable.keys = []
 
                 akka.persistence.journal.memory-journal-shared {
                     event-adapters {
