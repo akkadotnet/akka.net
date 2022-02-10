@@ -545,7 +545,7 @@ namespace Akka.Serialization
         ///
         /// If there is no external address available in the given <see cref="IActorRef"/> then the systems default
         /// address will be used and that is retrieved from the ThreadLocal <see cref="Information"/>
-        /// that was set with <see cref="Serialization.WithTransportInformation{T}"/>
+        /// that was set with <see cref="WithTransport{T}(ActorSystem, Address, Func{T})"/>
         /// </summary>
         /// <param name="actorRef">The <see cref="IActorRef"/> to be serialized.</param>
         /// <returns>Absolute path to the serialized actor.</returns>

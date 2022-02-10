@@ -16,8 +16,6 @@ namespace Akka.Streams.Dsl
     /// use [[FlowWithContextOps.via]] to manually provide the context propagation for otherwise unsupported
     /// operations.
     /// 
-    /// Can be created by calling <see cref="Source{TOut,TMat}.StartContextPropagation"/>
-    /// 
     /// API MAY CHANGE
     /// </summary>
     public sealed class SourceWithContext<TCtx, TOut, TMat> : GraphDelegate<SourceShape<(TOut, TCtx)>, TMat>

@@ -59,7 +59,7 @@ namespace Akka.Streams.TestKit
         #endregion
 
         /// <summary>
-        /// Implementation of <see cref="IPublisher{T}"/> that allows various assertions.
+        /// Implementation of Reactive.Streams.IPublisher{T} that allows various assertions.
         /// This probe does not track demand.Therefore you need to expect demand before sending
         ///  elements downstream.
         /// </summary>
@@ -280,7 +280,7 @@ namespace Akka.Streams.TestKit
         public static IPublisher<T> LazyError<T>(Exception exception) => new LazyErrorPublisher<T>(exception, "error");
 
         /// <summary>
-        /// Probe that implements <see cref="IPublisher{T}"/> interface.
+        /// Probe that implements Reactive.Streams.IPublisher{T} interface.
         /// </summary>
         public static ManualProbe<T> CreateManualPublisherProbe<T>(this TestKitBase testKit, bool autoOnSubscribe = true) 
             => new ManualProbe<T>(testKit, autoOnSubscribe);

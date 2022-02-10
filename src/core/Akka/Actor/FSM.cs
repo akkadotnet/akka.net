@@ -374,7 +374,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Log entry of the <see cref="ILoggingFSM"/> - can be obtained by calling <see cref="GetLog"/>
+        /// Log entry of the <see cref="ILoggingFSM"/> - can be obtained by calling 
         /// </summary>
         /// <typeparam name="TS">The name of the state</typeparam>
         /// <typeparam name="TD">The data of the state</typeparam>

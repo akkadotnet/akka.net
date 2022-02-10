@@ -23,12 +23,12 @@ namespace Akka.Persistence.Custom
             return ConfigurationFactory.FromResource<SqlitePersistence>("Akka.Persistence.Custom.sqlite.conf");
         }
 
-        //<Get-Instance>
+        // <Get-Instance>
         public static SqlitePersistence Get(ActorSystem system)
         {
             return system.WithExtension<SqlitePersistence, SqlitePersistenceProvider>();
         }
-        //</Get-Instance>
+        // </Get-Instance>
 
         /// <summary>
         /// Journal-related settings loaded from HOCON configuration.
