@@ -186,6 +186,20 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             });
         }
 
+        // issue: InterceptAsync seems to run func() as a detached task #5586
+        [Fact]
+        public async Task InterceptAsync_should_await_func()
+        {
+            await Assert.ThrowsAnyAsync<FalseException>(async () =>
+            {
+                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(0, async () =>
+                {
+                    Assert.False(true);
+                    await Task.CompletedTask;
+                }, TimeSpan.FromSeconds(.1));
+            });
+        }
+
         [Fact]
         public void Messages_can_be_muted()
         {
