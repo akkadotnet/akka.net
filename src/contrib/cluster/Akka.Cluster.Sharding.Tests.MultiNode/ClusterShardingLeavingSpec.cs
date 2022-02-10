@@ -223,7 +223,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 shardLocations.Tell(new Locations(locations));
                 Sys.Log.Debug("Original locations: {0}", string.Join(",", locations.Select(x => $"{x.Key}->{x.Value}")));
-            }, _config.First);
+            }, config.First);
             EnterBarrier("after-3");
         }
 
@@ -248,7 +248,7 @@ namespace Akka.Cluster.Sharding.Tests
                 var region = _region.Value;
                 Watch(region);
                 ExpectTerminated(region, TimeSpan.FromSeconds(15));
-            }, _config.First);
+            }, config.First);
             EnterBarrier("stopped");
             
             // more stress by not having the barrier here
