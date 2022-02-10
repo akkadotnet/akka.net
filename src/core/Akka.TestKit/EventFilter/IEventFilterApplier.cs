@@ -97,6 +97,17 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="actionAsync">The async action.</param>
+        Task ExpectAsync(int expectedCount, Func<Task> actionAsync);
+
+        /// <summary>
+        /// Executes <paramref name="actionAsync"/> task and expects the specified number
+        /// of events to be logged during the execution.
+        /// This method fails and throws an exception if more events than expected are logged,
+        /// or if a timeout occurs. The timeout is taken from the config value
+        /// "akka.test.filter-leeway", see <see cref="TestKitSettings.TestEventFilterLeeway"/>.
+        /// </summary>
+        /// <param name="expectedCount">The expected number of events</param>
+        /// <param name="actionAsync">The async action.</param>
         /// <param name="timeout"></param>
         Task ExpectAsync(int expectedCount, Func<Task> actionAsync, TimeSpan? timeout = null);
 
