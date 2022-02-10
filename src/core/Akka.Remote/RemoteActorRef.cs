@@ -154,7 +154,7 @@ namespace Akka.Remote
             SendSystemMessage(new Akka.Dispatch.SysMsg.Suspend());
         }
 
-        /// <inheritdoc cref="IInternalActorRef"/>
+        /// <inheritdoc/>
         public override bool IsLocal => false;
 
         /// <inheritdoc cref="IActorRef"/>

@@ -51,7 +51,7 @@ The architecture of the application will look like this:
 
 This tutorial is divided into four parts:
 
-* [Part 1: Top-level Architecture](../getting-started/tutorial-1.html)
-* [Part 2. The Device Actor](../getting-started/tutorial-2.html)
-* [Part 3. Device Groups and Manager](../getting-started/tutorial-3.html)
-* [Part 4. Querying a Group of Devices](../getting-started/tutorial-4.html)
+* [Part 1: Top-level Architecture](../getting-started/tutorial-1.md)
+* [Part 2. The Device Actor](../getting-started/tutorial-2.md)
+* [Part 3. Device Groups and Manager](../getting-started/tutorial-3.md)
+* [Part 4. Querying a Group of Devices](../getting-started/tutorial-4.md)

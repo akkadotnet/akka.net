@@ -84,7 +84,7 @@ namespace Akka.Streams.TestKit
         #endregion
 
         /// <summary>
-        /// Implementation of <see cref="ISubscriber{T}"/> that allows various assertions. All timeouts are dilated automatically, 
+        /// Implementation of Reactive.Streams.ISubscriber{T} that allows various assertions. All timeouts are dilated automatically, 
         /// for more details about time dilation refer to <see cref="TestKit"/>.
         /// </summary>
         public class ManualProbe<T> : ISubscriber<T>
@@ -109,7 +109,7 @@ namespace Akka.Streams.TestKit
             public void OnNext(T element) => _probe.Ref.Tell(new OnNext<T>(element));
 
             /// <summary>
-            /// Expects and returns <see cref="ISubscription"/>.
+            /// Expects and returnsReactive.Streams.ISubscription/>.
             /// </summary>
             public ISubscription ExpectSubscription()
             {
@@ -301,7 +301,7 @@ namespace Akka.Streams.TestKit
             }
 
             /// <summary>
-            /// Expect and return the signalled <see cref="Exception"/>.
+            /// Expect and return the signalled System.Exception/>.
             /// </summary>
             public Exception ExpectError() => _probe.ExpectMsg<OnError>().Cause;
 
@@ -415,16 +415,16 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Expect next element and test it with the <paramref name="predicate"/>
             /// </summary>
-            /// <typeparam name="TOther">The <see cref="Type"/> of the expected message</typeparam>
-            /// <param name="predicate">The <see cref="Predicate{T}"/> that is applied to the message</param>
+            /// <typeparam name="TOther">The System.Type of the expected message</typeparam>
+            /// <param name="predicate">The System.Predicate{T} that is applied to the message</param>
             /// <returns>The next element</returns>
             public TOther ExpectNext<TOther>(Predicate<TOther> predicate) => _probe.ExpectMsg<OnNext<TOther>>(x => predicate(x.Element)).Element;
             
             /// <summary>
             /// Expect next element and test it with the <paramref name="predicate"/>
             /// </summary>
-            /// <typeparam name="TOther">The <see cref="Type"/> of the expected message</typeparam>
-            /// <param name="predicate">The <see cref="Predicate{T}"/> that is applied to the message</param>
+            /// <typeparam name="TOther">The System.Type of the expected message</typeparam>
+            /// <param name="predicate">The System.Predicate{T} that is applied to the message</param>
             /// <returns>this</returns>
             public ManualProbe<T> MatchNext<TOther>(Predicate<TOther> predicate)
             {
@@ -493,7 +493,7 @@ namespace Akka.Streams.TestKit
             public TOther Within<TOther>(TimeSpan max, Func<TOther> execute) => _probe.Within(max, execute);
 
             /// <summary>
-            /// Attempt to drain the stream into a strict collection (by requesting <see cref="long.MaxValue"/> elements).
+            /// Attempt to drain the stream into a strict collection (by requesting long.MaxValue elements).
             /// </summary>
             /// <remarks>
             /// Use with caution: Be warned that this may not be a good idea if the stream is infinite or its elements are very large!

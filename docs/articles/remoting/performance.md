@@ -114,7 +114,7 @@ You can achieve similar results for your application.
 
 #### Optimizing Batches for Your Use Case
 
-To take advantage of I/O batching in DotNetty, you need to [tailor the following Akka.Remote configuration values to your use case](../../configuration/akka.remote.md):
+To take advantage of I/O batching in DotNetty, you need to [tailor the following Akka.Remote configuration values to your use case](../../configuration/modules/akka.remote.md):
 
 ```hocon
 akka.remote.dot-netty.tcp{
