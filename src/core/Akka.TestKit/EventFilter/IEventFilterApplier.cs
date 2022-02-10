@@ -109,7 +109,7 @@ namespace Akka.TestKit
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="actionAsync">The async action.</param>
         /// <param name="timeout"></param>
-        Task ExpectAsync(int expectedCount, Func<Task> actionAsync, TimeSpan? timeout = null);
+        Task ExpectAsync(int expectedCount, Func<Task> actionAsync, TimeSpan? timeout);
 
         /// <summary>
         /// Executes <paramref name="action"/> and expects the specified number

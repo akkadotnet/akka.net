@@ -98,7 +98,7 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Async version of Expect
         /// </summary>
-        public Task ExpectAsync(int expectedCount, Func<Task> actionAsync, TimeSpan? timeout = null)
+        public Task ExpectAsync(int expectedCount, Func<Task> actionAsync, TimeSpan? timeout)
         {
             return InternalExpectAsync(actionAsync, _actorSystem, expectedCount, timeout);
         }
