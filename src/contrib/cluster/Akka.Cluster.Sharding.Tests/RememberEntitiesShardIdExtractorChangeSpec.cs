@@ -111,7 +111,7 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.cluster.sharding {
                     remember-entities = on
                     remember-entities-store = ""eventsourced""
-                    state-store-mode = ""ddata""
+                    state-store-mode = ""persistence""
                 }
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
                 akka.cluster.sharding.verbose-debug-logging = on")
