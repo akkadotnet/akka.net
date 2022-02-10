@@ -111,7 +111,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 var other = obj as StartEntity;
@@ -122,7 +122,7 @@ namespace Akka.Cluster.Sharding
                 return EntityId.Equals(other.EntityId);
             }
 
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 unchecked
@@ -165,7 +165,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 var other = obj as StartEntityAck;
@@ -177,7 +177,7 @@ namespace Akka.Cluster.Sharding
                     && ShardId.Equals(other.ShardId);
             }
 
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 unchecked
