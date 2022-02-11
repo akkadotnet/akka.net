@@ -110,7 +110,7 @@ namespace Akka.Actor
             get { return _cell.SystemImpl.Provider; }
         }
 
-        /// <inheritdoc cref="IInternalActorRef"/>
+        
         public override IInternalActorRef Parent
         {
             get { return _cell.Parent; }

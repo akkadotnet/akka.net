@@ -538,7 +538,7 @@ namespace Akka.TestKit.Internal
             //    Dispose(false);
             //}
 
-            /// <inheritdoc/>
+           
             public void Dispose()
             {
                 Dispose(true);
