@@ -30,7 +30,7 @@ You register actors to the local mediator with `DistributedPubSubMediator.Subscr
 
 You publish messages by sending `DistributedPubSubMediator.Publish` message to the local mediator.
 
-Topic actors are automatically removed from the registry when they are terminated; they are terminated if there are no subscribers for the duration configured by `akka.cluster.pub-sub.removed-time-to-live`, which defaults to 2 minutes. You can change the deadline by setting `removed-time-to-live` to a custom duration.
+Topic actors are automatically removed from the registry when they are terminated. Termination occurs when there are no subscribers for the duration configured by `akka.cluster.pub-sub.removed-time-to-live`, which defaults to 2 minutes. You can change the deadline by setting `removed-time-to-live` to a custom duration.
 
 You can `Unsubscribe` from a topic with `DistributedPubSubMediator.Unsubscribe`.
 
