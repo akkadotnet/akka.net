@@ -84,7 +84,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public string Role { get; }
 
         /// <summary>
-        /// The routing logic to use for <see cref="DistributedPubSubMediator.Send"/>.
+        /// The routing logic to use for <see cref="DistributedPubSubMediator"/>.
         /// </summary>
         public RoutingLogic RoutingLogic { get; }
 
