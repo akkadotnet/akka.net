@@ -51,7 +51,7 @@ namespace Akka.DistributedData
             Id = id;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(IKey key)
         {
             if (ReferenceEquals(key, null)) return false;
@@ -60,13 +60,13 @@ namespace Akka.DistributedData
             return Id == key.Id;
         }
 
-        /// <inheritdoc/>
+        
         public sealed override bool Equals(object obj) => obj is IKey key && Equals(key);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Id.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => Id;
 
         /// <summary>

@@ -158,13 +158,13 @@ namespace Akka.DistributedData
             return Elements.SetEquals(other.Elements);
         }
 
-        /// <inheritdoc/>
+        
         public IEnumerator<T> GetEnumerator() => Elements.GetEnumerator();
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is GSet<T> && Equals((GSet<T>)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -186,7 +186,7 @@ namespace Akka.DistributedData
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             var sb = new StringBuilder("GSet(");
