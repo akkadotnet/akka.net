@@ -117,7 +117,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         public async Task WaitForRadioSilenceAsync_should_reset_timer_twice_only()
         {
             var probe = CreateTestProbe("probe");
-            var max = TimeSpan.FromMilliseconds(100);
+            var max = TimeSpan.FromMilliseconds(3000);
             var halfMax = TimeSpan.FromMilliseconds(max.TotalMilliseconds / 2);
             var doubleMax = TimeSpan.FromMilliseconds(max.TotalMilliseconds * 2);
             var task = probe.WaitForRadioSilenceAsync(max: max, maxMessages: 2);
