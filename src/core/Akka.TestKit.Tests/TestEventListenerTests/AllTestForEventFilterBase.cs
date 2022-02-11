@@ -172,24 +172,31 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             ex.Should().NotBeNull("Expected 0 errors logged, but there are error logs");
         }
 
-        /// <summary>
         /// issue: InternalExpectAsync does not await actionAsync() - causing actionAsync to run as a detached task #5537
-        /// </summary>
-        /// <returns></returns>
         [Fact]
         public async Task ExpectAsync_should_await_actionAsync()
         {
-            /// the following assert failed before the fix and passed after the fix
-            await Assert.ThrowsAnyAsync<AkkaEqualException>(async () =>
+            await Assert.ThrowsAnyAsync<FalseException>(async () =>
             {
-                await EventFilter.Error().ExpectAsync(0, actionAsync: async () =>
+                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(0, actionAsync: async () =>
                 {
-                    var probe = CreateTestProbe();
-                    probe.Tell("hello");
-                    probe.ExpectMsg("hello");
-                    probe.Reply("world");
-                    await Task.Run(() => { ExpectMsg("world2"); });
+                    Assert.False(true);
+                    await Task.CompletedTask;
                 });
+            });
+        }
+
+        // issue: InterceptAsync seems to run func() as a detached task #5586
+        [Fact]
+        public async Task InterceptAsync_should_await_func()
+        {
+            await Assert.ThrowsAnyAsync<FalseException>(async () =>
+            {
+                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(0, async () =>
+                {
+                    Assert.False(true);
+                    await Task.CompletedTask;
+                }, TimeSpan.FromSeconds(.1));
             });
         }
 
