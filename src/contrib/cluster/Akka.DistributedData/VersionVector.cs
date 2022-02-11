@@ -93,7 +93,7 @@ namespace Akka.DistributedData
 
         public abstract VersionVector PruningCleanup(UniqueAddress removedNode);
 
-        /// <inheritdoc/>
+        
         public bool Equals(VersionVector other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -102,7 +102,7 @@ namespace Akka.DistributedData
             return CompareOnlyTo(other, Ordering.Same) == Ordering.Same;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is VersionVector vector && Equals(vector);
 
         /// <summary>
@@ -229,7 +229,7 @@ namespace Akka.DistributedData
                 Current = new KeyValuePair<UniqueAddress, long>(node, version);
             }
 
-            /// <inheritdoc/>
+            
             public void Dispose() { }
 
             public bool MoveNext()
@@ -400,11 +400,11 @@ namespace Akka.DistributedData
         public override VersionVector PruningCleanup(UniqueAddress removedNode) =>
             new MultiVersionVector(Versions.Remove(removedNode));
 
-        /// <inheritdoc/>
+        
         public override string ToString() =>
             $"VersionVector({string.Join(";", Versions.Select(kv => $"({kv.Key}->{kv.Value})"))})";
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
