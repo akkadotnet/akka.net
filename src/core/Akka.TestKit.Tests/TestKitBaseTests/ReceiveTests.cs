@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
@@ -66,6 +67,38 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             TestActor.Tell("1");
             TestActor.Tell("2");
             Intercept(() => FishForMessage(_ => false, TimeSpan.FromMilliseconds(100)));
+        }
+
+        [Fact]
+        public async Task FishForMessage_should_fill_the_all_messages_param_if_not_null()
+        {
+            await Task.Run(delegate
+            {
+                var probe = base.CreateTestProbe("probe");
+                probe.Tell("1");
+                probe.Tell(2);
+                probe.Tell("3");
+                probe.Tell(4);
+                var allMessages = new ArrayList();
+                probe.FishForMessage<string>(isMessage: s => s == "3", allMessages: allMessages);
+                allMessages.Should().BeEquivalentTo(new ArrayList { "1", 2 });
+            });
+        }
+
+        [Fact]
+        public async Task FishForMessage_should_clear_the_all_messages_param_if_not_null_before_filling_it()
+        {
+            await Task.Run(delegate
+            {
+                var probe = base.CreateTestProbe("probe");
+                probe.Tell("1");
+                probe.Tell(2);
+                probe.Tell("3");
+                probe.Tell(4);
+                var allMessages = new ArrayList() { "pre filled data" };
+                probe.FishForMessage<string>(isMessage: x => x == "3", allMessages: allMessages);
+                allMessages.Should().BeEquivalentTo(new ArrayList { "1", 2 });
+            });
         }
 
         [Fact]
