@@ -94,7 +94,7 @@ namespace Akka.Cluster.Metrics.Serialization
          */
 
 
-        /// <inheritdoc />
+        
         public bool Equals(NodeMetrics other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -102,7 +102,7 @@ namespace Akka.Cluster.Metrics.Serialization
             return Equals(Address, other.Address);
         }
 
-        /// <inheritdoc />
+        
         public override int GetHashCode()
         {
             return (Address != null ? Address.GetHashCode() : 0);

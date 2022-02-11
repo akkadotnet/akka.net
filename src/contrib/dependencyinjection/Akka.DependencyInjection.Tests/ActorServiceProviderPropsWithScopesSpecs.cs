@@ -193,7 +193,6 @@ namespace Akka.DependencyInjection.Tests
         [Fact(DisplayName = "Props created via the ServiceProvider should support the standard Props copying methods")]
         public void ServiceProvider_Props_should_support_copying()
         {
-            // <CreateNonDiActor>
             var spExtension = DependencyResolver.For(Sys);
             var arg1 = "foo";
             var arg2 = "bar";
