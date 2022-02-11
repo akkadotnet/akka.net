@@ -272,6 +272,17 @@ namespace Akka.TestKit
             return new EventFilterFactory(this, system);
         }
 
+        public async Task ExpectLogNoWarningsNorErrorsAsync(Func<Task> actionAsync, TimeSpan? timeOut = null)
+        {
+            await CreateEventFilter(Sys)
+                .Custom(logEvent => logEvent is Error || logEvent is Warning)
+                .ExpectAsync(0,
+                async () =>
+                {
+                    await actionAsync();
+                }, timeOut);
+        }
+
         /// <summary>
         /// Returns <c>true</c> if messages are available.
         /// </summary>
