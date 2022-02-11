@@ -273,4 +273,3 @@ Examples:
 
 [!code-csharp[SerializationSetupDocSpec](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=StringSubstitutionSample)]
 [!code-csharp[SerializationSetupDocSpec](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=ArraySubstitutionSample)]
-
