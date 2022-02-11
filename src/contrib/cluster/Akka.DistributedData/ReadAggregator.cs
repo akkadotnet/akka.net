@@ -149,12 +149,12 @@ namespace Akka.DistributedData
 
         private ReadLocal() { }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj != null && obj is ReadLocal;
 
-        /// <inheritdoc/>
+        
         public override string ToString() => "ReadLocal";
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => nameof(ReadLocal).GetHashCode();
     }
 
@@ -170,10 +170,10 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is ReadFrom && Equals((ReadFrom) obj);
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadFrom other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -181,7 +181,7 @@ namespace Akka.DistributedData
             return N == other.N && Timeout.Equals(other.Timeout);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -190,7 +190,7 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadFrom({N}, timeout={Timeout})";
     }
 
@@ -205,16 +205,16 @@ namespace Akka.DistributedData
             MinCapacity = minCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj is ReadMajority && Equals((ReadMajority) obj);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadMajority(timeout={Timeout})";
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadMajority other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -222,7 +222,7 @@ namespace Akka.DistributedData
             return Timeout.Equals(other.Timeout) && MinCapacity == other.MinCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -250,16 +250,16 @@ namespace Akka.DistributedData
             MinCapacity = minCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj is ReadMajorityPlus && Equals((ReadMajorityPlus)obj);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadMajorityPlus(timeout={Timeout}, additional={Additional})";
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadMajorityPlus other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -267,7 +267,7 @@ namespace Akka.DistributedData
             return Timeout.Equals(other.Timeout) && Additional == other.Additional && MinCapacity == other.MinCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -290,16 +290,16 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj is ReadAll && Equals((ReadAll) obj);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadAll(timeout={Timeout})";
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadAll other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -307,7 +307,7 @@ namespace Akka.DistributedData
             return Timeout.Equals(other.Timeout);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return Timeout.GetHashCode();
