@@ -272,11 +272,17 @@ namespace Akka.TestKit
             return new EventFilterFactory(this, system);
         }
 
-        public async Task ExpectLogNoWarningsNorErrorsAsync(Func<Task> actionAsync, TimeSpan? timeOut = null)
+        /// <summary>
+        /// Asserts that no warnings nor errors have been loggged within <paramref name="timeout"/>.
+        /// </summary>
+        /// <param name="actionAsync"></param>
+        /// <param name="timeout"></param>
+        /// <returns></returns>
+        public async Task ExpectLogNoWarningsNorErrorsAsync(Func<Task> actionAsync, TimeSpan? timeout = null)
         {
             await CreateEventFilter(Sys)
                 .Custom(logEvent => logEvent is Error || logEvent is Warning)
-                .ExpectAsync(0, actionAsync, timeOut);
+                .ExpectAsync(0, actionAsync, timeout);
         }
 
         /// <summary>
