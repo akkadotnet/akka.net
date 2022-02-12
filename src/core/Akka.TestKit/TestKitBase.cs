@@ -276,11 +276,7 @@ namespace Akka.TestKit
         {
             await CreateEventFilter(Sys)
                 .Custom(logEvent => logEvent is Error || logEvent is Warning)
-                .ExpectAsync(0,
-                async () =>
-                {
-                    await actionAsync();
-                }, timeOut);
+                .ExpectAsync(0, actionAsync, timeOut);
         }
 
         /// <summary>
