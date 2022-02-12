@@ -207,19 +207,6 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
-        public async Task ExpectLogNoWarningsNorErrorsAsync_should_fail_with_one_log_warning()
-        {
-            await Assert.ThrowsAnyAsync<TrueException>(async delegate
-            {
-                await ExpectLogNoWarningsNorErrorsAsync(async () =>
-                {
-                    await Task.CompletedTask;
-                    Log.Warning("1");
-                });
-            });
-        }
-
-        [Fact]
         public void Messages_can_be_muted()
         {
             _testingEventFilter.ForLogLevel(LogLevel).Mute(() =>

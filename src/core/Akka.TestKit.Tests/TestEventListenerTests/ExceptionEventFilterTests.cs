@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -140,6 +141,19 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
                 .Exception<InvalidOperationException>(source: actor.Path.ToString())
                 // expecting 2 because the same exception is logged in PostRestart
                 .Expect(2, () => actor.Tell( toSend ));
+        }
+
+        [Fact]
+        public async Task ExpectLogNoWarningsNorErrorsAsync_should_fail_with_one_log_warning()
+        {
+            await Assert.ThrowsAnyAsync<TrueException>(async delegate
+            {
+                await ExpectLogNoWarningsNorErrorsAsync(async () =>
+                {
+                    await Task.CompletedTask;
+                    Log.Warning("whatever");
+                });
+            });
         }
 
         internal sealed class ExceptionTestActor : UntypedActor
