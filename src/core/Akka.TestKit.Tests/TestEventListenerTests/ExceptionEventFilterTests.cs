@@ -146,7 +146,7 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
         [Fact]
         public async Task ExpectLogNoWarningsNorErrorsAsync_should_pass_with_info_and_debug_logs()
         {
-            await ExpectLogNoWarningsNorErrorsAsync(async () =>
+            await ExpectLogNoWarningsNorErrorsAsync(async delegate
             {
                 await Task.CompletedTask;
                 Log.Debug("whatever");
