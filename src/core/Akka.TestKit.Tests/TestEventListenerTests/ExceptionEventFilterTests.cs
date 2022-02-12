@@ -156,6 +156,19 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
             });
         }
 
+        [Fact]
+        public async Task ExpectLogNoWarningsNorErrorsAsync_should_fail_with_one_log_error()
+        {
+            await Assert.ThrowsAnyAsync<TrueException>(async delegate
+            {
+                await ExpectLogNoWarningsNorErrorsAsync(async () =>
+                {
+                    await Task.CompletedTask;
+                    Log.Error("whatever");
+                });
+            });
+        }
+
         internal sealed class ExceptionTestActor : UntypedActor
         {
             private ILoggingAdapter Log { get; } = Context.GetLogger();
