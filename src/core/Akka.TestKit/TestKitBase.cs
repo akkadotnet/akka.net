@@ -34,7 +34,7 @@ namespace Akka.TestKit
 
             public ActorSystem System { get; set; }
             public TestKitSettings TestKitSettings { get; set; }
-            public BlockingQueue<MessageEnvelope> Queue { get; set; }
+            public BufferQueue<MessageEnvelope> Queue { get; set; }
             public MessageEnvelope LastMessage  { get; set; }
             public IActorRef TestActor { get; set; }
             public TimeSpan? End { get; set; }
@@ -154,7 +154,7 @@ namespace Akka.TestKit
             system.RegisterExtension(new TestKitAssertionsExtension(_assertions));
 
             _testState.TestKitSettings = TestKitExtension.For(_testState.System);
-            _testState.Queue = new BlockingQueue<MessageEnvelope>();
+            _testState.Queue = new BufferQueue<MessageEnvelope>();
             _testState.Log = Logging.GetLogger(system, GetType());
             _testState.EventFilterFactory = new EventFilterFactory(this);
 
