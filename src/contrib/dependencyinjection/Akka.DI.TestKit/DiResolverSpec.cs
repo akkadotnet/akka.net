@@ -390,7 +390,7 @@ namespace Akka.DI.TestKit
 
         #endregion
 
-        /// <inheritdoc/>
+        
         public void Dispose()
         {
             Dispose(true);
