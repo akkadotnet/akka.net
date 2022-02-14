@@ -141,13 +141,13 @@ namespace Akka.Cluster
                 }               
             }
 
-            /// <inheritdoc/>
+           
             public override int GetHashCode()
             {
                 return _computedHashValue;
             }
 
-            /// <inheritdoc/>
+           
             public override bool Equals(object obj)
             {
                 var that = obj as Node;
@@ -155,13 +155,13 @@ namespace Akka.Cluster
                 return _value.Equals(that._value);
             }
 
-            /// <inheritdoc/>
+           
             public override string ToString()
             {
                 return _value;
             }
 
-            /// <inheritdoc/>
+           
             public int CompareTo(Node other)
             {
                 return Comparer<String>.Default.Compare(_value, other._value);
@@ -476,7 +476,7 @@ namespace Akka.Cluster
             return this;
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             var versions = _versions.Select(p => p.Key + "->" + p.Value);

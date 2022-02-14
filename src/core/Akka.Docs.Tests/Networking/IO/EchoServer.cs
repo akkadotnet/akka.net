@@ -12,6 +12,7 @@ using Akka.IO;
 
 namespace DocsExamples.Networking.IO
 {
+    // <echoServer>
     public class EchoServer : UntypedActor
     {
         public EchoServer(int port)
@@ -34,4 +35,6 @@ namespace DocsExamples.Networking.IO
             else Unhandled(message);
         }
     }
+
+    // </echoServer>
 }

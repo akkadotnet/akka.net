@@ -103,7 +103,9 @@
         "markdownlint",
         "mergetool",
         "titlecase",
-        "Varghese"
+        "Varghese",
+		"Vertech",
+		"DeadLetter"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links

@@ -22,7 +22,6 @@ namespace Akka.Actor
     public class LocalActorRef : ActorRefWithCell, ILocalRef
     {
         private readonly ActorSystemImpl _system;
-        private readonly Props _props;
         private readonly MessageDispatcher _dispatcher;
         private readonly IInternalActorRef _supervisor;
         private readonly ActorPath _path;
@@ -57,7 +56,6 @@ namespace Akka.Actor
             IInternalActorRef supervisor, ActorPath path)
         {
             _system = system;
-            _props = props;
             _dispatcher = dispatcher;
             MailboxType = mailboxType;
             _supervisor = supervisor;
@@ -74,7 +72,7 @@ namespace Akka.Actor
              * object from another thread as soon as we run init.
              */
             // ReSharper disable once VirtualMemberCallInConstructor 
-            _cell = NewActorCell(_system, this, _props, _dispatcher,
+            _cell = NewActorCell(_system, this, props, _dispatcher,
                 _supervisor); // _cell needs to be assigned before Init is called. 
             _cell.Init(true, MailboxType);
         }
@@ -94,7 +92,7 @@ namespace Akka.Actor
             return new ActorCell(system, self, props, dispatcher, supervisor);
         }
 
-        /// <inheritdoc/>
+        
         public override ICell Underlying
         {
             get { return _cell; }
@@ -106,49 +104,49 @@ namespace Akka.Actor
             get { return _cell; }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="IActorRefProvider"/>
         public override IActorRefProvider Provider
         {
             get { return _cell.SystemImpl.Provider; }
         }
 
-        /// <inheritdoc/>
+        
         public override IInternalActorRef Parent
         {
             get { return _cell.Parent; }
         }
 
-        /// <inheritdoc/>
+        
         public override IEnumerable<IActorRef> Children
         {
             get { return _cell.GetChildren(); }
         }
 
-        /// <inheritdoc/>
+        
         public override void Start()
         {
             _cell.Start();
         }
 
-        /// <inheritdoc/>
+        
         public override void Stop()
         {
             _cell.Stop();
         }
 
-        /// <inheritdoc/>
+       
         public override void Suspend()
         {
             _cell.Suspend();
         }
 
-        /// <inheritdoc/>
+        
         public override bool IsLocal
         {
             get { return true; }
         }
 
-        /// <inheritdoc/>
+        
         public override void SendSystemMessage(ISystemMessage message)
         {
             _cell.SendSystemMessage(message);
@@ -168,7 +166,7 @@ namespace Akka.Actor
         /// <summary>
         /// The <see cref="Props"/> used to create this actor.
         /// </summary>
-        protected Props Props => _props;
+        protected Props Props => _cell.Props;
 
         /// <summary>
         /// The <see cref="MessageDispatcher"/> this actor will use to execute its message-processing.
@@ -180,7 +178,7 @@ namespace Akka.Actor
         /// </summary>
         protected IInternalActorRef Supervisor => _supervisor;
 
-        /// <inheritdoc/>
+        
         public override bool IsTerminated => _cell.IsTerminated;
 
         /// <summary>
@@ -188,13 +186,13 @@ namespace Akka.Actor
         /// </summary>
         protected MailboxType MailboxType { get; }
 
-        /// <inheritdoc/>
+        
         public override void Resume(Exception causedByFailure = null)
         {
             _cell.Resume(causedByFailure);
         }
 
-        /// <inheritdoc/>
+        
         public override void Restart(Exception cause)
         {
             _cell.Restart(cause);
@@ -206,13 +204,13 @@ namespace Akka.Actor
             _cell.SendMessage(sender, message);
         }
 
-        /// <inheritdoc/>
+        
         public override IInternalActorRef GetSingleChild(string name)
         {
             return _cell.GetSingleChild(name);
         }
 
-        /// <inheritdoc/>
+        
         public override IActorRef GetChild(IReadOnlyList<string> name)
         {
             IActorRef current = this;

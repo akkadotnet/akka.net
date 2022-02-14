@@ -65,7 +65,7 @@ namespace Akka.Persistence.TCK
             Sys.EventStream.Subscribe(subscriber, typeof (T));
         }
 
-        /// <inheritdoc/>
+        
         public void Dispose()
         {
             Dispose(true);

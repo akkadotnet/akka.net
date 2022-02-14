@@ -129,7 +129,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public long HighestSequenceNr { get; }
 
-            /// <inheritdoc/>
+            
             public bool Equals(ReplaySuccess other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -201,7 +201,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public long Max { get; }
 
-            /// <inheritdoc/>
+            
             public bool Equals(ReplayMessages other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -241,7 +241,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public long ToSequenceNr { get; }
 
-            /// <inheritdoc/>
+            
             public bool Equals(DeleteMessagesTo other)
             {
                 if (ReferenceEquals(other, null)) return false;
