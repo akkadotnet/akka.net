@@ -6,24 +6,27 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace Akka.TestKit.Internal
 {
     /// <summary>
     /// This class represents an implementation of <see cref="ITestActorQueue{T}"/>
-    /// that uses a <see cref="BlockingQueue{T}"/> as its backing store.
+    /// that uses a <see cref="BufferBlock{T}"/> as its backing store.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     /// <typeparam name="T">The type of item to store.</typeparam>
-    public class BlockingCollectionTestActorQueue<T> : ITestActorQueue<T>
+    public class BufferCollectionTestActorQueue<T> : ITestActorQueue<T>
     {
-        private readonly BlockingQueue<T> _queue;
+        private readonly BufferBlock<T> _queue;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="BlockingCollectionTestActorQueue{T}"/> class.
+        /// Initializes a new instance of the <see cref="BufferCollectionTestActorQueue{T}"/> class.
         /// </summary>
         /// <param name="queue">The queue to use as the backing store.</param>
-        public BlockingCollectionTestActorQueue(BlockingQueue<T> queue)
+        public BufferCollectionTestActorQueue(BufferBlock<T> queue)
         {
             _queue = queue;
         }
@@ -32,18 +35,19 @@ namespace Akka.TestKit.Internal
         /// Adds the specified item to the end of the queue.
         /// </summary>
         /// <param name="item">The item to add to the queue.</param>
-        public void Enqueue(T item)
+        public async ValueTask Enqueue(T item)
         {
-            _queue.Enqueue(item);
+            await _queue.SendAsync(item);
         }
 
         /// <summary>
         /// Return an <see cref="List{T}"/> for the items inside the collection.
         /// </summary>
-        /// <returns>A <see cref="List{T}"/> for the <see cref="BlockingCollectionTestActorQueue{T}"/> items</returns>
+        /// <returns>A <see cref="List{T}"/> for the <see cref="BufferCollectionTestActorQueue{T}"/> items</returns>
         public List<T> ToList()
         {
-            return _queue.ToList();
+            _queue.TryReceiveAll(out var list);
+            return list.ToList();
         }
         
         /// <summary>
@@ -58,7 +62,7 @@ namespace Akka.TestKit.Internal
         public IEnumerable<T> GetAll()
         {
             T item;
-            while(_queue.TryTake(out item))
+            while(_queue.TryReceive(out item))
             {
                 yield return item;
             }

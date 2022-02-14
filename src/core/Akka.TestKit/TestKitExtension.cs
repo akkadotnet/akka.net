@@ -5,6 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using Akka.Actor;
 
 namespace Akka.TestKit
@@ -36,6 +40,28 @@ namespace Akka.TestKit
         public static TestKitSettings For(ActorSystem system)
         {
             return system.GetExtension<TestKitSettings>();
+        }
+        
+    }
+
+    public static class EnvelopeExtention
+    {
+        public static async Task<T> TryTakeAsync<T>(this BufferBlock<T> bufferBlock)
+        {
+            try
+            {
+                return await bufferBlock.ReceiveAsync();
+            }
+            catch { return default; }
+        }
+        
+        public static async Task<T> TryTakeAsync<T>(this BufferBlock<T> bufferBlock, TimeSpan timeout, CancellationToken cst)
+        {
+            try
+            {
+                return await bufferBlock.ReceiveAsync(timeout, cst);
+            }
+            catch { return default; }
         }
     }
 }

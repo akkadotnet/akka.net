@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Akka.TestKit.Internal
 {
@@ -17,7 +18,7 @@ namespace Akka.TestKit.Internal
     {
         /// <summary>Adds the specified item to the queue.</summary>
         /// <param name="item">The item.</param>
-        void Enqueue(T item);
+        ValueTask Enqueue(T item);
     }
 
     /// <summary>

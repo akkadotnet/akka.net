@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
@@ -242,6 +243,46 @@ namespace Akka.TestKit
             return false;
         }
 
+        private async Task<MessageEnvelope> InternalTryReceiveOneAsync(TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
+        {
+            var maxDuration = GetTimeoutOrDefault(max);
+            var start = Now;
+            MessageEnvelope envelope;
+            if (maxDuration.IsZero())
+            {
+                ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will not wait.");
+
+                envelope = await _testState.Queue.TryTakeAsync();
+            }
+            else if (maxDuration.IsPositiveFinite())
+            {
+                ConditionalLog(shouldLog, "Trying to receive message from TestActor queue within {0}", maxDuration);
+                envelope = await _testState.Queue.TryTakeAsync(maxDuration, cancellationToken);
+            }
+            else if (maxDuration == Timeout.InfiniteTimeSpan)
+            {
+                ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will wait indefinitely.");
+                envelope = await _testState.Queue.TryTakeAsync(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            else
+            {
+                ConditionalLog(shouldLog, "Trying to receive message from TestActor queue with negative timeout.");
+                //Negative
+                envelope = null;
+            }
+
+            _testState.LastWasNoMsg = false;
+            if (envelope != null)
+            {
+                ConditionalLog(shouldLog, "Received message after {0}.", Now - start);
+                _testState.LastMessage = envelope;
+                return envelope;
+            }
+            ConditionalLog(shouldLog, "Received no message after {0}.{1}", Now - start, cancellationToken.IsCancellationRequested ? " Was canceled" : "");
+            envelope = NullMessageEnvelope.Instance;
+            _testState.LastMessage = envelope;
+            return envelope;
+        }
 
         /// <summary>
         /// Receive a series of messages until the function returns null or the overall
@@ -318,7 +359,7 @@ namespace Akka.TestKit
                 var result = filter(message);
                 if (result == null)
                 {
-                    _testState.Queue.AddFirst(envelope);  //Put the message back in the queue
+                    _testState.Queue.Post(envelope);//Put the message back in the queue
                     _testState.LastMessage = msg;
                     break;
                 }
