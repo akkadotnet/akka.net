@@ -11,7 +11,6 @@ Full API reference documentation on Akka.NET's modules, classes, and APIs.
 * [Akka.Streams API Docs](Akka.Streams.yml)
 * [Akka.Cluster API Docs](Akka.Cluster.yml)
 * [Akka.Cluster.Sharding API Docs](Akka.Cluster.Sharding.yml)
-* [Akka.Cluster.Tools API Docs](Akka.Cluster.Tools.yml)
 * [Akka.DependencyInjection API Docs](Akka.DependencyInjection.yml)
 * [Akka.Discovery API Docs](Akka.Discovery.yml)
 
