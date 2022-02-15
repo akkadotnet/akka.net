@@ -335,7 +335,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
-                var queue = new BlockingQueue<(TaskCompletionSource<int>, long)>();
+                var queue = new AsyncQueue<(TaskCompletionSource<int>, long)>();
                 var cancellation = new CancellationTokenSource();
 
                 Task.Run(() =>

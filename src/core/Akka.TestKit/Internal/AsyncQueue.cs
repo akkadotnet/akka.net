@@ -11,6 +11,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using Nito.AsyncEx;
 
 namespace Akka.TestKit.Internal
 {
@@ -20,33 +22,36 @@ namespace Akka.TestKit.Internal
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     /// <typeparam name="T">The type of item to store.</typeparam>
-    public class BlockingQueue<T>
+    public class AsyncQueue<T>
     {
-        private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>(new QueueWithAddFirst());
-
+        private readonly AsyncCollection<Positioned> _collection;
+        private readonly QueueWithAddFirst _queue;
+        public AsyncQueue()
+        {
+            _queue = new QueueWithAddFirst();
+            _collection = new AsyncCollection<Positioned>(_queue);
+        }
         /// <summary>
         /// The number of items that are currently in the queue.
         /// </summary>
-        public int Count { get { return _collection.Count; } }
+        public int Count { get { return _queue.Count; } }
 
         /// <summary>
         /// Adds the specified item to the end of the queue.
         /// </summary>
         /// <param name="item">The item to add to the queue.</param>
-        public void Enqueue(T item)
+        public async ValueTask Enqueue(T item)
         {
-            if (!_collection.TryAdd(new Positioned(item)))
-                throw new InvalidOperationException("Failed to enqueue item into the queue.");
+            await _collection.AddAsync(new Positioned(item));
         }
 
         /// <summary>
         /// Adds the specified item to the front of the queue. 
         /// </summary>
         /// <param name="item">The item to add to the queue.</param>
-        public void AddFirst(T item)
+        public async ValueTask AddFirst(T item)
         {
-            if(!_collection.TryAdd(new Positioned(item, first:true)))
-                throw new InvalidOperationException("Failed to enqueue item into the head of the queue.");
+            await _collection.AddAsync(new Positioned(item, first: true));
         }
 
         /// <summary>
@@ -57,9 +62,10 @@ namespace Akka.TestKit.Internal
         /// <param name="millisecondsTimeout">The number of milliseconds to wait for the add to complete.</param>
         /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation.</param>
         /// <returns><c>true</c> if the add completed within the specified timeout; otherwise, <c>false</c>.</returns>
-        public bool TryEnqueue(T item, int millisecondsTimeout, CancellationToken cancellationToken)
+        public async ValueTask<bool> TryEnqueue(T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            return _collection.TryAdd(new Positioned(item), millisecondsTimeout, cancellationToken);
+            await _collection.AddAsync(new Positioned(item, first: true), cancellationToken);
+            return true;
         }
 
         /// <summary>
@@ -67,15 +73,14 @@ namespace Akka.TestKit.Internal
         /// </summary>
         /// <param name="item">The item to remove from the queue.</param>
         /// <returns><c>true</c> if the item was removed; otherwise, <c>false</c>.</returns>
-        public bool TryTake(out T item)
+        public async ValueTask<(bool Success, T Item)> TryTake()
         {
-            if(_collection.TryTake(out var p))
+            if(await _collection.OutputAvailableAsync())
             {
-                item = p.Value;
-                return true;
+                var p = await _collection.TakeAsync();
+                return (true, p.Value);
             }
-            item = default;
-            return false;
+            return (false, default);
         }
 
         /// <summary>
@@ -86,15 +91,14 @@ namespace Akka.TestKit.Internal
         /// <param name="millisecondsTimeout">The number of milliseconds to wait for the remove to complete.</param>
         /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation.</param>
         /// <returns><c>true</c> if the remove completed within the specified timeout; otherwise, <c>false</c>.</returns>
-        public bool TryTake(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
+        public async ValueTask<(bool Success, T Item)> TryTake(int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            if(_collection.TryTake(out var p, millisecondsTimeout, cancellationToken))
+            if (await _collection.OutputAvailableAsync(cancellationToken))
             {
-                item = p.Value;
-                return true;
+                var p = await _collection.TakeAsync();
+                return (true, p.Value);
             }
-            item = default;
-            return false;
+            return (false, default);
         }
 
         /// <summary>
@@ -105,20 +109,23 @@ namespace Akka.TestKit.Internal
         /// This exception is thrown when the operation is canceled.
         /// </exception>
         /// <returns>The item removed from the collection.</returns>
-        public T Take(CancellationToken cancellationToken)
+        public async ValueTask<T> Take(CancellationToken cancellationToken)
         {
-            var p = _collection.Take(cancellationToken);
+            var p = await _collection.TakeAsync(cancellationToken);
             return p.Value;
         }
 
         /// <summary>
-        /// Copies the items from the <see cref="BlockingQueue{T}"/> instance into a new <see cref="List{T}"/>.
+        /// Copies the items from the <see cref="AsyncQueue{T}"/> instance into a new <see cref="List{T}"/>.
         /// </summary>
         /// <returns>A <see cref="List{T}"/> containing copies of the elements of the collection</returns>
-        public List<T> ToList()
+        public IEnumerable<T> ToList()
         {
-            var positionArray = _collection.ToArray();
-            return positionArray.Select(positioned => positioned.Value).ToList();
+            while(_collection.OutputAvailable())
+            {
+                var p = _collection.Take(); 
+                yield return p.Value;   
+            }
         }
 
 
