@@ -44,8 +44,24 @@ namespace Akka.TestKit
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
         public T FishForMessage<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "")
         {
+            return FishForMessage(isMessage: isMessage, max: max, hint: hint, allMessages: null);
+        }
+
+        /// <summary>
+        /// Receives messages until <paramref name="isMessage"/> returns <c>true</c>.
+        /// Use it to ignore certain messages while waiting for a specific message.
+        /// </summary>
+        /// <typeparam name="T">The type of the expected message. Messages of other types are ignored.</typeparam>
+        /// <param name="isMessage">The is message.</param>
+        /// <param name="max">The maximum.</param>
+        /// <param name="hint">The hint.</param>
+        /// <param name="allMessages">If null then will be ignored. If not null then will be initially cleared, then filled with all the messages until <paramref name="isMessage"/> returns <c>true</c></param>
+        /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
+        public T FishForMessage<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "")
+        {
             var maxValue = RemainingOrDilated(max);
             var end = Now + maxValue;
+            allMessages?.Clear();
             while (true)
             {
                 var left = end - Now;
@@ -55,6 +71,7 @@ namespace Akka.TestKit
                 {
                     return msg1;
                 }
+                allMessages?.Add(msg);
             }
         }
 

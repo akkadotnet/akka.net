@@ -154,10 +154,10 @@ namespace Akka.DistributedData
 
         /// <summary>
         /// Tries to return a result of the request, given a replicated collection 
-        /// <paramref name="key"/> used when sending a <see cref="Replicator.Get"/> request.
+        /// <paramref name="key"/> used when sending a <see cref="Replicator"/> request.
         /// </summary>
         /// <typeparam name="T">Replicated data.</typeparam>
-        /// <param name="key">Key send originally with a <see cref="Replicator.Get"/> request.</param>
+        /// <param name="key">Key send originally with a <see cref="Replicator"/> request.</param>
         /// <exception cref="KeyNotFoundException">Thrown when no value for provided <paramref name="key"/> was found.</exception>
         /// <exception cref="TimeoutException">Thrown when response with given consistency didn't arrive within specified timeout.</exception>
         /// <returns></returns>
