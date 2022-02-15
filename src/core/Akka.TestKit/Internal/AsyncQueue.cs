@@ -122,11 +122,8 @@ namespace Akka.TestKit.Internal
         /// <returns>A <see cref="List{T}"/> containing copies of the elements of the collection</returns>
         public IEnumerable<T> ToList()
         {
-            while(_collection.OutputAvailable())
-            {
-                var p = _collection.Take(); 
-                yield return p.Value;   
-            }
+            foreach (var p in _queue.ToList())
+                yield return p.Value;
         }
 
 
