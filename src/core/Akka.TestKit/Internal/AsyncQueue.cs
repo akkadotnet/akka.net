@@ -25,6 +25,7 @@ namespace Akka.TestKit.Internal
     public class AsyncQueue<T>
     {
         private readonly AsyncCollection<Positioned> _collection;
+
         private readonly QueueWithAddFirst _queue;
         public AsyncQueue()
         {
