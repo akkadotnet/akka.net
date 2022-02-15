@@ -253,7 +253,7 @@ Substitution processing is performed as the last parsing step, so a substitution
 
 If a key has been specified more than once, the substitution will always evaluate to its latest-assigned value (that is, it will evaluate to the merged object, or the last non-object value that was set, in the entire document being parsed including all included files).
 
-If a substitution does not match any value present in the configuration and is not resolved by an external source, then it is undefined. An undefined _required substitution_ is invalid and will generate an error.
+If a substitution does not match any value present in the configuration, then it is undefined. An undefined _required substitution_ is invalid and will generate an error.
 
 [!code-csharp[SerializationSetupDocSpec](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=UnsolvableSubstitutionWillThrowSample)]
 

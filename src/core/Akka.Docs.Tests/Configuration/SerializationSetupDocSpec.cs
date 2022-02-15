@@ -165,44 +165,5 @@ namespace DocsExamples.Configuration
             (new[] { 1, 2, 3, 4 }).Should().BeEquivalentTo(config.GetIntList("b"));
             // </ArraySubstitutionSample>
         }
-        [Fact]
-        public void SelfReferencingSubstitutionWithArray()
-        {
-            // <SelfReferencingSubstitutionWithArray>
-            // This is not an invalid substitution, it is a self referencing substitution, you can think of it as `a = a + [3, 4]`
-            // ${a} will be substituted with its previous value, which is [1, 2], concatenated with [3, 4] to make [1, 2, 3, 4], 
-            // and then stored back into a
-            var hoconString = @"
-            a = [1, 2]
-            a = ${a} [3, 4]
-            ";
-            Config config = hoconString;
-            var list = config.GetIntList("a");
-            (new int[] { 1, 2, 3, 4 }).Should().BeEquivalentTo(list);
-            // </SelfReferencingSubstitutionWithArray>
-        }
-        [Fact]
-        public void ObjectMergeSubstitutionSample()
-        {
-            // <ObjectMergeSubstitutionSample>
-            // ${a} will be substituted by hocon object 'a' and merged with object 'b'
-            var hoconString = @"
-            a.a : 1
-            b.b : 2
-            b : ${a}
-            ";
-            var expectedHoconString = @"{
-              a : {
-                a : 1
-              },
-              b : {
-                b : 2,
-                a : 1
-              }
-            }";                        
-            Config config = hoconString;
-            //expectedHoconString.Should().BeEquivalentTo(config.Value.ToString(1, 2));
-            // </ObjectMergeSubstitutionSample>
-        }
     }
 }
