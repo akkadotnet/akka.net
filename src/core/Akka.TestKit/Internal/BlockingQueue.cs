@@ -43,7 +43,8 @@ namespace Akka.TestKit.Internal
         /// Adds the specified item to the front of the queue. 
         /// </summary>
         /// <param name="item">The item to add to the queue.</param>
-        private void AddFirst(T item)
+        [Obsolete("This method will be removed from the public API in the future")] 
+        public void AddFirst(T item)
         {
             if(!_collection.TryAdd(new Positioned(item, first:true)))
                 throw new InvalidOperationException("Failed to enqueue item into the head of the queue.");
