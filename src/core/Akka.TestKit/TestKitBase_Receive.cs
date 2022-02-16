@@ -230,18 +230,137 @@ namespace Akka.TestKit
             }
 
             _testState.LastWasNoMsg = false;
+            if(envelope == null)
+                envelope = NullMessageEnvelope.Instance;
+            _testState.LastMessage = envelope;
+            
             if (didTake)
             {
                 ConditionalLog(shouldLog, "Received message after {0}.", Now - start);
-                _testState.LastMessage = envelope;
                 return true;
             }
+            
             ConditionalLog(shouldLog, "Received no message after {0}.{1}", Now - start, cancellationToken.IsCancellationRequested ? " Was canceled" : "");
-            envelope = NullMessageEnvelope.Instance;
-            _testState.LastMessage = envelope;
             return false;
         }
 
+        #region Peek methods
+        /// <summary>
+        /// Peek one message from the head of the internal queue of the TestActor.
+        /// This method blocks the specified duration or until a message
+        /// is received. If no message was received, <c>null</c> is returned.
+        /// <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks>
+        /// </summary>
+        /// <param name="max">The maximum duration to wait. 
+        /// If <c>null</c> the config value "akka.test.single-expect-default" is used as timeout.
+        /// If set to a negative value or <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever.
+        /// <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks></param>
+        /// <returns>The message if one was received; <c>null</c> otherwise</returns>
+        public object PeekOne(TimeSpan? max = null)
+        {
+            if(InternalTryPeekOne(out var envelope, max, CancellationToken.None, true))
+                return envelope.Message;
+            return null;
+        }
+
+        /// <summary>
+        /// Peek one message from the head of the internal queue of the TestActor.
+        /// This method blocks until cancelled. 
+        /// </summary>
+        /// <param name="cancellationToken">A token used to cancel the operation</param>
+        /// <returns>The message if one was received; <c>null</c> otherwise</returns>
+        public object PeekOne(CancellationToken cancellationToken)
+        {
+            if(InternalTryPeekOne(out var envelope, Timeout.InfiniteTimeSpan, cancellationToken, true))
+                return envelope.Message;
+            return null;
+        }
+
+        /// <summary>
+        /// Peek one message from the head of the internal queue of the TestActor within 
+        /// the specified duration. The method blocks the specified duration.
+        /// <remarks><b>Note!</b> that the returned <paramref name="envelope"/> 
+        /// is a <see cref="MessageEnvelope"/> containing the sender and the message.</remarks>
+        /// <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks>
+        /// </summary>
+        /// <param name="envelope">The received envelope.</param>
+        /// <param name="max">Optional: The maximum duration to wait. 
+        ///     If <c>null</c> the config value "akka.test.single-expect-default" is used as timeout.
+        ///     If set to a negative value or <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever.
+        ///     <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks></param>
+        /// <returns><c>True</c> if a message was received within the specified duration; <c>false</c> otherwise.</returns>
+        public bool TryPeekOne(out MessageEnvelope envelope, TimeSpan? max = null)
+        {
+            return InternalTryPeekOne(out envelope, max, CancellationToken.None, true);
+        }
+
+        /// <summary>
+        /// Peek one message from the head of the internal queue of the TestActor within 
+        /// the specified duration.
+        /// <para><c>True</c> is returned if a message existed, and the message 
+        /// is returned in <paramref name="envelope" />. The method blocks the 
+        /// specified duration, and can be cancelled using the 
+        /// <paramref name="cancellationToken" />.
+        /// </para> 
+        /// <remarks>This method does NOT automatically scale its duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks>
+        /// </summary>
+        /// <param name="envelope">The received envelope.</param>
+        /// <param name="max">The maximum duration to wait. 
+        ///     If <c>null</c> the config value "akka.test.single-expect-default" is used as timeout.
+        ///     If set to <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever (or until cancelled).
+        ///     <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks>
+        /// </param>
+        /// <param name="cancellationToken">A token used to cancel the operation.</param>
+        /// <returns><c>True</c> if a message was received within the specified duration; <c>false</c> otherwise.</returns>
+        public bool TryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken)
+        {
+            return InternalTryPeekOne(out envelope, max, cancellationToken, true);
+        }        
+
+        private bool InternalTryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
+        {
+            bool didPeek;
+            var maxDuration = GetTimeoutOrDefault(max);
+            var start = Now;
+            
+            if (maxDuration.IsZero())
+            {
+                ConditionalLog(shouldLog, "Trying to peek message from TestActor queue. Will not wait.");
+                didPeek = _testState.Queue.TryPeek(out envelope);
+            }
+            else if (maxDuration.IsPositiveFinite())
+            {
+                ConditionalLog(shouldLog, "Trying to peek message from TestActor queue within {0}", maxDuration);
+                didPeek = _testState.Queue.TryPeek(out envelope, (int)maxDuration.TotalMilliseconds, cancellationToken);
+            }
+            else if (maxDuration == Timeout.InfiniteTimeSpan)
+            {
+                ConditionalLog(shouldLog, "Trying to peek message from TestActor queue. Will wait indefinitely.");
+                didPeek = _testState.Queue.TryPeek(out envelope, -1, cancellationToken);
+            }
+            else
+            {
+                ConditionalLog(shouldLog, "Trying to peek message from TestActor queue with negative timeout.");
+                //Negative
+                envelope = null;
+                didPeek = false;
+            }
+            
+            _testState.LastWasNoMsg = false;
+            if(envelope == null)
+                envelope = NullMessageEnvelope.Instance;
+            _testState.LastMessage = envelope;
+            
+            if (didPeek)
+            {
+                ConditionalLog(shouldLog, "Peeked message after {0}.", Now - start);
+                return true;
+            }
+            
+            ConditionalLog(shouldLog, "Peeked no message after {0}.{1}", Now - start, cancellationToken.IsCancellationRequested ? " Was canceled" : "");
+            return false;
+        }
+        #endregion
 
         /// <summary>
         /// Receive a series of messages until the function returns null or the overall
@@ -308,21 +427,38 @@ namespace Akka.TestKit
             MessageEnvelope msg = NullMessageEnvelope.Instance;
             while (count < msgs)
             {
-                MessageEnvelope envelope;
-                if (!TryReceiveOne(out envelope, (stop - Now).Min(idleValue)))
+                // Peek the message on the front of the queue
+                PeekOne((stop - Now).Min(idleValue));
+                
+                if (!TryPeekOne(out var envelope, (stop - Now).Min(idleValue)))
                 {
                     _testState.LastMessage = msg;
                     break;
                 }
                 var message = envelope.Message;
                 var result = filter(message);
-                if (result == null)
+                
+                // If the message is accepted by the filter, remove it from the queue
+                if (result != null)
                 {
-                    _testState.Queue.AddFirst(envelope);  //Put the message back in the queue
+                    // This should happen immediately (zero timespan). Something is wrong if this fails.
+                    if (!InternalTryReceiveOne(out var removed, TimeSpan.Zero, CancellationToken.None, true))
+                        throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
+                    
+                    // The removed item should be equal to the one peeked previously
+                    if(!ReferenceEquals(envelope, removed))
+                        throw new InvalidOperationException("[RACY] Dequeued item does not match earlier peeked item");
+                    
+                    msg = envelope;
+                }
+                // If the message is rejected by the filter, stop the loop
+                else
+                {
                     _testState.LastMessage = msg;
                     break;
                 }
-                msg = envelope;
+                
+                // Store the accepted message and continue.
                 acc.Add(result);
                 count++;
             }
@@ -365,8 +501,7 @@ namespace Akka.TestKit
             MessageEnvelope msg = NullMessageEnvelope.Instance;
             while (count < msgs)
             {
-                MessageEnvelope envelope;
-                if (!TryReceiveOne(out envelope, (stop - Now).Min(idleValue)))
+                if (!TryPeekOne(out var envelope, (stop - Now).Min(idleValue)))
                 {
                     _testState.LastMessage = msg;
                     break;
@@ -390,9 +525,21 @@ namespace Akka.TestKit
                 {
                     shouldStop = !shouldIgnoreOtherMessageTypes;
                 }
-                if (shouldStop)
+
+                // If the message is accepted by the filter, remove it from the queue
+                if (!shouldStop)
                 {
-                    _testState.Queue.AddFirst(envelope);  //Put the message back in the queue
+                    // This should happen immediately (zero timespan). Something is wrong if this fails.
+                    if (!InternalTryReceiveOne(out var removed, TimeSpan.Zero, CancellationToken.None, true))
+                        throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
+                    
+                    // The removed item should be equal to the one peeked previously
+                    if(!ReferenceEquals(envelope, removed))
+                        throw new InvalidOperationException("[RACY] Dequeued item does not match earlier peeked item");
+                }
+                // If the message is rejected by the filter, stop the loop
+                else
+                {
                     _testState.LastMessage = msg;
                     break;
                 }
