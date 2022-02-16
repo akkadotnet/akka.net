@@ -43,6 +43,7 @@ namespace Akka.TestKit.Internal
         /// Adds the specified item to the front of the queue. 
         /// </summary>
         /// <param name="item">The item to add to the queue.</param>
+        [Obsolete("This method will be removed from the public API in the future")] 
         public void AddFirst(T item)
         {
             if(!_collection.TryAdd(new Positioned(item, first:true)))
@@ -111,6 +112,62 @@ namespace Akka.TestKit.Internal
             return p.Value;
         }
 
+        #region Peek methods
+
+        /// <summary>
+        /// Tries to remove the specified item from the queue.
+        /// </summary>
+        /// <param name="item">The item to remove from the queue.</param>
+        /// <returns><c>true</c> if the item was removed; otherwise, <c>false</c>.</returns>
+        public bool TryPeek(out T item)
+        {
+            if(_collection.TryTake(out var p))
+            {
+                item = p.Value;
+                AddFirst(item);
+                return true;
+            }
+            item = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Tries to remove the specified item from the queue within the specified time period.
+        /// A token can be provided to cancel the operation if needed.
+        /// </summary>
+        /// <param name="item">The item to remove from the queue.</param>
+        /// <param name="millisecondsTimeout">The number of milliseconds to wait for the remove to complete.</param>
+        /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation.</param>
+        /// <returns><c>true</c> if the remove completed within the specified timeout; otherwise, <c>false</c>.</returns>
+        public bool TryPeek(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
+        {
+            if(_collection.TryTake(out var p, millisecondsTimeout, cancellationToken))
+            {
+                item = p.Value;
+                AddFirst(item);
+                return true;
+            }
+            item = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Removes an item from the collection.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation.</param>
+        /// <exception cref="OperationCanceledException">
+        /// This exception is thrown when the operation is canceled.
+        /// </exception>
+        /// <returns>The item removed from the collection.</returns>
+        public T Peek(CancellationToken cancellationToken)
+        {
+            var p = _collection.Take(cancellationToken);
+            AddFirst(p.Value);
+            return p.Value;
+        }
+
+        #endregion
+        
         /// <summary>
         /// Copies the items from the <see cref="BlockingQueue{T}"/> instance into a new <see cref="List{T}"/>.
         /// </summary>
