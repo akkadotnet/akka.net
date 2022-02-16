@@ -89,19 +89,5 @@ namespace Akka.TestKit.Internal
                 _queue.Enqueue(new RealMessageEnvelope(message, actorRef));
             return true;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override void PostStop()
-        {
-            var self = Self;
-            foreach(var messageEnvelope in _queue.ToList())
-            {
-                var messageSender = messageEnvelope.Sender;
-                var message = messageEnvelope.Message;
-                Context.System.DeadLetters.Tell(new DeadLetter(message, messageSender, self), messageSender);
-            }
-        }
     }
 }
