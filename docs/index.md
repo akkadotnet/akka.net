@@ -4,6 +4,7 @@ title: Akka.NET Documentation
 tagline: A straightforward approach to building distributed, high-scale applications in .NET
 ---
 <!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable MD009 -->
 <style>
 .subtitle {
     font-size:20px;
