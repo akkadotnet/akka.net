@@ -107,7 +107,7 @@ namespace Akka.TestKit.Internal
         protected override void PostStop()
         {
             var self = Self;
-            foreach(var messageEnvelope in _queue.ToList())
+            foreach(var messageEnvelope in _queue.TakeAll())
             {
                 var messageSender = messageEnvelope.Sender;
                 var message = messageEnvelope.Message;

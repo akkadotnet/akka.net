@@ -115,12 +115,24 @@ namespace Akka.TestKit.Internal
         /// Copies the items from the <see cref="BlockingQueue{T}"/> instance into a new <see cref="List{T}"/>.
         /// </summary>
         /// <returns>A <see cref="List{T}"/> containing copies of the elements of the collection</returns>
+        [Obsolete("This method will be removed in the future")] 
         public List<T> ToList()
         {
             var positionArray = _collection.ToArray();
             return positionArray.Select(positioned => positioned.Value).ToList();
         }
 
+        /// <summary>
+        /// Empties the items from the <see cref="BlockingQueue{T}"/> instance and returns a <see cref="List{T}"/>
+        /// of items emptied from the collection.
+        /// </summary>
+        /// <returns>A <see cref="List{T}"/> containing all the emptied elements of the collection</returns>
+        public List<T> TakeAll(CancellationToken cancellationToken)
+        {
+            return _collection
+                .GetConsumingEnumerable(cancellationToken)
+                .Select(p => p.Value).ToList();
+        }
 
         private class Positioned
         {

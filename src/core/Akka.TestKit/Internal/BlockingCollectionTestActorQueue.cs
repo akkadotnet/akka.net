@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Akka.TestKit.Internal
 {
@@ -46,6 +47,15 @@ namespace Akka.TestKit.Internal
             return _queue.ToList();
         }
         
+        /// <summary>
+        /// Drain the queue and return all remaining items in a <see cref="List{T}"/>
+        /// </summary>
+        /// <returns>TBD</returns>
+        public List<T> TakeAll()
+        {
+            return _queue.TakeAll(CancellationToken.None);
+        }
+
         /// <summary>
         /// <para>
         /// Retrieves all items from the queue.
