@@ -2579,11 +2579,8 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="materializerFunction">TBD</param>
         /// <returns>TBD</returns>
-        public static IFlow<T, TMat2> WatchTermination<T, TMat, TMat2>(this IFlow<T, TMat> flow,
-            Func<TMat, Task, TMat2> materializerFunction)
-        {
-            return flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
-        }
+        public static IFlow<T, TMat2> WatchTermination<T, TMat, TMat2>(this IFlow<T, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) => 
+            flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
 
         /// <summary>
         /// Materializes to <see cref="IFlowMonitor"/> that allows monitoring of the the current flow. All events are propagated
