@@ -316,6 +316,10 @@ pre code{
     border-color: #fa7979;
 }
 
+.jumbotron{
+    background-color: #040e1c;
+}
+
 
 .article .content.wrap img {
     background: #25aae1;
@@ -331,6 +335,5 @@ pre code{
     .svg.akka-logo{
         margin: auto;
 
-    }
-    
+    }    
 }

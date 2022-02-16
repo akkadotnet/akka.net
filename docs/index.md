@@ -23,8 +23,9 @@ h2:before{
 }
 </style>
 
-<div class="jumbotron">
-    <div class="container">
+<div class="container">
+    <div class="jumbotron">
+   
       <img src="images/mainlogo.png" class="main-logo" />
       <h1 class="title">Try <strong>Akka.NET</strong> now!</h1>
       <h1 class="title"><small class="subtitle">Follow our tutorial and build your first Akka.NET application today.</small></h1>
