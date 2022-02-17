@@ -2,7 +2,5 @@
   href: config.md
 - name: HOCON Syntax and Practices in Akka.NET
   href: hocon.md
-- name: Akka
-  href: akka.md
 - name: Modules
   href: modules/toc.yml
