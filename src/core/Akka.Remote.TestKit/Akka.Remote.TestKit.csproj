@@ -6,7 +6,7 @@
     <Description>TestKit for Testing Distributed Akka.NET Applications</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;testkit</PackageTags>
-    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    <ProduceReferenceAssembly>$(ProduceReferenceAssembly)</ProduceReferenceAssembly>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

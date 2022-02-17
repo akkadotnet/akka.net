@@ -7,7 +7,7 @@
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    <ProduceReferenceAssembly>$(ProduceReferenceAssembly)</ProduceReferenceAssembly>
   </PropertyGroup>
 
   <ItemGroup>

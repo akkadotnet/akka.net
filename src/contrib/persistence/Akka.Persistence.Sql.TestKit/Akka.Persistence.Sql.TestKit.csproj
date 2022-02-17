@@ -6,7 +6,7 @@
     <Description>Akka.NET TestKit for SQL-based ADO.NET Persistence middleware</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;testkit;eventsource;sql;reactive;streams</PackageTags>
-    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    <ProduceReferenceAssembly>$(ProduceReferenceAssembly)</ProduceReferenceAssembly>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

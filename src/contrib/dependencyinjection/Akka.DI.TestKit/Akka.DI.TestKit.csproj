@@ -6,7 +6,7 @@
     <Description>Dependency Injection (DI) TestKit support for Akka.NET</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);dependency injection;testkit</PackageTags>
-    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    <ProduceReferenceAssembly>$(ProduceReferenceAssembly)</ProduceReferenceAssembly>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
