@@ -34,7 +34,7 @@ namespace Akka.TestKit
 
             public ActorSystem System { get; set; }
             public TestKitSettings TestKitSettings { get; set; }
-            public BlockingQueue<MessageEnvelope> Queue { get; set; }
+            public ITestQueue<MessageEnvelope> Queue { get; set; }
             public MessageEnvelope LastMessage  { get; set; }
             public IActorRef TestActor { get; set; }
             public TimeSpan? End { get; set; }
