@@ -6,6 +6,7 @@
     <Description>Distributed coordination support for Akka.NET</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

@@ -6,6 +6,7 @@
     <Description>Akka.NET streams support for ADO.NET Persistence middleware.</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

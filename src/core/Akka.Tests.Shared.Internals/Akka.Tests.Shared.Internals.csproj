@@ -2,6 +2,7 @@
   <Import Project="..\..\common.props" />
   <PropertyGroup>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
   </PropertyGroup>
 
   <ItemGroup>
