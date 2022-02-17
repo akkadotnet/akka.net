@@ -6,7 +6,6 @@
     <Description>Replicated data using CRDT structures</Description>
     <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <PackageTags>$(AkkaPackageTags);network;cluster;crdt;replication;lightningdb;lmdb</PackageTags>
-    <ProduceReferenceAssembly>$(ProduceReferenceAssembly)</ProduceReferenceAssembly>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
