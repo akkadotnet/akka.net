@@ -8,9 +8,11 @@ parameters:
   scriptArgs: 'all'
   outputDirectory: ''
   timeoutInMinutes: 120
+  run_if: true
 
 jobs:
   - job: ${{ parameters.name }}
+    condition: eq( ${{ parameters.run_if }}, true )
     displayName: ${{ parameters.displayName }}
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     pool:
