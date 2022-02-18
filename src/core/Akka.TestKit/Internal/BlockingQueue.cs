@@ -25,17 +25,14 @@ namespace Akka.TestKit.Internal
     {
         private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>(new QueueWithAddFirst());
 
-        /// <inheritdoc cref="Count"/>
         public int Count { get { return _collection.Count; } }
 
-        /// <inheritdoc cref="Enqueue"/>
         public void Enqueue(T item)
         {
             if (!_collection.TryAdd(new Positioned(item)))
                 throw new InvalidOperationException("Failed to enqueue item into the queue.");
         }
 
-        /// <inheritdoc cref="EnqueueAsync"/>
         public async ValueTask EnqueueAsync(T item)
         {
             Enqueue(item);
@@ -48,19 +45,16 @@ namespace Akka.TestKit.Internal
                 throw new InvalidOperationException("Failed to enqueue item into the head of the queue.");
         }
 
-        /// <inheritdoc cref="TryEnqueue"/>
         public bool TryEnqueue(T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
             return _collection.TryAdd(new Positioned(item), millisecondsTimeout, cancellationToken);
         }
 
-        /// <inheritdoc cref="TryEnqueueAsync"/>
         public async ValueTask<bool> TryEnqueueAsync(T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
             return TryEnqueue(item, millisecondsTimeout, cancellationToken);
         }
 
-        /// <inheritdoc cref="TryTake(out T)"/>
         public bool TryTake(out T item, CancellationToken cancellationToken = default)
         {
             if(_collection.TryTake(out var p, 0, cancellationToken))
@@ -72,14 +66,12 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
-        /// <inheritdoc cref="TryTakeAsync(CancellationToken)"/>
         public async ValueTask<(bool success, T item)> TryTakeAsync(CancellationToken cancellationToken)
         {
             var result = TryTake(out var item);
             return (result, item);
         }
 
-        /// <inheritdoc cref="TryTake(out T, int, CancellationToken)"/>
         public bool TryTake(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
             if(_collection.TryTake(out var p, millisecondsTimeout, cancellationToken))
@@ -91,21 +83,18 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
-        /// <inheritdoc cref="TryTakeAsync(int, CancellationToken)"/>
         public async ValueTask<(bool success, T item)> TryTakeAsync(int millisecondsTimeout, CancellationToken cancellationToken)
         {
             var result = TryTake(out var item, millisecondsTimeout, cancellationToken);
             return (result, item);
         }
 
-        /// <inheritdoc cref="Take"/>
         public T Take(CancellationToken cancellationToken)
         {
             var p = _collection.Take(cancellationToken);
             return p.Value;
         }
 
-        /// <inheritdoc cref="TakeAsync"/>
         public async ValueTask<T> TakeAsync(CancellationToken cancellationToken)
         {
             return _collection.Take(cancellationToken).Value;
@@ -113,7 +102,6 @@ namespace Akka.TestKit.Internal
 
         #region Peek methods
 
-        /// <inheritdoc cref="TryPeek(out T)"/>
         public bool TryPeek(out T item)
         {
             if(_collection.TryTake(out var p))
@@ -126,7 +114,6 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
-        /// <inheritdoc cref="TryPeekAsync(CancellationToken)"/>
         public async ValueTask<(bool success, T item)> TryPeekAsync(CancellationToken cancellationToken)
         {
             if(_collection.TryTake(out var p))
@@ -138,7 +125,6 @@ namespace Akka.TestKit.Internal
             return (false, default);
         }
 
-        /// <inheritdoc cref="TryPeek(out T, int, CancellationToken)"/>
         public bool TryPeek(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
             if(_collection.TryTake(out var p, millisecondsTimeout, cancellationToken))
@@ -151,7 +137,6 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
-        /// <inheritdoc cref="TryPeekAsync(int, CancellationToken)"/>
         public async ValueTask<(bool success, T item)> TryPeekAsync(int millisecondsTimeout, CancellationToken cancellationToken)
         {
             if(_collection.TryTake(out var p, millisecondsTimeout, cancellationToken))
@@ -163,7 +148,6 @@ namespace Akka.TestKit.Internal
             return (false, default);
         }
         
-        /// <inheritdoc cref="Peek"/>
         public T Peek(CancellationToken cancellationToken)
         {
             var p = _collection.Take(cancellationToken);
@@ -171,7 +155,6 @@ namespace Akka.TestKit.Internal
             return p.Value;
         }
 
-        /// <inheritdoc cref="PeekAsync"/>
         public async ValueTask<T> PeekAsync(CancellationToken cancellationToken)
         {
             var val = _collection.Take(cancellationToken).Value;
@@ -180,7 +163,6 @@ namespace Akka.TestKit.Internal
         }
         #endregion
         
-        /// <inheritdoc cref="ToList"/>
         public List<T> ToList()
         {
             var positionArray = _collection.ToArray();
