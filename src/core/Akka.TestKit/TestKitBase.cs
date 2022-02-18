@@ -154,7 +154,7 @@ namespace Akka.TestKit
             system.RegisterExtension(new TestKitAssertionsExtension(_assertions));
 
             _testState.TestKitSettings = TestKitExtension.For(_testState.System);
-            _testState.Queue = new BlockingQueue<MessageEnvelope>();
+            _testState.Queue = new AsyncQueue<MessageEnvelope>();
             _testState.Log = Logging.GetLogger(system, GetType());
             _testState.EventFilterFactory = new EventFilterFactory(this);
 

@@ -61,9 +61,9 @@ namespace Akka.TestKit.Internal
         }
 
         /// <inheritdoc cref="TryTake(out T)"/>
-        public bool TryTake(out T item)
+        public bool TryTake(out T item, CancellationToken cancellationToken = default)
         {
-            if(_collection.TryTake(out var p))
+            if(_collection.TryTake(out var p, 0, cancellationToken))
             {
                 item = p.Value;
                 return true;
@@ -72,8 +72,8 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
-        /// <inheritdoc cref="TryTakeAsync()"/>
-        public async ValueTask<(bool success, T item)> TryTakeAsync()
+        /// <inheritdoc cref="TryTakeAsync(CancellationToken)"/>
+        public async ValueTask<(bool success, T item)> TryTakeAsync(CancellationToken cancellationToken)
         {
             var result = TryTake(out var item);
             return (result, item);
@@ -126,8 +126,8 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
-        /// <inheritdoc cref="TryPeekAsync()"/>
-        public async ValueTask<(bool success, T item)> TryPeekAsync()
+        /// <inheritdoc cref="TryPeekAsync(CancellationToken)"/>
+        public async ValueTask<(bool success, T item)> TryPeekAsync(CancellationToken cancellationToken)
         {
             if(_collection.TryTake(out var p))
             {
