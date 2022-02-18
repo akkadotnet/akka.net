@@ -268,9 +268,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Custom.Tes
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WIndowsService", "WIndowsService", "{71AE3A57-B735-45CA-A936-836DAC390B76}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AkkaWindowsService", "examples\WindowsService\AkkaWindowsService\AkkaWindowsService.csproj", "{81851799-31D0-4C61-B862-6E75EB7FBF3D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AkkaWindowsService", "examples\WindowsService\AkkaWindowsService\AkkaWindowsService.csproj", "{81851799-31D0-4C61-B862-6E75EB7FBF3D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Cpu.Benchmark", "benchmark\Akka.Cluster.Cpu.Benchmark\Akka.Cluster.Cpu.Benchmark.csproj", "{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Cpu.Benchmark", "benchmark\Akka.Cluster.Cpu.Benchmark\Akka.Cluster.Cpu.Benchmark.csproj", "{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1259,6 +1259,18 @@ Global
 		{81851799-31D0-4C61-B862-6E75EB7FBF3D}.Release|x64.Build.0 = Release|Any CPU
 		{81851799-31D0-4C61-B862-6E75EB7FBF3D}.Release|x86.ActiveCfg = Release|Any CPU
 		{81851799-31D0-4C61-B862-6E75EB7FBF3D}.Release|x86.Build.0 = Release|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Debug|x64.Build.0 = Debug|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Debug|x86.Build.0 = Debug|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Release|x64.ActiveCfg = Release|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Release|x64.Build.0 = Release|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Release|x86.ActiveCfg = Release|Any CPU
+		{6FA94D22-9369-4A60-BBC1-764CA68F4ED1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
