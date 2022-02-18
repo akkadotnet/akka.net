@@ -133,7 +133,7 @@ jobs:
       scriptArgs: docfx
       outputDirectory: "TestResults"
       artifactName: "docfx_test-$(Build.BuildId)"
-    condition: eq(variables['Build.Reason'], 'PullRequest')
+      run_if: eq(variables['Build.Reason'], 'PullRequest')
       
   - template: azure-pipeline.template.yaml
     parameters:
