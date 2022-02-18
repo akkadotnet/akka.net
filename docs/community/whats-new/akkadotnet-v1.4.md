@@ -13,7 +13,7 @@ The high-level summary of changes:
 
 1. [Akka.Cluster.Sharding](../../articles/clustering/cluster-sharding.md) and [Akka.DistributedData](../../articles/clustering/distributed-data.md) are now out of beta status, have stable wire formats, and all sharding functionality is fully supported using either `akka.cluster.sharding.state-store-mode = "persistence"` or `akka.cluster.sharding.state-store-mode = "ddata"`.
 2. Akka.Remote's performance has significantly increased as a function of our new batching mode ([see the numbers](../../articles/remoting/performance.md#no-io-batching)) - which is tunable via HOCON configuration to best support your needs. [Learn how to performance optimize Akka.Remote here](../../articles/remoting/performance.md).
-3. Added a new module, [Akka.Cluster.Metrics](../../articles/cluster/cluster-metrics.md), which allows clustering users to receive performance data about each of the nodes in their cluster and even create some routers that can direct the flow of messages based on these metrics.
+3. Added a new module, [Akka.Cluster.Metrics](../../articles/clustering/cluster-metrics.md), which allows clustering users to receive performance data about each of the nodes in their cluster and even create some routers that can direct the flow of messages based on these metrics.
 4. Added ["Stream References" to Akka.Streams](../../articles/streams/streamrefs.md), a feature which allows Akka.Streams graphs to span across the network.
 5. Moved from .NET Standard 1.6 to .NET Standard 2.0 and dropped support for all versions of .NET Framework that aren't supported by .NET Standard 2.0 - this means issues caused by our polyfills (i.e. `SerializableAttribute`) should be fully resolved now.
 6. Moved onto modern C# best practices, such as changing our APIs to support `System.ValueTuple` over regular tuples.
@@ -24,7 +24,7 @@ If you want a detailed summary of changes and numerous bug fixes, [please see th
 
 In Akka.NET v1.4.1-RC1 we introduced an ambitious change to migrate all HOCON configuration from an internal namespace (`Akka.Configuration`, defined inside the core `Akka` NuGet package) to a stand-alone library:
 
-> All HOCON `Config` objects have been moved from the `Akka.Configuration` namespace within the core `Akka` library to the stand-alone [HOCON project](https://github.com/akkadotnet/HOCON) and its subsequent [HOCON.Configuration NuGet package](https://www.nuget.org/packages/Hocon.Configuration/). See ["HOCON Syntax and Practices in Akka.NET"](../../articles/hocon/index.md) for a full guide on all of the different APIs, standards, and syntax supported. **This is a breaking change**, so [follow the Akka.NET v1.4.0 migration guide](#migration) below.
+> All HOCON `Config` objects have been moved from the `Akka.Configuration` namespace within the core `Akka` library to the stand-alone [HOCON project](https://github.com/akkadotnet/HOCON) and its subsequent [HOCON.Configuration NuGet package](https://www.nuget.org/packages/Hocon.Configuration/). See ["HOCON Syntax and Practices in Akka.NET"](../../articles/configuration/hocon.md) for a full guide on all of the different APIs, standards, and syntax supported. **This is a breaking change**, so [follow the Akka.NET v1.4.0 migration guide](#akkanet-v14-migration-guide-and-key-changes) below.
 
 In Akka.NET v1.4.1-RC2 we rolled this change back in order to:
 
