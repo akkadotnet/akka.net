@@ -1403,7 +1403,7 @@ namespace Akka.Streams.Dsl
         [System.ObsoleteAttribute("Use Via(GraphStage) instead. [1.1.2]")]
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Transform<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, System.Func<Akka.Streams.Stage.IStage<TOut1, TOut2>> stageFactory) { }
         public static Akka.Streams.Dsl.Flow<T, T, TMat> Watch<T, TMat>(this Akka.Streams.Dsl.Flow<T, T, TMat> flow, Akka.Actor.IActorRef actorRef) { }
-        public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Func<TMat, System.Threading.Tasks.Task, TMat2> materializerFunction)
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Func<TMat, System.Threading.Tasks.Task<Akka.Done>, TMat2> materializerFunction)
             where TIn : TOut { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Where<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Predicate<TOut> predicate) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> WhereNot<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Predicate<TOut> predicate) { }
@@ -2076,7 +2076,7 @@ namespace Akka.Streams.Dsl
         [System.ObsoleteAttribute("Use Via(GraphStage) instead. [1.1.2]")]
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Transform<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<Akka.Streams.Stage.IStage<TOut1, TOut2>> stageFactory) { }
         public static Akka.Streams.Dsl.Source<T, TMat> Watch<T, TMat>(this Akka.Streams.Dsl.Source<T, TMat> flow, Akka.Actor.IActorRef actorRef) { }
-        public static Akka.Streams.Dsl.Source<TOut, TMat2> WatchTermination<TOut, TMat, TMat2>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TMat, System.Threading.Tasks.Task, TMat2> materializerFunction) { }
+        public static Akka.Streams.Dsl.Source<TOut, TMat2> WatchTermination<TOut, TMat, TMat2>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TMat, System.Threading.Tasks.Task<Akka.Done>, TMat2> materializerFunction) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Where<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Predicate<TOut> predicate) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> WhereNot<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Predicate<TOut> predicate) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> WireTap<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Action<TOut> action) { }
@@ -2246,7 +2246,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Throttle<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, int cost, System.TimeSpan per, int maximumBurst, System.Func<TOut, int> calculateCost, Akka.Streams.ThrottleMode mode) { }
         [System.ObsoleteAttribute("Use Via(GraphStage) instead. [1.1.2]")]
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Transform<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, System.Func<Akka.Streams.Stage.IStage<TOut1, TOut2>> stageFactory) { }
-        public static Akka.Streams.Dsl.SubFlow<TOut, TMat2, TClosed> WatchTermination<TOut, TMat, TMat2, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Func<TMat, System.Threading.Tasks.Task, TMat2> materializerFunction) { }
+        public static Akka.Streams.Dsl.SubFlow<TOut, TMat2, TClosed> WatchTermination<TOut, TMat, TMat2, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Func<TMat, System.Threading.Tasks.Task<Akka.Done>, TMat2> materializerFunction) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Where<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Predicate<TOut> predicate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> WhereNot<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Predicate<TOut> predicate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> WireTap<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Action<TOut> action) { }
