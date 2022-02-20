@@ -428,8 +428,6 @@ namespace Akka.TestKit
             while (count < msgs)
             {
                 // Peek the message on the front of the queue
-                PeekOne((stop - Now).Min(idleValue));
-                
                 if (!TryPeekOne(out var envelope, (stop - Now).Min(idleValue)))
                 {
                     _testState.LastMessage = msg;

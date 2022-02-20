@@ -55,8 +55,9 @@ namespace Akka.TestKit.Internal
         /// Tries to remove the specified item from the queue.
         /// </summary>
         /// <param name="item">The item to remove from the queue.</param>
+        /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation.</param>
         /// <returns><c>true</c> if the item was removed; otherwise, <c>false</c>.</returns>
-        bool TryTake(out T item);
+        bool TryTake(out T item, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Tries to remove the specified item from the queue within the specified time period.
@@ -71,8 +72,9 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Tries to remove the specified item from the queue.
         /// </summary>
+        /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation.</param>
         /// <returns>a tuple of <c>bool</c> and <c>T</c>, <c>true</c> if the item was removed; otherwise, <c>false</c>.</returns>
-        ValueTask<(bool success, T item)> TryTakeAsync();
+        ValueTask<(bool success, T item)> TryTakeAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Tries to remove the specified item from the queue within the specified time period.
@@ -123,8 +125,9 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Tries to peek the specified item from the queue.
         /// </summary>
+        /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation.</param>
         /// <returns>a tuple of <c>bool</c> and <c>T</c>, <c>true</c> if the item was removed; otherwise, <c>false</c>.</returns>
-        ValueTask<(bool success, T item)> TryPeekAsync();
+        ValueTask<(bool success, T item)> TryPeekAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Tries to peek the specified item from the queue within the specified time period.

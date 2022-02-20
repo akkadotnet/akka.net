@@ -7,6 +7,7 @@
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+      <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +25,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>EventFilterFactory_Generated.tt</DependentUpon>
     </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
+    <PackageReference Include="Nito.AsyncEx.Context" Version="5.1.2" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
