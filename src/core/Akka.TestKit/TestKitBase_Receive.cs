@@ -202,7 +202,9 @@ namespace Akka.TestKit
 
         private bool InternalTryReceiveOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
         {
-            var received = InternalTryReceiveOneAsync(max, cancellationToken, shouldLog).GetAwaiter().GetResult();
+            var task = InternalTryReceiveOneAsync(max, cancellationToken, shouldLog).AsTask();
+            task.Wait();
+            var received = task.Result;
             envelope = received.envelope;
             return received.success;
         }
@@ -215,7 +217,8 @@ namespace Akka.TestKit
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will not wait.");
-                take = await _testState.Queue.TryTakeAsync(cancellationToken).ConfigureAwait(false);
+                var didTake = _testState.Queue.TryTake(out var item, cancellationToken);
+                take = (didTake, item);
             }
             else if (maxDuration.IsPositiveFinite())
             {
@@ -326,7 +329,9 @@ namespace Akka.TestKit
 
         private bool InternalTryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
         {
-            var received = InternalTryPeekOneAsync(max, cancellationToken, shouldLog).GetAwaiter().GetResult();
+            var task = InternalTryPeekOneAsync(max, cancellationToken, shouldLog).AsTask();
+            task.Wait();
+            var received = task.Result;
             envelope = received.envelope;
             return received.success;
         }
@@ -339,7 +344,8 @@ namespace Akka.TestKit
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue. Will not wait.");
-                peek = await _testState.Queue.TryPeekAsync(cancellationToken).ConfigureAwait(false);
+                var peeked = _testState.Queue.TryPeek(out var item);
+                peek = (peeked, item);
             }
             else if (maxDuration.IsPositiveFinite())
             {
