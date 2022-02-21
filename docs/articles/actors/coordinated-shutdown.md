@@ -8,7 +8,7 @@ There's an `ActorSystem` extension called `CoordinatedShutdown` that will stop c
 
 The default phases and their orderings are defined in the default HOCON configuration as `akka.coordinated-shutdown.phases`, and they are defined below:
 
-[!code[Pigeon](../../../src/core/Akka/Configuration/Pigeon.conf?name=coordinated-shutdown-phases)]
+[!code-hocon[Pigeon.conf](../../../src/core/Akka/Configuration/Pigeon.conf#L1019-L1091)]
 
 ## Custom Phases
 
