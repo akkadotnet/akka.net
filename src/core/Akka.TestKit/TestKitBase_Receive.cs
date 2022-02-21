@@ -139,9 +139,15 @@ namespace Akka.TestKit
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object ReceiveOne(TimeSpan? max = null)
         {
-            MessageEnvelope envelope;
-            if (TryReceiveOne(out envelope, max, CancellationToken.None))
-                return envelope.Message;
+            return ReceiveOneAsync(max).GetAwaiter().GetResult();
+        }
+
+        /// <inheritdoc cref="ReceiveOne(TimeSpan?)"/>
+        public async ValueTask<object> ReceiveOneAsync(TimeSpan? max = null)
+        {
+            var received = await TryReceiveOneAsync(max, CancellationToken.None).ConfigureAwait(false);
+            if (received.success)
+                return received.envelope.Message;
             return null;
         }
 
@@ -152,10 +158,16 @@ namespace Akka.TestKit
         /// <param name="cancellationToken">A token used to cancel the operation</param>
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object ReceiveOne(CancellationToken cancellationToken)
+        {            
+            return ReceiveOneAsync(cancellationToken).GetAwaiter().GetResult();
+        }
+
+        /// <inheritdoc cref="ReceiveOne(CancellationToken)"/>
+        public async ValueTask<object> ReceiveOneAsync(CancellationToken cancellationToken)
         {
-            MessageEnvelope envelope;
-            if (TryReceiveOne(out envelope, Timeout.InfiniteTimeSpan, cancellationToken))
-                return envelope.Message;
+            var received = await TryReceiveOneAsync(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+            if (received.success)
+                return received.envelope.Message;
             return null;
         }
 
@@ -173,9 +185,16 @@ namespace Akka.TestKit
         ///     If set to a negative value or <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever.
         ///     <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks></param>
         /// <returns><c>True</c> if a message was received within the specified duration; <c>false</c> otherwise.</returns>
-        public bool TryReceiveOne(out MessageEnvelope envelope, TimeSpan? max = null)
+        
+        public bool TryReceiveOne(out MessageEnvelope envelope, TimeSpan? max)
         {
-            return TryReceiveOne(out envelope, max, CancellationToken.None);
+            return InternalTryReceiveOne(out envelope, max, CancellationToken.None, true);
+        }
+
+        /// <inheritdoc cref="TryReceiveOne(out MessageEnvelope, TimeSpan?)"/>
+        public async ValueTask<(bool success, MessageEnvelope envelope)> TryReceiveOneAsync(TimeSpan? max)
+        {
+            return await InternalTryReceiveOneAsync(max, CancellationToken.None, true).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -201,47 +220,61 @@ namespace Akka.TestKit
             return InternalTryReceiveOne(out envelope, max, cancellationToken, true);
         }
 
+        /// <inheritdoc cref="TryReceiveOne(out MessageEnvelope, TimeSpan?, CancellationToken)"/>
+        public async ValueTask<(bool success, MessageEnvelope envelope)> TryReceiveOneAsync(TimeSpan? max, CancellationToken cancellationToken)
+        {
+            return await InternalTryReceiveOneAsync(max, cancellationToken, true).ConfigureAwait(false);
+        }
+
         private bool InternalTryReceiveOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
         {
-            bool didTake;
+            var received = InternalTryReceiveOneAsync(max, cancellationToken, shouldLog).GetAwaiter().GetResult();
+            envelope = received.envelope;
+            return received.success;
+        }
+
+        private async ValueTask<(bool success, MessageEnvelope envelope)> InternalTryReceiveOneAsync(TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
+        {
+            (bool didTake, MessageEnvelope env) take;
             var maxDuration = GetTimeoutOrDefault(max);
-            var start = Now;
+            var start = Now;    
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will not wait.");
-                didTake = _testState.Queue.TryTake(out envelope);
+                take = await _testState.Queue.TryTakeAsync(cancellationToken).ConfigureAwait(false);
             }
             else if (maxDuration.IsPositiveFinite())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue within {0}", maxDuration);
-                didTake = _testState.Queue.TryTake(out envelope, (int)maxDuration.TotalMilliseconds, cancellationToken);
+                take = await _testState.Queue.TryTakeAsync((int)maxDuration.TotalMilliseconds, cancellationToken)
+                    .ConfigureAwait(false);
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will wait indefinitely.");
-                didTake = _testState.Queue.TryTake(out envelope, -1, cancellationToken);
+                take = await _testState.Queue.TryTakeAsync(-1, cancellationToken).ConfigureAwait(false);
             }
             else
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue with negative timeout.");
                 //Negative
-                envelope = null;
-                didTake = false;
+                take = (false, null);
             }
 
             _testState.LastWasNoMsg = false;
-            if(envelope == null)
-                envelope = NullMessageEnvelope.Instance;
-            _testState.LastMessage = envelope;
-            
-            if (didTake)
+            if (take.env == null)
+                take.env = NullMessageEnvelope.Instance;
+
+            _testState.LastMessage = take.env;
+
+            if (take.didTake)
             {
                 ConditionalLog(shouldLog, "Received message after {0}.", Now - start);
-                return true;
+                return take;
             }
-            
+
             ConditionalLog(shouldLog, "Received no message after {0}.{1}", Now - start, cancellationToken.IsCancellationRequested ? " Was canceled" : "");
-            return false;
+            return take;
         }
 
         #region Peek methods
@@ -258,9 +291,15 @@ namespace Akka.TestKit
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object PeekOne(TimeSpan? max = null)
         {
-            if(InternalTryPeekOne(out var envelope, max, CancellationToken.None, true))
-                return envelope.Message;
-            return null;
+            return PeekOneAsync(max).GetAwaiter().GetResult();  
+        }
+
+        /// <inheritdoc cref="PeekOne(TimeSpan?)"/>
+        public async ValueTask<object> PeekOneAsync(TimeSpan? max = null)
+        {
+            var received = await InternalTryPeekOneAsync(max, CancellationToken.None, true)
+                .ConfigureAwait(false);
+            return received.envelope?.Message;
         }
 
         /// <summary>
@@ -271,11 +310,16 @@ namespace Akka.TestKit
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object PeekOne(CancellationToken cancellationToken)
         {
-            if(InternalTryPeekOne(out var envelope, Timeout.InfiniteTimeSpan, cancellationToken, true))
-                return envelope.Message;
-            return null;
+            return PeekOneAsync(cancellationToken).GetAwaiter().GetResult();
         }
 
+        /// <inheritdoc cref="PeekOne(CancellationToken)"/>
+        public async ValueTask<object> PeekOneAsync(CancellationToken cancellationToken)
+        {
+            var received = await InternalTryPeekOneAsync(Timeout.InfiniteTimeSpan, cancellationToken, true)
+                .ConfigureAwait(false);
+            return received.envelope?.Message;
+        }
         /// <summary>
         /// Peek one message from the head of the internal queue of the TestActor within 
         /// the specified duration. The method blocks the specified duration.
@@ -292,6 +336,12 @@ namespace Akka.TestKit
         public bool TryPeekOne(out MessageEnvelope envelope, TimeSpan? max = null)
         {
             return InternalTryPeekOne(out envelope, max, CancellationToken.None, true);
+        }
+
+        /// <inheritdoc cref="TryPeekOne(out MessageEnvelope, TimeSpan?)"/>
+        public async ValueTask<(bool success, MessageEnvelope envelope)> TryPeekOneAsync(TimeSpan? max = null)
+        {
+            return await InternalTryPeekOneAsync(max, CancellationToken.None, true).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -315,50 +365,64 @@ namespace Akka.TestKit
         public bool TryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken)
         {
             return InternalTryPeekOne(out envelope, max, cancellationToken, true);
-        }        
+        }
+
+        /// <inheritdoc cref="TryPeekOne(out MessageEnvelope, TimeSpan?, CancellationToken)"/>
+        public async ValueTask<(bool success, MessageEnvelope envelope)> TryPeekOneAsync(TimeSpan? max, CancellationToken cancellationToken)
+        {
+            return await InternalTryPeekOneAsync(max, cancellationToken, true).ConfigureAwait(false);
+        }
 
         private bool InternalTryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
         {
-            bool didPeek;
+            var received = InternalTryPeekOneAsync(max, cancellationToken, shouldLog).GetAwaiter().GetResult();
+            envelope = received.envelope;
+            return received.success;
+        }
+        private async ValueTask<(bool success, MessageEnvelope envelope)> InternalTryPeekOneAsync(TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
+        {
+            (bool didPeek, MessageEnvelope env) peek;
             var maxDuration = GetTimeoutOrDefault(max);
             var start = Now;
-            
+
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue. Will not wait.");
-                didPeek = _testState.Queue.TryPeek(out envelope);
+                peek = await _testState.Queue.TryPeekAsync(cancellationToken).ConfigureAwait(false);
             }
             else if (maxDuration.IsPositiveFinite())
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue within {0}", maxDuration);
-                didPeek = _testState.Queue.TryPeek(out envelope, (int)maxDuration.TotalMilliseconds, cancellationToken);
+                peek = await _testState.Queue.TryPeekAsync((int)maxDuration.TotalMilliseconds, cancellationToken)
+                    .ConfigureAwait(false);
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue. Will wait indefinitely.");
-                didPeek = _testState.Queue.TryPeek(out envelope, -1, cancellationToken);
+                peek = await _testState.Queue.TryPeekAsync(-1, cancellationToken).ConfigureAwait(false);
             }
             else
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue with negative timeout.");
                 //Negative
-                envelope = null;
-                didPeek = false;
+                peek = (false, null);
             }
-            
+
             _testState.LastWasNoMsg = false;
-            if(envelope == null)
-                envelope = NullMessageEnvelope.Instance;
-            _testState.LastMessage = envelope;
-            
-            if (didPeek)
+
+            if (peek.env == null)
+                peek.env = NullMessageEnvelope.Instance;
+
+            _testState.LastMessage = peek.env;
+
+            if (peek.didPeek)
             {
                 ConditionalLog(shouldLog, "Peeked message after {0}.", Now - start);
-                return true;
+                return peek;
             }
-            
+
             ConditionalLog(shouldLog, "Peeked no message after {0}.{1}", Now - start, cancellationToken.IsCancellationRequested ? " Was canceled" : "");
-            return false;
+            return peek;
         }
         #endregion
 
