@@ -193,23 +193,11 @@ namespace Akka.TestKit.Internal
 
             public bool TryTake(out T item)
             {
-                if (_queue.Count == 0)
-                {
-                    item = null;
-                    return false;
-                }
-
                 return _queue.TryDequeue(out item);
             }
 
             public bool TryPeek(out T item)
             {
-                if (_queue.Count == 0)
-                {
-                    item = null;
-                    return false;
-                }
-
                 return _queue.TryPeek(out item);
             }
 
