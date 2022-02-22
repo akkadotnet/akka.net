@@ -59,13 +59,20 @@ namespace Akka.TestKit
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
         public T FishForMessage<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "")
         {
+            var task = FishForMessageAsync<T>(isMessage, allMessages, max, hint).AsTask();
+            task.Wait();
+            return task.Result; 
+        }
+
+        public async ValueTask<T> FishForMessageAsync<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "")
+        {
             var maxValue = RemainingOrDilated(max);
             var end = Now + maxValue;
             allMessages?.Clear();
             while (true)
             {
                 var left = end - Now;
-                var msg = ReceiveOne(left);
+                var msg = await ReceiveOneAsync(left).ConfigureAwait(false);
                 _assertions.AssertTrue(msg != null, "Timeout ({0}) during fishForMessage{1}", maxValue, string.IsNullOrEmpty(hint) ? "" : ", hint: " + hint);
                 if (msg is T msg1 && isMessage(msg1))
                 {
