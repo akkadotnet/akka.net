@@ -499,7 +499,7 @@ namespace Akka.TestKit
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        /// <param name="max"></param>
+        /// <param name="max">TBD</param>
         /// <param name="idle">TBD</param>
         /// <param name="filter">TBD</param>
         /// <param name="msgs">TBD</param>
