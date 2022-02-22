@@ -698,6 +698,13 @@ namespace Akka.TestKit
             return result;
         }
 
+        /// <inheritdoc cref="ReceiveN(int)"/>
+        public async ValueTask<IReadOnlyCollection<object>> ReceiveNAsync(int numberOfMessages)
+        {
+            var result = await InternalReceiveNAsync(numberOfMessages, RemainingOrDefault, true).ToListAsync();
+            return result;
+        }
+
         /// <summary>
         /// Receive the specified number of messages in a row before the given deadline.
         /// The deadline is scaled by "akka.test.timefactor" using <see cref="Dilated"/>.
@@ -713,7 +720,22 @@ namespace Akka.TestKit
             return result;
         }
 
+        /// <inheritdoc cref="ReceiveN(int, TimeSpan)"/>
+        public async ValueTask<IReadOnlyCollection<object>> ReceiveNAsync(int numberOfMessages, TimeSpan max)
+        {
+            max.EnsureIsPositiveFinite("max");
+            var dilated = Dilated(max);
+            var result = await InternalReceiveNAsync(numberOfMessages, dilated, true).ToListAsync();
+            return result;
+        }
+
         private IEnumerable<object> InternalReceiveN(int numberOfMessages, TimeSpan max, bool shouldLog)
+        {
+            foreach(var msg in InternalReceiveNAsync(numberOfMessages, max, shouldLog).ToEnumerable())
+                yield return msg;
+        }
+
+        private async IAsyncEnumerable<object> InternalReceiveNAsync(int numberOfMessages, TimeSpan max, bool shouldLog)
         {
             var start = Now;
             var stop = max + start;
@@ -721,7 +743,7 @@ namespace Akka.TestKit
             for (int i = 0; i < numberOfMessages; i++)
             {
                 var timeout = stop - Now;
-                var o = ReceiveOne(timeout);
+                var o = await ReceiveOneAsync(timeout);
                 var condition = o != null;
                 if (!condition)
                 {
