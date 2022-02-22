@@ -109,7 +109,7 @@
   - name: Streams Cookbook
     href: streams/cookbook.md
   - name: Configuration
-    href: configuration/akka.streams.md
+    href: configuration/modules/akka.streams.md
 - name: Networking
   items:
   - name: I/O
