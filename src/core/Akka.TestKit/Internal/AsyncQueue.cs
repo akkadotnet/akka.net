@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit.Internal
 {
@@ -19,7 +20,7 @@ namespace Akka.TestKit.Internal
 
         public int Count => _collection.Count;
         
-        public void Enqueue(T item) => EnqueueAsync(item).AsTask().Wait();
+        public void Enqueue(T item) => EnqueueAsync(item).AsTask().WaitAndUnwrapException();
 
         public ValueTask EnqueueAsync(T item) => new ValueTask(_collection.AddAsync(item)); 
 
