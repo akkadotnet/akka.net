@@ -301,8 +301,18 @@ namespace Akka.TestKit
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object PeekOne(TimeSpan? max = null)
         {
-            if (InternalTryPeekOne(out var envelope, max, CancellationToken.None, true))
-                return envelope.Message;
+            var task = PeekOneAsync(max).AsTask();
+            task.Wait();
+            var peeked = task.Result;
+            return peeked;
+        } 
+        
+        /// <inheritdoc cref="PeekOne(TimeSpan?)"/>
+        public async ValueTask<object> PeekOneAsync(TimeSpan? max = null)
+        {
+            var peeked = await TryPeekOneAsync(max, CancellationToken.None);
+            if (peeked.success)
+                return peeked.envelope.Message;
             return null;
         }
 
@@ -314,8 +324,18 @@ namespace Akka.TestKit
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object PeekOne(CancellationToken cancellationToken)
         {
-            if (InternalTryPeekOne(out var envelope, Timeout.InfiniteTimeSpan, cancellationToken, true))
-                return envelope.Message;
+            var task = PeekOneAsync(cancellationToken).AsTask();
+            task.Wait();
+            var peeked = task.Result;
+            return peeked;
+        }
+
+        /// <inheritdoc cref="PeekOne(CancellationToken)"/>
+        public async ValueTask<object> PeekOneAsync(CancellationToken cancellationToken)
+        {
+            var peeked = await TryPeekOneAsync(Timeout.InfiniteTimeSpan, cancellationToken);
+            if (peeked.success)
+                return peeked.envelope.Message;
             return null;
         }
 
@@ -335,6 +355,12 @@ namespace Akka.TestKit
         public bool TryPeekOne(out MessageEnvelope envelope, TimeSpan? max = null)
         {
             return InternalTryPeekOne(out envelope, max, CancellationToken.None, true);
+        }
+
+        /// <inheritdoc cref="TryPeekOne(out MessageEnvelope, TimeSpan?)"/>
+        public async ValueTask<(bool success, MessageEnvelope envelope)> TryPeekOneAsync(TimeSpan? max = null)
+        {
+            return await InternalTryPeekOneAsync(max, CancellationToken.None, true);
         }
 
         /// <summary>
@@ -358,6 +384,12 @@ namespace Akka.TestKit
         public bool TryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken)
         {
             return InternalTryPeekOne(out envelope, max, cancellationToken, true);
+        }
+
+        /// <inheritdoc cref="TryPeekOne(out MessageEnvelope, TimeSpan?, CancellationToken)"/>
+        public async ValueTask<(bool success, MessageEnvelope envelope)> TryPeekOneAsync(TimeSpan? max, CancellationToken cancellationToken)
+        {
+            return await InternalTryPeekOneAsync(max, cancellationToken, true);
         }
 
         private bool InternalTryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
