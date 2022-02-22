@@ -127,24 +127,21 @@ namespace Akka.TestKit
         /// <returns>Returns all the messages encountered before 'radio-silence' was reached.</returns>
         public async Task<ArrayList> WaitForRadioSilenceAsync(TimeSpan? max = null, uint? maxMessages = null)
         {
-            return await Task.Run(() =>
+            var messages = new ArrayList();
+
+            for (uint i = 0; ; i++)
             {
-                var messages = new ArrayList();
+                _assertions.AssertFalse(maxMessages.HasValue && i > maxMessages.Value, $"{nameof(maxMessages)} violated (current iteration: {i}).");
 
-                for (uint i = 0; ; i++)
+                var message = await ReceiveOneAsync(max: max);
+
+                if (message == null)
                 {
-                    _assertions.AssertFalse(maxMessages.HasValue && i > maxMessages.Value, $"{nameof(maxMessages)} violated (current iteration: {i}).");
-
-                    var message = ReceiveOne(max: max);
-
-                    if (message == null)
-                    {
-                        return ArrayList.ReadOnly(messages);
-                    }
-
-                    messages.Add(message);
+                    return ArrayList.ReadOnly(messages);
                 }
-            });
+
+                messages.Add(message);
+            }
         }
         /// <summary>
         /// Receive one message from the internal queue of the TestActor.
@@ -487,6 +484,11 @@ namespace Akka.TestKit
             return ReceiveWhile(filter, max, Timeout.InfiniteTimeSpan, msgs);
         }
 
+        /// <inheritdoc cref="ReceiveWhileAsync{T}(TimeSpan?, Func{object, T}, int)"/>
+        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue) where T : class
+        {
+            return await ReceiveWhileAsync(filter, max, Timeout.InfiniteTimeSpan, msgs);
+        }
         /// <summary>
         /// Receive a series of messages until the function returns null or the idle 
         /// timeout is met or the overall maximum duration is elapsed or 
@@ -497,7 +499,7 @@ namespace Akka.TestKit
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        /// <param name="max">TBD</param>
+        /// <param name="max"></param>
         /// <param name="idle">TBD</param>
         /// <param name="filter">TBD</param>
         /// <param name="msgs">TBD</param>
@@ -505,6 +507,12 @@ namespace Akka.TestKit
         public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue)
         {
             return ReceiveWhile(filter, max, idle, msgs);
+        }
+
+        /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, TimeSpan?, Func{object, T}, int)"/>
+        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue)
+        {
+            return await ReceiveWhileAsync(filter, max, idle, msgs);
         }
 
         /// <summary>
@@ -524,6 +532,15 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue)
         {
+            var task = ReceiveWhileAsync(filter, max, idle, msgs).AsTask();
+            task.WaitAndUnwrapException();
+            return task.Result;
+        }
+
+        
+        /// <inheritdoc cref="ReceiveWhileAsync{T}(Func{object, T}, TimeSpan?, TimeSpan?, int)"/>
+        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue)
+        {
             var maxValue = RemainingOrDilated(max);
             var start = Now;
             var stop = start + maxValue;
@@ -535,26 +552,30 @@ namespace Akka.TestKit
             while (count < msgs)
             {
                 // Peek the message on the front of the queue
-                if (!TryPeekOne(out var envelope, (stop - Now).Min(idleValue)))
+                var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue))
+                    .ConfigureAwait(false);
+                if (!peeked.success)
                 {
                     _testState.LastMessage = msg;
                     break;
                 }
-                var message = envelope.Message;
+                var message = peeked.envelope.Message;
                 var result = filter(message);
-                
+
                 // If the message is accepted by the filter, remove it from the queue
                 if (result != null)
                 {
                     // This should happen immediately (zero timespan). Something is wrong if this fails.
-                    if (!InternalTryReceiveOne(out var removed, TimeSpan.Zero, CancellationToken.None, true))
+                    var received = await InternalTryReceiveOneAsync(TimeSpan.Zero, CancellationToken.None, true)
+                        .ConfigureAwait(false);
+                    if (!received.success)
                         throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
-                    
+
                     // The removed item should be equal to the one peeked previously
-                    if(!ReferenceEquals(envelope, removed))
+                    if (!ReferenceEquals(peeked.envelope, received.envelope))
                         throw new InvalidOperationException("[RACY] Dequeued item does not match earlier peeked item");
-                    
-                    msg = envelope;
+
+                    msg = peeked.envelope;
                 }
                 // If the message is rejected by the filter, stop the loop
                 else
@@ -562,7 +583,7 @@ namespace Akka.TestKit
                     _testState.LastMessage = msg;
                     break;
                 }
-                
+
                 // Store the accepted message and continue.
                 acc.Add(result);
                 count++;
@@ -572,7 +593,6 @@ namespace Akka.TestKit
             _testState.LastWasNoMsg = true;
             return acc;
         }
-
 
         /// <summary>
         /// Receive a series of messages.
@@ -595,6 +615,14 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldContinue, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
         {
+            var task = ReceiveWhileAsync(shouldContinue, max, idle, msgs, shouldIgnoreOtherMessageTypes).AsTask();
+            task.WaitAndUnwrapException();
+            return task.Result;
+        }
+
+        /// <inheritdoc cref="ReceiveWhileAsync{T}(Predicate{T}, TimeSpan?, TimeSpan?, int, bool)"/>
+        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(Predicate<T> shouldContinue, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
+        {
             var start = Now;
             var maxValue = RemainingOrDilated(max);
             var stop = start + maxValue;
@@ -606,12 +634,13 @@ namespace Akka.TestKit
             MessageEnvelope msg = NullMessageEnvelope.Instance;
             while (count < msgs)
             {
-                if (!TryPeekOne(out var envelope, (stop - Now).Min(idleValue)))
+                var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue)).ConfigureAwait(false);
+                if (!peeked.success)
                 {
                     _testState.LastMessage = msg;
                     break;
                 }
-                var message = envelope.Message;
+                var message = peeked.envelope.Message;
                 var typedMessage = message as T;
                 var shouldStop = false;
                 if (typedMessage != null)
@@ -635,11 +664,13 @@ namespace Akka.TestKit
                 if (!shouldStop)
                 {
                     // This should happen immediately (zero timespan). Something is wrong if this fails.
-                    if (!InternalTryReceiveOne(out var removed, TimeSpan.Zero, CancellationToken.None, true))
+                    var received = await InternalTryReceiveOneAsync(TimeSpan.Zero, CancellationToken.None, true)
+                        .ConfigureAwait(false);
+                    if (!received.success)
                         throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
-                    
+
                     // The removed item should be equal to the one peeked previously
-                    if(!ReferenceEquals(envelope, removed))
+                    if (!ReferenceEquals(peeked.envelope, received.envelope))
                         throw new InvalidOperationException("[RACY] Dequeued item does not match earlier peeked item");
                 }
                 // If the message is rejected by the filter, stop the loop
@@ -648,7 +679,7 @@ namespace Akka.TestKit
                     _testState.LastMessage = msg;
                     break;
                 }
-                msg = envelope;
+                msg = peeked.envelope;
             }
             ConditionalLog("Received {0} messages with filter during {1}", count, Now - start);
 
