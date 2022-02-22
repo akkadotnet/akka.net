@@ -64,6 +64,7 @@ namespace Akka.TestKit
             return task.Result; 
         }
 
+        /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, ArrayList, TimeSpan?, string)"/>
         public async ValueTask<T> FishForMessageAsync<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "")
         {
             var maxValue = RemainingOrDilated(max);
