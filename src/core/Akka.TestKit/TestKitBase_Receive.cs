@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Internal;
+using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit
 {
@@ -60,7 +61,7 @@ namespace Akka.TestKit
         public T FishForMessage<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "")
         {
             var task = FishForMessageAsync<T>(isMessage, allMessages, max, hint).AsTask();
-            task.Wait();
+            task.WaitAndUnwrapException();
             return task.Result; 
         }
 
@@ -147,7 +148,7 @@ namespace Akka.TestKit
         public object ReceiveOne(TimeSpan? max = null)
         {
             var task = ReceiveOneAsync(max).AsTask();
-            task.Wait();
+            task.WaitAndUnwrapException();
             var received = task.Result;
             return received;
         }
@@ -172,7 +173,7 @@ namespace Akka.TestKit
         public object ReceiveOne(CancellationToken cancellationToken)
         {
            var task = ReceiveOneAsync(cancellationToken).AsTask();
-           task.Wait();
+           task.WaitAndUnwrapException();
            var received = task.Result;
            return received;
         }
@@ -244,7 +245,7 @@ namespace Akka.TestKit
         private bool InternalTryReceiveOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
         {
             var task = InternalTryReceiveOneAsync(max, cancellationToken, shouldLog).AsTask();
-            task.Wait();
+            task.WaitAndUnwrapException();
             var received = task.Result;
             envelope = received.envelope;
             return received.success;
@@ -310,7 +311,7 @@ namespace Akka.TestKit
         public object PeekOne(TimeSpan? max = null)
         {
             var task = PeekOneAsync(max).AsTask();
-            task.Wait();
+            task.WaitAndUnwrapException();
             var peeked = task.Result;
             return peeked;
         } 
@@ -333,7 +334,7 @@ namespace Akka.TestKit
         public object PeekOne(CancellationToken cancellationToken)
         {
             var task = PeekOneAsync(cancellationToken).AsTask();
-            task.Wait();
+            task.WaitAndUnwrapException();
             var peeked = task.Result;
             return peeked;
         }
@@ -403,7 +404,7 @@ namespace Akka.TestKit
         private bool InternalTryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
         {
             var task = InternalTryPeekOneAsync(max, cancellationToken, shouldLog).AsTask();
-            task.Wait();
+            task.WaitAndUnwrapException();
             var received = task.Result;
             envelope = received.envelope;
             return received.success;
