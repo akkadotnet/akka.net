@@ -32,6 +32,12 @@ namespace Akka.TestKit
         public object FishForMessage(Predicate<object> isMessage, TimeSpan? max = null, string hint = "")
         {
             return FishForMessage<object>(isMessage, max, hint);
+        } 
+
+        /// <inheritdoc cref="FishForMessage(Predicate{object}, TimeSpan?, string)"/>
+        public async ValueTask<object> FishForMessageAsync(Predicate<object> isMessage, TimeSpan? max = null, string hint = "")
+        {
+            return await FishForMessageAsync<object>(isMessage, max, hint);
         }
 
         /// <summary>
@@ -46,6 +52,12 @@ namespace Akka.TestKit
         public T FishForMessage<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "")
         {
             return FishForMessage(isMessage: isMessage, max: max, hint: hint, allMessages: null);
+        }
+
+        /// <inheritdoc cref="FishForMessage(Predicate{object}, TimeSpan?, string)"/>
+        public async ValueTask<T> FishForMessageAsync<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "")
+        {
+            return await FishForMessageAsync(isMessage: isMessage, max: max, hint: hint, allMessages: null);
         }
 
         /// <summary>
