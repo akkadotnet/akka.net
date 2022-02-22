@@ -138,9 +138,20 @@ namespace Akka.TestKit
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object ReceiveOne(TimeSpan? max = null)
         {
-            MessageEnvelope envelope;
-            if (TryReceiveOne(out envelope, max, CancellationToken.None))
-                return envelope.Message;
+            var task = ReceiveOneAsync(max).AsTask();
+            task.Wait();
+            var received = task.Result;
+            return received;
+        }
+
+        /// <inheritdoc cref="ReceiveOne(TimeSpan?)"/>
+        public async ValueTask<object> ReceiveOneAsync(TimeSpan? max = null)
+        {
+            var received = await TryReceiveOneAsync(max, CancellationToken.None);
+
+            if (received.success)
+                return received.envelope.Message;
+
             return null;
         }
 
@@ -152,9 +163,19 @@ namespace Akka.TestKit
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object ReceiveOne(CancellationToken cancellationToken)
         {
-            MessageEnvelope envelope;
-            if (TryReceiveOne(out envelope, Timeout.InfiniteTimeSpan, cancellationToken))
-                return envelope.Message;
+           var task = ReceiveOneAsync(cancellationToken).AsTask();
+           task.Wait();
+           var received = task.Result;
+           return received;
+        }
+        /// <inheritdoc cref="ReceiveOne(CancellationToken)"/>
+        public async ValueTask<object> ReceiveOneAsync(CancellationToken cancellationToken)
+        {
+            var received = await TryReceiveOneAsync(Timeout.InfiniteTimeSpan, cancellationToken);  
+            
+            if (received.success)
+                return received.envelope.Message;
+
             return null;
         }
 
@@ -175,6 +196,12 @@ namespace Akka.TestKit
         public bool TryReceiveOne(out MessageEnvelope envelope, TimeSpan? max = null)
         {
             return TryReceiveOne(out envelope, max, CancellationToken.None);
+        }
+
+        /// <inheritdoc cref="TryReceiveOne(out MessageEnvelope, TimeSpan?)"/>
+        public async ValueTask<(bool success, MessageEnvelope envelope)> TryReceiveOneAsync(TimeSpan? max = null)
+        {
+            return await TryReceiveOneAsync(max, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -198,6 +225,12 @@ namespace Akka.TestKit
         public bool TryReceiveOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken)
         {
             return InternalTryReceiveOne(out envelope, max, cancellationToken, true);
+        }
+
+        /// <inheritdoc cref="TryReceiveOne(out MessageEnvelope, TimeSpan?, CancellationToken)"/>
+        public async ValueTask<(bool success, MessageEnvelope envelope)> TryReceiveOneAsync(TimeSpan? max, CancellationToken cancellationToken)
+        {
+            return await InternalTryReceiveOneAsync(max, cancellationToken, true).ConfigureAwait(false);
         }
 
         private bool InternalTryReceiveOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
