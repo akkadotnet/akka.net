@@ -88,7 +88,7 @@ header .subnav.navbar{
 }
 
 .table-striped>tbody>tr:nth-of-type(odd) {
-    /* background-color: #f9f9f9; */
+    background-color: transparent !important;
 }
 
 .article{
@@ -183,7 +183,7 @@ header .navbar .navbar-nav >li.active{
     margin-right: 10px;
 }
 .sideaffix .contribution  .nav li a {
-    color: #e2e8f0;
+  color: #e2e8f0;
   font-family: Inter;
   font-size: 14px;
   font-weight: 600;
