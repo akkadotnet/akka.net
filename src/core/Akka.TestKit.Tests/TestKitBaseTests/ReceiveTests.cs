@@ -115,7 +115,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         {
             var probe = CreateTestProbe("probe");
             probe.Ref.Tell(3, TestActor);
-            Func<Task> func = () => probe.FishUntilMessageAsync<int>(max: TimeSpan.FromMilliseconds(10));
+            Func<Task> func = () => probe.FishUntilMessageAsync<int>(max: TimeSpan.FromMilliseconds(10)).AsTask();
             await func.Should().ThrowAsync<Exception>();
         }
 
