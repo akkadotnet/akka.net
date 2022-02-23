@@ -63,7 +63,7 @@ namespace Akka.Actor
             
             try
             { 
-                await taskToPipe.ConfigureAwait(false);
+                await taskToPipe;
 
                 if (success != null)
                 {
