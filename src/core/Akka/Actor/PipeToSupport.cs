@@ -21,20 +21,30 @@ namespace Akka.Actor
         /// Pipes the output of a Task directly to the <paramref name="recipient"/>'s mailbox once
         /// the task completes
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="taskToPipe">TBD</param>
-        /// <param name="recipient">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="success">TBD</param>
-        /// <param name="failure">TBD</param>
+        /// <typeparam name="T">The type of result of the Task</typeparam>
+        /// <param name="taskToPipe">The Task that result needs to be piped to an actor</param>
+        /// <param name="recipient">The actor that will receive the Task result</param>
+        /// <param name="sender">The IActorRef that will be used as the sender of the result. Defaults to <see cref="ActorRefs.Nobody"/> </param>
+        /// <param name="success">A callback function that will be called on Task success. Defaults to <c>null</c> for no callback</param>
+        /// <param name="failure">A callback function that will be called on Task failure. Defaults to <c>null</c> for no callback</param>
+        /// <param name="useConfigureAwait">If set to true, <c>taskToPipe</c> will be awaited using <c>ConfigureAwait(false)</c></param>
         /// <returns>A detached task</returns>
-        public static async Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, IActorRef sender = null, Func<T, object> success = null, Func<Exception, object> failure = null)
+        public static async Task PipeTo<T>(
+            this Task<T> taskToPipe,
+            ICanTell recipient,
+            IActorRef sender = null, 
+            Func<T, object> success = null,
+            Func<Exception, object> failure = null,
+            bool useConfigureAwait = true)
         {
             sender = sender ?? ActorRefs.NoSender;
             
             try
             {
-                var result = await taskToPipe;
+                var result = useConfigureAwait
+                    ? await taskToPipe.ConfigureAwait(false)
+                    : await taskToPipe;
+                
                 recipient.Tell(success != null
                     ? success(result)
                     : result, sender);
@@ -51,19 +61,33 @@ namespace Akka.Actor
         /// Pipes the output of a Task directly to the <paramref name="recipient"/>'s mailbox once
         /// the task completes.  As this task has no result, only exceptions will be piped to the <paramref name="recipient"/>
         /// </summary>
-        /// <param name="taskToPipe">TBD</param>
-        /// <param name="recipient">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="success">TBD</param>
-        /// <param name="failure">TBD</param>
-        /// <returns>TBD</returns>
-        public static async Task PipeTo(this Task taskToPipe, ICanTell recipient, IActorRef sender = null, Func<object> success = null, Func<Exception, object> failure = null)
+        /// <param name="taskToPipe">The Task that result needs to be piped to an actor</param>
+        /// <param name="recipient">The actor that will receive the Task result</param>
+        /// <param name="sender">The IActorRef that will be used as the sender of the result. Defaults to <see cref="ActorRefs.Nobody"/> </param>
+        /// <param name="success">A callback function that will be called on Task success. Defaults to <c>null</c> for no callback</param>
+        /// <param name="failure">A callback function that will be called on Task failure. Defaults to <c>null</c> for no callback</param>
+        /// <param name="useConfigureAwait">If set to true, <c>taskToPipe</c> will be awaited using <c>ConfigureAwait(false)</c></param>
+        /// <returns>A detached task</returns>
+        public static async Task PipeTo(
+            this Task taskToPipe,
+            ICanTell recipient,
+            IActorRef sender = null,
+            Func<object> success = null,
+            Func<Exception, object> failure = null,
+            bool useConfigureAwait = true)
         {
             sender = sender ?? ActorRefs.NoSender;
             
             try
-            { 
-                await taskToPipe;
+            {
+                if (useConfigureAwait)
+                {
+                    await taskToPipe.ConfigureAwait(false);
+                }
+                else
+                {
+                    await taskToPipe;
+                }
 
                 if (success != null)
                 {
