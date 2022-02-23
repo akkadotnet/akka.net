@@ -87,6 +87,9 @@ header .subnav.navbar{
   letter-spacing: 0.036097284px;
 }
 
+.table-striped>tbody>tr:nth-of-type(odd) {
+    /* background-color: #f9f9f9; */
+}
 
 .article{
     margin-top: 90px;
@@ -236,7 +239,18 @@ ul li::marker{
     color: #547ea4;
    font-size: 19px;
 }
-
+.article.grid-right{
+    padding-bottom: 35px;
+}
+.sidetoc.shiftup{
+    bottom: 0;
+}
+/* 
+footer{
+    position: relative !important;
+    opacity: 1 !important;
+    display: block !important;
+} */
 .footer{
     background: url(/images/footer.png) no-repeat left top, linear-gradient(270deg, #FFFFFF, #6DC9ED);
     
@@ -247,15 +261,15 @@ ul li::marker{
   line-height: 18px;
   letter-spacing: 0.041650712px;
 
-  padding: 40px 0;
+  padding: 20px 0;
 }
 .footer ul{
-    margin: 20px 0px;
+    margin: 10px 0px;
     padding: 0px;
 }
 .footer ul li {
     list-style: none;
-    margin: 15px 0px;
+    margin: 10px 0px;
 }
 
 .footer ul li a{
@@ -316,10 +330,6 @@ pre code{
     border-color: #fa7979;
 }
 
-.jumbotron{
-    background-color: #040e1c;
-}
-
 
 .article .content.wrap img {
     background: #25aae1;
@@ -335,5 +345,10 @@ pre code{
     .svg.akka-logo{
         margin: auto;
 
-    }    
+    }
+    
+}
+
+.jumbotron{
+    background-color: #040e1c;
 }
