@@ -34,7 +34,7 @@ namespace Akka.Actor
             
             try
             {
-                var result = await taskToPipe.ConfigureAwait(false);
+                var result = await taskToPipe;
                 recipient.Tell(success != null
                     ? success(result)
                     : result, sender);
