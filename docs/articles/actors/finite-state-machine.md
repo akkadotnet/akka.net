@@ -99,9 +99,7 @@ The `stateFunction` argument is a `delegate State<TState, TData> StateFunction(E
 
 Each `FSM` needs a starting point, which is declared using
 
-```csharp
-StartWith(state, data[, timeout])
-```
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/ExampleFSMActor.cs?name=StartWith)]
 
 The optionally given timeout argument overrides any specification given for the desired initial state. If you want to cancel a default timeout, use `null`.
 
@@ -109,21 +107,7 @@ The optionally given timeout argument overrides any specification given for the 
 
 If a state doesn't handle a received event a warning is logged. If you want to do something else in this case you can specify that with `WhenUnhandled(stateFunction)`:
 
-```csharp
-WhenUnhandled(state =>
-{
-    if (state.FsmEvent is Queue x)
-    {
-        _log.Info("Received unhandled event: " + x);
-        return Stay();
-    }
-    else
-    {
-        _log.Warning("Received unknown event: " + state.FsmEvent);
-        return Goto(new Error());
-    }
-});
-```
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/ExampleFSMActor.cs?name=UnhandledHandler)]
 
 Within this handler the state of the `FSM` may be queried using the stateName method.
 
@@ -163,23 +147,7 @@ OnTransition(handler)
 
 which associates actions with a transition instead of with a state and event. The handler is a delegate `void TransitionHandler(TState initialState, TState nextState)` function which takes a pair of states as input; no resulting state is needed as it is not possible to modify the transition in progress.
 
-```csharp
-OnTransition((initialState, nextState) =>
-{
-    if (initialState == State.Active && nextState == State.Idle)
-    {
-        SetTimer("timeout", new Tick(), TimeSpan.FromSeconds(1), repeat: true);
-    } 
-    else if (initialState == State.Active)
-    {
-        CancelTimer("timeout");
-    }
-    else if (nextState == State.Idle)
-    {
-        _log.Info("entering Idle from " + initialState);
-    }
-});
-```
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/ExampleFSMActor.cs?name=TransitionHandler)]
 
 The handlers registered with this method are stacked, so you can intersperse `OnTransition` blocks with when blocks as suits your design. It should be noted, however, that all handlers will be invoked for each transition, not only the first matching one. This is designed specifically so you can put all transition handling for a certain aspect into one place without having to worry about earlier declarations shadowing later ones; the actions are still executed in declaration order, though.
 
