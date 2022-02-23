@@ -9,6 +9,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Internal;
+using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit
 {
@@ -33,44 +34,12 @@ namespace Akka.TestKit
         /// <param name="interval">The interval to wait between executing the assertion.</param>
         public void AwaitAssert(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null)
         {
-            var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
-            if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
-            intervalValue.EnsureIsPositiveFinite("interval");
-            var max = RemainingOrDilated(duration);
-            var stop = Now + max;
-            var t = max.Min(intervalValue);
-            while(true)
-            {
-                try
-                {
-                    assertion();
-                    return;
-                }
-                catch(Exception)
-                {
-                    if(Now + t >= stop)
-                        throw;
-                }
-                Thread.Sleep(t);
-                t = (stop - Now).Min(intervalValue);
-            }
+            var task = AwaitAssertAsync(assertion, duration, interval).AsTask();
+            task.WaitAndUnwrapException();
         }
         
-        /// <summary>
-        /// <para>Await until the given assertion does not throw an exception or the timeout
-        /// expires, whichever comes first. If the timeout expires the last exception
-        /// is thrown.</para>
-        /// <para>The action is called, and if it throws an exception the thread sleeps
-        /// the specified interval before retrying.</para>
-        /// <para>If no timeout is given, take it from the innermost enclosing `within`
-        /// block.</para>
-        /// <para>Note that the timeout is scaled using <see cref="Dilated" />,
-        /// which uses the configuration entry "akka.test.timefactor".</para>
-        /// </summary>
-        /// <param name="assertion">The action.</param>
-        /// <param name="duration">The timeout.</param>
-        /// <param name="interval">The interval to wait between executing the assertion.</param>
-        public async Task AwaitAssertAsync(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null)
+        /// <inheritdoc cref="AwaitAssert(Action, TimeSpan?, TimeSpan?)"/>
+        public async ValueTask AwaitAssertAsync(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null)
         {
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
@@ -109,7 +78,7 @@ namespace Akka.TestKit
         /// <param name="assertion">The action.</param>
         /// <param name="duration">The timeout.</param>
         /// <param name="interval">The interval to wait between executing the assertion.</param>
-        public async Task AwaitAssertAsync(Func<Task> assertion, TimeSpan? duration=null, TimeSpan? interval=null)
+        public async ValueTask AwaitAssertAsync(Func<Task> assertion, TimeSpan? duration=null, TimeSpan? interval=null)
         {
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
