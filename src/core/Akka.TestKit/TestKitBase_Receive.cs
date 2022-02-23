@@ -31,7 +31,9 @@ namespace Akka.TestKit
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
         public object FishForMessage(Predicate<object> isMessage, TimeSpan? max = null, string hint = "")
         {
-            return FishForMessage<object>(isMessage, max, hint);
+            var task = FishForMessageAsync(isMessage, max, hint).AsTask();
+            task.WaitAndUnwrapException();
+            return task.Result;
         } 
 
         /// <inheritdoc cref="FishForMessage(Predicate{object}, TimeSpan?, string)"/>
@@ -51,7 +53,9 @@ namespace Akka.TestKit
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
         public T FishForMessage<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "")
         {
-            return FishForMessage(isMessage: isMessage, max: max, hint: hint, allMessages: null);
+            var task = FishForMessageAsync(isMessage, max, hint).AsTask();
+            task.WaitAndUnwrapException();
+            return task.Result;
         }
 
         /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, TimeSpan?, string)"/>
@@ -72,7 +76,7 @@ namespace Akka.TestKit
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
         public T FishForMessage<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "")
         {
-            var task = FishForMessageAsync<T>(isMessage, allMessages, max, hint).AsTask();
+            var task = FishForMessageAsync(isMessage, allMessages, max, hint).AsTask();
             task.WaitAndUnwrapException();
             return task.Result; 
         }
@@ -104,15 +108,12 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="T">The type that the message is not supposed to be.</typeparam>
         /// <param name="max">Optional. The maximum wait duration. Defaults to <see cref="RemainingOrDefault"/> when unset.</param>
-        public async Task FishUntilMessageAsync<T>(TimeSpan? max = null)
+        public async ValueTask FishUntilMessageAsync<T>(TimeSpan? max = null)
         {
-            await Task.Run(() =>
+            await ReceiveWhileAsync<object>(max: max, shouldContinue: x =>
             {
-                ReceiveWhile<object>(max: max, shouldContinue: x =>
-                {
-                    _assertions.AssertFalse(x is T, "did not expect a message of type {0}", typeof(T));
-                    return true; // please continue receiving, don't stop
-                });
+                _assertions.AssertFalse(x is T, "did not expect a message of type {0}", typeof(T));
+                return true; // please continue receiving, don't stop
             });
         }
 
@@ -484,7 +485,7 @@ namespace Akka.TestKit
             return ReceiveWhile(filter, max, Timeout.InfiniteTimeSpan, msgs);
         }
 
-        /// <inheritdoc cref="ReceiveWhileAsync{T}(TimeSpan?, Func{object, T}, int)"/>
+        /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, Func{object, T}, int)"/>
         public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue) where T : class
         {
             return await ReceiveWhileAsync(filter, max, Timeout.InfiniteTimeSpan, msgs);
@@ -538,7 +539,7 @@ namespace Akka.TestKit
         }
 
         
-        /// <inheritdoc cref="ReceiveWhileAsync{T}(Func{object, T}, TimeSpan?, TimeSpan?, int)"/>
+        /// <inheritdoc cref="ReceiveWhile{T}(Func{object, T}, TimeSpan?, TimeSpan?, int)"/>
         public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue)
         {
             var maxValue = RemainingOrDilated(max);
@@ -620,7 +621,7 @@ namespace Akka.TestKit
             return task.Result;
         }
 
-        /// <inheritdoc cref="ReceiveWhileAsync{T}(Predicate{T}, TimeSpan?, TimeSpan?, int, bool)"/>
+        /// <inheritdoc cref="ReceiveWhile{T}(Predicate{T}, TimeSpan?, TimeSpan?, int, bool)"/>
         public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(Predicate<T> shouldContinue, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
         {
             var start = Now;
