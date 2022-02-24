@@ -48,8 +48,9 @@ namespace Akka.TestKit
             var max = RemainingOrDilated(duration);
             var stop = Now + max;
             var t = max.Min(intervalValue);
-            while(!cancellationToken.IsCancellationRequested)
+            while(true)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     assertion();
@@ -88,8 +89,9 @@ namespace Akka.TestKit
             var max = RemainingOrDilated(duration);
             var stop = Now + max;
             var t = max.Min(intervalValue);
-            while(!cancellationToken.IsCancellationRequested)
+            while(true)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     await assertion();
