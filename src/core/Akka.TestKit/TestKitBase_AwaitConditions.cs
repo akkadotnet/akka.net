@@ -275,8 +275,15 @@ namespace Akka.TestKit
             var stop = start + max;
             ConditionalLog(logger, "Awaiting condition for {0}.{1}", max, interval.HasValue ? " Will sleep " + interval.Value + " between checks" : "");
 
-            while (!conditionIsFulfilled() && !cancellationToken.IsCancellationRequested)
+            while (!conditionIsFulfilled())
             {
+                if(cancellationToken.IsCancellationRequested)
+                {
+                    const string message = "Task is canceled";
+                    ConditionalLog(logger, message, max);
+                    fail(message, new object[] { max });
+                    return false;
+                }
                 var now = Now;
 
                 if (now > stop)
