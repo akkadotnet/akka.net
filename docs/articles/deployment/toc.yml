@@ -1,0 +1,10 @@
+- name: Deployment Scenarios
+  href: index.md
+- name: Console Application
+  href: console.md
+- name: ASP.NET Core
+  href: aspnet-core.md
+- name: Headless Service
+  href: headless-service.md
+- name: Azure Cloud Service (Deprecated)
+  href: azure-cloud-service.md
