@@ -113,7 +113,7 @@ namespace Akka.TestKit
         /// <typeparam name="T">The type that the message is not supposed to be.</typeparam>
         /// <param name="max">Optional. The maximum wait duration. Defaults to <see cref="RemainingOrDefault"/> when unset.</param>
         /// <param name="cancellationToken"></param>
-        public async ValueTask FishUntilMessageAsync<T>(TimeSpan? max = null, CancellationToken cancellationToken = default)
+        public async Task FishUntilMessageAsync<T>(TimeSpan? max = null, CancellationToken cancellationToken = default)
         {
             await ReceiveWhileAsync<object>(max: max, shouldContinue: x =>
             {
@@ -466,7 +466,9 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue, CancellationToken cancellationToken = default) where T : class
         {
-            return ReceiveWhile(filter, max, Timeout.InfiniteTimeSpan, msgs, cancellationToken);
+            var task = ReceiveWhileAsync(max, filter, msgs, cancellationToken).AsTask();
+            task.WaitAndUnwrapException();
+            return task.Result;
         }
 
         /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, Func{object, T}, int, CancellationToken)"/>
@@ -488,16 +490,19 @@ namespace Akka.TestKit
         /// <param name="idle">TBD</param>
         /// <param name="filter">TBD</param>
         /// <param name="msgs">TBD</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue, CancellationToken cancellationToken = default)
         {
-            return ReceiveWhile(filter, max, idle, msgs, cancellationToken);
+            var task = ReceiveWhileAsync(max, idle, filter, msgs, cancellationToken).AsTask();
+            task.WaitAndUnwrapException();
+            return task.Result;
         }
 
         /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, TimeSpan?, Func{object, T}, int, CancellationToken)"/>
-        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue)
+        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue, CancellationToken cancellationToken = default)
         {
-            return await ReceiveWhileAsync(filter, max, idle, msgs);
+            return await ReceiveWhileAsync(filter, max, idle, msgs, cancellationToken);
         }
 
         /// <summary>
@@ -537,6 +542,7 @@ namespace Akka.TestKit
             MessageEnvelope msg = NullMessageEnvelope.Instance;
             while (count < msgs)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 // Peek the message on the front of the queue
                 var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken)
                     .ConfigureAwait(false);
@@ -682,8 +688,9 @@ namespace Akka.TestKit
         /// <returns>The received messages</returns>
         public IReadOnlyCollection<object> ReceiveN(int numberOfMessages, CancellationToken cancellationToken = default)
         {
-            var result = InternalReceiveN(numberOfMessages, RemainingOrDefault, true, cancellationToken).ToList();
-            return result;
+            var task = ReceiveNAsync(numberOfMessages, cancellationToken).AsTask();
+            task.WaitAndUnwrapException();
+            return task.Result;
         }
 
         /// <inheritdoc cref="ReceiveN(int, CancellationToken)"/>
@@ -703,10 +710,9 @@ namespace Akka.TestKit
         /// <returns>The received messages</returns>
         public IReadOnlyCollection<object> ReceiveN(int numberOfMessages, TimeSpan max, CancellationToken cancellationToken = default)
         {
-            max.EnsureIsPositiveFinite("max");
-            var dilated = Dilated(max);
-            var result = InternalReceiveN(numberOfMessages, dilated, true, cancellationToken).ToList();
-            return result;
+            var task = ReceiveNAsync(numberOfMessages, max, cancellationToken).AsTask();
+            task.WaitAndUnwrapException();  
+            return task.Result;
         }
 
         /// <inheritdoc cref="ReceiveN(int, TimeSpan, CancellationToken)"/>
