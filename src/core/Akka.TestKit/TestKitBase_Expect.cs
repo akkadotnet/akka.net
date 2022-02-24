@@ -9,9 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit.Internal;
 using Akka.Util;
+using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit
 {
@@ -369,18 +371,28 @@ namespace Akka.TestKit
             return InternalExpectMsgAllOf(dilated, messages);
         }
 
-        private IReadOnlyCollection<T> InternalExpectMsgAllOf<T>(TimeSpan max, IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null, bool shouldLog=false)
+        private IReadOnlyCollection<T> InternalExpectMsgAllOf<T>(TimeSpan max, IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null, bool shouldLog=false, CancellationToken cancellationToken = default)
+        {
+            var task = InternalExpectMsgAllOfAsync(max, messages, areEqual, shouldLog, cancellationToken);
+            task.WaitAndUnwrapException(cancellationToken);
+            return task.Result;
+        }
+
+        private async Task<IReadOnlyCollection<T>> InternalExpectMsgAllOfAsync<T>(TimeSpan max,
+            IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null, bool shouldLog = false,
+            CancellationToken cancellationToken = default)
         {
             ConditionalLog(shouldLog, "Expecting {0} messages during {1}", messages.Count, max);
             areEqual = areEqual ?? ((x, y) => Equals(x, y));
             var start = Now;
-            var receivedMessages = InternalReceiveN(messages.Count, max, shouldLog).ToList();
-            var missing = messages.Where(m => !receivedMessages.Any(r => r is T && areEqual((T)r, m))).ToList();
-            var unexpected = receivedMessages.Where(r => !messages.Any(m => r is T && areEqual((T)r, m))).ToList();
+            
+            var receivedMessages = await InternalReceiveNAsync(messages.Count, max, shouldLog, cancellationToken).ToListAsync(cancellationToken);
+
+            var missing = messages.Where(m => !receivedMessages.Any(r => r is T obj && areEqual(obj, m))).ToList();
+            var unexpected = receivedMessages.Where(r => !messages.Any(m => r is T obj && areEqual(obj, m))).ToList();
             CheckMissingAndUnexpected(missing, unexpected, "not found", "found unexpected", shouldLog, string.Format("Expected {0} messages during {1}. Failed after {2}. ", messages.Count, max, Now-start));
             return receivedMessages.Cast<T>().ToList();
         }
-
 
         private void CheckMissingAndUnexpected<TMissing, TUnexpected>(IReadOnlyCollection<TMissing> missing, IReadOnlyCollection<TUnexpected> unexpected, string missingMessage, string unexpectedMessage, bool shouldLog, string hint)
         {
