@@ -627,6 +627,7 @@ namespace Akka.TestKit
             MessageEnvelope msg = NullMessageEnvelope.Instance;
             while (count < msgs)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken).ConfigureAwait(false);
                 if (!peeked.success)
                 {
@@ -720,14 +721,8 @@ namespace Akka.TestKit
         {
             max.EnsureIsPositiveFinite("max");
             var dilated = Dilated(max);
-            var result = await InternalReceiveNAsync(numberOfMessages, dilated, true, cancellationToken).ToListAsync();
+            var result = await InternalReceiveNAsync(numberOfMessages, dilated, true, cancellationToken).ToListAsync(cancellationToken);
             return result;
-        }
-
-        private IEnumerable<object> InternalReceiveN(int numberOfMessages, TimeSpan max, bool shouldLog, CancellationToken cancellationToken = default)
-        {
-            foreach(var msg in InternalReceiveNAsync(numberOfMessages, max, shouldLog, cancellationToken).ToEnumerable())
-                yield return msg;
         }
 
         private async IAsyncEnumerable<object> InternalReceiveNAsync(int numberOfMessages, TimeSpan max, bool shouldLog, [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -735,8 +730,10 @@ namespace Akka.TestKit
             var start = Now;
             var stop = max + start;
             ConditionalLog(shouldLog, "Trying to receive {0} messages during {1}.", numberOfMessages, max);
-            for (int i = 0; i < numberOfMessages; i++)
+            for (var i = 0; i < numberOfMessages; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                
                 var timeout = stop - Now;
                 var o = await ReceiveOneAsync(timeout, cancellationToken);
                 var condition = o != null;
