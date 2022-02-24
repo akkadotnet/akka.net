@@ -613,12 +613,12 @@ namespace Akka.DistributedData
 
             public IReplicatedData Merge(IReplicatedData other)
             {
-                if (other is AddDeltaOperation)
+                if (other is AddDeltaOperation thatAdd)
                 {
                     // merge AddDeltaOp into last AddDeltaOp in the group, if possible
                     var last = Operations[Operations.Length - 1];
-                    return last is AddDeltaOperation
-                        ? new DeltaGroup(Operations.SetItem(Operations.Length - 1, other.Merge(last)))
+                    return last is AddDeltaOperation thisAdd
+                        ? new DeltaGroup(Operations.SetItem(Operations.Length - 1, thisAdd.Merge(thatAdd)))
                         : new DeltaGroup(Operations.Add(other));
                 }
                 else if (other is DeltaGroup @group)
