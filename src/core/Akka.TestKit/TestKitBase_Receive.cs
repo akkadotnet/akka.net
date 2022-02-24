@@ -9,6 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Internal;
@@ -28,18 +29,19 @@ namespace Akka.TestKit
         /// <param name="isMessage">The is message.</param>
         /// <param name="max">The maximum.</param>
         /// <param name="hint">The hint.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
-        public object FishForMessage(Predicate<object> isMessage, TimeSpan? max = null, string hint = "")
+        public object FishForMessage(Predicate<object> isMessage, TimeSpan? max = null, string hint = "", CancellationToken cancellationToken = default)
         {
-            var task = FishForMessageAsync(isMessage, max, hint).AsTask();
+            var task = FishForMessageAsync(isMessage, max, hint, cancellationToken).AsTask();
             task.WaitAndUnwrapException();
             return task.Result;
         } 
 
-        /// <inheritdoc cref="FishForMessage(Predicate{object}, TimeSpan?, string)"/>
-        public async ValueTask<object> FishForMessageAsync(Predicate<object> isMessage, TimeSpan? max = null, string hint = "")
+        /// <inheritdoc cref="FishForMessage(Predicate{object}, TimeSpan?, string, CancellationToken)"/>
+        public async ValueTask<object> FishForMessageAsync(Predicate<object> isMessage, TimeSpan? max = null, string hint = "", CancellationToken cancellationToken = default)
         {
-            return await FishForMessageAsync<object>(isMessage, max, hint);
+            return await FishForMessageAsync<object>(isMessage, max, hint, cancellationToken);
         }
 
         /// <summary>
@@ -50,18 +52,19 @@ namespace Akka.TestKit
         /// <param name="isMessage">The is message.</param>
         /// <param name="max">The maximum.</param>
         /// <param name="hint">The hint.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
-        public T FishForMessage<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "")
+        public T FishForMessage<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "", CancellationToken cancellationToken = default)
         {
-            var task = FishForMessageAsync(isMessage, max, hint).AsTask();
+            var task = FishForMessageAsync(isMessage, max, hint, cancellationToken).AsTask();
             task.WaitAndUnwrapException();
             return task.Result;
         }
 
-        /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, TimeSpan?, string)"/>
-        public async ValueTask<T> FishForMessageAsync<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "")
+        /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, TimeSpan?, string, CancellationToken)"/>
+        public async ValueTask<T> FishForMessageAsync<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "", CancellationToken cancellationToken = default)
         {
-            return await FishForMessageAsync(isMessage: isMessage, max: max, hint: hint, allMessages: null);
+            return await FishForMessageAsync(isMessage: isMessage, max: max, hint: hint, allMessages: null, cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -72,17 +75,18 @@ namespace Akka.TestKit
         /// <param name="isMessage">The is message.</param>
         /// <param name="max">The maximum.</param>
         /// <param name="hint">The hint.</param>
+        /// <param name="cancellationToken"></param>
         /// <param name="allMessages">If null then will be ignored. If not null then will be initially cleared, then filled with all the messages until <paramref name="isMessage"/> returns <c>true</c></param>
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
-        public T FishForMessage<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "")
+        public T FishForMessage<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "", CancellationToken cancellationToken = default)
         {
-            var task = FishForMessageAsync(isMessage, allMessages, max, hint).AsTask();
+            var task = FishForMessageAsync(isMessage, allMessages, max, hint, cancellationToken).AsTask();
             task.WaitAndUnwrapException();
             return task.Result; 
         }
 
-        /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, ArrayList, TimeSpan?, string)"/>
-        public async ValueTask<T> FishForMessageAsync<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "")
+        /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, ArrayList, TimeSpan?, string, CancellationToken)"/>
+        public async ValueTask<T> FishForMessageAsync<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "", CancellationToken cancellationToken = default)
         {
             var maxValue = RemainingOrDilated(max);
             var end = Now + maxValue;
@@ -90,7 +94,7 @@ namespace Akka.TestKit
             while (true)
             {
                 var left = end - Now;
-                var msg = await ReceiveOneAsync(left).ConfigureAwait(false);
+                var msg = await ReceiveOneAsync(left, cancellationToken).ConfigureAwait(false);
                 _assertions.AssertTrue(msg != null, "Timeout ({0}) during fishForMessage{1}", maxValue, string.IsNullOrEmpty(hint) ? "" : ", hint: " + hint);
                 if (msg is T msg1 && isMessage(msg1))
                 {
@@ -108,13 +112,14 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="T">The type that the message is not supposed to be.</typeparam>
         /// <param name="max">Optional. The maximum wait duration. Defaults to <see cref="RemainingOrDefault"/> when unset.</param>
-        public async ValueTask FishUntilMessageAsync<T>(TimeSpan? max = null)
+        /// <param name="cancellationToken"></param>
+        public async ValueTask FishUntilMessageAsync<T>(TimeSpan? max = null, CancellationToken cancellationToken = default)
         {
             await ReceiveWhileAsync<object>(max: max, shouldContinue: x =>
             {
                 _assertions.AssertFalse(x is T, "did not expect a message of type {0}", typeof(T));
                 return true; // please continue receiving, don't stop
-            });
+            },cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -123,10 +128,11 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="max">A temporary period of 'radio-silence'.</param>
         /// <param name="maxMessages">The method asserts that <paramref name="maxMessages"/> is never reached.</param>
+        /// <param name="cancellationToken"></param>
         /// If set to null then this method will loop for an infinite number of <paramref name="max"/> periods. 
         /// NOTE: If set to null and radio-silence is never reached then this method will never return.  
         /// <returns>Returns all the messages encountered before 'radio-silence' was reached.</returns>
-        public async Task<ArrayList> WaitForRadioSilenceAsync(TimeSpan? max = null, uint? maxMessages = null)
+        public async Task<ArrayList> WaitForRadioSilenceAsync(TimeSpan? max = null, uint? maxMessages = null, CancellationToken cancellationToken = default)
         {
             var messages = new ArrayList();
 
@@ -134,7 +140,7 @@ namespace Akka.TestKit
             {
                 _assertions.AssertFalse(maxMessages.HasValue && i > maxMessages.Value, $"{nameof(maxMessages)} violated (current iteration: {i}).");
 
-                var message = await ReceiveOneAsync(max: max);
+                var message = await ReceiveOneAsync(max: max, cancellationToken);
 
                 if (message == null)
                 {
@@ -154,19 +160,20 @@ namespace Akka.TestKit
         /// If <c>null</c> the config value "akka.test.single-expect-default" is used as timeout.
         /// If set to a negative value or <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever.
         /// <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks></param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
-        public object ReceiveOne(TimeSpan? max = null)
+        public object ReceiveOne(TimeSpan? max = null,CancellationToken cancellationToken = default)
         {
-            var task = ReceiveOneAsync(max).AsTask();
+            var task = ReceiveOneAsync(max, cancellationToken).AsTask();
             task.WaitAndUnwrapException();
             var received = task.Result;
             return received;
         }
 
-        /// <inheritdoc cref="ReceiveOne(TimeSpan?)"/>
-        public async ValueTask<object> ReceiveOneAsync(TimeSpan? max = null)
+        /// <inheritdoc cref="ReceiveOne(TimeSpan?, CancellationToken)"/>
+        public async ValueTask<object> ReceiveOneAsync(TimeSpan? max = null, CancellationToken cancellationToken = default)
         {
-            var received = await TryReceiveOneAsync(max, CancellationToken.None);
+            var received = await TryReceiveOneAsync(max, cancellationToken);
 
             if (received.success)
                 return received.envelope.Message;
@@ -360,30 +367,6 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Peek one message from the head of the internal queue of the TestActor within 
-        /// the specified duration. The method blocks the specified duration.
-        /// <remarks><b>Note!</b> that the returned <paramref name="envelope"/> 
-        /// is a <see cref="MessageEnvelope"/> containing the sender and the message.</remarks>
-        /// <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks>
-        /// </summary>
-        /// <param name="envelope">The received envelope.</param>
-        /// <param name="max">Optional: The maximum duration to wait. 
-        ///     If <c>null</c> the config value "akka.test.single-expect-default" is used as timeout.
-        ///     If set to a negative value or <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever.
-        ///     <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks></param>
-        /// <returns><c>True</c> if a message was received within the specified duration; <c>false</c> otherwise.</returns>
-        public bool TryPeekOne(out MessageEnvelope envelope, TimeSpan? max = null)
-        {
-            return InternalTryPeekOne(out envelope, max, CancellationToken.None, true);
-        }
-
-        /// <inheritdoc cref="TryPeekOne(out MessageEnvelope, TimeSpan?)"/>
-        public async ValueTask<(bool success, MessageEnvelope envelope)> TryPeekOneAsync(TimeSpan? max = null)
-        {
-            return await InternalTryPeekOneAsync(max, CancellationToken.None, true);
-        }
-
-        /// <summary>
-        /// Peek one message from the head of the internal queue of the TestActor within 
         /// the specified duration.
         /// <para><c>True</c> is returned if a message existed, and the message 
         /// is returned in <paramref name="envelope" />. The method blocks the 
@@ -479,16 +462,17 @@ namespace Akka.TestKit
         /// <param name="max">TBD</param>
         /// <param name="filter">TBD</param>
         /// <param name="msgs">TBD</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue) where T : class
+        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue, CancellationToken cancellationToken = default) where T : class
         {
-            return ReceiveWhile(filter, max, Timeout.InfiniteTimeSpan, msgs);
+            return ReceiveWhile(filter, max, Timeout.InfiniteTimeSpan, msgs, cancellationToken);
         }
 
-        /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, Func{object, T}, int)"/>
-        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue) where T : class
+        /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, Func{object, T}, int, CancellationToken)"/>
+        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue, CancellationToken cancellationToken = default) where T : class
         {
-            return await ReceiveWhileAsync(filter, max, Timeout.InfiniteTimeSpan, msgs);
+            return await ReceiveWhileAsync(filter, max, Timeout.InfiniteTimeSpan, msgs, cancellationToken);
         }
         /// <summary>
         /// Receive a series of messages until the function returns null or the idle 
@@ -505,12 +489,12 @@ namespace Akka.TestKit
         /// <param name="filter">TBD</param>
         /// <param name="msgs">TBD</param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue)
+        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue, CancellationToken cancellationToken = default)
         {
-            return ReceiveWhile(filter, max, idle, msgs);
+            return ReceiveWhile(filter, max, idle, msgs, cancellationToken);
         }
 
-        /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, TimeSpan?, Func{object, T}, int)"/>
+        /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, TimeSpan?, Func{object, T}, int, CancellationToken)"/>
         public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue)
         {
             return await ReceiveWhileAsync(filter, max, idle, msgs);
@@ -530,17 +514,18 @@ namespace Akka.TestKit
         /// <param name="max">TBD</param>
         /// <param name="idle">TBD</param>
         /// <param name="msgs">TBD</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue)
+        public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, CancellationToken cancellationToken = default)
         {
-            var task = ReceiveWhileAsync(filter, max, idle, msgs).AsTask();
+            var task = ReceiveWhileAsync(filter, max, idle, msgs, cancellationToken).AsTask();
             task.WaitAndUnwrapException();
             return task.Result;
         }
 
         
-        /// <inheritdoc cref="ReceiveWhile{T}(Func{object, T}, TimeSpan?, TimeSpan?, int)"/>
-        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue)
+        /// <inheritdoc cref="ReceiveWhile{T}(Func{object, T}, TimeSpan?, TimeSpan?, int, CancellationToken)"/>
+        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, CancellationToken cancellationToken = default)
         {
             var maxValue = RemainingOrDilated(max);
             var start = Now;
@@ -553,7 +538,7 @@ namespace Akka.TestKit
             while (count < msgs)
             {
                 // Peek the message on the front of the queue
-                var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue))
+                var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken)
                     .ConfigureAwait(false);
                 if (!peeked.success)
                 {
@@ -567,7 +552,7 @@ namespace Akka.TestKit
                 if (result != null)
                 {
                     // This should happen immediately (zero timespan). Something is wrong if this fails.
-                    var received = await InternalTryReceiveOneAsync(TimeSpan.Zero, CancellationToken.None, true)
+                    var received = await InternalTryReceiveOneAsync(TimeSpan.Zero, cancellationToken, true)
                         .ConfigureAwait(false);
                     if (!received.success)
                         throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
@@ -613,16 +598,17 @@ namespace Akka.TestKit
         /// <param name="idle">TBD</param>
         /// <param name="msgs">TBD</param>
         /// <param name="shouldIgnoreOtherMessageTypes">TBD</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldContinue, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
+        public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldContinue, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true, CancellationToken cancellationToken = default) where T : class
         {
-            var task = ReceiveWhileAsync(shouldContinue, max, idle, msgs, shouldIgnoreOtherMessageTypes).AsTask();
+            var task = ReceiveWhileAsync(shouldContinue, max, idle, msgs, shouldIgnoreOtherMessageTypes, cancellationToken).AsTask();
             task.WaitAndUnwrapException();
             return task.Result;
         }
 
-        /// <inheritdoc cref="ReceiveWhile{T}(Predicate{T}, TimeSpan?, TimeSpan?, int, bool)"/>
-        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(Predicate<T> shouldContinue, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
+        /// <inheritdoc cref="ReceiveWhile{T}(Predicate{T}, TimeSpan?, TimeSpan?, int, bool, CancellationToken)"/>
+        public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(Predicate<T> shouldContinue, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true, CancellationToken cancellationToken = default) where T : class
         {
             var start = Now;
             var maxValue = RemainingOrDilated(max);
@@ -635,7 +621,7 @@ namespace Akka.TestKit
             MessageEnvelope msg = NullMessageEnvelope.Instance;
             while (count < msgs)
             {
-                var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue)).ConfigureAwait(false);
+                var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken).ConfigureAwait(false);
                 if (!peeked.success)
                 {
                     _testState.LastMessage = msg;
@@ -665,7 +651,7 @@ namespace Akka.TestKit
                 if (!shouldStop)
                 {
                     // This should happen immediately (zero timespan). Something is wrong if this fails.
-                    var received = await InternalTryReceiveOneAsync(TimeSpan.Zero, CancellationToken.None, true)
+                    var received = await InternalTryReceiveOneAsync(TimeSpan.Zero, cancellationToken, true)
                         .ConfigureAwait(false);
                     if (!received.success)
                         throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
@@ -692,17 +678,18 @@ namespace Akka.TestKit
         /// Receive the specified number of messages using <see cref="RemainingOrDefault"/> as timeout.
         /// </summary>
         /// <param name="numberOfMessages">The number of messages.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The received messages</returns>
-        public IReadOnlyCollection<object> ReceiveN(int numberOfMessages)
+        public IReadOnlyCollection<object> ReceiveN(int numberOfMessages, CancellationToken cancellationToken = default)
         {
-            var result = InternalReceiveN(numberOfMessages, RemainingOrDefault, true).ToList();
+            var result = InternalReceiveN(numberOfMessages, RemainingOrDefault, true, cancellationToken).ToList();
             return result;
         }
 
-        /// <inheritdoc cref="ReceiveN(int)"/>
-        public async ValueTask<IReadOnlyCollection<object>> ReceiveNAsync(int numberOfMessages)
+        /// <inheritdoc cref="ReceiveN(int, CancellationToken)"/>
+        public async ValueTask<IReadOnlyCollection<object>> ReceiveNAsync(int numberOfMessages, CancellationToken cancellationToken)
         {
-            var result = await InternalReceiveNAsync(numberOfMessages, RemainingOrDefault, true).ToListAsync();
+            var result = await InternalReceiveNAsync(numberOfMessages, RemainingOrDefault, true, cancellationToken).ToListAsync();
             return result;
         }
 
@@ -712,31 +699,32 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="numberOfMessages">The number of messages.</param>
         /// <param name="max">The timeout scaled by "akka.test.timefactor" using <see cref="Dilated"/>.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The received messages</returns>
-        public IReadOnlyCollection<object> ReceiveN(int numberOfMessages, TimeSpan max)
+        public IReadOnlyCollection<object> ReceiveN(int numberOfMessages, TimeSpan max, CancellationToken cancellationToken = default)
         {
             max.EnsureIsPositiveFinite("max");
             var dilated = Dilated(max);
-            var result = InternalReceiveN(numberOfMessages, dilated, true).ToList();
+            var result = InternalReceiveN(numberOfMessages, dilated, true, cancellationToken).ToList();
             return result;
         }
 
-        /// <inheritdoc cref="ReceiveN(int, TimeSpan)"/>
-        public async ValueTask<IReadOnlyCollection<object>> ReceiveNAsync(int numberOfMessages, TimeSpan max)
+        /// <inheritdoc cref="ReceiveN(int, TimeSpan, CancellationToken)"/>
+        public async ValueTask<IReadOnlyCollection<object>> ReceiveNAsync(int numberOfMessages, TimeSpan max, CancellationToken cancellationToken = default)
         {
             max.EnsureIsPositiveFinite("max");
             var dilated = Dilated(max);
-            var result = await InternalReceiveNAsync(numberOfMessages, dilated, true).ToListAsync();
+            var result = await InternalReceiveNAsync(numberOfMessages, dilated, true, cancellationToken).ToListAsync();
             return result;
         }
 
-        private IEnumerable<object> InternalReceiveN(int numberOfMessages, TimeSpan max, bool shouldLog)
+        private IEnumerable<object> InternalReceiveN(int numberOfMessages, TimeSpan max, bool shouldLog, CancellationToken cancellationToken = default)
         {
-            foreach(var msg in InternalReceiveNAsync(numberOfMessages, max, shouldLog).ToEnumerable())
+            foreach(var msg in InternalReceiveNAsync(numberOfMessages, max, shouldLog, cancellationToken).ToEnumerable())
                 yield return msg;
         }
 
-        private async IAsyncEnumerable<object> InternalReceiveNAsync(int numberOfMessages, TimeSpan max, bool shouldLog)
+        private async IAsyncEnumerable<object> InternalReceiveNAsync(int numberOfMessages, TimeSpan max, bool shouldLog, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var start = Now;
             var stop = max + start;
@@ -744,7 +732,7 @@ namespace Akka.TestKit
             for (int i = 0; i < numberOfMessages; i++)
             {
                 var timeout = stop - Now;
-                var o = await ReceiveOneAsync(timeout);
+                var o = await ReceiveOneAsync(timeout, cancellationToken);
                 var condition = o != null;
                 if (!condition)
                 {
