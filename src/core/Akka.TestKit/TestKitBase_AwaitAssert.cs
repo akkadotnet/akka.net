@@ -32,14 +32,15 @@ namespace Akka.TestKit
         /// <param name="assertion">The action.</param>
         /// <param name="duration">The timeout.</param>
         /// <param name="interval">The interval to wait between executing the assertion.</param>
-        public void AwaitAssert(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null)
+        /// <param name="cancellationToken"></param>
+        public void AwaitAssert(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
-            var task = AwaitAssertAsync(assertion, duration, interval).AsTask();
+            var task = AwaitAssertAsync(assertion, duration, interval, cancellationToken);
             task.WaitAndUnwrapException();
         }
         
-        /// <inheritdoc cref="AwaitAssert(Action, TimeSpan?, TimeSpan?)"/>
-        public async ValueTask AwaitAssertAsync(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null)
+        /// <inheritdoc cref="AwaitAssert(Action, TimeSpan?, TimeSpan?, CancellationToken)"/>
+        public async Task AwaitAssertAsync(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
@@ -47,7 +48,7 @@ namespace Akka.TestKit
             var max = RemainingOrDilated(duration);
             var stop = Now + max;
             var t = max.Min(intervalValue);
-            while(true)
+            while(!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
@@ -59,11 +60,11 @@ namespace Akka.TestKit
                     if(Now + t >= stop)
                         throw;
                 }
-                await Task.Delay(t);
+                await Task.Delay(t, cancellationToken);
                 t = (stop - Now).Min(intervalValue);
             }
         }
-        
+
         /// <summary>
         /// <para>Await until the given assertion does not throw an exception or the timeout
         /// expires, whichever comes first. If the timeout expires the last exception
@@ -78,7 +79,8 @@ namespace Akka.TestKit
         /// <param name="assertion">The action.</param>
         /// <param name="duration">The timeout.</param>
         /// <param name="interval">The interval to wait between executing the assertion.</param>
-        public async ValueTask AwaitAssertAsync(Func<Task> assertion, TimeSpan? duration=null, TimeSpan? interval=null)
+        /// <param name="cancellationToken"></param>
+        public async Task AwaitAssertAsync(Func<Task> assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
@@ -86,7 +88,7 @@ namespace Akka.TestKit
             var max = RemainingOrDilated(duration);
             var stop = Now + max;
             var t = max.Min(intervalValue);
-            while(true)
+            while(!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
@@ -98,7 +100,7 @@ namespace Akka.TestKit
                     if(Now + t >= stop)
                         throw;
                 }
-                await Task.Delay(t);
+                await Task.Delay(t, cancellationToken);
                 t = (stop - Now).Min(intervalValue);
             }
         }
