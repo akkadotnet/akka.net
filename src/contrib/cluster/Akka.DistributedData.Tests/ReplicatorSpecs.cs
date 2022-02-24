@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -574,7 +575,53 @@ namespace Akka.DistributedData.Tests
             });
         }
 
+        // Reproduction spec for issue #5663
+        [Fact]
+        public async Task ORMultiValueDictionary_WithValueDeltas_LargeDataSet()
+        {
+            await InitCluster();
 
+            var changedProbe2 = CreateTestProbe(_sys2);
+            _replicator2.Tell(Dsl.Subscribe(_keyJ, changedProbe2.Ref));
+
+            var changedProbe3 = CreateTestProbe(_sys3);
+            _replicator3.Tell(Dsl.Subscribe(_keyJ, changedProbe3.Ref));
+
+            // add 1 entry with multiple values to all nodes
+            var keyA = "A";
+            var builder = ImmutableHashSet.CreateBuilder<string>();
+            for (var i =0; i < 20000; i++)
+            {
+                builder.Add(Convert.ToString(i));
+            }
+            var entryA = builder.ToImmutableHashSet();
+            
+            await AwaitAssertAsync(async () =>
+            {
+                var stopwatch = Stopwatch.StartNew();
+                try
+                {
+                    var m1 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                        _keyJ,
+                        ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                        new WriteMajority(_timeOut),
+                        s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA)));
+                }
+                finally
+                {
+                    stopwatch.Stop();
+                }
+                Log.Info($"Update time: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.ElapsedMilliseconds / 1000.0} s)");
+           
+                var node2EntriesA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+                node2EntriesA[keyA].Should().BeEquivalentTo(entryA);
+
+                var node3EntriesA = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+                node3EntriesA[keyA].Should().BeEquivalentTo(entryA);
+            });
+
+        }
+        
         protected override void BeforeTermination()
         {
             Shutdown(_sys1);
