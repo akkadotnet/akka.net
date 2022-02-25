@@ -375,42 +375,69 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        public void ExpectNoMsg()
+        public void ExpectNoMsg(CancellationToken cancellationToken = default)
         {
-            InternalExpectNoMsg(RemainingOrDefault);
+            var task = ExpectNoMsgAsync(cancellationToken).AsTask();
+            task.WaitAndUnwrapException();
+        }
+        
+        /// <inheritdoc cref="ExpectNoMsg(CancellationToken)"/>
+        public async ValueTask ExpectNoMsgAsync(CancellationToken cancellationToken)
+        {
+            await InternalExpectNoMsgAsync(RemainingOrDefault, cancellationToken);
         }
 
         /// <summary>
         /// Assert that no message is received for the specified time.
         /// </summary>
         /// <param name="duration">TBD</param>
-        public void ExpectNoMsg(TimeSpan duration)
+        /// <param name="cancellationToken"></param>
+        public void ExpectNoMsg(TimeSpan duration, CancellationToken cancellationToken = default)
         {
-            InternalExpectNoMsg(Dilated(duration));
+            var task = ExpectNoMsgAsync(duration, cancellationToken).AsTask();
+            task.WaitAndUnwrapException();
+        }
+        
+        /// <inheritdoc cref="ExpectNoMsg(TimeSpan, CancellationToken)"/>
+        public async ValueTask ExpectNoMsgAsync(TimeSpan duration, CancellationToken cancellationToken)
+        {
+            await InternalExpectNoMsgAsync(Dilated(duration), cancellationToken);
         }
 
         /// <summary>
         /// Assert that no message is received for the specified time in milliseconds.
         /// </summary>
         /// <param name="milliseconds">TBD</param>
-        public void ExpectNoMsg(int milliseconds)
+        /// <param name="cancellationToken"></param>
+        public void ExpectNoMsg(int milliseconds, CancellationToken cancellationToken = default)
         {
-            ExpectNoMsg(TimeSpan.FromMilliseconds(milliseconds));
+            var task = ExpectNoMsgAsync(milliseconds, cancellationToken).AsTask();
+            task.WaitAndUnwrapException();
+        }
+        /// <inheritdoc cref="ExpectNoMsg(int, CancellationToken)"/>
+        public async ValueTask ExpectNoMsgAsync(int milliseconds, CancellationToken cancellationToken)
+        {
+            await InternalExpectNoMsgAsync(TimeSpan.FromMilliseconds(milliseconds), cancellationToken);
         }
 
-        private void InternalExpectNoMsg(TimeSpan duration)
+        private void InternalExpectNoMsg(TimeSpan duration, CancellationToken cancellationToken)
         {
-            MessageEnvelope t;
+            var task = InternalExpectNoMsgAsync(duration, cancellationToken).AsTask();
+            task.WaitAndUnwrapException(cancellationToken);
+        }
+        
+        private async ValueTask InternalExpectNoMsgAsync(TimeSpan duration, CancellationToken cancellationToken)
+        {
             var start = Now;
             ConditionalLog("Expecting no messages during {0}", duration);
 
-            bool didReceiveMessage = InternalTryReceiveOne(out t, duration, CancellationToken.None, false);
-            if (didReceiveMessage)
+            var received = await InternalTryReceiveOneAsync(duration, cancellationToken, false);
+            if (received.success)
             {
                 const string failMessage = "Failed: Expected no messages during {0}, instead we received {1} after {2}";
                 var elapsed = Now - start;
-                ConditionalLog(failMessage, duration,t, elapsed);
-                _assertions.Fail(failMessage,duration, t, elapsed);
+                ConditionalLog(failMessage, duration,received.envelope, elapsed);
+                _assertions.Fail(failMessage,duration, received.envelope, elapsed);
             }
         }
 
