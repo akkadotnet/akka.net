@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Persistence.Internal;
 using Akka.TestKit;
@@ -212,7 +213,7 @@ namespace Akka.Persistence.Tests
             pref.Tell(TakeSnapshot.Instance);
             pref.Tell("e");
             pref.Tell("f");
-            ExpectMsgAllOf(1L, 2L, 4L);
+            ExpectMsgAllOf(CancellationToken.None, 1L, 2L, 4L);
         }
 
         [Fact]

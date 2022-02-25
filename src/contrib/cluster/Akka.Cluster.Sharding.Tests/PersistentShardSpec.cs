@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
@@ -84,7 +85,7 @@ namespace Akka.Cluster.Sharding.Tests
             secondIncarnation.Tell(Shard.GetShardStats.Instance);
             AwaitAssert(() =>
             {
-                ExpectMsgAllOf(new Shard.ShardStats("shard-1", 1));
+                ExpectMsgAllOf(CancellationToken.None, new Shard.ShardStats("shard-1", 1));
             });
         }
     }

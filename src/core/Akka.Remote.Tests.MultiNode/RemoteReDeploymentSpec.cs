@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -142,7 +143,7 @@ namespace Akka.Remote.Tests.MultiNode
                     }
                     else
                     {
-                        ExpectMsgAllOf("PostStop", "PreStart");
+                        ExpectMsgAllOf(CancellationToken.None, "PostStop", "PreStart");
                     }
                 });
             }, _config.First);

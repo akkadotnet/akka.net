@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
@@ -102,7 +103,7 @@ namespace DocsExamples.Debugging
             // assert
 
             // no raciness - ExpectMsgAllOf doesn't care about order
-            ExpectMsgAllOf("hit1a1", "hit2a1");
+            ExpectMsgAllOf(CancellationToken.None, "hit1a1", "hit2a1");
         }
         // </FixedMsgOrdering>
         

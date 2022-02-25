@@ -97,10 +97,10 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectNoMsg(TimeSpan.Zero);
             sub.Request(1);
             var got = new List<int> {c.ExpectNext()};
-            probe.ExpectMsgAllOf(1, 2, 3, 4, 5);
+            probe.ExpectMsgAllOf(CancellationToken.None, 1, 2, 3, 4, 5);
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             sub.Request(25);
-            probe.ExpectMsgAllOf(Enumerable.Range(6, 15).ToArray());
+            probe.ExpectMsgAllOf(CancellationToken.None, Enumerable.Range(6, 15).ToArray());
             c.Within(TimeSpan.FromSeconds(3), () =>
             {
                 Enumerable.Range(2, 19).ForEach(_ => got.Add(c.ExpectNext()));

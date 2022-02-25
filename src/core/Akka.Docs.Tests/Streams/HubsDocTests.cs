@@ -54,7 +54,7 @@ namespace DocsExamples.Streams
             Source.Single("Hub!").RunWith(toConsumer, Materializer);
             #endregion
 
-            ExpectMsgAllOf("Hello!", "Hub!");
+            ExpectMsgAllOf(CancellationToken.None, "Hello!", "Hub!");
         }
 
         [Fact]

@@ -218,39 +218,15 @@ namespace Akka.TestKit
         ///     If <c>null</c> the config value "akka.test.single-expect-default" is used as timeout.
         ///     If set to a negative value or <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever.
         ///     <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks></param>
+        /// <param name="cancellationToken"></param>
         /// <returns><c>True</c> if a message was received within the specified duration; <c>false</c> otherwise.</returns>
-        public bool TryReceiveOne(out MessageEnvelope envelope, TimeSpan? max = null)
+        public bool TryReceiveOne(out MessageEnvelope envelope, TimeSpan? max = null, CancellationToken cancellationToken = default)
         {
-            return TryReceiveOne(out envelope, max, CancellationToken.None);
-        }
-
-        /// <inheritdoc cref="TryReceiveOne(out MessageEnvelope, TimeSpan?)"/>
-        public async ValueTask<(bool success, MessageEnvelope envelope)> TryReceiveOneAsync(TimeSpan? max = null)
-        {
-            return await TryReceiveOneAsync(max, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Receive one message from the internal queue of the TestActor within 
-        /// the specified duration.
-        /// <para><c>True</c> is returned if a message existed, and the message 
-        /// is returned in <paramref name="envelope" />. The method blocks the 
-        /// specified duration, and can be cancelled using the 
-        /// <paramref name="cancellationToken" />.
-        /// </para> 
-        /// <remarks>This method does NOT automatically scale its duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks>
-        /// </summary>
-        /// <param name="envelope">The received envelope.</param>
-        /// <param name="max">The maximum duration to wait. 
-        ///     If <c>null</c> the config value "akka.test.single-expect-default" is used as timeout.
-        ///     If set to <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever (or until cancelled).
-        ///     <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks>
-        /// </param>
-        /// <param name="cancellationToken">A token used to cancel the operation.</param>
-        /// <returns><c>True</c> if a message was received within the specified duration; <c>false</c> otherwise.</returns>
-        public bool TryReceiveOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken)
-        {
-            return InternalTryReceiveOne(out envelope, max, cancellationToken, true);
+            var task = TryReceiveOneAsync(max, cancellationToken).AsTask();
+            task.WaitAndUnwrapException();  
+            var result = task.Result;   
+            envelope = result.envelope;
+            return task.Result.success;
         }
 
         /// <inheritdoc cref="TryReceiveOne(out MessageEnvelope, TimeSpan?, CancellationToken)"/>

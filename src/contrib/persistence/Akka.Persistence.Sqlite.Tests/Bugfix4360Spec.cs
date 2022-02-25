@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util;
@@ -129,7 +130,7 @@ auto-initialize = on
             recoveryActor.Tell("foo");
             recoveryActor.Tell("bar");
             recoveryActor.Tell(RecoverActor.DoSnapshot.Instance);
-            ExpectMsgAllOf("foo", "bar");
+            ExpectMsgAllOf(CancellationToken.None, "foo", "bar");
             ExpectMsg<SaveSnapshotSuccess>();
 
             Watch(recoveryActor);
