@@ -61,7 +61,7 @@ namespace Akka.Streams.Tests.IO
                 var inputStream = Source.From(new[] { _byteString, byteString2, null })
                     .RunWith(TestSink(sinkProbe), _materializer);
 
-                sinkProbe.ExpectMsgAllOf(CancellationToken.None, GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance);
+                sinkProbe.ExpectMsgAllOf(GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance);
 
                 var result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
@@ -237,7 +237,7 @@ namespace Akka.Streams.Tests.IO
                 var inputStream = Source.From(new[] { bytes1, bytes2, null }).RunWith(TestSink(sinkProbe), _materializer);
 
                 //need to wait while both elements arrive to sink
-                sinkProbe.ExpectMsgAllOf(CancellationToken.None, GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance);
+                sinkProbe.ExpectMsgAllOf(GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance);
 
                 var r1 = ReadN(inputStream, 15);
                 r1.Item1.Should().Be(15);

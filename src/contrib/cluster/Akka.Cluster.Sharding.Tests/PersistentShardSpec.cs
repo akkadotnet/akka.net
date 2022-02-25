@@ -85,7 +85,7 @@ namespace Akka.Cluster.Sharding.Tests
             secondIncarnation.Tell(Shard.GetShardStats.Instance);
             AwaitAssert(() =>
             {
-                ExpectMsgAllOf(CancellationToken.None, new Shard.ShardStats("shard-1", 1));
+                ExpectMsgAllOf(new Shard.ShardStats("shard-1", 1));
             });
         }
     }

@@ -103,7 +103,7 @@ namespace DocsExamples.Debugging
             // assert
 
             // no raciness - ExpectMsgAllOf doesn't care about order
-            ExpectMsgAllOf(CancellationToken.None, "hit1a1", "hit2a1");
+            ExpectMsgAllOf("hit1a1", "hit2a1");
         }
         // </FixedMsgOrdering>
         

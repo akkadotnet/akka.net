@@ -130,7 +130,7 @@ auto-initialize = on
             recoveryActor.Tell("foo");
             recoveryActor.Tell("bar");
             recoveryActor.Tell(RecoverActor.DoSnapshot.Instance);
-            ExpectMsgAllOf(CancellationToken.None, "foo", "bar");
+            ExpectMsgAllOf("foo", "bar");
             ExpectMsg<SaveSnapshotSuccess>();
 
             Watch(recoveryActor);

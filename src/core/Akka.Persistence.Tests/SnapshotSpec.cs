@@ -213,7 +213,7 @@ namespace Akka.Persistence.Tests
             pref.Tell(TakeSnapshot.Instance);
             pref.Tell("e");
             pref.Tell("f");
-            ExpectMsgAllOf(CancellationToken.None, 1L, 2L, 4L);
+            ExpectMsgAllOf(1L, 2L, 4L);
         }
 
         [Fact]

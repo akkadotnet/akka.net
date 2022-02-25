@@ -477,10 +477,9 @@ namespace Akka.TestKit
         /// </code>
         /// </summary>
         /// <typeparam name="T">The type of the messages</typeparam>
-        /// <param name="cancellationToken"></param>
         /// <param name="messages">The messages.</param>
         /// <returns>The received messages in received order</returns>
-        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(CancellationToken cancellationToken = default, params T[] messages)
+        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(params T[] messages)
         {
             return InternalExpectMsgAllOf(RemainingOrDefault, messages);
         }
@@ -502,43 +501,23 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="T">The type of the messages</typeparam>
         /// <param name="max">The deadline. The deadline is scaled by "akka.test.timefactor" using <see cref="Dilated"/>.</param>
-        /// <param name="cancellationToken"></param>
         /// <param name="messages">The messages.</param>
         /// <returns>The received messages in received order</returns>
-        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(TimeSpan max, CancellationToken cancellationToken = default, params T[] messages)
-        {
-            var task = ExpectMsgAllOfAsync<T>(max, cancellationToken, messages).AsTask();
-            task.WaitAndUnwrapException();
-            return task.Result;    
-        }
-        /// <inheritdoc cref="ExpectMsgAllOf{T}(TimeSpan, CancellationToken, T[])"/>
-        public async ValueTask<IReadOnlyCollection<T>> ExpectMsgAllOfAsync<T>(TimeSpan max, CancellationToken cancellationToken = default, params T[] messages)
+        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(TimeSpan max, params T[] messages)
         {
             max.EnsureIsPositiveFinite("max");
             var dilated = Dilated(max);
-            return await InternalExpectMsgAllOfAsync(dilated, messages);
+            return InternalExpectMsgAllOf(dilated, messages);
         }
-
-        private IReadOnlyCollection<T> InternalExpectMsgAllOf<T>(TimeSpan max, IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null, bool shouldLog=false, CancellationToken cancellationToken = default)
-        {
-            var task = InternalExpectMsgAllOfAsync(max, messages, areEqual, shouldLog, cancellationToken);
-            task.WaitAndUnwrapException(cancellationToken);
-            return task.Result;
-        }
-
-        private async Task<IReadOnlyCollection<T>> InternalExpectMsgAllOfAsync<T>(TimeSpan max,
-            IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null, bool shouldLog = false,
-            CancellationToken cancellationToken = default)
+        private IReadOnlyCollection<T> InternalExpectMsgAllOf<T>(TimeSpan max, IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null, bool shouldLog = false)
         {
             ConditionalLog(shouldLog, "Expecting {0} messages during {1}", messages.Count, max);
             areEqual = areEqual ?? ((x, y) => Equals(x, y));
             var start = Now;
-            
-            var receivedMessages = await InternalReceiveNAsync(messages.Count, max, shouldLog, cancellationToken).ToListAsync(cancellationToken);
-
-            var missing = messages.Where(m => !receivedMessages.Any(r => r is T obj && areEqual(obj, m))).ToList();
-            var unexpected = receivedMessages.Where(r => !messages.Any(m => r is T obj && areEqual(obj, m))).ToList();
-            CheckMissingAndUnexpected(missing, unexpected, "not found", "found unexpected", shouldLog, string.Format("Expected {0} messages during {1}. Failed after {2}. ", messages.Count, max, Now-start));
+            var receivedMessages = InternalReceiveN(messages.Count, max, shouldLog).ToList();
+            var missing = messages.Where(m => !receivedMessages.Any(r => r is T && areEqual((T)r, m))).ToList();
+            var unexpected = receivedMessages.Where(r => !messages.Any(m => r is T && areEqual((T)r, m))).ToList();
+            CheckMissingAndUnexpected(missing, unexpected, "not found", "found unexpected", shouldLog, string.Format("Expected {0} messages during {1}. Failed after {2}. ", messages.Count, max, Now - start));
             return receivedMessages.Cast<T>().ToList();
         }
 

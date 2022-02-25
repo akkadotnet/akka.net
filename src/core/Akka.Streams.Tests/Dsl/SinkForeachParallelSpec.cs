@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
                     latch[n].Ready(TimeSpan.FromSeconds(5));
                 }), Materializer);
 
-                probe.ExpectMsgAllOf(CancellationToken.None, 1, 2, 3, 4);
+                probe.ExpectMsgAllOf(1, 2, 3, 4);
                 probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
                 p.IsCompleted.Should().BeFalse();
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
                 }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)), Materializer);
 
                 latch.CountDown();
-                probe.ExpectMsgAllOf(CancellationToken.None, 1, 2, 4, 5);
+                probe.ExpectMsgAllOf(1, 2, 4, 5);
 
                 p.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
             }, Materializer);
@@ -138,7 +138,7 @@ namespace Akka.Streams.Tests.Dsl
                 // make sure the stream is up and running, otherwise the latch is maybe ready before the third message arrives
                 Thread.Sleep(500);
                 latch.CountDown();
-                probe.ExpectMsgAllOf(CancellationToken.None, 1, 2);
+                probe.ExpectMsgAllOf(1, 2);
 
                 var ex = p.Invoking(t => t.Wait(TimeSpan.FromSeconds(1))).Should().Throw<AggregateException>().Which;
                 ex.Flatten().InnerException.Should().BeOfType<TestException>();
