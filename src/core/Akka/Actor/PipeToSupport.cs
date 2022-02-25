@@ -60,9 +60,7 @@ namespace Akka.Actor
             
             try
             {
-                var result = useConfigureAwait
-                    ? await taskToPipe.ConfigureAwait(false)
-                    : await taskToPipe;
+                var result = await taskToPipe.ConfigureAwait(!useConfigureAwait); 
                 
                 recipient.Tell(success != null
                     ? success(result)
@@ -117,14 +115,7 @@ namespace Akka.Actor
             
             try
             {
-                if (useConfigureAwait)
-                {
-                    await taskToPipe.ConfigureAwait(false);
-                }
-                else
-                {
-                    await taskToPipe;
-                }
+                await taskToPipe.ConfigureAwait(!useConfigureAwait);
 
                 if (success != null)
                 {
