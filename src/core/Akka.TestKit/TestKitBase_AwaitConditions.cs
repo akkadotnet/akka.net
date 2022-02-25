@@ -45,7 +45,8 @@ namespace Akka.TestKit
             var maxDur = RemainingOrDefault;
             var interval = new TimeSpan(maxDur.Ticks / 10);
             var logger = _testState.TestKitSettings.LogTestKitCalls ? _testState.Log : null;
-            await InternalAwaitConditionAsync(conditionIsFulfilled, maxDur, interval, (format, args) => _assertions.Fail(format, args), logger, cancellationToken);
+            await InternalAwaitConditionAsync(conditionIsFulfilled, maxDur, interval, (format, args) => _assertions.Fail(format, args), logger, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -79,7 +80,8 @@ namespace Akka.TestKit
             var maxDur = RemainingOrDilated(max);
             var interval = new TimeSpan(maxDur.Ticks / 10);
             var logger = _testState.TestKitSettings.LogTestKitCalls ? _testState.Log : null;
-            await InternalAwaitConditionAsync(conditionIsFulfilled, maxDur, interval, (format, args) => _assertions.Fail(format, args), logger, cancellationToken);
+            await InternalAwaitConditionAsync(conditionIsFulfilled, maxDur, interval, (format, args) => _assertions.Fail(format, args), logger, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -114,7 +116,8 @@ namespace Akka.TestKit
             var maxDur = RemainingOrDilated(max);
             var interval = new TimeSpan(maxDur.Ticks / 10);
             var logger = _testState.TestKitSettings.LogTestKitCalls ? _testState.Log : null;
-            _ = await InternalAwaitConditionAsync(conditionIsFulfilled, maxDur, interval, (format, args) => AssertionsFail(format, args, message), logger, cancellationToken);
+            await InternalAwaitConditionAsync(conditionIsFulfilled, maxDur, interval, (format, args) => AssertionsFail(format, args, message), logger, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -156,7 +159,9 @@ namespace Akka.TestKit
         {
             var maxDur = RemainingOrDilated(max);
             var logger = _testState.TestKitSettings.LogTestKitCalls ? _testState.Log : null;
-            await InternalAwaitConditionAsync(conditionIsFulfilled, maxDur, interval, (format, args) => AssertionsFail(format, args, message), logger, cancellationToken);
+            await InternalAwaitConditionAsync(conditionIsFulfilled, maxDur, interval, 
+                (format, args) => AssertionsFail(format, args, message), logger, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         private void AssertionsFail(string format, object[] args, string message = null)
@@ -179,9 +184,8 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public bool AwaitConditionNoThrow(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval = null, CancellationToken cancellationToken = default)
         {
-            var task = AwaitConditionNoThrowAsync(conditionIsFulfilled, max, interval, cancellationToken);
-            task.WaitAndUnwrapException();
-            return task.Result;
+            return AwaitConditionNoThrowAsync(conditionIsFulfilled, max, interval, cancellationToken)
+                .WaitAndUnwrapException(cancellationToken);
         }
         
         /// <inheritdoc cref="AwaitConditionNoThrow(Func{bool}, TimeSpan, TimeSpan?, CancellationToken)"/>
@@ -262,9 +266,9 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         protected static bool InternalAwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval, Action<string, object[]> fail, ILoggingAdapter logger, CancellationToken cancellationToken = default)
         {
-            var task = InternalAwaitConditionAsync(conditionIsFulfilled, max, interval, fail, logger, cancellationToken);
-            task.WaitAndUnwrapException();
-            return task.Result;
+            return InternalAwaitConditionAsync(conditionIsFulfilled, max, interval, fail, logger, cancellationToken)
+                .WaitAndUnwrapException(cancellationToken);
+            
         }
         
         /// <inheritdoc cref="InternalAwaitCondition(Func{bool}, TimeSpan, TimeSpan?, Action{string, object[]}, ILoggingAdapter, CancellationToken)"/>
@@ -294,7 +298,7 @@ namespace Akka.TestKit
                     return false;
                 }
                 var sleepDuration = (stop - now).Min(interval);
-                await Task.Delay(sleepDuration, cancellationToken);
+                await Task.Delay(sleepDuration, cancellationToken).ConfigureAwait(false);
             }
             ConditionalLog(logger, "Condition fulfilled after {0}", Now-start);
             return true;
