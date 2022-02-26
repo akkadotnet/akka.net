@@ -653,7 +653,17 @@ namespace Akka.TestKit
         /// <returns>The received messages</returns>
         public IReadOnlyCollection<object> ReceiveN(int numberOfMessages, CancellationToken cancellationToken = default)
         {
-            return InternalReceiveN(numberOfMessages, RemainingOrDefault, true).ToList();
+            return ReceiveNAsync(numberOfMessages, cancellationToken)
+                .AsTask().WaitAndUnwrapException(cancellationToken);
+        }
+
+        /// <inheritdoc cref="ReceiveN(int, CancellationToken)"/>
+        public async ValueTask<IReadOnlyCollection<object>> ReceiveNAsync(int numberOfMessages, CancellationToken cancellationToken)
+        {
+            var result = await InternalReceiveNAsync(numberOfMessages, RemainingOrDefault, true, cancellationToken)
+                .ToListAsync()
+                .ConfigureAwait(false);
+            return result;
         }
 
         /// <summary>
@@ -662,24 +672,37 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="numberOfMessages">The number of messages.</param>
         /// <param name="max">The timeout scaled by "akka.test.timefactor" using <see cref="Dilated"/>.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The received messages</returns>
-        public IReadOnlyCollection<object> ReceiveN(int numberOfMessages, TimeSpan max)
+        public IReadOnlyCollection<object> ReceiveN(int numberOfMessages, TimeSpan max, CancellationToken cancellationToken = default)
+        {
+            return ReceiveNAsync(numberOfMessages, max, cancellationToken)
+                .AsTask()
+                .WaitAndUnwrapException(cancellationToken);
+        }
+
+        /// <inheritdoc cref="ReceiveN(int, TimeSpan, CancellationToken)"/>
+        public async ValueTask<IReadOnlyCollection<object>> ReceiveNAsync(int numberOfMessages, TimeSpan max, CancellationToken cancellationToken = default)
         {
             max.EnsureIsPositiveFinite("max");
             var dilated = Dilated(max);
-            var result = InternalReceiveN(numberOfMessages, dilated, true);
-            return result.ToList();
+            var result = await InternalReceiveNAsync(numberOfMessages, dilated, true, cancellationToken)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            return result;
         }
 
-        private IEnumerable<object> InternalReceiveN(int numberOfMessages, TimeSpan max, bool shouldLog)
+        private async IAsyncEnumerable<object> InternalReceiveNAsync(int numberOfMessages, TimeSpan max, bool shouldLog, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var start = Now;
             var stop = max + start;
             ConditionalLog(shouldLog, "Trying to receive {0} messages during {1}.", numberOfMessages, max);
             for (var i = 0; i < numberOfMessages; i++)
-            {                
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var timeout = stop - Now;
-                var o = ReceiveOne(timeout);
+                var o = await ReceiveOneAsync(timeout, cancellationToken)
+                    .ConfigureAwait(false);
                 var condition = o != null;
                 if (!condition)
                 {
@@ -692,5 +715,6 @@ namespace Akka.TestKit
             }
             ConditionalLog(shouldLog, "Received {0} messages during {1}.", numberOfMessages, Now - start);
         }
+
     }
 }
