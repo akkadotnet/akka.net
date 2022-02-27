@@ -35,8 +35,10 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         public void AwaitCondition(Func<bool> conditionIsFulfilled, CancellationToken cancellationToken = default)
         {
-            AwaitConditionAsync(conditionIsFulfilled, cancellationToken)
-               .WaitAndUnwrapException();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var token = cts.Token;
+            AwaitConditionAsync(conditionIsFulfilled, token)
+               .WaitAndUnwrapException(token);
         }
         
         /// <inheritdoc cref="AwaitCondition(Func{bool}, CancellationToken)"/>
@@ -70,8 +72,10 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, CancellationToken cancellationToken = default)
         {
-            AwaitConditionAsync(conditionIsFulfilled, max, cancellationToken)
-                .WaitAndUnwrapException();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var token = cts.Token;
+            AwaitConditionAsync(conditionIsFulfilled, max, token)
+                .WaitAndUnwrapException(token);
         }
         
         /// <inheritdoc cref="AwaitCondition(Func{bool}, TimeSpan?, CancellationToken)"/>
@@ -106,8 +110,10 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, string message, CancellationToken cancellationToken = default)
         {
-            AwaitConditionAsync(conditionIsFulfilled, max, message, cancellationToken)
-                .WaitAndUnwrapException();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var token = cts.Token;
+            AwaitConditionAsync(conditionIsFulfilled, max, message, token)
+                .WaitAndUnwrapException(token);
         }
         
         /// <inheritdoc cref="AwaitCondition(Func{bool}, TimeSpan?, string, CancellationToken)"/>
@@ -149,9 +155,11 @@ namespace Akka.TestKit
         /// <param name="message">The message used if the timeout expires.</param>
         /// <param name="cancellationToken"></param>
         public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, TimeSpan? interval, string message = null, CancellationToken cancellationToken = default)
-        { 
-            AwaitConditionAsync(conditionIsFulfilled, max, interval, message, cancellationToken)
-                .WaitAndUnwrapException();
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var token = cts.Token;
+            AwaitConditionAsync(conditionIsFulfilled, max, interval, message, token)
+                .WaitAndUnwrapException(token);
         }
         
         /// <inheritdoc cref="AwaitCondition(Func{bool}, TimeSpan?, TimeSpan?, string, CancellationToken)"/>
@@ -184,8 +192,10 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public bool AwaitConditionNoThrow(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval = null, CancellationToken cancellationToken = default)
         {
-            return AwaitConditionNoThrowAsync(conditionIsFulfilled, max, interval, cancellationToken)
-                .WaitAndUnwrapException(cancellationToken);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var token = cts.Token;
+            return AwaitConditionNoThrowAsync(conditionIsFulfilled, max, interval, token)
+                .WaitAndUnwrapException(token);
         }
         
         /// <inheritdoc cref="AwaitConditionNoThrow(Func{bool}, TimeSpan, TimeSpan?, CancellationToken)"/>
@@ -266,8 +276,10 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         protected static bool InternalAwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval, Action<string, object[]> fail, ILoggingAdapter logger, CancellationToken cancellationToken = default)
         {
-            return InternalAwaitConditionAsync(conditionIsFulfilled, max, interval, fail, logger, cancellationToken)
-                .WaitAndUnwrapException(cancellationToken);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var token = cts.Token;
+            return InternalAwaitConditionAsync(conditionIsFulfilled, max, interval, fail, logger, token)
+                .WaitAndUnwrapException(token);
             
         }
         
