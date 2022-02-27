@@ -167,7 +167,9 @@ namespace Akka.TestKit
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object ReceiveOne(TimeSpan? max = null,CancellationToken cancellationToken = default)
         {
-            return ReceiveOneAsync(max, cancellationToken).AsTask().WaitAndUnwrapException(cancellationToken);
+            return ReceiveOneAsync(max, cancellationToken)
+                .AsTask()
+                .WaitAndUnwrapException(cancellationToken);
         }
 
         /// <inheritdoc cref="ReceiveOne(TimeSpan?, CancellationToken)"/>
