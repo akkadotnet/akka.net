@@ -36,7 +36,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(TimeSpan? duration = null, string hint = null, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectMsgAsync<T>(duration, hint, token)
                 .AsTask().WaitAndUnwrapException(token);
@@ -64,7 +64,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(T message, TimeSpan? timeout = null, string hint = null, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectMsgAsync(message, timeout, hint, token)
                 .AsTask()
@@ -97,7 +97,7 @@ namespace Akka.TestKit
         public T ExpectMsg<T>(Predicate<T> isMessage, TimeSpan? timeout = null, string hint = null, 
             CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectMsgAsync<T>(isMessage, timeout, hint, token)
                 .AsTask().WaitAndUnwrapException(token);
@@ -132,7 +132,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(Action<T> assert, TimeSpan? timeout = null, string hint = null, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectMsgAsync<T>(assert, timeout, hint, token)
                 .AsTask().WaitAndUnwrapException(token);
@@ -163,7 +163,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(Func<T, IActorRef, bool> isMessageAndSender, TimeSpan? timeout = null, string hint = null, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectMsgAsync<T>(isMessageAndSender, timeout, hint, token)
                 .AsTask()
@@ -197,7 +197,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(Action<T, IActorRef> assertMessageAndSender, TimeSpan? timeout = null, string hint = null, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectMsgAsync<T>(assertMessageAndSender, timeout, hint, token)
                 .AsTask()
@@ -229,7 +229,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(T expected, Func<T, T, bool> comparer, TimeSpan? timeout = null, string hint = null, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectMsgAsync(expected, comparer, timeout, hint, token)
                 .AsTask()
@@ -258,7 +258,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public Terminated ExpectTerminated(IActorRef target, TimeSpan? timeout = null, string hint = null, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectTerminatedAsync(target, timeout, hint, token)
                 .AsTask()
@@ -302,7 +302,7 @@ namespace Akka.TestKit
 
         private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T> msgAssert, Action<IActorRef> senderAssert, string hint, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return InternalExpectMsgAsync<T>(timeout, msgAssert, senderAssert, hint, token)
                 .AsTask()
@@ -317,7 +317,7 @@ namespace Akka.TestKit
 
         private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T, IActorRef> assert, string hint, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return InternalExpectMsgAsync<T>(timeout, assert, hint, cancellationToken: token)
                 .AsTask()
@@ -332,7 +332,7 @@ namespace Akka.TestKit
 
         private MessageEnvelope InternalExpectMsgEnvelope<T>(TimeSpan? timeout, Action<T> msgAssert, Action<IActorRef> senderAssert, string hint, CancellationToken cancellationToken)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return InternalExpectMsgEnvelopeAsync<T>(timeout, msgAssert, senderAssert, hint, token)
                 .AsTask()
@@ -398,7 +398,7 @@ namespace Akka.TestKit
         /// </summary>
         public void ExpectNoMsg(CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             ExpectNoMsgAsync(token)
                 .AsTask()
@@ -419,7 +419,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         public void ExpectNoMsg(TimeSpan duration, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             ExpectNoMsgAsync(duration, token)
                 .AsTask()
@@ -440,7 +440,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         public void ExpectNoMsg(int milliseconds, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             ExpectNoMsgAsync(milliseconds, token)
                 .AsTask()
@@ -545,7 +545,7 @@ namespace Akka.TestKit
         }
         private IReadOnlyCollection<T> InternalExpectMsgAllOf<T>(TimeSpan max, IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null, bool shouldLog = false, CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return InternalExpectMsgAllOfAsync(max, messages, areEqual, shouldLog, token)
                 .AsTask()

@@ -57,7 +57,7 @@ namespace Akka.TestKit
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
         public T FishForMessage<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "", CancellationToken cancellationToken = default)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;  
             return FishForMessageAsync(isMessage, max, hint, token)
                 .AsTask()
