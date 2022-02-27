@@ -61,7 +61,7 @@ namespace Akka.TestKit
             var token = cts.Token;  
             return FishForMessageAsync(isMessage, max, hint, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
 
         /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, TimeSpan?, string, CancellationToken)"/>

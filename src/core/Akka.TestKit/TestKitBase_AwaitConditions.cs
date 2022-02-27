@@ -38,7 +38,7 @@ namespace Akka.TestKit
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             AwaitConditionAsync(conditionIsFulfilled, token)
-               .WaitAndUnwrapException(token);
+               .WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="AwaitCondition(Func{bool}, CancellationToken)"/>
@@ -75,7 +75,7 @@ namespace Akka.TestKit
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             AwaitConditionAsync(conditionIsFulfilled, max, token)
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="AwaitCondition(Func{bool}, TimeSpan?, CancellationToken)"/>
@@ -113,7 +113,7 @@ namespace Akka.TestKit
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             AwaitConditionAsync(conditionIsFulfilled, max, message, token)
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="AwaitCondition(Func{bool}, TimeSpan?, string, CancellationToken)"/>
@@ -159,7 +159,7 @@ namespace Akka.TestKit
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             AwaitConditionAsync(conditionIsFulfilled, max, interval, message, token)
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="AwaitCondition(Func{bool}, TimeSpan?, TimeSpan?, string, CancellationToken)"/>
@@ -195,7 +195,7 @@ namespace Akka.TestKit
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return AwaitConditionNoThrowAsync(conditionIsFulfilled, max, interval, token)
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="AwaitConditionNoThrow(Func{bool}, TimeSpan, TimeSpan?, CancellationToken)"/>
@@ -279,7 +279,7 @@ namespace Akka.TestKit
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return InternalAwaitConditionAsync(conditionIsFulfilled, max, interval, fail, logger, token)
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
             
         }
         

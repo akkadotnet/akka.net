@@ -38,7 +38,7 @@ namespace Akka.TestKit
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             var task = AwaitAssertAsync(assertion, duration, interval, token);
-            task.WaitAndUnwrapException(token);
+            task.WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="AwaitAssert(Action, TimeSpan?, TimeSpan?, CancellationToken)"/>

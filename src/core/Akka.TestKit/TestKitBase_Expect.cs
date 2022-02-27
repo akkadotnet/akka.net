@@ -39,7 +39,7 @@ namespace Akka.TestKit
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectMsgAsync<T>(duration, hint, token)
-                .AsTask().WaitAndUnwrapException(token);
+                .AsTask().WaitAndUnwrapException();
         }
         /// <inheritdoc cref="ExpectMsg{T}(TimeSpan?, string, CancellationToken)"/>
         public async ValueTask<T> ExpectMsgAsync<T>(TimeSpan? duration = null, string hint = null, CancellationToken cancellationToken = default)
@@ -68,7 +68,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             return ExpectMsgAsync(message, timeout, hint, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
 
         /// <inheritdoc cref="ExpectMsg{T}(T, TimeSpan?, string, CancellationToken)"/>
@@ -100,7 +100,7 @@ namespace Akka.TestKit
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectMsgAsync<T>(isMessage, timeout, hint, token)
-                .AsTask().WaitAndUnwrapException(token);
+                .AsTask().WaitAndUnwrapException();
         }
         /// <inheritdoc cref="ExpectMsg{T}(Predicate{T}, TimeSpan?, string, CancellationToken)"/>
         public async ValueTask<T> ExpectMsgAsync<T>(Predicate<T> isMessage, TimeSpan? timeout = null, string hint = null, 
@@ -135,7 +135,7 @@ namespace Akka.TestKit
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var token = cts.Token;
             return ExpectMsgAsync<T>(assert, timeout, hint, token)
-                .AsTask().WaitAndUnwrapException(token);
+                .AsTask().WaitAndUnwrapException();
         }
 
         /// <inheritdoc cref="ExpectMsg{T}(Action{T}, TimeSpan?, string, CancellationToken)"/>
@@ -167,7 +167,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             return ExpectMsgAsync<T>(isMessageAndSender, timeout, hint, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
 
         /// <inheritdoc cref="ExpectMsg{T}(Func{T, IActorRef, bool}, TimeSpan?, string, CancellationToken)"/>
@@ -201,7 +201,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             return ExpectMsgAsync<T>(assertMessageAndSender, timeout, hint, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="ExpectMsg{T}(Action{T, IActorRef}, TimeSpan?, string, CancellationToken)"/>
@@ -233,7 +233,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             return ExpectMsgAsync(expected, comparer, timeout, hint, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         /// <inheritdoc cref="ExpectMsg{T}(T, Func{T, T, bool}, TimeSpan?, string, CancellationToken)"/>
         public async ValueTask<T> ExpectMsgAsync<T>(T expected, Func<T, T, bool> comparer, TimeSpan? timeout = null, string hint = null, CancellationToken cancellationToken = default)
@@ -262,7 +262,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             return ExpectTerminatedAsync(target, timeout, hint, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="ExpectTerminated(IActorRef, TimeSpan?, string, CancellationToken)"/>
@@ -306,7 +306,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             return InternalExpectMsgAsync<T>(timeout, msgAssert, senderAssert, hint, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         private async ValueTask<T> InternalExpectMsgAsync<T>(TimeSpan? timeout, Action<T> msgAssert, Action<IActorRef> senderAssert, string hint, CancellationToken cancellationToken)
         {
@@ -321,7 +321,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             return InternalExpectMsgAsync<T>(timeout, assert, hint, cancellationToken: token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         private async ValueTask<T> InternalExpectMsgAsync<T>(TimeSpan? timeout, Action<T, IActorRef> assert, string hint, CancellationToken cancellationToken)
         {
@@ -336,7 +336,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             return InternalExpectMsgEnvelopeAsync<T>(timeout, msgAssert, senderAssert, hint, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
 
         private async ValueTask<MessageEnvelope> InternalExpectMsgEnvelopeAsync<T>(TimeSpan? timeout, Action<T> msgAssert, Action<IActorRef> senderAssert, string hint, CancellationToken cancellationToken)
@@ -402,7 +402,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             ExpectNoMsgAsync(token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="ExpectNoMsg(CancellationToken)"/>
@@ -423,7 +423,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             ExpectNoMsgAsync(duration, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="ExpectNoMsg(TimeSpan, CancellationToken)"/>
@@ -444,7 +444,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             ExpectNoMsgAsync(milliseconds, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         /// <inheritdoc cref="ExpectNoMsg(int, CancellationToken)"/>
         public async ValueTask ExpectNoMsgAsync(int milliseconds, CancellationToken cancellationToken)
@@ -549,7 +549,7 @@ namespace Akka.TestKit
             var token = cts.Token;
             return InternalExpectMsgAllOfAsync(max, messages, areEqual, shouldLog, token)
                 .AsTask()
-                .WaitAndUnwrapException(token);
+                .WaitAndUnwrapException();
         }
         private async ValueTask<IReadOnlyCollection<T>> InternalExpectMsgAllOfAsync<T>(TimeSpan max, IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null, bool shouldLog = false, CancellationToken cancellationToken = default)
         {
