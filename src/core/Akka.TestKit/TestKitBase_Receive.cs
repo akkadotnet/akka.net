@@ -250,7 +250,8 @@ namespace Akka.TestKit
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will not wait.");
-                take = await _testState.Queue.TryTakeAsync(cancellationToken).ConfigureAwait(false);
+                var taken = _testState.Queue.TryTake(out var msg, cancellationToken);
+                take = (taken, msg);
             }
             else if (maxDuration.IsPositiveFinite())
             {
