@@ -140,7 +140,8 @@ namespace Akka.Routing
                 }, cancelable);
             }
 
-            completion.Task.PipeTo(sender);
+            var result = completion.Task.GetAwaiter().GetResult();
+            sender.Tell(result);
         }
     }
 

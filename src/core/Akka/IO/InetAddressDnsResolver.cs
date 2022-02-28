@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -54,25 +55,26 @@ namespace Akka.IO
                     replyTo.Tell(answer);
                     return true;
                 }
-                
-                System.Net.Dns.GetHostEntryAsync(resolve.Name).ContinueWith(t =>
-                {
-                    if (t.IsFaulted)
-                    {
-                        var flattened = t.Exception.Flatten().InnerExceptions;
-                        return flattened.Count == 1 
-                            ? new Dns.Resolved(resolve.Name, flattened[0]) 
-                            : new Dns.Resolved(resolve.Name, t.Exception);
-                    }
-                    
-                    answer = Dns.Resolved.Create(resolve.Name, t.Result.AddressList.Where(x => 
-                        x.AddressFamily == AddressFamily.InterNetwork 
-                        || _useIpv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
-                    _cache.Put(answer, _positiveTtl);
-                    return answer;
 
-                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(replyTo);
-                return true;
+                try
+                {
+                    var address = System.Net.Dns.GetHostEntryAsync(resolve.Name).GetAwaiter().GetResult();
+                    answer = Dns.Resolved.Create(resolve.Name, address.AddressList.Where(x =>
+                           x.AddressFamily == AddressFamily.InterNetwork
+                           || _useIpv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
+                    _cache.Put(answer, _positiveTtl);
+                    replyTo.Tell(answer);
+                    return true;
+                }
+                catch(AggregateException ex)
+                {
+                    var flattened = ex.Flatten().InnerExceptions;
+                    var ans = flattened.Count == 1
+                        ? new Dns.Resolved(resolve.Name, flattened[0])
+                        : new Dns.Resolved(resolve.Name, ex);
+                    replyTo.Tell(ans);
+                    return false;
+                }
             }
             return false;
         }

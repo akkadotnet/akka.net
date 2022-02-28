@@ -75,6 +75,7 @@ namespace Akka.Streams.Dsl
             _killSwitch.Shutdown();
             _killSwitch = null;
             _sinkQueue = null;
+            await Task.CompletedTask;
         }
 
         public async ValueTask<bool> MoveNextAsync()
