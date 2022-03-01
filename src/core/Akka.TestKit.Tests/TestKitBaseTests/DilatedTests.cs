@@ -7,7 +7,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Threading;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Sdk;

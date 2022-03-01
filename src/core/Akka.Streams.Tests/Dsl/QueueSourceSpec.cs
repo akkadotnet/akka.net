@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
@@ -174,7 +173,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.Cancel();
 
-                ExpectMsgAllOf<object>(CancellationToken.None, QueueClosed.Instance, "done");
+                ExpectMsgAllOf<object>(QueueClosed.Instance, "done");
             }, _materializer);
         }
 

@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -38,7 +37,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         [Fact]
         public void ExpectMsgAllOf_should_timeout_when_not_receiving_any_messages()
         {
-            Intercept(() => ExpectMsgAllOf(TimeSpan.FromMilliseconds(100),"3", "1", "2"));
+            Intercept(() => ExpectMsgAllOf(TimeSpan.FromMilliseconds(100), "3", "1", "2"));
         }
 
         [Fact]
