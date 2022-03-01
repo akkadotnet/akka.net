@@ -271,22 +271,15 @@ namespace Akka.TestKit
         /// action that performs extra assertions. Wait time is bounded by the given duration.
         /// Use this variant to implement more complicated or conditional processing.
         /// </summary>
-        private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T> msgAssert, string hint, CancellationToken cancellationToken = default)
-        {
-           return InternalExpectMsgAsync<T>(timeout, msgAssert, hint, cancellationToken)
-                .AsTask()
-                .WaitAndUnwrapException(cancellationToken);
-        }
-        /// <inheritdoc cref="InternalExpectMsg{T}(TimeSpan?, Action{T}, string, CancellationToken)"/>
         private async ValueTask<T> InternalExpectMsgAsync<T>(TimeSpan? timeout, Action<T> msgAssert, string hint, CancellationToken cancellationToken)
         {
-            return await InternalExpectMsgAsync<T>(timeout, msgAssert, null, hint, cancellationToken)
+            return await InternalExpectMsgAsync(timeout, msgAssert, null, hint, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T> msgAssert, Action<IActorRef> senderAssert, string hint, CancellationToken cancellationToken = default)
         {
-            return InternalExpectMsgAsync<T>(timeout, msgAssert, senderAssert, hint, cancellationToken)
+            return InternalExpectMsgAsync(timeout, msgAssert, senderAssert, hint, cancellationToken)
                 .AsTask()
                 .WaitAndUnwrapException(cancellationToken);
         }
@@ -299,7 +292,7 @@ namespace Akka.TestKit
 
         private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T, IActorRef> assert, string hint, CancellationToken cancellationToken = default)
         {
-            return InternalExpectMsgAsync<T>(timeout, assert, hint, cancellationToken: cancellationToken)
+            return InternalExpectMsgAsync(timeout, assert, hint, cancellationToken: cancellationToken)
                 .AsTask()
                 .WaitAndUnwrapException(cancellationToken);
         }
@@ -308,13 +301,6 @@ namespace Akka.TestKit
             var envelope = await InternalExpectMsgEnvelopeAsync(timeout, assert, hint, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
             return (T)envelope.Message;
-        }
-
-        private MessageEnvelope InternalExpectMsgEnvelope<T>(TimeSpan? timeout, Action<T> msgAssert, Action<IActorRef> senderAssert, string hint, CancellationToken cancellationToken)
-        {
-            return InternalExpectMsgEnvelopeAsync<T>(timeout, msgAssert, senderAssert, hint, cancellationToken)
-                .AsTask()
-                .WaitAndUnwrapException(cancellationToken);
         }
 
         private async ValueTask<MessageEnvelope> InternalExpectMsgEnvelopeAsync<T>(TimeSpan? timeout, Action<T> msgAssert, Action<IActorRef> senderAssert, string hint, CancellationToken cancellationToken)
@@ -331,28 +317,21 @@ namespace Akka.TestKit
             return envelope;
         }
 
-        private MessageEnvelope InternalExpectMsgEnvelope<T>(TimeSpan? timeout, Action<T, IActorRef> assert, string hint, bool shouldLog=false, CancellationToken cancellationToken = default)
-        {
-            return InternalExpectMsgEnvelopeAsync(timeout, assert, hint, shouldLog, cancellationToken)
-                .AsTask()
-                .WaitAndUnwrapException(cancellationToken);
-        }
-
         private async ValueTask<MessageEnvelope> InternalExpectMsgEnvelopeAsync<T>(TimeSpan? timeout, Action<T, IActorRef> assert, string hint, bool shouldLog = false, CancellationToken cancellationToken = default)
         {
             ConditionalLog(shouldLog, "Expecting message of type {0}. {1}", typeof(T), hint);
-            var received = await TryReceiveOneAsync(timeout, cancellationToken)
+            var (success, envelope) = await TryReceiveOneAsync(timeout, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (!received.success)
+            if (!success)
             {
                 const string failMessage = "Failed: Timeout {0} while waiting for a message of type {1} {2}";
                 ConditionalLog(shouldLog, failMessage, GetTimeoutOrDefault(timeout), typeof(T), hint ?? "");
                 _assertions.Fail(failMessage, GetTimeoutOrDefault(timeout), typeof(T), hint ?? "");
             }
 
-            var message = received.envelope.Message;
-            var sender = received.envelope.Sender;
+            var message = envelope.Message;
+            var sender = envelope.Sender;
             var messageIsT = message is T;
             if (!messageIsT)
             {
@@ -363,7 +342,7 @@ namespace Akka.TestKit
             var tMessage = (T)message;
             if (assert != null)
                 assert(tMessage, sender);
-            return received.envelope;
+            return envelope;
         }
 
 
@@ -425,25 +404,19 @@ namespace Akka.TestKit
                 .ConfigureAwait(false);
         }
 
-        private void InternalExpectNoMsg(TimeSpan duration, CancellationToken cancellationToken)
-        {
-            var task = InternalExpectNoMsgAsync(duration, cancellationToken).AsTask();
-            task.WaitAndUnwrapException(cancellationToken);
-        }
-        
         private async ValueTask InternalExpectNoMsgAsync(TimeSpan duration, CancellationToken cancellationToken)
         {
             var start = Now;
             ConditionalLog("Expecting no messages during {0}", duration);
 
-            var received = await InternalTryReceiveOneAsync(duration, cancellationToken, false)
+            var (success, t) = await InternalTryReceiveOneAsync(duration, cancellationToken, false)
                 .ConfigureAwait(false);
-            if (received.success)
+            if (success)
             {
                 const string failMessage = "Failed: Expected no messages during {0}, instead we received {1} after {2}";
                 var elapsed = Now - start;
-                ConditionalLog(failMessage, duration,received.envelope, elapsed);
-                _assertions.Fail(failMessage,duration, received.envelope, elapsed);
+                ConditionalLog(failMessage, duration,t, elapsed);
+                _assertions.Fail(failMessage,duration, t, elapsed);
             }
         }
 

@@ -233,15 +233,6 @@ namespace Akka.TestKit
                 .ConfigureAwait(false);
         }
 
-        private bool InternalTryReceiveOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
-        {
-            var received = InternalTryReceiveOneAsync(max, cancellationToken, shouldLog).AsTask()
-                .WaitAndUnwrapException(cancellationToken);
-            
-            envelope = received.envelope;
-            return received.success;
-        }
-
         private async ValueTask<(bool success, MessageEnvelope envelope)> InternalTryReceiveOneAsync(TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
         {
             (bool didTake, MessageEnvelope env) take;
@@ -250,8 +241,8 @@ namespace Akka.TestKit
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will not wait.");
-                var taken = _testState.Queue.TryTake(out var msg, cancellationToken);
-                take = (taken, msg);
+                var didTake = _testState.Queue.TryTake(out var item, cancellationToken);
+                take = (didTake, item);
             }
             else if (maxDuration.IsPositiveFinite())
             {
@@ -288,6 +279,7 @@ namespace Akka.TestKit
         }
 
         #region Peek methods
+
         /// <summary>
         /// Peek one message from the head of the internal queue of the TestActor.
         /// This method blocks the specified duration or until a message
@@ -298,18 +290,19 @@ namespace Akka.TestKit
         /// If <c>null</c> the config value "akka.test.single-expect-default" is used as timeout.
         /// If set to a negative value or <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever.
         /// <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks></param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
-        public object PeekOne(TimeSpan? max = null)
+        public object PeekOne(TimeSpan? max = null, CancellationToken cancellationToken = default)
         {
-            return PeekOneAsync(max).AsTask().WaitAndUnwrapException();
+            return PeekOneAsync(max, cancellationToken).AsTask().WaitAndUnwrapException();
         } 
         
         /// <inheritdoc cref="PeekOne(TimeSpan?)"/>
-        public async ValueTask<object> PeekOneAsync(TimeSpan? max = null)
+        public async ValueTask<object> PeekOneAsync(TimeSpan? max = null, CancellationToken cancellationToken = default)
         {
-            var peeked = await TryPeekOneAsync(max, CancellationToken.None).ConfigureAwait(false);
-            if (peeked.success)
-                return peeked.envelope.Message;
+            var (success, envelope) = await TryPeekOneAsync(max, cancellationToken).ConfigureAwait(false);
+            if (success)
+                return envelope.Message;
             return null;
         }
 
@@ -327,10 +320,10 @@ namespace Akka.TestKit
         /// <inheritdoc cref="PeekOne(CancellationToken)"/>
         public async ValueTask<object> PeekOneAsync(CancellationToken cancellationToken)
         {
-            var peeked = await TryPeekOneAsync(Timeout.InfiniteTimeSpan, cancellationToken)
+            var (success, envelope) = await TryPeekOneAsync(Timeout.InfiniteTimeSpan, cancellationToken)
                 .ConfigureAwait(false);
-            if (peeked.success)
-                return peeked.envelope.Message;
+            if (success)
+                return envelope.Message;
             return null;
         }
 
@@ -354,7 +347,10 @@ namespace Akka.TestKit
         /// <returns><c>True</c> if a message was received within the specified duration; <c>false</c> otherwise.</returns>
         public bool TryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken)
         {
-            return InternalTryPeekOne(out envelope, max, cancellationToken, true);
+            var (success, result) = InternalTryPeekOneAsync(max, cancellationToken, true)
+                .AsTask().WaitAndUnwrapException(cancellationToken);
+            envelope = result;
+            return success;
         }
 
         /// <inheritdoc cref="TryPeekOne(out MessageEnvelope, TimeSpan?, CancellationToken)"/>
@@ -363,12 +359,6 @@ namespace Akka.TestKit
             return await InternalTryPeekOneAsync(max, cancellationToken, true);
         }
 
-        private bool InternalTryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
-        {
-            var received = InternalTryPeekOneAsync(max, cancellationToken, shouldLog).AsTask().WaitAndUnwrapException(cancellationToken);
-            envelope = received.envelope;
-            return received.success;
-        }
         private async ValueTask<(bool success, MessageEnvelope envelope)> InternalTryPeekOneAsync(TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
         {
             (bool didPeek, MessageEnvelope env) peek;
@@ -378,7 +368,8 @@ namespace Akka.TestKit
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue. Will not wait.");
-                peek = await _testState.Queue.TryPeekAsync(cancellationToken).ConfigureAwait(false);
+                var didPeek = _testState.Queue.TryPeek(out var item);
+                peek = (didPeek, item);
             }
             else if (maxDuration.IsPositiveFinite())
             {
