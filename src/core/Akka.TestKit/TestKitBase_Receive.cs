@@ -41,8 +41,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="FishForMessage(Predicate{object}, TimeSpan?, string, CancellationToken)"/>
         public async ValueTask<object> FishForMessageAsync(Predicate<object> isMessage, TimeSpan? max = null, string hint = "", CancellationToken cancellationToken = default)
         {
-            return await FishForMessageAsync<object>(isMessage, max, hint, cancellationToken)
-                .ConfigureAwait(false);
+            return await FishForMessageAsync<object>(isMessage, max, hint, cancellationToken);
         }
 
         /// <summary>
@@ -65,8 +64,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, TimeSpan?, string, CancellationToken)"/>
         public async ValueTask<T> FishForMessageAsync<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "", CancellationToken cancellationToken = default)
         {
-            return await FishForMessageAsync(isMessage: isMessage, max: max, hint: hint, allMessages: null, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+            return await FishForMessageAsync(isMessage: isMessage, max: max, hint: hint, allMessages: null, cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -97,7 +95,7 @@ namespace Akka.TestKit
             while (true)
             {
                 var left = end - Now;
-                var msg = await ReceiveOneAsync(left, cancellationToken).ConfigureAwait(false);
+                var msg = await ReceiveOneAsync(left, cancellationToken);
                 _assertions.AssertTrue(msg != null, "Timeout ({0}) during fishForMessage{1}", maxValue, string.IsNullOrEmpty(hint) ? "" : ", hint: " + hint);
                 if (msg is T msg1 && isMessage(msg1))
                 {
@@ -175,7 +173,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ReceiveOne(TimeSpan?, CancellationToken)"/>
         public async ValueTask<object> ReceiveOneAsync(TimeSpan? max = null, CancellationToken cancellationToken = default)
         {
-            var received = await TryReceiveOneAsync(max, cancellationToken).ConfigureAwait(false);
+            var received = await TryReceiveOneAsync(max, cancellationToken);
 
             if (received.success)
                 return received.envelope.Message;
@@ -196,7 +194,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ReceiveOne(CancellationToken)"/>
         public async ValueTask<object> ReceiveOneAsync(CancellationToken cancellationToken)
         {
-            var received = await TryReceiveOneAsync(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);  
+            var received = await TryReceiveOneAsync(Timeout.InfiniteTimeSpan, cancellationToken);  
             
             if (received.success)
                 return received.envelope.Message;
@@ -229,8 +227,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="TryReceiveOne(out MessageEnvelope, TimeSpan?, CancellationToken)"/>
         public async ValueTask<(bool success, MessageEnvelope envelope)> TryReceiveOneAsync(TimeSpan? max, CancellationToken cancellationToken)
         {
-            return await InternalTryReceiveOneAsync(max, cancellationToken, true)
-                .ConfigureAwait(false);
+            return await InternalTryReceiveOneAsync(max, cancellationToken, true);
         }
 
         private async ValueTask<(bool success, MessageEnvelope envelope)> InternalTryReceiveOneAsync(TimeSpan? max, CancellationToken cancellationToken, bool shouldLog)
@@ -247,13 +244,12 @@ namespace Akka.TestKit
             else if (maxDuration.IsPositiveFinite())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue within {0}", maxDuration);
-                take = await _testState.Queue.TryTakeAsync((int)maxDuration.TotalMilliseconds, cancellationToken)
-                    .ConfigureAwait(false);
+                take = await _testState.Queue.TryTakeAsync((int)maxDuration.TotalMilliseconds, cancellationToken);
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will wait indefinitely.");
-                take = await _testState.Queue.TryTakeAsync(-1, cancellationToken).ConfigureAwait(false);
+                take = await _testState.Queue.TryTakeAsync(-1, cancellationToken);
             }
             else
             {
@@ -300,7 +296,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="PeekOne(TimeSpan?)"/>
         public async ValueTask<object> PeekOneAsync(TimeSpan? max = null, CancellationToken cancellationToken = default)
         {
-            var (success, envelope) = await TryPeekOneAsync(max, cancellationToken).ConfigureAwait(false);
+            var (success, envelope) = await TryPeekOneAsync(max, cancellationToken);
             if (success)
                 return envelope.Message;
             return null;
@@ -320,8 +316,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="PeekOne(CancellationToken)"/>
         public async ValueTask<object> PeekOneAsync(CancellationToken cancellationToken)
         {
-            var (success, envelope) = await TryPeekOneAsync(Timeout.InfiniteTimeSpan, cancellationToken)
-                .ConfigureAwait(false);
+            var (success, envelope) = await TryPeekOneAsync(Timeout.InfiniteTimeSpan, cancellationToken);
             if (success)
                 return envelope.Message;
             return null;
@@ -374,13 +369,12 @@ namespace Akka.TestKit
             else if (maxDuration.IsPositiveFinite())
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue within {0}", maxDuration);
-                peek = await _testState.Queue.TryPeekAsync((int)maxDuration.TotalMilliseconds, cancellationToken)
-                    .ConfigureAwait(false);
+                peek = await _testState.Queue.TryPeekAsync((int)maxDuration.TotalMilliseconds, cancellationToken);
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue. Will wait indefinitely.");
-                peek = await _testState.Queue.TryPeekAsync(-1, cancellationToken).ConfigureAwait(false);
+                peek = await _testState.Queue.TryPeekAsync(-1, cancellationToken);
             }
             else
             {
@@ -429,8 +423,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, Func{object, T}, int, CancellationToken)"/>
         public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue, CancellationToken cancellationToken = default) where T : class
         {
-            return await ReceiveWhileAsync(filter, max, Timeout.InfiniteTimeSpan, msgs, cancellationToken)
-                .ConfigureAwait(false);
+            return await ReceiveWhileAsync(filter, max, Timeout.InfiniteTimeSpan, msgs, cancellationToken);
         }
         /// <summary>
         /// Receive a series of messages until the function returns null or the idle 
@@ -458,8 +451,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, TimeSpan?, Func{object, T}, int, CancellationToken)"/>
         public async ValueTask<IReadOnlyList<T>> ReceiveWhileAsync<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue, CancellationToken cancellationToken = default)
         {
-            return await ReceiveWhileAsync(filter, max, idle, msgs, cancellationToken)
-                .ConfigureAwait(false);
+            return await ReceiveWhileAsync(filter, max, idle, msgs, cancellationToken);
         }
 
         /// <summary>
@@ -501,8 +493,7 @@ namespace Akka.TestKit
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 // Peek the message on the front of the queue
-                var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken)
-                    .ConfigureAwait(false);
+                var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken);
                 if (!peeked.success)
                 {
                     _testState.LastMessage = msg;
@@ -515,8 +506,7 @@ namespace Akka.TestKit
                 if (result != null)
                 {
                     // This should happen immediately (zero timespan). Something is wrong if this fails.
-                    var received = await InternalTryReceiveOneAsync(TimeSpan.Zero, cancellationToken, true)
-                        .ConfigureAwait(false);
+                    var received = await InternalTryReceiveOneAsync(TimeSpan.Zero, cancellationToken, true);
                     if (!received.success)
                         throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
 
@@ -585,8 +575,7 @@ namespace Akka.TestKit
             while (count < msgs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken)
-                    .ConfigureAwait(false);
+                var peeked = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken);
                 if (!peeked.success)
                 {
                     _testState.LastMessage = msg;
@@ -616,8 +605,7 @@ namespace Akka.TestKit
                 if (!shouldStop)
                 {
                     // This should happen immediately (zero timespan). Something is wrong if this fails.
-                    var received = await InternalTryReceiveOneAsync(TimeSpan.Zero, cancellationToken, true)
-                        .ConfigureAwait(false);
+                    var received = await InternalTryReceiveOneAsync(TimeSpan.Zero, cancellationToken, true);
                     if (!received.success)
                         throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
 
@@ -655,8 +643,7 @@ namespace Akka.TestKit
         public async ValueTask<IReadOnlyCollection<object>> ReceiveNAsync(int numberOfMessages, CancellationToken cancellationToken)
         {
             var result = await InternalReceiveNAsync(numberOfMessages, RemainingOrDefault, true, cancellationToken)
-                .ToListAsync()
-                .ConfigureAwait(false);
+                .ToListAsync();
             return result;
         }
 
@@ -681,7 +668,7 @@ namespace Akka.TestKit
             max.EnsureIsPositiveFinite("max");
             var dilated = Dilated(max);
             var result = await InternalReceiveNAsync(numberOfMessages, dilated, true, cancellationToken)
-                .ToListAsync(cancellationToken).ConfigureAwait(false);
+                .ToListAsync(cancellationToken);
             return result;
         }
 
@@ -695,8 +682,7 @@ namespace Akka.TestKit
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var timeout = stop - Now;
-                var o = await ReceiveOneAsync(timeout, cancellationToken)
-                    .ConfigureAwait(false);
+                var o = await ReceiveOneAsync(timeout, cancellationToken);
                 var condition = o != null;
                 if (!condition)
                 {
