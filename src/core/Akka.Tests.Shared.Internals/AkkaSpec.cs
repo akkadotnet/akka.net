@@ -233,13 +233,16 @@ namespace Akka.TestKit
         }
 
         protected void MuteDeadLetters(params Type[] messageClasses)
+            => MuteDeadLetters(Sys, messageClasses);
+
+        protected void MuteDeadLetters(ActorSystem sys, params Type[] messageClasses)
         {
-            if (!Sys.Log.IsDebugEnabled)
+            if (!sys.Log.IsDebugEnabled)
                 return;
 
             Action<Type> mute =
                 clazz =>
-                    Sys.EventStream.Publish(
+                    sys.EventStream.Publish(
                         new Mute(new DeadLettersFilter(new PredicateMatcher(_ => true),
                             new PredicateMatcher(_ => true),
                             letter => clazz == typeof(object) || letter.Message.GetType() == clazz)));
