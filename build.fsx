@@ -241,6 +241,7 @@ Target "RunTests" (fun _ ->
                             | true -> !! "./src/**/*.Tests.*sproj"
                                       ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
                                       -- "./src/**/*.Tests.MultiNode.csproj"
+                                      -- "./src/**/*.Tests.Performance.csproj"
                                       -- "./src/examples/**"
                             | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
                                    -- "./src/**/*.Tests.MultiNode.csproj"
@@ -276,6 +277,7 @@ Target "RunTestsNetCore" (fun _ ->
                                 | true -> !! "./src/**/*.Tests.*sproj"
                                           ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
                                           -- "./src/**/*.Tests.MultiNode.csproj"
+                                          -- "./src/**/*.Tests.Performance.csproj"
                                           -- "./src/examples/**"
                                 | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
                                        -- "./src/**/*.Tests.MultiNode.csproj"
@@ -311,6 +313,7 @@ Target "RunTestsNet" (fun _ ->
                                 | true -> !! "./src/**/*.Tests.*sproj"
                                           ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
                                           -- "./src/**/*.Tests.MultiNode.csproj"
+                                          -- "./src/**/*.Tests.Performance.csproj"
                                           -- "./src/examples/**"
                                 | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
                                        -- "./src/**/*.Tests.MultiNode.csproj"
