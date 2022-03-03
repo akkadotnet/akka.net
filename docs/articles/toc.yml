@@ -9,7 +9,8 @@
 - name: Persistence
   href: persistence/toc.yml
 - name: Streams
-  href: streams/toc.yml  
+  href: streams/toc.yml
+- name: Networking
   href: networking/toc.yml  
 - name: Remoting
   href: remoting/toc.yml  

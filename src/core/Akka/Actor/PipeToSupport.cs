@@ -34,7 +34,7 @@ namespace Akka.Actor
             IActorRef sender = null,
             Func<T, object> success = null,
             Func<Exception, object> failure = null)
-            => PipeTo(taskToPipe, recipient, true, sender, success, failure);
+            => PipeTo(taskToPipe, recipient, false, sender, success, failure);
         
         /// <summary>
         /// Pipes the output of a Task directly to the <paramref name="recipient"/>'s mailbox once
@@ -46,7 +46,7 @@ namespace Akka.Actor
         /// <param name="sender">The IActorRef that will be used as the sender of the result. Defaults to <see cref="ActorRefs.Nobody"/> </param>
         /// <param name="success">A callback function that will be called on Task success. Defaults to <c>null</c> for no callback</param>
         /// <param name="failure">A callback function that will be called on Task failure. Defaults to <c>null</c> for no callback</param>
-        /// <param name="useConfigureAwait">If set to true, <c>taskToPipe</c> will be awaited using <c>ConfigureAwait(false)</c></param>
+        /// <param name="useConfigureAwait">Sets the <c>taskToPipe.ConfigureAwait(bool)</c> <c>bool</c> parameter</param>
         /// <returns>A detached task</returns>
         public static async Task PipeTo<T>(
             this Task<T> taskToPipe,
@@ -60,9 +60,7 @@ namespace Akka.Actor
             
             try
             {
-                var result = useConfigureAwait
-                    ? await taskToPipe.ConfigureAwait(false)
-                    : await taskToPipe;
+                var result = await taskToPipe.ConfigureAwait(useConfigureAwait); 
                 
                 recipient.Tell(success != null
                     ? success(result)
@@ -92,7 +90,7 @@ namespace Akka.Actor
             IActorRef sender = null,
             Func<object> success = null,
             Func<Exception, object> failure = null)
-            => PipeTo(taskToPipe, recipient, true, sender, success, failure);
+            => PipeTo(taskToPipe, recipient, false, sender, success, failure);
         
         /// <summary>
         /// Pipes the output of a Task directly to the <paramref name="recipient"/>'s mailbox once
@@ -103,7 +101,7 @@ namespace Akka.Actor
         /// <param name="sender">The IActorRef that will be used as the sender of the result. Defaults to <see cref="ActorRefs.Nobody"/> </param>
         /// <param name="success">A callback function that will be called on Task success. Defaults to <c>null</c> for no callback</param>
         /// <param name="failure">A callback function that will be called on Task failure. Defaults to <c>null</c> for no callback</param>
-        /// <param name="useConfigureAwait">If set to true, <c>taskToPipe</c> will be awaited using <c>ConfigureAwait(false)</c></param>
+        /// <param name="useConfigureAwait">Sets the <c>taskToPipe.ConfigureAwait(bool)</c> <c>bool</c> parameter</param>
         /// <returns>A detached task</returns>
         public static async Task PipeTo(
             this Task taskToPipe,
@@ -117,14 +115,7 @@ namespace Akka.Actor
             
             try
             {
-                if (useConfigureAwait)
-                {
-                    await taskToPipe.ConfigureAwait(false);
-                }
-                else
-                {
-                    await taskToPipe;
-                }
+                await taskToPipe.ConfigureAwait(useConfigureAwait);
 
                 if (success != null)
                 {
