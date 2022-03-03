@@ -247,21 +247,26 @@ Target "RunTests" (fun _ ->
                                    -- "./src/examples/**"
         rawProjects |> Seq.choose filterProjects
 
-    let runSingleProject project =
+    let projectDlls = projects |> Seq.map ( fun project ->
+            let assemblyName = fileNameWithoutExt project
+            (directory project) @@ "bin" @@ "Release" @@ testNetFrameworkVersion @@ assemblyName + ".dll" 
+        )
+        
+    let runSingleProject projectDll =
         let arguments =
             match (hasTeamCity) with
-            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
-            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetFrameworkVersion outputTests)
+            | true -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" projectDll testNetFrameworkVersion outputTests)
+            | false -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -parallel none" projectDll testNetFrameworkVersion outputTests)
 
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
-            info.WorkingDirectory <- (Directory.GetParent project).FullName
+            info.WorkingDirectory <- outputTests
             info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
 
         ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
     CreateDir outputTests
-    projects |> Seq.iter (runSingleProject)
+    projectDlls |> Seq.iter ( runSingleProject )
 )
 
 Target "RunTestsNetCore" (fun _ ->
@@ -277,21 +282,26 @@ Target "RunTestsNetCore" (fun _ ->
                                        -- "./src/examples/**"
             rawProjects |> Seq.choose filterProjects
 
-        let runSingleProject project =
+        let projectDlls = projects |> Seq.map ( fun project ->
+                let assemblyName = fileNameWithoutExt project
+                (directory project) @@ "bin" @@ "Release" @@ testNetCoreVersion @@ assemblyName + ".dll" 
+            )
+        
+        let runSingleProject projectDll =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetCoreVersion outputTests)
-                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetCoreVersion outputTests)
+                | true -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" projectDll testNetCoreVersion outputTests)
+                | false -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -parallel none" projectDll testNetCoreVersion outputTests)
 
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
-                info.WorkingDirectory <- (Directory.GetParent project).FullName
+                info.WorkingDirectory <- outputTests
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
 
             ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
         CreateDir outputTests
-        projects |> Seq.iter (runSingleProject)
+        projectDlls |> Seq.iter ( runSingleProject )
 )
 
 Target "RunTestsNet" (fun _ ->
@@ -307,21 +317,26 @@ Target "RunTestsNet" (fun _ ->
                                        -- "./src/examples/**"
             rawProjects |> Seq.choose filterProjects
 
-        let runSingleProject project =
+        let projectDlls = projects |> Seq.map ( fun project ->
+                let assemblyName = fileNameWithoutExt project
+                (directory project) @@ "bin" @@ "Release" @@ testNetVersion @@ assemblyName + ".dll" 
+            )
+        
+        let runSingleProject projectDll =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetVersion outputTests)
-                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetVersion outputTests)
+                | true -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" projectDll testNetVersion outputTests)
+                | false -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -parallel none" projectDll testNetVersion outputTests)
 
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
-                info.WorkingDirectory <- (Directory.GetParent project).FullName
+                info.WorkingDirectory <- outputTests
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
 
             ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
         CreateDir outputTests
-        projects |> Seq.iter (runSingleProject)
+        projectDlls |> Seq.iter ( runSingleProject )
 )
 
 Target "MultiNodeTestsNetCore" (fun _ ->
