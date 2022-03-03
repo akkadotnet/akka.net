@@ -1,2 +1,4 @@
-- name: Serializer Code Table
-  href: serializer-codes.md
+- name: Overview
+  href: serialization.md
+- name: Code Table
+  href: codes.md
