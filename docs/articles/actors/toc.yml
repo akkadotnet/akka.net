@@ -10,6 +10,8 @@
   href: mailboxes.md
 - name: Scheduling Future and Recurring Messages
   href: schedulers.md
+- name: Akka.IO
+  href: io.md
 - name: Inbox
   href: inbox.md
 - name: Finite State Machines
@@ -24,3 +26,4 @@
   href: testing-actor-systems.md
 - name: Coordinated Shutdown
   href: coordinated-shutdown.md
+  
