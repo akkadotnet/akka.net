@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
@@ -16,8 +18,10 @@ using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -133,41 +137,36 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
-        private ActorSystem systemB;
-        private IActorRef remote;
+        private readonly ActorSystem _systemB;
+        private readonly IActorRef _remote;
 
         private RootActorPath RootB
         {
-            get { return new RootActorPath(systemB.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress); }
+            get { return new RootActorPath(_systemB.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress); }
         }
 
-        private IActorRef Here
+        private async Task<IActorRef> Here()
         {
-            get
-            {
-                Sys.ActorSelection(RootB / "user" / "echo").Tell(new Identify(null), TestActor);
-                return ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(3)).Subject;
-            }
+            var identity = await Sys.ActorSelection(RootB / "user" / "echo").Ask<ActorIdentity>(new Identify(null));
+            return identity.Subject;
         }
 
-        private bool Throttle(ThrottleTransportAdapter.Direction direction, ThrottleMode mode)
+        private async Task<bool> Throttle(ThrottleTransportAdapter.Direction direction, ThrottleMode mode)
         {
             var rootBAddress = new Address("akka", "systemB", "localhost", RootB.Address.Port.Value);
             var transport =
                 Sys.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
-            var task = transport.ManagementCommand(new SetThrottle(rootBAddress, direction, mode));
-            task.Wait(TimeSpan.FromSeconds(3));
-            return task.Result;
+            
+            return await transport.ManagementCommand(new SetThrottle(rootBAddress, direction, mode));
         }
 
-        private bool Disassociate()
+        private async Task<bool> Disassociate()
         {
             var rootBAddress = new Address("akka", "systemB", "localhost", RootB.Address.Port.Value);
             var transport =
                 Sys.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
-            var task = transport.ManagementCommand(new ForceDisassociate(rootBAddress));
-            task.Wait(TimeSpan.FromSeconds(3));
-            return task.Result;
+            
+            return await transport.ManagementCommand(new ForceDisassociate(rootBAddress));
         }
 
         #endregion
@@ -175,49 +174,66 @@ namespace Akka.Remote.Tests.Transport
         public ThrottlerTransportAdapterSpec(ITestOutputHelper output)
             : base(ThrottlerTransportAdapterSpecConfig, output)
         {
-            systemB = ActorSystem.Create("systemB", Sys.Settings.Config);
-            remote = systemB.ActorOf(Props.Create<Echo>(), "echo");
+            _systemB = ActorSystem.Create("systemB", Sys.Settings.Config);
+            _remote = _systemB.ActorOf(Props.Create<Echo>(), "echo");
         }
 
         #region Tests
 
         [Fact]
-        public void ThrottlerTransportAdapter_must_maintain_average_message_rate()
+        public async Task ThrottlerTransportAdapter_must_maintain_average_message_rate()
         {
-            Throttle(ThrottleTransportAdapter.Direction.Send, new Remote.Transport.TokenBucket(PingPacketSize*4, BytesPerSecond, 0, 0)).ShouldBeTrue();
-            var tester = Sys.ActorOf(Props.Create(() => new ThrottlingTester(Here, TestActor)));
+            await ShouldCompleteWithin(
+                () => Throttle(
+                    ThrottleTransportAdapter.Direction.Send,
+                    new Remote.Transport.TokenBucket(PingPacketSize * 4, BytesPerSecond, 0, 0)),
+                true, TimeSpan.FromSeconds(3));
+            
+            var here = await Here();
+            var tester = Sys.ActorOf(Props.Create(() => new ThrottlingTester(here, TestActor)));
             tester.Tell("start");
 
             var time = TimeSpan.FromTicks(ExpectMsg<long>(TimeSpan.FromSeconds(TotalTime + 12))).TotalSeconds;
             Log.Warning("Total time of transmission: {0}", time);
-            Assert.True(time > TotalTime - 12);
-            Throttle(ThrottleTransportAdapter.Direction.Send, Unthrottled.Instance).ShouldBeTrue();
+            time.Should().BeGreaterThan(TotalTime - 12);
+            
+            await ShouldCompleteWithin(
+                () => Throttle(ThrottleTransportAdapter.Direction.Send, Unthrottled.Instance),
+                true, TimeSpan.FromSeconds(3));
         }
 
         [Fact]
-        public void ThrottlerTransportAdapter_must_survive_blackholing()
+        public async Task ThrottlerTransportAdapter_must_survive_blackholing()
         {
-            Here.Tell(new ThrottlingTester.Lost("BlackHole 1"));
+            
+            var here = await Here();
+            here.Tell(new ThrottlingTester.Lost("BlackHole 1"));
             ExpectMsg(new ThrottlingTester.Lost("BlackHole 1"));
 
-            var here = Here;
-            //TODO: muteDeadLetters (typeof(Lost)) for both actor systems 
+            MuteDeadLetters(typeof(ThrottlingTester.Lost));
+            MuteDeadLetters(_systemB, typeof(ThrottlingTester.Lost));
 
-            Throttle(ThrottleTransportAdapter.Direction.Both, Blackhole.Instance).ShouldBeTrue();
-            
+            await ShouldCompleteWithin(
+                func: () => Throttle(ThrottleTransportAdapter.Direction.Both, Blackhole.Instance), 
+                expected: true, 
+                timeout: TimeSpan.FromSeconds(3));
+
             here.Tell(new ThrottlingTester.Lost("BlackHole 2"));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
-            Disassociate().ShouldBeTrue();
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ShouldCompleteWithin(Disassociate, true, TimeSpan.FromSeconds(3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
-            Throttle(ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance).ShouldBeTrue();
+            await ShouldCompleteWithin(
+                func: () => Throttle(ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance), 
+                expected: true,
+                timeout: TimeSpan.FromSeconds(3));
 
             // after we remove the Blackhole we can't be certain of the state
             // of the connection, repeat until success
             here.Tell(new ThrottlingTester.Lost("BlackHole 3"));
-            AwaitCondition(() =>
+            await AwaitConditionAsync(async () =>
             {
-                var received = ReceiveOne(TimeSpan.Zero);
+                var received = await ReceiveOneAsync(TimeSpan.Zero);
                 if (received != null && received.Equals(new ThrottlingTester.Lost("BlackHole 3")))
                     return true;
 
@@ -227,7 +243,18 @@ namespace Akka.Remote.Tests.Transport
             }, TimeSpan.FromSeconds(15));
 
             here.Tell("Cleanup");
-            FishForMessage(o => o.Equals("Cleanup"), TimeSpan.FromSeconds(5));
+            await FishForMessageAsync(o => o.Equals("Cleanup"), TimeSpan.FromSeconds(5));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static async Task ShouldCompleteWithin<T>(Func<Task<T>> func, T expected, TimeSpan timeout)
+        {
+            T result = default;
+            await Awaiting(async () =>
+            {
+                result = await func();
+            }).Should().CompleteWithinAsync(timeout);
+            result.Should().Be(expected);
         }
 
         #endregion
@@ -238,7 +265,7 @@ namespace Akka.Remote.Tests.Transport
         {
             EventFilter.Warning(start: "received dead letter").Mute();
             EventFilter.Warning(new Regex("received dead letter.*(InboundPayload|Disassociate)")).Mute();
-            systemB.EventStream.Publish(new Mute(new WarningFilter(new RegexMatcher(new Regex("received dead letter.*(InboundPayload|Disassociate)"))), 
+            _systemB.EventStream.Publish(new Mute(new WarningFilter(new RegexMatcher(new Regex("received dead letter.*(InboundPayload|Disassociate)"))), 
                 new ErrorFilter(typeof(EndpointException)),
                 new ErrorFilter(new StartsWithString("AssociationError"))));
             base.BeforeTermination();
@@ -246,7 +273,7 @@ namespace Akka.Remote.Tests.Transport
 
         protected override void AfterTermination()
         {
-            Shutdown(systemB);
+            Shutdown(_systemB);
             base.AfterTermination();
         }
 
