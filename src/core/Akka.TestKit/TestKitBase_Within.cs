@@ -49,6 +49,9 @@ namespace Akka.TestKit
                 .ConfigureAwait(false).GetAwaiter().GetResult();
         }
         
+        /// <summary>
+        /// Async version of <see cref="Within(TimeSpan, Action, TimeSpan?, CancellationToken)"/>
+        /// </summary>
         public async Task WithinAsync(
             TimeSpan max,
             Action action,
@@ -70,7 +73,8 @@ namespace Akka.TestKit
         }
         
         /// <summary>
-        /// Async version of Within
+        /// Async version of <see cref="Within(TimeSpan, Action, TimeSpan?, CancellationToken)"/>
+        /// that takes a <see cref="Func{Task}"/> instead of an <see cref="Action"/>
         /// </summary>
         public async Task WithinAsync(
             TimeSpan max,
@@ -127,6 +131,9 @@ namespace Akka.TestKit
                 .ConfigureAwait(false).GetAwaiter().GetResult();
         }
         
+        /// <summary>
+        /// Async version of <see cref="Within(TimeSpan, TimeSpan, Action, string, TimeSpan?, CancellationToken)"/>
+        /// </summary>
         public async Task WithinAsync(
             TimeSpan min,
             TimeSpan max,
@@ -150,7 +157,8 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Async version of <see cref="Within(System.TimeSpan,System.Action,System.Nullable{System.TimeSpan})"/>
+        /// Async version of <see cref="Within(TimeSpan, TimeSpan, Action, string, TimeSpan?, CancellationToken)"/>
+        /// that takes a <see cref="Func{Task}"/> instead of an <see cref="Action"/>
         /// </summary>
         public async Task WithinAsync(
             TimeSpan min,
@@ -265,6 +273,9 @@ namespace Akka.TestKit
                 .WaitAndUnwrapException();
         }
 
+        /// <summary>
+        /// Async version of <see cref="Within{T}(TimeSpan, TimeSpan, Func{T}, string, TimeSpan?, CancellationToken)"/>
+        /// </summary>
         public async Task<T> WithinAsync<T>(
             TimeSpan min,
             TimeSpan max,
