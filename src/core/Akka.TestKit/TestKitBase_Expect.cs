@@ -360,18 +360,6 @@ namespace Akka.TestKit
             return await InternalExpectMsgAsync(timeout, msgAssert, null, hint, cancellationToken);
         }
 
-        private T InternalExpectMsg<T>(
-            TimeSpan? timeout,
-            Action<T> msgAssert,
-            Action<IActorRef> senderAssert,
-            string hint,
-            CancellationToken cancellationToken = default)
-        {
-            return InternalExpectMsgAsync(timeout, msgAssert, senderAssert, hint, cancellationToken)
-                .AsTask()
-                .WaitAndUnwrapException(cancellationToken);
-        }
-        
         private async ValueTask<T> InternalExpectMsgAsync<T>(
             TimeSpan? timeout,
             Action<T> msgAssert,
@@ -383,24 +371,13 @@ namespace Akka.TestKit
             return (T)item.Message;
         }
 
-        private T InternalExpectMsg<T>(
-            TimeSpan? timeout,
-            Action<T, IActorRef> assert,
-            string hint,
-            CancellationToken cancellationToken = default)
-        {
-            return InternalExpectMsgAsync(timeout, assert, hint, cancellationToken: cancellationToken)
-                .AsTask()
-                .WaitAndUnwrapException(cancellationToken);
-        }
-        
         private async ValueTask<T> InternalExpectMsgAsync<T>(
             TimeSpan? timeout,
             Action<T, IActorRef> assert,
             string hint,
             CancellationToken cancellationToken)
         {
-            var envelope = await InternalExpectMsgEnvelopeAsync(timeout, assert, hint, cancellationToken: cancellationToken);
+            var envelope = await InternalExpectMsgEnvelopeAsync(timeout, assert, hint, cancellationToken);
             return (T)envelope.Message;
         }
 
@@ -424,8 +401,8 @@ namespace Akka.TestKit
                     timeout: timeout, 
                     assert: (Action<T, IActorRef>)CombinedAssert,
                     hint: hint,
-                    shouldLog: false,
-                    cancellationToken: cancellationToken)
+                    cancellationToken: cancellationToken,
+                    shouldLog: false)
                 .ConfigureAwait(false);
             return envelope;
         }
@@ -434,8 +411,8 @@ namespace Akka.TestKit
             TimeSpan? timeout,
             Action<T, IActorRef> assert, 
             string hint,
-            bool shouldLog = false,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken,
+            bool shouldLog = false)
         {
             ConditionalLog(shouldLog, "Expecting message of type {0}. {1}", typeof(T), hint);
             var (success, envelope) = await TryReceiveOneAsync(timeout, cancellationToken);
