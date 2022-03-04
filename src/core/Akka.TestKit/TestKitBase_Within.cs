@@ -35,8 +35,38 @@ namespace Akka.TestKit
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
         {
-            WithinAsync(max, async () => action, epsilonValue, cancellationToken)
-                .WaitAndUnwrapException();
+            WithinAsync(
+                    min: TimeSpan.Zero,
+                    max: max,
+                    function: () =>
+                    {
+                        action();
+                        return Task.FromResult((object)null);
+                    },
+                    hint: null,
+                    epsilonValue: epsilonValue,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+        }
+        
+        public async Task WithinAsync(
+            TimeSpan max,
+            Action action,
+            TimeSpan? epsilonValue = null,
+            CancellationToken cancellationToken = default)
+        {
+            await WithinAsync(
+                    min: TimeSpan.Zero,
+                    max: max,
+                    function: () =>
+                    {
+                        action();
+                        return Task.FromResult((object)null);
+                    },
+                    hint: null,
+                    epsilonValue: epsilonValue,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
         }
         
         /// <summary>
@@ -51,7 +81,12 @@ namespace Akka.TestKit
             await WithinAsync(
                 min: TimeSpan.Zero,
                 max: max,
-                actionAsync: actionAsync,
+                function: async () =>
+                {
+                    await actionAsync().ConfigureAwait(false);
+                    return Task.FromResult((object)null);
+                },
+                hint: null,
                 epsilonValue: epsilonValue,
                 cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
@@ -78,10 +113,42 @@ namespace Akka.TestKit
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
         {
-            WithinAsync(min, max, async () => action, hint, epsilonValue, cancellationToken)
-                .WaitAndUnwrapException();
+            WithinAsync(
+                    min: min, 
+                    max: max, 
+                    function: () =>
+                    {
+                        action();
+                        return Task.FromResult((object)null);
+                    }, 
+                    hint: hint, 
+                    epsilonValue: epsilonValue, 
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
         }
         
+        public async Task WithinAsync(
+            TimeSpan min,
+            TimeSpan max,
+            Action action,
+            string hint = null,
+            TimeSpan? epsilonValue = null,
+            CancellationToken cancellationToken = default)
+        {
+            await WithinAsync(
+                    min: min,
+                    max: max,
+                    function: () =>
+                    {
+                        action();
+                        return Task.FromResult((object)null);
+                    }, 
+                    hint: hint,
+                    epsilonValue: epsilonValue, 
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         /// <summary>
         /// Async version of <see cref="Within(System.TimeSpan,System.Action,System.Nullable{System.TimeSpan})"/>
         /// </summary>
@@ -93,13 +160,13 @@ namespace Akka.TestKit
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
         {
-            await WithinAsync<object>(
+            await WithinAsync(
                 min: min,
                 max: max,
                 function: async () =>
                 {
-                    await actionAsync();
-                    return null;
+                    await actionAsync().ConfigureAwait(false);
+                    return (object)null;
                 }, 
                 hint: hint,
                 epsilonValue: epsilonValue, 
@@ -130,9 +197,10 @@ namespace Akka.TestKit
                     min: TimeSpan.Zero,
                     max: max,
                     function: () => Task.FromResult(function()),
-                    epsilonValue: epsilonValue, 
+                    hint: null,
+                    epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
-                .WaitAndUnwrapException();
+                .ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -158,6 +226,7 @@ namespace Akka.TestKit
                     min: TimeSpan.Zero,
                     max: max,
                     function: function, 
+                    hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
@@ -196,6 +265,24 @@ namespace Akka.TestKit
                 .WaitAndUnwrapException();
         }
 
+        public async Task<T> WithinAsync<T>(
+            TimeSpan min,
+            TimeSpan max,
+            Func<T> function,
+            string hint = null,
+            TimeSpan? epsilonValue = null,
+            CancellationToken cancellationToken = default)
+        {
+            return await WithinAsync(
+                    min: min,
+                    max: max,
+                    function: () => Task.FromResult(function()),
+                    hint: hint,
+                    epsilonValue: epsilonValue,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+        }
+        
         /// <summary>
         /// Execute code block while bounding its execution time between <paramref name="min"/> and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
@@ -235,23 +322,7 @@ namespace Akka.TestKit
             T ret;
             try
             {
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                using (cts)
-                {
-                    var funcTask = function();
-                    var timeoutTask = Task.Delay(maxDiff + TimeSpan.FromSeconds(1), cts.Token);
-
-                    var finishedTask = await Task.WhenAny(funcTask, timeoutTask);
-                    if (finishedTask == funcTask)
-                    {
-                        ret = await function();
-                        cts.Cancel();
-                    }
-                    else
-                    {
-                        ret = default;
-                    }
-                }
+                ret = await function();
             }
             finally
             {
