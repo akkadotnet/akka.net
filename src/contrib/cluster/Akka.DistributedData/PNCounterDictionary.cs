@@ -179,7 +179,7 @@ namespace Akka.DistributedData
         public PNCounterDictionary<TKey> PruningCleanup(UniqueAddress removedNode) =>
             new PNCounterDictionary<TKey>(Underlying.PruningCleanup(removedNode));
 
-        /// <inheritdoc/>
+        
         public bool Equals(PNCounterDictionary<TKey> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -188,19 +188,19 @@ namespace Akka.DistributedData
             return Equals(Underlying, other.Underlying);
         }
 
-        /// <inheritdoc/>
+        
         public IEnumerator<KeyValuePair<TKey, BigInteger>> GetEnumerator() =>
             Underlying.Select(x => new KeyValuePair<TKey, BigInteger>(x.Key, x.Value.Value)).GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) =>
             obj is PNCounterDictionary<TKey> pairs && Equals(pairs);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Underlying.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             var sb = new StringBuilder("PNCounterDictionary(");

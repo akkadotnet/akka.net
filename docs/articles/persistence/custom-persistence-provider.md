@@ -444,7 +444,7 @@ There are two conventions that needs to be implemented when you extend `IExtensi
 
 * It is strongly recommended to create a static `Get` method that returns an instance of this class. This method is responsible for registering the extension with the Akka.NET extension manager and instantiates a new instance for users to use.
 
-[!code-csharp[Get-Instance](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=Get-Instance "Extension static Get method")]
+[!code-csharp[GetInstance](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=GetInstance "Extension static Get method")]
 
 ### Extending `ExtensionIdProvider<T>`
 

@@ -1287,7 +1287,7 @@ namespace Akka.Streams.Dsl
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.MergeMany(flow, breadth, flatten);
         }
-        
+
         /// <summary>
         /// Combine the elements of current flow into a stream of tuples consisting
         /// of all elements paired with their index. Indices start at 0.
@@ -1558,7 +1558,7 @@ namespace Akka.Streams.Dsl
         {
             return (SubFlow<TOut, TMat, TClosed>) InternalFlowOperations.AlsoTo(flow, that);
         }
-        
+
         /// <summary>
         /// <para>
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, as a wire tap, meaning that elements that pass
@@ -1571,7 +1571,7 @@ namespace Akka.Streams.Dsl
         /// <para>Completes when upstream completes</para>
         /// <para>Cancels when downstream cancels</para>
         /// </summary>
-        public static SubFlow<TOut, TMat, TClosed> WireTap<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, IGraph<SinkShape<TOut>, TMat> that) => 
+        public static SubFlow<TOut, TMat, TClosed> WireTap<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, IGraph<SinkShape<TOut>, TMat> that) =>
             (SubFlow<TOut, TMat, TClosed>) InternalFlowOperations.WireTap(flow, that);
 
         /// <summary>
@@ -1614,7 +1614,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="that">TBD</param>
         /// <param name="when">TBD</param>
-        public static SubFlow<TOut, TMat, TClosed> DivertTo<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when) => 
+        public static SubFlow<TOut, TMat, TClosed> DivertTo<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when) =>
             (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.DivertTo(flow, that, when);
 
         ///<summary>
@@ -1633,10 +1633,8 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="materializerFunction">TBD</param>
         /// <returns>TBD</returns>
-        public static SubFlow<TOut, TMat2, TClosed> WatchTermination<TOut, TMat, TMat2, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Func<TMat, Task, TMat2> materializerFunction)
-        {
-            return (SubFlow<TOut, TMat2, TClosed>) InternalFlowOperations.WatchTermination(flow, materializerFunction);
-        }
+        public static SubFlow<TOut, TMat2, TClosed> WatchTermination<TOut, TMat, TMat2, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) =>
+            (SubFlow<TOut, TMat2, TClosed>)InternalFlowOperations.WatchTermination(flow, materializerFunction);
 
         /// <summary>
         /// Detaches upstream demand from downstream demand without detaching the

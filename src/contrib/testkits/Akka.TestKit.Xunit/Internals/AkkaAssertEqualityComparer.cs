@@ -13,7 +13,7 @@ using System.Reflection;
 namespace Akka.TestKit.Xunit.Internals
 {
     /// <summary>
-    /// Default implementation of IEqualityComparer<T> used by the Akka's xUnit.net equality assertions.
+    /// Default implementation of IEqualityComparer{T} used by the Akka's xUnit.net equality assertions.
     /// Copy of xUnits code
     /// https://github.com/xunit/xunit/blob/3e6ab94ca231a6d8c86e90d6e724631a0faa33b7/src/xunit.assert/Asserts/Sdk/AssertEqualityComparer.cs
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
@@ -40,7 +40,7 @@ namespace Akka.TestKit.Xunit.Internals
             _innerComparerFactory = () => innerComparer ?? DefaultInnerComparer;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(T x, T y)
         {
             var typeInfo = typeof(T).GetTypeInfo();
@@ -91,7 +91,7 @@ namespace Akka.TestKit.Xunit.Internals
             return object.Equals(x, y);
         }
 
-        /// <inheritdoc/>
+        
         public int GetHashCode(T obj) => throw new NotImplementedException();
     }
 }

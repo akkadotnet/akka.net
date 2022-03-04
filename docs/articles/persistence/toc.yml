@@ -1,0 +1,22 @@
+- name: Architecture
+  href: architecture.md
+- name: Event sourcing
+  href: event-sourcing.md
+- name: Persistence Views
+  href: persistent-views.md
+- name: Snapshots
+  href: snapshots.md
+- name: At-Least-Once Delivery
+  href: at-least-once-delivery.md
+- name: Event Adapters
+  href: event-adapters.md
+- name: Persistent FSM
+  href: persistent-fsm.md
+- name: Storage plugins
+  href: storage-plugins.md
+- name: Custom serialization
+  href: custom-serialization.md
+- name: Persistence Query
+  href: persistence-query.md
+- name: Persistence Testing
+  href: persistence-testing.md
