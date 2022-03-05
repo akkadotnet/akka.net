@@ -1797,11 +1797,10 @@ namespace Akka.Cluster
         public void ReceiveGossipStatus(GossipStatus status)
         {
             var from = status.From;
-            if (!LatestGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, from))
+            if(!LatestGossip.HasMember(from))
+                _cluster.LogInfo("Ignoring received gossip status from unknown [{0}]", from);
+            else if (!LatestGossip.IsReachable(SelfUniqueAddress, from))
                 _cluster.LogInfo("Ignoring received gossip status from unreachable [{0}]", from);
-            else if (LatestGossip.Members.All(m => !m.UniqueAddress.Equals(from)))
-                _cluster.LogInfo("Cluster Node [{0}] - Ignoring received gossip status from unknown [{1}]",
-                    _cluster.SelfAddress, from);
             else
             {
                 var comparison = status.Version.CompareTo(LatestGossip.Version);
@@ -1870,14 +1869,14 @@ namespace Akka.Cluster
                     from.Address, envelope.To);
                 return ReceiveGossipType.Ignored;
             }
-            if (!localGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, from))
+            if (!localGossip.HasMember(from))
             {
-                _cluster.LogInfo("Ignoring received gossip from unreachable [{0}]", from);
+                _cluster.LogInfo("Ignoring received gossip from unknown [{0}]", from);
                 return ReceiveGossipType.Ignored;
             }
-            if (localGossip.Members.All(m => !m.UniqueAddress.Equals(from)))
+            if (!localGossip.IsReachable(SelfUniqueAddress, from))
             {
-                _cluster.LogInfo("Cluster Node [{0}] - Ignoring received gossip from unknown [{1}]", _cluster.SelfAddress, from);
+                _cluster.LogInfo("Ignoring received gossip from unreachable [{0}]", from);
                 return ReceiveGossipType.Ignored;
             }
             if (remoteGossip.Members.All(m => !m.UniqueAddress.Equals(SelfUniqueAddress)))
