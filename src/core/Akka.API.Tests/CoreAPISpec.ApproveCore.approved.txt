@@ -4045,10 +4045,9 @@ namespace Akka.Pattern
         public Akka.Pattern.CircuitBreaker OnOpen(System.Action callback) { }
         public void Succeed() { }
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.Tasks.Task<T>> body) { }
-        public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.Tasks.Task<T>> body) { }
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T, TState>(TState state, System.Func<TState, System.Threading.Tasks.Task<T>> body) { }
         public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.Tasks.Task> body) { }
-        public System.Threading.Tasks.Task WithCircuitBreakerTState>(TState state, System.Func<TState, System.Threading.Tasks.Task body) { }
+        public System.Threading.Tasks.Task WithCircuitBreaker<TState>(TState state, System.Func<TState, System.Threading.Tasks.Task> body) { }
         public Akka.Pattern.CircuitBreaker WithExponentialBackoff(System.TimeSpan maxResetTimeout) { }
         public Akka.Pattern.CircuitBreaker WithRandomFactor(double randomFactor) { }
         public void WithSyncCircuitBreaker(System.Action body) { }
