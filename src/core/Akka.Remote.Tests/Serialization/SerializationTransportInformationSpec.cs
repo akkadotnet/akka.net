@@ -181,6 +181,7 @@ namespace Akka.Remote.Tests.Serialization
 
         protected override void AfterAll()
         {
+            base.AfterAll();
             Shutdown(System2, verifySystemShutdown: true);
         }
     }

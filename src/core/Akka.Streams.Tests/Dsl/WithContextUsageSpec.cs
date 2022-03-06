@@ -214,7 +214,7 @@ namespace Akka.Streams.Tests.Dsl
                     new CommittableMessage<Record>(new Record(GenKey(i), GenValue(i)), new CommittableOffsetImpl(i)))
                 .ToArray();
 
-        private static SourceWithContext<Offset, Record, NotUsed> CreateSourceWithContext(
+        private static SourceWithContext<Record, Offset, NotUsed> CreateSourceWithContext(
             params CommittableMessage<Record>[] messages) =>
             CommittableConsumer.CommittableSource(messages)
                 .AsSourceWithContext(m => new Offset(m.Offset.Offset))
