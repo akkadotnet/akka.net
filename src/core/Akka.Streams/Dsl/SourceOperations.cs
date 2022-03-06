@@ -2275,10 +2275,9 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TOut">Type of produced events.</typeparam>
         /// <typeparam name="TMat">Type of materialized value.</typeparam>
         /// <returns></returns>
-        public static SourceWithContext<TCtx, TOut, TMat> AsSourceWithContext<TCtx, TOut, TMat>(
-            this Source<TOut, TMat> flow, Func<TOut, TCtx> fn) =>
-            new SourceWithContext<TCtx, TOut, TMat>(flow.Select(x => (x, fn(x))));
-
+        public static SourceWithContext<TOut, TCtx, TMat> AsSourceWithContext<TOut, TCtx, TMat>(this Source<TOut, TMat> flow, Func<TOut, TCtx> fn) =>
+            new SourceWithContext<TOut, TCtx, TMat>(flow.Select(x => (x, fn(x))));
+      
         /// <summary>
         /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated.
         /// 
