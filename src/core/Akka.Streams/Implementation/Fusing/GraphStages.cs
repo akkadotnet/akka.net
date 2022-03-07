@@ -36,7 +36,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task> TerminationWatcher<T>()
+        internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Done>> TerminationWatcher<T>()
             => Implementation.Fusing.TerminationWatcher<T>.Instance;
 
         /// <summary>
@@ -289,7 +289,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    internal sealed class TerminationWatcher<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task>
+    internal sealed class TerminationWatcher<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Done>>
     {
         /// <summary>
         /// TBD
@@ -301,10 +301,10 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly TerminationWatcher<T> _stage;
-            private readonly TaskCompletionSource<NotUsed> _finishPromise;
+            private readonly TaskCompletionSource<Done> _finishPromise;
             private bool _completedSignalled;
 
-            public Logic(TerminationWatcher<T> stage, TaskCompletionSource<NotUsed> finishPromise) : base(stage.Shape)
+            public Logic(TerminationWatcher<T> stage, TaskCompletionSource<Done> finishPromise) : base(stage.Shape)
             {
                 _stage = stage;
                 _finishPromise = finishPromise;
@@ -316,7 +316,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnUpstreamFinish()
             {
-                _finishPromise.TrySetResult(NotUsed.Instance);
+                _finishPromise.TrySetResult(Done.Instance);
                 _completedSignalled = true;
                 CompleteStage();
             }
@@ -332,7 +332,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnDownstreamFinish()
             {
-                _finishPromise.TrySetResult(NotUsed.Instance);
+                _finishPromise.TrySetResult(Done.Instance);
                 _completedSignalled = true;
                 CompleteStage();
             }
@@ -369,10 +369,10 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="inheritedAttributes">TBD</param>
         /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<Task> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Task<Done>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var finishPromise = new TaskCompletionSource<NotUsed>();
-            return new LogicAndMaterializedValue<Task>(new Logic(this, finishPromise), finishPromise.Task);
+            var finishPromise = new TaskCompletionSource<Done>();
+            return new LogicAndMaterializedValue<Task<Done>>(new Logic(this, finishPromise), finishPromise.Task);
         }
 
         /// <summary>

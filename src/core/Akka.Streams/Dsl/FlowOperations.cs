@@ -1916,7 +1916,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="materializerFunction">TBD</param>
         /// <returns>TBD</returns>
-        public static Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Flow<TIn, TOut, TMat> flow, Func<TMat, Task, TMat2> materializerFunction) where TIn : TOut
+        public static Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Flow<TIn, TOut, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) where TIn : TOut
         {
             return (Flow<TIn, TOut, TMat2>)InternalFlowOperations.WatchTermination(flow, materializerFunction);
         }
@@ -2399,7 +2399,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TCtxOut">Resulting context type</typeparam>
         /// <typeparam name="TMat">Materialized value type</typeparam>
         /// <typeparam name="TIn2">Type of passed flow elements</typeparam>
-        public static FlowWithContext<TCtxIn, TIn, TCtxOut, TOut, TMat> AsFlowWithContext<TCtxIn, TIn, TCtxOut, TOut, TMat, TIn2>(
+        public static FlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat> AsFlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat, TIn2>(
             this Flow<TIn2, TOut, TMat> flow,
             Func<TIn, TCtxIn, TIn2> collapseContext,
             Func<TOut, TCtxOut> extractContext)

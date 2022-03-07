@@ -295,6 +295,21 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// Returns `true` if <paramref name="fromAddress"/> should be able to reach <paramref name="toAddress"/> 
+        /// based on the unreachability data.
+        /// </summary>
+        /// <param name="fromAddress">TBD</param>
+        /// <param name="toAddress">TBD</param>
+        public bool IsReachable(UniqueAddress fromAddress, UniqueAddress toAddress)
+        {
+            if (!HasMember(toAddress)) 
+                return false;
+
+            // as it looks for specific unreachable entires for the node pair we don't have to filter on team
+            return Overview.Reachability.IsReachable(fromAddress, toAddress);
+        }
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="node">TBD</param>
@@ -415,7 +430,7 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public Reachability Reachability { get { return _reachability; } }
-        
+
         /// <inheritdoc/>
         public override string ToString() => $"GossipOverview(seen=[{string.Join(", ", Seen)}], reachability={Reachability})";
     }
