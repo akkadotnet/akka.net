@@ -35,8 +35,8 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         public void AwaitAssert(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
-            var task = AwaitAssertAsync(assertion, duration, interval, cancellationToken);
-            task.WaitAndUnwrapException();
+            AwaitAssertAsync(assertion, duration, interval, cancellationToken)
+                .WaitAndUnwrapException();
         }
         
         /// <inheritdoc cref="AwaitAssert(Action, TimeSpan?, TimeSpan?, CancellationToken)"/>
@@ -53,6 +53,7 @@ namespace Akka.TestKit
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
+                    // TODO: assertion can run forever, need a way to stop this if this happens.
                     assertion();
                     return;
                 }
