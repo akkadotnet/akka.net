@@ -364,7 +364,7 @@ namespace Akka.TestKit
         /// <summary>
         /// <para>
         /// Retrieves the time remaining for execution of the innermost enclosing
-        /// <see cref="Within(TimeSpan, Action, TimeSpan?)">Within</see> block.
+        /// <see cref="Within(TimeSpan, Action, TimeSpan?, CancellationToken)">Within</see> block.
         /// If missing that, then it returns the properly dilated default for this
         /// case from settings (key: "akka.test.single-expect-default").
         /// </para>
@@ -378,7 +378,7 @@ namespace Akka.TestKit
         /// <summary>
         /// <para>
         /// Retrieves the time remaining for execution of the innermost enclosing
-        /// <see cref="Within(TimeSpan, Action, TimeSpan?)">Within</see> block.
+        /// <see cref="Within(TimeSpan, Action, TimeSpan?, CancellationToken)">Within</see> block.
         /// </para>
         /// <remarks>The returned value is always finite.</remarks>
         /// </summary>
