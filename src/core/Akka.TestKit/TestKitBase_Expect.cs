@@ -391,16 +391,6 @@ namespace Akka.TestKit
             return (T)item.Message;
         }
 
-        private T InternalExpectMsg<T>(
-            TimeSpan? timeout,
-            Action<T, IActorRef> assert,
-            string hint,
-            CancellationToken cancellationToken = default)
-        {
-            return InternalExpectMsgAsync(timeout, assert, hint, cancellationToken: cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-        }
-        
         private async ValueTask<T> InternalExpectMsgAsync<T>(
             TimeSpan? timeout,
             Action<T, IActorRef> assert,
@@ -432,8 +422,8 @@ namespace Akka.TestKit
                     timeout: timeout, 
                     assert: combinedAssert,
                     hint: hint,
-                    shouldLog: false,
-                    cancellationToken: cancellationToken)
+                    cancellationToken: cancellationToken,
+                    shouldLog: false)
                 .ConfigureAwait(false);
             return envelope;
         }
@@ -442,8 +432,8 @@ namespace Akka.TestKit
             TimeSpan? timeout,
             Action<T, IActorRef> assert, 
             string hint,
-            bool shouldLog = false,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken,
+            bool shouldLog = false)
         {
             ConditionalLog(shouldLog, "Expecting message of type {0}. {1}", typeof(T), hint);
             var (success, envelope) = await TryReceiveOneAsync(timeout, cancellationToken)
