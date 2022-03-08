@@ -463,14 +463,16 @@ namespace Akka.Tests.Dispatch
             {
                 ReceiveAsync<string>(async msg =>
                 {
-                    Task.Run(() =>
-                    {
-                        Thread.Sleep(10);
-                        return msg;
-                    }).PipeTo(Sender, Self); //LogicalContext is lost?!?
+                    Delayed(msg).PipeTo(Sender, Self);
 
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                 });
+            }
+
+            private async Task<string> Delayed(string msg)
+            {
+                await Task.Delay(10);
+                return msg;
             }
         }
 
@@ -483,13 +485,20 @@ namespace Akka.Tests.Dispatch
                     var sender = Sender;
                     Task.Run(() =>
                     {
-                        //Sleep to make sure the task is not completed when ContinueWith is called
+                        
                         Thread.Sleep(100);
                         return msg;
                     }).ContinueWith(_ => sender.Tell(msg)); // ContinueWith will schedule with the implicit ActorTaskScheduler
 
                     Thread.Sleep(3000);
                 });
+            }
+            
+            private async Task<string> Delayed(string msg)
+            {
+                // Sleep to make sure the task is not completed when ContinueWith is called
+                await Task.Delay(100);
+                return msg;
             }
         }
 
@@ -503,12 +512,12 @@ namespace Akka.Tests.Dispatch
         }
 
         [Fact]
-        public void Actor_PipeTo_should_not_be_delayed_by_async_receive()
+        public async Task Actor_PipeTo_should_not_be_delayed_by_async_receive()
         {
             var actor = Sys.ActorOf<AsyncPipeToDelayActor>();
 
             actor.Tell("hello");
-            ExpectMsg<string>(m => "hello".Equals(m), TimeSpan.FromMilliseconds(1000));
+            await ExpectMsgAsync<string>(m => "hello".Equals(m), TimeSpan.FromMilliseconds(1000));
         }
 
         [Fact]

@@ -596,7 +596,7 @@ namespace Akka.TestKit
 
         public async IAsyncEnumerable<T> ExpectMsgAllOfAsync<T>(
             IReadOnlyCollection<T> messages,
-            CancellationToken cancellationToken = default)
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var enumerable = InternalExpectMsgAllOfAsync(RemainingOrDefault, messages, cancellationToken: cancellationToken)
                 .ConfigureAwait(false).WithCancellation(cancellationToken);

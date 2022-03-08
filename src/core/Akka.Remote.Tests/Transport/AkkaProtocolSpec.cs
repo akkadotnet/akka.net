@@ -237,7 +237,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public void ProtocolStateActor_must_handle_explicit_disassociate_messages()
+        public async Task ProtocolStateActor_must_handle_explicit_disassociate_messages()
         {
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
@@ -248,25 +248,38 @@ namespace Akka.Remote.Tests.Transport
                     statusPromise, collaborators.Transport,
                     new AkkaProtocolSettings(config), codec, collaborators.FailureDetector));
 
-            AwaitCondition(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
 
             reader.Tell(testAssociate(33), Self);
 
-            statusPromise.Task.Wait(TimeSpan.FromSeconds(3));
-            statusPromise.Task.Result.Match()
-                .With<AkkaProtocolHandle>(h =>
-                {
+            var cts = new CancellationTokenSource();
+            using (cts)
+            {
+                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(3));
+                var completeTask = await Task.WhenAny(timeoutTask, statusPromise.Task);
+                cts.Cancel();
+                if (completeTask == timeoutTask)
+                    throw new TimeoutException();
+            }
+
+            var result = statusPromise.Task.Result;
+            switch (result)
+            {
+                case AkkaProtocolHandle h:
                     Assert.Equal(_remoteAkkaAddress, h.RemoteAddress);
                     Assert.Equal(_localAkkaAddress, h.LocalAddress);
-                })
-                .Default(msg => Assert.True(false, "Did not receive expected AkkaProtocolHandle from handshake"));
-            var wrappedHandle = statusPromise.Task.Result.AsInstanceOf<AkkaProtocolHandle>();
+                    break;
+                default:
+                    Assert.True(false, "Did not receive expected AkkaProtocolHandle from handshake");
+                    break;
+            }
 
+            var wrappedHandle = (AkkaProtocolHandle) result;
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
             reader.Tell(testDisassociate(DisassociateInfo.Unknown), Self);
 
-            ExpectMsgPf<Disassociated>("expected Disassociated(DisassociateInfo.Unknown", o =>
+            await ExpectMsgOfAsync("expected Disassociated(DisassociateInfo.Unknown", o =>
             {
                 var disassociated = o.AsInstanceOf<Disassociated>();
 
