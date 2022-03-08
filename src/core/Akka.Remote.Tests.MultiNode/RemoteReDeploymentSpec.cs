@@ -142,7 +142,7 @@ namespace Akka.Remote.Tests.MultiNode
                     }
                     else
                     {
-                        ExpectMsgAllOf("PostStop", "PreStart");
+                        ExpectMsgAllOf(new []{ "PostStop", "PreStart" });
                     }
                 });
             }, _config.First);

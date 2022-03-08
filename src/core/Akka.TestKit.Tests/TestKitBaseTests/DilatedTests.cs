@@ -54,7 +54,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         public void ExpectMsgAllOf_should_dilate_timeout()
         {
             var stopwatch = Stopwatch.StartNew();
-            AssertThrows<TrueException>(() => ExpectMsgAllOf(TimeSpan.FromMilliseconds(Timeout), "1", "2"));
+            AssertThrows<TrueException>(() => ExpectMsgAllOf(TimeSpan.FromMilliseconds(Timeout), new []{ "1", "2" }));
             stopwatch.Stop();
             AssertDilated(stopwatch.ElapsedMilliseconds, $"Expected the timeout to be {ExpectedTimeout} but in fact it was {stopwatch.ElapsedMilliseconds}.");
         }
