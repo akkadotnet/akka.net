@@ -12,7 +12,6 @@ using System.Linq;
 using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.Pattern;
 using Hocon;

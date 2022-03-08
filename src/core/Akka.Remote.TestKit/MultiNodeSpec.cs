@@ -19,7 +19,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
-using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
