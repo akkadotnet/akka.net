@@ -173,7 +173,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.Cancel();
 
-                ExpectMsgAllOf<object>(QueueClosed.Instance, "done");
+                ExpectMsgAllOf(new object[]{ QueueClosed.Instance, "done" });
             }, _materializer);
         }
 

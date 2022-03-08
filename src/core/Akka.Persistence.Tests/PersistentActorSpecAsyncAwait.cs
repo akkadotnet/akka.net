@@ -238,7 +238,7 @@ namespace Akka.Persistence.Tests
             {
                 foreach (var probe in probes)
                 {
-                    probe.ExpectMsgAllOf<string>();
+                    probe.ExpectMsgAllOf(new string[]{ });
                 }
             });
         }
