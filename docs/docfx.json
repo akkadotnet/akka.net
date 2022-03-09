@@ -67,7 +67,6 @@
             "_appTitle": "Akka.NET Documentation",
             "_appLogoPath": "/images/akkalogo.png",
             "_appFaviconPath": "/images/favicon.ico",
-            "_appFooter": "<div class='col-md-3 foot-link'><strong>Contribute</strong><ul><li><a href='https://gitter.im/akkadotnet/akka.net'>Project Chat</a>        </li><li><a href='https://github.com/akkadotnet/akka.net/discussions'>Discussion Forum</a></li></ul></div><div class='col-md-3 foot-link'><strong>Contribute</strong><ul><li><a href='https://github.com/akkadotnet/akka.net'>Source Code</a>        </li></ul></div>",
             "_enableSearch": "true"
         },
         "dest": "_site",

@@ -349,6 +349,11 @@ pre code{
     
 }
 
+.pb-logo{
+    width: 60px;
+    height: 60px;
+}
+
 .jumbotron{
     background-color: #040e1c;
 }

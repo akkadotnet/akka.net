@@ -13,7 +13,7 @@ img.akka-logo{
         <span class="icon-bar"></span>
       </button>
       <a class="navbar-brand" href="{{_rel}}index.html">
-        <img id="logo" class="svg akka-logo" src="{{_rel}}Images/akkalogo.png" alt="{{_appName}}">
+        <img id="logo" class="svg akka-logo" src="{{_rel}}images/akkalogo.png" alt="{{_appName}}">
       </a>
     </div>
     <div class="collapse navbar-collapse" id="navbar">
