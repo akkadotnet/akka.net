@@ -1,14 +1,14 @@
 ---
 uid: community-standups
-title: Akka.NET Community Standups
+title: Akka.NET Community Stand-ups
 ---
 
-# Akka.NET Community Standups
+# Akka.NET Community Stand-ups
 
 Akka.NET Community Standups are a once-a-month meeting that happens on the second Wednesday of each month and is live-streamed via [Petabridge’s YouTube channel](https://www.youtube.com/c/PetabridgeAcademy).
 
 > [!TIP]
-> [Click here to subscribe for future Akka.NET Community Standup notifications on YouTube](https://www.youtube.com/c/PetabridgeAcademy?sub_confirmation=1)
+> [Click here to subscribe for future Akka.NET Community Stand-up notifications on YouTube](https://www.youtube.com/c/PetabridgeAcademy?sub_confirmation=1)
 
 ## Structure of Each Standup
 
@@ -23,11 +23,11 @@ Akka.NET Community Standups are a once-a-month meeting that happens on the secon
 **Standups are second Wednesday of each month starting at 12pm CST.**
 
 > [!TIP]
-> See our [schedule of upcoming 2022 Akka.NET Community Standups here](https://github.com/akkadotnet/akka.net/discussions/5691).
+> See our [schedule of upcoming 2022 Akka.NET Community Stand-ups here](https://github.com/akkadotnet/akka.net/discussions/5691).
 
 ## Show and Tell Presentations
 
-The AKka.NET team features members of the Akka.NET community at each standup, where they their stories about how they use Akka.NET at work. e call these "Show and Tell" prsentations and they are featured in our Community Standups going forward.
+The AKka.NET team features members of the Akka.NET community at each standup, where they their stories about how they use Akka.NET at work. e call these "Show and Tell" presentations and they are featured in our Community Standups going forward.
 
 > [!IMPORTANT]
 > Show and Tell is a great way to attract talented .NET developers in the Akka.NET community who love to work on the sorts of interesting and important problems that Akka.NET solves well. Use this as a platform to showcase your company and attract great talent to it!
@@ -36,7 +36,7 @@ You can participate in the Show and Tell process by filling out this form: (Akka
 
 ### Show and Tell Structure
 
-Show and tell is an important component of each set of community standups as it gives members of the Akka.NET Community a chance to share their experiences and success with Akka.NET.
+Show and tell is an important component of each set of community stand-ups as it gives members of the Akka.NET Community a chance to share their experiences and success with Akka.NET.
 
 Here is what makes for a compelling show and tell presentation:
 
