@@ -2,6 +2,8 @@
   href: whats-new/toc.yml
 - name: Contributing to Akka.NET
   href: contributing/toc.yml
+- name: Community Standups
+  href: community-standups.md
 - name: Getting Access to Nightly Akka.NET Builds
   href: getting-access-to-nightly-builds.md
 - name: Online Resources
