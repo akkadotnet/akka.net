@@ -41,8 +41,8 @@ h2:before{
 
 <div class="container">
     <div class="row text-center">
-        <h2>Professionally Maintained and Supported by <a href="https://petabridge.com/">Petabridge</a></h2>
-         <a href="https://petabridge.com/"><img class="pb-logo-full" src="images/logos/petabridge_logo_full.png" alt="Petabridge, the Akka.NET Company."></a>
+        <h2>Professionally Maintained and Supported by <a href="https://petabridge.com/" title="Petabridge - the Akka.NET Company">Petabridge</a></h2>
+         <a href="https://petabridge.com/" title="Petabridge - the Akka.NET Company"><img class="pb-logo-full" src="images/logos/petabridge_logo_full.png" alt="Petabridge, the Akka.NET Company."></a>
     </div>
 </div>
 

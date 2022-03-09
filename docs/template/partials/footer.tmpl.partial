@@ -26,7 +26,7 @@
           </div>
           <div class='col-md-3 foot-link'><strong>Maintained By</strong>
             <ul>
-              <li><a href='https://petabridge.com'>Petabridge - The Akka.NET Company</a>.</li>
+              <li><a href='https://petabridge.com'>Petabridge - The Akka.NET Company</a></li>
               <li><a href="https://petabridge.com/bootcamp">Learn Akka.NET</a></li>
             </ul>
           </div>
