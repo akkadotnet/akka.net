@@ -14,7 +14,7 @@ Akka.NET Community Standups are a once-a-month meeting that happens on the secon
 
 1. **Recap of most recent Akka.NET releases (10 min)** - we should talk about the work that was performed since the last standup, its impact on end-users, and what we learned in the course of performing that work.
 2. **Plans for future work (10 min)** - what are we working on next, why, and why should users care?
-3. **Opportunities to contribute (5 min)** - what help would we like from the Akka.NET end-user community? 
+3. **Opportunities to contribute (5 min)** - what help would we like from the Akka.NET end-user community?
 4. **Show and Tell (20 min)** - give members of the Akka.NET team and community opportunities to showcase their work built on top of Akka.NET. 
 5. **Q&A (10 min)** - show and tell presenters along with the Akka.NET team should take questions via YouTube Live from the audience.
 
@@ -32,7 +32,7 @@ The AKka.NET team features members of the Akka.NET community at each standup, wh
 > [!IMPORTANT]
 > Show and Tell is a great way to attract talented .NET developers in the Akka.NET community who love to work on the sorts of interesting and important problems that Akka.NET solves well. Use this as a platform to showcase your company and attract great talent to it!
 
-You can participate in the Show and Tell process by filling out this form: https://forms.gle/zR1K2pygCFhdCG7v5 - someone from our team will respond, help you with your presentation, and get you scheduled for one of our upcoming 2022 Akka.NET Community Standups.
+You can participate in the Show and Tell process by filling out this form: (Akka.NET Community Standup Submission)[https://forms.gle/zR1K2pygCFhdCG7v5] - someone from our team will respond, help you with your presentation, and get you scheduled for one of our upcoming 2022 Akka.NET Community Standups.
 
 ### Show and Tell Structure
 
@@ -58,7 +58,7 @@ After you've submitted the form, a member of the Akka.NET team will contact you 
 
 Examples of past show and tells:
 
-- [Game Plumbing Framework on Akka.NET](https://youtu.be/6AoDlK8LtFU?t=958) - July 7th, 2021
+* [Game Plumbing Framework on Akka.NET](https://youtu.be/6AoDlK8LtFU?t=958) - July 7th, 2021
 
 ### Submit a “Show and Tell”
 
