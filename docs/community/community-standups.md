@@ -5,14 +5,14 @@ title: Akka.NET Community Stand-ups
 
 # Akka.NET Community Stand-ups
 
-Akka.NET Community Standups are a once-a-month meeting that happens on the second Wednesday of each month and is live-streamed via [Petabridge’s YouTube channel](https://www.youtube.com/c/PetabridgeAcademy).
+Akka.NET Community Stand-ups are a once-a-month meeting that happens on the second Wednesday of each month and is live-streamed via [Petabridge’s YouTube channel](https://www.youtube.com/c/PetabridgeAcademy).
 
 > [!TIP]
 > [Click here to subscribe for future Akka.NET Community Stand-up notifications on YouTube](https://www.youtube.com/c/PetabridgeAcademy?sub_confirmation=1)
 
-## Structure of Each Standup
+## Structure of Each Stand-up
 
-1. **Recap of most recent Akka.NET releases (10 min)** - we should talk about the work that was performed since the last standup, its impact on end-users, and what we learned in the course of performing that work.
+1. **Recap of most recent Akka.NET releases (10 min)** - we should talk about the work that was performed since the last stand-up, its impact on end-users, and what we learned in the course of performing that work.
 2. **Plans for future work (10 min)** - what are we working on next, why, and why should users care?
 3. **Opportunities to contribute (5 min)** - what help would we like from the Akka.NET end-user community?
 4. **Show and Tell (20 min)** - give members of the Akka.NET team and community opportunities to showcase their work built on top of Akka.NET.
@@ -20,19 +20,19 @@ Akka.NET Community Standups are a once-a-month meeting that happens on the secon
 
 ### Current Schedule
 
-**Standups are second Wednesday of each month starting at 12pm CST.**
+**Stand-ups are second Wednesday of each month starting at 12pm CST.**
 
 > [!TIP]
 > See our [schedule of upcoming 2022 Akka.NET Community Stand-ups here](https://github.com/akkadotnet/akka.net/discussions/5691).
 
 ## Show and Tell Presentations
 
-The AKka.NET team features members of the Akka.NET community at each standup, where they their stories about how they use Akka.NET at work. e call these "Show and Tell" presentations and they are featured in our Community Standups going forward.
+The AKka.NET team features members of the Akka.NET community at each stand-up, where they their stories about how they use Akka.NET at work. e call these "Show and Tell" presentations and they are featured in our Community Stand-ups going forward.
 
 > [!IMPORTANT]
 > Show and Tell is a great way to attract talented .NET developers in the Akka.NET community who love to work on the sorts of interesting and important problems that Akka.NET solves well. Use this as a platform to showcase your company and attract great talent to it!
 
-You can participate in the Show and Tell process by filling out this form: [Akka.NET Community Standup Submission](https://forms.gle/zR1K2pygCFhdCG7v5) - someone from our team will respond, help you with your presentation, and get you scheduled for one of our upcoming 2022 Akka.NET Community Standups.
+You can participate in the Show and Tell process by filling out this form: [Akka.NET Community Stand-up Submission](https://forms.gle/zR1K2pygCFhdCG7v5) - someone from our team will respond, help you with your presentation, and get you scheduled for one of our upcoming 2022 Akka.NET Community Stand-ups.
 
 ### Show and Tell Structure
 
@@ -62,7 +62,7 @@ Examples of past show and tells:
 
 ### Submit a “Show and Tell”
 
-Want to share your experience with Akka.NET? Fill out our Google Form here and someone from our team will contact you about participating in an upcoming Akka.NET Community Standup!
+Want to share your experience with Akka.NET? Fill out our Google Form here and someone from our team will contact you about participating in an upcoming Akka.NET Community Stand-up!
 
 > [!TIP]
-> Click here to submit a "Show and Tell" proposal to the Akka.NET team: [Akka.NET Community Standup Submission](https://forms.gle/zR1K2pygCFhdCG7v5)
+> Click here to submit a "Show and Tell" proposal to the Akka.NET team: [Akka.NET Community Stand-up Submission](https://forms.gle/zR1K2pygCFhdCG7v5)
