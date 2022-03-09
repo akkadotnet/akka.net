@@ -15,6 +15,9 @@ tagline: A straightforward approach to building distributed, high-scale applicat
 img.main-logo{
     width: 192px;
 }
+img.pb-logo-full{
+    width:  200px;
+}
 h2:before{
     display: none;
 }
@@ -33,6 +36,13 @@ h2:before{
         <a class="btn btn-lg btn-primary" href="community/whats-new/akkadotnet-v1.5.md">Coming Soon: Akka.NET v1.5</a>
         <a class="btn btn-lg btn-primary" href="articles/intro/getting-started/tutorial-overview.md">Get Started Now</a> <a class="btn btn-lg btn-primary" href="articles/intro/what-is-akka.md">Read the documentation</a>
       </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row text-center">
+        <h2>Professionally Maintained and Supported by <a href="https://petabridge.com/">Petabridge</a></h2>
+         <a href="https://petabridge.com/"><img class="pb-logo-full" src="images/logos/petabridge_logo_full.png" alt="Petabridge, the Akka.NET Company."></a>
     </div>
 </div>
 

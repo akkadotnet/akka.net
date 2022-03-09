@@ -245,16 +245,18 @@ ul li::marker{
 .sidetoc.shiftup{
     bottom: 0;
 }
-/* 
+
+
 footer{
     position: relative !important;
     opacity: 1 !important;
     display: block !important;
-} */
+}
+
 .footer{
     background: url(/images/footer.png) no-repeat left top, linear-gradient(270deg, #FFFFFF, #6DC9ED);
     
-    color: #222322;
+  color: #222322;
   font-family: Inter;
   font-size: 15px;
   font-weight: 600;
