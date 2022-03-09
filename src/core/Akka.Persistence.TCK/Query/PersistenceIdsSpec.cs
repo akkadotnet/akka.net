@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -76,18 +77,23 @@ namespace Akka.Persistence.TCK.Query
             var source = queries.PersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
 
+            var expected = new List<string> { "h", "i", "j" };
             probe.Within(TimeSpan.FromSeconds(10), () =>
             {
-                probe.Request(1).ExpectNext();
-                return probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                expected.Remove(probe.Request(1).ExpectNext());
+                return probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             });
 
             Setup("j", 1);
-            probe.Within(TimeSpan.FromSeconds(10), () =>
-            {
-                probe.Request(5).ExpectNext();
-                return probe.ExpectNext();
-            });
+            probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(5).ExpectNextUnordered(expected[0], expected[1]));
+            
+            Setup("a1", 1);
+            Thread.Sleep(TimeSpan.FromSeconds(2));
+            probe.ExpectNext(TimeSpan.FromSeconds(10));
+
+            Thread.Sleep(TimeSpan.FromSeconds(2));
+            Setup("a2", 1);
+            probe.ExpectNext(TimeSpan.FromSeconds(10));
         }
 
         [Fact]
