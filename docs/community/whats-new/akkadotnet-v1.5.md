@@ -11,7 +11,9 @@ While not every technical detail is finalized yet, we do want to share the goals
 
 ## Goals
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/pZN1ugrJtJU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
 
 Based on feedback from Akka.NET users, here are the top priorities:
 
