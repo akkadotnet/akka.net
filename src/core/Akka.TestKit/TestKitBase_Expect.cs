@@ -475,7 +475,7 @@ namespace Akka.TestKit
         }
         
         /// <inheritdoc cref="ExpectNoMsg(CancellationToken)"/>
-        public async ValueTask ExpectNoMsgAsync(CancellationToken cancellationToken)
+        public async ValueTask ExpectNoMsgAsync(CancellationToken cancellationToken = default)
         {
             await InternalExpectNoMsgAsync(RemainingOrDefault, cancellationToken)
                 .ConfigureAwait(false);

@@ -97,10 +97,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
 
         [Fact]
-        public void ClusterSingleton_that_is_leaving_must()
+        public async Task ClusterSingleton_that_is_leaving_must()
         {
-            ClusterSingleton_that_is_leaving_must_join_cluster();
-            ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest();
+            await ClusterSingleton_that_is_leaving_must_join_cluster();
+            await ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest();
         }
 
         private async Task ClusterSingleton_that_is_leaving_must_join_cluster()

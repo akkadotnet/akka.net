@@ -485,7 +485,7 @@ namespace Akka.Tests.Dispatch
                     var sender = Sender;
                     Task.Run(() =>
                     {
-                        
+                        //Sleep to make sure the task is not completed when ContinueWith is called
                         Thread.Sleep(100);
                         return msg;
                     }).ContinueWith(_ => sender.Tell(msg)); // ContinueWith will schedule with the implicit ActorTaskScheduler
