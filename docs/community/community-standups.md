@@ -1,16 +1,16 @@
 ---
 uid: community-standups
-title: Akka.NET Community Stand-ups
+title: Akka.NET Community Stand-Ups
 ---
 
-# Akka.NET Community Stand-ups
+# Akka.NET Community Stand-Ups
 
 Akka.NET Community Stand-ups are a once-a-month meeting that happens on the second Wednesday of each month and is live-streamed via [Petabridge’s YouTube channel](https://www.youtube.com/c/PetabridgeAcademy).
 
 > [!TIP]
 > [Click here to subscribe for future Akka.NET Community Stand-up notifications on YouTube](https://www.youtube.com/c/PetabridgeAcademy?sub_confirmation=1)
 
-## Structure of Each Stand-up
+## Structure of Each Stand-Up
 
 1. **Recap of most recent Akka.NET releases (10 min)** - we should talk about the work that was performed since the last stand-up, its impact on end-users, and what we learned in the course of performing that work.
 2. **Plans for future work (10 min)** - what are we working on next, why, and why should users care?
