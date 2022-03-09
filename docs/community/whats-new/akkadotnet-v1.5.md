@@ -34,7 +34,7 @@ Contributing to the v1.5 effort is somewhat different than our [normal maintaine
 
 1. .NET 6 dual-targeting - there will be lots of areas where we can take advantage of new .NET 6 APIs for improved performance;
 2. Performance optimization - performance optimziation around Akka.Remote, Akka.Persistence, Akka.Cluster.Sharding, DData, and core Akka will be prioritized in this release and there are _many_ areas for improvement;
-3. Akka.Hosting - there are lots of extension points and possibilities for making the APIs as expressive + concise as possible - we will need input from contributors to help make this possible; 
+3. Akka.Hosting - there are lots of extension points and possibilities for making the APIs as expressive + concise as possible - we will need input from contributors to help make this possible;
 4. API Cleanup - there are lots of utility classes or deprecated APIs that can be deleted from the code base with minimal impact. Less is more; and
 5. New ideas and possibilities - this is a _great_ time to consider adding new features to Akka.NET. Be bold.
 
