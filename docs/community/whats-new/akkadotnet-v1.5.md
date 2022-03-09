@@ -24,7 +24,7 @@ Based on feedback from Akka.NET users, here are the top priorities:
 
 ## How to Contribute
 
-Contributing to the v1.5 effort is somewhat different than our [normal maintainence contributions to Akka.NET](xref:contributing-to-akkadotnet),in the following ways:
+Contributing to the v1.5 effort is somewhat different than our [normal maintenance contributions to Akka.NET](xref:contributing-to-akkadotnet),in the following ways:
 
 1. **Breaking binary compatibility changes are allowed so long as they are cost-justified** - contributors must be able to explain both the benefits and trade-offs involved in making this change in order for it to be accepted;
 2. **Wire compatibility must include a viable upgrade path** - if we're to introduce changes to the wire format of Akka.NET, contributors must demonstrate and document a viable upgrade path for end-users; and
@@ -33,7 +33,7 @@ Contributing to the v1.5 effort is somewhat different than our [normal maintaine
 ### Good Areas for Contribution
 
 1. .NET 6 dual-targeting - there will be lots of areas where we can take advantage of new .NET 6 APIs for improved performance;
-2. Performance optimization - performance optimziation around Akka.Remote, Akka.Persistence, Akka.Cluster.Sharding, DData, and core Akka will be prioritized in this release and there are _many_ areas for improvement;
+2. Performance optimization - performance optimization around Akka.Remote, Akka.Persistence, Akka.Cluster.Sharding, DData, and core Akka will be prioritized in this release and there are _many_ areas for improvement;
 3. Akka.Hosting - there are lots of extension points and possibilities for making the APIs as expressive + concise as possible - we will need input from contributors to help make this possible;
 4. API Cleanup - there are lots of utility classes or deprecated APIs that can be deleted from the code base with minimal impact. Less is more; and
 5. New ideas and possibilities - this is a _great_ time to consider adding new features to Akka.NET. Be bold.
