@@ -126,17 +126,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void SourceWithContext_must_pass_through_context_using_FlowWithContext()
         {
-            var flowWithContext = FlowWithContext.Create<long, string>();
-
-            var msg = new Message("a", 1);
+            var flowWithContext = FlowWithContext.Create<string, long>();
 
             var sink = this.CreateSubscriberProbe<(string, long)>();
 
-            Source.From(new[] { msg })
+            Source.From(new[] { new Message("a", 1L) })
                 .AsSourceWithContext(x => x.Offset)
                 .Select(x => x.Data)
                 .Via(flowWithContext.Select(s => s + "b"))
-                .AsSource()
                 .RunWith(Sink.FromSubscriber(sink), Materializer);
 
             var sub = sink.ExpectSubscription();

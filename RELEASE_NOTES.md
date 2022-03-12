@@ -1,5 +1,27 @@
-#### 1.4.34 February 14 2022 ####
-**Placeholder for nightlies**
+#### 1.4.35 March 7 2022 ####
+
+*Placeholder for nightlies*
+
+#### 1.4.34 March 7 2022 ####
+Akka.NET v1.4.33 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code. 
+
+__Bug fixes__:
+* [Akka: Added support to pass a state object into CircuitBreaker to reduce allocations](https://github.com/akkadotnet/akka.net/pull/5650)
+* [Akka.DistributedData: ORSet merge operation performance improvement](https://github.com/akkadotnet/akka.net/pull/5686)
+* [Akka.Streams: FlowWithContext generic type parameters have been reordered to make them easier to read](https://github.com/akkadotnet/akka.net/pull/5648)
+
+__Improvements__:
+* [Akka: PipeTo can be configured to retain async threading context](https://github.com/akkadotnet/akka.net/pull/5684)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.33, click here](https://github.com/akkadotnet/akka.net/milestone/65?closed=1).
+
+| COMMITS | LOC+   | LOC-  | AUTHOR              |
+|---------|--------|-------|---------------------|
+| 12      | 1177   | 718   | Ebere Abanonu       |
+| 6       | 192    | 47    | Gregorius Soedharmo |
+| 3       | 255    | 167   | Ismael Hamed        |
+| 1       | 3      | 0     | Aaron Stannard      |
+| 1       | 126    | 10    | Drew                |
 
 #### 1.4.33 February 14 2022 ####
 Akka.NET v1.4.33 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code. The most important bug fix is the actor Props memory leak when actors are cached inside Akka.Remote. 
