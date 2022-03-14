@@ -11,33 +11,25 @@ namespace Akka.Persistence.TestKit.Tests
     using System.Threading.Tasks;
     using FluentAssertions;
     using Xunit;
-    using static FluentAssertions.FluentActions;
 
     public class SnapshotStoreInterceptorsSpec
     {
         [Fact]
-        public async Task noop_must_do_nothing()
-        {
-            await Awaiting(async () =>
-            {
-                await SnapshotStoreInterceptors.Noop.Instance.InterceptAsync(null, null);
-            }).Should().NotThrowAsync();
-        }
+        public void noop_must_do_nothing()
+            => SnapshotStoreInterceptors.Noop.Instance
+                .Awaiting(x => x.InterceptAsync(null, null))
+                .Should().NotThrow();
 
         [Fact]
-        public async Task failure_must_always_throw_exception()
-        {
-            await Awaiting(async () =>
-            {
-                await SnapshotStoreInterceptors.Failure.Instance.InterceptAsync(null, null);
-            }).Should().ThrowExactlyAsync<TestSnapshotStoreFailureException>();
-        }
+        public void failure_must_always_throw_exception()
+            => SnapshotStoreInterceptors.Failure.Instance
+                .Awaiting(x => x.InterceptAsync(null, null))
+                .Should().ThrowExactly<TestSnapshotStoreFailureException>();
 
         [Fact]
         public async Task delay_must_call_next_interceptor_after_specified_delay()
         {
-            var duration = TimeSpan.FromMilliseconds(200);
-            var epsilon = TimeSpan.FromMilliseconds(50);
+            var duration = TimeSpan.FromMilliseconds(100);
             var probe = new InterceptorProbe();
             var delay = new SnapshotStoreInterceptors.Delay(duration, probe);
 
@@ -45,7 +37,7 @@ namespace Akka.Persistence.TestKit.Tests
             await delay.InterceptAsync(null, null);
 
             probe.WasCalled.Should().BeTrue();
-            probe.CalledAt.Should().BeOnOrAfter(startedAt + duration - epsilon);
+            probe.CalledAt.Should().BeOnOrAfter(startedAt + duration);
         }
 
         [Fact]

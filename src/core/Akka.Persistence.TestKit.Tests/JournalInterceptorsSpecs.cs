@@ -12,35 +12,31 @@ namespace Akka.Persistence.TestKit.Tests
     using Akka.Persistence.TestKit;
     using FluentAssertions;
     using Xunit;
-    using static FluentAssertions.FluentActions;
 
     public class JournalInterceptorsSpecs
     {
         [Fact]
-        public async Task noop_immediately_returns_without_exception()
+        public void noop_immediately_returns_without_exception()
         {
-            await Awaiting(async () =>
-            {
-                await JournalInterceptors.Noop.Instance.InterceptAsync(null);
-            }).Should().NotThrowAsync();
+            JournalInterceptors.Noop.Instance
+                .Awaiting(x => x.InterceptAsync(null))
+                .Should().NotThrow();
         }
 
         [Fact]
-        public async Task failure_must_throw_specific_exception()
+        public void failure_must_throw_specific_exception()
         {
-            await Awaiting(async () =>
-            {
-                await JournalInterceptors.Failure.Instance.InterceptAsync(null);
-            }).Should().ThrowExactlyAsync<TestJournalFailureException>();
+            JournalInterceptors.Failure.Instance
+                .Awaiting(x => x.InterceptAsync(null))
+                .Should().ThrowExactly<TestJournalFailureException>();
         }
 
         [Fact]
-        public async Task rejection_must_throw_specific_exception()
+        public void rejection_must_throw_specific_exception()
         {
-            await Awaiting(async () =>
-            {
-                await JournalInterceptors.Rejection.Instance.InterceptAsync(null);
-            }).Should().ThrowExactlyAsync<TestJournalRejectionException>();
+            JournalInterceptors.Rejection.Instance
+                .Awaiting(x => x.InterceptAsync(null))
+                .Should().ThrowExactly<TestJournalRejectionException>();
         }
 
         [Fact]

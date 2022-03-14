@@ -23,24 +23,24 @@ namespace Akka.Persistence.TestKit.Tests
         private readonly TestProbe _probe;
 
         [Fact]
-        public async Task send_ack_after_load_interceptor_is_set()
+        public void send_ack_after_load_interceptor_is_set()
         {
             SnapshotsActorRef.Tell(new TestSnapshotStore.UseLoadInterceptor(null), TestActor);
-            await ExpectMsgAsync<TestSnapshotStore.Ack>();
+            ExpectMsg<TestSnapshotStore.Ack>();
         }
 
         [Fact]
-        public async Task send_ack_after_save_interceptor_is_set()
+        public void send_ack_after_save_interceptor_is_set()
         {
             SnapshotsActorRef.Tell(new TestSnapshotStore.UseSaveInterceptor(null), TestActor);
-            await ExpectMsgAsync<TestSnapshotStore.Ack>();
+            ExpectMsg<TestSnapshotStore.Ack>();
         }
 
         [Fact]
-        public async Task send_ack_after_delete_interceptor_is_set()
+        public void send_ack_after_delete_interceptor_is_set()
         {
             SnapshotsActorRef.Tell(new TestSnapshotStore.UseDeleteInterceptor(null), TestActor);
-            await ExpectMsgAsync<TestSnapshotStore.Ack>();
+            ExpectMsg<TestSnapshotStore.Ack>();
         }
 
         [Fact]
@@ -49,17 +49,17 @@ namespace Akka.Persistence.TestKit.Tests
             // create snapshot
             var actor = ActorOf(() => new SnapshotActor(_probe));
             actor.Tell("save");
-            await _probe.ExpectMsgAsync<SaveSnapshotSuccess>();
+            _probe.ExpectMsg<SaveSnapshotSuccess>();
             await actor.GracefulStop(TimeSpan.FromSeconds(3));
 
-            await WithSnapshotLoad(load => load.Fail(), async () =>
+            await WithSnapshotLoad(load => load.Fail(), () =>
             {
                 ActorOf(() => new SnapshotActor(_probe));
-                await _probe.ExpectMsgAsync<SnapshotActor.RecoveryFailure>();
+                _probe.ExpectMsg<SnapshotActor.RecoveryFailure>();
             });
 
             ActorOf(() => new SnapshotActor(_probe));
-            await _probe.ExpectMsgAsync<SnapshotOffer>();
+            _probe.ExpectMsg<SnapshotOffer>();
         }
 
         [Fact]
@@ -68,14 +68,14 @@ namespace Akka.Persistence.TestKit.Tests
             // create snapshot
             var actor = ActorOf(() => new SnapshotActor(_probe));
 
-            await WithSnapshotSave(save => save.Fail(), async () =>
+            await WithSnapshotSave(save => save.Fail(), () =>
             {
                 actor.Tell("save");
-                await _probe.ExpectMsgAsync<SaveSnapshotFailure>();
+                _probe.ExpectMsg<SaveSnapshotFailure>();
             });
 
             actor.Tell("save");
-            await _probe.ExpectMsgAsync<SaveSnapshotSuccess>();
+            _probe.ExpectMsg<SaveSnapshotSuccess>();
         }
 
         [Fact]
@@ -85,17 +85,17 @@ namespace Akka.Persistence.TestKit.Tests
             var actor = ActorOf(() => new SnapshotActor(_probe));
             actor.Tell("save");
 
-            var success = await _probe.ExpectMsgAsync<SaveSnapshotSuccess>();
+            var success = _probe.ExpectMsg<SaveSnapshotSuccess>();
             var nr = success.Metadata.SequenceNr;
 
-            await WithSnapshotDelete(del => del.Fail(), async () =>
+            await WithSnapshotDelete(del => del.Fail(), () =>
             {
                 actor.Tell(new SnapshotActor.DeleteOne(nr), TestActor);
-                await _probe.ExpectMsgAsync<DeleteSnapshotFailure>();
+                _probe.ExpectMsg<DeleteSnapshotFailure>();
             });
 
             actor.Tell(new SnapshotActor.DeleteOne(nr), TestActor);
-            await _probe.ExpectMsgAsync<DeleteSnapshotSuccess>();
+            _probe.ExpectMsg<DeleteSnapshotSuccess>();
         }
     }
 }
