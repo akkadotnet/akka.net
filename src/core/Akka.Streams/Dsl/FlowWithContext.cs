@@ -53,6 +53,12 @@ namespace Akka.Streams.Dsl
             IGraph<FlowShape<(TOut, TCtxOut), (TOut2, TCtx2)>, TMat2> viaFlow, Func<TMat, TMat2, TMat3> combine) =>
             FlowWithContext.From(Flow.FromGraph(Inner).ViaMaterialized(viaFlow, combine));
 
+        /// <summary>
+        /// Context-preserving variant of <see cref="Flow{TIn, TOut, TMat2}.MapMaterializedValue{TMat2}(Func{TMat2, TMat2})"/>.
+        /// </summary>
+        public FlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> combine) =>
+            FlowWithContext.From(Flow.FromGraph(Inner).MapMaterializedValue(combine));
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Flow<(TIn, TCtxIn), (TOut, TCtxOut), TMat> AsFlow() => Flow.FromGraph(Inner);
     }
