@@ -28,19 +28,19 @@ namespace Akka.Persistence.TestKit.Tests
         [Fact]
         public async Task failure_must_throw_specific_exception()
         {
-            await Awaiting(async () =>
+            await Assert.ThrowsAsync<TestJournalFailureException>(async () =>
             {
                 await JournalInterceptors.Failure.Instance.InterceptAsync(null);
-            }).Should().ThrowExactlyAsync<TestJournalFailureException>();
+            });
         }
 
         [Fact]
         public async Task rejection_must_throw_specific_exception()
         {
-            await Awaiting(async () =>
+            await Assert.ThrowsAsync<TestJournalRejectionException>(async () =>
             {
                 await JournalInterceptors.Rejection.Instance.InterceptAsync(null);
-            }).Should().ThrowExactlyAsync<TestJournalRejectionException>();
+            });
         }
 
         [Fact]
