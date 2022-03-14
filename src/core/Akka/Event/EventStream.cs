@@ -128,6 +128,7 @@ namespace Akka.Event
             {
                 return false;
             }
+
             return _initiallySubscribedOrUnsubscriber.Match().With<Left<IImmutableSet<IActorRef>>>(v =>
             {
                 if (_initiallySubscribedOrUnsubscriber.CompareAndSet(v, Either.Right(unsubscriber)))

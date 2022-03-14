@@ -26,7 +26,7 @@ namespace Akka.Event
     /// watching a few actors too much - we opt for the 2nd choice here.
     /// </summary>
     [InternalApi]
-    class EventStreamUnsubscriber : ActorBase
+    internal class EventStreamUnsubscriber : ActorBase
     {
         private readonly EventStream _eventStream;
         private readonly bool _debug;
@@ -45,39 +45,42 @@ namespace Akka.Event
             _debug = debug;
            
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected override bool Receive(object message)
         {
-            return message.Match().With<Register>(register =>
+            switch (message)
             {
-                if (_debug)
-                    _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
-                       string.Format("watching {0} in order to unsubscribe from EventStream when it terminates", register.Actor)));
-                Context.Watch(register.Actor);
-            }).With<UnregisterIfNoMoreSubscribedChannels>(unregister =>
-            {
-                if (_debug)
-                    _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
-                        string.Format("unwatching {0} since has no subscriptions", unregister.Actor)));
-                Context.Unwatch(unregister.Actor);
-            }).With<Terminated>(terminated =>
-            {
-                if (_debug)
-                    _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
-                        string.Format("unsubscribe {0} from {1}, because it was terminated", terminated.Actor , _eventStream )));
-                _eventStream.Unsubscribe(terminated.Actor);
-            })
-            .WasHandled;
+                case Register register:
+                {
+                    if (_debug)
+                        _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
+                            string.Format("watching {0} in order to unsubscribe from EventStream when it terminates", register.Actor)));
+                    Context.Watch(register.Actor);
+                    break;
+                }
+                case UnregisterIfNoMoreSubscribedChannels unregister:
+                {
+                    if (_debug)
+                        _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
+                            string.Format("unwatching {0} since has no subscriptions", unregister.Actor)));
+                    Context.Unwatch(unregister.Actor);
+                    break;
+                }
+                case Terminated terminated:
+                {
+                    if (_debug)
+                        _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
+                            string.Format("unsubscribe {0} from {1}, because it was terminated", terminated.Actor , _eventStream )));
+                    _eventStream.Unsubscribe(terminated.Actor);
+                    break;
+                }
+                default:
+                    return false;
+            }
+
+            return true;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected override void PreStart()
         {
             if (_debug)
