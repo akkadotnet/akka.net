@@ -6,10 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Annotations;
-using Akka.Dispatch;
-using Akka.Util.Internal;
 
 namespace Akka.Event
 {
@@ -53,25 +50,25 @@ namespace Akka.Event
                 case Register register:
                 {
                     if (_debug)
-                        _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
-                            string.Format("watching {0} in order to unsubscribe from EventStream when it terminates", register.Actor)));
+                        _eventStream.Publish(new Debug(GetType().Name, GetType(),
+                            $"watching {register.Actor} in order to unsubscribe from EventStream when it terminates"));
                     Context.Watch(register.Actor);
                     break;
                 }
                 case UnregisterIfNoMoreSubscribedChannels unregister:
                 {
                     if (_debug)
-                        _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
-                            string.Format("unwatching {0} since has no subscriptions", unregister.Actor)));
+                        _eventStream.Publish(new Debug(GetType().Name, GetType(),
+                            $"unwatching {unregister.Actor} since has no subscriptions"));
                     Context.Unwatch(unregister.Actor);
                     break;
                 }
                 case Terminated terminated:
                 {
                     if (_debug)
-                        _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
-                            string.Format("unsubscribe {0} from {1}, because it was terminated", terminated.Actor , _eventStream )));
-                    _eventStream.Unsubscribe(terminated.Actor);
+                        _eventStream.Publish(new Debug(GetType().Name, GetType(),
+                            $"unsubscribe {terminated.ActorRef} from {_eventStream}, because it was terminated"));
+                    _eventStream.Unsubscribe(terminated.ActorRef);
                     break;
                 }
                 default:
@@ -84,104 +81,44 @@ namespace Akka.Event
         protected override void PreStart()
         {
             if (_debug)
-                _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
+                _eventStream.Publish(new Debug(GetType().Name, GetType(),
                     string.Format("registering unsubscriber with {0}", _eventStream)));
-            _eventStream.InitUnsubscriber(Self, _system);
         }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API
+        ///
+        /// Registers a new subscriber to be death-watched and automatically unsubscribed.
         /// </summary>
         internal class Register
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="actor">TBD</param>
             public Register(IActorRef actor)
             {
                 Actor = actor;
             }
 
             /// <summary>
-            /// TBD
-            /// </summary>
-            public IActorRef Actor { get; private set; }
-        }
-
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal class Terminated
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="actor">TBD</param>
-            public Terminated(IActorRef actor)
-            {
-                Actor = actor;
-            }
-
-            /// <summary>
-            /// TBD
+            /// The actor we're going to deathwatch and automatically unsubscribe
             /// </summary>
             public IActorRef Actor { get; private set; }
         }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API
+        ///
+        /// Unsubscribes an actor that is no longer subscribed and does not need to be death-watched any longer.
         /// </summary>
         internal class UnregisterIfNoMoreSubscribedChannels
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="actor">TBD</param>
             public UnregisterIfNoMoreSubscribedChannels(IActorRef actor)
             {
                 Actor = actor;
             }
 
             /// <summary>
-            /// TBD
+            /// The actor we're no longer going to death watch.
             /// </summary>
             public IActorRef Actor { get; private set; }
-        }
-    }
-
-
-
-    /// <summary>
-    /// Provides factory for Akka.Event.EventStreamUnsubscriber actors with unique names.
-    /// This is needed if someone spins up more EventStreams using the same ActorSystem,
-    /// each stream gets it's own unsubscriber.
-    /// </summary>
-    class EventStreamUnsubscribersProvider
-    {
-        private readonly AtomicCounter _unsubscribersCounter = new AtomicCounter(0);
-        private static readonly EventStreamUnsubscribersProvider _instance = new EventStreamUnsubscribersProvider();
-
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static EventStreamUnsubscribersProvider Instance
-        {
-            get { return _instance; }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="eventStream">TBD</param>
-        /// <param name="debug">TBD</param>
-        public void Start(ActorSystemImpl system, EventStream eventStream, bool debug)
-        {
-            system.SystemActorOf(Props.Create<EventStreamUnsubscriber>(eventStream, system, debug).WithDispatcher(Dispatchers.InternalDispatcherId),
-                string.Format("EventStreamUnsubscriber-{0}", _unsubscribersCounter.IncrementAndGet()));
         }
     }
 }
