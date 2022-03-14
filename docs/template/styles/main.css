@@ -346,9 +346,13 @@ pre code{
     }
     .svg.akka-logo{
         margin: auto;
+    }    
+}
 
+@media only screen and (max-width: 768px){
+    .content.wrap iframe{
+    max-width: 100% !important;
     }
-    
 }
 
 .pb-logo{
