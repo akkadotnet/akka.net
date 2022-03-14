@@ -480,10 +480,14 @@ namespace Akka.Actor
     {
         public Akka.Util.Option<Akka.Actor.ProviderSelection> ActorRefProvider { get; }
         public Akka.Util.Option<Akka.Configuration.Config> Config { get; }
+        public System.Collections.Immutable.ImmutableArray<Akka.Actor.IExtensionId> Extensions { get; }
         public static Akka.Actor.BootstrapSetup Create() { }
         public Akka.Actor.BootstrapSetup WithActorRefProvider(Akka.Actor.ProviderSelection name) { }
         public Akka.Actor.BootstrapSetup WithConfig(Akka.Configuration.Config config) { }
         public Akka.Actor.BootstrapSetup WithConfigFallback(Akka.Configuration.Config config) { }
+        public Akka.Actor.BootstrapSetup WithExtensions(Akka.Actor.IExtensionId extension) { }
+        public Akka.Actor.BootstrapSetup WithExtensions(params Akka.Actor.IExtensionId[] extensions) { }
+        public Akka.Actor.BootstrapSetup WithExtensions(System.Collections.Generic.IEnumerable<Akka.Actor.IExtensionId> extensions) { }
     }
     public class Cancelable : Akka.Actor.ICancelable, System.IDisposable
     {
@@ -2114,6 +2118,7 @@ namespace Akka.Actor.Setup
         public Akka.Actor.Setup.ActorSystemSetup And<T>(T setup)
             where T : Akka.Actor.Setup.Setup { }
         public static Akka.Actor.Setup.ActorSystemSetup Create(params Akka.Actor.Setup.Setup[] setup) { }
+        public static Akka.Actor.Setup.ActorSystemSetup Create(Akka.Actor.Setup.Setup setup) { }
         public Akka.Util.Option<T> Get<T>()
             where T : Akka.Actor.Setup.Setup { }
         public override string ToString() { }

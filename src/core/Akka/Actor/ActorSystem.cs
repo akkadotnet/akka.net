@@ -16,6 +16,9 @@ using Akka.Event;
 using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 using Config = Akka.Configuration.Config;
+using System.Collections.Immutable;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Akka.Actor
 {
@@ -101,16 +104,20 @@ namespace Akka.Actor
         internal BootstrapSetup()
             : this(
                 Option<Config>.None,
-                Option<ProviderSelection>.None)
+                Option<ProviderSelection>.None,
+                ImmutableArray<IExtensionId>.Empty)
         {
         }
 
         internal BootstrapSetup(
             Option<Config> config,
-            Option<ProviderSelection> actorRefProvider)
+            Option<ProviderSelection> actorRefProvider,
+            ImmutableArray<IExtensionId> extensions)
         {
             Config = config;
             ActorRefProvider = actorRefProvider;
+            Extensions = !extensions.IsDefault
+                ? extensions : ImmutableArray<IExtensionId>.Empty;
         }
 
         /// <summary>
@@ -126,6 +133,13 @@ namespace Akka.Actor
         /// </summary>
         public Option<ProviderSelection> ActorRefProvider { get; }
 
+
+        /// <summary>
+        /// Extensions that should be loaded on system startup.
+        /// Registered extensions have priority over the same entries from 'akka.extensions' config section.
+        /// </summary>
+        public ImmutableArray<IExtensionId> Extensions { get; }
+
         /// <summary>
         /// Create a new <see cref="BootstrapSetup"/> instance.
         /// </summary>
@@ -136,18 +150,35 @@ namespace Akka.Actor
 
         public BootstrapSetup WithActorRefProvider(ProviderSelection name)
         {
-            return new BootstrapSetup(Config, name);
+            return new BootstrapSetup(Config, name, Extensions);
         }
 
         public BootstrapSetup WithConfig(Config config)
         {
-            return new BootstrapSetup(config, ActorRefProvider);
+            return new BootstrapSetup(config, ActorRefProvider, Extensions);
         }
 
         public BootstrapSetup WithConfigFallback(Config config)
             => Config.HasValue
-                ? new BootstrapSetup(Config.Value.SafeWithFallback(config), ActorRefProvider)
+                ? new BootstrapSetup(Config.Value.SafeWithFallback(config), ActorRefProvider, Extensions)
                 : WithConfig(config);
+
+        public BootstrapSetup WithExtensions(IExtensionId extension)
+        {
+            return Extensions.Contains(extension) ? this
+                : new BootstrapSetup(Config, ActorRefProvider, Extensions.Add(extension));
+        }
+
+        public BootstrapSetup WithExtensions(params IExtensionId[] extensions)
+        {
+            return WithExtensions((IEnumerable<IExtensionId>)extensions);
+        }
+
+        public BootstrapSetup WithExtensions(IEnumerable<IExtensionId> extensions)
+        {
+            return new BootstrapSetup(Config, ActorRefProvider, 
+                Extensions.AddRange(extensions.Where(n => !Extensions.Contains(n))));
+        }
     }
 
     /// <summary>

@@ -47,9 +47,17 @@ namespace Akka.Actor.Setup
 
         public static ActorSystemSetup Create(params Setup[] setup)
         {
-            return new ActorSystemSetup(setup
-                .Select(x => new KeyValuePair<Type, Setup>(x.GetType(), x))
-                .Aggregate(ImmutableDictionary<Type, Setup>.Empty, (setups, pair) => setups.SetItem(pair.Key, pair.Value)));
+            var b = ImmutableDictionary.CreateBuilder<Type, Setup>();
+
+            foreach (var x in setup)
+                b[x.GetType()] = x;
+
+            return new ActorSystemSetup(b.ToImmutable());
+        }
+
+        public static ActorSystemSetup Create(Setup setup)
+        {
+            return new ActorSystemSetup(ImmutableDictionary<Type, Setup>.Empty.Add(setup.GetType(), setup));
         }
 
         internal ActorSystemSetup(ImmutableDictionary<Type, Setup> setups)

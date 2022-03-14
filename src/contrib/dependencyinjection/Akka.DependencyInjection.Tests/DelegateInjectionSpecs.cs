@@ -120,8 +120,9 @@ namespace Akka.DependencyInjection.Tests
 
             public Task StartAsync(CancellationToken cancellationToken)
             {
-                var setup = DependencyResolverSetup.Create(_serviceProvider)
-                    .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig));
+                var setup = BootstrapSetup.Create()
+                        .WithDependencyInjection(_serviceProvider)
+                        .WithConfig(TestKitBase.DefaultConfig);
 
                 ActorSystem = ActorSystem.Create("TestSystem", setup);
                 return Task.CompletedTask;

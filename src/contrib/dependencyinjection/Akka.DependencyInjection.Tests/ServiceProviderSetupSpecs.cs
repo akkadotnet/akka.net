@@ -10,7 +10,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,8 +17,8 @@ namespace Akka.DependencyInjection.Tests
 {
     public class ServiceProviderSetupSpecs : AkkaSpec, IClassFixture<AkkaDiFixture>
     {
-        public ServiceProviderSetupSpecs(AkkaDiFixture fixture, ITestOutputHelper output) : base(DependencyResolverSetup.Create(fixture.Provider)
-            .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig)), output)
+        public ServiceProviderSetupSpecs(AkkaDiFixture fixture, ITestOutputHelper output)
+            : base(BootstrapSetup.Create().WithDependencyInjection(fixture.Provider).WithConfig(TestKitBase.DefaultConfig), output)
         {
 
         }

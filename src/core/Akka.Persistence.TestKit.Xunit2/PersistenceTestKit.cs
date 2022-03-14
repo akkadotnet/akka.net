@@ -316,25 +316,11 @@ namespace Akka.Persistence.TestKit
         /// <seealso cref="Config"/>
         private static ActorSystemSetup GetConfig(ActorSystemSetup customConfig)
         {
-            var bootstrapSetup = customConfig.Get<BootstrapSetup>();
-            var config = bootstrapSetup.FlatSelect(x => x.Config);
-            var actorProvider = bootstrapSetup.FlatSelect(x => x.ActorRefProvider);
-            var newSetup = BootstrapSetup.Create();
-            if (config.HasValue)
-            {
-                newSetup = newSetup.WithConfig(GetConfig(config.Value));
-            }
-            else
-            {
-                newSetup = newSetup.WithConfig(GetConfig(Config.Empty));
-            }
+            var bootstrapSetup = customConfig.Get<BootstrapSetup>().Value ?? BootstrapSetup.Create();
 
-            if (actorProvider.HasValue)
-            {
-                newSetup = newSetup.WithActorRefProvider(actorProvider.Value);
-            }
+            bootstrapSetup = bootstrapSetup.WithConfig(GetConfig(bootstrapSetup.Config.Value ?? Config.Empty));
 
-            return customConfig.WithSetup(newSetup);
+            return customConfig.WithSetup(bootstrapSetup);
         }
 
         /// <summary>
