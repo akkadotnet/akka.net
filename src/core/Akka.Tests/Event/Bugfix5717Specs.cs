@@ -5,13 +5,17 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Event
 {
     public class Bugfix5717Specs : AkkaSpec
     {
+        public Bugfix5717Specs(ITestOutputHelper output) : base(Config.Empty, output){}
+        
         /// <summary>
         /// Reproduction for https://github.com/akkadotnet/akka.net/issues/5717
         /// </summary>
