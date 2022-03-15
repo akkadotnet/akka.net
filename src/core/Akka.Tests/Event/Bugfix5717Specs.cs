@@ -5,6 +5,8 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System;
+using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
@@ -20,7 +22,7 @@ namespace Akka.Tests.Event
         /// Reproduction for https://github.com/akkadotnet/akka.net/issues/5717
         /// </summary>
         [Fact]
-        public void Should_unsubscribe_from_all_topics_on_Terminate()
+        public async Task Should_unsubscribe_from_all_topics_on_Terminate()
         {
             var es = Sys.EventStream;
             var tm1 = 1;
@@ -42,12 +44,23 @@ namespace Akka.Tests.Event
             Sys.Stop(a2);
             ExpectTerminated(a2);
 
-            EventFilter.DeadLetter().Expect(0, () =>
+            /*
+             * It's possible that the `Terminate` message may not have been processed by the
+             * Unsubscriber yet, so we want to try this operation more than once to see if it
+             * eventually executes the unsubscribe on the EventStream.
+             *
+             * If it still fails after multiple attempts, the issue is that the unsub was never
+             * executed in the first place.
+             */
+            await AwaitAssertAsync(async () =>
             {
-                es.Publish(tm1);
-                es.Publish(tm2);
-                a1.ExpectMsg(tm1);
-            });
+                await EventFilter.DeadLetter().ExpectAsync(0, () =>
+                {
+                    es.Publish(tm1);
+                    es.Publish(tm2);
+                    a1.ExpectMsg(tm1);
+                });
+            }, interval:TimeSpan.FromSeconds(250));
         }       
     }
 }
