@@ -49,11 +49,16 @@ namespace Akka.TestKit.Xunit2.Internals
                 {
                     var message =
                         $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Args)}]";
-                    if(e.Cause != null)
+                    if (e.Cause != null)
                         throw new AggregateException(message, ex, e.Cause);
                     throw new FormatException(message, ex);
                 }
+
                 throw;
+            }
+            catch (InvalidOperationException ie)
+            {
+                Console.WriteLine($"Received InvalidOperationException: {ie} - probably because the test had completed executing.");
             }
         }
     }
