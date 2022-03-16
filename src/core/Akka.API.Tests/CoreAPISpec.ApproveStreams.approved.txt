@@ -1437,6 +1437,7 @@ namespace Akka.Streams.Dsl
     public sealed class FlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat> : Akka.Streams.GraphDelegate<Akka.Streams.FlowShape<System.ValueTuple<TIn, TCtxIn>, System.ValueTuple<TOut, TCtxOut>>, TMat>
     {
         public Akka.Streams.Dsl.Flow<System.ValueTuple<TIn, TCtxIn>, System.ValueTuple<TOut, TCtxOut>, TMat> AsFlow() { }
+        public Akka.Streams.Dsl.FlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> combine) { }
         public Akka.Streams.Dsl.FlowWithContext<TIn, TCtxIn, TOut2, TCtx2, TMat> Via<TOut2, TCtx2, TMat2>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.ValueTuple<TOut, TCtxOut>, System.ValueTuple<TOut2, TCtx2>>, TMat2> viaFlow) { }
         public Akka.Streams.Dsl.FlowWithContext<TIn, TCtxIn, TOut2, TCtx2, TMat3> ViaMaterialized<TOut2, TCtx2, TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.ValueTuple<TOut, TCtxOut>, System.ValueTuple<TOut2, TCtx2>>, TMat2> viaFlow, System.Func<TMat, TMat2, TMat3> combine) { }
     }
@@ -2106,7 +2107,10 @@ namespace Akka.Streams.Dsl
     {
         public SourceWithContext(Akka.Streams.Dsl.Source<System.ValueTuple<TOut, TCtx>, TMat> source) { }
         public Akka.Streams.Dsl.Source<System.ValueTuple<TOut, TCtx>, TMat> AsSource() { }
+        public Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> combine) { }
         public TMat2 RunWith<TMat2>(Akka.Streams.IGraph<Akka.Streams.SinkShape<System.ValueTuple<TOut, TCtx>>, TMat2> sink, Akka.Streams.IMaterializer materializer) { }
+        public Akka.Streams.Dsl.IRunnableGraph<TMat> To<TMat2>(Akka.Streams.IGraph<Akka.Streams.SinkShape<System.ValueTuple<TOut, TCtx>>, TMat2> sink) { }
+        public Akka.Streams.Dsl.IRunnableGraph<TMat3> ToMaterialized<TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.SinkShape<System.ValueTuple<TOut, TCtx>>, TMat2> sink, System.Func<TMat, TMat2, TMat3> combine) { }
         public Akka.Streams.Dsl.SourceWithContext<TOut2, TCtx2, TMat> Via<TOut2, TCtx2, TMat2>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.ValueTuple<TOut, TCtx>, System.ValueTuple<TOut2, TCtx2>>, TMat2> viaFlow) { }
         public Akka.Streams.Dsl.SourceWithContext<TOut2, TCtx2, TMat3> ViaMaterialized<TOut2, TCtx2, TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.ValueTuple<TOut, TCtx>, System.ValueTuple<TOut2, TCtx2>>, TMat2> viaFlow, System.Func<TMat, TMat2, TMat3> combine) { }
     }
