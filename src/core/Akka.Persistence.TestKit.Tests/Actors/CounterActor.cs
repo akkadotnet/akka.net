@@ -77,13 +77,13 @@ namespace Akka.Persistence.TestKit.Tests
                 
                 Watch(actor);
                 actor.Tell("inc", TestActor);
-                ExpectMsg<Terminated>(TimeSpan.FromSeconds(3));
+                await ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(3));
 
                 // need to restart actor
                 actor = ActorOf(counterProps, "counter1");
                 actor.Tell("read", TestActor);
 
-                var value = ExpectMsg<int>(TimeSpan.FromSeconds(3));
+                var value = await ExpectMsgAsync<int>(TimeSpan.FromSeconds(3));
                 value.ShouldBe(0);
             });
         }
