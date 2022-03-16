@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -168,9 +166,12 @@ namespace Akka.TestKit
                 testActorName = "testActor" + _testActorId.IncrementAndGet();
 
             var testActor = CreateTestActor(system, testActorName);
-
-            // Wait for the testactor to start
-            WaitUntilTestActorIsReady(testActor);
+            //Wait for the testactor to start
+            // Calling sync version here, since .Wait() causes deadlock
+            AwaitCondition(() =>
+            {
+                return !(testActor is IRepointableRef repRef) || repRef.IsStarted;
+            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
 
             if (!(this is INoImplicitSender))
             {
@@ -188,30 +189,6 @@ namespace Akka.TestKit
             _testState.TestActor = testActor;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WaitUntilTestActorIsReady(IActorRef testActor)
-        {
-            var deadline = TimeSpan.FromSeconds(5);
-            var stopwatch = Stopwatch.StartNew();
-            var ready = false;
-            try
-            {
-                while (stopwatch.Elapsed < deadline)
-                {
-                    ready = !(testActor is IRepointableRef repRef) || repRef.IsStarted;
-                    if (ready) break;
-                    Thread.Sleep(10);
-                }
-            }
-            finally
-            {
-                stopwatch.Stop();
-            }
-
-            if (!ready)
-                throw new Exception("Timeout waiting for test actor to be ready");
-        }
-        
         /// <summary>
         /// Initializes the <see cref="TestState"/> for a new spec.
         /// </summary>
