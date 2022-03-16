@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Dsl;
@@ -20,6 +21,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Internal;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
@@ -32,7 +34,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowGroupBySpec(ITestOutputHelper helper) : base(helper)
+        public FlowGroupBySpec(ITestOutputHelper helper) : base("akka.loglevel = INFO", helper)
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 2);
             Materializer = ActorMaterializer.Create(Sys, settings);
@@ -514,6 +516,93 @@ namespace Akka.Streams.Tests.Dsl
                 substream.Cancel();
                 downstreamMaster.Cancel();
                 upstream.SendComplete();
+            }, Materializer);
+        }
+        
+        [Fact(DisplayName = "GroupBy must clean up all sub-source cleanly if exception was thrown downstream in one of the sub-source")]
+        public async Task GroupBy_must_clean_sub_source_on_downstream_exception()
+        {
+            const int partition = 3;
+
+            await this.AssertAllStagesStopped(async () =>
+            {
+                var upstreams = new []
+                {
+                    this.CreatePublisherProbe<int>(), 
+                    this.CreatePublisherProbe<int>(), 
+                    this.CreatePublisherProbe<int>()
+                };
+                
+                (string partition, Source<int, NotUsed> source)[] sources =
+                {
+                    ("partition_0", Source.FromPublisher(upstreams[0])),
+                    ("partition_1", Source.FromPublisher(upstreams[1])),
+                    ("partition_2", Source.FromPublisher(upstreams[2]))
+                };
+
+                var cts = new CancellationTokenSource();
+                async Task Publish()
+                {
+                    foreach (var i in Enumerable.Range(1, 900))
+                    {
+                        upstreams[i % partition].SendNext(i);
+                        await Task.Delay(50, cts.Token);
+                        if (cts.IsCancellationRequested)
+                            break;
+                    }
+                }
+                
+                var completed = new AtomicCounterLong(0);
+                var failCounter = new AtomicCounter();
+                var failCount = new AtomicCounter(0);
+                var source = Source.From(sources)
+                    .WithAttributes(new Attributes(new Attributes.Name($"top-source")))
+                    .GroupBy(partition, tuple => tuple.partition)
+                    .SelectAsync(3, async tuple =>
+                    {
+                        var (topicPartition, src) = tuple;
+                        
+                        Log.Info($"{topicPartition}: Sub-source started");
+                        
+                        var sourceMessages = await src
+                            .WithAttributes(new Attributes(new Attributes.Name($"sub-source({topicPartition})")))
+                            .Select(message =>
+                            {
+                                // Fail at message 50
+                                var fail = failCounter.IncrementAndGet();
+                                if(fail % 200 == 0)
+                                {
+                                    failCount.IncrementAndGet();
+                                    throw new Exception("BOOM!");
+                                }
+                            
+                                completed.IncrementAndGet();
+                                return message;
+                            })
+                            .Scan(0, (c, _) => c + 1)
+                            .RunWith(Sink.Last<int>(), Materializer);
+                        
+                        Log.Info($"{topicPartition}: Sub-source completed");
+
+                        return sourceMessages;
+                    })
+                    .MergeSubstreams()
+                    .As<Source<int, NotUsed>>();
+
+                var last = source.ToMaterialized(Sink.Last<int>(), Keep.Right)
+                    .Run(Materializer);
+
+                var publishTask = Publish();
+                
+                await AwaitConditionAsync(() => failCount.Current > 0, TimeSpan.FromSeconds(10));
+                Log.Info($"Stream should be dead at this point. Fail count: [{failCount.Current}]");
+
+                cts.Cancel();
+                await publishTask;
+                upstreams[0].SendComplete();
+                upstreams[1].SendComplete();
+                upstreams[2].SendComplete();
+
             }, Materializer);
         }
 
