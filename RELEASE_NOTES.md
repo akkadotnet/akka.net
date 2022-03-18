@@ -1,3 +1,7 @@
+#### 1.4.36 March 18 2022 ####
+
+**Placeholder for nightlies**
+
 #### 1.4.35 March 18 2022 ####
 Akka.NET v1.4.35 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code.
 
