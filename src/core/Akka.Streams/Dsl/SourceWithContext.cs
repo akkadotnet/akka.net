@@ -49,6 +49,26 @@ namespace Akka.Streams.Dsl
             new SourceWithContext<TOut2, TCtx2, TMat3>(Source.FromGraph(Inner).ViaMaterialized(viaFlow, combine));
 
         /// <summary>
+        /// Connect this <see cref="SourceWithContext{TOut, TCtx, TMat2}"/> to a <see cref="Sink"/>,
+        /// concatenating the processing steps of both.
+        /// </summary>
+        public IRunnableGraph<TMat> To<TMat2>(IGraph<SinkShape<(TOut, TCtx)>, TMat2> sink) => 
+            Source.FromGraph(Inner).ToMaterialized(sink, Keep.Left);
+
+        /// <summary>
+        /// Connect this <see cref="SourceWithContext{TOut, TCtx, TMat2}"/> to a <see cref="Sink"/>,
+        /// concatenating the processing steps of both.
+        /// </summary>
+        public IRunnableGraph<TMat3> ToMaterialized<TMat2, TMat3>(IGraph<SinkShape<(TOut, TCtx)>, TMat2> sink, Func<TMat, TMat2, TMat3> combine) =>
+            Source.FromGraph(Inner).ToMaterialized(sink, combine);
+
+        /// <summary>
+        /// Context-preserving variant of <see cref="Source{TOut, TMat2}.MapMaterializedValue{TMat2}(Func{TMat2, TMat2})"/>.
+        /// </summary>
+        public SourceWithContext<TOut, TCtx, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> combine) =>
+            new SourceWithContext<TOut, TCtx, TMat2>(Source.FromGraph(Inner).MapMaterializedValue(combine));
+
+        /// <summary>
         /// Connect this <see cref="SourceWithContext{TOut,TCtx,TMat}"/> to a Sink and run it. The returned value is the materialized value of the Sink.
         /// Note that the ActorSystem can be used as the implicit materializer parameter to use the SystemMaterializer for running the stream.
         /// </summary>

@@ -1,3 +1,5 @@
+- name: New in Akka.NET v1.5
+  href: akkadotnet-v1.5.md
 - name: New in Akka.NET v1.4
   href: akkadotnet-v1.4.md
 - name: Upgrade Advisories (v1.4)
