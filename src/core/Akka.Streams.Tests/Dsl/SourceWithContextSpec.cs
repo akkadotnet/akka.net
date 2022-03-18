@@ -65,17 +65,13 @@ namespace Akka.Streams.Tests.Dsl
         {
             var msg = new Message("a", 1);
 
-            var sink = this.CreateSubscriberProbe<(Message, long)>();
-
             Source.From(new[] { msg })
                 .AsSourceWithContext(x => x.Offset)
-                .AsSource()
-                .RunWith(Sink.FromSubscriber(sink), Materializer);
-
-            var sub = sink.ExpectSubscription();
-            sub.Request(1);
-            sink.ExpectNext((msg, 1L));
-            sink.ExpectComplete();
+                .ToMaterialized(this.SinkProbe<(Message, long)>(), Keep.Right)
+                .Run(Materializer)
+                .Request(1)
+                .ExpectNext((msg, 1L))
+                .ExpectComplete();
         }
 
         [Fact]
@@ -100,8 +96,6 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void SourceWithContext_must_pass_through_context_using_Select_and_Where()
         {
-            var sink = this.CreateSubscriberProbe<(string, long)>();
-
             Source.From(new[]
                 {
                     new Message("A", 1),
@@ -113,14 +107,12 @@ namespace Akka.Streams.Tests.Dsl
                 .Select(m => m.Data.ToLower())
                 .Where(x => x != "b")
                 .WhereNot(x => x == "d")
-                .AsSource()
-                .RunWith(Sink.FromSubscriber(sink), Materializer);
-
-            var sub = sink.ExpectSubscription();
-            sub.Request(2);
-            sink.ExpectNext(("a", 1L));
-            sink.ExpectNext(("c", 4L));
-            sink.ExpectComplete();
+                .ToMaterialized(this.SinkProbe<(string, long)>(), Keep.Right)
+                .Run(Materializer)
+                .Request(2)
+                .ExpectNext(("a", 1L))
+                .ExpectNext(("c", 4L))
+                .ExpectComplete();
         }
 
         [Fact]
@@ -190,6 +182,19 @@ namespace Akka.Streams.Tests.Dsl
             b.Item2.ShouldBe(new[] { 1L, 1L });
 
             sink.ExpectComplete();
+        }
+
+        [Fact]
+        public void SourceWithContext_must_be_able_to_change_materialized_value_via_MapMaterializedValue()
+        {
+            var materializedValue = "MatedValue";
+
+            Source.Empty<Message>()
+                .AsSourceWithContext(m => m.Offset)
+                .MapMaterializedValue(_ => materializedValue)
+                .To(Sink.Ignore<(Message, long)>())
+                .Run(Materializer)
+                .ShouldBe(materializedValue);
         }
     }
 }

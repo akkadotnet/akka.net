@@ -40,6 +40,23 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectNext((new Message("az", 1L), 1L))
                 .ExpectComplete();
         }
+
+        [Fact]
+        public void A_FlowWithContext_must_be_able_to_map_materialized_value_via_FlowWithContext_MapMaterializedValue()
+        {
+            var materializedValue = "MatedValue";
+            var mapMaterializedValueFlow = FlowWithContext.Create<Message, long>().MapMaterializedValue(_ => materializedValue);
+
+            var (matValue, probe) = Source.From(new[] { new Message("a", 1L) })
+                .MapMaterializedValue(_ => 42)
+                .AsSourceWithContext(m => m.Offset)
+                .ViaMaterialized(mapMaterializedValueFlow, Keep.Both)
+                .ToMaterialized(this.SinkProbe<(Message, long)>(), Keep.Both)
+                .Run(Materializer);
+
+            matValue.ShouldBe((42, materializedValue));
+            probe.Request(1).ExpectNext((new Message("a", 1L), 1L)).ExpectComplete();
+        }
     }
 
     sealed class Message : IEquatable<Message>

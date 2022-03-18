@@ -136,7 +136,7 @@ namespace Akka.Persistence.Query.Sql
             {
                 case Request _:
                     _journalRef.Tell(new SelectCurrentPersistenceIds(0, Self));
-                    Become(Initializing);
+                    Become(Waiting);
                     return true;
                 case Continue _:
                     return true;
@@ -148,7 +148,7 @@ namespace Akka.Persistence.Query.Sql
             }
         }
 
-        private bool Initializing(object message)
+        private bool Waiting(object message)
         {
             switch (message)
             {
@@ -175,16 +175,12 @@ namespace Akka.Persistence.Query.Sql
         {
             switch (message)
             {
-                case CurrentPersistenceIds added:
-                    _lastOrderingOffset = added.HighestOrderingNumber;
-                    _buffer.AddRange(added.AllPersistenceIds);
-                    _buffer.DeliverBuffer(TotalDemand);
-                    return true;
                 case Request _:
                     _buffer.DeliverBuffer(TotalDemand);
                     return true;
                 case Continue _:
                     _journalRef.Tell(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self));
+                    Become(Waiting);
                     return true;
                 case Cancel _:
                     Context.Stop(Self);
