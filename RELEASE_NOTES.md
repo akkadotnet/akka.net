@@ -1,9 +1,23 @@
-#### 1.4.35 March 7 2022 ####
+#### 1.4.35 March 18 2022 ####
+Akka.NET v1.4.35 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code.
 
-*Placeholder for nightlies*
+__Bug fixes__:
+* [Akka: Fixed IActorRef leak inside EventStream](https://github.com/akkadotnet/akka.net/pull/5720)
+* [Akka: Fixed ActorSystemSetup.And forgetting registered types](https://github.com/akkadotnet/akka.net/issues/5728)
+* [Akka.Persistence.Query.Sql: Fixed Query PersistenceIds query bug](https://github.com/akkadotnet/akka.net/pull/5715)
+* [Akka.Streams: Add MapMaterializedValue for SourceWithContext and FlowWithContext](https://github.com/akkadotnet/akka.net/pull/5711)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.35, click here](https://github.com/akkadotnet/akka.net/milestone/66?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 6       | 2178 | 174  | Aaron Stannard      |
+| 2       | 43   | 33   | Gregorius Soedharmo |
+| 1       | 71   | 19   | Ismael Hamed        |
+| 1       | 1    | 1    | dependabot[bot]     |
 
 #### 1.4.34 March 7 2022 ####
-Akka.NET v1.4.33 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code. 
+Akka.NET v1.4.34 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code. 
 
 __Bug fixes__:
 * [Akka: Added support to pass a state object into CircuitBreaker to reduce allocations](https://github.com/akkadotnet/akka.net/pull/5650)
@@ -13,7 +27,7 @@ __Bug fixes__:
 __Improvements__:
 * [Akka: PipeTo can be configured to retain async threading context](https://github.com/akkadotnet/akka.net/pull/5684)
 
-If you want to see the [full set of changes made in Akka.NET v1.4.33, click here](https://github.com/akkadotnet/akka.net/milestone/65?closed=1).
+If you want to see the [full set of changes made in Akka.NET v1.4.34, click here](https://github.com/akkadotnet/akka.net/milestone/65?closed=1).
 
 | COMMITS | LOC+   | LOC-  | AUTHOR              |
 |---------|--------|-------|---------------------|
