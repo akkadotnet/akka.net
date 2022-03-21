@@ -9,6 +9,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.TestKit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -34,14 +35,17 @@ namespace Akka.DependencyInjection.Tests
             _akkaService = _serviceProvider.GetRequiredService<AkkaService>();
         }
 
-        [Fact(DisplayName = "DI should throw if DI provider does not contain required parameter")]
-        public void ShouldThrowIfParameterInjectionFailed()
+        [Fact(DisplayName = "DI should log an error if DI provider does not contain required parameter")]
+        public void ShouldLogAnErrorIfParameterInjectionFailed()
         {
             var system = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
-            var props = DependencyResolver.For(system).Props<TestDiActor>();
+            var probe = CreateTestProbe(system);
+            system.EventStream.Subscribe(probe, typeof(Error));
             
-            Invoking(() => system.ActorOf(props, "testDIActor"))
-                .Should().Throw<InvalidOperationException>().WithMessage("Unable to resolve service for type");
+            var props = DependencyResolver.For(system).Props<TestDiActor>();
+            var actor = system.ActorOf(props.WithDeploy(Deploy.Local), "testDIActor");
+
+            probe.ExpectMsg<Error>().Cause.Should().BeOfType<ActorInitializationException>();
         }
 
         internal class TestDiActor : ReceiveActor
@@ -59,6 +63,7 @@ namespace Akka.DependencyInjection.Tests
         public async Task InitializeAsync()
         {
             await _akkaService.StartAsync(default);
+            InitializeLogger(_akkaService.ActorSystem);
         }
 
         public async Task DisposeAsync()
