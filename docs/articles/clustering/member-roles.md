@@ -5,7 +5,7 @@ title: Member Roles
 
 # Member Roles
 
-![cluster roles](/images/cluster-roles.jpeg)
+![cluster roles](/images/cluster-roles.png)
 
 A cluster can have multiple Akka.NET applications in it, "roles" help to distinguish different Akka.NET applications within a cluster!
 Not all Akka.NET applications in a cluster need to perform the same function. For example, there might be one sub-set which runs the web front-end, one which runs the data access layer and one for the number-crunching.
