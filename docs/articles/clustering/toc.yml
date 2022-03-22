@@ -22,3 +22,5 @@
   href: distributed-data.md
 - name: Split Brain Resolver
   href: split-brain-resolver.md
+- name: Node Roles
+  href: node-roles.md
