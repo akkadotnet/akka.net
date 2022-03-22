@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Util;
 using Xunit.Abstractions;
 
 namespace Akka.TestKit.Xunit2.Internals
@@ -58,7 +59,8 @@ namespace Akka.TestKit.Xunit2.Internals
             }
             catch (InvalidOperationException ie)
             {
-                Console.WriteLine($"Received InvalidOperationException: {ie} - probably because the test had completed executing.");
+                StandardOutWriter.WriteLine($"Received InvalidOperationException: {ie} - probably because the test had completed executing.");
+                Context.Stop(Self); // shut ourselves down, can't do our job any longer
             }
         }
     }
