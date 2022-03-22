@@ -9,14 +9,14 @@ A cluster can have multiple Akka.NET applications in it, "roles" help to disting
 
 # How Can Roles Help
 
-Not all Akka.NET applications in a cluster need to perform the same function. For example, there might be one sub-set which runs the web front-end, one which runs the data access layer and one for the number-crunching. 
+Not all Akka.NET applications in a cluster need to perform the same function. For example, there might be one sub-set which runs the web front-end, one which runs the data access layer and one for the number-crunching.
 Choosing which actors to start on each node, for example cluster-aware routers, can take member roles into account to achieve this distribution of responsibilities.
 
 # Usage
 
 The member roles are defined in the configuration property named `akka.cluster.roles`:
 
-```
+```hocon
 akka {
 cluster {
     roles = ["backend"]
@@ -26,7 +26,7 @@ cluster {
 
 and typically defined in the start script as a system property or environment variable.
 
-```
+```csharp
 var settings = ClusterShardingSettings
     .Create(_system)
     .WithRole(Environment.GetEnvironmentVariable("ROLE"));
