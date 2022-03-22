@@ -13,7 +13,4 @@ Akka.Streams.Kinesis is a `Amazon Kinesis streams` adapter that can be used to e
 
 Description: Akka.NET Streams + Cluster + AWS Kinesis Sample
 
-Project URL: https://github.com/petabridge/kinesis-sample
-	
-
-
+Project URL: [kinesis-sample](https://github.com/petabridge/kinesis-sample)
