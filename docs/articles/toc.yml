@@ -25,4 +25,4 @@
 - name: Serialization
   href: serialization/toc.yml
 - name: Examples
-  href: examples.yml
+  href: examples.md
