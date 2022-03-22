@@ -1,6 +1,6 @@
 ---
 uid: akka-examples
-title: Example Projects 
+title: Example Akka.NET Projects 
 ---
 
 Here we will be showing a curated lists of projects that use various modules of Akka.NET
