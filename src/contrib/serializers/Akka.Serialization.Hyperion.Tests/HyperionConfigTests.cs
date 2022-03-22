@@ -7,8 +7,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using FluentAssertions;
@@ -244,6 +246,71 @@ namespace Akka.Serialization.Hyperion.Tests
                 FooHyperionSurrogate.Surrogated[0].Should().BeEquivalentTo(expected);
             }
         }
+        
+        [Fact]
+        public async Task CanDeserializeANaughtyTypeWhenAllowed()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+akka {
+    serialize-messages = on
+    actor {
+        serializers {
+            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+        }
+        serialization-bindings {
+            ""System.Object"" = hyperion
+        }
+        serialization-settings.hyperion.disallow-unsafe-type = false
+    }
+}");
+            var system = ActorSystem.Create("unsafeSystem", config);
+            
+            try
+            {
+                var serializer = system.Serialization.FindSerializerForType(typeof(DirectoryInfo));
+                var di = new DirectoryInfo(@"c:\");
+
+                var serialized = serializer.ToBinary(di);
+                var deserialized = serializer.FromBinary<DirectoryInfo>(serialized);
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+        
+        [Fact]
+        public async Task CantDeserializeANaughtyTypeByDefault()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+akka {
+    serialize-messages = on
+    actor {
+        serializers {
+            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+        }
+        serialization-bindings {
+            ""System.Object"" = hyperion
+        }
+    }
+}");
+            var system = ActorSystem.Create("unsafeSystem", config);
+            
+            try
+            {
+                var serializer = system.Serialization.FindSerializerForType(typeof(DirectoryInfo));
+                var di = new DirectoryInfo(@"c:\");
+                
+                var serialized = serializer.ToBinary(di);
+                var ex = Assert.Throws<SerializationException>(() => serializer.FromBinary<DirectoryInfo>(serialized));
+                ex.InnerException.Should().BeOfType<EvilDeserializationException>();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+                
 
         public static IEnumerable<object[]> TypeFilterObjectFactory()
         {

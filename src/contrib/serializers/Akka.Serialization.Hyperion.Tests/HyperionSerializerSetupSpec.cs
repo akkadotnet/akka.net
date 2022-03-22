@@ -35,8 +35,12 @@ akka.actor {
 }
 ");
 
+        private readonly ITestOutputHelper _output;
+
         public HyperionSerializerSetupSpec(ITestOutputHelper output) : base (Config, output)
-        { }
+        {
+            _output = output;
+        }
 
         [Fact]
         public void Setup_should_be_converted_to_settings_correctly()
@@ -128,13 +132,29 @@ akka.actor {
 
         [Theory]
         [MemberData(nameof(DangerousObjectFactory))]
-        public void Setup_disallow_unsafe_type_should_work(object dangerousObject, Type type)
+        public void Setup_disallow_unsafe_type_should_work_by_default(object dangerousObject, Type type)
         {
             var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, HyperionSerializerSettings.Default);
             var serialized = serializer.ToBinary(dangerousObject);
+            
+            _output.WriteLine($"Dangerous type: [{type.AssemblyQualifiedName}]");
             serializer.Invoking(s => s.FromBinary(serialized, type)).Should().Throw<SerializationException>();
         }
 
+        [Theory]
+        [MemberData(nameof(DangerousObjectFactory))]
+        public void Setup_should_deserialize_unsafe_type_if_allowed(object dangerousObject, Type type)
+        {
+            var setup = HyperionSerializerSetup.Empty
+                .WithDisallowUnsafeType(false);
+            var settings = setup.ApplySettings(HyperionSerializerSettings.Default);
+            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, settings);
+            
+            _output.WriteLine($"Dangerous type: [{type.AssemblyQualifiedName}]");
+            var serialized = serializer.ToBinary(dangerousObject);
+            var deserialized = serializer.FromBinary(serialized, type); // should not throw
+        }
+        
         [Theory]
         [MemberData(nameof(TypeFilterObjectFactory))]
         public void Setup_TypeFilter_should_filter_types_properly(object sampleObject, bool shouldSucceed)
