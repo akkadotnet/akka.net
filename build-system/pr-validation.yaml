@@ -30,7 +30,7 @@ jobs:
       - task: Npm@1
         inputs:
           command: "custom"
-          customCommand: "install -g cspell"
+          customCommand: "install -g cspell@5.18.5"
       - task: CmdLine@2
         inputs:
           script: 'cspell --config ./docs/cSpell.json "docs/**/*.md"'
