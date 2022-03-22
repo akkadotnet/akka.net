@@ -3322,6 +3322,7 @@ namespace Akka.IO
         public string ToString(System.Text.Encoding encoding) { }
         public void WriteTo(System.IO.Stream stream) { }
         public System.Threading.Tasks.Task WriteToAsync(System.IO.Stream stream) { }
+        public System.Threading.Tasks.Task WriteToAsync(System.IO.Stream stream, System.Threading.CancellationToken cancellationToken) { }
         public static Akka.IO.ByteString +(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
         public static bool ==(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
         public static Akka.IO.ByteString op_Explicit(byte[] bytes) { }

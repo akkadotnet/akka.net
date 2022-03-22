@@ -180,6 +180,7 @@ namespace Akka.Streams.Tests.IO
                     var lastWriteString = new string(lastWrite.SelectMany(x => x).ToArray());
                     var testLinesString = new string(_testLines.SelectMany(x => x).ToArray());
 
+                    f.Refresh();
                     f.Length.Should().Be(result1.Count + result2.Count);
 
                     //NOTE: no new line at the end of the file - does JVM/linux appends new line at the end of the file in append mode?
@@ -227,6 +228,7 @@ namespace Akka.Streams.Tests.IO
                     var completion2 = Write(testLinesPart2, startPosition);
                     var result2 = completion2.AwaitResult(Remaining);
 
+                    f.Refresh();
                     f.Length.ShouldBe(startPosition + result2.Count);
 
                     AwaitAssert(
@@ -392,6 +394,7 @@ namespace Akka.Streams.Tests.IO
                     task.AwaitResult(Remaining);
                     ExpectTerminated(actor, Remaining);
 
+                    f.Refresh();
                     f.Length.ShouldBe(8);
                     CheckFileContent(f, "a\nb\na\nb\n");
                 }, _materializer);
@@ -469,6 +472,8 @@ namespace Akka.Streams.Tests.IO
 
         private static void CheckFileContent(FileInfo f, string contents)
         {
+            f.Refresh();
+            f.Length.Should().Be(contents.Length);
             using (var s = f.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 using(var reader = new StreamReader(s))
