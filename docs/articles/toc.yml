@@ -24,3 +24,5 @@
   href: configuration/toc.yml
 - name: Serialization
   href: serialization/toc.yml
+- name: Examples
+  href: examples.yml
