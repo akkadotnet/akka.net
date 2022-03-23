@@ -186,6 +186,41 @@ The only thing left to do for this class would be to fill in the serialization l
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
+### Overriding Default Serializer Ids
+
+> [!WARNING]
+> Changing the identification does not change the serialization binding, it only change the identification used by the serializer when it serialize a message. In fact, depending on the code, this might actually break the serializer as it might expect a specific identifier. You have been warned.
+
+Generally, overriding a default serializer identification is not recommended. The more recommended way is to change the serialization binding as was done when we [replace the default serializer with Hyperion](xref:serialization#how-to-setup-hyperion-as-the-default-serializer). 
+
+In the rare case where you do need to override them, you can do it in one of two ways:
+
+* Overriding the `Identifier` property in your custom serializer class that inherits from the `Akka.Serialization.Serializer` abstract class. The `Identifier` property will override any HOCON settings; in fact, you will get a warning in your log when you do that, reminding you that you actually did that.
+* Overriding the identifier inside your HOCON settings. To do this, you have to both change the original default serializer id and declare your own serializer using the original default serializer id.
+
+```c#
+ serialization-identifiers {
+  "Akka.Serialization.NewtonSoftJsonSerializer, Akka" : 1000001
+  "MyAssembly.MyDefaultSerializer, SomeAssembly" : 1
+}
+ ```
+
+this would in effect results this final HOCON settings:
+
+```c#
+serialization-identifiers : {
+    "Akka.Serialization.ByteArraySerializer, Akka" : 4
+    "Akka.Serialization.NewtonSoftJsonSerializer, Akka" : 1000001
+    "Akka.Remote.Serialization.ProtobufSerializer, Akka.Remote" : 2
+    "Akka.Remote.Serialization.DaemonMsgCreateSerializer, Akka.Remote" : 3
+    "Akka.Remote.Serialization.MessageContainerSerializer, Akka.Remote" : 6
+    "Akka.Remote.Serialization.MiscMessageSerializer, Akka.Remote" : 16
+    "Akka.Remote.Serialization.PrimitiveSerializers, Akka.Remote" : 17
+    "Akka.Remote.Serialization.SystemMessageSerializer, Akka.Remote" : 22
+    "MyAssembly.MyDefaultSerializer, SomeAssembly" : 1
+}
+```
+
 ### Programmatically Change NewtonSoft JSON Serializer Settings
 
 You can change the JSON serializer behavior by using the `NewtonSoftJsonSerializerSetup` class to programmatically
@@ -354,7 +389,7 @@ from being deserialized:
 * `System.Diagnostics.Process`
 * `System.Management.IWbemClassObjectFreeThreaded`
 
-Be warned that these class can be used as a man in the middle attack vector, but if you need
+Be warned that these class can be used as a man in the middle and arbitrary code injection attack vector, but if you need
 to serialize one of these class, you can turn off this feature using this inside your HOCON settings:
 
 ```hocon
