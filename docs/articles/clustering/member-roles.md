@@ -40,6 +40,8 @@ else if (selfMember.HasRole("front"))
 
 ### Akka.Cluster.Sharding
 
+Specifies that entities runs on cluster nodes with a specific role. If the role is not specified (or empty) all nodes in the cluster are used.
+
 ```hocon
 akka {
 	cluster {
@@ -51,7 +53,19 @@ akka {
 }
 ```
 
+```csharp
+	var sharding = ClusterSharding.Get(system);
+    var shardRegion = await sharding.StartAsync(
+    typeName: "customer",
+    entityPropsFactory: e => Props.Create(() => new Customer(e)),
+    settings: ClusterShardingSettings.Create(system).WithRole("worker"),
+    messageExtractor: new MessageExtractor(10));
+
+```
+
 ### `DistributedPubSub`
+
+Start the mediator on members tagged with this role. All members are used if undefined or empty.
 
 ```hocon
 akka {
@@ -66,6 +80,8 @@ akka {
 
 ### `DData`
 
+Replicas are running on members tagged with this role. All members are used if undefined or empty
+
 ```hocon
 akka {
 	cluster {
@@ -77,8 +93,9 @@ akka {
 }
 ```
 
-
 ### `ClusterSingleton`
+
+Singleton among the nodes tagged with specified role. If the role is not specified it's a singleton among all nodes in the cluster.
 
 ```hocon
 akka {
