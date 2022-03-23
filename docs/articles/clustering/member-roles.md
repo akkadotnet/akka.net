@@ -24,6 +24,7 @@ akka
   }
 }
 ```
+
 ## Using Roles Within Your Cluster
 
 The roles are part of the membership information in `MemberEvent` that you can subscribe to. The roles of the local cluster member are available from the `SelfMember` and that can be used for conditionally starting certain actors:
@@ -32,11 +33,11 @@ The roles are part of the membership information in `MemberEvent` that you can s
 var selfMember = Cluster.Get(_actorSystem).SelfMember;
 if (selfMember.HasRole("backend"))
 {
-	context.ActorOf(Backend.Prop(), "back");
+    context.ActorOf(Backend.Prop(), "back");
 }
 else if (selfMember.HasRole("front"))
 {
-	context.ActorOf(Frontend.Prop(), "front");
+    context.ActorOf(Frontend.Prop(), "front");
 }
 ```
 
@@ -50,10 +51,10 @@ akka
   cluster
   {
     roles = ["worker", "notifier", "credit", "storage"]
-	sharding
-	{
-	  role = "worker"
-	}
+    sharding
+    {
+      role = "worker"
+    }
   }
 }
 ```
@@ -61,9 +62,9 @@ akka
 ```csharp
 var sharding = ClusterSharding.Get(system);
 var shardRegion = await sharding.StartAsync(
-	typeName: "customer",
-	entityPropsFactory: e => Props.Create(() => new Customer(e)),
-	settings: ClusterShardingSettings.Create(system).WithRole("worker"),
+    typeName: "customer",
+    entityPropsFactory: e => Props.Create(() => new Customer(e)),
+    settings: ClusterShardingSettings.Create(system).WithRole("worker"),
     messageExtractor: new MessageExtractor(10));
 ```
 
@@ -77,10 +78,10 @@ akka
   cluster
   {
     roles = ["worker", "notifier", "credit", "storage"]
-	pub-sub
-	{
-	  role = "notifier"
-	}
+    pub-sub
+    {
+      role = "notifier"
+    }
   }
 }
 ```
@@ -95,10 +96,10 @@ akka
   cluster
   {
     roles = ["worker", "notifier", "credit", "storage"]
-	distributed-data
-	{
-	  role = "storage"
-	}
+    distributed-data
+    {
+      role = "storage"
+    }
   }
 }
 ```
@@ -113,10 +114,10 @@ akka
   cluster
   {
     roles = ["worker", "notifier", "credit", "storage"]
-	singleton 
-	{
-	  role = "credit"
-	}
+    singleton 
+    {
+      role = "credit"
+    }
   }
 }
 ```
@@ -131,21 +132,21 @@ akka
   cluster 
   {
     roles = ["worker", "notifier", "credit", "storage"]
-	singleton
+    singleton
     {
-	  role = "credit"
-	}
-	distributed-data
-	{
-	  role = "storage"
-	}
-	pub-sub
-	{
-	  role = "notifier"
-	}
-	sharding
-	{
-	  role = "worker"
-	}
+      role = "credit"
+    }
+    distributed-data
+    {
+      role = "storage"
+    }
+    pub-sub
+    {
+      role = "notifier"
+    }
+    sharding
+    {
+      role = "worker"
+    }
 }
 ```
