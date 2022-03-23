@@ -203,6 +203,22 @@ var system = ActorSystem.Create("MySystem");
 var propsResolver = new NinjectDependencyResolver(container,system);
 ```
 
+#### DryIoc
+
+In order to use this plugin, install the [Nuget package](https://www.nuget.org/packages/Akka.DI.DryIoc) with
+`Install-Package Akka.DI.DryIoc`, then follow the instructions:
+
+```csharp
+// Create and build your container
+var container = new DryIoc.Container();
+container.Register<WorkerService>(Reuse.Transient);
+container.Register<TypedWorker>(Reuse.Transient);
+
+// Create the ActorSystem and Dependency Resolver
+var system = ActorSystem.Create("MySystem")
+                        .UseDryIoC(container);
+```
+
 #### Other Frameworks
 
 Support for additional dependency injection frameworks may be added in the
