@@ -16,9 +16,11 @@ Choosing which actors to start on each node, for example cluster-aware routers, 
 The member roles are defined in the configuration property named `akka.cluster.roles` and typically defined in the start script as a system property or environment variable.:
 
 ```hocon
-   akka {
-   cluster {
-      roles = ["backend"]
+akka
+{
+  cluster
+  {
+    roles = ["backend"]
   }
 }
 ```
@@ -28,13 +30,13 @@ The roles are part of the membership information in `MemberEvent` that you can s
 
 ```csharp
 var selfMember = Cluster.Get(_actorSystem).SelfMember;
-if (selfMember.HasRole("backend")) 
+if (selfMember.HasRole("backend"))
 {
-  context.ActorOf(Backend.Prop(), "back");
-} 
-else if (selfMember.HasRole("front")) 
+	context.ActorOf(Backend.Prop(), "back");
+}
+else if (selfMember.HasRole("front"))
 {
-  context.ActorOf(Frontend.Prop(), "front");
+	context.ActorOf(Frontend.Prop(), "front");
 }
 ```
 
@@ -43,24 +45,26 @@ else if (selfMember.HasRole("front"))
 Specifies that entities runs on cluster nodes with a specific role. If the role is not specified (or empty) all nodes in the cluster are used.
 
 ```hocon
-akka {
-	cluster {
+akka
+{
+  cluster
+  {
     roles = ["worker", "notifier", "credit", "storage"]
-		sharding {
-			role = "worker"
-    }
+	sharding
+	{
+	  role = "worker"
+	}
   }
 }
 ```
 
 ```csharp
-	var sharding = ClusterSharding.Get(system);
-    var shardRegion = await sharding.StartAsync(
-    typeName: "customer",
-    entityPropsFactory: e => Props.Create(() => new Customer(e)),
-    settings: ClusterShardingSettings.Create(system).WithRole("worker"),
+var sharding = ClusterSharding.Get(system);
+var shardRegion = await sharding.StartAsync(
+	typeName: "customer",
+	entityPropsFactory: e => Props.Create(() => new Customer(e)),
+	settings: ClusterShardingSettings.Create(system).WithRole("worker"),
     messageExtractor: new MessageExtractor(10));
-
 ```
 
 # `DistributedPubSub`
@@ -68,11 +72,14 @@ akka {
 Start the mediator on members tagged with this role. All members are used if undefined or empty.
 
 ```hocon
-akka {
-	cluster {
-	roles = ["worker", "notifier", "credit", "storage"]
-	pub-sub {
-		role = "notifier"
+akka
+{
+  cluster
+  {
+    roles = ["worker", "notifier", "credit", "storage"]
+	pub-sub
+	{
+	  role = "notifier"
 	}
   }
 }
@@ -83,11 +90,14 @@ akka {
 Replicas are running on members tagged with this role. All members are used if undefined or empty
 
 ```hocon
-akka {
-	cluster {
-	roles = ["worker", "notifier", "credit", "storage"]
-	distributed-data {
-		role = "storage"
+akka
+{
+  cluster
+  {
+    roles = ["worker", "notifier", "credit", "storage"]
+	distributed-data
+	{
+	  role = "storage"
 	}
   }
 }
@@ -98,11 +108,14 @@ akka {
 Singleton among the nodes tagged with specified role. If the role is not specified it's a singleton among all nodes in the cluster.
 
 ```hocon
-akka {
-	cluster {
-	roles = ["worker", "notifier", "credit", "storage"]
-	singleton {
-		role = "credit"
+akka
+{
+  cluster
+  {
+    roles = ["worker", "notifier", "credit", "storage"]
+	singleton 
+	{
+	  role = "credit"
 	}
   }
 }
@@ -113,21 +126,26 @@ akka {
 From the above, you can see that it is possible to have different .NET applications (or actors) in a cluster all performing different function:
 
 ```hocon
-akka {
-	cluster {
-	roles = ["worker", "notifier", "credit", "storage"]
-	singleton {
-		role = "credit"
+akka 
+{
+  cluster 
+  {
+    roles = ["worker", "notifier", "credit", "storage"]
+	singleton
+    {
+	  role = "credit"
 	}
-	distributed-data {
-		role = "storage"
+	distributed-data
+	{
+	  role = "storage"
 	}
-	pub-sub {
-		role = "notifier"
+	pub-sub
+	{
+	  role = "notifier"
 	}
-	sharding {
-		role = "worker"
+	sharding
+	{
+	  role = "worker"
 	}
-  }
-
+}
 ```
