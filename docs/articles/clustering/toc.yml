@@ -1,5 +1,7 @@
 - name: Overview
   href: cluster-overview.md
+- name: Member Roles
+  href: member-roles.md
 - name: Cluster Routing
   href: cluster-routing.md
 - name: Cluster Configuration
@@ -22,5 +24,3 @@
   href: distributed-data.md
 - name: Split Brain Resolver
   href: split-brain-resolver.md
-- name: Member Roles
-  href: member-roles.md
