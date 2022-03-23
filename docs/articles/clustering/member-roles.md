@@ -16,9 +16,9 @@ Choosing which actors to start on each node, for example cluster-aware routers, 
 The member roles are defined in the configuration property named `akka.cluster.roles` and typically defined in the start script as a system property or environment variable.:
 
 ```hocon
-akka {
-cluster {
-    roles = ["backend"]
+   akka {
+   cluster {
+      roles = ["backend"]
   }
 }
 ```
@@ -46,9 +46,9 @@ Specifies that entities runs on cluster nodes with a specific role. If the role 
 akka {
 	cluster {
     roles = ["worker", "notifier", "credit", "storage"]
-    sharding {
+		sharding {
 			role = "worker"
-		}
+    }
   }
 }
 ```
@@ -70,10 +70,10 @@ Start the mediator on members tagged with this role. All members are used if und
 ```hocon
 akka {
 	cluster {
-    roles = ["worker", "notifier", "credit", "storage"]
-    pub-sub {
-			role = "notifier"
-		}
+	roles = ["worker", "notifier", "credit", "storage"]
+	pub-sub {
+		role = "notifier"
+	}
   }
 }
 ```
@@ -85,10 +85,10 @@ Replicas are running on members tagged with this role. All members are used if u
 ```hocon
 akka {
 	cluster {
-    roles = ["worker", "notifier", "credit", "storage"]
-    distributed-data {
-			role = "storage"
-		}
+	roles = ["worker", "notifier", "credit", "storage"]
+	distributed-data {
+		role = "storage"
+	}
   }
 }
 ```
@@ -100,10 +100,10 @@ Singleton among the nodes tagged with specified role. If the role is not specifi
 ```hocon
 akka {
 	cluster {
-    roles = ["worker", "notifier", "credit", "storage"]
-    singleton {
-			role = "credit"
-		}
+	roles = ["worker", "notifier", "credit", "storage"]
+	singleton {
+		role = "credit"
+	}
   }
 }
 ```
@@ -115,19 +115,19 @@ From the above, you can see that it is possible to have different .NET applicati
 ```hocon
 akka {
 	cluster {
-    roles = ["worker", "notifier", "credit", "storage"]
-    singleton {
-			role = "credit"
-		}
+	roles = ["worker", "notifier", "credit", "storage"]
+	singleton {
+		role = "credit"
+	}
 	distributed-data {
-			role = "storage"
-		}
+		role = "storage"
+	}
 	pub-sub {
-			role = "notifier"
-		}
+		role = "notifier"
+	}
 	sharding {
-			role = "worker"
-		}
+		role = "worker"
+	}
   }
 
 ```
