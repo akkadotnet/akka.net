@@ -22,6 +22,7 @@ cluster {
   }
 }
 ```
+### Programming Against Akka.Cluster Events
 
 The roles are part of the membership information in `MemberEvent` that you can subscribe to. The roles of the local cluster member are available from the `SelfMember` and that can be used for conditionally starting certain actors:
 
@@ -34,5 +35,58 @@ if (selfMember.HasRole("backend"))
 else if (selfMember.HasRole("front")) 
 {
   context.ActorOf(Frontend.Prop(), "front");
+}
+```
+
+### Akka.Cluster.Sharding
+
+```hocon
+akka {
+	cluster {
+    roles = ["worker", "notifier", "credit", "storage"]
+    sharding {
+			role = "worker"
+		}
+  }
+}
+```
+
+### `DistributedPubSub`
+
+```hocon
+akka {
+	cluster {
+    roles = ["worker", "notifier", "credit", "storage"]
+    pub-sub {
+			role = "notifier"
+		}
+  }
+}
+```
+
+### `DData`
+
+```hocon
+akka {
+	cluster {
+    roles = ["worker", "notifier", "credit", "storage"]
+    distributed-data {
+			role = "storage"
+		}
+  }
+}
+```
+
+
+### `ClusterSingleton`
+
+```hocon
+akka {
+	cluster {
+    roles = ["worker", "notifier", "credit", "storage"]
+    singleton {
+			role = "credit"
+		}
+  }
 }
 ```
