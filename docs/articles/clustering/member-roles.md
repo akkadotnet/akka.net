@@ -5,7 +5,7 @@ title: Member Roles
 
 # Member Roles
 
-![cluster roles](/images/cluster-roles.png)
+![cluster roles](/images/cluster/cluster-roles.png)
 
 A cluster can have multiple Akka.NET applications in it, "roles" help to distinguish different Akka.NET applications within a cluster!
 Not all Akka.NET applications in a cluster need to perform the same function. For example, there might be one sub-set which runs the web front-end, one which runs the data access layer and one for the number-crunching.
@@ -42,7 +42,7 @@ else if (selfMember.HasRole("front"))
 
 # Akka.Cluster.Sharding
 
-Specifies that entities runs on cluster nodes with a specific role. If the role is not specified (or empty) all nodes in the cluster are used.
+Cluster Sharding uses its own Distributed Data Replicator per node. If using roles with sharding there is one Replicator per role, which enables a subset of all nodes for some entity types and another subset for other entity types. Each replicator has a name that contains the node role and therefore the role configuration must be the same on all nodes in the cluster, for example you can’t change the roles when performing a rolling update. Changing roles requires a full cluster restart.
 
 ```hocon
 akka
