@@ -122,6 +122,100 @@ akka
 }
 ```
 
+## Cluster-Aware Router
+
+The major benefit of Akka.Cluster is that you can scale out your actor system to more nodes as load on the system increases - in other words, during peak period, Akka.Cluster can scale out your, for instance, order processor. 
+You can further make the most of the scaling benefits, with Cluster-aware routers to simplify developing scalable applications.
+
+### Creating Cluster-Aware Router Groups
+
+While the standard Router Groups lets you direct messages to a selected actor paths, in Akka.Cluster, Cluster-Aware Router Groups, you can send the messages across a cluster of machines instead!
+
+Create Cluster-Aware Router Groups with HOCON file:
+
+```hocon
+akka
+{
+   actor
+   {
+      provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+      deployment
+      {
+         /workdispatcher
+         {
+            router = consistent-hashing-group # routing strategy
+            routees.paths = ["/user/worker"] # path of routee on each node
+            nr-of-instances = 3 # max number of total routees
+            cluster
+            {
+               enabled = on
+               allow-local-routees = on
+            }
+         }
+      }
+   }
+   cluster
+   {
+     # your cluster configuration here
+   }
+}
+```
+```csharp
+var worker = system.ActorOf<Worker>("worker");
+var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"workdispatcher");
+```
+
+Create Cluster-Aware Router Groups with `code`:
+
+```csharp
+var routeePaths = new List<string> { "/user/worker" };
+var clusterRouterSettings = new ClusterRouterGroupSettings(3, routeePaths, true);
+var clusterGroupProps = Props.Empty.WithRouter(new ClusterRouterGroup(new Akka.Routing.ConsistentHashingGroup("/user/worker"), clusterRouterSettings));
+```
+
+### Creating Cluster-Aware Router Pool
+
+Cluster-Aware Router Pool, lets you create actors across a cluster of nodes. Any time a new node joins existing cluster, the router deploys actors onto the new node and makes the actors available by adding it to the list of routees. 
+If a node becomes unresponsive, due to network outage or it is shut down abruptly, it’s removed from the list of available routees.
+
+Create Cluster-Aware Router Pool with HOCON file:
+
+```hocon
+akka
+{
+   actor
+   {
+      provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+      deployment
+      {
+         /workdispatcher
+         {
+            router = round-robin-pool # routing strategy
+            max-nr-of-instances-per-node = 5
+            cluster
+            {
+               enabled = on
+               allow-local-routees = on
+            }
+         }
+      }
+   }
+   cluster
+   {
+     # your cluster configuration here
+   }
+}
+```
+```csharp
+var routerProps = Props.Empty.WithRouter(FromConfig.Instance);
+```
+Create Cluster-Aware Router Pool with `code`:
+
+```csharp
+var clusterPoolSettings = new ClusterRouterPoolSettings(1000, 5, true);
+var clusterPoolProps = Props.Create<Worker>().WithRouter(new ClusterRouterPool(new RoundRobinPool(5), clusterPoolSettings));
+```
+
 ## Putting It All Together
 
 From the above, you can see that it is possible to have different .NET applications (or actors) in a cluster all performing different function:
