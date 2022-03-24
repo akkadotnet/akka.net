@@ -29,6 +29,7 @@ akka
 ```
 
 **Node2**: All of my code handling fraud detections will be deployed on this node
+
 ```hocon
 akka
 {
