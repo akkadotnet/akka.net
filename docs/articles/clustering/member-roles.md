@@ -9,7 +9,7 @@ title: Member Roles
 
 A cluster can have multiple nodes(machines/servers/vms) with different capabilities.
 When you require an application to run on a node(machine/server/vm) with certain capabilities, roles helps you to distinguish the nodes so that application can be deployed on that node.
-Specifying cluster role(s) is a best practice; you don't want an application that requires less computational power running and consuming resources meant for a mission-critical and resouce-intensive application.
+Specifying cluster role(s) is a best practice; you don't want an application that requires less computational power running and consuming resources meant for a mission-critical and resource-intensive application.
 Even if you only have a single type of node in your cluster, you should still use roles for it so you can leverage this infrastructure as your cluster expands in the future; and they add zero overhead in any conceivable way.
 
 # How To Configure Cluster Role
@@ -17,6 +17,7 @@ Even if you only have a single type of node in your cluster, you should still us
 Below I will show you how the cluster above can be reproduced. I will create a five-nodes(ActorSystems - all having same name, though, but living on different machine/server/vm) cluster with different roles applied:
 
 **Node1**: All of my code that receives requests from users and push same to the cluster will be deployed here!
+
 ```hocon
 akka
 {
@@ -39,6 +40,7 @@ akka
 ```
 
 **Node3**: All me code that retrieves, stores data will be deployed on this node
+
 ```hocon
 akka
 {
@@ -50,6 +52,7 @@ akka
 ```
 
 **Node4**: All my code that handles customer orders will be deployed on this node
+
 ```hocon
 akka
 {
@@ -61,6 +64,7 @@ akka
 ```
 
 **Node5**: All my code that handles customer billing will be deployed on this node
+
 ```hocon
 akka
 {
@@ -138,7 +142,7 @@ akka
 }
 ```
 
-I have one more node, `node2`, with nothing running in it. I will deploy my custom fraud detection code there, and the way to do that is: 
+I have one more node, `node2`, with nothing running in it. I will deploy my custom fraud detection code there, and the way to do that is:
 
 ```csharp
 var selfMember = Cluster.Get(_actorSystem).SelfMember;
@@ -157,7 +161,7 @@ Using the Cluster `SelfMember`, I am checking if the current node has the `billi
 ## Cluster-Aware Router
 
 Cluster-Aware routers automate how actors are deployed on the cluster and also how messages are routed based on the role specified! Routers in Akka.NET can be either grouped or pooled and you can read up on them [Routers](https://getakka.net/articles/actors/routers.html)
- 
+
 **Router Group**: I will create Cluster-Aware Router Group for all my applications above!
 
 ```hocon
@@ -176,10 +180,10 @@ akka
             cluster
             {
                enabled = on
-			   use-role = "web"
+               use-role = "web"
             }
          }
-		 /frauddispatcher
+         /frauddispatcher
          {
             router = consistent-hashing-group # routing strategy
             routees.paths = ["/user/fraud"] # path of routee on each node
@@ -187,10 +191,10 @@ akka
             cluster
             {
                enabled = on
-			   use-role = "fraud"
+               use-role = "fraud"
             }
          }
-		 /billingdispatcher
+         /billingdispatcher
          {
             router = consistent-hashing-group # routing strategy
             routees.paths = ["/user/billing"] # path of routee on each node
@@ -198,10 +202,10 @@ akka
             cluster
             {
                enabled = on
-			   use-role = "billing"
+               use-role = "billing"
             }
          }
-		 /orderdispatcher
+         /orderdispatcher
          {
             router = consistent-hashing-group # routing strategy
             routees.paths = ["/user/order"] # path of routee on each node
@@ -209,10 +213,10 @@ akka
             cluster
             {
                enabled = on
-			   use-role = "order"
+               use-role = "order"
             }
          }
-		 /storagedispatcher
+         /storagedispatcher
          {
             router = consistent-hashing-group # routing strategy
             routees.paths = ["/user/storage"] # path of routee on each node
@@ -220,13 +224,14 @@ akka
             cluster
             {
                enabled = on
-			   use-role = "storage"
+               use-role = "storage"
             }
          }
       }
    }
 }
 ```
+
 ```csharp
 var web = system.ActorOf<Web>("web");
 var fraud = system.ActorOf<Fraud>("fraud");
@@ -258,47 +263,47 @@ akka
             cluster
             {
                enabled = on
-			   use-role = "web"
+               use-role = "web"
             }
          }
-		 /frauddispatcher
+         /frauddispatcher
          {
             router = round-robin-pool # routing strategy
             max-nr-of-instances-per-node = 5
             cluster
             {
                enabled = on
-			   use-role = "fraud"
+               use-role = "fraud"
             }
          }
-		 /billingdispatcher
+         /billingdispatcher
          {
             router = round-robin-pool # routing strategy
             max-nr-of-instances-per-node = 5
             cluster
             {
                enabled = on
-			   use-role = "billing"
+               use-role = "billing"
             }
          }
-		 /orderdispatcher
+         /orderdispatcher
          {
             router = round-robin-pool # routing strategy
             max-nr-of-instances-per-node = 5
             cluster
             {
                enabled = on
-			   use-role = "order"
+               use-role = "order"
             }
          }
-		 /storagedispatcher
+         /storagedispatcher
          {
             router = round-robin-pool # routing strategy
             max-nr-of-instances-per-node = 5
             cluster
             {
                enabled = on
-			   use-role = "storage"
+               use-role = "storage"
             }
          }
       }
@@ -309,4 +314,3 @@ akka
 ```csharp
 var routerProps = Props.Empty.WithRouter(FromConfig.Instance);
 ```
-
