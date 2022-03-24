@@ -236,7 +236,7 @@ A node might also exit the cluster gracefully, preventing it from being marked a
 <iframe width="560" height="315" src="https://www.youtube.com/embed/mUTKvGyxbOA" frameborder="0" allowfullscreen></iframe>
 <!-- markdownlint-enable MD033 -->
 
-* [Cluster Member Roles](member-roles.md)
+* [Cluster Member Roles](xref:member-roles)
 * [How to Create Scalable Clustered Akka.NET Apps Using Akka.Cluster](https://petabridge.com/blog/intro-to-akka-cluster/)
 * [Video: Introduction to Akka.Cluster](https://www.youtube.com/watch?v=mUTKvGyxbOA)
 * [Gossip Protocol](https://en.wikipedia.org/wiki/Gossip_protocol)
