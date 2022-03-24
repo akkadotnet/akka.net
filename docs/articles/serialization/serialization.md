@@ -191,7 +191,7 @@ serializer.
 > [!WARNING]
 > Changing the identification does not change the serialization binding, it only change the identification used by the serializer when it serialize a message. In fact, depending on the code, this might actually break the serializer as it might expect a specific identifier. You have been warned.
 
-Generally, overriding a default serializer identification is not recommended. The more recommended way is to change the serialization binding as was done when we [replace the default serializer with Hyperion](xref:serialization#how-to-setup-hyperion-as-the-default-serializer). 
+Generally, overriding a default serializer identification is not recommended. The more recommended way is to change the serialization binding as was done when we [replace the default serializer with Hyperion](xref:serialization#how-to-setup-hyperion-as-the-default-serializer).
 
 In the rare case where you do need to override them, you can do it in one of two ways:
 
