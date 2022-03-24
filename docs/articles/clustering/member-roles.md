@@ -7,95 +7,113 @@ title: Member Roles
 
 ![cluster roles](/images/cluster/cluster-roles.png)
 
-A cluster can have multiple Akka.NET applications in it, "roles" help to distinguish different Akka.NET applications within a cluster!
-Not all Akka.NET applications in a cluster need to perform the same function. For example, there might be one sub-set which runs the web front-end, one which runs the data access layer and one for the number-crunching.
-Choosing which actors to start on each node, for example cluster-aware routers, can take member roles into account to achieve this distribution of responsibilities.
+A cluster can have multiple nodes(machines/servers/vms) with different capabilities.
+When you require an application to run on a node(machine/server/vm) with certain capabilities, roles helps you to distinguish the nodes so that application can be deployed on that node.
+Specifying cluster role(s) is a best practice; you don't want an application that requires less computational power running and consuming resources meant for a mission-critical and resouce-intensive application.
+Even if you only have a single type of node in your cluster, you should still use roles for it so you can leverage this infrastructure as your cluster expands in the future; and they add zero overhead in any conceivable way.
 
-# How to Use Roles
+# How To Configure Cluster Role
 
-The member roles are defined in the configuration property named `akka.cluster.roles` and typically defined in the start script as a system property or environment variable.:
+Below I will show you how the cluster above can be reproduced. I will create a five-nodes(ActorSystems - all having same name, though, but living on different machine/server/vm) cluster with different roles applied:
 
+**Node1**: All of my code that receives requests from users and push same to the cluster will be deployed here!
 ```hocon
 akka
 {
   cluster
   {
-    roles = ["backend"]
+    roles = ["web"]
   }
 }
 ```
 
-## Using Roles Within Your Cluster
-
-The roles are part of the membership information in `MemberEvent` that you can subscribe to. The roles of the local cluster member are available from the `SelfMember` and that can be used for conditionally starting certain actors:
-
-```csharp
-var selfMember = Cluster.Get(_actorSystem).SelfMember;
-if (selfMember.HasRole("backend"))
+**Node2**: All of my code handling fraud detections will be deployed on this node
+```hocon
+akka
 {
-    context.ActorOf(Backend.Prop(), "back");
-}
-else if (selfMember.HasRole("front"))
-{
-    context.ActorOf(Frontend.Prop(), "front");
+  cluster
+  {
+    roles = ["fraud"]
+  }
 }
 ```
 
-## Akka.Cluster.Sharding
+**Node3**: All me code that retrieves, stores data will be deployed on this node
+```hocon
+akka
+{
+  cluster
+  {
+    roles = ["storage"]
+  }
+}
+```
 
-Cluster Sharding uses its own Distributed Data Replicator per node. If using roles with sharding there is one Replicator per role, which enables a subset of all nodes for some entity types and another subset for other entity types. Each replicator has a name that contains the node role and therefore the role configuration must be the same on all nodes in the cluster, for example you can’t change the roles when performing a rolling update. Changing roles requires a full cluster restart.
+**Node4**: All my code that handles customer orders will be deployed on this node
+```hocon
+akka
+{
+  cluster
+  {
+    roles = ["order"]
+  }
+}
+```
+
+**Node5**: All my code that handles customer billing will be deployed on this node
+```hocon
+akka
+{
+  cluster
+  {
+    roles = ["billing"]
+  }
+}
+```
+
+Now that we have laid the foundation for what is to follow, Akka.Cluster is made of various ready-made extensions(or modules) you can deploy.
+I will show you how you can deploy them on any of the nodes. Apart from the Akka.Cluster modules, if you just want to use the Akka.Cluster core, I will show you how you can deploy your own actor to the cluster node with the required role:
+
+**Cluster Sharding**: Sharding be will deployed on the nodes with the `order` role, `node4`
 
 ```hocon
 akka
 {
   cluster
   {
-    roles = ["worker", "notifier", "credit", "storage"]
+    roles = ["order"]
     sharding
     {
-      role = "worker"
+      role = "order"
     }
   }
 }
 ```
 
-```csharp
-var sharding = ClusterSharding.Get(system);
-var shardRegion = await sharding.StartAsync(
-    typeName: "customer",
-    entityPropsFactory: e => Props.Create(() => new Customer(e)),
-    settings: ClusterShardingSettings.Create(system).WithRole("worker"),
-    messageExtractor: new MessageExtractor(10));
-```
-
-## `DistributedPubSub`
-
-Start the mediator on members tagged with this role. All members are used if undefined or empty.
+**Distributed Pub-Sub**: DistributedPubSub will be deployed on the nodes with the `web` role, `node1`.
 
 ```hocon
 akka
 {
   cluster
   {
-    roles = ["worker", "notifier", "credit", "storage"]
+    roles = ["web"]
     pub-sub
     {
-      role = "notifier"
+      role = "web"
     }
   }
 }
 ```
 
-## `DData`
-
-Replicas are running on members tagged with this role. All members are used if undefined or empty
+**Distributed Data**: DistributedData will be deployed on the node with the `storage` role, `node3`.
 
 ```hocon
 akka
 {
   cluster
   {
-    roles = ["worker", "notifier", "credit", "storage"]
+    roles = ["storage"]
     distributed-data
     {
       role = "storage"
@@ -104,34 +122,43 @@ akka
 }
 ```
 
-## `ClusterSingleton`
-
-Singleton among the nodes tagged with specified role. If the role is not specified it's a singleton among all nodes in the cluster.
+**Cluster Singleton**: To avoid over charging a customer more than once, my code will be deployed with `ClusterSingleton` on the node with the `billing` role, `node5`
 
 ```hocon
 akka
 {
   cluster
   {
-    roles = ["worker", "notifier", "credit", "storage"]
+    roles = ["billing"]
     singleton 
     {
-      role = "credit"
+      role = "billing"
     }
   }
 }
 ```
 
+I have one more node, `node2`, with nothing running in it. I will deploy my custom fraud detection code there, and the way to do that is: 
+
+```csharp
+var selfMember = Cluster.Get(_actorSystem).SelfMember;
+if (selfMember.HasRole("fraud"))
+{
+    context.ActorOf(Billing.Prop(), "bill-gate");
+}
+else
+{
+    //sleep, probably!
+}
+```
+
+Using the Cluster `SelfMember`, I am checking if the current node has the `billing` role and if yes, create the `Billing` actor.
+
 ## Cluster-Aware Router
 
-The major benefit of Akka.Cluster is that you can scale out your actor system to more nodes as load on the system increases - in other words, during peak period, Akka.Cluster can scale out your, for instance, order processor. 
-You can further make the most of the scaling benefits, with Cluster-aware routers to simplify developing scalable applications.
-
-### Creating Cluster-Aware Router Groups
-
-While the standard Router Groups lets you direct messages to a selected actor paths, in Akka.Cluster, Cluster-Aware Router Groups, you can send the messages across a cluster of machines instead!
-
-Create Cluster-Aware Router Groups with HOCON file:
+Cluster-Aware routers automate how actors are deployed on the cluster and also how messages are routed based on the role specified! Routers in Akka.NET can be either grouped or pooled and you can read up on them [Routers](https://getakka.net/articles/actors/routers.html)
+ 
+**Router Group**: I will create Cluster-Aware Router Group for all my applications above!
 
 ```hocon
 akka
@@ -141,44 +168,80 @@ akka
       provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
       deployment
       {
-         /workdispatcher
+         /webdispatcher
          {
             router = consistent-hashing-group # routing strategy
-            routees.paths = ["/user/worker"] # path of routee on each node
+            routees.paths = ["/user/web"] # path of routee on each node
             nr-of-instances = 3 # max number of total routees
             cluster
             {
                enabled = on
-               allow-local-routees = on
+			   use-role = "web"
+            }
+         }
+		 /frauddispatcher
+         {
+            router = consistent-hashing-group # routing strategy
+            routees.paths = ["/user/fraud"] # path of routee on each node
+            nr-of-instances = 3 # max number of total routees
+            cluster
+            {
+               enabled = on
+			   use-role = "fraud"
+            }
+         }
+		 /billingdispatcher
+         {
+            router = consistent-hashing-group # routing strategy
+            routees.paths = ["/user/billing"] # path of routee on each node
+            nr-of-instances = 3 # max number of total routees
+            cluster
+            {
+               enabled = on
+			   use-role = "billing"
+            }
+         }
+		 /orderdispatcher
+         {
+            router = consistent-hashing-group # routing strategy
+            routees.paths = ["/user/order"] # path of routee on each node
+            nr-of-instances = 3 # max number of total routees
+            cluster
+            {
+               enabled = on
+			   use-role = "order"
+            }
+         }
+		 /storagedispatcher
+         {
+            router = consistent-hashing-group # routing strategy
+            routees.paths = ["/user/storage"] # path of routee on each node
+            nr-of-instances = 3 # max number of total routees
+            cluster
+            {
+               enabled = on
+			   use-role = "storage"
             }
          }
       }
    }
-   cluster
-   {
-     # your cluster configuration here
-   }
 }
 ```
 ```csharp
-var worker = system.ActorOf<Worker>("worker");
-var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"workdispatcher");
+var web = system.ActorOf<Web>("web");
+var fraud = system.ActorOf<Fraud>("fraud");
+var order = system.ActorOf<Order>("order");
+var billing = system.ActorOf<Billing>("billing");
+var storage = system.ActorOf<Storage>("storage");
+
+var webRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"webdispatcher");
+var fraudRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"frauddispatcher");
+var orderRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"orderdispatcher");
+var billingRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"billingispatcher");
+var storageRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"storagedispatcher");
 ```
 
-Create Cluster-Aware Router Groups with `code`:
-
-```csharp
-var routeePaths = new List<string> { "/user/worker" };
-var clusterRouterSettings = new ClusterRouterGroupSettings(3, routeePaths, true);
-var clusterGroupProps = Props.Empty.WithRouter(new ClusterRouterGroup(new Akka.Routing.ConsistentHashingGroup("/user/worker"), clusterRouterSettings));
-```
-
-### Creating Cluster-Aware Router Pool
-
-Cluster-Aware Router Pool, lets you create actors across a cluster of nodes. Any time a new node joins existing cluster, the router deploys actors onto the new node and makes the actors available by adding it to the list of routees. 
-If a node becomes unresponsive, due to network outage or it is shut down abruptly, it’s removed from the list of available routees.
-
-Create Cluster-Aware Router Pool with HOCON file:
+**Router Pool**: I will create Cluster-Aware Router Pool for all my applications above!
 
 ```hocon
 akka
@@ -188,59 +251,62 @@ akka
       provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
       deployment
       {
-         /workdispatcher
+         /webdispatcher
          {
             router = round-robin-pool # routing strategy
             max-nr-of-instances-per-node = 5
             cluster
             {
                enabled = on
-               allow-local-routees = on
+			   use-role = "web"
+            }
+         }
+		 /frauddispatcher
+         {
+            router = round-robin-pool # routing strategy
+            max-nr-of-instances-per-node = 5
+            cluster
+            {
+               enabled = on
+			   use-role = "fraud"
+            }
+         }
+		 /billingdispatcher
+         {
+            router = round-robin-pool # routing strategy
+            max-nr-of-instances-per-node = 5
+            cluster
+            {
+               enabled = on
+			   use-role = "billing"
+            }
+         }
+		 /orderdispatcher
+         {
+            router = round-robin-pool # routing strategy
+            max-nr-of-instances-per-node = 5
+            cluster
+            {
+               enabled = on
+			   use-role = "order"
+            }
+         }
+		 /storagedispatcher
+         {
+            router = round-robin-pool # routing strategy
+            max-nr-of-instances-per-node = 5
+            cluster
+            {
+               enabled = on
+			   use-role = "storage"
             }
          }
       }
    }
-   cluster
-   {
-     # your cluster configuration here
-   }
 }
 ```
+
 ```csharp
 var routerProps = Props.Empty.WithRouter(FromConfig.Instance);
 ```
-Create Cluster-Aware Router Pool with `code`:
 
-```csharp
-var clusterPoolSettings = new ClusterRouterPoolSettings(1000, 5, true);
-var clusterPoolProps = Props.Create<Worker>().WithRouter(new ClusterRouterPool(new RoundRobinPool(5), clusterPoolSettings));
-```
-
-## Putting It All Together
-
-From the above, you can see that it is possible to have different .NET applications (or actors) in a cluster all performing different function:
-
-```hocon
-akka 
-{
-  cluster 
-  {
-    roles = ["worker", "notifier", "credit", "storage"]
-    singleton
-    {
-      role = "credit"
-    }
-    distributed-data
-    {
-      role = "storage"
-    }
-    pub-sub
-    {
-      role = "notifier"
-    }
-    sharding
-    {
-      role = "worker"
-    }
-}
-```
