@@ -12,7 +12,7 @@ When you require an application to run on a node(machine/server/vm) with certain
 Specifying cluster role(s) is a best practice; you don't want an application that requires less computational power running and consuming resources meant for a mission-critical and resource-intensive application.
 Even if you only have a single type of node in your cluster, you should still use roles for it so you can leverage this infrastructure as your cluster expands in the future; and they add zero overhead in any conceivable way.
 
-# How To Configure Cluster Role
+# How To Configure Cluster Roles
 
 Below I will show you how the cluster above can be reproduced. I will create a five-nodes(ActorSystems - all having same name, though, but living on different machine/server/vm) cluster with different roles applied:
 
