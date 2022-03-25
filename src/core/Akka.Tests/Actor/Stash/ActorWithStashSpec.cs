@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
@@ -59,18 +60,18 @@ namespace Akka.Tests.Actor.Stash
         }
 
         [Fact]
-        public void An_actor_Should__not_throw_an_exception_if_the_same_message_is_received_and_stashed_twice()
+        public async Task An_actor_Should__not_throw_an_exception_if_the_same_message_is_received_and_stashed_twice()
         {
             _state.ExpectedException = new TestLatch();
             var stasher = ActorOf<StashAndReplyActor>("stashing-actor");
             stasher.Tell("hello");
-            ExpectMsg("bye");
+            await ExpectMsgAsync("bye");
             stasher.Tell("hello");
-            ExpectMsg("bye");
+            await ExpectMsgAsync("bye");
         }
 
         [Fact]
-        public void An_actor_must_unstash_all_messages_on_PostStop()
+        public async Task An_actor_must_unstash_all_messages_on_PostStop()
         {
             var stasher = ActorOf<StashEverythingActor>("stasher");
             Watch(stasher);
@@ -79,11 +80,12 @@ namespace Akka.Tests.Actor.Stash
 
             //When stasher is stopped it should unstash message during poststop to mailbox
             //the mailbox will be emptied and the messages will be sent to deadletters
-            EventFilter.DeadLetter<string>(s=>s=="message", source: stasher.Path.ToString()).ExpectOne(() =>
-            {
-                Sys.Stop(stasher);
-                ExpectTerminated(stasher);
-            });
+            await EventFilter.DeadLetter<string>(s=>s=="message", source: stasher.Path.ToString())
+                .ExpectOneAsync(async () =>
+                {
+                    Sys.Stop(stasher);
+                    await ExpectTerminatedAsync(stasher);
+                });
         }
 
         [Fact]
@@ -111,7 +113,7 @@ namespace Akka.Tests.Actor.Stash
         }
 
         [Fact]
-        public void An_actor_that_clears_the_stash_on_preRestart_Must_not_receive_previously_stashed_messages()
+        public async Task An_actor_that_clears_the_stash_on_preRestart_Must_not_receive_previously_stashed_messages()
         {
             SupervisorStrategy strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), e => Directive.Restart);
             var boss = ActorOf(() => new Supervisor(strategy));
@@ -137,15 +139,15 @@ namespace Akka.Tests.Actor.Stash
             //So when the cell tries to unstash, it will not unstash messages. If it would TestActor
             //would receive all stashme messages instead of "this should bounce back"
             restartLatch.Ready(TimeSpan.FromSeconds(1110));
-            ExpectMsg("this should bounce back");
+            await ExpectMsgAsync("this should bounce back");
         }
 
         [Fact]
-        public void An_actor_must_rereceive_unstashed_Terminated_messages()
+        public async Task An_actor_must_rereceive_unstashed_Terminated_messages()
         {
             ActorOf(Props.Create(() => new TerminatedMessageStashingActor(TestActor)), "terminated-message-stashing-actor");
-            ExpectMsg("terminated1");
-            ExpectMsg("terminated2");
+            await ExpectMsgAsync("terminated1");
+            await ExpectMsgAsync("terminated2");
         }
 
         private class UnboundedStashActor : BlackHoleActor, IWithUnboundedStash
