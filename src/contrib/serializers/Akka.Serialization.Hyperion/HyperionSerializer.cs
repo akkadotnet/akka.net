@@ -401,5 +401,8 @@ namespace Akka.Serialization
             DisallowUnsafeType = disallowUnsafeType;
             TypeFilter = typeFilter;
         }
+
+        public HyperionSerializerSettings WithDisallowUnsafeType(bool disallow)
+            => new HyperionSerializerSettings(PreserveObjectReferences, VersionTolerance, KnownTypesProvider, PackageNameOverrides, Surrogates, disallow, TypeFilter);
     }
 }
