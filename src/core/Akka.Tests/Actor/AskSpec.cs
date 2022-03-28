@@ -16,6 +16,8 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Nito.AsyncEx;
 using Akka.Dispatch.SysMsg;
+using FluentAssertions.Extensions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Tests.Actor
 {
@@ -70,8 +72,11 @@ namespace Akka.Tests.Actor
                 {
                     if (message.Equals("ask"))
                     {
-                        var result = await _replyActor.Ask("foo", TimeSpan.FromSeconds(2));
-                        _testActor.Tell(result);
+                        await Awaiting(async () =>
+                        {
+                            var result = await _replyActor.Ask("foo");
+                            _testActor.Tell(result);
+                        }).Should().CompleteWithinAsync(2.Seconds());
                     }
 
                 });
