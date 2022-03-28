@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Serialization;
@@ -76,7 +77,7 @@ namespace Akka.Tests.Actor
         {
             Shutdown();
             InternalCurrentActorCellKeeper.Current = null;
-            Intercept<ActorInitializationException>(() =>
+            Assert.Throws<ActorInitializationException>(() =>
             {
                 new BlackHoleActor();
             });
@@ -100,7 +101,7 @@ namespace Akka.Tests.Actor
             var aref = ActorOf<BlackHoleActor>();
 
             var serializer = new NewtonSoftJsonSerializer(null);
-            Intercept(() =>
+            Assert.Throws<NullReferenceException>(() =>
             {
                 var binary = serializer.ToBinary(aref);
                 var bref = serializer.FromBinary(binary, typeof(IActorRef));
@@ -108,9 +109,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void
-            An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled
-            ()
+        public async Task An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled()
         {
             var aref = ActorOf<BlackHoleActor>("non-existing");
             var aserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
@@ -120,11 +119,11 @@ namespace Akka.Tests.Actor
 
             aref.Tell(PoisonPill.Instance);
 
-            ExpectMsg<Terminated>();
+            await ExpectMsgAsync<Terminated>();
 
             var bserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
 
-            AwaitCondition(() =>
+            await AwaitConditionAsync(() =>
             {
                 var bref = (IActorRef) bserializer.FromBinary(binary, typeof (IActorRef));
                 try
@@ -142,9 +141,9 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRef_should_restart_when_Killed()
+        public async Task An_ActorRef_should_restart_when_Killed()
         {
-            EventFilter.Exception<ActorKilledException>().ExpectOne(() =>
+            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(() =>
             {
                 var latch = CreateTestLatch(2);
                 var boss = ActorOf(a =>
@@ -173,12 +172,11 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRef_should_support_nested_ActorOfs()
+        public async Task An_ActorRef_should_support_nested_ActorOfs()
         {
             var a = Sys.ActorOf(Props.Create(() => new NestingActor(Sys)));
-            var t1 = a.Ask("any");
-            t1.Wait(TimeSpan.FromSeconds(3));
-            var nested = t1.Result as IActorRef;
+            var t1 = await a.Ask("any", TimeSpan.FromSeconds(3));
+            var nested = t1 as IActorRef;
 
             Assert.NotNull(a);
             Assert.NotNull(nested);
@@ -186,29 +184,25 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRef_should_support_advanced_nested_ActorOfs()
+        public async Task An_ActorRef_should_support_advanced_nested_ActorOfs()
         {
             var i = Sys.ActorOf(Props.Create(() => new InnerActor()));
             var a = Sys.ActorOf(Props.Create(() => new OuterActor(i)));
 
-            var t1 = a.Ask("innerself");
-            t1.Wait(TimeSpan.FromSeconds(3));
-            var inner = t1.Result as IActorRef;
+            var t1 = await a.Ask("innerself", TimeSpan.FromSeconds(3));
+            var inner = t1 as IActorRef;
             Assert.True(inner != a);
 
-            var t2 = a.Ask(a);
-            t2.Wait(TimeSpan.FromSeconds(3));
-            var self = t2.Result as IActorRef;
+            var t2 = await a.Ask(a, TimeSpan.FromSeconds(3));
+            var self = t2 as IActorRef;
             self.ShouldBe(a);
 
-            var t3 = a.Ask("self");
-            t3.Wait(TimeSpan.FromSeconds(3));
-            var self2 = t3.Result as IActorRef;
+            var t3 = await a.Ask("self", TimeSpan.FromSeconds(3));
+            var self2 = t3 as IActorRef;
             self2.ShouldBe(a);
 
-            var t4 = a.Ask("msg");
-            t4.Wait(TimeSpan.FromSeconds(3));
-            var msg = t4.Result as string;
+            var t4 = await a.Ask("msg", TimeSpan.FromSeconds(3));
+            var msg = t4 as string;
             msg.ShouldBe("msg");
         }
 
@@ -238,57 +232,52 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRef_should_support_ActorOfs_where_actor_class_is_not_public()
+        public async Task An_ActorRef_should_support_ActorOfs_where_actor_class_is_not_public()
         {
             var a = Sys.ActorOf(NonPublicActor.CreateProps());
             a.Tell("pigdog", TestActor);
-            ExpectMsg("pigdog");
+            await ExpectMsgAsync("pigdog");
             Sys.Stop(a);
         }
 
         [Fact]
-        public void An_ActorRef_should_stop_when_sent_a_poison_pill()
+        public async Task An_ActorRef_should_stop_when_sent_a_poison_pill()
         {
             var timeout = TimeSpan.FromSeconds(20);
             var actorRef = Sys.ActorOf(Props.Create(() => new PoisonPilledActor()));
 
-            var t1 = actorRef.Ask(5, timeout);
-            var t2 = actorRef.Ask(0, timeout);
+            var t1 = await actorRef.Ask(5, timeout);
+            var t2 = await actorRef.Ask(0, timeout);
             actorRef.Tell(PoisonPill.Instance);
 
-            t1.Wait(timeout);
-            t2.Wait(timeout);
-
-            t1.Result.ShouldBe("five");
-            t2.Result.ShouldBe("zero");
+            t1.ShouldBe("five");
+            t2.ShouldBe("zero");
 
             VerifyActorTermination(actorRef);
         }
 
         [Fact]
-        public void An_ActorRef_should_be_able_to_check_for_existence_of_the_children()
+        public async Task An_ActorRef_should_be_able_to_check_for_existence_of_the_children()
         {
             var timeout = TimeSpan.FromSeconds(3);
             var parent = Sys.ActorOf(Props.Create(() => new ChildAwareActor("child")));
 
-            var t1 = parent.Ask("child");
-            t1.Wait(timeout);
-            Assert.True((bool)t1.Result);
+            var t1 = await parent.Ask("child", timeout);
+            Assert.True((bool)t1);
 
-            var t2 = parent.Ask("what");
-            t2.Wait(timeout);
-            Assert.True(!(bool)t2.Result);
+            var t2 = await parent.Ask("what", timeout);
+            Assert.True(!(bool)t2);
         }
 
         [Fact]
-        public void An_ActorRef_should_never_have_a_null_Sender_Bug_1212()
+        public async Task An_ActorRef_should_never_have_a_null_Sender_Bug_1212()
         {          
             var actor = ActorOfAsTestActorRef<NonPublicActor>(Props.Create<NonPublicActor>(SupervisorStrategy.StoppingStrategy));
             // actors with a null sender should always write to deadletters
-            EventFilter.DeadLetter<object>().ExpectOne(() => actor.Tell(new object(), null));
+            await EventFilter.DeadLetter<object>().ExpectOneAsync(() => actor.Tell(new object(), null));
 
             // will throw an exception if there's a bug
-            ExpectNoMsg();
+            await ExpectNoMsgAsync(default);
         }
 
         [Fact]
@@ -301,11 +290,11 @@ namespace Akka.Tests.Actor
             mock.IsNobody().ShouldBeTrue();
         }
 
-        private void VerifyActorTermination(IActorRef actorRef)
+        private async Task VerifyActorTermination(IActorRef actorRef)
         {
             var watcher = CreateTestProbe();
             watcher.Watch(actorRef);
-            watcher.ExpectTerminated(actorRef, TimeSpan.FromSeconds(20));
+            await watcher.ExpectTerminatedAsync(actorRef, TimeSpan.FromSeconds(20));
         }
 
         private sealed class ActorRefMock : IActorRef
