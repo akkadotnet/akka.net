@@ -373,7 +373,7 @@ namespace Akka.TestKit
             Action<T> msgAssert,
             Action<IActorRef> senderAssert,
             string hint,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default)
         {
             return InternalExpectMsgAsync(timeout, msgAssert, senderAssert, hint, cancellationToken)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
@@ -475,7 +475,7 @@ namespace Akka.TestKit
         }
         
         /// <inheritdoc cref="ExpectNoMsg(CancellationToken)"/>
-        public async ValueTask ExpectNoMsgAsync(CancellationToken cancellationToken = default)
+        public async ValueTask ExpectNoMsgAsync(CancellationToken cancellationToken)
         {
             await InternalExpectNoMsgAsync(RemainingOrDefault, cancellationToken)
                 .ConfigureAwait(false);
@@ -596,7 +596,7 @@ namespace Akka.TestKit
 
         public async IAsyncEnumerable<T> ExpectMsgAllOfAsync<T>(
             IReadOnlyCollection<T> messages,
-            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default)
         {
             var enumerable = InternalExpectMsgAllOfAsync(RemainingOrDefault, messages, cancellationToken: cancellationToken)
                 .ConfigureAwait(false).WithCancellation(cancellationToken);

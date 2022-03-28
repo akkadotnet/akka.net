@@ -34,7 +34,7 @@ namespace Akka.Tests.Actor
             // since the reply is ignored, we can't check that a message was sent to it
             askMeRef.Tell(new Request(Sys.IgnoreRef));
 
-            await probe.ExpectNoMsgAsync();
+            await probe.ExpectNoMsgAsync(default);
 
             // but we do check that the counter has increased when we used the ActorRef.ignore
             askMeRef.Tell(new Request(probe.Ref));
