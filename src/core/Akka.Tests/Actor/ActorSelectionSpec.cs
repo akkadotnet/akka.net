@@ -19,6 +19,7 @@ using Xunit;
 
 namespace Akka.Tests.Actor
 {
+    using System.Threading.Tasks;
     using Akka.Util;
 
     public class ActorSelectionSpec : AkkaSpec
@@ -47,12 +48,12 @@ namespace Akka.Tests.Actor
         private IInternalActorRef System => SystemImpl.SystemGuardian;
         private IInternalActorRef Root => SystemImpl.LookupRoot;
 
-        private IActorRef Identify(ActorSelection selection)
+        private async Task<IActorRef> Identify(ActorSelection selection)
         {
             var idProbe = CreateTestProbe();
             selection.Tell(new Identify(selection), idProbe.Ref);
-            var result = idProbe.ExpectMsg<ActorIdentity>().Subject;
-            var asked = selection.Ask<ActorIdentity>(new Identify(selection)).Result;
+            var result = (await idProbe.ExpectMsgAsync<ActorIdentity>()).Subject;
+            var asked = await selection.Ask<ActorIdentity>(new Identify(selection));
             asked.Subject.ShouldBe(result);
             asked.MessageId.ShouldBe(selection);
             IActorRef resolved;
@@ -68,54 +69,54 @@ namespace Akka.Tests.Actor
             return result;
         }
 
-        private IActorRef Identify(string path) => Identify(Sys.ActorSelection(path));
+        private async Task<IActorRef> Identify(string path) => await Identify(Sys.ActorSelection(path));
 
-        private IActorRef Identify(ActorPath path) => Identify(Sys.ActorSelection(path));
+        private async Task<IActorRef> Identify(ActorPath path) => await Identify(Sys.ActorSelection(path));
 
-        private IActorRef AskNode(IActorRef node, IQuery query)
+        private async Task<IActorRef> AskNode(IActorRef node, IQuery query)
         {
-            var result = node.Ask(query).Result;
+            var result = await node.Ask(query);
 
             if (result is IActorRef actorRef)
                 return actorRef;
 
-            return result is ActorSelection selection ? Identify(selection) : null;
+            return result is ActorSelection selection ? await Identify(selection) : null;
         }
 
         [Fact]
-        public void An_ActorSystem_must_select_actors_by_their_path()
+        public async Task An_ActorSystem_must_select_actors_by_their_path()
         {
-            Identify(_c1.Path).ShouldBe(_c1);
-            Identify(_c2.Path).ShouldBe(_c2);
-            Identify(_c21.Path).ShouldBe(_c21);
-            Identify("user/c1").ShouldBe(_c1);
-            Identify("user/c2").ShouldBe(_c2);
-            Identify("user/c2/c21").ShouldBe(_c21);
+            (await Identify(_c1.Path)).ShouldBe(_c1);
+            (await Identify(_c2.Path)).ShouldBe(_c2);
+            (await Identify(_c21.Path)).ShouldBe(_c21);
+            (await Identify("user/c1")).ShouldBe(_c1);
+            (await Identify("user/c2")).ShouldBe(_c2);
+            (await Identify("user/c2/c21")).ShouldBe(_c21);
         }
 
         [Fact]
-        public void An_ActorSystem_must_select_actors_by_their_string_path_representation()
+        public async Task An_ActorSystem_must_select_actors_by_their_string_path_representation()
         {
-            Identify(_c1.Path.ToString()).ShouldBe(_c1);
-            Identify(_c2.Path.ToString()).ShouldBe(_c2);
-            Identify(_c21.Path.ToString()).ShouldBe(_c21);
+            (await Identify(_c1.Path.ToString())).ShouldBe(_c1);
+            (await Identify(_c2.Path.ToString())).ShouldBe(_c2);
+            (await Identify(_c21.Path.ToString())).ShouldBe(_c21);
 
-            Identify(_c1.Path.ToStringWithoutAddress()).ShouldBe(_c1);
-            Identify(_c2.Path.ToStringWithoutAddress()).ShouldBe(_c2);
-            Identify(_c21.Path.ToStringWithoutAddress()).ShouldBe(_c21);
+            (await Identify(_c1.Path.ToStringWithoutAddress())).ShouldBe(_c1);
+            (await Identify(_c2.Path.ToStringWithoutAddress())).ShouldBe(_c2);
+            (await Identify(_c21.Path.ToStringWithoutAddress())).ShouldBe(_c21);
         }
 
         [Fact]
-        public void An_ActorSystem_must_take_actor_incarnation_into_account_when_comparing_actor_references()
+        public async Task An_ActorSystem_must_take_actor_incarnation_into_account_when_comparing_actor_references()
         {
             const string name = "abcdefg";
             var a1 = Sys.ActorOf(Props, name);
             Watch(a1);
             a1.Tell(PoisonPill.Instance);
-            ExpectMsg<Terminated>().ActorRef.ShouldBe(a1);
+            (await ExpectMsgAsync<Terminated>()).ActorRef.ShouldBe(a1);
 
             //not equal because it's terminated
-            Identify(a1.Path).ShouldBe(null);
+            (await Identify(a1.Path)).ShouldBe(null);
 
             var a2 = Sys.ActorOf(Props, name);
             a2.Path.ShouldBe(a1.Path);
@@ -125,58 +126,58 @@ namespace Akka.Tests.Actor
 
             Watch(a2);
             a2.Tell(PoisonPill.Instance);
-            ExpectMsg<Terminated>().ActorRef.ShouldBe(a2);
+            (await ExpectMsgAsync<Terminated>()).ActorRef.ShouldBe(a2);
         }
 
         [Fact]
-        public void An_ActorSystem_must_select_actors_by_their_root_anchored_relative_path()
+        public async Task An_ActorSystem_must_select_actors_by_their_root_anchored_relative_path()
         {
-            Identify(_c1.Path.ToStringWithoutAddress()).ShouldBe(_c1);
-            Identify(_c2.Path.ToStringWithoutAddress()).ShouldBe(_c2);
-            Identify(_c21.Path.ToStringWithoutAddress()).ShouldBe(_c21);
+            (await Identify(_c1.Path.ToStringWithoutAddress())).ShouldBe(_c1);
+            (await Identify(_c2.Path.ToStringWithoutAddress())).ShouldBe(_c2);
+            (await Identify(_c21.Path.ToStringWithoutAddress())).ShouldBe(_c21);
         }
 
         [Fact]
-        public void An_ActorSystem_must_select_actors_by_their_relative_path()
+        public async Task An_ActorSystem_must_select_actors_by_their_relative_path()
         {
-            Identify(_c1.Path.Elements.Join("/")).ShouldBe(_c1);
-            Identify(_c2.Path.Elements.Join("/")).ShouldBe(_c2);
-            Identify(_c21.Path.Elements.Join("/")).ShouldBe(_c21);
+            (await Identify(_c1.Path.Elements.Join("/"))).ShouldBe(_c1);
+            (await Identify(_c2.Path.Elements.Join("/"))).ShouldBe(_c2);
+            (await Identify(_c21.Path.Elements.Join("/"))).ShouldBe(_c21);
         }
 
         [Fact]
-        public void An_ActorSystem_must_select_system_generated_actors()
+        public async Task An_ActorSystem_must_select_system_generated_actors()
         {
-            Identify("/user").ShouldBe(User);
-            Identify("/system").ShouldBe(System);
-            Identify(System.Path).ShouldBe(System);
-            Identify(System.Path.ToStringWithoutAddress()).ShouldBe(System);
-            Identify("/").ShouldBe(Root);
+            (await Identify("/user")).ShouldBe(User);
+            (await Identify("/system")).ShouldBe(System);
+            (await Identify(System.Path)).ShouldBe(System);
+            (await Identify(System.Path.ToStringWithoutAddress())).ShouldBe(System);
+            (await Identify("/")).ShouldBe(Root);
             //We return Nobody for an empty path 
             //Identify("").ShouldBe(Root);
-            Identify("").ShouldBe(Nobody.Instance);
-            Identify(new RootActorPath(Root.Path.Address)).ShouldBe(Root);
-            Identify("..").ShouldBe(Root);
-            Identify(Root.Path).ShouldBe(Root);
-            Identify(Root.Path.ToStringWithoutAddress()).ShouldBe(Root);
-            Identify("user").ShouldBe(User);
-            Identify("system").ShouldBe(System);
-            Identify("user/").ShouldBe(User);
-            Identify("system/").ShouldBe(System);
+            (await Identify("")).ShouldBe(Nobody.Instance);
+            (await Identify(new RootActorPath(Root.Path.Address))).ShouldBe(Root);
+            (await Identify("..")).ShouldBe(Root);
+            (await Identify(Root.Path)).ShouldBe(Root);
+            (await Identify(Root.Path.ToStringWithoutAddress())).ShouldBe(Root);
+            (await Identify("user")).ShouldBe(User);
+            (await Identify("system")).ShouldBe(System);
+            (await Identify("user/")).ShouldBe(User);
+            (await Identify("system/")).ShouldBe(System);
         }
 
         [Fact]
-        public void An_ActorSystem_must_return_ActorIdentity_None_respectively_for_non_existing_paths_and_DeadLetters()
+        public async Task An_ActorSystem_must_return_ActorIdentity_None_respectively_for_non_existing_paths_and_DeadLetters()
         {
-            Identify("a/b/c").ShouldBe(null);
-            Identify("a/b/c").ShouldBe(null);
-            Identify("akka://all-systems/Nobody").ShouldBe(null);
-            Identify("akka://all-systems/user").ShouldBe(null);
-            Identify("user/hallo").ShouldBe(null);
-            Identify("foo://user").ShouldBe(Nobody.Instance);
-            Identify("/deadLetters").ShouldBe(Nobody.Instance);
-            Identify("deadLetters").ShouldBe(Nobody.Instance);
-            Identify("deadLetters/").ShouldBe(Nobody.Instance);
+            (await Identify("a/b/c")).ShouldBe(null);
+            (await Identify("a/b/c")).ShouldBe(null);
+            (await Identify("akka://all-systems/Nobody")).ShouldBe(null);
+            (await Identify("akka://all-systems/user")).ShouldBe(null);
+            (await Identify("user/hallo")).ShouldBe(null);
+            (await Identify("foo://user")).ShouldBe(Nobody.Instance);
+            (await Identify("/deadLetters")).ShouldBe(Nobody.Instance);
+            (await Identify("deadLetters")).ShouldBe(Nobody.Instance);
+            (await Identify("deadLetters/")).ShouldBe(Nobody.Instance);
         }
 
 
@@ -184,7 +185,7 @@ namespace Akka.Tests.Actor
         public void An_ActorContext_must_select_actors_by_their_path()
         {
             Action<IActorRef, IActorRef> check =
-                (looker, result) => AskNode(looker, new SelectPath(result.Path)).ShouldBe(result);
+                async(looker, result) => (await AskNode(looker, new SelectPath(result.Path))).ShouldBe(result);
 
             foreach (var l in _all)
                 foreach (var r in _all)
@@ -194,11 +195,11 @@ namespace Akka.Tests.Actor
         [Fact]
         public void An_ActorContext_must_select_actor_by_their_string_path_representation()
         {
-            Action<IActorRef, IActorRef> check = (looker, result) =>
+            Action<IActorRef, IActorRef> check = async (looker, result) =>
             {
-                AskNode(looker, new SelectString(result.Path.ToStringWithoutAddress())).ShouldBe(result);
+                (await AskNode(looker, new SelectString(result.Path.ToStringWithoutAddress()))).ShouldBe(result);
                 // with trailing /
-                AskNode(looker, new SelectString(result.Path.ToStringWithoutAddress() + "/")).ShouldBe(result);
+                (await AskNode(looker, new SelectString(result.Path.ToStringWithoutAddress() + "/"))).ShouldBe(result);
             };
 
             foreach (var l in _all)
@@ -209,10 +210,10 @@ namespace Akka.Tests.Actor
         [Fact]
         public void An_ActorContext_must_select_actors_by_their_root_anchored_relative_path()
         {
-            Action<IActorRef, IActorRef> check = (looker, result) =>
+            Action<IActorRef, IActorRef> check = async (looker, result) =>
             {
-                AskNode(looker, new SelectString(result.Path.ToStringWithoutAddress())).ShouldBe(result);
-                AskNode(looker, new SelectString("/" + result.Path.Elements.Join("/") + "/")).ShouldBe(result);
+                (await AskNode(looker, new SelectString(result.Path.ToStringWithoutAddress()))).ShouldBe(result);
+                (await AskNode(looker, new SelectString("/" + result.Path.Elements.Join("/") + "/"))).ShouldBe(result);
             };
 
             foreach (var l in _all)
@@ -223,10 +224,10 @@ namespace Akka.Tests.Actor
         [Fact]
         public void An_ActorContext_must_select_actors_by_their_relative_path()
         {
-            Action<IActorRef, IActorRef, string[]> check = (looker, result, elements) =>
+            Action<IActorRef, IActorRef, string[]> check = async (looker, result, elements) =>
             {
-                AskNode(looker, new SelectString(elements.Join("/"))).ShouldBe(result);
-                AskNode(looker, new SelectString(elements.Join("/") + "/")).ShouldBe(result);
+                (await AskNode(looker, new SelectString(elements.Join("/")))).ShouldBe(result);
+                (await AskNode(looker, new SelectString(elements.Join("/") + "/"))).ShouldBe(result);
             };
 
             check(_c1, User, new[] { ".." });
@@ -247,16 +248,16 @@ namespace Akka.Tests.Actor
         [Fact]
         public void An_ActorContext_must_find_system_generated_actors()
         {
-            Action<IActorRef> check = target =>
+            Action<IActorRef> check = async target =>
             {
                 foreach (var looker in _all)
                 {
-                    AskNode(looker, new SelectPath(target.Path)).ShouldBe(target);
-                    AskNode(looker, new SelectString(target.Path.ToString())).ShouldBe(target);
-                    AskNode(looker, new SelectString(target.Path.ToString() + "/")).ShouldBe(target);
+                    (await AskNode(looker, new SelectPath(target.Path))).ShouldBe(target);
+                    (await AskNode(looker, new SelectString(target.Path.ToString()))).ShouldBe(target);
+                    (await AskNode(looker, new SelectString(target.Path.ToString() + "/"))).ShouldBe(target);
                 }
                 if (!Equals(target, Root))
-                    AskNode(_c1, new SelectString("../../" + target.Path.Elements.Join("/") + "/")).ShouldBe(target);
+                    (await AskNode(_c1, new SelectString("../../" + target.Path.Elements.Join("/") + "/"))).ShouldBe(target);
             };
 
             new[] { Root, System, User }.ForEach(check);
@@ -265,9 +266,9 @@ namespace Akka.Tests.Actor
         [Fact]
         public void An_ActorContext_must_return_deadLetters_or_ActorIdentity_None_respectively_for_non_existing_paths()
         {
-            Action<IActorRef, IQuery> checkOne = (looker, query) =>
+            Action<IActorRef, IQuery> checkOne = async (looker, query) =>
             {
-                var lookup = AskNode(looker, query);
+                var lookup = await AskNode(looker, query);
                 lookup.ShouldBe(null);
             };
 
@@ -288,62 +289,64 @@ namespace Akka.Tests.Actor
 
 
         [Fact]
-        public void An_ActorSelection_must_send_messages_directly()
+        public async Task An_ActorSelection_must_send_messages_directly()
         {
             new ActorSelection(_c1, "").Tell(new GetSender(TestActor));
-            ExpectMsg(TestActor);
+            await ExpectMsgAsync(TestActor);
             LastSender.ShouldBe(_c1);
         }
 
         [Fact]
-        public void An_ActorSelection_must_send_messages_to_string_path()
+        public async Task An_ActorSelection_must_send_messages_to_string_path()
         {
             Sys.ActorSelection("/user/c2/c21").Tell(new GetSender(TestActor));
-            ExpectMsg(TestActor);
+            await ExpectMsgAsync(TestActor);
             LastSender.ShouldBe(_c21);
         }
 
         [Fact]
-        public void An_ActorSelection_must_send_messages_to_actor_path()
+        public async Task An_ActorSelection_must_send_messages_to_actor_path()
         {
             Sys.ActorSelection(_c2.Path / "c21").Tell(new GetSender(TestActor));
-            ExpectMsg(TestActor);
+            await ExpectMsgAsync(TestActor);
             LastSender.ShouldBe(_c21);
         }
 
         [Fact]
-        public void An_ActorSelection_must_send_messages_with_correct_sender()
+        public async Task An_ActorSelection_must_send_messages_with_correct_sender()
         {
             new ActorSelection(_c21, "../../*").Tell(new GetSender(TestActor), _c1);
             //Three messages because the selection includes the TestActor, GetSender -> TestActor + response from c1 and c2 to TestActor
-            var actors = ReceiveWhile(_ => LastSender, msgs: 3).Distinct();
+            var actors = (await ReceiveWhileAsync(_ => LastSender, msgs: 3).ToListAsync()).Distinct();
             actors.Should().BeEquivalentTo(new[] { _c1, _c2 });
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
-        public void An_ActorSelection_must_drop_messages_which_cannot_be_delivered()
+        public async Task An_ActorSelection_must_drop_messages_which_cannot_be_delivered()
         {
             new ActorSelection(_c21, "../../*/c21").Tell(new GetSender(TestActor), _c2);
 
-            var actors = ReceiveWhile(_ => LastSender, msgs: 2).Distinct();
+            var actors = (await ReceiveWhileAsync(_ => LastSender, msgs: 2).ToListAsync()).Distinct();
             actors.Should().HaveCount(1).And.Subject.First().ShouldBe(_c21);
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
         }
 
         [Fact]
-        public void An_ActorSelection_must_resolve_one_actor_with_timeout()
+        public async Task An_ActorSelection_must_resolve_one_actor_with_timeout()
         {
             var s = Sys.ActorSelection("user/c2");
-            s.ResolveOne(Dilated(TimeSpan.FromSeconds(1))).Result.ShouldBe(_c2);
+            (await s.ResolveOne(Dilated(TimeSpan.FromSeconds(1)))).ShouldBe(_c2);
         }
 
         [Fact]
-        public void An_ActorSelection_must_resolve_non_existing_with_failure()
+        public async Task An_ActorSelection_must_resolve_non_existing_with_failure()
         {
-            var task = Sys.ActorSelection("user/none").ResolveOne(Dilated(TimeSpan.FromSeconds(1)));
-            task.Invoking(t => t.Wait()).Should().Throw<ActorNotFoundException>();
+            await Assert.ThrowsAsync<ActorNotFoundException>(async () =>
+            {
+                await Sys.ActorSelection("user/none").ResolveOne(Dilated(TimeSpan.FromSeconds(1)));
+            });
         }
 
         [Fact]
@@ -371,12 +374,12 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorSelection_must_send_ActorSelection_targeted_to_missing_actor_to_deadLetters()
+        public async Task An_ActorSelection_must_send_ActorSelection_targeted_to_missing_actor_to_deadLetters()
         {
             var p = CreateTestProbe();
             Sys.EventStream.Subscribe(p.Ref, typeof(DeadLetter));
             Sys.ActorSelection("/user/missing").Tell("boom", TestActor);
-            var d = p.ExpectMsg<DeadLetter>();
+            var d = await p.ExpectMsgAsync<DeadLetter>();
             d.Message.ShouldBe("boom");
             d.Sender.ShouldBe(TestActor);
             d.Recipient.Path.ToStringWithoutAddress().ShouldBe("/user/missing");
@@ -385,7 +388,7 @@ namespace Akka.Tests.Actor
         [Theory]
         [InlineData("/user/foo/*/bar")]
         [InlineData("/user/foo/bar/*")]
-        public void Bugfix3420_A_wilcard_ActorSelection_that_selects_no_actors_must_go_to_DeadLetters(string actorPathStr)
+        public async Task Bugfix3420_A_wilcard_ActorSelection_that_selects_no_actors_must_go_to_DeadLetters(string actorPathStr)
         {
             var actorA = Sys.ActorOf(act =>
             {
@@ -400,100 +403,100 @@ namespace Akka.Tests.Actor
             // deliver two ActorSelections - one from outside any actors, one from inside
             // they have different anchors to start with, so the results may differ
             Sys.ActorSelection(actorPathStr).Tell("foo");
-            ExpectMsg<DeadLetter>().Message.Should().Be("foo");
+            (await ExpectMsgAsync<DeadLetter>()).Message.Should().Be("foo");
 
             actorA.Tell("foo");
-            ExpectMsg<DeadLetter>().Message.Should().Be("foo");
+            (await ExpectMsgAsync<DeadLetter>()).Message.Should().Be("foo");
         }
 
         [Fact]
-        public void An_ActorSelection_must_identify_actors_with_wildcard_selection_correctly()
+        public async Task An_ActorSelection_must_identify_actors_with_wildcard_selection_correctly()
         {
             var creator = CreateTestProbe();
             var top = Sys.ActorOf(Props, "a");
-            var b1 = top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3)).Result;
-            var b2 = top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3)).Result;
-            var c = b2.Ask<IActorRef>(new Create("c"), TimeSpan.FromSeconds(3)).Result;
-            var d = c.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3)).Result;
+            var b1 = await top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3));
+            var b2 = await top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3));
+            var c = await b2.Ask<IActorRef>(new Create("c"), TimeSpan.FromSeconds(3));
+            var d = await c.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3));
 
             var probe = CreateTestProbe();
             Sys.ActorSelection("/user/a/*").Tell(new Identify(1), probe.Ref);
-            probe.ReceiveN(2)
+            (await probe.ReceiveNAsync(2, default).ToListAsync())
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
                 .Should().BeEquivalentTo(new[] { b1, b2 });
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/b1/*").Tell(new Identify(2), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(2, null));
+            (await probe.ExpectMsgAsync<ActorIdentity>()).Should().BeEquivalentTo(new ActorIdentity(2, null));
 
             Sys.ActorSelection("/user/a/*/c").Tell(new Identify(3), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(3, c));
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+            (await probe.ExpectMsgAsync<ActorIdentity>()).Should().BeEquivalentTo(new ActorIdentity(3, c));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/b2/*/d").Tell(new Identify(4), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(4, d));
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+            (await probe.ExpectMsgAsync<ActorIdentity>()).Should().BeEquivalentTo(new ActorIdentity(4, d));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/*/*/d").Tell(new Identify(5), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(5, d));
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+            (await probe.ExpectMsgAsync<ActorIdentity>()).Should().BeEquivalentTo(new ActorIdentity(5, d));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/*/c/*").Tell(new Identify(6), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(6, d));
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+            (await probe.ExpectMsgAsync<ActorIdentity>()).Should().BeEquivalentTo(new ActorIdentity(6, d));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/b2/*/d/e").Tell(new Identify(7), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(7, null));
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+            (await probe.ExpectMsgAsync<ActorIdentity>()).Should().BeEquivalentTo(new ActorIdentity(7, null));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/*/c/d/e").Tell(new Identify(8), probe.Ref);
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
         }
 
         [Fact]
-        public void An_ActorSelection_must_identify_actors_with_double_wildcard_selection_correctly()
+        public async Task An_ActorSelection_must_identify_actors_with_double_wildcard_selection_correctly()
         {
             var creator = CreateTestProbe();
             var top = Sys.ActorOf(Props, "a");
-            var b1 = top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3)).Result;
-            var b2 = top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3)).Result;
-            var b3 = top.Ask<IActorRef>(new Create("b3"), TimeSpan.FromSeconds(3)).Result;
-            var c1 = b2.Ask<IActorRef>(new Create("c1"), TimeSpan.FromSeconds(3)).Result;
-            var c2 = b2.Ask<IActorRef>(new Create("c2"), TimeSpan.FromSeconds(3)).Result;
-            var d = c1.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3)).Result;
+            var b1 = await top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3));
+            var b2 = await top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3));
+            var b3 = await top.Ask<IActorRef>(new Create("b3"), TimeSpan.FromSeconds(3));
+            var c1 = await b2.Ask<IActorRef>(new Create("c1"), TimeSpan.FromSeconds(3));
+            var c2 = await b2.Ask<IActorRef>(new Create("c2"), TimeSpan.FromSeconds(3));
+            var d = await c1.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3));
 
             var probe = CreateTestProbe();
 
             // grab everything below /user/a
             Sys.ActorSelection("/user/a/**").Tell(new Identify(1), probe.Ref);
-            probe.ReceiveN(6)
+            (await probe.ReceiveNAsync(6, default).ToListAsync())
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
                 .Should().BeEquivalentTo(new[] { b1, b2, b3, c1, c2, d });
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
 
             // grab everything below /user/a/b2
             Sys.ActorSelection("/user/a/b2/**").Tell(new Identify(2), probe.Ref);
-            probe.ReceiveN(3)
+            (await probe.ReceiveNAsync(3, default).ToListAsync())
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
                 .Should().BeEquivalentTo(new[] { c1, c2, d });
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
 
             // nothing under /user/a/b2/c1/d
             Sys.ActorSelection("/user/a/b2/c1/d/**").Tell(new Identify(3), probe.Ref);
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
 
             Action illegalDoubleWildCard = () => Sys.ActorSelection("/user/a/**/d").Tell(new Identify(4), probe.Ref);
             illegalDoubleWildCard.Should().Throw<IllegalActorNameException>();
         }
 
         [Fact]
-        public void An_ActorSelection_must_forward_to_selection()
+        public async Task An_ActorSelection_must_forward_to_selection()
         {
             _c2.Tell(new Forward("c21", "hello"), TestActor);
-            ExpectMsg("hello");
+            await ExpectMsgAsync("hello");
             LastSender.ShouldBe(_c21);
         }
 
