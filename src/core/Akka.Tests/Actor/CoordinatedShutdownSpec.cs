@@ -18,6 +18,9 @@ using FluentAssertions;
 using Xunit;
 using static Akka.Actor.CoordinatedShutdown;
 using Akka.Tests.Util;
+using FluentAssertions;
+using FluentAssertions.Extensions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Tests.Actor
 {
@@ -194,12 +197,12 @@ namespace Akka.Tests.Actor
                 return TaskEx.Completed;
             });
 
-            co.AddTask("b", "b2", () =>
+            co.AddTask("b", "b2", async () =>
             {
                 // to verify that c is not performed before b
-                Task.Delay(TimeSpan.FromMilliseconds(100)).Wait();
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
                 TestActor.Tell("B");
-                return TaskEx.Completed;
+                return Done.Instance;
             });
 
             co.AddTask("c", "c1", () =>
@@ -336,8 +339,9 @@ namespace Akka.Tests.Actor
                 return TaskEx.Completed;
             });
 
+            var task = co.Run(CoordinatedShutdown.UnknownReason.Instance);
             await ExpectMsgAsync("B");
-            await Assert.ThrowsAsync<TimeoutException>(async() => await co.Run(CoordinatedShutdown.UnknownReason.Instance).AwaitWithTimeout(RemainingOrDefault));
+            await Assert.ThrowsAsync<TimeoutException>(async() => await task.AwaitWithTimeout(RemainingOrDefault));
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200)); // C not run
         }
 
