@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace Akka.Util.Internal
 {
@@ -199,6 +201,13 @@ namespace Akka.Util.Internal
                 action(item);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static async Task ForEachAsync<T>(this IEnumerable<T> source, Func<T, Task> action)
+        {
+            foreach (var item in source)
+                await action(item);
+        }
+        
         /// <summary>
         /// Selects last n elements.
         /// </summary>
