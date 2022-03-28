@@ -210,7 +210,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Reliably_create_waves_of_actors()
+        public async Task Reliably_create_waves_of_actors()
         {
             var timeout = Dilated(TimeSpan.FromSeconds(20));
             var waves = Task.WhenAll(
@@ -218,7 +218,7 @@ namespace Akka.Tests.Actor
                 Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000),
                 Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000));
 
-            waves.Wait(timeout.Duration() + TimeSpan.FromSeconds(5));
+            await waves.AwaitWithTimeout(timeout.Duration() + TimeSpan.FromSeconds(5));
 
             Assert.Equal(new[] { "done", "done", "done" }, waves.Result);
         }
@@ -231,12 +231,12 @@ namespace Akka.Tests.Actor
         }
 
         [Fact()]
-        public async Task Reliable_deny_creation_of_actors_while_shutting_down()
+        public void Reliable_deny_creation_of_actors_while_shutting_down()
         {
             var sys = ActorSystem.Create("DenyCreationWhileShuttingDown");
-            sys.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(100), async () =>
+            sys.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(100), () =>
             {
-                await sys.Terminate();
+                sys.Terminate();
             });
             var failing = false;
             var created = new HashSet<IActorRef>();
@@ -250,7 +250,7 @@ namespace Akka.Tests.Actor
                     created.Add(t);
 
                     if (created.Count % 1000 == 0)
-                        await Task.Delay(50); // in case of unfair thread scheduling
+                        Thread.Sleep(50); // in case of unfair thread scheduling
                 }
                 catch (InvalidOperationException)
                 {
