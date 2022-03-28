@@ -7,8 +7,9 @@
 
 using System;
 using System.Collections.Generic;
+using Hocon.Abstraction;
 
-namespace Akka.Configuration.Hocon
+namespace Hocon
 {
     /// <summary>
     /// This class represents an array element in a HOCON (Human-Optimized Config Object Notation)
@@ -23,7 +24,7 @@ namespace Akka.Configuration.Hocon
     /// }
     /// </code>
     /// </summary>
-    public class HoconArray : List<HoconValue>, IHoconElement
+    public class HoconArray : List<IHoconValue>, IHoconArray
     {
         /// <summary>
         /// Determines whether this element is a string.
@@ -61,7 +62,7 @@ namespace Akka.Configuration.Hocon
         /// <returns>
         /// A list of elements associated with this element.
         /// </returns>
-        public IList<HoconValue> GetArray()
+        public IEnumerable<IHoconValue> GetArray()
         {
             return this;
         }

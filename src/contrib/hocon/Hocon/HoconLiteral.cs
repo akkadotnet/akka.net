@@ -7,8 +7,9 @@
 
 using System;
 using System.Collections.Generic;
+using Hocon.Abstraction;
 
-namespace Akka.Configuration.Hocon
+namespace Hocon
 {
     /// <summary>
     /// This class represents a string literal element in a HOCON (Human-Optimized Config Object Notation)
@@ -21,12 +22,17 @@ namespace Akka.Configuration.Hocon
     /// }
     /// </code>
     /// </summary>
-    public class HoconLiteral : IHoconElement
+    public class HoconLiteral : IHoconLiteral
     {
+        public HoconLiteral(string value)
+        {
+            Value = value;
+        }
+
         /// <summary>
         /// Gets or sets the value of this element.
         /// </summary>
-        public string Value { get; set; }
+        public string Value { get; }
 
         /// <summary>
         /// Determines whether this element is a string.
@@ -62,7 +68,7 @@ namespace Akka.Configuration.Hocon
         /// <exception cref="NotImplementedException">
         /// This exception is thrown automatically since this element is a string literal and not an array.
         /// </exception>
-        public IList<HoconValue> GetArray()
+        public IEnumerable<IHoconValue> GetArray()
         {
             throw new NotImplementedException("This element is a string literal and not an array.");
         }

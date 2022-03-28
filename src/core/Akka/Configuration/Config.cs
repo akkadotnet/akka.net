@@ -8,8 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Akka.Configuration.Hocon;
 using Akka.Util.Internal;
+using Hocon;
+using Hocon.Abstraction;
 
 namespace Akka.Configuration
 {
@@ -24,8 +25,9 @@ namespace Akka.Configuration
         /// <summary>
         /// Initializes a new instance of the <see cref="Config"/> class.
         /// </summary>
-        public Config()
+        protected Config()
         {
+            Substitutions = new List<IHoconSubstitution>();
         }
 
         /// <summary>
@@ -33,7 +35,7 @@ namespace Akka.Configuration
         /// </summary>
         /// <param name="root">The root node to base this configuration.</param>
         /// <exception cref="ArgumentNullException">This exception is thrown if the given <paramref name="root"/> value is undefined.</exception>
-        public Config(HoconRoot root)
+        public Config(IHoconRoot root)
         {
             if (root.Value == null)
                 throw new ArgumentNullException(nameof(root), "The root value cannot be null.");
@@ -57,6 +59,7 @@ namespace Akka.Configuration
             Value = source.Value;
             Root = source.Root;
             Fallback = fallback;
+            Substitutions = new List<IHoconSubstitution>();
         }
 
         /// <summary>
@@ -72,17 +75,17 @@ namespace Akka.Configuration
             get { return Root == null || Root.IsEmpty; }
         }
 
-        private HoconValue Value { get; set; }
+        private IHoconValue Value { get; set; }
 
         /// <summary>
         /// The root node of this configuration section
         /// </summary>
-        public virtual HoconValue Root { get; private set; }
+        public virtual IHoconValue Root { get; private set; }
 
         /// <summary>
         /// An enumeration of substitutions values
         /// </summary>
-        public IEnumerable<HoconSubstitution> Substitutions { get; set; }
+        public IEnumerable<IHoconSubstitution> Substitutions { get; set; }
 
         /// <summary>
         /// Generates a deep clone of the current configuration.
@@ -100,10 +103,10 @@ namespace Akka.Configuration
             };
         }
 
-        private HoconValue GetNode(string path)
+        private IHoconValue GetNode(string path)
         {
             var parsedPath = path.SplitDottedPathHonouringQuotes();
-            HoconValue currentNode = Root;
+            var currentNode = Root;
             if (currentNode == null)
             {
                 throw new InvalidOperationException("Current node should not be null");
@@ -125,7 +128,7 @@ namespace Akka.Configuration
         /// <returns>The boolean value defined in the specified path.</returns>
         public virtual bool GetBoolean(string path, bool @default = false)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null)
                 return @default;
 
@@ -140,7 +143,7 @@ namespace Akka.Configuration
         /// <returns>The long value defined in the specified path.</returns>
         public virtual long? GetByteSize(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null) return null;
             return value.GetByteSize();
         }
@@ -154,7 +157,7 @@ namespace Akka.Configuration
         /// <returns>The long value defined in the specified path.</returns>
         public virtual long? GetByteSize(string path, long? def = null)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null) return def;
             return value.GetByteSize();
         }
@@ -168,7 +171,7 @@ namespace Akka.Configuration
         /// <returns>The integer value defined in the specified path.</returns>
         public virtual int GetInt(string path, int @default = 0)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null)
                 return @default;
 
@@ -184,7 +187,7 @@ namespace Akka.Configuration
         /// <returns>The long value defined in the specified path.</returns>
         public virtual long GetLong(string path, long @default = 0)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null)
                 return @default;
 
@@ -200,7 +203,7 @@ namespace Akka.Configuration
         /// <returns>The string value defined in the specified path.</returns>
         public virtual string GetString(string path, string @default = null)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null)
                 return @default;
 
@@ -216,7 +219,7 @@ namespace Akka.Configuration
         /// <returns>The float value defined in the specified path.</returns>
         public virtual float GetFloat(string path, float @default = 0)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null)
                 return @default;
 
@@ -232,7 +235,7 @@ namespace Akka.Configuration
         /// <returns>The decimal value defined in the specified path.</returns>
         public virtual decimal GetDecimal(string path, decimal @default = 0)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null)
                 return @default;
 
@@ -248,7 +251,7 @@ namespace Akka.Configuration
         /// <returns>The double value defined in the specified path.</returns>
         public virtual double GetDouble(string path, double @default = 0)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null)
                 return @default;
 
@@ -263,7 +266,7 @@ namespace Akka.Configuration
         /// <returns>The list of boolean values defined in the specified path.</returns>
         public virtual IList<Boolean> GetBooleanList(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             return value.GetBooleanList();
         }
 
@@ -275,7 +278,7 @@ namespace Akka.Configuration
         /// <returns>The list of decimal values defined in the specified path.</returns>
         public virtual IList<decimal> GetDecimalList(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             return value.GetDecimalList();
         }
 
@@ -287,7 +290,7 @@ namespace Akka.Configuration
         /// <returns>The list of float values defined in the specified path.</returns>
         public virtual IList<float> GetFloatList(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             return value.GetFloatList();
         }
 
@@ -299,7 +302,7 @@ namespace Akka.Configuration
         /// <returns>The list of double values defined in the specified path.</returns>
         public virtual IList<double> GetDoubleList(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             return value.GetDoubleList();
         }
 
@@ -311,7 +314,7 @@ namespace Akka.Configuration
         /// <returns>The list of int values defined in the specified path.</returns>
         public virtual IList<int> GetIntList(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             return value.GetIntList();
         }
 
@@ -323,7 +326,7 @@ namespace Akka.Configuration
         /// <returns>The list of long values defined in the specified path.</returns>
         public virtual IList<long> GetLongList(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             return value.GetLongList();
         }
 
@@ -335,7 +338,7 @@ namespace Akka.Configuration
         /// <returns>The list of byte values defined in the specified path.</returns>
         public virtual IList<byte> GetByteList(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             return value.GetByteList();
         }
 
@@ -348,7 +351,7 @@ namespace Akka.Configuration
         /// <returns>The list of string values defined in the specified path.</returns>
         public virtual IList<string> GetStringList(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null) return new List<string>();
             return value.GetStringList();
         }
@@ -362,7 +365,7 @@ namespace Akka.Configuration
         /// <returns>The list of string values defined in the specified path.</returns>
         public virtual IList<string> GetStringList(string path, string[] defaultPaths)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null) return defaultPaths;
             return value.GetStringList();
         }
@@ -376,7 +379,7 @@ namespace Akka.Configuration
         /// <returns>A new configuration with the root node being the supplied path.</returns>
         public virtual Config GetConfig(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (Fallback != null)
             {
                 Config f = Fallback.GetConfig(path);
@@ -400,9 +403,9 @@ namespace Akka.Configuration
         /// <param name="path">The path that contains the value to retrieve.</param>
         /// <exception cref="InvalidOperationException">This exception is thrown if the current node is undefined.</exception>
         /// <returns>The <see cref="HoconValue"/> found at the location if one exists, otherwise <c>null</c>.</returns>
-        public HoconValue GetValue(string path)
+        public IHoconValue GetValue(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             return value;
         }
 
@@ -416,7 +419,7 @@ namespace Akka.Configuration
         /// <returns>The <see cref="TimeSpan"/> value defined in the specified path.</returns>
         public virtual TimeSpan GetTimeSpan(string path, TimeSpan? @default = null, bool allowInfinite = true)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             if (value == null)
                 return @default.GetValueOrDefault();
 
@@ -465,7 +468,7 @@ namespace Akka.Configuration
             if (Contains(fallback))
                 return this;
 
-            var mergedRoot = fallback.Root.GetObject().MergeImmutable(Root.GetObject());
+            var mergedRoot = ((HoconObject) fallback.Root.GetObject()).MergeImmutable(Root.GetObject());
             var newRoot = new HoconValue();
             newRoot.AppendValue(mergedRoot);
             var mergedConfig = Copy(fallback);
@@ -481,7 +484,7 @@ namespace Akka.Configuration
         /// <returns><c>true</c> if a value was found, <c>false</c> otherwise.</returns>
         public virtual bool HasPath(string path)
         {
-            HoconValue value = GetNode(path);
+            var value = GetNode(path);
             return value != null;
         }
 
@@ -493,7 +496,7 @@ namespace Akka.Configuration
         /// <returns>The supplied configuration configured with the supplied fallback.</returns>
         public static Config operator +(Config config, string fallback)
         {
-            Config fallbackConfig = ConfigurationFactory.ParseString(fallback);
+            var fallbackConfig = ConfigurationFactory.ParseString(fallback);
             return config.WithFallback(fallbackConfig);
         }
 
@@ -505,7 +508,7 @@ namespace Akka.Configuration
         /// <returns>A configuration configured with the supplied fallback.</returns>
         public static Config operator +(string configHocon, Config fallbackConfig)
         {
-            Config config = ConfigurationFactory.ParseString(configHocon);
+            var config = ConfigurationFactory.ParseString(configHocon);
             return config.WithFallback(fallbackConfig);
         }
 
@@ -516,7 +519,7 @@ namespace Akka.Configuration
         /// <returns>A configuration based on the supplied string.</returns>
         public static implicit operator Config(string str)
         {
-            Config config = ConfigurationFactory.ParseString(str);
+            var config = ConfigurationFactory.ParseString(str);
             return config;
         }
 
@@ -524,10 +527,10 @@ namespace Akka.Configuration
         /// Retrieves an enumerable key value pair representation of the current configuration.
         /// </summary>
         /// <returns>The current configuration represented as an enumerable key value pair.</returns>
-        public virtual IEnumerable<KeyValuePair<string, HoconValue>> AsEnumerable()
+        public virtual IEnumerable<KeyValuePair<string, IHoconValue>> AsEnumerable()
         {
             var used = new HashSet<string>();
-            Config current = this;
+            var current = this;
             while (current != null)
             {
                 foreach (var kvp in current.Root.GetObject().Items)
@@ -550,7 +553,7 @@ namespace Akka.Configuration
         internal bool Contains(Config other)
             => Contains(other.Root.GetObject().Items, "");
 
-        private bool Contains(Dictionary<string, HoconValue> other, string path)
+        private bool Contains(IDictionary<string, IHoconValue> other, string path)
         {
             foreach (var kvp in other)
             {

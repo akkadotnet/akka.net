@@ -2191,14 +2191,14 @@ namespace Akka.Configuration
     public class Config
     {
         public static readonly Akka.Configuration.Config Empty;
-        public Config() { }
-        public Config(Akka.Configuration.Hocon.HoconRoot root) { }
+        protected Config() { }
+        public Config(Hocon.Abstraction.IHoconRoot root) { }
         public Config(Akka.Configuration.Config source, Akka.Configuration.Config fallback) { }
         public Akka.Configuration.Config Fallback { get; }
         public virtual bool IsEmpty { get; }
-        public Akka.Configuration.Hocon.HoconValue Root { get; }
-        public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; set; }
-        public virtual System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, Akka.Configuration.Hocon.HoconValue>> AsEnumerable() { }
+        public Hocon.Abstraction.IHoconValue Root { get; }
+        public System.Collections.Generic.IEnumerable<Hocon.Abstraction.IHoconSubstitution> Substitutions { get; set; }
+        public virtual System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, Hocon.Abstraction.IHoconValue>> AsEnumerable() { }
         protected Akka.Configuration.Config Copy(Akka.Configuration.Config fallback = null) { }
         public virtual bool GetBoolean(string path, bool default = False) { }
         public virtual System.Collections.Generic.IList<bool> GetBooleanList(string path) { }
@@ -2220,7 +2220,7 @@ namespace Akka.Configuration
         public virtual System.Collections.Generic.IList<string> GetStringList(string path) { }
         public virtual System.Collections.Generic.IList<string> GetStringList(string path, string[] defaultPaths) { }
         public virtual System.TimeSpan GetTimeSpan(string path, System.Nullable<System.TimeSpan> default = null, bool allowInfinite = True) { }
-        public Akka.Configuration.Hocon.HoconValue GetValue(string path) { }
+        public Hocon.Abstraction.IHoconValue GetValue(string path) { }
         public virtual bool HasPath(string path) { }
         public override string ToString() { }
         public string ToString(bool includeFallback) { }
@@ -2234,7 +2234,7 @@ namespace Akka.Configuration
         public static bool IsNullOrEmpty(this Akka.Configuration.Config config) { }
         public static Akka.Configuration.Config SafeWithFallback(this Akka.Configuration.Config config, Akka.Configuration.Config fallback) { }
     }
-    public class ConfigurationException : Akka.Actor.AkkaException
+    public class ConfigurationException : Hocon.Common.ConfigurationException
     {
         public ConfigurationException(string message) { }
         public ConfigurationException(string message, System.Exception exception) { }
@@ -2251,8 +2251,13 @@ namespace Akka.Configuration
         public static Akka.Configuration.Config FromResource<TAssembly>(string resourceName) { }
         public static Akka.Configuration.Config FromResource(string resourceName, System.Reflection.Assembly assembly) { }
         public static Akka.Configuration.Config Load() { }
-        public static Akka.Configuration.Config ParseString(string hocon, System.Func<string, Akka.Configuration.Hocon.HoconRoot> includeCallback) { }
+        public static Akka.Configuration.Config ParseString(string hocon, System.Func<string, Hocon.HoconRoot> includeCallback) { }
         public static Akka.Configuration.Config ParseString(string hocon) { }
+    }
+    public class static Extensions
+    {
+        public static Akka.Configuration.Config AtKey(this Hocon.Abstraction.IHoconValue value, string key) { }
+        public static Akka.Configuration.Config ToConfig(this Hocon.Abstraction.IHoconValue value) { }
     }
 }
 namespace Akka.Configuration.Hocon
@@ -2270,207 +2275,11 @@ namespace Akka.Configuration.Hocon
         protected CDataConfigurationElement() { }
         protected override void DeserializeElement(System.Xml.XmlReader reader, bool serializeCollectionKey) { }
     }
-    public class HoconArray : System.Collections.Generic.List<Akka.Configuration.Hocon.HoconValue>, Akka.Configuration.Hocon.IHoconElement
-    {
-        public HoconArray() { }
-        public System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray() { }
-        public string GetString() { }
-        public bool IsArray() { }
-        public bool IsString() { }
-        public override string ToString() { }
-    }
     public class HoconConfigurationElement : Akka.Configuration.Hocon.CDataConfigurationElement
     {
         public HoconConfigurationElement() { }
         [System.Configuration.ConfigurationPropertyAttribute("content", IsKey=true, IsRequired=true)]
         public string Content { get; set; }
-    }
-    public class HoconLiteral : Akka.Configuration.Hocon.IHoconElement
-    {
-        public HoconLiteral() { }
-        public string Value { get; set; }
-        public System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray() { }
-        public string GetString() { }
-        public bool IsArray() { }
-        public bool IsString() { }
-        public override string ToString() { }
-    }
-    public class HoconObject : Akka.Configuration.Hocon.IHoconElement
-    {
-        public HoconObject() { }
-        public System.Collections.Generic.Dictionary<string, Akka.Configuration.Hocon.HoconValue> Items { get; }
-        [Newtonsoft.Json.JsonIgnoreAttribute()]
-        public System.Collections.Generic.IDictionary<string, object> Unwrapped { get; }
-        public System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray() { }
-        public Akka.Configuration.Hocon.HoconValue GetKey(string key) { }
-        public Akka.Configuration.Hocon.HoconValue GetOrCreateKey(string key) { }
-        public string GetString() { }
-        public bool IsArray() { }
-        public bool IsString() { }
-        public void Merge(Akka.Configuration.Hocon.HoconObject other) { }
-        public override string ToString() { }
-        public string ToString(int indent) { }
-    }
-    public class HoconRoot
-    {
-        protected HoconRoot() { }
-        public HoconRoot(Akka.Configuration.Hocon.HoconValue value, System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> substitutions) { }
-        public HoconRoot(Akka.Configuration.Hocon.HoconValue value) { }
-        public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; }
-        public Akka.Configuration.Hocon.HoconValue Value { get; }
-    }
-    public class HoconSubstitution : Akka.Configuration.Hocon.IHoconElement, Akka.Configuration.Hocon.IMightBeAHoconObject
-    {
-        protected HoconSubstitution() { }
-        public HoconSubstitution(string path) { }
-        public string Path { get; set; }
-        public Akka.Configuration.Hocon.HoconValue ResolvedValue { get; set; }
-        public System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray() { }
-        public Akka.Configuration.Hocon.HoconObject GetObject() { }
-        public string GetString() { }
-        public bool IsArray() { }
-        public bool IsObject() { }
-        public bool IsString() { }
-    }
-    public class HoconTokenizer : Akka.Configuration.Hocon.Tokenizer
-    {
-        public HoconTokenizer(string text) { }
-        public bool IsArrayEnd() { }
-        public bool IsArrayStart() { }
-        public bool IsAssignment() { }
-        public bool IsComma() { }
-        public bool IsDot() { }
-        public bool IsEndOfObject() { }
-        public bool IsInclude() { }
-        public bool IsObjectStart() { }
-        public bool IsSpaceOrTab() { }
-        public bool IsStartOfComment() { }
-        public bool IsStartOfQuotedText() { }
-        public bool IsStartOfTripleQuotedText() { }
-        public bool IsStartSimpleValue() { }
-        public bool IsSubstitutionStart() { }
-        public bool IsUnquotedKey() { }
-        public bool IsUnquotedKeyStart() { }
-        public bool IsWhitespace() { }
-        public bool IsWhitespaceOrComment() { }
-        public Akka.Configuration.Hocon.Token PullArrayEnd() { }
-        public Akka.Configuration.Hocon.Token PullArrayStart() { }
-        public Akka.Configuration.Hocon.Token PullAssignment() { }
-        public Akka.Configuration.Hocon.Token PullComma() { }
-        public Akka.Configuration.Hocon.Token PullComment() { }
-        public Akka.Configuration.Hocon.Token PullDot() { }
-        public Akka.Configuration.Hocon.Token PullEndOfObject() { }
-        public Akka.Configuration.Hocon.Token PullInclude() { }
-        public Akka.Configuration.Hocon.Token PullNext() { }
-        public Akka.Configuration.Hocon.Token PullQuotedKey() { }
-        public Akka.Configuration.Hocon.Token PullQuotedText() { }
-        public string PullRestOfLine() { }
-        public Akka.Configuration.Hocon.Token PullSimpleValue() { }
-        public Akka.Configuration.Hocon.Token PullSpaceOrTab() { }
-        public Akka.Configuration.Hocon.Token PullStartOfObject() { }
-        public Akka.Configuration.Hocon.Token PullSubstitution() { }
-        public Akka.Configuration.Hocon.Token PullTripleQuotedText() { }
-        public Akka.Configuration.Hocon.Token PullUnquotedKey() { }
-        public Akka.Configuration.Hocon.Token PullValue() { }
-        public void PullWhitespaceAndComments() { }
-    }
-    public class HoconValue : Akka.Configuration.Hocon.IMightBeAHoconObject
-    {
-        public HoconValue() { }
-        public HoconValue(System.Collections.Generic.List<Akka.Configuration.Hocon.IHoconElement> values, bool adoptedFromFallback = True) { }
-        public bool IsEmpty { get; }
-        public System.Collections.Generic.List<Akka.Configuration.Hocon.IHoconElement> Values { get; }
-        public void AppendValue(Akka.Configuration.Hocon.IHoconElement value) { }
-        public Akka.Configuration.Config AtKey(string key) { }
-        public void Clear() { }
-        public System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray() { }
-        public bool GetBoolean() { }
-        public System.Collections.Generic.IList<bool> GetBooleanList() { }
-        public byte GetByte() { }
-        public System.Collections.Generic.IList<byte> GetByteList() { }
-        public System.Nullable<long> GetByteSize() { }
-        public Akka.Configuration.Hocon.HoconValue GetChildObject(string key) { }
-        public decimal GetDecimal() { }
-        public System.Collections.Generic.IList<decimal> GetDecimalList() { }
-        public double GetDouble() { }
-        public System.Collections.Generic.IList<double> GetDoubleList() { }
-        public float GetFloat() { }
-        public System.Collections.Generic.IList<float> GetFloatList() { }
-        public int GetInt() { }
-        public System.Collections.Generic.IList<int> GetIntList() { }
-        public long GetLong() { }
-        public System.Collections.Generic.IList<long> GetLongList() { }
-        public Akka.Configuration.Hocon.HoconObject GetObject() { }
-        public string GetString() { }
-        public System.Collections.Generic.IList<string> GetStringList() { }
-        public System.TimeSpan GetTimeSpan(bool allowInfinite = True) { }
-        public bool IsArray() { }
-        public bool IsObject() { }
-        public bool IsString() { }
-        public void NewValue(Akka.Configuration.Hocon.IHoconElement value) { }
-        public Akka.Configuration.Config ToConfig() { }
-        public override string ToString() { }
-        public virtual string ToString(int indent) { }
-    }
-    public interface IHoconElement
-    {
-        System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray();
-        string GetString();
-        bool IsArray();
-        bool IsString();
-    }
-    public interface IMightBeAHoconObject
-    {
-        Akka.Configuration.Hocon.HoconObject GetObject();
-        bool IsObject();
-    }
-    public class Parser
-    {
-        public Parser() { }
-        public static Akka.Configuration.Hocon.HoconRoot Parse(string text, System.Func<string, Akka.Configuration.Hocon.HoconRoot> includeCallback) { }
-        public Akka.Configuration.Hocon.HoconArray ParseArray(string currentPath) { }
-        public void ParseValue(Akka.Configuration.Hocon.HoconValue owner, string currentPath) { }
-    }
-    public class Token
-    {
-        protected Token() { }
-        public Token(Akka.Configuration.Hocon.TokenType type) { }
-        public Token(string value) { }
-        public Akka.Configuration.Hocon.TokenType Type { get; set; }
-        public string Value { get; set; }
-        public static Akka.Configuration.Hocon.Token Key(string key) { }
-        public static Akka.Configuration.Hocon.Token LiteralValue(string value) { }
-        public static Akka.Configuration.Hocon.Token Substitution(string path) { }
-    }
-    public enum TokenType
-    {
-        Comment = 0,
-        Key = 1,
-        LiteralValue = 2,
-        Assign = 3,
-        ObjectStart = 4,
-        ObjectEnd = 5,
-        Dot = 6,
-        EoF = 7,
-        ArrayStart = 8,
-        ArrayEnd = 9,
-        Comma = 10,
-        Substitute = 11,
-        Include = 12,
-    }
-    public class Tokenizer
-    {
-        public Tokenizer(string text) { }
-        public bool EoF { get; }
-        public bool Matches(string pattern) { }
-        public bool Matches(params string[] patterns) { }
-        public char Peek() { }
-        protected string PickErrorLine(out int index) { }
-        public void Pop() { }
-        public void PullWhitespace() { }
-        public void Push() { }
-        public string Take(int length) { }
-        public char Take() { }
     }
 }
 namespace Akka.Dispatch

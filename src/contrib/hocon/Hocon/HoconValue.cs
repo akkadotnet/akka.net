@@ -11,14 +11,15 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Hocon.Abstraction;
 
-namespace Akka.Configuration.Hocon
+namespace Hocon
 {
     /// <summary>
     /// This class represents the root type for a HOCON (Human-Optimized Config Object Notation)
     /// configuration object.
     /// </summary>
-    public class HoconValue : IMightBeAHoconObject
+    public class HoconValue : IHoconValue
     {
         private static readonly Regex EscapeRegex = new Regex("[ \t:]{1}", RegexOptions.Compiled);
         private static readonly Regex TimeSpanRegex = new Regex(@"^(?<value>([0-9]+(\.[0-9]+)?))\s*(?<unit>(nanoseconds|nanosecond|nanos|nano|ns|microseconds|microsecond|micros|micro|us|milliseconds|millisecond|millis|milli|ms|seconds|second|s|minutes|minute|m|hours|hour|h|days|day|d))$", RegexOptions.Compiled);
@@ -36,7 +37,7 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         /// <param name="values">The list of elements inside this HOCON value.</param>
         /// <param name="adoptedFromFallback">Indicates whether this instance was constructed during association with fallback <see cref="Config"/>.</param>
-        public HoconValue(List<IHoconElement> values, bool adoptedFromFallback = true)
+        public HoconValue(IList<IHoconElement> values, bool adoptedFromFallback = true)
         {
             Values = values;
             AdoptedFromFallback = adoptedFromFallback;
@@ -52,8 +53,7 @@ namespace Akka.Configuration.Hocon
                 if (Values.Count == 0)
                     return true;
 
-                var first = Values[0] as HoconObject;
-                if (first != null)
+                if (Values[0] is HoconObject first)
                 {
                     if (first.Items.Count == 0)
                         return true;
@@ -65,7 +65,7 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// The list of elements inside this HOCON value
         /// </summary>
-        public List<IHoconElement> Values { get; private set; }
+        public IList<IHoconElement> Values { get; private set; }
 
         /// <summary>
         /// Marker for values were merged during fallback attaching
@@ -73,37 +73,16 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         internal bool AdoptedFromFallback { get; private set; }
 
-        public Config ToConfig()
-        {
-            return new Config(new HoconRoot(this, Enumerable.Empty<HoconSubstitution>()));
-        }
-
-        /// <summary>
-        /// Wraps this <see cref="HoconValue"/> into a new <see cref="Config"/> object at the specified key.
-        /// </summary>
-        /// <param name="key">The key designated to be the new root element.</param>
-        /// <returns>A <see cref="Config"/> with the given key as the root element.</returns>
-        public Config AtKey(string key)
-        {
-            var o = new HoconObject();
-            o.GetOrCreateKey(key);
-            o.Items[key] = this;
-            var r = new HoconValue();
-            r.Values.Add(o);
-            return new Config(new HoconRoot(r));
-        }
-
         /// <summary>
         /// Retrieves the <see cref="HoconObject"/> from this <see cref="HoconValue"/>.
         /// </summary>
         /// <returns>The <see cref="HoconObject"/> that represents this <see cref="HoconValue"/>.</returns>
-        public HoconObject GetObject()
+        public IHoconObject? GetObject()
         {
             //TODO: merge objects?
-            IHoconElement raw = Values.FirstOrDefault();
-            var o = raw as HoconObject;
+            var raw = Values.FirstOrDefault();
             var sub = raw as IMightBeAHoconObject;
-            if (o != null) return o;
+            if (raw is HoconObject o) return o;
             if (sub != null && sub.IsObject()) return sub.GetObject();
             return null;
         }
@@ -157,14 +136,11 @@ namespace Akka.Configuration.Hocon
             return Values.Count > 0 && Values.All(v => v.IsString());
         }
 
-        private string ConcatString()
+        private string? ConcatString()
         {
-            string concat = string.Join("", Values.Select(l => l.GetString())).Trim();
+            var concat = string.Join("", Values.Select(l => l.GetString())).Trim();
 
-            if (concat == "null")
-                return null;
-
-            return concat;
+            return concat == "null" ? null : concat;
         }
 
         /// <summary>
@@ -172,7 +148,7 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         /// <param name="key">The key used to retrieve the child object.</param>
         /// <returns>The element at the given key.</returns>
-        public HoconValue GetChildObject(string key)
+        public IHoconValue? GetChildObject(string key)
         {
             return GetObject()?.GetKey(key);
         }
@@ -187,33 +163,24 @@ namespace Akka.Configuration.Hocon
         /// </exception>
         public bool GetBoolean()
         {
-            string v = GetString();
-            switch (v)
+            var v = GetString();
+            return v switch
             {
-                case "on":
-                    return true;
-                case "off":
-                    return false;
-                case "true":
-                    return true;
-                case "false":
-                    return false;
-                default:
-                    throw new NotSupportedException($"Unknown boolean format: {v}");
-            }
+                "on" => true,
+                "off" => false,
+                "true" => true,
+                "false" => false,
+                _ => throw new NotSupportedException($"Unknown boolean format: {v}")
+            };
         }
 
         /// <summary>
         /// Retrieves the string value from this <see cref="HoconValue"/>.
         /// </summary>
         /// <returns>The string value represented by this <see cref="HoconValue"/>.</returns>
-        public string GetString()
+        public string? GetString()
         {
-            if (IsString())
-            {
-                return ConcatString();
-            }
-            return null; //TODO: throw exception?
+            return IsString() ? ConcatString() : null;
         }
 
         /// <summary>
@@ -339,16 +306,18 @@ namespace Akka.Configuration.Hocon
         /// <returns>A list of string values represented by this <see cref="HoconValue"/>.</returns>
         public IList<string> GetStringList()
         {
-            return GetArray().Select(v => v.GetString()).ToList();
+            return ((IEnumerable<string>) GetArray()
+                .Select(v => v.GetString())
+                .Where(s => s != null)).ToList();
         }
 
         /// <summary>
         /// Retrieves a list of values from this <see cref="HoconValue"/>.
         /// </summary>
         /// <returns>A list of values represented by this <see cref="HoconValue"/>.</returns>
-        public IList<HoconValue> GetArray()
+        public IList<IHoconValue> GetArray()
         {
-            IEnumerable<HoconValue> x = from element in Values
+            var x = from element in Values
                 where element.IsArray()
                 from e in element.GetArray()
                 select e;
@@ -377,7 +346,9 @@ namespace Akka.Configuration.Hocon
         /// <returns>The time span value represented by this <see cref="HoconValue"/>.</returns>
         public TimeSpan GetTimeSpan(bool allowInfinite = true)
         {
-            string res = GetString();
+            var res = GetString();
+            if (res == null)
+                return new TimeSpan();
 
             var match = TimeSpanRegex.Match(res);
             if (match.Success) 
@@ -476,7 +447,7 @@ namespace Akka.Configuration.Hocon
             var res = GetString();
             if (string.IsNullOrEmpty(res))
                 return null;
-            res = res.Trim();
+            res = res!.Trim();
             var index = res.LastIndexOfAny(Digits);
             if (index == -1 || index + 1 >= res.Length)
                 return long.Parse(res);
@@ -484,12 +455,10 @@ namespace Akka.Configuration.Hocon
             var value = res.Substring(0, index + 1);
             var unit = res.Substring(index + 1).Trim();
 
-            for (var byteSizeIndex = 0; byteSizeIndex < ByteSizes.Length; byteSizeIndex++)
+            foreach (var byteSize in ByteSizes)
             {
-                var byteSize = ByteSizes[byteSizeIndex];
-                for (var suffixIndex = 0; suffixIndex < byteSize.Suffixes.Length; suffixIndex++)
+                foreach (var suffix in byteSize.Suffixes)
                 {
-                    var suffix = byteSize.Suffixes[suffixIndex];
                     if (string.Equals(unit, suffix, StringComparison.Ordinal))
                         return byteSize.Factor * long.Parse(value);
                 }
@@ -516,29 +485,28 @@ namespace Akka.Configuration.Hocon
         {
             if (IsString())
             {
-                string text = QuoteIfNeeded(GetString());
-                return text;
+                return QuoteIfNeeded(GetString());
             }
             if (IsObject())
             {
                 if (indent == 0)
                 {
-                    return GetObject().ToString(indent + 1);
+                    return GetObject()?.ToString(indent + 1) ?? string.Empty;
                 }
                 else
                 {
                     var i = new string(' ', indent * 2);
-                    return string.Format("{{\r\n{1}{0}}}", i, GetObject().ToString(indent + 1));
+                    return string.Format("{{\r\n{1}{0}}}", i, GetObject()?.ToString(indent + 1));
                 }
             }
             if (IsArray())
             {
-                return string.Format("[{0}]", string.Join(",", GetArray().Select(e => e.ToString(indent + 1))));
+                return $"[{string.Join(",", GetArray().Select(e => e.ToString(indent + 1)))}]";
             }
             return "<<unknown value>>";
         }
 
-        private string QuoteIfNeeded(string text)
+        private string QuoteIfNeeded(string? text)
         {
             if (text == null) return "";
 

@@ -7,22 +7,14 @@
 
 using System;
 using System.Runtime.Serialization;
-using HConfigurationException = Hocon.Common.ConfigurationException;
 
-namespace Akka.Configuration
+namespace Hocon.Common
 {
     /// <summary>
     /// The exception that is thrown when a configuration is invalid.
     /// </summary>
-    public class ConfigurationException : HConfigurationException
+    public class ConfigurationException : Exception
     {
-        public static ConfigurationException NullOrEmptyConfig<T>(string path = null)
-        {
-            return !string.IsNullOrWhiteSpace(path) 
-                ? new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration does not contain `{path}` node") 
-                : new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration is null or empty.");
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationException"/> class.
         /// </summary>
