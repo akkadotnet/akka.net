@@ -284,28 +284,26 @@ namespace Akka.Tests
                 switch (message)
                 {
                     case Spawn m:
-                        {
-                            Context.ActorOf(Props.Create(() => new KillableActor(testActor)), m.Name);
-                            testActor.Tell(("Created", m.Name));
-                        }
+                        Context.ActorOf(Props.Create(() => new KillableActor(testActor)), m.Name); 
+                        testActor.Tell(("Created", m.Name));
                         break;
+                    
                     case ContextStop m:
-                        {
-                            var child = Context.Child(m.Name);
-                            Context.Stop(child);
-                        }
+                    {
+                        var child = Context.Child(m.Name);
+                        Context.Stop(child);
                         break;
+                    }
+                    
                     case Stop m:
-                        {
-                            var child = Context.Child(m.Name);
-                            ((IInternalActorRef)child).Stop();
-                        }
+                    {
+                        var child = Context.Child(m.Name);
+                        ((IInternalActorRef)child).Stop();
                         break;
-                    case Count m:
-                    default:
-                        {
-                            testActor.Tell(Context.GetChildren().Count());
-                        }
+                    }
+                    
+                    case Count _:
+                        testActor.Tell(Context.GetChildren().Count());
                         break;
                 }
             }
