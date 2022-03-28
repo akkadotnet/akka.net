@@ -63,7 +63,7 @@ namespace Akka.Tests.Actor
         /// }
         /// </summary>
         [Fact]
-        public void Logs_config_on_start_with_info_level()
+        public async Task Logs_config_on_start_with_info_level()
         {
             var config = ConfigurationFactory.ParseString("akka.log-config-on-start = on")
                 .WithFallback(DefaultConfig);
@@ -76,13 +76,13 @@ namespace Akka.Tests.Actor
 
             // Notice here we forcedly start actor system again to monitor how it processes
             var expected = "log-config-on-start : on";
-            eventFilter.Info(contains:expected).ExpectOne(() => system.Start());
+            await eventFilter.Info(contains:expected).ExpectOneAsync(() => system.Start());
 
-            system.Terminate();
+            await system.Terminate();
         }
 
         [Fact]
-        public void Does_not_log_config_on_start()
+        public async Task Does_not_log_config_on_start()
         {
             var config = ConfigurationFactory.ParseString("akka.log-config-on-start = off")
                 .WithFallback(DefaultConfig);
@@ -94,21 +94,21 @@ namespace Akka.Tests.Actor
             var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
-            eventFilter.Info().Expect(0, () => system.Start());
+            await eventFilter.Info().ExpectAsync(0, () => system.Start());
 
-            system.Terminate();
+            await system.Terminate();
         }
 
         [Fact]
-        public void Allow_valid_names()
+        public async Task Allow_valid_names()
         {
-            ActorSystem
+            await ActorSystem
                 .Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-")
                 .Terminate();
         }
 
         [Fact]
-        public void Log_dead_letters()
+        public async Task Log_dead_letters()
         {
             var sys = ActorSystem.Create("LogDeadLetters", ConfigurationFactory.ParseString("akka.loglevel=INFO")
                 .WithFallback(DefaultConfig));
@@ -118,7 +118,7 @@ namespace Akka.Tests.Actor
                 var a = sys.ActorOf(Props.Create<Terminater>());
 
                 var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(sys));
-                eventFilter.Info(contains: "not delivered").Expect(1, () =>
+                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, () =>
                 {
                     a.Tell("run");
                     a.Tell("boom");
@@ -146,7 +146,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Run_termination_callbacks_in_order()
+        public async Task Run_termination_callbacks_in_order()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
             var result = new List<int>();
@@ -159,15 +159,15 @@ namespace Akka.Tests.Actor
                 expected.Add(i);
 
                 var value = i;
-                actorSystem.RegisterOnTermination(() =>
+                actorSystem.RegisterOnTermination(async() =>
                 {
-                    Task.Delay(Dilated(TimeSpan.FromMilliseconds(value % 3))).Wait();
+                    await Task.Delay(Dilated(TimeSpan.FromMilliseconds(value % 3)));
                     result.Add(value);
                     latch.CountDown();
                 });
             }
 
-            actorSystem.Terminate();
+            await actorSystem.Terminate();
             latch.Ready();
 
             expected.Reverse();
@@ -223,19 +223,19 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Find_actors_that_just_have_been_created()
+        public async Task Find_actors_that_just_have_been_created()
         {
             Sys.ActorOf(Props.Create(() => new FastActor(new TestLatch(), TestActor)).WithDispatcher("slow"));
-            Assert.Equal(typeof(LocalActorRef), ExpectMsg<Type>());
+            Assert.Equal(typeof(LocalActorRef), await ExpectMsgAsync<Type>());
         }
 
         [Fact()]
-        public void Reliable_deny_creation_of_actors_while_shutting_down()
+        public async Task Reliable_deny_creation_of_actors_while_shutting_down()
         {
             var sys = ActorSystem.Create("DenyCreationWhileShuttingDown");
-            sys.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(100), () =>
+            sys.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(100), async () =>
             {
-                sys.Terminate();
+                await sys.Terminate();
             });
             var failing = false;
             var created = new HashSet<IActorRef>();
@@ -249,7 +249,7 @@ namespace Akka.Tests.Actor
                     created.Add(t);
 
                     if (created.Count % 1000 == 0)
-                        Thread.Sleep(50); // in case of unfair thread scheduling
+                        await Task.Delay(50); // in case of unfair thread scheduling
                 }
                 catch (InvalidOperationException)
                 {
@@ -313,7 +313,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Allow_configuration_of_guardian_supervisor_strategy()
+        public async Task Allow_configuration_of_guardian_supervisor_strategy()
         {
             var config = ConfigurationFactory.ParseString("akka.actor.guardian-supervisor-strategy=\"Akka.Actor.StoppingSupervisorStrategy\"")
                 .WithFallback(DefaultConfig);
@@ -330,12 +330,12 @@ namespace Akka.Tests.Actor
 
             a.Tell("die");
 
-            var t = probe.ExpectTerminated(a);
+            var t = await probe.ExpectTerminatedAsync(a);
 
             Assert.True(t.ExistenceConfirmed);
             Assert.False(t.AddressTerminated);
 
-            system.Terminate();
+            await system.Terminate();
         }
 
         [Fact]
