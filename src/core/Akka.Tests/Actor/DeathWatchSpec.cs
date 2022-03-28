@@ -17,6 +17,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Tests.TestUtils;
+using Akka.Tests.Util;
 using Akka.Util.Internal;
 using Xunit;
 
@@ -38,7 +39,7 @@ namespace Akka.Tests.Actor
         {
             var terminal = Sys.ActorOf(Props.Empty, "killed-actor");
             terminal.Tell(PoisonPill.Instance, TestActor);
-            StartWatching(terminal);
+            await StartWatching(terminal);
             await ExpectTerminationOf(terminal);
         }
 
@@ -141,10 +142,13 @@ namespace Akka.Tests.Actor
                 var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(
                     new OneForOneStrategy(2, TimeSpan.FromSeconds(1), r => Directive.Restart))));
 
-                var t1 = await supervisor.Ask(Props.Create(() => new EchoTestActor()), timeout);
-                var terminal = t1 as LocalActorRef;
-                var t2 = await supervisor.Ask(CreateWatchAndForwarderProps(terminal, TestActor), timeout);
-                var monitor = t2 as IActorRef;
+                var t1 = supervisor.Ask(Props.Create(() => new EchoTestActor()));
+                await t1.AwaitWithTimeout(timeout);
+                var terminal = (LocalActorRef) t1.Result;
+                
+                var t2 = supervisor.Ask(CreateWatchAndForwarderProps(terminal, TestActor));
+                await t2.AwaitWithTimeout(timeout);
+                var monitor = (IActorRef) t2.Result;
 
                 terminal.Tell(Kill.Instance);
                 terminal.Tell(Kill.Instance);
@@ -170,22 +174,33 @@ namespace Akka.Tests.Actor
                 var strategy = new FailedSupervisorStrategy(TestActor);
                 _supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(strategy)).WithDeploy(Deploy.Local));
 
-                var failed = (await _supervisor.Ask(Props.Empty)) as IActorRef;
-                var brother = (await _supervisor.Ask(Props.Create(() => new BrotherActor(failed)))) as IActorRef;
+                var failed = (IActorRef) (await _supervisor.Ask(Props.Empty));
+                var brother = (IActorRef) (await _supervisor.Ask(Props.Create(() => new BrotherActor(failed))));
 
-                StartWatching(brother);
+                await StartWatching(brother);
 
                 failed.Tell(Kill.Instance);
                 var result = await ReceiveWhileAsync(TimeSpan.FromSeconds(5), msg =>
                 {
                     var res = 0;
-                    msg.Match()
-                        .With<FF>(ff =>
-                        {
-                            if (ff.Fail.Cause is ActorKilledException && ff.Fail.Child == failed) res = 1;
-                            if (ff.Fail.Cause is DeathPactException && ff.Fail.Child == brother) res = 2;
-                        })
-                        .With<WrappedTerminated>(x => res = x.Terminated.ActorRef == brother ? 3 : 0);
+                    switch (msg)
+                    {
+                        case FF ff:
+                            switch (ff.Fail.Cause)
+                            {
+                                case ActorKilledException _ when ReferenceEquals(ff.Fail.Child, failed):
+                                    res = 1;
+                                    break;
+                                case DeathPactException _ when ReferenceEquals(ff.Fail.Child, brother):
+                                    res = 2;
+                                    break;
+                            }
+                            break;
+                        
+                        case WrappedTerminated x:
+                            res = ReferenceEquals(x.Terminated.ActorRef, brother) ? 3 : 0;
+                            break;
+                    }
                     return res.ToString();
                 }, 3).ToListAsync();
 
@@ -249,14 +264,16 @@ namespace Akka.Tests.Actor
 
         private async Task<IActorRef> StartWatching(IActorRef target)
         {
-            var result = await _supervisor.Ask(CreateWatchAndForwarderProps(target, TestActor), TimeSpan.FromSeconds(3));
-            return (IActorRef)result;
+            var task = _supervisor.Ask(CreateWatchAndForwarderProps(target, TestActor));
+            await task.AwaitWithTimeout(TimeSpan.FromSeconds(3));
+            return (IActorRef)task.Result;
         }
 
         private async Task<IActorRef> StartWatchingWith(IActorRef target, object message)
         {
-            var result = await _supervisor.Ask(CreateWatchWithAndForwarderProps(target, TestActor, message), TimeSpan.FromSeconds(3));
-            return (IActorRef)result;
+            var task = _supervisor.Ask(CreateWatchWithAndForwarderProps(target, TestActor, message), TimeSpan.FromSeconds(3));
+            await task.AwaitWithTimeout(TimeSpan.FromSeconds(3));
+            return (IActorRef)task.Result;
         }
 
         private Props CreateWatchAndForwarderProps(IActorRef target, IActorRef forwardToActor)
@@ -295,57 +312,50 @@ namespace Akka.Tests.Actor
 
         internal const string Knob = "KNOB";
         internal const string Bonk = "BONK";
-        internal class KnobKidActor : ActorBase
+        internal class KnobKidActor : ReceiveActor
         {
-            protected override bool Receive(object message)
+            public KnobKidActor()
             {
-                message.Match().With<string>(x =>
+                Receive<string>(s =>
                 {
-                    if (x == Knob)
+                    if (s == Knob)
                     {
                         Context.Stop(Self);
                     }
                 });
-                return true;
             }
         }
-        internal class KnobActor : ActorBase
+        internal class KnobActor : ReceiveActor
         {
             private readonly IActorRef _testActor;
 
             public KnobActor(IActorRef testActor)
             {
                 _testActor = testActor;
-            }
 
-            protected override bool Receive(object message)
-            {
-                message.Match().With<string>(x =>
+                Receive<string>(x =>
                 {
-                    if (x == Knob)
+                    if (x != Knob) 
+                        return;
+                    
+                    var kid = Context.ActorOf(Props.Create(() => new KnobKidActor()), "kid");
+                    Context.Watch(kid);
+                    kid.Forward(Knob);
+                    Context.Become(msg =>
                     {
-                        var kid = Context.ActorOf(Props.Create(() => new KnobKidActor()), "kid");
-                        Context.Watch(kid);
-                        kid.Forward(Knob);
-                        Context.Become(msg =>
+                        if (msg is Terminated y && y.ActorRef == kid)
                         {
-                            msg.Match().With<Terminated>(y =>
-                            {
-                                if (y.ActorRef == kid)
-                                {
-                                    _testActor.Tell(Bonk);
-                                    Context.UnbecomeStacked();
-                                }
-                            });
-                            return true;
-                        });
-                    }
+                            _testActor.Tell(Bonk);
+                            Context.UnbecomeStacked();
+                        }
+
+                        return true;
+                    });
                 });
-                return true;
             }
         }
 
-        internal class WatchAndUnwatchMonitor : ActorBase
+        internal class WatchAndUnwatchMonitor : ReceiveActor
         {
             private readonly IActorRef _testActor;
 
@@ -354,20 +364,14 @@ namespace Akka.Tests.Actor
                 _testActor = testActor;
                 Context.Watch(terminal);
                 Context.Unwatch(terminal);
-            }
 
-            protected override bool Receive(object message)
-            {
-                message.Match()
-                    .With<string>(x =>
-                    {
-                        if (x == "ping")
-                        {
-                            _testActor.Tell("pong");
-                        }
-                    })
-                    .With<Terminated>(x => _testActor.Tell(new WrappedTerminated(x)));
-                return true;
+                Receive<string>(x =>
+                {
+                    if (x == "ping")
+                        _testActor.Tell("pong");
+                });
+
+                Receive<Terminated>(x => _testActor.Tell(new WrappedTerminated(x)));
             }
         }
 
@@ -385,7 +389,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        internal class WatchAndForwardActor : ActorBase
+        internal class WatchAndForwardActor : ReceiveActor
         {
             private readonly IActorRef _forwardToActor;
 
@@ -393,20 +397,13 @@ namespace Akka.Tests.Actor
             {
                 _forwardToActor = forwardToActor;
                 Context.Watch(watchedActor);
-            }
 
-            protected override bool Receive(object message)
-            {
-                var terminated = message as Terminated;
-                if (terminated != null)
-                    _forwardToActor.Forward(new WrappedTerminated(terminated));
-                else
-                    _forwardToActor.Forward(message);
-                return true;
+                Receive<Terminated>(terminated => _forwardToActor.Forward(new WrappedTerminated(terminated)));
+                ReceiveAny(message => _forwardToActor.Forward(message));
             }
         }
 
-        internal class WatchWithAndForwardActor : ActorBase
+        internal class WatchWithAndForwardActor : ReceiveActor
         {
             private readonly IActorRef _forwardToActor;
 
@@ -414,12 +411,7 @@ namespace Akka.Tests.Actor
             {
                 _forwardToActor = forwardToActor;
                 Context.WatchWith(watchedActor, message);
-            }
-
-            protected override bool Receive(object message)
-            {
-                _forwardToActor.Forward(message);
-                return true;
+                ReceiveAny(_forwardToActor.Forward);
             }
         }
 
@@ -434,14 +426,12 @@ namespace Akka.Tests.Actor
 
         public class WrappedTerminated
         {
-            private readonly Terminated _terminated;
-
             public WrappedTerminated(Terminated terminated)
             {
-                _terminated = terminated;
+                Terminated = terminated;
             }
 
-            public Terminated Terminated { get { return _terminated; } }
+            public Terminated Terminated { get; }
         }
 
         internal struct W
