@@ -14,6 +14,8 @@ using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -175,12 +177,15 @@ namespace Akka.Tests.Actor
         public async Task An_ActorRef_should_support_nested_ActorOfs()
         {
             var a = Sys.ActorOf(Props.Create(() => new NestingActor(Sys)));
-            var t1 = await a.Ask("any", TimeSpan.FromSeconds(3));
-            var nested = t1 as IActorRef;
-
-            Assert.NotNull(a);
-            Assert.NotNull(nested);
-            Assert.True(a != nested);
+            a.Should().NotBeNull();
+            
+            Func<Task> t1 = async () =>
+            {
+                var nested = (IActorRef) await a.Ask("any");
+                nested.Should().NotBeNull();
+                a.Should().NotBe(nested);
+            };
+            await t1.Should().CompleteWithinAsync(3.Seconds());
         }
 
         [Fact]
@@ -189,21 +194,33 @@ namespace Akka.Tests.Actor
             var i = Sys.ActorOf(Props.Create(() => new InnerActor()));
             var a = Sys.ActorOf(Props.Create(() => new OuterActor(i)));
 
-            var t1 = await a.Ask("innerself", TimeSpan.FromSeconds(3));
-            var inner = t1 as IActorRef;
-            Assert.True(inner != a);
+            Func<Task> t1 = async () =>
+            {
+                var inner = await a.Ask("innerself");
+                ((IActorRef)inner).Should().NotBe(a);
+            };
+            await t1.Should().CompleteWithinAsync(3.Seconds());
 
-            var t2 = await a.Ask(a, TimeSpan.FromSeconds(3));
-            var self = t2 as IActorRef;
-            self.ShouldBe(a);
+            Func<Task> t2 = async () =>
+            {
+                var self = await a.Ask(a);
+                ((IActorRef)self).ShouldBe(a);
+            };
+            await t2.Should().CompleteWithinAsync(3.Seconds());
 
-            var t3 = await a.Ask("self", TimeSpan.FromSeconds(3));
-            var self2 = t3 as IActorRef;
-            self2.ShouldBe(a);
+            Func<Task> t3 = async () =>
+            {
+                var self2 = await a.Ask("self");
+                ((IActorRef)self2).ShouldBe(a);
+            };
+            await t3.Should().CompleteWithinAsync(3.Seconds());
 
-            var t4 = await a.Ask("msg", TimeSpan.FromSeconds(3));
-            var msg = t4 as string;
-            msg.ShouldBe("msg");
+            Func<Task> t4 = async () =>
+            {
+                var msg = await a.Ask("msg");
+                ((string)msg).ShouldBe("msg");
+            };
+            await t4.Should().CompleteWithinAsync(3.Seconds());
         }
 
         [Fact]
@@ -246,14 +263,19 @@ namespace Akka.Tests.Actor
             var timeout = TimeSpan.FromSeconds(20);
             var actorRef = Sys.ActorOf(Props.Create(() => new PoisonPilledActor()));
 
-            var t1 = await actorRef.Ask(5, timeout);
-            var t2 = await actorRef.Ask(0, timeout);
+            var t1 = actorRef.Ask(5, timeout);
+            var t2 = actorRef.Ask(0, timeout);
             actorRef.Tell(PoisonPill.Instance);
 
-            t1.ShouldBe("five");
-            t2.ShouldBe("zero");
+            Func<Task> f1 = async () => await t1;
+            await f1.Should().CompleteWithinAsync(timeout);
+            Func<Task> f2 = async () => await t2;
+            await f2.Should().CompleteWithinAsync(timeout);
+            
+            t1.Result.ShouldBe("five");
+            t2.Result.ShouldBe("zero");
 
-            VerifyActorTermination(actorRef);
+            await VerifyActorTermination(actorRef);
         }
 
         [Fact]
@@ -262,11 +284,19 @@ namespace Akka.Tests.Actor
             var timeout = TimeSpan.FromSeconds(3);
             var parent = Sys.ActorOf(Props.Create(() => new ChildAwareActor("child")));
 
-            var t1 = await parent.Ask("child", timeout);
-            Assert.True((bool)t1);
+            Func<Task> t1 = async () =>
+            {
+                var result = await parent.Ask("child");
+                ((bool)result).Should().BeTrue();
+            };
+            await t1.Should().CompleteWithinAsync(timeout);
 
-            var t2 = await parent.Ask("what", timeout);
-            Assert.True(!(bool)t2);
+            Func<Task> t2 = async () =>
+            {
+                var result = await parent.Ask("what");
+                ((bool)result).Should().BeFalse();
+            };
+            await t2.Should().CompleteWithinAsync(timeout);
         }
 
         [Fact]
