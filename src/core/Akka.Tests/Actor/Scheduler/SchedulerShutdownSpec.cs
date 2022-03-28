@@ -91,10 +91,8 @@ namespace Akka.Tests.Actor.Scheduler
                 sys = ActorSystem.Create("SchedulerShutdownSys1", Config);
                 var scheduler = (ShutdownScheduler)sys.Scheduler;
                 var currentCounter = scheduler.Shutdown.Current;
-                var terminated = await sys.Terminate().AwaitWithTimeout(sys.Settings.SchedulerShutdownTimeout);
-                terminated.Should().BeTrue();   
-                var nextCounter = scheduler.Shutdown.Current;
-                nextCounter.Should().Be(currentCounter + 1);
+                (await sys.Terminate().AwaitWithTimeout(sys.Settings.SchedulerShutdownTimeout)).Should().BeTrue();
+                (scheduler.Shutdown.Current).Should().Be(currentCounter + 1);
             }
             finally
             {
@@ -114,10 +112,8 @@ namespace Akka.Tests.Actor.Scheduler
                 sys.Scheduler.Advanced.ScheduleRepeatedly(TimeSpan.FromMilliseconds(0), TimeSpan.FromMilliseconds(10), () => i++);
                 await Task.Delay(100); // give the scheduler a chance to start and run
                 var currentCounter = scheduler.Shutdown.Current;
-                var terminated = await sys.Terminate().AwaitWithTimeout(sys.Settings.SchedulerShutdownTimeout);
-                terminated.Should().BeTrue();
-                var nextCounter = scheduler.Shutdown.Current;
-                nextCounter.Should().Be(currentCounter + 1);
+                (await sys.Terminate().AwaitWithTimeout(sys.Settings.SchedulerShutdownTimeout)).Should().BeTrue();
+                (scheduler.Shutdown.Current).Should().Be(currentCounter + 1);
                 var stoppedValue = i;
                 stoppedValue.Should().BeGreaterThan(0, "should have incremented at least once");
                 await Task.Delay(100);
