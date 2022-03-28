@@ -21,6 +21,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using FluentAssertions.Execution;
+using Akka.Tests.Util;
 
 namespace Akka.Tests.Actor
 {
@@ -128,21 +129,21 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Block_until_exit()
+        public async Task Block_until_exit()
         {
             var actorSystem = ActorSystem
                 .Create(Guid.NewGuid().ToString());
             var st = Stopwatch.StartNew();
             var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(_ => actorSystem.Terminate());
-            actorSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
+            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(2))).ShouldBeTrue();
             Assert.True(st.Elapsed.TotalSeconds >= .9);
         }
 
         [Fact]
-        public void Given_a_system_that_isnt_going_to_shutdown_When_waiting_for_system_shutdown_Then_it_times_out()
+        public async Task Given_a_system_that_isnt_going_to_shutdown_When_waiting_for_system_shutdown_Then_it_times_out()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
-            actorSystem.WhenTerminated.Wait(TimeSpan.FromMilliseconds(10)).ShouldBeFalse();
+            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromMilliseconds(10))).ShouldBeFalse();
         }
 
         [Fact]
@@ -159,9 +160,9 @@ namespace Akka.Tests.Actor
                 expected.Add(i);
 
                 var value = i;
-                actorSystem.RegisterOnTermination(async() =>
+                actorSystem.RegisterOnTermination(() =>
                 {
-                    await Task.Delay(Dilated(TimeSpan.FromMilliseconds(value % 3)));
+                    Task.Delay(Dilated(TimeSpan.FromMilliseconds(value % 3))).Wait();
                     result.Add(value);
                     latch.CountDown();
                 });
@@ -176,7 +177,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void AwaitTermination_after_termination_callbacks()
+        public async Task AwaitTermination_after_termination_callbacks()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
             var callbackWasRun = false;
@@ -193,16 +194,16 @@ namespace Akka.Tests.Actor
                 actorSystem.Terminate();
             });
 
-            actorSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(5));
+            await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(5));
             Assert.True(callbackWasRun);
         }
 
         [Fact]
-        public void Throw_exception_when_register_callback_after_shutdown()
+        public async Task Throw_exception_when_register_callback_after_shutdown()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
 
-            actorSystem.Terminate().Wait(TimeSpan.FromSeconds(10));
+            await actorSystem.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(10));
             
             var ex = Assert.Throws<InvalidOperationException>(() => actorSystem.RegisterOnTermination(() => { }));
             Assert.Equal("ActorSystem already terminated.", ex.Message);
