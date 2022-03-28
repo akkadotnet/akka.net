@@ -359,7 +359,10 @@ namespace Akka.Tests.Actor
                 }
             }
 
-            await new[] { Root, System, User }.ForEachAsync(Check);
+            foreach (var actorRef in new[] { Root, System, User })
+            {
+                await Check(actorRef);
+            }
         }
 
         [Fact]
@@ -373,17 +376,25 @@ namespace Akka.Tests.Actor
 
             async Task Check(IActorRef looker)
             {
-                await new IQuery[]
+                var queries = new IQuery[]
                 {
                     new SelectString("a/b/c"),
                     new SelectString("akka://all-systems/Nobody"),
                     new SelectPath(User.Path / "hallo"),
                     new SelectPath(looker.Path / "hallo"),
                     new SelectPath(looker.Path / new []{"a","b"}),
-                }.ForEachAsync(async t => await CheckOne(looker, t));
+                };
+                
+                foreach (var query in queries)
+                {
+                    await CheckOne(looker, query);
+                }    
             }
 
-            await _all.ForEachAsync(Check);
+            foreach (var actorRef in _all)
+            {
+                await Check(actorRef);
+            }
         }
 
 
