@@ -492,7 +492,7 @@ namespace Akka.Tests.Actor.Dispatch
         }
 
         [Fact]
-        public void A_dispatcher_must_handle_queuing_from_multiple_threads()
+        public async Task A_dispatcher_must_handle_queuing_from_multiple_threads()
         {
             var dispatcher = InterceptedDispatcher();
             var counter = new CountdownEvent(200);
@@ -517,7 +517,7 @@ namespace Akka.Tests.Actor.Dispatch
             }
             finally
             {
-                var stats = a.Ask<InterceptorStats>(GetStats.Instance).Result;
+                var stats = await a.Ask<InterceptorStats>(GetStats.Instance);
                 _testOutputHelper.WriteLine("Observed stats: {0}", stats);
 
                 Sys.Stop(a);

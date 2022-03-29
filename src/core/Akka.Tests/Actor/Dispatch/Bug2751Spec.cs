@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -40,14 +41,14 @@ namespace Akka.Tests.Actor.Dispatch
         }
 
         [Fact]
-        public void ShouldReceiveSysMsgBeforeUserMsg()
+        public async Task ShouldReceiveSysMsgBeforeUserMsg()
         {
             var stopper = Sys.ActorOf(Props.Create(() => new StopActor(TestActor)));
             stopper.Tell("stop");
-            ExpectNoMsg(TimeSpan.FromMilliseconds(250));
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(250));
             Watch(stopper);
-            ExpectTerminated(stopper);
-            ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            await ExpectTerminatedAsync(stopper);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
     }
 
