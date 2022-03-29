@@ -31,58 +31,58 @@ namespace Akka.Tests.Actor
         }
         
         [Fact]
-        public void Should_immediately_PipeTo_completed_Task()
+        public async Task Should_immediately_PipeTo_completed_Task()
         {
             var task = Task.FromResult("foo");
             task.PipeTo(TestActor);
-            ExpectMsg("foo");
+            await ExpectMsgAsync("foo");
         }
 
         [Fact]
-        public void Should_by_default_send_task_result_as_message()
+        public async Task Should_by_default_send_task_result_as_message()
         {
             _task.PipeTo(TestActor);
             _taskCompletionSource.SetResult("Hello");
-            ExpectMsg("Hello");
+            await ExpectMsgAsync("Hello");
         }
 
         [Fact]
-        public void Should_by_default_not_send_a_success_message_if_the_task_does_not_produce_a_result()
+        public async Task Should_by_default_not_send_a_success_message_if_the_task_does_not_produce_a_result()
         {
             _taskWithoutResult.PipeTo(TestActor);
             _taskCompletionSource.SetResult("Hello");
-            ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
 
         [Fact]
-        public void Should_by_default_send_task_exception_as_status_failure_message()
+        public async Task Should_by_default_send_task_exception_as_status_failure_message()
         {
             _task.PipeTo(TestActor);
             _taskWithoutResult.PipeTo(TestActor);
             _taskCompletionSource.SetException(new Exception("Boom"));
-            ExpectMsg<Status.Failure>(x => x.Cause.Message == "Boom");
-            ExpectMsg<Status.Failure>(x => x.Cause.Message == "Boom");
+            await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom");
+            await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom");
         }
 
         [Fact]
-        public void Should_use_success_handling_to_transform_task_result()
+        public async Task Should_use_success_handling_to_transform_task_result()
         {
             _task.PipeTo(TestActor, success: x => "Hello " + x);
             _taskWithoutResult.PipeTo(TestActor, success: () => "Hello");
             _taskCompletionSource.SetResult("World");
-            var pipeTo = ReceiveN(2).Cast<string>().ToList();
+            var pipeTo = (await ReceiveNAsync(2, default).ToListAsync()).Cast<string>().ToList();
             pipeTo.Should().Contain("Hello");
             pipeTo.Should().Contain("Hello World");
         }
 
         [Fact]
-        public void Should_use_failure_handling_to_transform_task_exception()
+        public async Task Should_use_failure_handling_to_transform_task_exception()
         {
             _task.PipeTo(TestActor, failure: e => "Such a " + e.Message);
             _taskWithoutResult.PipeTo(TestActor, failure: e => "Such a " + e.Message);
             _taskCompletionSource.SetException(new Exception("failure..."));
-            ExpectMsg("Such a failure...");
-            ExpectMsg("Such a failure...");
+            await ExpectMsgAsync("Such a failure...");
+            await ExpectMsgAsync("Such a failure...");
         }
     }
 }

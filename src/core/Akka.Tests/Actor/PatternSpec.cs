@@ -78,7 +78,7 @@ namespace Akka.Tests.Actor
 
             //assert  
             Assert.True(stopped);
-            ExpectNoMsg(TimeSpan.Zero);
+            await ExpectNoMsgAsync(TimeSpan.Zero);
         }
 
         #region Actors
