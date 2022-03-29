@@ -196,7 +196,7 @@ stable-prio-mailbox{
 #endif
 
         [Fact]
-        public void Can_use_unbounded_priority_mailbox()
+        public async Task Can_use_unbounded_priority_mailbox()
         {
             var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("string-prio-mailbox"), "echo");
 
@@ -204,7 +204,7 @@ stable-prio-mailbox{
             actor.SendSystemMessage(new Suspend());
 
             // wait until we can confirm that the mailbox is suspended before we begin sending messages
-            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+            await AwaitConditionAsync(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
 
             actor.Tell(true);
             for (var i = 0; i < 30; i++)
@@ -222,19 +222,19 @@ stable-prio-mailbox{
             //resume mailbox, this prevents the mailbox from running to early
             //priority mailbox is best effort only
             
-            ExpectMsg("a");
-            ExpectMsg(true);
+            await ExpectMsgAsync("a");
+            await ExpectMsgAsync(true);
             for (var i = 0; i < 60; i++)
             {
-                ExpectMsg(1);
+                await ExpectMsgAsync(1);
             }
-            ExpectMsg(2.0);
+            await ExpectMsgAsync(2.0);
 
-            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
         }
 
         [Fact]
-        public void Can_use_unbounded_stable_priority_mailbox()
+        public async Task Can_use_unbounded_stable_priority_mailbox()
         {
             var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("stable-prio-mailbox"), "echo");
 
@@ -242,7 +242,7 @@ stable-prio-mailbox{
             actor.SendSystemMessage(new Suspend());
 
             // wait until we can confirm that the mailbox is suspended before we begin sending messages
-            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+            AwaitConditionAsync(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
 
             actor.Tell(true);
             for (var i = 0; i < 30; i++)
@@ -260,26 +260,26 @@ stable-prio-mailbox{
             //resume mailbox, this prevents the mailbox from running to early
             //priority mailbox is best effort only
 
-            ExpectMsg("a");
-            ExpectMsg(true);
+            await ExpectMsgAsync("a");
+            await ExpectMsgAsync(true);
             for (var i = 0; i < 60; i++)
             {
-                ExpectMsg(i);
+                await ExpectMsgAsync(i);
             }
-            ExpectMsg(2.0);
+            await ExpectMsgAsync(2.0);
 
-            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
         }
 
         [Fact]
-        public void Priority_mailbox_keeps_ordering_with_many_priority_values()
+        public async Task Priority_mailbox_keeps_ordering_with_many_priority_values()
         {
             var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
 
             //pause mailbox until all messages have been told
             actor.SendSystemMessage(new Suspend());
 
-            AwaitCondition(()=> (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+            await AwaitConditionAsync(()=> (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
             // creates 50 messages with values spanning from Int32.MinValue to Int32.MaxValue
             var values = new int[50];
             var increment = (int)(UInt32.MaxValue / values.Length);
@@ -301,23 +301,23 @@ stable-prio-mailbox{
             // expect the messages in the correct order
             foreach (var value in values)
             {
-                ExpectMsg(value);
-                ExpectMsg(value);
-                ExpectMsg(value);
+                await ExpectMsgAsync(value);
+                await ExpectMsgAsync(value);
+                await ExpectMsgAsync(value);
             }
 
-            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
         }
 
         [Fact]
-        public void Unbounded_Priority_Mailbox_Supports_Unbounded_Stashing()
+        public async Task Unbounded_Priority_Mailbox_Supports_Unbounded_Stashing()
         {
             var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
 
             //pause mailbox until all messages have been told
             actor.SendSystemMessage(new Suspend());
 
-            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+            await AwaitConditionAsync(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
 
             var values = new int[10];
             var increment = (int)(UInt32.MaxValue / values.Length);
@@ -338,29 +338,29 @@ stable-prio-mailbox{
             //resume mailbox, this prevents the mailbox from running to early
             actor.SendSystemMessage(new Resume(null));
 
-            this.Within(5.Seconds(), () =>
+            await WithinAsync(5.Seconds(), async() =>
             {
                 // expect the messages in the correct order
                 foreach (var value in values)
                 {
-                    ExpectMsg(value);
-                    ExpectMsg(value);
-                    ExpectMsg(value);
+                    await ExpectMsgAsync(value);
+                    await ExpectMsgAsync(value);
+                    await ExpectMsgAsync(value);
                 }
             }); 
 
-            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
         }
 
         [Fact]
-        public void Unbounded_Stable_Priority_Mailbox_Supports_Unbounded_Stashing()
+        public async Task Unbounded_Stable_Priority_Mailbox_Supports_Unbounded_Stashing()
         {
             var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("stable-prio-mailbox"), "echo");
 
             //pause mailbox until all messages have been told
             actor.SendSystemMessage(new Suspend());
 
-            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+            await AwaitConditionAsync(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
 
             var values = new int[10];
             var increment = (int)(UInt32.MaxValue / values.Length);
@@ -381,18 +381,18 @@ stable-prio-mailbox{
             //resume mailbox, this prevents the mailbox from running to early
             actor.SendSystemMessage(new Resume(null));
 
-            this.Within(5.Seconds(), () =>
+            await WithinAsync(5.Seconds(), async() =>
             {
                 // expect the messages in the original order
                 foreach (var value in values)
                 {
-                    ExpectMsg(value);
-                    ExpectMsg(value);
-                    ExpectMsg(value);
+                    await ExpectMsgAsync(value);
+                    await ExpectMsgAsync(value);
+                    await ExpectMsgAsync(value);
                 }
             });
 
-            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
         }
     }
 }
