@@ -19,17 +19,17 @@ namespace Akka.Tests.Actor
     public class LocalActorRefProviderSpec : AkkaSpec
     {
         [Fact]
-        public void A_LocalActorRefs_ActorCell_must_not_retain_its_original_Props_when_Terminated()
+        public async Task A_LocalActorRefs_ActorCell_must_not_retain_its_original_Props_when_Terminated()
         {
             var parent = Sys.ActorOf(Props.Create(() => new ParentActor()));
             parent.Tell("GetChild", TestActor);
-            var child = ExpectMsg<IActorRef>();
+            var child = await ExpectMsgAsync<IActorRef>();
             var childPropsBeforeTermination = ((LocalActorRef)child).Underlying.Props;
             Assert.Equal(Props.Empty, childPropsBeforeTermination);
             Watch(parent);
             Sys.Stop(parent);
-            ExpectTerminated(parent);
-            AwaitAssert(() =>
+            await ExpectTerminatedAsync(parent);
+            await AwaitAssertAsync(() =>
                 {
                     var childPropsAfterTermination = ((LocalActorRef)child).Underlying.Props;
                     Assert.NotEqual(childPropsBeforeTermination, childPropsAfterTermination);
@@ -58,10 +58,10 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRefFactory_must_only_create_one_instance_of_an_actor_from_within_the_same_message_invocation()
+        public async Task An_ActorRefFactory_must_only_create_one_instance_of_an_actor_from_within_the_same_message_invocation()
         {
             var supervisor = Sys.ActorOf(Props.Create<ActorWithDuplicateChild>());
-            EventFilter.Exception<InvalidActorNameException>(message: "Actor name \"duplicate\" is not unique!").ExpectOne(() =>
+            await EventFilter.Exception<InvalidActorNameException>(message: "Actor name \"duplicate\" is not unique!").ExpectOneAsync(() =>
                 {
                     supervisor.Tell("");
                 });
