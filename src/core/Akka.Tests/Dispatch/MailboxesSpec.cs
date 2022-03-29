@@ -242,7 +242,7 @@ stable-prio-mailbox{
             actor.SendSystemMessage(new Suspend());
 
             // wait until we can confirm that the mailbox is suspended before we begin sending messages
-            AwaitConditionAsync(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+            await AwaitConditionAsync(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
 
             actor.Tell(true);
             for (var i = 0; i < 30; i++)
