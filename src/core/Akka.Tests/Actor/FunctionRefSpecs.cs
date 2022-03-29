@@ -174,7 +174,7 @@ namespace Akka.Tests.Actor
             await ExpectTerminatedAsync(forwarder);
         }
 
-        private async ValueTask<FunctionRef> GetFunctionRef(IActorRef s)
+        private async Task<FunctionRef> GetFunctionRef(IActorRef s)
         {
             s.Tell(new GetForwarder(TestActor));
             return await ExpectMsgAsync<FunctionRef>();
