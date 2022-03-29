@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Event;
@@ -415,7 +416,7 @@ namespace Akka.Tests.Actor
         #endregion
 
         [Fact(Skip = "Not implemented yet")]
-        public void FSMActor_must_unlock_the_lock()
+        public async Task FSMActor_must_unlock_the_lock() // async/await now in case it get implemented in the future
         {
             var latches = new Latches(Sys);
             var timeout = 2.Seconds();
@@ -435,7 +436,7 @@ namespace Akka.Tests.Actor
             latches.TransitionCallBackLatch.Ready(timeout);
             latches.LockedLatch.Ready(timeout);
 
-            EventFilter.Warning("unhandled event").ExpectOne(() =>
+            await EventFilter.Warning("unhandled event").ExpectOneAsync(() =>
             {
                 lockFsm.Tell("not_handled");
                 latches.UnhandledLatch.Ready(timeout);
@@ -451,15 +452,15 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void FSMActor_must_log_termination()
+        public async Task FSMActor_must_log_termination()
         {
             var actorRef = Sys.ActorOf(Props.Create(() => new ActorLogTermination()));
             var name = actorRef.Path.ToString();
-            EventFilter.Error("Next state 2 does not exist").ExpectOne(() =>
+            await EventFilter.Error("Next state 2 does not exist").ExpectOneAsync(async() =>
             {
                 Sys.EventStream.Subscribe(TestActor, typeof(Error));
                 actorRef.Tell("go");
-                var error = ExpectMsg<Error>(1.Seconds());
+                var error = await ExpectMsgAsync<Error>(1.Seconds());
                 error.LogSource.Should().Contain(name);
                 error.Message.Should().Be("Next state 2 does not exist");
                 Sys.EventStream.Unsubscribe(TestActor);
@@ -467,28 +468,28 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void FSMActor_must_run_onTermination_upon_ActorRef_Stop()
+        public async Task FSMActor_must_run_onTermination_upon_ActorRef_Stop()
         {
             var started = new TestLatch(1);
             var actorRef = Sys.ActorOf(Props.Create(() => new ActorStopTermination(started, TestActor)));
             started.Ready();
             Sys.Stop(actorRef);
-            var stopEvent = ExpectMsg<StopEvent<int, object>>(1.Seconds());
+            var stopEvent = await ExpectMsgAsync<StopEvent<int, object>>(1.Seconds());
             stopEvent.Reason.Should().BeOfType<Shutdown>();
             stopEvent.TerminatedState.Should().Be(1);
         }
 
         [Fact]
-        public void FSMActor_must_run_onTermination_with_updated_state_upon_stop()
+        public async Task FSMActor_must_run_onTermination_with_updated_state_upon_stop()
         {
             var expected = "pigdog";
             var actorRef = Sys.ActorOf(Props.Create(() => new ActorStopReason(expected, TestActor)));
             actorRef.Tell(2);
-            ExpectMsg("green");
+            await ExpectMsgAsync("green");
         }
 
         [Fact]
-        public void FSMActor_must_cancel_all_timers_when_terminated()
+        public async Task FSMActor_must_cancel_all_timers_when_terminated()
         {
             var timerNames = new List<string> {"timer-1", "timer-2", "timer-3"};
 
@@ -507,11 +508,11 @@ namespace Akka.Tests.Actor
             checkTimersActive(false);
 
             fsmRef.Tell("start");
-            ExpectMsg("starting", 1.Seconds());
+            await ExpectMsgAsync("starting", 1.Seconds());
             checkTimersActive(true);
 
             fsmRef.Tell("stop");
-            ExpectMsg("stopped", 1.Seconds());
+            await ExpectMsgAsync("stopped", 1.Seconds());
         }
 
         [Fact(Skip = "Not implemented yet")]
@@ -520,31 +521,31 @@ namespace Akka.Tests.Actor
         }
 
         [Fact(Skip = "Does not pass due to LoggingFsm limitations")]
-        public void FSMActor_must_fill_rolling_event_log_and_hand_it_out()
+        public async Task FSMActor_must_fill_rolling_event_log_and_hand_it_out()
         {
             var fsmRef = new TestActorRef<RollingEventLogFsm>(Sys, Props.Create<RollingEventLogFsm>());
             fsmRef.Tell("log");
-            ExpectMsg<object>(1.Seconds());
+            await ExpectMsgAsync<object>(1.Seconds());
             fsmRef.Tell("count");
             fsmRef.Tell("log");
-            ExpectMsg<object>(1.Seconds());
+            await ExpectMsgAsync<object>(1.Seconds());
             fsmRef.Tell("count");
             fsmRef.Tell("log");
-            ExpectMsg<object>(1.Seconds());
+            await ExpectMsgAsync<object>(1.Seconds());
         }
 
         [Fact]
-        public void FSMActor_must_allow_transforming_of_state_results()
+        public async Task FSMActor_must_allow_transforming_of_state_results()
         {
             var fsmRef = Sys.ActorOf(Props.Create<TransformingStateFsm>());
             fsmRef.Tell(new SubscribeTransitionCallBack(TestActor));
             fsmRef.Tell("go");
-            ExpectMsg(new CurrentState<int>(fsmRef, 0));
-            ExpectMsg(new Transition<int>(fsmRef, 0, 1));
+            await ExpectMsgAsync(new CurrentState<int>(fsmRef, 0));
+            await ExpectMsgAsync(new Transition<int>(fsmRef, 0, 1));
         }
 
         [Fact(Skip = "Not implemented yet")]
-        public void FSMActor_must_allow_cancelling_stateTimeout_by_issuing_forMax()
+        public async Task FSMActor_must_allow_cancelling_stateTimeout_by_issuing_forMax()
         {
             var sys = ActorSystem.Create("fsmEvent", Sys.Settings.Config);
             var p = CreateTestProbe(sys);
@@ -553,14 +554,14 @@ namespace Akka.Tests.Actor
 
             try
             {
-                p.ExpectMsg<StateTimeout>();
+                await p.ExpectMsgAsync<StateTimeout>();
                 fsmRef.Tell(OverrideTimeoutToInf);
-                p.ExpectMsg(OverrideTimeoutToInf);
-                p.ExpectNoMsg(3.Seconds());
+                await p.ExpectMsgAsync(OverrideTimeoutToInf);
+                await p.ExpectNoMsgAsync(3.Seconds());
             }
             finally
             {
-                sys.WhenTerminated.Wait();
+                await sys.WhenTerminated;
             }
         }
     }
