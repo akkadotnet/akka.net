@@ -70,7 +70,7 @@ namespace Akka.Tests.Actor
             _task.PipeTo(TestActor, success: x => "Hello " + x);
             _taskWithoutResult.PipeTo(TestActor, success: () => "Hello");
             _taskCompletionSource.SetResult("World");
-            var pipeTo = (await ReceiveNAsync(2, default).ToListAsync()).Cast<string>().ToList();
+            var pipeTo = await ReceiveNAsync(2, default).Cast<string>().ToListAsync();
             pipeTo.Should().Contain("Hello");
             pipeTo.Should().Contain("Hello World");
         }
