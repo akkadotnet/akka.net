@@ -13,6 +13,7 @@ using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
 using Akka.TestKit.TestActors;
+using Akka.Tests.Util;
 
 namespace Akka.Tests.Actor
 {
@@ -38,7 +39,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRefFactory_must_only_create_one_instance_of_an_actor_with_a_specific_address_in_a_concurrent_environment()
+        public async Task An_ActorRefFactory_must_only_create_one_instance_of_an_actor_with_a_specific_address_in_a_concurrent_environment()
         {
             var impl = (ActorSystemImpl)Sys;
             var provider = impl.Provider;
@@ -49,9 +50,10 @@ namespace Akka.Tests.Actor
             {
                 var timeout = Dilated(TimeSpan.FromSeconds(5));
                 var address = "new-actor" + i;
-                var actors = Enumerable.Range(0, 4).Select(x => Task.Run(() => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address))).ToArray();
+                var actors = Enumerable.Range(0, 4)
+                    .Select(async x => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address)).ToArray();
                 // Use WhenAll with empty ContinueWith to swallow all exceptions, so we can inspect the tasks afterwards.
-                Task.WhenAll(actors).ContinueWith(a => { }).Wait(timeout);
+                await Task.WhenAll(actors).ContinueWith(a => { }).AwaitWithTimeout(timeout);
                 Assert.True(actors.Any(x => x.Status == TaskStatus.RanToCompletion && x.Result != null), "Failed to create any Actors");
                 Assert.True(actors.Any(x => x.Status == TaskStatus.Faulted && x.Exception.InnerException is InvalidActorNameException), "Succeeded in creating all Actors. Some should have failed.");
             }
