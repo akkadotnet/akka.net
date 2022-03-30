@@ -7,6 +7,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Implementation;
@@ -90,51 +93,111 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Expect a subscription.
             /// </summary>
-            public StreamTestKit.PublisherProbeSubscription<T> ExpectSubscription() =>
-                (StreamTestKit.PublisherProbeSubscription<T>)_probe.ExpectMsg<Subscribe>().Subscription;
+            public StreamTestKit.PublisherProbeSubscription<T> ExpectSubscription(
+                CancellationToken cancellationToken = default)
+                => ExpectSubscriptionAsync(cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+
+            /// <summary>
+            /// Expect a subscription.
+            /// </summary>
+            public async Task<StreamTestKit.PublisherProbeSubscription<T>> ExpectSubscriptionAsync(
+                CancellationToken cancellationToken = default)
+            {
+                var msg = await _probe.ExpectMsgAsync<Subscribe>(cancellationToken: cancellationToken)
+                    .ConfigureAwait(false); 
+                return (StreamTestKit.PublisherProbeSubscription<T>) msg.Subscription;
+            }
 
             /// <summary>
             /// Expect demand from the given subscription.
             /// </summary>
-            public ManualProbe<T> ExpectRequest(ISubscription subscription, int n)
+            public void ExpectRequest(
+                ISubscription subscription,
+                int n,
+                CancellationToken cancellationToken = default)
+                => ExpectRequestAsync(subscription, n, cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+            
+            /// <summary>
+            /// Expect demand from the given subscription.
+            /// </summary>
+            public async Task ExpectRequestAsync(
+                ISubscription subscription, 
+                int n,
+                CancellationToken cancellationToken = default)
             {
-                _probe.ExpectMsg<RequestMore>(x => x.NrOfElements == n && x.Subscription == subscription);
-                return this;
+                await _probe.ExpectMsgAsync<RequestMore>(
+                    isMessage: x => x.NrOfElements == n && x.Subscription == subscription, 
+                    cancellationToken: cancellationToken);
             }
 
             /// <summary>
             /// Expect no messages.
             /// </summary>
-            public ManualProbe<T> ExpectNoMsg()
+            public void ExpectNoMsg(CancellationToken cancellationToken = default)
+                => ExpectNoMsgAsync(cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+
+            /// <summary>
+            /// Expect no messages.
+            /// </summary>
+            public async Task ExpectNoMsgAsync(CancellationToken cancellationToken = default)
             {
-                _probe.ExpectNoMsg();
-                return this;
+                await _probe.ExpectNoMsgAsync(cancellationToken);
             }
 
             /// <summary>
             /// Expect no messages for given duration.
             /// </summary>
-            public ManualProbe<T> ExpectNoMsg(TimeSpan duration)
+            public void ExpectNoMsg(TimeSpan duration, CancellationToken cancellationToken = default)
+                => ExpectNoMsgAsync(duration, cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+
+            /// <summary>
+            /// Expect no messages for given duration.
+            /// </summary>
+            public async Task ExpectNoMsgAsync(TimeSpan duration, CancellationToken cancellationToken = default)
             {
-                _probe.ExpectNoMsg(duration);
-                return this;
+                await _probe.ExpectNoMsgAsync(duration, cancellationToken);
             }
 
             /// <summary>
             /// Receive messages for a given duration or until one does not match a given partial function.
             /// </summary>
-            public IEnumerable<TOther> ReceiveWhile<TOther>(TimeSpan? max = null, TimeSpan? idle = null, Func<object, TOther> filter = null, int msgs = int.MaxValue) where TOther : class
-            {
-                return _probe.ReceiveWhile(max, idle, filter, msgs);
-            }
+            public IEnumerable<TOther> ReceiveWhile<TOther>(
+                TimeSpan? max = null,
+                TimeSpan? idle = null,
+                Func<object, TOther> filter = null,
+                int msgs = int.MaxValue,
+                CancellationToken cancellationToken = default) where TOther : class
+                => ReceiveWhileAsync(max, idle, filter, msgs, cancellationToken)
+                    .ToListAsync(cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
 
-            public IPublisherEvent ExpectEvent() => _probe.ExpectMsg<IPublisherEvent>();
+            /// <summary>
+            /// Receive messages for a given duration or until one does not match a given partial function.
+            /// </summary>
+            public IAsyncEnumerable<TOther> ReceiveWhileAsync<TOther>(
+                TimeSpan? max = null,
+                TimeSpan? idle = null,
+                Func<object, TOther> filter = null, 
+                int msgs = int.MaxValue,
+                CancellationToken cancellationToken = default) where TOther : class
+                => _probe.ReceiveWhileAsync(max, idle, filter, msgs, cancellationToken);
+
+            public IPublisherEvent ExpectEvent(CancellationToken cancellationToken = default)
+                => ExpectEventAsync(cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+
+            public async Task<IPublisherEvent> ExpectEventAsync(CancellationToken cancellationToken = default)
+                => await _probe.ExpectMsgAsync<IPublisherEvent>(cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
 
             /// <summary>
             /// Execute code block while bounding its execution time between <paramref name="min"/> and
-            /// <paramref name="max"/>. <see cref="Within{TOther}(TimeSpan,TimeSpan,Func{TOther})"/> blocks may be nested. 
+            /// <paramref name="max"/>. <see cref="Within{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> blocks may be nested. 
             /// All methods in this class which take maximum wait times are available in a version which implicitly uses
-            /// the remaining time governed by the innermost enclosing <see cref="Within{TOther}(TimeSpan,TimeSpan,Func{TOther})"/> block.
+            /// the remaining time governed by the innermost enclosing <see cref="Within{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> block.
             /// 
             /// <para />
             /// 
@@ -152,13 +215,100 @@ namespace Akka.Streams.TestKit
             /// <param name="min"></param>
             /// <param name="max"></param>
             /// <param name="execute"></param>
+            /// <param name="cancellationToken"></param>
             /// <returns></returns>
-            public TOther Within<TOther>(TimeSpan min, TimeSpan max, Func<TOther> execute) => _probe.Within(min, max, execute);
+            public TOther Within<TOther>(
+                TimeSpan min,
+                TimeSpan max,
+                Func<TOther> execute,
+                CancellationToken cancellationToken = default)
+                => WithinAsync(min, max, execute, cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
 
             /// <summary>
-            /// Sane as calling Within(TimeSpan.Zero, max, function).
+            /// Execute code block while bounding its execution time between <paramref name="min"/> and
+            /// <paramref name="max"/>. <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> blocks may be nested. 
+            /// All methods in this class which take maximum wait times are available in a version which implicitly uses
+            /// the remaining time governed by the innermost enclosing <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> block.
+            /// 
+            /// <para />
+            /// 
+            /// Note that the timeout is scaled using <see cref="TestKitBase.Dilated"/>, which uses the
+            /// configuration entry "akka.test.timefactor", while the min Duration is not.
+            /// 
+            /// <![CDATA[
+            /// var ret = probe.Within(Timespan.FromMilliseconds(50), () =>
+            /// {
+            ///     test.Tell("ping");
+            ///     return ExpectMsg<string>();
+            /// });
+            /// ]]>
             /// </summary>
-            public TOther Within<TOther>(TimeSpan max, Func<TOther> execute) => _probe.Within(max, execute);
+            /// <param name="min"></param>
+            /// <param name="max"></param>
+            /// <param name="execute"></param>
+            /// <param name="cancellationToken"></param>
+            /// <returns></returns>
+            public async Task<TOther> WithinAsync<TOther>(
+                TimeSpan min,
+                TimeSpan max,
+                Func<TOther> execute,
+                CancellationToken cancellationToken = default)
+                => await _probe.WithinAsync(min, max, execute, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+            
+            /// <summary>
+            /// Execute code block while bounding its execution time between <paramref name="min"/> and
+            /// <paramref name="max"/>. <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> blocks may be nested. 
+            /// All methods in this class which take maximum wait times are available in a version which implicitly uses
+            /// the remaining time governed by the innermost enclosing <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> block.
+            /// 
+            /// <para />
+            /// 
+            /// Note that the timeout is scaled using <see cref="TestKitBase.Dilated"/>, which uses the
+            /// configuration entry "akka.test.timefactor", while the min Duration is not.
+            /// 
+            /// <![CDATA[
+            /// var ret = probe.Within(Timespan.FromMilliseconds(50), () =>
+            /// {
+            ///     test.Tell("ping");
+            ///     return ExpectMsg<string>();
+            /// });
+            /// ]]>
+            /// </summary>
+            /// <param name="min"></param>
+            /// <param name="max"></param>
+            /// <param name="execute"></param>
+            /// <param name="cancellationToken"></param>
+            /// <returns></returns>
+            public async Task<TOther> WithinAsync<TOther>(
+                TimeSpan min,
+                TimeSpan max,
+                Func<Task<TOther>> actionAsync,
+                CancellationToken cancellationToken = default)
+                => await _probe.WithinAsync(min, max, actionAsync, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+
+            /// <summary>
+            /// Sane as calling Within(TimeSpan.Zero, max, function, cancellationToken).
+            /// </summary>
+            public TOther Within<TOther>(TimeSpan max, Func<TOther> execute)
+                => WithinAsync(max, execute)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+            
+            /// <summary>
+            /// Sane as calling WithinAsync(TimeSpan.Zero, max, function, cancellationToken).
+            /// </summary>
+            public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) 
+                => await _probe.WithinAsync(max, execute, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+            
+            /// <summary>
+            /// Sane as calling WithinAsync(TimeSpan.Zero, max, function, cancellationToken).
+            /// </summary>
+            public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<Task<TOther>> execute, CancellationToken cancellationToken = default) 
+                => await _probe.WithinAsync(max, execute, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -168,12 +318,11 @@ namespace Akka.Streams.TestKit
         public class Probe<T> : ManualProbe<T>
         {
             private readonly long _initialPendingRequests;
-            private readonly Lazy<StreamTestKit.PublisherProbeSubscription<T>> _subscription;
+            private StreamTestKit.PublisherProbeSubscription<T> _subscription = null;
 
             internal Probe(TestKitBase system, long initialPendingRequests) : base(system)
             {
                 _initialPendingRequests = Pending = initialPendingRequests;
-                _subscription = new Lazy<StreamTestKit.PublisherProbeSubscription<T>>(ExpectSubscription);
             }
 
             /// <summary>
@@ -184,14 +333,22 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Asserts that a subscription has been received or will be received
             /// </summary>
-            public void EnsureSubscription()
+            public void EnsureSubscription(CancellationToken cancellationToken = default)
             {
-                var _ = _subscription.Value;
+                if(_subscription == null)
+                    _subscription = ExpectSubscription(cancellationToken);
             }
 
+            public async Task EnsureSubscriptionAsync(CancellationToken cancellationToken = default)
+            {
+                if(_subscription == null)
+                    _subscription = await ExpectSubscriptionAsync(cancellationToken)
+                        .ConfigureAwait(false);
+            }
             public Probe<T> SendNext(T element)
             {
-                var sub = _subscription.Value;
+                EnsureSubscription();
+                var sub = _subscription;
                 if (Pending == 0)
                     Pending = sub.ExpectRequest();
                 Pending--;
@@ -201,33 +358,46 @@ namespace Akka.Streams.TestKit
 
             public Probe<T> UnsafeSendNext(T element)
             {
-                _subscription.Value.SendNext(element);
+                EnsureSubscription();
+                _subscription.SendNext(element);
                 return this;
             }
 
             public Probe<T> SendComplete()
             {
-                _subscription.Value.SendComplete();
+                EnsureSubscription();
+                _subscription.SendComplete();
                 return this;
             }
 
             public Probe<T> SendError(Exception e)
             {
-                _subscription.Value.SendError(e);
+                EnsureSubscription();
+                _subscription.SendError(e);
                 return this;
             }
 
-            public long ExpectRequest()
+            public long ExpectRequest(CancellationToken cancellationToken = default)
+                => ExpectRequestAsync(cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+
+            public async Task<long> ExpectRequestAsync(CancellationToken cancellationToken = default)
             {
-                var requests = _subscription.Value.ExpectRequest();
+                await EnsureSubscriptionAsync(cancellationToken);
+                var requests = await _subscription.ExpectRequestAsync(cancellationToken)
+                    .ConfigureAwait(false);
                 Pending += requests;
                 return requests;
             }
 
-            public Probe<T> ExpectCancellation()
+            public void ExpectCancellation(CancellationToken cancellationToken = default)
+                => ExpectCancellationAsync(cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+            
+            public async Task ExpectCancellationAsync(CancellationToken cancellationToken = default)
             {
-                _subscription.Value.ExpectCancellation();
-                return this;
+                await EnsureSubscriptionAsync(cancellationToken);
+                await _subscription.ExpectCancellationAsync(cancellationToken);
             }
         }
 

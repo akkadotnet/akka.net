@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -18,7 +19,7 @@ namespace Akka.Tests.Actor
     public partial class ReceiveActorTests : AkkaSpec
     {
         [Fact]
-        public void Given_actor_with_no_receive_specified_When_receiving_message_Then_it_should_be_unhandled()
+        public async Task Given_actor_with_no_receive_specified_When_receiving_message_Then_it_should_be_unhandled()
         {
             //Given
             var system = ActorSystem.Create("test");
@@ -29,13 +30,13 @@ namespace Akka.Tests.Actor
             actor.Tell("Something");
 
             //Then
-            ExpectMsg<UnhandledMessage>(m => ((string)m.Message) == "Something" && m.Recipient == actor);
+            await ExpectMsgAsync<UnhandledMessage>(m => ((string)m.Message) == "Something" && m.Recipient == actor);
             system.EventStream.Unsubscribe(TestActor, typeof(UnhandledMessage));
         }
 
 
         [Fact]
-        public void Test_that_actor_cannot_call_receive_out_of_construction_and_become()
+        public async Task Test_that_actor_cannot_call_receive_out_of_construction_and_become()
         {
             //Given
             var system = ActorSystem.Create("test");
@@ -46,11 +47,11 @@ namespace Akka.Tests.Actor
 
             //Then
             //We expect a exception was thrown when the actor called Receive, and that it was sent back to us
-            ExpectMsg<InvalidOperationException>();
+            await ExpectMsgAsync<InvalidOperationException>();
         }
 
         [Fact]
-        public void Given_an_EchoActor_When_receiving_messages_Then_messages_should_be_sent_back()
+        public async Task Given_an_EchoActor_When_receiving_messages_Then_messages_should_be_sent_back()
         {
             //Given
             var system = ActorSystem.Create("test");
@@ -61,12 +62,12 @@ namespace Akka.Tests.Actor
             actor.Tell("Something else", TestActor);
 
             //Then
-            ExpectMsg((object) "Something");
-            ExpectMsg((object) "Something else");
+            await ExpectMsgAsync((object) "Something");
+            await ExpectMsgAsync((object) "Something else");
         }
 
         [Fact]
-        public void Given_an_actor_which_uses_predicates_When_sending_different_messages_Then_correct_handler_should_be_invoked()
+        public async Task Given_an_actor_which_uses_predicates_When_sending_different_messages_Then_correct_handler_should_be_invoked()
         {
             //Given
             var system = ActorSystem.Create("test");
@@ -79,14 +80,14 @@ namespace Akka.Tests.Actor
             actor.Tell(15, TestActor);
 
             //Then
-            ExpectMsg((object) "int<5:0");
-            ExpectMsg((object) "int<10:5");
-            ExpectMsg((object) "int<15:10");
-            ExpectMsg((object) "int:15");
+            await ExpectMsgAsync((object) "int<5:0");
+            await ExpectMsgAsync((object) "int<10:5");
+            await ExpectMsgAsync((object) "int<15:10");
+            await ExpectMsgAsync((object) "int:15");
         }
 
         [Fact]
-        public void Given_an_actor_that_uses_non_generic_and_predicates_When_sending_different_messages_Then_correct_handler_should_be_invoked()
+        public async Task Given_an_actor_that_uses_non_generic_and_predicates_When_sending_different_messages_Then_correct_handler_should_be_invoked()
         {
             //Given
             var system = ActorSystem.Create("test");
@@ -100,16 +101,16 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
 
             //Then
-            ExpectMsg((object) "int<5:0");
-            ExpectMsg((object) "int<10:5");
-            ExpectMsg((object) "int<15:10");
-            ExpectMsg((object) "int:15");
-            ExpectMsg((object) "string:hello");
+            await ExpectMsgAsync((object) "int<5:0");
+            await ExpectMsgAsync((object) "int<10:5");
+            await ExpectMsgAsync((object) "int<15:10");
+            await ExpectMsgAsync((object) "int:15");
+            await ExpectMsgAsync((object) "string:hello");
         }
 
 
         [Fact]
-        public void Given_an_actor_with_ReceiveAny_When_sending_different_messages_Then_correct_handler_should_be_invoked()
+        public async Task Given_an_actor_with_ReceiveAny_When_sending_different_messages_Then_correct_handler_should_be_invoked()
         {
             //Given
             var system = ActorSystem.Create("test");
@@ -120,12 +121,12 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
 
             //Then
-            ExpectMsg((object)"int:4711");
-            ExpectMsg((object)"any:hello");
+            await ExpectMsgAsync((object)"int:4711");
+            await ExpectMsgAsync((object)"any:hello");
         }
 
         [Fact]
-        public void Given_an_actor_which_overrides_PreStart_When_sending_a_message_Then_the_message_should_be_handled()
+        public async Task Given_an_actor_which_overrides_PreStart_When_sending_a_message_Then_the_message_should_be_handled()
         {
             //Given
             var actor = Sys.ActorOf<PreStartEchoReceiveActor>("echo");
@@ -134,7 +135,7 @@ namespace Akka.Tests.Actor
             actor.Tell(4711, TestActor);
 
             //Then
-            ExpectMsg(4711);
+            await ExpectMsgAsync(4711);
         }
 
         private class NoReceiveActor : ReceiveActor
