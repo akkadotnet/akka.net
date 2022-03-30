@@ -74,7 +74,7 @@ namespace Akka.Persistence.TCK.Query
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
                 .Request(2)
                 .ExpectNext("f-1", "f-2")
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(100)) as TestSubscriber.Probe<object>;
+                .ExpectNoMsg(TimeSpan.FromMilliseconds(100)).Probe as TestSubscriber.Probe<object>;
 
             pref.Tell("f-4");
             ExpectMsg("f-4-done");
