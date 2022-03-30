@@ -338,7 +338,7 @@ namespace Akka.Tests.Event
 
             var msg = allmsg.Where(l => l.LogLevel() >= level);
             allmsg.ToList().ForEach(l => bus.Publish(l));
-            msg.ToList().ForEach(async l => await ExpectMsgAsync(l));
+            msg.ToList().ForEach(l => ExpectMsg(l));
         }
     }
 }
