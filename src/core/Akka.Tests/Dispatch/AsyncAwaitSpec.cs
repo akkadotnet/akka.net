@@ -494,12 +494,12 @@ namespace Akka.Tests.Dispatch
         }
 
         [Fact]
-        public void ActorTaskScheduler_reentrancy_should_not_be_possible()
+        public async Task ActorTaskScheduler_reentrancy_should_not_be_possible()
         {
             var actor = Sys.ActorOf<AsyncReentrantActor>();
             actor.Tell("hello");
 
-            ExpectNoMsg(1000);
+            await ExpectNoMsgAsync(1000);
         }
 
         [Fact]
