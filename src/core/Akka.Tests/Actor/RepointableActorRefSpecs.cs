@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -46,11 +47,11 @@ namespace Akka.Tests.Actor
         /// Fixes https://github.com/akkadotnet/akka.net/pull/2182
         /// </summary>
         [Fact]
-        public void Fix2128_RepointableActorRef_multiple_enumerations()
+        public async Task Fix2128_RepointableActorRef_multiple_enumerations()
         {
             var actor = Sys.ActorOf(Props.Create(() => new Bug2182Actor()).WithDispatcher("akka.test.calling-thread-dispatcher"), "buggy");
             actor.Tell("foo");
-            ExpectMsg("foo");
+            await ExpectMsgAsync("foo");
         }
     }
 }
