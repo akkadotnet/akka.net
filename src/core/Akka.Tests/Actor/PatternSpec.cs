@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.Tests.Util;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -17,17 +18,17 @@ namespace Akka.Tests.Actor
     public class PatternSpec : AkkaSpec
     {
         [Fact]
-        public void GracefulStop_must_provide_Task_for_stopping_an_actor()
+        public async Task GracefulStop_must_provide_Task_for_stopping_an_actor()
         {
             //arrange
             var target = Sys.ActorOf<TargetActor>();
 
             //act
-            var result = target.GracefulStop(TimeSpan.FromSeconds(5));
-            result.Wait(TimeSpan.FromSeconds(6));
+            var result = await target.GracefulStop(TimeSpan.FromSeconds(5))
+                .AwaitWithTimeout(TimeSpan.FromSeconds(6));;
 
             //assert
-            Assert.True(result.Result);
+            Assert.True(result);
 
         }
 
@@ -46,7 +47,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void GracefulStop_must_complete_Task_with_TaskCanceledException_when_actor_not_terminated_within_timeout()
+        public async Task GracefulStop_must_complete_Task_with_TaskCanceledException_when_actor_not_terminated_within_timeout()
         {
             //arrange
             var target = Sys.ActorOf<TargetActor>();
@@ -56,11 +57,9 @@ namespace Akka.Tests.Actor
             target.Tell((latch, TimeSpan.FromSeconds(2)));
 
             //assert
-            XAssert.Throws<TaskCanceledException>(() =>
+            await Assert.ThrowsAsync<TaskCanceledException>(async () =>
             {
-                var task = target.GracefulStop(TimeSpan.FromMilliseconds(500));
-                task.Wait();
-                var result = task.Result;
+                await target.GracefulStop(TimeSpan.FromMilliseconds(50));
             });
             latch.Open();
 
@@ -78,7 +77,7 @@ namespace Akka.Tests.Actor
 
             //assert  
             Assert.True(stopped);
-            ExpectNoMsg(TimeSpan.Zero);
+            await ExpectNoMsgAsync(TimeSpan.Zero);
         }
 
         #region Actors
