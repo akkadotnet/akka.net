@@ -346,9 +346,9 @@ namespace Akka.Tests.IO
                 });
                 
                 // All acks should be received
-                clients.ForEach(async client =>
+                clients.ForEach(client =>
                 {
-                    await client.Probe.ExpectMsgAsync<AckWithValue>(ack => ack.Value.ShouldBe(client.Index), TimeSpan.FromSeconds(10));
+                    client.Probe.ExpectMsg<AckWithValue>(ack => ack.Value.ShouldBe(client.Index), TimeSpan.FromSeconds(10));
                 });
             });
         }
@@ -491,7 +491,7 @@ namespace Akka.Tests.IO
                 serverSocket.Listen(100);
                 var endpoint = (IPEndPoint) serverSocket.LocalEndPoint;
 
-                var connectCommander = base.CreateTestProbe();
+                var connectCommander = CreateTestProbe();
                 connectCommander.Send(Sys.Tcp(), new Tcp.Connect(endpoint));
 
                 var accept = serverSocket.Accept();
