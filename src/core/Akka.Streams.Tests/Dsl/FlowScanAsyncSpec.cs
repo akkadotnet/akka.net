@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .Request(elements.Count + 1)
-                .ExpectNext(zero);
+                .ExpectNext(zero).Probe;
         }
 
         private TestSubscriber.ManualProbe<int> WhenFailedTask(ICollection<int> elements, int zero,
@@ -203,7 +203,7 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .Request(elements.Count + 1)
-                .ExpectNext(zero);
+                .ExpectNext(zero).Probe;
         }
 
         private TestSubscriber.ManualProbe<string> WhenNullElement(ICollection<string> elements, string zero, Decider decider = null)
@@ -215,7 +215,7 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
                 .RunWith(this.SinkProbe<string>(), Materializer)
                 .Request(elements.Count + 1)
-                .ExpectNext(zero);
+                .ExpectNext(zero).Probe;
         }
     }
 }

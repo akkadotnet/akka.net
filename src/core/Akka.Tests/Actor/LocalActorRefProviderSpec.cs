@@ -13,23 +13,24 @@ using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
 using Akka.TestKit.TestActors;
+using Akka.Tests.Util;
 
 namespace Akka.Tests.Actor
 {
     public class LocalActorRefProviderSpec : AkkaSpec
     {
         [Fact]
-        public void A_LocalActorRefs_ActorCell_must_not_retain_its_original_Props_when_Terminated()
+        public async Task A_LocalActorRefs_ActorCell_must_not_retain_its_original_Props_when_Terminated()
         {
             var parent = Sys.ActorOf(Props.Create(() => new ParentActor()));
             parent.Tell("GetChild", TestActor);
-            var child = ExpectMsg<IActorRef>();
+            var child = await ExpectMsgAsync<IActorRef>();
             var childPropsBeforeTermination = ((LocalActorRef)child).Underlying.Props;
             Assert.Equal(Props.Empty, childPropsBeforeTermination);
             Watch(parent);
             Sys.Stop(parent);
-            ExpectTerminated(parent);
-            AwaitAssert(() =>
+            await ExpectTerminatedAsync(parent);
+            await AwaitAssertAsync(() =>
                 {
                     var childPropsAfterTermination = ((LocalActorRef)child).Underlying.Props;
                     Assert.NotEqual(childPropsBeforeTermination, childPropsAfterTermination);
@@ -38,7 +39,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRefFactory_must_only_create_one_instance_of_an_actor_with_a_specific_address_in_a_concurrent_environment()
+        public async Task An_ActorRefFactory_must_only_create_one_instance_of_an_actor_with_a_specific_address_in_a_concurrent_environment()
         {
             var impl = (ActorSystemImpl)Sys;
             var provider = impl.Provider;
@@ -49,19 +50,20 @@ namespace Akka.Tests.Actor
             {
                 var timeout = Dilated(TimeSpan.FromSeconds(5));
                 var address = "new-actor" + i;
-                var actors = Enumerable.Range(0, 4).Select(x => Task.Run(() => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address))).ToArray();
+                var actors = Enumerable.Range(0, 4)
+                    .Select(async x => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address)).ToArray();
                 // Use WhenAll with empty ContinueWith to swallow all exceptions, so we can inspect the tasks afterwards.
-                Task.WhenAll(actors).ContinueWith(a => { }).Wait(timeout);
+                await Task.WhenAll(actors).ContinueWith(a => { }).AwaitWithTimeout(timeout);
                 Assert.True(actors.Any(x => x.Status == TaskStatus.RanToCompletion && x.Result != null), "Failed to create any Actors");
                 Assert.True(actors.Any(x => x.Status == TaskStatus.Faulted && x.Exception.InnerException is InvalidActorNameException), "Succeeded in creating all Actors. Some should have failed.");
             }
         }
 
         [Fact]
-        public void An_ActorRefFactory_must_only_create_one_instance_of_an_actor_from_within_the_same_message_invocation()
+        public async Task An_ActorRefFactory_must_only_create_one_instance_of_an_actor_from_within_the_same_message_invocation()
         {
             var supervisor = Sys.ActorOf(Props.Create<ActorWithDuplicateChild>());
-            EventFilter.Exception<InvalidActorNameException>(message: "Actor name \"duplicate\" is not unique!").ExpectOne(() =>
+            await EventFilter.Exception<InvalidActorNameException>(message: "Actor name \"duplicate\" is not unique!").ExpectOneAsync(() =>
                 {
                     supervisor.Tell("");
                 });
