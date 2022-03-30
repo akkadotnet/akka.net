@@ -48,127 +48,127 @@ namespace Akka.Tests.IO
                      akka.io.tcp.write-commands-queue-max-size = {InternalConnectionActorMaxQueueSize}", output: output)
         { }
 
-        private void VerifyActorTermination(IActorRef actor)
+        private async Task VerifyActorTermination(IActorRef actor)
         {
             Watch(actor);
-            ExpectTerminated(actor);
+            await ExpectTerminatedAsync(actor);
         }
 
         [Fact]
-        public void The_TCP_transport_implementation_should_properly_bind_a_test_server()
+        public async Task The_TCP_transport_implementation_should_properly_bind_a_test_server()
         {
-            new TestSetup(this).Run(x => { });
+            await new TestSetup(this).RunAsync(x => { });
         }
 
         [Fact(Skip="FIXME .net core / linux")]
-        public void The_TCP_transport_implementation_should_allow_connecting_to_and_disconnecting_from_the_test_server()
+        public async Task The_TCP_transport_implementation_should_allow_connecting_to_and_disconnecting_from_the_test_server()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Close.Instance);
-                actors.ClientHandler.ExpectMsg<Tcp.Closed>();
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.Closed>();
                 
-                actors.ServerHandler.ExpectMsg<Tcp.PeerClosed>();
-                VerifyActorTermination(actors.ClientConnection);
-                VerifyActorTermination(actors.ServerConnection);
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.PeerClosed>();
+                await VerifyActorTermination(actors.ClientConnection);
+                await VerifyActorTermination(actors.ServerConnection);
             });
         }
 
         [Fact(Skip="FIXME .net core / linux")]
-        public void The_TCP_transport_implementation_should_properly_handle_connection_abort_from_client_side()
+        public async Task The_TCP_transport_implementation_should_properly_handle_connection_abort_from_client_side()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Abort.Instance);
-                actors.ClientHandler.ExpectMsg<Tcp.Aborted>();
-                actors.ServerHandler.ExpectMsg<Tcp.ErrorClosed>();
-                VerifyActorTermination(actors.ClientConnection);
-                VerifyActorTermination(actors.ServerConnection);
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.Aborted>();
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await VerifyActorTermination(actors.ClientConnection);
+                await VerifyActorTermination(actors.ServerConnection);
             });
         }
 
         [Fact(Skip="FIXME .net core / linux")]
-        public void The_TCP_transport_implementation_should_properly_handle_connection_abort_from_client_side_after_chit_chat()
+        public async Task The_TCP_transport_implementation_should_properly_handle_connection_abort_from_client_side_after_chit_chat()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection();
-                ChitChat(actors);
+                var actors = await x.EstablishNewClientConnectionAsync();
+                await ChitChat(actors);
 
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Abort.Instance);
-                actors.ClientHandler.ExpectMsg<Tcp.Aborted>();
-                actors.ServerHandler.ExpectMsg<Tcp.ErrorClosed>();
-                VerifyActorTermination(actors.ClientConnection);
-                VerifyActorTermination(actors.ServerConnection);
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.Aborted>();
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await VerifyActorTermination(actors.ClientConnection);
+                await VerifyActorTermination(actors.ServerConnection);
             });   
         }
 
         [Fact]
-        public void The_TCP_transport_implementation_should_properly_handle_connection_abort_via_PoisonPill_from_client_side()
+        public async Task The_TCP_transport_implementation_should_properly_handle_connection_abort_via_PoisonPill_from_client_side()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
                 actors.ClientHandler.Send(actors.ClientConnection, PoisonPill.Instance);
-                VerifyActorTermination(actors.ClientConnection);
+                await VerifyActorTermination(actors.ClientConnection);
 
-                actors.ServerHandler.ExpectMsg<Tcp.ErrorClosed>();
-                VerifyActorTermination(actors.ServerConnection);
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await VerifyActorTermination(actors.ServerConnection);
             });
         }
 
         [Fact]
-        public void The_TCP_transport_implementation_should_properly_handle_connection_abort_via_PoisonPill_from_client_side_after_chit_chat()
+        public async Task The_TCP_transport_implementation_should_properly_handle_connection_abort_via_PoisonPill_from_client_side_after_chit_chat()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection();
-                ChitChat(actors);
+                var actors = await x.EstablishNewClientConnectionAsync();
+                await ChitChat(actors);
 
                 actors.ClientHandler.Send(actors.ClientConnection, PoisonPill.Instance);
-                VerifyActorTermination(actors.ClientConnection);
+                await VerifyActorTermination(actors.ClientConnection);
 
-                actors.ServerHandler.ExpectMsg<Tcp.ErrorClosed>();
-                VerifyActorTermination(actors.ServerConnection);
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await VerifyActorTermination(actors.ServerConnection);
             });
         }
 
         [Fact]
-        public void The_TCP_transport_implementation_should_properly_handle_connection_abort_via_PoisonPill_from_server_side()
+        public async Task The_TCP_transport_implementation_should_properly_handle_connection_abort_via_PoisonPill_from_server_side()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
                 actors.ServerHandler.Send(actors.ServerConnection, PoisonPill.Instance);
-                VerifyActorTermination(actors.ServerConnection);
+                await VerifyActorTermination(actors.ServerConnection);
 
-                actors.ClientHandler.ExpectMsg<Tcp.ErrorClosed>();
-                VerifyActorTermination(actors.ClientConnection);
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await VerifyActorTermination(actors.ClientConnection);
             });
         }
 
         [Fact]
-        public void The_TCP_transport_implementation_should_properly_handle_connection_abort_via_PoisonPill_from_server_side_after_chit_chat()
+        public async Task The_TCP_transport_implementation_should_properly_handle_connection_abort_via_PoisonPill_from_server_side_after_chit_chat()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection();
-                ChitChat(actors);
+                var actors = await x.EstablishNewClientConnectionAsync();
+                await ChitChat(actors);
 
                 actors.ServerHandler.Send(actors.ServerConnection, PoisonPill.Instance);
-                VerifyActorTermination(actors.ServerConnection);
+                await VerifyActorTermination(actors.ServerConnection);
 
-                actors.ClientHandler.ExpectMsg<Tcp.ErrorClosed>();
-                VerifyActorTermination(actors.ClientConnection);
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await VerifyActorTermination(actors.ClientConnection);
             });
         }
 
         [InlineData(AddressFamily.InterNetworkV6)]
         [InlineData(AddressFamily.InterNetwork)]
         [Theory]
-        public void The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints(AddressFamily family)
+        public async Task The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints(AddressFamily family)
         {
             // Aaronontheweb, 9/2/2017 - POSIX-based OSES are still having trouble with IPV6 DNS resolution
             if(!RuntimeInformation
@@ -179,36 +179,36 @@ namespace Akka.Tests.IO
             var bindCommander = CreateTestProbe();
             bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(family == AddressFamily.InterNetwork ? IPAddress.Loopback 
                 : IPAddress.IPv6Loopback, 0)));
-            var boundMsg = bindCommander.ExpectMsg<Tcp.Bound>();
+            var boundMsg = await bindCommander.ExpectMsgAsync<Tcp.Bound>();
 
             // setup client to connect 
             var targetAddress = new DnsEndPoint("localhost", boundMsg.LocalAddress.AsInstanceOf<IPEndPoint>().Port);
             var clientHandler = CreateTestProbe();
             Sys.Tcp().Tell(new Tcp.Connect(targetAddress), clientHandler);
-            clientHandler.ExpectMsg<Tcp.Connected>(TimeSpan.FromSeconds(3));
+            await clientHandler.ExpectMsgAsync<Tcp.Connected>(TimeSpan.FromSeconds(3));
             var clientEp = clientHandler.Sender;
             clientEp.Tell(new Tcp.Register(clientHandler));
-            serverHandler.ExpectMsg<Tcp.Connected>();
+            await serverHandler.ExpectMsgAsync<Tcp.Connected>();
             serverHandler.Sender.Tell(new Tcp.Register(serverHandler));
 
             var str = Enumerable.Repeat("f", 567).Join("");
             var testData = ByteString.FromString(str);
             clientEp.Tell(Tcp.Write.Create(testData, Ack.Instance), clientHandler);
-            clientHandler.ExpectMsg<Ack>();
-            var received = serverHandler.ReceiveWhile<Tcp.Received>(o =>
+            await clientHandler.ExpectMsgAsync<Ack>();
+            var received = await serverHandler.ReceiveWhileAsync<Tcp.Received>(o =>
             {
                 return o as Tcp.Received;
-            }, RemainingOrDefault, TimeSpan.FromSeconds(0.5));
+            }, RemainingOrDefault, TimeSpan.FromSeconds(0.5)).ToListAsync();
 
             received.Sum(s => s.Data.Count).Should().Be(testData.Count);
         }
 
         [Fact]
-        public void BugFix_3021_Tcp_Should_not_drop_large_messages()
+        public async Task BugFix_3021_Tcp_Should_not_drop_large_messages()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
 
                 // create a large-ish byte string
                 var str = Enumerable.Repeat("f", 567).Join("");
@@ -219,31 +219,31 @@ namespace Akka.Tests.IO
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
 
-                var serverMsgs = actors.ServerHandler.ReceiveWhile<Tcp.Received>(o =>
+                var serverMsgs = await actors.ServerHandler.ReceiveWhileAsync<Tcp.Received>(o =>
                 {
                     return o as Tcp.Received;
-                }, RemainingOrDefault, TimeSpan.FromSeconds(2));
+                }, RemainingOrDefault, TimeSpan.FromSeconds(2)).ToListAsync();
 
                 serverMsgs.Sum(s => s.Data.Count).Should().Be(testData.Count*3);
             });
         }
 
         [Fact]
-        public void When_sending_Close_to_TcpManager_Should_log_detailed_error_message()
+        public async Task When_sending_Close_to_TcpManager_Should_log_detailed_error_message()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
                 // Setup multiple clients
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
 
                 // Error message should contain invalid message type
-                EventFilter.Error(contains: nameof(Tcp.Close)).ExpectOne(() =>
+                await EventFilter.Error(contains: nameof(Tcp.Close)).ExpectOneAsync(() =>
                 {
                     // Sending `Tcp.Close` to TcpManager instead of outgoing connection
                     Sys.Tcp().Tell(Tcp.Close.Instance, actors.ClientHandler);
                 });
                 // Should also contain ref to documentation
-                EventFilter.Error(contains: "https://getakka.net/articles/networking/io.html").ExpectOne(() =>
+                await EventFilter.Error(contains: "https://getakka.net/articles/networking/io.html").ExpectOneAsync(() =>
                 {
                     // Sending `Tcp.Close` to TcpManager instead of outgoing connection
                     Sys.Tcp().Tell(Tcp.Close.Instance, actors.ClientHandler);
@@ -252,63 +252,63 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public void Write_before_Register_should_not_be_silently_dropped()
+        public async Task Write_before_Register_should_not_be_silently_dropped()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection(registerClientHandler: false);
+                var actors = await x.EstablishNewClientConnectionAsync(registerClientHandler: false);
 
                 var msg = ByteString.FromString("msg"); // 3 bytes
 
-                EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOne(() =>
+                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOneAsync(() =>
                 {
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(msg));
                     actors.ClientConnection.Tell(new Tcp.Register(actors.ClientHandler));
                 });
                 
-                var serverMsgs = actors.ServerHandler.ReceiveWhile(o =>
+                var serverMsgs = await actors.ServerHandler.ReceiveWhileAsync(o =>
                 {
                     return o as Tcp.Received;
-                }, RemainingOrDefault, TimeSpan.FromSeconds(2));
+                }, RemainingOrDefault, TimeSpan.FromSeconds(2)).ToListAsync();
 
                 serverMsgs.Should().HaveCount(1).And.Subject.Should().Contain(m => m.Data.Equals(msg));
             });
         }
         
         [Fact]
-        public void Write_before_Register_should_Be_dropped_if_buffer_is_full()
+        public async Task Write_before_Register_should_Be_dropped_if_buffer_is_full()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection(registerClientHandler: false);
+                var actors = await x.EstablishNewClientConnectionAsync(registerClientHandler: false);
 
                 var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
 
                 // We do not want message about receiving Write to be logged, if the write was actually discarded
-                EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).Expect(0, () =>
+                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectAsync(0, () =>
                 {
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData));
                 });
                 
-                actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
                 
                 // After failed receive, next "good" writes should be handled with no issues
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(ByteString.FromBytes(new byte[1])));
                 actors.ClientHandler.Send(actors.ClientConnection, new Tcp.Register(actors.ClientHandler));
-                var serverMsgs = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(2));
+                var serverMsgs = await actors.ServerHandler.ReceiveWhileAsync(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(2)).ToListAsync();
                 serverMsgs.Should().HaveCount(1).And.Subject.Should().Contain(m => m.Data.Count == 1);
             });
         }
 
         [Fact]
-        public void When_multiple_concurrent_writing_clients_Should_not_lose_messages()
+        public async Task When_multiple_concurrent_writing_clients_Should_not_lose_messages()
         {
             const int clientsCount = 50;
             
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
                 // Setup multiple clients
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
 
                 // Each client sends his index to server
                 var clients = Enumerable.Range(0, clientsCount).Select(i => (Index: i, Probe: CreateTestProbe($"test-client-{i}"))).ToArray();
@@ -321,20 +321,20 @@ namespace Akka.Tests.IO
                 });
                 
                 // All messages data should be received
-                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.5));
+                var received = await actors.ServerHandler.ReceiveWhileAsync(o => o as Tcp.Received, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.5)).ToListAsync();
                 received.Sum(r => r.Data.Count).ShouldBe(counter.Current);
             });
         }
         
         [Fact]
-        public void When_multiple_concurrent_writing_clients_All_acks_should_be_received()
+        public async Task When_multiple_concurrent_writing_clients_All_acks_should_be_received()
         {
             const int clientsCount = 50;
             
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
                 // Setup multiple clients
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
 
                 // Each client sends his index to server
                 var indexRange = Enumerable.Range(0, clientsCount).ToList();
@@ -346,22 +346,22 @@ namespace Akka.Tests.IO
                 });
                 
                 // All acks should be received
-                clients.ForEach(client =>
+                clients.ForEach(async client =>
                 {
-                    client.Probe.ExpectMsg<AckWithValue>(ack => ack.Value.ShouldBe(client.Index), TimeSpan.FromSeconds(10));
+                    await client.Probe.ExpectMsgAsync<AckWithValue>(ack => ack.Value.ShouldBe(client.Index), TimeSpan.FromSeconds(10));
                 });
             });
         }
         
         [Fact]
-        public void When_multiple_writing_clients_Should_receive_messages_in_order()
+        public async Task When_multiple_writing_clients_Should_receive_messages_in_order()
         {
             const int clientsCount = 50;
             
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
                 // Setup multiple clients
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
 
                 // Each client sends his index to server
                 var clients = Enumerable.Range(0, clientsCount).Select(i => (Index: i, Probe: CreateTestProbe($"test-client-{i}"))).ToArray();
@@ -374,7 +374,7 @@ namespace Akka.Tests.IO
                 });
                 
                 // All messages data should be received, and be in the same order as they were sent
-                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.5));
+                var received = await actors.ServerHandler.ReceiveWhileAsync(o => o as Tcp.Received, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.5)).ToListAsync();
                 var content = string.Join("", received.Select(r => r.Data.ToString()));
                 content.ShouldBe(contentBuilder.ToString());
             });
@@ -385,29 +385,29 @@ namespace Akka.Tests.IO
         {
             await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
 
                 // create a buffer-overflow message
                 var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
                 var goodData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize]);
 
                 // If test runner is too loaded, let it try ~3 times with 5 pause interval
-                await AwaitAssertAsync(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     // try sending overflow
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immidiately
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
-                    actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(20));
+                    await actors.ClientHandler.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(20));
 
                     // First overflow data will be received anyway
-                    actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
+                    (await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync())
                         .Sum(m => m.Data.Count)
                         .Should().Be(InternalConnectionActorMaxQueueSize + 1);
                 
                     // Check that almost-overflow size does not cause any problems
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData));
-                    actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
+                    (await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync())
                         .Sum(m => m.Data.Count)
                         .Should().Be(InternalConnectionActorMaxQueueSize);
                 }, TimeSpan.FromSeconds(30 * 3), TimeSpan.FromSeconds(5)); // 3 attempts by ~25 seconds + 5 sec pause
@@ -416,91 +416,91 @@ namespace Akka.Tests.IO
 
         
         [Fact]
-        public void The_TCP_transport_implementation_should_properly_complete_one_client_server_request_response_cycle()
+        public async Task The_TCP_transport_implementation_should_properly_complete_one_client_server_request_response_cycle()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
 
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(ByteString.FromString("Captain on the bridge!"), Aye.Instance));
-                actors.ClientHandler.ExpectMsg(Aye.Instance);
-                actors.ServerHandler.ExpectMsg<Tcp.Received>().Data.ToString(Encoding.ASCII).ShouldBe("Captain on the bridge!");
+                await actors.ClientHandler.ExpectMsgAsync(Aye.Instance);
+                (await actors.ServerHandler.ExpectMsgAsync<Tcp.Received>()).Data.ToString(Encoding.ASCII).ShouldBe("Captain on the bridge!");
 
                 actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(ByteString.FromString("For the king!"), Yes.Instance));
-                actors.ServerHandler.ExpectMsg(Yes.Instance);
-                actors.ClientHandler.ExpectMsg<Tcp.Received>().Data.ToString(Encoding.ASCII).ShouldBe("For the king!");
+                await actors.ServerHandler.ExpectMsgAsync(Yes.Instance);
+                (await actors.ClientHandler.ExpectMsgAsync<Tcp.Received>()).Data.ToString(Encoding.ASCII).ShouldBe("For the king!");
 
                 actors.ServerHandler.Send(actors.ServerConnection, Tcp.Close.Instance);
-                actors.ServerHandler.ExpectMsg<Tcp.Closed>();
-                actors.ClientHandler.ExpectMsg<Tcp.PeerClosed>();
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.Closed>();
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.PeerClosed>();
 
-                VerifyActorTermination(actors.ClientConnection);
-                VerifyActorTermination(actors.ServerConnection);
+                await VerifyActorTermination(actors.ClientConnection);
+                await VerifyActorTermination(actors.ServerConnection);
             });
         }
 
         
         [Fact]
-        public void The_TCP_transport_implementation_should_support_waiting_for_writes_with_backpressure()
+        public async Task The_TCP_transport_implementation_should_support_waiting_for_writes_with_backpressure()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
                 x.BindOptions = new[] {new Inet.SO.SendBufferSize(1024)};
                 x.ConnectOptions = new[] {new Inet.SO.SendBufferSize(1024)};
 
-                var actors = x.EstablishNewClientConnection();
+                var actors = await x.EstablishNewClientConnectionAsync();
 
                 actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(ByteString.FromBytes(new byte[100000]), Ack.Instance));
-                actors.ServerHandler.ExpectMsg(Ack.Instance);
+                await actors.ServerHandler.ExpectMsgAsync(Ack.Instance);
 
-                x.ExpectReceivedData(actors.ClientHandler, 100000);
+                await x.ExpectReceivedDataAsync(actors.ClientHandler, 100000);
             });
         }
 
         [Fact]
-        public void The_TCP_transport_implementation_dont_report_Connected_when_endpoint_isnt_responding()
+        public async Task The_TCP_transport_implementation_dont_report_Connected_when_endpoint_isnt_responding()
         {
             var connectCommander = CreateTestProbe();
             // a "random" endpoint hopefully unavailable since it's in the test-net IP range
             var endpoint = new IPEndPoint(IPAddress.Parse("192.0.2.1"), 23825);
             connectCommander.Send(Sys.Tcp(), new Tcp.Connect(endpoint));
             // expecting CommandFailed or no reply (within timeout)
-            var replies = connectCommander.ReceiveWhile(TimeSpan.FromSeconds(1), x => x as Tcp.Connected);
+            var replies = await connectCommander.ReceiveWhileAsync(TimeSpan.FromSeconds(1), x => x as Tcp.Connected).ToListAsync();
             replies.Count.ShouldBe(0);
         }
 
         [Fact]
-        public void Should_report_Error_only_once_when_connecting_to_unreachable_DnsEndpoint()
+        public async Task Should_report_Error_only_once_when_connecting_to_unreachable_DnsEndpoint()
         {
             var probe = CreateTestProbe();
             var endpoint = new DnsEndPoint("fake", 1000);
             Sys.Tcp().Tell(new Tcp.Connect(endpoint), probe.Ref);
             
             // expecting CommandFailed or no reply (within timeout)
-            var replies = probe.ReceiveWhile(TimeSpan.FromSeconds(5), x => x as Tcp.CommandFailed);
+            var replies = await probe.ReceiveWhileAsync(TimeSpan.FromSeconds(5), x => x as Tcp.CommandFailed).ToListAsync();
             replies.Count.ShouldBe(1);
         }
 
         [Fact]
-        public void The_TCP_transport_implementation_handle_tcp_connection_actor_death_properly()
+        public async Task The_TCP_transport_implementation_handle_tcp_connection_actor_death_properly()
         {
-            new TestSetup(this, shouldBindServer:false).Run(x =>
+            await new TestSetup(this, shouldBindServer:false).RunAsync((Action<TestSetup>)(async x =>
             {
                 var serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
                 serverSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
                 serverSocket.Listen(100);
                 var endpoint = (IPEndPoint) serverSocket.LocalEndPoint;
 
-                var connectCommander = CreateTestProbe();
+                var connectCommander = base.CreateTestProbe();
                 connectCommander.Send(Sys.Tcp(), new Tcp.Connect(endpoint));
 
                 var accept = serverSocket.Accept();
-                var connected = connectCommander.ExpectMsg<Tcp.Connected>();
+                var connected = await connectCommander.ExpectMsgAsync<Tcp.Connected>();
                 connected.RemoteAddress.AsInstanceOf<IPEndPoint>().Port.ShouldBe(endpoint.Port);
                 var connectionActor = connectCommander.LastSender;
                 connectCommander.Send(connectionActor, PoisonPill.Instance);
 
-                AwaitConditionNoThrow(() =>
+                await AwaitConditionNoThrowAsync(() =>
                 {
                     try
                     {
@@ -513,19 +513,19 @@ namespace Akka.Tests.IO
                     }
                 }, TimeSpan.FromSeconds(3));
 
-                VerifyActorTermination(connectionActor);
-            });
+                await VerifyActorTermination(connectionActor);
+            }));
         }
 
-        private void ChitChat(TestSetup.ConnectionDetail actors, int rounds = 100)
+        private async Task ChitChat(TestSetup.ConnectionDetail actors, int rounds = 100)
         {
             var testData = ByteString.FromBytes(new[] {(byte) 0});
             for (int i = 0; i < rounds; i++)
             {
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
-                actors.ServerHandler.ExpectMsg<Tcp.Received>(x => x.Data.Count == 1 && x.Data[0] == 0, hint: $"server didn't received at {i} round");
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.Received>(x => x.Data.Count == 1 && x.Data[0] == 0, hint: $"server didn't received at {i} round");
                 actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(testData));
-                actors.ClientHandler.ExpectMsg<Tcp.Received>(x => x.Data.Count == 1 && x.Data[0] == 0, hint: $"client didn't received at {i} round");
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.Received>(x => x.Data.Count == 1 && x.Data[0] == 0, hint: $"client didn't received at {i} round");
             }
         }
 
@@ -545,24 +545,24 @@ namespace Akka.Tests.IO
                 _bindHandler = _spec.CreateTestProbe("bind-handler-probe");
             }
 
-            public void BindServer()
+            public async Task BindServer()
             {
                 var bindCommander = _spec.CreateTestProbe();
                 bindCommander.Send(_spec.Sys.Tcp(), new Tcp.Bind(_bindHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0), options: BindOptions));
-                bindCommander.ExpectMsg<Tcp.Bound>(bound => _endpoint = (IPEndPoint) bound.LocalAddress);
+                await bindCommander.ExpectMsgAsync<Tcp.Bound>(bound => _endpoint = (IPEndPoint) bound.LocalAddress);
             }
 
-            public ConnectionDetail EstablishNewClientConnection(bool registerClientHandler = true)
+            public async Task<ConnectionDetail> EstablishNewClientConnectionAsync(bool registerClientHandler = true)
             {
                 var connectCommander = _spec.CreateTestProbe("connect-commander-probe");
                 connectCommander.Send(_spec.Sys.Tcp(), new Tcp.Connect(_endpoint, options: ConnectOptions));
-                connectCommander.ExpectMsg<Tcp.Connected>();
+                await connectCommander.ExpectMsgAsync<Tcp.Connected>();
                 
                 var clientHandler = _spec.CreateTestProbe($"client-handler-probe");
                 if (registerClientHandler)
                     connectCommander.Sender.Tell(new Tcp.Register(clientHandler.Ref));
 
-                _bindHandler.ExpectMsg<Tcp.Connected>();
+                await _bindHandler.ExpectMsgAsync<Tcp.Connected>();
                 var serverHandler = _spec.CreateTestProbe("server-handler-probe");
                 _bindHandler.Sender.Tell(new Tcp.Register(serverHandler.Ref));
 
@@ -583,12 +583,12 @@ namespace Akka.Tests.IO
                 public IActorRef ServerConnection { get; set; }
             }
 
-            public void ExpectReceivedData(TestProbe handler, int remaining)
+            public async Task ExpectReceivedDataAsync(TestProbe handler, int remaining)
             {
                 if (remaining > 0)
                 {
-                    var recv = handler.ExpectMsg<Tcp.Received>();
-                    ExpectReceivedData(handler, remaining - recv.Data.Count);
+                    var recv = await handler.ExpectMsgAsync<Tcp.Received>();
+                    await ExpectReceivedDataAsync(handler, remaining - recv.Data.Count);
                 }
             }
 
@@ -597,16 +597,16 @@ namespace Akka.Tests.IO
 
             public IPEndPoint Endpoint { get { return _endpoint; } }
 
-            public void Run(Action<TestSetup> action)
+            public async Task RunAsync(Action<TestSetup> action)
             {
-                if (_shouldBindServer) BindServer();
+                if (_shouldBindServer) await BindServer();
                 action(this);
             }
             
-            public Task RunAsync(Func<TestSetup, Task> asyncAction)
+            public async Task RunAsync(Func<TestSetup, Task> asyncAction)
             {
-                if (_shouldBindServer) BindServer();
-                return asyncAction(this);
+                if (_shouldBindServer) await BindServer();
+                await asyncAction(this);
             }
         }
 
