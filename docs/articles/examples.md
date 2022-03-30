@@ -5,18 +5,34 @@ title: Example Akka.NET Projects
 
 Here we will be showing a curated lists of projects that use various modules of Akka.NET
 
-## Fire Alert System
+## IoT
 
-**Description**: Akka.NET Streams + Cluster + AWS Kinesis Sample
+- [kinesis sample](https://github.com/petabridge/kinesis-sample): Akka.NET Streams + Cluster + AWS Kinesis Sample
 
-**Project URL**: [kinesis-sample](https://github.com/petabridge/kinesis-sample)
+- [Home Temperature Monitor](https://github.com/grofab95/HomeTemperatureMonitor): Arduino temperature monitoring project built on **Akka.Cluster**
 
-**Module(s)**: Akk.Streams, Akka.Cluster
+## Machine Learning
 
-# Home Temperature Monitor
+- [ML.NET ASP.NET Core Web API Akka.NET Sample](https://github.com/lqdev/MlNetAspNetAkkaSample): Sample application that uses Akka.NET Actors to scale predictions in an ASP.NET Core Web API.
 
-**Description**: Arduino temperature monitoring project
+## Blockchain
 
-**Project URL**: [HomeTemperatureMonitor](https://github.com/grofab95/HomeTemperatureMonitor)
+- [Blocksharp](https://github.com/revoltez/Blocksharp): A fully implemented Blockchain based on the Actor model using Akka.NET.
 
-**Module(s)**: Akk Core, Akka.Cluster
+## Web
+
+- [Cluster Web Crawler](https://github.com/petabridge/Cluster.WebCrawler): K8s, DevOps-ified version of the Akka.Cluster WebCrawler code sample
+
+## Finance - Stock Trading
+
+- [In-Memory Stock Trading CQRS Sample](https://github.com/Aaronontheweb/InMemoryCQRSReplication): Akka.NET Reference Architecture - CQRS + Sharding + In-Memory Replication
+
+## Files
+
+- [File Processor](https://github.com/cgstevens/FileProcessor): The example demonstrates the use of Akka.NET Clustering to monitor the file system for new files.
+
+## Frameworks Built On Top Akka.NET
+
+- [Akkatecture](https://github.com/AfterLutz/Akkatecture): a cqrs and event sourcing framework for dotnet core using akka.NET.
+
+- [EventFly](https://github.com/Sporteco/EventFly): A cqrs and event sourcing framework for dotnet core, build ontop of akka.net. Fully optimised around using akka's highly scalable message passing and event stream pub sub mechanisms.
