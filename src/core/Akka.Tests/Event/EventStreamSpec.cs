@@ -80,7 +80,7 @@ namespace Akka.Tests.Event
         public void Not_allow_null_as_subscriber()
         {
             var bus = new EventStream(true);
-            XAssert.Throws<ArgumentNullException>(() =>
+            Assert.Throws<ArgumentNullException>(() =>
             {
                 bus.Subscribe(null, typeof(M));
             });
