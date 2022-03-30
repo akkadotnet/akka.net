@@ -226,6 +226,35 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public async Task<T> WithinAsync<T>(
             TimeSpan max,
+            Func<T> function,
+            TimeSpan? epsilonValue = null,
+            CancellationToken cancellationToken = default)
+        {
+            return await WithinAsync(
+                    min: TimeSpan.Zero,
+                    max: max,
+                    function: function, 
+                    hint: null,
+                    epsilonValue: epsilonValue,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Execute code block while bounding its execution time between 0 seconds and <paramref name="max"/>.
+        /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
+        /// are available in a version which implicitly uses the remaining time governed by 
+        /// the innermost enclosing `within` block.</para>
+        /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="max">TBD</param>
+        /// <param name="function">TBD</param>
+        /// <param name="epsilonValue">TBD</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>TBD</returns>
+        public async Task<T> WithinAsync<T>(
+            TimeSpan max,
             Func<Task<T>> function,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
