@@ -8,6 +8,7 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
@@ -32,36 +33,36 @@ namespace Akka.Tests.IO
         [Fact]
         public void A_TCP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
         {
-            new TestSetup(this, pullMode: false).Run(x =>
+            new TestSetup(this, pullMode: false).Run(async x =>
             {
-                x.BindCommander.ExpectMsg<Tcp.Bound>();
+                await x.BindCommander.ExpectMsgAsync<Tcp.Bound>();
             });           
         }
 
         [Fact]
         public void A_TCP_Listener_must_continue_to_accept_connections_after_a_previous_accept()
         {
-            new TestSetup(this, pullMode: false).Run(x =>
+            new TestSetup(this, pullMode: false).Run(async x =>
             {
-                x.BindListener();
+                await x.BindListener();
 
-                x.AttemptConnectionToEndpoint();
-                x.AttemptConnectionToEndpoint();
+                await x.AttemptConnectionToEndpoint();
+                await x.AttemptConnectionToEndpoint();
             });
         }
 
         [Fact]
         public void A_TCP_Listener_must_react_to_unbind_commands_by_replying_with_unbound_and_stopping_itself()
         {
-            new TestSetup(this, pullMode:false).Run(x =>
+            new TestSetup(this, pullMode:false).Run(async x =>
             {
-                x.BindListener();
+                await x.BindListener();
 
                 var unbindCommander = CreateTestProbe();
                 unbindCommander.Send(x.Listener, Tcp.Unbind.Instance);
 
-                unbindCommander.ExpectMsg(Tcp.Unbound.Instance);
-                x.Parent.ExpectTerminated(x.Listener);
+                await unbindCommander.ExpectMsgAsync(Tcp.Unbound.Instance);
+                await x.Parent.ExpectTerminatedAsync(x.Listener);
             });    
         }
 
@@ -96,16 +97,16 @@ namespace Akka.Tests.IO
                 test(this);
             }
 
-            public void BindListener()
+            public async Task BindListener()
             {
-                var bound = _bindCommander.ExpectMsg<Tcp.Bound>();
+                var bound = await _bindCommander.ExpectMsgAsync<Tcp.Bound>();
                 LocalEndPoint = (IPEndPoint)bound.LocalAddress;
             }
 
-            public void AttemptConnectionToEndpoint()
+            public async Task AttemptConnectionToEndpoint()
             {
-                new Socket(LocalEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
-                    .Connect(LocalEndPoint);
+                await new Socket(LocalEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+                    .ConnectAsync(LocalEndPoint);
             }
 
             public IActorRef Listener { get { return _parentRef.UnderlyingActor.Listener; } }
