@@ -7,7 +7,7 @@ Here we will be showing a curated lists of projects that use various modules of 
 
 ## IoT
 
-- [kinesis sample](https://github.com/petabridge/kinesis-sample): Akka.NET Streams + Cluster + AWS Kinesis Sample
+- [Fire Alert AWS Kinesis Sample](https://github.com/petabridge/kinesis-sample): Akka.NET Streams + Cluster + AWS Kinesis Sample
 
 - [Home Temperature Monitor](https://github.com/grofab95/HomeTemperatureMonitor): Arduino temperature monitoring project built on **Akka.Cluster**
 
