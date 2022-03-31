@@ -57,7 +57,7 @@ namespace Akka.Tests.IO
         [Fact]
         public async Task The_TCP_transport_implementation_should_properly_bind_a_test_server()
         {
-            await new TestSetup(this).RunAsync(x => { });
+            await new TestSetup(this).RunAsync(async x => await Task.CompletedTask);
         }
 
         [Fact(Skip="FIXME .net core / linux")]
@@ -484,7 +484,7 @@ namespace Akka.Tests.IO
         [Fact]
         public async Task The_TCP_transport_implementation_handle_tcp_connection_actor_death_properly()
         {
-            await new TestSetup(this, shouldBindServer:false).RunAsync((Action<TestSetup>)(async x =>
+            await new TestSetup(this, shouldBindServer:false).RunAsync(async x =>
             {
                 var serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
                 serverSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
@@ -514,7 +514,7 @@ namespace Akka.Tests.IO
                 }, TimeSpan.FromSeconds(3));
 
                 await VerifyActorTermination(connectionActor);
-            }));
+            });
         }
 
         private async Task ChitChat(TestSetup.ConnectionDetail actors, int rounds = 100)
