@@ -378,6 +378,7 @@ namespace Akka.Tests.Pattern
             supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
             (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(1);
 
+            // This code looks suspicious, this might be the cause of the raciness
             var c2 = await WaitForChild();
             await AwaitAssertAsync(() => c2.ShouldNotBe(c1));
             Watch(c2);
@@ -429,6 +430,7 @@ namespace Akka.Tests.Pattern
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
                 (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(1);
 
+                // This code looks suspicious, this might be the cause of the raciness
                 var c2 = await WaitForChild();
                 await AwaitAssertAsync(() => c2.ShouldNotBe(c1));
                 Watch(c2);
