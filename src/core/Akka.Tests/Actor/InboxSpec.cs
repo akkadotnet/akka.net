@@ -51,13 +51,13 @@ namespace Akka.Tests.Actor
                     Task.Factory.StartNew(() =>
                     {
                         Thread.Sleep(100);
-                        return _inbox.ReceiveWhere(x => x.ToString() == "world"); 
-                    }), 
+                        return _inbox.ReceiveWhere(x => x.ToString() == "world");
+                    }),
                     Task.Factory.StartNew(() =>
                     {
                         Thread.Sleep(200);
-                        return _inbox.ReceiveWhere(x => x.ToString() == "hello"); 
-                    }) 
+                        return _inbox.ReceiveWhere(x => x.ToString() == "hello");
+                    })
                 };
 
             _inbox.Receiver.Tell(42);
@@ -77,7 +77,7 @@ namespace Akka.Tests.Actor
             _inbox.Receiver.Tell("hello");
             _inbox.Receiver.Tell("world");
 
-            var selection = _inbox.ReceiveWhere(x => x.ToString() == "world");       
+            var selection = _inbox.ReceiveWhere(x => x.ToString() == "world");
             selection.ShouldBe("world");
             _inbox.Receive().ShouldBe("hello");
         }
@@ -94,7 +94,7 @@ namespace Akka.Tests.Actor
                 await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
                 //The inbox is full. Sending another message should result in a Warning message
-                await EventFilter.Warning(start:"Dropping message").ExpectOneAsync(() => _inbox.Receiver.Tell(42));
+                await EventFilter.Warning(start: "Dropping message").ExpectOneAsync(() => _inbox.Receiver.Tell(42));
 
                 //The inbox is still full. But since the warning message has already been sent, no more warnings should be sent
                 _inbox.Receiver.Tell(42);
@@ -138,7 +138,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Select_WithClient_should_update_Client_and_copy_the_rest_of_the_properties_BUG_427()
         {
-            var deadline = new TimeSpan(Sys.Scheduler.MonotonicClock.Ticks/2); //Some point in the past
+            var deadline = new TimeSpan(Sys.Scheduler.MonotonicClock.Ticks / 2); //Some point in the past
             Predicate<object> predicate = o => true;
             var actorRef = new EmptyLocalActorRef(((ActorSystemImpl)Sys).Provider, new RootActorPath(new Address("akka", "test")), Sys.EventStream);
             var select = new Select(deadline, predicate, actorRef);
