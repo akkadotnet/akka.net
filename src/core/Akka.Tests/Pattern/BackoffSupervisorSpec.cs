@@ -9,6 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.TestKit;
@@ -91,55 +92,55 @@ namespace Akka.Tests.Pattern
         #endregion
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void BackoffSupervisor_must_start_child_again_when_it_stops_when_using_Backoff_OnStop()
+        public async Task BackoffSupervisor_must_start_child_again_when_it_stops_when_using_Backoff_OnStop()
         {
             var supervisor = Create(OnStopOptions());
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-            var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
             Watch(c1);
             c1.Tell(PoisonPill.Instance);
-            ExpectTerminated(c1);
-            AwaitAssert(() =>
+            await ExpectTerminatedAsync(c1);
+            await AwaitAssertAsync(async() =>
             {
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                 // new instance
-                ExpectMsg<BackoffSupervisor.CurrentChild>().Ref.Should().NotBeSameAs(c1);
+                (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref.Should().NotBeSameAs(c1);
             });
         }
 
         [Fact]
-        public void BackoffSupervisor_must_forward_messages_to_the_child()
+        public async Task BackoffSupervisor_must_forward_messages_to_the_child()
         {
-            Action<IActorRef> assertForward = supervisor =>
+            Func<IActorRef, Task> assertForward = async supervisor =>
             {
                 supervisor.Tell("hello");
-                ExpectMsg("hello");
+                await ExpectMsgAsync("hello");
             };
 
-            assertForward(Create(OnStopOptions()));
-            assertForward(Create(OnFailureOptions()));
+            await assertForward(Create(OnStopOptions()));
+            await assertForward(Create(OnFailureOptions()));
         }
 
         [Fact]
-        public void BackoffSupervisor_must_support_custom_supervision_strategy()
+        public async Task BackoffSupervisor_must_support_custom_supervision_strategy()
         {
-            Action<IActorRef> assertCustomStrategy = supervisor =>
+            Func<IActorRef, Task> assertCustomStrategy = async supervisor =>
             {
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-                var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
                 Watch(c1);
                 c1.Tell("boom");
-                ExpectTerminated(c1);
-                AwaitAssert(() =>
+                await ExpectTerminatedAsync(c1);
+                await AwaitAssertAsync(async () =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                     // new instance
-                    ExpectMsg<BackoffSupervisor.CurrentChild>().Ref.Should().NotBeSameAs(c1);
+                    (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref.Should().NotBeSameAs(c1);
                 });
             };
 
             // TODO: use FilterException
-            EventFilter.Exception<TestException>().Expect(2, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(2, async () =>
             {
                 var stoppingStrategy = new OneForOneStrategy(ex =>
                 {
@@ -161,77 +162,77 @@ namespace Akka.Tests.Pattern
                     return Directive.Escalate;
                 });
 
-                assertCustomStrategy(Create(OnStopOptions().WithSupervisorStrategy(stoppingStrategy)));
-                assertCustomStrategy(Create(OnFailureOptions().WithSupervisorStrategy(restartingStrategy)));
+                await assertCustomStrategy(Create(OnStopOptions().WithSupervisorStrategy(stoppingStrategy)));
+                await assertCustomStrategy(Create(OnFailureOptions().WithSupervisorStrategy(restartingStrategy)));
             });
         }
 
         [Fact]
-        public void BackoffSupervisor_must_support_default_stopping_strategy_when_using_Backoff_OnStop()
+        public async Task BackoffSupervisor_must_support_default_stopping_strategy_when_using_Backoff_OnStop()
         {
             // TODO: use FilterException
-            EventFilter.Exception<TestException>().Expect(1, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(1, async () =>
             {
                 var supervisor = Create(OnStopOptions().WithDefaultStoppingStrategy().WithManualReset());
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-                var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
                 Watch(c1);
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+                (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(0);
 
                 c1.Tell("boom");
-                ExpectTerminated(c1);
-                AwaitAssert(() =>
+                await ExpectTerminatedAsync(c1);
+                await AwaitAssertAsync(async() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                     // new instance
-                    ExpectMsg<BackoffSupervisor.CurrentChild>().Ref.Should().NotBeSameAs(c1);
+                    (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref.Should().NotBeSameAs(c1);
                 });
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
+                (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(1);
             });
         }
 
         [Fact]
-        public void BackoffSupervisor_must_support_manual_reset()
+        public async Task BackoffSupervisor_must_support_manual_reset()
         {
-            Action<IActorRef> assertManualReset = supervisor =>
+            Func<IActorRef, Task> assertManualReset = async supervisor =>
             {
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-                var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
                 Watch(c1);
                 c1.Tell("boom");
-                ExpectTerminated(c1);
+                await ExpectTerminatedAsync(c1);
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                    ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
+                    (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(1);
                 });
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                     // new instance
-                    ExpectMsg<BackoffSupervisor.CurrentChild>().Ref.Should().NotBeSameAs(c1);
+                    (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref.Should().NotBeSameAs(c1);
                 });
 
                 // TODO: this Thread.Sleep should be removed
-                Thread.Sleep(500);
+                await Task.Delay(500);
 
                 supervisor.Tell("hello");
-                ExpectMsg("hello");
+                await ExpectMsgAsync("hello");
 
                 // making sure the Reset is handled by supervisor
                 supervisor.Tell("hello");
-                ExpectMsg("hello");
+                await ExpectMsgAsync("hello");
 
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+                (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(0);
             };
 
             // TODO: use FilterException
-            EventFilter.Exception<TestException>().Expect(2, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(2, async() =>
             {
                 var stoppingStrategy = new OneForOneStrategy(ex =>
                 {
@@ -255,12 +256,12 @@ namespace Akka.Tests.Pattern
                     return Directive.Restart;
                 });
 
-                assertManualReset(
+                await assertManualReset(
                     Create(OnStopOptions(ManualChild.Props(TestActor))
                         .WithManualReset()
                         .WithSupervisorStrategy(stoppingStrategy)));
 
-                assertManualReset(
+                await assertManualReset(
                     Create(OnFailureOptions(ManualChild.Props(TestActor))
                         .WithManualReset()
                         .WithSupervisorStrategy(restartingStrategy)));
@@ -268,57 +269,57 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public void BackoffSupervisor_must_reply_to_sender_if_replyWhileStopped_is_specified()
+        public async Task BackoffSupervisor_must_reply_to_sender_if_replyWhileStopped_is_specified()
         {
-            EventFilter.Exception<TestException>().Expect(1, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(1, async() =>
             {
                 var supervisor = Create(Backoff.OnFailure(Child.Props(TestActor), "c1", TimeSpan.FromSeconds(100), TimeSpan.FromSeconds(300), 0.2, -1)
                     .WithReplyWhileStopped("child was stopped"));
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
 
-                var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
                 Watch(c1);
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+                (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(0);
 
                 c1.Tell("boom");
-                ExpectTerminated(c1);
+                await ExpectTerminatedAsync(c1);
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                    ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
+                    (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(1);
                 });
 
                 supervisor.Tell("boom");
-                ExpectMsg("child was stopped");
+                await ExpectMsgAsync("child was stopped");
             });
         }
 
         [Fact]
-        public void BackoffSupervisor_must_not_reply_to_sender_if_replyWhileStopped_is_not_specified()
+        public async Task BackoffSupervisor_must_not_reply_to_sender_if_replyWhileStopped_is_not_specified()
         {
-            EventFilter.Exception<TestException>().Expect(1, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(1, async() =>
             {
                 var supervisor = Create(Backoff.OnFailure(Child.Props(TestActor), "c1", TimeSpan.FromSeconds(100), TimeSpan.FromSeconds(300), 0.2, -1));
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
 
-                var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
                 Watch(c1);
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+                (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(0);
 
                 c1.Tell("boom");
-                ExpectTerminated(c1);
+                await ExpectTerminatedAsync(c1);
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                    ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
+                    (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(1);
                 });
 
                 supervisor.Tell("boom"); //this will be sent to deadLetters
-                ExpectNoMsg(500);
+               await ExpectNoMsgAsync(500);
             });
         }
 
@@ -346,142 +347,142 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnStop()
+        public async Task BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnStop()
         {
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 2));
 
-            IActorRef WaitForChild()
+            async Task<IActorRef> WaitForChild()
             {
-                AwaitCondition(() =>
+                await AwaitConditionAsync(async() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-                    var c = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                    var c = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
                     return !c.IsNobody();
                 }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50));
 
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-                return ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                return (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
             }
 
             Watch(supervisor);
 
             supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-            ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+            (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(0);
 
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-            var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
             Watch(c1);
             c1.Tell(PoisonPill.Instance);
-            ExpectTerminated(c1);
+            await ExpectTerminatedAsync(c1);
 
             supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-            ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
+            (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(1);
 
-            var c2 = WaitForChild();
-            AwaitAssert(() => c2.ShouldNotBe(c1));
+            var c2 = await WaitForChild();
+            await AwaitAssertAsync(() => c2.ShouldNotBe(c1));
             Watch(c2);
             c2.Tell(PoisonPill.Instance);
-            ExpectTerminated(c2);
+            await ExpectTerminatedAsync(c2);
 
             supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-            ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(2);
+            (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(2);
 
-            var c3 = WaitForChild();
-            AwaitAssert(() => c3.ShouldNotBe(c2));
+            var c3 = await WaitForChild();
+            await AwaitAssertAsync(() => c3.ShouldNotBe(c2));
             Watch(c3);
             c3.Tell(PoisonPill.Instance);
-            ExpectTerminated(c3);
-            ExpectTerminated(supervisor);
+            await ExpectTerminatedAsync(c3);
+            await ExpectTerminatedAsync(supervisor);
         }
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnFailure()
+        public async Task BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnFailure()
         {
-            EventFilter.Exception<TestException>().Expect(3, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(3, async() =>
             {
                 var supervisor = Create(OnFailureOptions(maxNrOfRetries: 2));
 
-                IActorRef WaitForChild()
+                async Task<IActorRef> WaitForChild()
                 {
-                    AwaitCondition(() =>
+                    await AwaitConditionAsync(async () =>
                     {
                         supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-                        var c = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                        var c = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
                         return !c.IsNobody();
                     }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50));
 
                     supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-                    return ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                    return (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
                 }
 
                 Watch(supervisor);
 
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+                (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(0);
 
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-                var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
                 Watch(c1);
                 c1.Tell("boom");
-                ExpectTerminated(c1);
+                await ExpectTerminatedAsync(c1);
 
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
+                (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(1);
 
-                var c2 = WaitForChild();
-                AwaitAssert(() => c2.ShouldNotBe(c1));
+                var c2 = await WaitForChild();
+                await AwaitAssertAsync(() => c2.ShouldNotBe(c1));
                 Watch(c2);
                 c2.Tell("boom");
-                ExpectTerminated(c2);
+                await ExpectTerminatedAsync(c2);
 
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(2);
+                (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(2);
 
-                var c3 = WaitForChild();
-                AwaitAssert(() => c3.ShouldNotBe(c2));
+                var c3 = await WaitForChild();
+                await AwaitAssertAsync(() => c3.ShouldNotBe(c2));
                 Watch(c3);
                 c3.Tell("boom");
-                ExpectTerminated(c3);
-                ExpectTerminated(supervisor);
+                await ExpectTerminatedAsync(c3);
+                await ExpectTerminatedAsync(supervisor);
             });
         }
 
         [Fact]
-        public void BackoffSupervisor_must_stop_restarting_the_child_if_final_stop_message_received_using_BackOff_OnStop()
+        public async Task BackoffSupervisor_must_stop_restarting_the_child_if_final_stop_message_received_using_BackOff_OnStop()
         {
             const string stopMessage = "stop";
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 100).WithFinalStopMessage(message => ReferenceEquals(message, stopMessage)));
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-            var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            var c1 = (await  ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
             var parentSupervisor = CreateTestProbe();
             Watch(c1);
             parentSupervisor.Watch(supervisor);
 
             supervisor.Tell(stopMessage);
-            ExpectMsg("stop");
+            await ExpectMsgAsync("stop");
             c1.Tell(PoisonPill.Instance);
-            ExpectTerminated(c1);
-            parentSupervisor.ExpectTerminated(supervisor);
+            await ExpectTerminatedAsync(c1);
+            await parentSupervisor.ExpectTerminatedAsync(supervisor);
         }
 
         [Fact]
-        public void BackoffSupervisor_must_not_stop_when_final_stop_message_has_not_been_received()
+        public async Task BackoffSupervisor_must_not_stop_when_final_stop_message_has_not_been_received()
         {
             const string stopMessage = "stop";
             var supervisorWatcher = new TestProbe(Sys, new XunitAssertions());
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 100).WithFinalStopMessage(message => ReferenceEquals(message, stopMessage)));
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-            var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
             Watch(c1);
             supervisorWatcher.Watch(supervisor);
 
             c1.Tell(PoisonPill.Instance);
-            ExpectTerminated(c1);
+            await ExpectTerminatedAsync(c1);
             supervisor.Tell("ping");
-            supervisorWatcher.ExpectNoMsg(TimeSpan.FromMilliseconds(20)); // supervisor must not terminate
+            await supervisorWatcher.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(20)); // supervisor must not terminate
 
             supervisor.Tell(stopMessage);
-            supervisorWatcher.ExpectTerminated(supervisor);
+            await supervisorWatcher.ExpectTerminatedAsync(supervisor);
         }
     }
 }
