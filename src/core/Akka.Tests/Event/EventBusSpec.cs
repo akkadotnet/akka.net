@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -146,33 +147,33 @@ namespace Akka.Tests.Event
         }
 
         [Fact]
-        public void EventBus_publish_to_the_only_subscriber()
+        public async Task EventBus_publish_to_the_only_subscriber()
         {
             _bus.Subscribe(_subscriber, _classifier);
             _bus.Publish(_evt);
-            ExpectMsg(_evt);
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync(_evt);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
             _bus.Unsubscribe(_subscriber);
         }
 
         [Fact]
-        public void EventBus_publish_to_the_only_subscriber_multiple_times()
+        public async Task EventBus_publish_to_the_only_subscriber_multiple_times()
         {
             _bus.Subscribe(_subscriber, _classifier);
             _bus.Publish(_evt);
             _bus.Publish(_evt);
             _bus.Publish(_evt);
 
-            ExpectMsg(_evt);
-            ExpectMsg(_evt);
-            ExpectMsg(_evt);
+            await ExpectMsgAsync(_evt);
+            await ExpectMsgAsync(_evt);
+            await ExpectMsgAsync(_evt);
 
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
             _bus.Unsubscribe(_subscriber, _classifier);
         }
 
         [Fact]
-        public void EventBus_not_publish_event_to_unindented_subscribers()
+        public async Task EventBus_not_publish_event_to_unindented_subscribers()
         {
             var otherSubscriber = CreateSubscriber(TestActor);
             var otherClassifier = typeof (int);
@@ -181,20 +182,20 @@ namespace Akka.Tests.Event
             _bus.Subscribe(otherSubscriber, otherClassifier);
             _bus.Publish(_evt);
 
-            ExpectMsg(_evt);
+            await ExpectMsgAsync(_evt);
 
             _bus.Unsubscribe(_subscriber, _classifier);
             _bus.Unsubscribe(otherSubscriber, otherClassifier);
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
-        public void EventBus_not_publish_event_to_former_subscriber()
+        public async Task EventBus_not_publish_event_to_former_subscriber()
         {
             _bus.Subscribe(_subscriber, _classifier);
             _bus.Unsubscribe(_subscriber, _classifier);
             _bus.Publish(_evt);
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
