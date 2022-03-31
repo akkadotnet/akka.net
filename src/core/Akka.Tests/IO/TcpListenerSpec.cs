@@ -31,18 +31,18 @@ namespace Akka.Tests.IO
         { }
 
         [Fact]
-        public void A_TCP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
+        public async Task A_TCP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
         {
-            new TestSetup(this, pullMode: false).Run(async x =>
+            await new TestSetup(this, pullMode: false).RunAsync(async x =>
             {
                 await x.BindCommander.ExpectMsgAsync<Tcp.Bound>();
             });           
         }
 
         [Fact]
-        public void A_TCP_Listener_must_continue_to_accept_connections_after_a_previous_accept()
+        public async Task A_TCP_Listener_must_continue_to_accept_connections_after_a_previous_accept()
         {
-            new TestSetup(this, pullMode: false).Run(async x =>
+            await new TestSetup(this, pullMode: false).RunAsync(async x =>
             {
                 await x.BindListener();
 
@@ -52,9 +52,9 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public void A_TCP_Listener_must_react_to_unbind_commands_by_replying_with_unbound_and_stopping_itself()
+        public async Task A_TCP_Listener_must_react_to_unbind_commands_by_replying_with_unbound_and_stopping_itself()
         {
-            new TestSetup(this, pullMode:false).Run(async x =>
+            await new TestSetup(this, pullMode:false).RunAsync(async x =>
             {
                 await x.BindListener();
 
@@ -95,6 +95,10 @@ namespace Akka.Tests.IO
             public void Run(Action<TestSetup> test)
             {
                 test(this);
+            }
+            public async Task RunAsync(Func<TestSetup, Task> test)
+            {
+                await test(this);
             }
 
             public async Task BindListener()
