@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Akka.Util.Internal
 {
@@ -25,7 +24,7 @@ namespace Akka.Util.Internal
         /// <returns>TBD</returns>
         public static T AsInstanceOf<T>(this object self)
         {
-            return (T) self;
+            return (T)self;
         }
 
         /// <summary>
@@ -117,7 +116,7 @@ namespace Akka.Util.Internal
             if (hash.ContainsKey(key))
                 hash[key] = value;
             else
-                hash.Add(key,value);
+                hash.Add(key, value);
         }
 
         /// <summary>
@@ -182,7 +181,7 @@ namespace Akka.Util.Internal
         /// <returns>TBD</returns>
         public static IEnumerable<T> Concat<T>(this IEnumerable<T> enumerable, T item)
         {
-            var itemInArray = new[] {item};
+            var itemInArray = new[] { item };
             if (enumerable == null)
                 return itemInArray;
             return enumerable.Concat(itemInArray);
@@ -200,12 +199,6 @@ namespace Akka.Util.Internal
                 action(item);
         }
 
-        /// <inheritdoc cref="ForEach{T}(IEnumerable{T}, Action{T})"/>
-        public static async Task ForEachAsync<T>(this IEnumerable<T> source, Func<T, Task> action)
-        {
-            foreach (var item in source)
-                await action(item);
-        }
         /// <summary>
         /// Selects last n elements.
         /// </summary>

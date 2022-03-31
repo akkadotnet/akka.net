@@ -346,10 +346,10 @@ namespace Akka.Tests.IO
                 });
                 
                 // All acks should be received
-                await clients.ForEachAsync( async client =>
+                foreach(var client in clients)
                 {
                     await client.Probe.ExpectMsgAsync<AckWithValue>(ack => ack.Value.ShouldBe(client.Index), TimeSpan.FromSeconds(10));
-                });
+                }
             });
         }
         
