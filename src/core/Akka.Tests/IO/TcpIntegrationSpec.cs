@@ -346,9 +346,9 @@ namespace Akka.Tests.IO
                 });
                 
                 // All acks should be received
-                clients.ForEach(client =>
+                await clients.ForEachAsync( async client =>
                 {
-                    client.Probe.ExpectMsg<AckWithValue>(ack => ack.Value.ShouldBe(client.Index), TimeSpan.FromSeconds(10));
+                    await client.Probe.ExpectMsgAsync<AckWithValue>(ack => ack.Value.ShouldBe(client.Index), TimeSpan.FromSeconds(10));
                 });
             });
         }
