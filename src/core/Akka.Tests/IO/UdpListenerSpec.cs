@@ -81,19 +81,19 @@ namespace Akka.Tests.IO
         }        
         
         [Fact]
-        public void A_UDP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
+        public async Task A_UDP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
         {
-            new TestSetup(this).Run(async x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
                 await x.BindCommander.ExpectMsgAsync<Udp.Bound>();
             });           
         }
 
         [Fact]
-        public void A_UDP_Listener_must_forward_incoming_packets_to_handler_actor()
+        public async Task A_UDP_Listener_must_forward_incoming_packets_to_handler_actor()
         {
             const string dgram = "Fly little packet!";
-            new TestSetup(this).Run(async x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
                 await x.BindCommander.ExpectMsgAsync<Udp.Bound>();
                 x.SendDataToLocal(Encoding.UTF8.GetBytes(dgram));
@@ -104,9 +104,9 @@ namespace Akka.Tests.IO
         }
         
         [Fact]
-        public void A_UDP_Listener_must_be_able_to_send_and_receive_when_server_goes_away()
+        public async Task A_UDP_Listener_must_be_able_to_send_and_receive_when_server_goes_away()
         {
-            new TestSetup(this).Run(async x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
                await  x.BindCommander.ExpectMsgAsync<Udp.Bound>();
                 
@@ -169,7 +169,10 @@ namespace Akka.Tests.IO
             {
                 test(this);
             }
-
+            public async Task RunAsync(Func<TestSetup, Task> test)
+            {
+                await test(this);
+            }
             public async Task BindListener()
             {
                 await _bindCommander.ExpectMsgAsync<Udp.Bound>();
