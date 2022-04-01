@@ -192,8 +192,8 @@ namespace Akka.Tests.IO
                 for (var j = 0; j < batchSize; ++j)
                     client.Tell(UdpConnected.Send.Create(data));
 
-                var msgs = await serverProbe.ReceiveNAsync(batchSize, TimeSpan.FromSeconds(10)).ToListAsync();
-                var cast = msgs.Cast<Udp.Received>();
+                var msgs = serverProbe.ReceiveNAsync(batchSize, TimeSpan.FromSeconds(10));
+                var cast = await msgs.Cast<Udp.Received>().ToListAsync();
                 cast.Sum(m => m.Data.Count).Should().Be(data.Count * batchSize);
             }
 
