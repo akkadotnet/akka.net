@@ -251,7 +251,7 @@ namespace Akka.Actor
         /// <summary>
         /// The <see cref="ActorSystem"/>
         /// </summary>
-        public ExtendedActorSystem System { get; }
+        public ExtendedActorSystem System { get; private set; }
 
         /// <summary>
         /// The set of named <see cref="Phase"/>s that will be executed during coordinated shutdown.
@@ -261,7 +261,7 @@ namespace Akka.Actor
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        internal ILoggingAdapter Log { get; }
+        internal ILoggingAdapter Log { get; private set; }
 
         private readonly HashSet<string> _knownPhases;
 
@@ -659,6 +659,9 @@ namespace Akka.Actor
                             {
                                 Environment.Exit(0);
                             }
+
+                            coord.System = null;
+                            coord.Log = null;
                             return Done.Instance;
                         });
                     }
