@@ -14,6 +14,7 @@ using Xunit;
 using FluentAssertions;
 using System.Threading;
 using FluentAssertions.Extensions;
+using System.Threading.Tasks;
 
 namespace Akka.Tests.Pattern
 {
@@ -146,40 +147,40 @@ namespace Akka.Tests.Pattern
         #endregion
 
         [Fact]
-        public void BackoffOnRestartSupervisor_must_terminate_when_child_terminates()
+        public async Task BackoffOnRestartSupervisor_must_terminate_when_child_terminates()
         {
             var probe = CreateTestProbe();
             var supervisor = Sys.ActorOf(SupervisorProps(probe.Ref));
-            probe.ExpectMsg("STARTED");
+            await probe.ExpectMsgAsync("STARTED");
 
             probe.Watch(supervisor);
             supervisor.Tell("DIE");
-            probe.ExpectTerminated(supervisor);
+            await probe.ExpectTerminatedAsync(supervisor);
         }
 
         [Fact]
-        public void BackoffOnRestartSupervisor_must_restart_the_child_with_an_exponential_back_off()
+        public async Task BackoffOnRestartSupervisor_must_restart_the_child_with_an_exponential_back_off()
         {
             var probe = CreateTestProbe();
             var supervisor = Sys.ActorOf(SupervisorProps(probe.Ref));
-            probe.ExpectMsg("STARTED");
+            await probe.ExpectMsgAsync("STARTED");
 
-            EventFilter.Exception<TestException>().Expect(3, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(3, async() =>
             {
                 // Exponential back off restart test
-                probe.Within(TimeSpan.FromSeconds(1.4), 2.Seconds(), () =>
+                await probe.WithinAsync(TimeSpan.FromSeconds(1.4), 2.Seconds(), async () =>
                 {
                     supervisor.Tell("THROW");
                     // numRestart = 0 ~ 200 millis
-                    probe.ExpectMsg<string>(300.Milliseconds(), "STARTED");
+                    await probe.ExpectMsgAsync<string>(300.Milliseconds(), "STARTED");
 
                     supervisor.Tell("THROW");
                     // numRestart = 1 ~ 400 millis
-                    probe.ExpectMsg<string>(500.Milliseconds(), "STARTED");
+                    await probe.ExpectMsgAsync<string>(500.Milliseconds(), "STARTED");
 
                     supervisor.Tell("THROW");
                     // numRestart = 2 ~ 800 millis
-                    probe.ExpectMsg<string>(900.Milliseconds(), "STARTED");
+                    await probe.ExpectMsgAsync<string>(900.Milliseconds(), "STARTED");
                 });
             });
 
@@ -188,41 +189,41 @@ namespace Akka.Tests.Pattern
             // If there exists more than one child, we will get more than one reply.
             var supervisionChildSelection = Sys.ActorSelection(supervisor.Path / "*");
             supervisionChildSelection.Tell("testmsg", probe.Ref);
-            probe.ExpectMsg("testmsg");
-            probe.ExpectNoMsg();
+            await probe.ExpectMsgAsync("testmsg");
+            await probe.ExpectNoMsgAsync();
         }
 
         [Fact]
-        public void BackoffOnRestartSupervisor_must_stop_on_exceptions_as_dictated_by_the_supervisor_strategy()
+        public async Task BackoffOnRestartSupervisor_must_stop_on_exceptions_as_dictated_by_the_supervisor_strategy()
         {
             var probe = CreateTestProbe();
             var supervisor = Sys.ActorOf(SupervisorProps(probe.Ref));
-            probe.ExpectMsg("STARTED");
+            await probe.ExpectMsgAsync("STARTED");
 
-            EventFilter.Exception<TestException>().Expect(1, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(1, async() =>
             {
                 probe.Watch(supervisor);
                 // This should cause the supervisor to stop the child actor and then
                 // subsequently stop itself.
                 supervisor.Tell("THROW_STOPPING_EXCEPTION");
-                probe.ExpectTerminated(supervisor);
+                await probe.ExpectTerminatedAsync(supervisor);
             });
         }
 
         [Fact]
-        public void BackoffOnRestartSupervisor_must_forward_messages_from_the_child_to_the_parent_of_the_supervisor()
+        public async Task BackoffOnRestartSupervisor_must_forward_messages_from_the_child_to_the_parent_of_the_supervisor()
         {
             var probe = CreateTestProbe();
             var parent = Sys.ActorOf(TestParentActor.Props(probe.Ref, SupervisorProps(probe.Ref)));
-            probe.ExpectMsg("STARTED");
+            await probe.ExpectMsgAsync("STARTED");
             var child = probe.LastSender;
 
             child.Tell(("TO_PARENT", "TEST_MESSAGE"));
-            probe.ExpectMsg("TEST_MESSAGE");
+            await probe.ExpectMsgAsync("TEST_MESSAGE");
         }
 
         [Fact]
-        public void BackoffOnRestartSupervisor_must_accept_commands_while_child_is_terminating()
+        public async Task BackoffOnRestartSupervisor_must_accept_commands_while_child_is_terminating()
         {
             var postStopLatch = CreateTestLatch(1);
             var options = Backoff.OnFailure(SlowlyFailingActor.Props(postStopLatch), "someChildName", 1.Ticks(), 1.Ticks(), 0.0, -1)
@@ -233,42 +234,42 @@ namespace Akka.Tests.Pattern
 
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
             // new instance
-            var child = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            var child = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
 
             child.Tell("PING");
-            ExpectMsg("PONG");
+            await ExpectMsgAsync("PONG");
 
             supervisor.Tell("THROW");
-            ExpectMsg("THROWN");
+            await ExpectMsgAsync("THROWN");
 
             child.Tell("PING");
-            ExpectNoMsg(100.Milliseconds()); // Child is in limbo due to latch in postStop. There is no Terminated message yet
+            await ExpectNoMsgAsync(100.Milliseconds()); // Child is in limbo due to latch in postStop. There is no Terminated message yet
 
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-            ExpectMsg<BackoffSupervisor.CurrentChild>().Ref.Should().BeSameAs(child);
+            (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref.Should().BeSameAs(child);
 
             supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-            ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+            (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(0);
 
             postStopLatch.CountDown();
 
             // New child is ready
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async () =>
             {
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                 // new instance
-                ExpectMsg<BackoffSupervisor.CurrentChild>().Ref.Should().NotBeSameAs(child);
+                (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref.Should().NotBeSameAs(child);
             });
         }
 
         [Fact]
-        public void BackoffOnRestartSupervisor_must_respect_maxNrOfRetries_property_of_OneForOneStrategy()
+        public async Task BackoffOnRestartSupervisor_must_respect_maxNrOfRetries_property_of_OneForOneStrategy()
         {
             var probe = CreateTestProbe();
             var supervisor = Sys.ActorOf(SupervisorProps(probe.Ref));
-            probe.ExpectMsg("STARTED");
+            await probe.ExpectMsgAsync("STARTED");
 
-            EventFilter.Exception<TestException>().Expect(5, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(5, async() =>
             {
                 probe.Watch(supervisor);
                 for (var i = 1; i <= 5; i++)
@@ -278,16 +279,16 @@ namespace Akka.Tests.Pattern
                     {
                         // Since we should've died on this throw, don't expect to be started.
                         // We're not testing timing, so set a reasonably high timeout.
-                        probe.ExpectMsg("STARTED", 4.Seconds());
+                        await probe.ExpectMsgAsync("STARTED", 4.Seconds());
                     }
                 }
 
-                probe.ExpectTerminated(supervisor);
+                await probe.ExpectTerminatedAsync(supervisor);
             });
         }
 
         [SkippableFact]
-        public void BackoffOnRestartSupervisor_must_respect_withinTimeRange_property_of_OneForOneStrategy()
+        public async Task BackoffOnRestartSupervisor_must_respect_withinTimeRange_property_of_OneForOneStrategy()
         {
             var probe = CreateTestProbe();
             // withinTimeRange indicates the time range in which maxNrOfRetries will cause the child to
@@ -300,32 +301,32 @@ namespace Akka.Tests.Pattern
             var supervisor = Sys.ActorOf(BackoffSupervisor.Props(options));
 
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-            probe.ExpectMsg("STARTED");
+            await probe.ExpectMsgAsync("STARTED");
 
             probe.Watch(supervisor);
             // Throw three times rapidly
             for (var i = 1; i <= 3; i++)
             {
                 supervisor.Tell("THROW");
-                probe.ExpectMsg("STARTED");
+                await probe.ExpectMsgAsync("STARTED");
             }
 
             // Now wait the length of our window, and throw again. We should still restart.
-            Thread.Sleep(2100);
+            await Task.Delay(2100);
 
             var stopwatch = Stopwatch.StartNew();
             // Throw three times rapidly
             for (var i = 1; i <= 3; i++)
             {
                 supervisor.Tell("THROW");
-                probe.ExpectMsg("STARTED");
+                await probe.ExpectMsgAsync("STARTED");
             }
             stopwatch.Stop();
             Skip.If(stopwatch.ElapsedMilliseconds > 1500, "Could not satisfy test condition. Execution time exceeds the prescribed 2 seconds limit.");
             
             // Now we'll issue another request and should be terminated.
             supervisor.Tell("THROW");
-            probe.ExpectTerminated(supervisor);
+            await probe.ExpectTerminatedAsync(supervisor);
         }
     }
 }

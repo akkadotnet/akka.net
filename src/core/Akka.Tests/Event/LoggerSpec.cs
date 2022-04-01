@@ -45,7 +45,7 @@ namespace Akka.Tests.Event
         [InlineData(LogLevel.DebugLevel, true, "foo", new object[] { })]
         [InlineData(LogLevel.DebugLevel, false, "foo {0}", new object[] { 1 })]
         [InlineData(LogLevel.DebugLevel, true, "foo {0}", new object[] { 1 })]
-        public void LoggingAdapter_should_log_all_information(LogLevel logLevel, bool includeException, string formatStr, object [] args)
+        public async Task LoggingAdapter_should_log_all_information(LogLevel logLevel, bool includeException, string formatStr, object [] args)
         {
             Sys.EventStream.Subscribe(TestActor, typeof(LogEvent));
             var msg = args != null ? string.Format(formatStr, args) : formatStr;
@@ -102,10 +102,10 @@ namespace Akka.Tests.Event
                     logEvent.Cause.Should().BeNull();
             }
 
-            var log = ExpectMsg<LogEvent>();
+            var log = await ExpectMsgAsync<LogEvent>();
             ProcessLog(log);
 
-            var log2 = ExpectMsg<LogEvent>();
+            var log2 = await ExpectMsgAsync<LogEvent>();
             ProcessLog(log2);
         }
 
@@ -117,23 +117,23 @@ namespace Akka.Tests.Event
             system.EventStream.Subscribe(TestActor, typeof(Debug));
             await system.Terminate();
 
-            await AwaitAssertAsync(() =>
+            await AwaitAssertAsync(async() =>
             {
-                var shutdownInitiated = ExpectMsg<Debug>(TestKitSettings.DefaultTimeout);
+                var shutdownInitiated = await ExpectMsgAsync<Debug>(TestKitSettings.DefaultTimeout);
                 shutdownInitiated.Message.ShouldBe("System shutdown initiated");
             });
             
-            var loggerStarted = ExpectMsg<Debug>(TestKitSettings.DefaultTimeout);
+            var loggerStarted = await ExpectMsgAsync<Debug>(TestKitSettings.DefaultTimeout);
             loggerStarted.Message.ShouldBe("Shutting down: StandardOutLogger started");
             loggerStarted.LogClass.ShouldBe(typeof(EventStream));
             loggerStarted.LogSource.ShouldBe(typeof(EventStream).Name);
 
-            var loggerStopped = ExpectMsg<Debug>(TestKitSettings.DefaultTimeout);
+            var loggerStopped = await ExpectMsgAsync<Debug>(TestKitSettings.DefaultTimeout);
             loggerStopped.Message.ShouldBe("All default loggers stopped");
             loggerStopped.LogClass.ShouldBe(typeof(EventStream));
             loggerStopped.LogSource.ShouldBe(typeof(EventStream).Name);
 
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
     }
 }
