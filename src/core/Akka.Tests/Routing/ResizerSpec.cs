@@ -106,9 +106,9 @@ namespace Akka.Tests.Routing
             }
         }
 
-        private static int RouteeSize(IActorRef router)
+        private static async Task<int> RouteeSize(IActorRef router)
         {
-            return router.Ask<Routees>(new GetRoutees()).Result.Members.Count();
+            return (await router.Ask<Routees>(new GetRoutees())).Members.Count();
         }
 
         [Fact(Skip = "DefaultOptimalSizeExploringResizer has not implemented yet")]
@@ -204,7 +204,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void DefaultResizer_must_be_possible_to_define_programmatically()
+        public async Task DefaultResizer_must_be_possible_to_define_programmatically()
         {
             var latch = new TestLatch(3);
             var resizer = new DefaultResizer(lower: 2, upper: 3);
@@ -218,11 +218,11 @@ namespace Akka.Tests.Routing
             latch.Ready(RemainingOrDefault);
 
             // MessagesPerResize is 10 so there is no risk of additional resize
-            RouteeSize(router).Should().Be(2);
+            (await RouteeSize(router)).Should().Be(2);
         }
 
         [Fact]
-        public void DefaultResizer_must_be_possible_to_define_in_configuration()
+        public async Task DefaultResizer_must_be_possible_to_define_in_configuration()
         {
             var latch = new TestLatch(3);
             var router = Sys.ActorOf(FromConfig.Instance.Props(Props.Create<ResizerTestActor>()), "router1");
@@ -233,11 +233,11 @@ namespace Akka.Tests.Routing
 
             latch.Ready(RemainingOrDefault);
 
-            RouteeSize(router).Should().Be(2);
+            (await RouteeSize(router)).Should().Be(2);
         }
 
         [Fact(Skip = "Racy due to Resizer / Mailbox impl")]
-        public void DefaultResizer_must_grow_as_needed_under_pressure()
+        public async Task DefaultResizer_must_grow_as_needed_under_pressure()
         {
             var resizer = new DefaultResizer(
                 lower: 3,
@@ -252,37 +252,37 @@ namespace Akka.Tests.Routing
 
             // first message should create the minimum number of routees
             router.Tell("echo");
-            ExpectMsg("reply");
+            await ExpectMsgAsync("reply");
 
-            RouteeSize(router).Should().Be(resizer.LowerBound);
+            (await RouteeSize(router)).Should().Be(resizer.LowerBound);
 
-            Action<int, TimeSpan> loop = (loops, d) =>
+            Func<int, TimeSpan, Task> loop = async (loops, d) =>
             {
                 for (var i = 0; i < loops; i++)
                 {
                     router.Tell(d);
 
                     //sending too quickly will result in skipped resize due to many ResizeInProgress conflicts
-                    Thread.Sleep(Dilated(20.Milliseconds()));
+                    await Task.Delay(Dilated(20.Milliseconds()));
                 }
 
                 double max = d.TotalMilliseconds * loops / resizer.LowerBound + Dilated(2.Seconds()).TotalMilliseconds;
-                Within(TimeSpan.FromMilliseconds(max), () =>
+                await WithinAsync(TimeSpan.FromMilliseconds(max), async() =>
                 {
                     for (var i = 0; i < loops; i++)
                     {
-                        ExpectMsg("done");
+                        await ExpectMsgAsync("done");
                     }
                 });
             };
 
             // 2 more should go through without triggering more
-            loop(2, 200.Milliseconds());
-            RouteeSize(router).Should().Be(resizer.LowerBound);
+            await loop(2, 200.Milliseconds());
+            (await RouteeSize(router)).Should().Be(resizer.LowerBound);
 
             // a whole bunch should max it out
-            loop(20, 500.Milliseconds());
-            RouteeSize(router).Should().Be(resizer.UpperBound);
+            await loop(20, 500.Milliseconds());
+            (await RouteeSize(router)).Should().Be(resizer.UpperBound);
         }
 
         [Fact]
@@ -301,9 +301,9 @@ namespace Akka.Tests.Routing
 
             // first message should create the minimum number of routees
             router.Tell("echo");
-            ExpectMsg("reply");
+            await ExpectMsgAsync("reply");
 
-            RouteeSize(router).Should().Be(resizer.LowerBound);
+            (await RouteeSize(router)).Should().Be(resizer.LowerBound);
 
             Func<int, TimeSpan, Task> loop = async (loops, d) =>
             {
@@ -316,28 +316,28 @@ namespace Akka.Tests.Routing
                 }
 
                 var max = d.TotalMilliseconds * loops / resizer.LowerBound + Dilated(2.Seconds()).TotalMilliseconds;
-                Within(TimeSpan.FromMilliseconds(max), () =>
+                await WithinAsync(TimeSpan.FromMilliseconds(max), async () =>
                 {
                     for (var i = 0; i < loops; i++)
                     {
-                        ExpectMsg("done");
+                        await ExpectMsgAsync("done");
                     }
                 });
             };
 
             // 2 more should go through without triggering more
             await loop(2, 200.Milliseconds());
-            RouteeSize(router).Should().Be(resizer.LowerBound);
+            (await RouteeSize(router)).Should().Be(resizer.LowerBound);
 
             // a whole bunch should max it out
             await loop(20, 500.Milliseconds());
-            RouteeSize(router).Should().Be(resizer.UpperBound);
+            (await RouteeSize(router)).Should().Be(resizer.UpperBound);
         }
         
         [Fact(Skip = "Racy due to Resizer / Mailbox impl")]
-        public void DefaultResizer_must_backoff()
+        public async Task DefaultResizer_must_backoff()
         {
-            Within(10.Seconds(), () =>
+            await WithinAsync(10.Seconds(), async () =>
             {
                 var resizer = new DefaultResizer(
                     lower: 2,
@@ -356,20 +356,20 @@ namespace Akka.Tests.Routing
                 {
                     router.Tell(150);
 
-                    Thread.Sleep(Dilated(20.Milliseconds()));
+                    await Task.Delay(Dilated(20.Milliseconds()));
                 }
 
-                var z = RouteeSize(router);
+                var z = await RouteeSize(router);
                 z.Should().BeGreaterThan(2);
 
-                Thread.Sleep(Dilated(300.Milliseconds()));
+                await Task.Delay(Dilated(300.Milliseconds()));
 
                 // let it cool down
-                AwaitCondition(() =>
+                await AwaitConditionAsync(async () =>
                 {
                     router.Tell(0); //trigger resize
-                    Thread.Sleep(Dilated(20.Milliseconds()));
-                    return RouteeSize(router) < z;
+                    await Task.Delay(Dilated(20.Milliseconds()));
+                    return (await RouteeSize(router)) < z;
                 }, Dilated(500.Milliseconds()));
             });
         }
