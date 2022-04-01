@@ -653,8 +653,7 @@ namespace Akka.Actor
 
                     if (terminateActorSystem)
                     {
-                        system.FinalTerminate();
-                        return system.Terminate().ContinueWith(tr =>
+                        return system.FinalTerminate().ContinueWith(tr =>
                         {
                             if (exitClr && !coord._runningClrHook)
                             {
