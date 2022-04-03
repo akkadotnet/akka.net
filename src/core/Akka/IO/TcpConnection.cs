@@ -13,7 +13,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
@@ -155,10 +154,7 @@ namespace Akka.IO
                         // up to this point we've been watching the commander,
                         // but since registration is now complete we only need to watch the handler from here on
                         if (!Equals(register.Handler, commander))
-                        {
-                            Context.Unwatch(commander);
-                            Context.Watch(register.Handler);
-                        }
+                            SignDeathPact(register.Handler); // will unsign death pact with commander automatically
 
                         if (_traceLogging) Log.Debug("[{0}] registered as connection handler", register.Handler);
 
@@ -727,6 +723,7 @@ namespace Akka.IO
         protected void StopWith(CloseInformation closeInfo)
         {
             _closedMessage = closeInfo;
+            UnsignDeathPact();
             Context.Stop(Self);
         }
 
