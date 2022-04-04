@@ -16,6 +16,8 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Nito.AsyncEx;
 using Akka.Dispatch.SysMsg;
+using FluentAssertions.Extensions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Tests.Actor
 {
@@ -25,66 +27,65 @@ namespace Akka.Tests.Actor
             : base(@"akka.actor.ask-timeout = 3000ms")
         { }
 
-        public class SomeActor : UntypedActor
+        public class SomeActor : ReceiveActor
         {
-            protected override void OnReceive(object message)
+            public SomeActor()
             {
-                if (message.Equals("timeout"))
-                {
-                    Thread.Sleep(5000);
-                }
-
-                if (message.Equals("answer"))
-                {
-                    Sender.Tell("answer");
-                }
-
-                if (message.Equals("delay"))
-                {
-                    Thread.Sleep(3000);
-                    Sender.Tell("answer");
-                }
-
-                if (message.Equals("many"))
-                {
-                    Sender.Tell("answer1");
-                    Sender.Tell("answer2");
-                    Sender.Tell("answer2");
-                }
-
-                if (message.Equals("invalid"))
-                {
-                    Sender.Tell(123);
-                }
-
-                if (message.Equals("system"))
-                {
-                    Sender.Tell(new DummySystemMessage());
-                }
+                ReceiveAsync<string>(async message => 
+                { 
+                    switch (message)
+                    {
+                        case "timeout":
+                            await Task.Delay(5000);
+                            break;
+                        case "answer":
+                            Sender.Tell("answer");
+                            break;
+                        case "delay":
+                            await Task.Delay(3000);
+                            Sender.Tell("answer");
+                            break;
+                        case "many":
+                            Sender.Tell("answer1");
+                            Sender.Tell("answer2");
+                            Sender.Tell("answer2");
+                            break;
+                        case "invalid":
+                            Sender.Tell(123);
+                            break;
+                        case "system":
+                            Sender.Tell(new DummySystemMessage());
+                            break;
+                    }
+                
+                });
             }
         }
 
-        public class WaitActor : UntypedActor
+        public class WaitActor : ReceiveActor
         {
             public WaitActor(IActorRef replyActor, IActorRef testActor)
             {
                 _replyActor = replyActor;
                 _testActor = testActor;
+                ReceiveAsync<string>(async message => 
+                {
+                    if (message.Equals("ask"))
+                    {
+                        await Awaiting(async () =>
+                        {
+                            var result = await _replyActor.Ask("foo");
+                            _testActor.Tell(result);
+                        }).Should().CompleteWithinAsync(2.Seconds());
+                    }
+
+                });
             }
 
             private readonly IActorRef _replyActor;
 
             private readonly IActorRef _testActor;
 
-            protected override void OnReceive(object message)
-            {
-                if (message.Equals("ask"))
-                {
-                    var result = _replyActor.Ask("foo");
-                    result.Wait(TimeSpan.FromSeconds(2));
-                    _testActor.Tell(result.Result);
-                }
-            }
         }
 
         public class ReplyActor : UntypedActor
@@ -231,7 +232,7 @@ namespace Akka.Tests.Actor
                 await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("cancel", cts.Token));
             }
 
-            Are_Temp_Actors_Removed(actor);
+            await Are_Temp_Actors_Removed(actor);
         }
 
         [Fact]
@@ -243,7 +244,7 @@ namespace Akka.Tests.Actor
                 await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("cancel", TimeSpan.FromSeconds(30), cts.Token));
             }
 
-            Are_Temp_Actors_Removed(actor);
+            await Are_Temp_Actors_Removed(actor);
         }
 
         [Fact]
@@ -253,7 +254,7 @@ namespace Akka.Tests.Actor
 
             await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("timeout"));
 
-            Are_Temp_Actors_Removed(actor);
+            await Are_Temp_Actors_Removed(actor);
         }
 
         [Fact]
@@ -292,14 +293,14 @@ namespace Akka.Tests.Actor
             });
         }
 
-        private void Are_Temp_Actors_Removed(IActorRef actor)
+        private async Task Are_Temp_Actors_Removed(IActorRef actor)
         {
             var actorCell = actor as ActorRefWithCell;
             Assert.True(actorCell != null, "Test method only valid with ActorRefWithCell actors.");
             // ReSharper disable once PossibleNullReferenceException
             var container = actorCell.Provider.TempContainer as VirtualPathContainer;
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 var childCounter = 0;
                 // ReSharper disable once PossibleNullReferenceException
@@ -314,12 +315,12 @@ namespace Akka.Tests.Actor
         /// that we don't deadlock
         /// </summary>
         [Fact]
-        public void Can_Ask_actor_inside_receive_loop()
+        public async Task Can_Ask_actor_inside_receive_loop()
         {
             var replyActor = Sys.ActorOf<ReplyActor>();
             var waitActor = Sys.ActorOf(Props.Create(() => new WaitActor(replyActor, TestActor)));
             waitActor.Tell("ask");
-            ExpectMsg("bar");
+            await ExpectMsgAsync("bar");
         }
     }
 }

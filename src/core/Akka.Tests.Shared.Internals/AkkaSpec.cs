@@ -35,6 +35,7 @@ namespace Akka.TestKit
             stdout-loglevel = WARNING
             serialize-messages = on
             actor {
+              ask-timeout = 20s
               #default-dispatcher {
               #  executor = fork-join-executor
               #  fork-join-executor {

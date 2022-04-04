@@ -107,82 +107,82 @@ namespace Akka.Tests
         }
 
         [Fact(DisplayName = "invoke preRestart, preStart, postRestart when using OneForOneStrategy")]
-        public void Actor_lifecycle_test1()
+        public async Task Actor_lifecycle_test1()
         {
             var generationProvider = new AtomicCounter();
             string id = Guid.NewGuid().ToString();
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTestActor(TestActor, id, generationProvider));
-            var restarter = supervisor.Ask<IActorRef>(restarterProps).Result;
+            var restarter = await supervisor.Ask<IActorRef>(restarterProps);
 
-            ExpectMsg(("preStart", id, 0));
+            await ExpectMsgAsync(("preStart", id, 0));
             restarter.Tell(Kill.Instance);
-            ExpectMsg(("preRestart", id, 0));
-            ExpectMsg(("postRestart", id, 1));
+            await ExpectMsgAsync(("preRestart", id, 0));
+            await ExpectMsgAsync(("postRestart", id, 1));
             restarter.Tell("status");
-            ExpectMsg(("OK", id, 1));
+            await ExpectMsgAsync(("OK", id, 1));
             restarter.Tell(Kill.Instance);
-            ExpectMsg(("preRestart", id, 1));
-            ExpectMsg(("postRestart", id, 2));
+            await ExpectMsgAsync(("preRestart", id, 1));
+            await ExpectMsgAsync(("postRestart", id, 2));
             restarter.Tell("status");
-            ExpectMsg(("OK", id, 2));
+            await ExpectMsgAsync(("OK", id, 2));
             restarter.Tell(Kill.Instance);
-            ExpectMsg(("preRestart", id, 2));
-            ExpectMsg(("postRestart", id, 3));
+            await ExpectMsgAsync(("preRestart", id, 2));
+            await ExpectMsgAsync(("postRestart", id, 3));
             restarter.Tell("status");
-            ExpectMsg(("OK", id, 3));
+            await ExpectMsgAsync(("OK", id, 3));
             restarter.Tell(Kill.Instance);
-            ExpectMsg(("postStop", id, 3));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync(("postStop", id, 3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
             Sys.Stop(supervisor);
         }
 
         [Fact(DisplayName="default for preRestart and postRestart is to call postStop and preStart respectively")]
-        public void Actor_lifecycle_test2()
+        public async Task Actor_lifecycle_test2()
         {
             var generationProvider = new AtomicCounter();
             string id = Guid.NewGuid().ToString();            
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(TestActor, id, generationProvider));
-            var restarter = supervisor.Ask<IActorRef>(restarterProps).Result;
+            var restarter = await supervisor.Ask<IActorRef>(restarterProps);
 
-            ExpectMsg(("preStart", id, 0));
+            await ExpectMsgAsync(("preStart", id, 0));
             restarter.Tell(Kill.Instance);
-            ExpectMsg(("postStop", id, 0));
-            ExpectMsg(("preStart", id, 1));
+            await ExpectMsgAsync(("postStop", id, 0));
+            await ExpectMsgAsync(("preStart", id, 1));
             restarter.Tell("status");
-            ExpectMsg(("OK", id, 1));
+            await ExpectMsgAsync(("OK", id, 1));
             restarter.Tell(Kill.Instance);
-            ExpectMsg(("postStop", id, 1));
-            ExpectMsg(("preStart", id, 2));
+            await ExpectMsgAsync(("postStop", id, 1));
+            await ExpectMsgAsync(("preStart", id, 2));
             restarter.Tell("status");
-            ExpectMsg(("OK", id, 2));
+            await ExpectMsgAsync(("OK", id, 2));
             restarter.Tell(Kill.Instance);
-            ExpectMsg(("postStop", id, 2));
-            ExpectMsg(("preStart", id, 3));
+            await ExpectMsgAsync(("postStop", id, 2));
+            await ExpectMsgAsync(("preStart", id, 3));
             restarter.Tell("status");
-            ExpectMsg(("OK", id, 3));
+            await ExpectMsgAsync(("OK", id, 3));
             restarter.Tell(Kill.Instance);
-            ExpectMsg(("postStop", id, 3));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync(("postStop", id, 3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
             Sys.Stop(supervisor);
         } 
 
         [Fact(DisplayName="not invoke preRestart and postRestart when never restarted using OneForOneStrategy")]
-        public void Actor_lifecycle_test3()
+        public async Task Actor_lifecycle_test3()
         {
             var generationProvider = new AtomicCounter();
             string id = Guid.NewGuid().ToString();            
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(TestActor, id, generationProvider));
-            var restarter = supervisor.Ask<IInternalActorRef>(restarterProps).Result;
+            var restarter = await supervisor.Ask<IInternalActorRef>(restarterProps);
 
-            ExpectMsg(("preStart", id, 0));
+            await ExpectMsgAsync(("preStart", id, 0));
             restarter.Tell("status");
-            ExpectMsg(("OK", id, 0));
+            await ExpectMsgAsync(("OK", id, 0));
             restarter.Stop();
-            ExpectMsg(("postStop", id, 0));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync(("postStop", id, 0));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
 
@@ -199,10 +199,10 @@ namespace Akka.Tests
         }
 
         [Fact(DisplayName="log failures in postStop")]
-        public void Log_failures_in_PostStop()
+        public async Task Log_failures_in_PostStop()
         {
             var a = Sys.ActorOf<EmptyActor>();
-            EventFilter.Exception<Exception>(message: "hurrah").ExpectOne(() =>
+            await EventFilter.Exception<Exception>(message: "hurrah").ExpectOneAsync(() =>
                 {
                     a.Tell(PoisonPill.Instance);
                 });            
@@ -255,20 +255,20 @@ namespace Akka.Tests
         }
 
         [Fact]
-        public void Clear_behavior_stack_upon_restart()
+        public async Task Clear_behavior_stack_upon_restart()
         {
             var a = Sys.ActorOf(Props.Create(() => new BecomeActor(TestActor)));
 
             a.Tell("hello");
-            ExpectMsg(42);
+            await ExpectMsgAsync(42);
             a.Tell(new Become());
-            ExpectMsg("ok");
+            await ExpectMsgAsync("ok");
             a.Tell("hello");
-            ExpectMsg(43);
+            await ExpectMsgAsync(43);
 
-            EventFilter.Exception<Exception>("buh").ExpectOne(() => a.Tell("fail"));
+            await EventFilter.Exception<Exception>("buh").ExpectOneAsync(() => a.Tell("fail"));
             a.Tell("hello");
-            ExpectMsg(42);
+            await ExpectMsgAsync(42);
         }
 
         public class SupervisorTestActor : UntypedActor
@@ -281,24 +281,31 @@ namespace Akka.Tests
 
             protected override void OnReceive(object message)
             {
-                PatternMatch.Match(message)
-                    .With<Spawn>(m =>
-                    {
-                        Context.ActorOf(Props.Create(() => new KillableActor(testActor)), m.Name);
+                switch (message)
+                {
+                    case Spawn m:
+                        Context.ActorOf(Props.Create(() => new KillableActor(testActor)), m.Name); 
                         testActor.Tell(("Created", m.Name));
-                    })
-                    .With<ContextStop>(m =>
+                        break;
+                    
+                    case ContextStop m:
                     {
                         var child = Context.Child(m.Name);
-                        Context.Stop(child);                    
-                    })
-                    .With<Stop>(m =>
+                        Context.Stop(child);
+                        break;
+                    }
+                    
+                    case Stop m:
                     {
                         var child = Context.Child(m.Name);
                         ((IInternalActorRef)child).Stop();
-                    })
-                    .With<Count>(m => 
-                        testActor.Tell(Context.GetChildren().Count()));
+                        break;
+                    }
+                    
+                    case Count _:
+                        testActor.Tell(Context.GetChildren().Count());
+                        break;
+                }
             }
 
             public class Spawn
@@ -339,47 +346,47 @@ namespace Akka.Tests
         }
 
         [Fact(DisplayName="If a parent receives a Terminated event for a child actor, the parent should no longer supervise it")]
-        public void Clear_child_upon_terminated()
+        public async Task Clear_child_upon_terminated()
         {
             var names = new[] {"Bob", "Jameson", "Natasha"};
             var supervisor = Sys.ActorOf(Props.Create(() => new SupervisorTestActor(TestActor)));
             supervisor.Tell(new SupervisorTestActor.Spawn(){ Name = names[0] });
-            ExpectMsg(("Created",names[0]));
+            await ExpectMsgAsync(("Created",names[0]));
             supervisor.Tell(new SupervisorTestActor.Count());
-            ExpectMsg(1);
+            await ExpectMsgAsync(1);
             supervisor.Tell(new SupervisorTestActor.Spawn() { Name = names[1] });
-            ExpectMsg(("Created", names[1]));
+            await ExpectMsgAsync(("Created", names[1]));
             supervisor.Tell(new SupervisorTestActor.Count());
-            ExpectMsg(2);
+            await ExpectMsgAsync(2);
             supervisor.Tell(new SupervisorTestActor.ContextStop() { Name = names[1] });
-            ExpectMsg(("Terminated", names[1]));
+            await ExpectMsgAsync(("Terminated", names[1]));
        
             //we need to wait for the child actor to unregister itself from the parent.
             //this is done after PostStop so we have no way to wait for it
             //ideas?
-            Task.Delay(100).Wait();
+            await Task.Delay(100);
             supervisor.Tell(new SupervisorTestActor.Count());
-            ExpectMsg(1);
+            await ExpectMsgAsync(1);
             supervisor.Tell(new SupervisorTestActor.Spawn() { Name = names[2] });
-            ExpectMsg(("Created", names[2]));
-            Task.Delay(100).Wait();
+            await ExpectMsgAsync(("Created", names[2]));
+            await Task.Delay(100);
             supervisor.Tell(new SupervisorTestActor.Count());
-            ExpectMsg(2);
+            await ExpectMsgAsync(2);
             supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[0] });
-            ExpectMsg(("Terminated", names[0]));
+            await ExpectMsgAsync(("Terminated", names[0]));
             supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[2] });
-            ExpectMsg(("Terminated", names[2]));
+            await ExpectMsgAsync(("Terminated", names[2]));
 
-            Task.Delay(100).Wait();
+            await Task.Delay(100);
             supervisor.Tell(new SupervisorTestActor.Count());
-            ExpectMsg(0);
+            await ExpectMsgAsync(0);
         }
 
 
         class MyCustomException : Exception {}
 
         [Fact(DisplayName="PreRestart should receive correct cause, message and sender")]
-        public void Call_PreStart_with_correct_message_and_sender()
+        public async Task Call_PreStart_with_correct_message_and_sender()
         {
             var broken = ActorOf(c =>
             {
@@ -400,9 +407,9 @@ namespace Akka.Tests
 
             broken.Tell(message);
 
-            ExpectMsg<MyCustomException>();
-            ExpectMsg(message);
-            ExpectMsg(TestActor);
+            await ExpectMsgAsync<MyCustomException>();
+            await ExpectMsgAsync(message);
+            await ExpectMsgAsync(TestActor);
         }
     }
 }

@@ -373,7 +373,7 @@ namespace Akka.TestKit
             Action<T> msgAssert,
             Action<IActorRef> senderAssert,
             string hint,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             return InternalExpectMsgAsync(timeout, msgAssert, senderAssert, hint, cancellationToken)
                 .ConfigureAwait(false).GetAwaiter().GetResult();

@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Xunit;
@@ -14,7 +15,7 @@ namespace Akka.Tests.Actor
     public partial class ReceiveActorTests
     {
         [Fact]
-        public void Given_actor_When_it_calls_Become_Then_it_switches_handler()
+        public async Task Given_actor_When_it_calls_Become_Then_it_switches_handler()
         {
             //Given
             var system = ActorSystem.Create("test");
@@ -26,20 +27,20 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
             actor.Tell(4711, TestActor);
             //Then
-            ExpectMsg((object) "string2:hello");
-            ExpectMsg<UnhandledMessage>( m => ((int)m.Message) == 4711 && m.Recipient == actor);
+            await ExpectMsgAsync((object) "string2:hello");
+            await ExpectMsgAsync<UnhandledMessage>( m => ((int)m.Message) == 4711 && m.Recipient == actor);
 
             //When
             actor.Tell("BECOME", TestActor);    //Switch to state3
             actor.Tell("hello", TestActor);
             actor.Tell(4711, TestActor);
             //Then
-            ExpectMsg((object) "string3:hello");
-            ExpectMsg<UnhandledMessage>(m => ((int)m.Message) == 4711 && m.Recipient == actor);
+            await ExpectMsgAsync((object) "string3:hello");
+            await ExpectMsgAsync<UnhandledMessage>(m => ((int)m.Message) == 4711 && m.Recipient == actor);
         }
 
         [Fact]
-        public void Given_actor_that_has_called_Become_When_it_calls_Unbecome_Then_it_switches_back_handler()
+        public async Task Given_actor_that_has_called_Become_When_it_calls_Unbecome_Then_it_switches_back_handler()
         {
             //Given
             var system = ActorSystem.Create("test");
@@ -52,11 +53,11 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
 
             //Then
-            ExpectMsg((object) "string2:hello");
+            await ExpectMsgAsync((object) "string2:hello");
         }
 
         [Fact]
-        public void Given_actor_that_has_called_Become_at_construction_time_When_it_calls_Unbecome_Then_it_switches_back_handler()
+        public async Task Given_actor_that_has_called_Become_at_construction_time_When_it_calls_Unbecome_Then_it_switches_back_handler()
         {
             //Given
             var system = ActorSystem.Create("test");
@@ -65,25 +66,25 @@ namespace Akka.Tests.Actor
             //When
             actor.Tell("hello", TestActor);
             //Then
-            ExpectMsg((object) "string3:hello");
+            await ExpectMsgAsync((object) "string3:hello");
 
             //When
             actor.Tell("UNBECOME", TestActor);  //Switch back to state2
             actor.Tell("hello", TestActor);
             //Then
-            ExpectMsg((object) "string2:hello");
+            await ExpectMsgAsync((object) "string2:hello");
 
             //When
             actor.Tell("UNBECOME", TestActor);  //Switch back to state1
             actor.Tell("hello", TestActor);
             //Then
-            ExpectMsg((object) "string1:hello");
+            await ExpectMsgAsync((object) "string1:hello");
 
             //When
             actor.Tell("UNBECOME", TestActor);  //should still be in state1
             actor.Tell("hello", TestActor);
             //Then
-            ExpectMsg((object) "string1:hello");
+            await ExpectMsgAsync((object) "string1:hello");
         }
 
         private class BecomeActor : ReceiveActor

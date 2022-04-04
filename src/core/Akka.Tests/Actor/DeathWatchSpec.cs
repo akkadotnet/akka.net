@@ -7,7 +7,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
@@ -15,6 +17,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Tests.TestUtils;
+using Akka.Tests.Util;
 using Akka.Util.Internal;
 using Xunit;
 
@@ -32,12 +35,12 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void DeathWatch_must_notify_with_one_Terminated_message_when_an_Actor_is_already_terminated()
+        public async Task DeathWatch_must_notify_with_one_Terminated_message_when_an_Actor_is_already_terminated()
         {
             var terminal = Sys.ActorOf(Props.Empty, "killed-actor");
             terminal.Tell(PoisonPill.Instance, TestActor);
-            StartWatching(terminal);
-            ExpectTerminationOf(terminal);
+            await StartWatching(terminal);
+            await ExpectTerminationOf(terminal);
         }
 
         //        protected static string GetConfig()
@@ -54,17 +57,17 @@ namespace Akka.Tests.Actor
         //            ";
         //        }
         [Fact]
-        public void Bug209_any_user_messages_following_a_Terminate_message_should_be_forwarded_to_DeadLetterMailbox()
+        public async Task Bug209_any_user_messages_following_a_Terminate_message_should_be_forwarded_to_DeadLetterMailbox()
         {
             var actor = (ActorRefWithCell) Sys.ActorOf(Props.Empty, "killed-actor");
             Watch(actor);
             Sys.EventStream.Subscribe(TestActor, typeof (DeadLetter));
 
             actor.Tell(PoisonPill.Instance);
-            ExpectMsg<Terminated>();
+            await ExpectMsgAsync<Terminated>();
 
             actor.Tell(new Envelope("SomeUserMessage", TestActor));
-            ExpectMsg<DeadLetter>(d => ((Envelope)d.Message).Message.Equals("SomeUserMessage"));
+            await ExpectMsgAsync<DeadLetter>(d => ((Envelope)d.Message).Message.Equals("SomeUserMessage"));
 
             //The actor should Terminate, exchange the mailbox to a DeadLetterMailbox and forward the user message to the DeadLetterMailbox
             
@@ -72,38 +75,38 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void DeathWatch_must_notify_with_one_Terminated_message_when_actor_is_stopped()
+        public async Task DeathWatch_must_notify_with_one_Terminated_message_when_actor_is_stopped()
         {
             const string msg = "hello";
-            StartWatching(_terminal).Tell(msg);
-            ExpectMsg(msg);
+            (await StartWatching(_terminal)).Tell(msg);
+            await ExpectMsgAsync(msg);
             _terminal.Tell(PoisonPill.Instance);
-            ExpectTerminationOf(_terminal);
+            await ExpectTerminationOf(_terminal);
         }
 
         [Fact]
-        public void DeathWatch_must_notify_with_one_custom_termination_message_when_actor_is_stopped()
+        public async Task DeathWatch_must_notify_with_one_custom_termination_message_when_actor_is_stopped()
         {
             const string msg = "hello";
             const string terminationMsg = "watchee terminated";
-            StartWatchingWith(_terminal, terminationMsg).Tell(msg);
-            ExpectMsg(msg);
+            (await StartWatchingWith(_terminal, terminationMsg)).Tell(msg);
+            await ExpectMsgAsync(msg);
             _terminal.Tell(PoisonPill.Instance);
-            ExpectMsg(terminationMsg);
+            await ExpectMsgAsync(terminationMsg);
         }
 
         [Fact]
-        public void DeathWatch_must_notify_with_all_monitors_with_one_Terminated_message_when_Actor_is_stopped()
+        public async Task DeathWatch_must_notify_with_all_monitors_with_one_Terminated_message_when_Actor_is_stopped()
         {
-            var monitor1 = StartWatching(_terminal);
-            var monitor2 = StartWatching(_terminal);
-            var monitor3 = StartWatching(_terminal);
+            var monitor1 = await StartWatching(_terminal);
+            var monitor2 = await StartWatching(_terminal);
+            var monitor3 = await StartWatching(_terminal);
 
             _terminal.Tell(PoisonPill.Instance);
 
-            ExpectTerminationOf(_terminal);
-            ExpectTerminationOf(_terminal);
-            ExpectTerminationOf(_terminal);
+            await ExpectTerminationOf(_terminal);
+            await ExpectTerminationOf(_terminal);
+            await ExpectTerminationOf(_terminal);
 
             Sys.Stop(monitor1);
             Sys.Stop(monitor2);
@@ -111,19 +114,19 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void DeathWatch_must_notify_with_current_monitors_with_one_Terminated_message_when_Actor_is_stopped()
+        public async Task DeathWatch_must_notify_with_current_monitors_with_one_Terminated_message_when_Actor_is_stopped()
         {
-            var monitor1 = StartWatching(_terminal);
+            var monitor1 = await StartWatching(_terminal);
             var monitor2 = Sys.ActorOf(Props.Create(() => new WatchAndUnwatchMonitor(_terminal, TestActor)).WithDeploy(Deploy.Local));
-            var monitor3 = StartWatching(_terminal);
+            var monitor3 = await StartWatching(_terminal);
 
             monitor2.Tell("ping");
-            ExpectMsg("pong");      // since Watch and Unwatch are asynchronous, we need some sync
+            await ExpectMsgAsync("pong");      // since Watch and Unwatch are asynchronous, we need some sync
 
             _terminal.Tell(PoisonPill.Instance);
 
-            ExpectTerminationOf(_terminal);
-            ExpectTerminationOf(_terminal);
+            await ExpectTerminationOf(_terminal);
+            await ExpectTerminationOf(_terminal);
 
             Sys.Stop(monitor1);
             Sys.Stop(monitor2);
@@ -131,30 +134,31 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void DeathWatch_must_notify_with_a_Terminated_message_once_when_Actor_is_stopped_but_not_when_restarted()
+        public async Task DeathWatch_must_notify_with_a_Terminated_message_once_when_Actor_is_stopped_but_not_when_restarted()
         {
-            EventFilter.Exception<ActorKilledException>().Expect(3, () =>
+            await EventFilter.Exception<ActorKilledException>().ExpectAsync(3, async () =>
             {
                 var timeout = TimeSpan.FromSeconds(5);
                 var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(
                     new OneForOneStrategy(2, TimeSpan.FromSeconds(1), r => Directive.Restart))));
 
                 var t1 = supervisor.Ask(Props.Create(() => new EchoTestActor()));
-                t1.Wait(timeout);
-                var terminal = t1.Result as LocalActorRef;
-                var t2 = supervisor.Ask(CreateWatchAndForwarderProps(terminal, TestActor), timeout);
-                t2.Wait(timeout);
-                var monitor = t2.Result as IActorRef;
+                await t1.AwaitWithTimeout(timeout);
+                var terminal = (LocalActorRef) t1.Result;
+                
+                var t2 = supervisor.Ask(CreateWatchAndForwarderProps(terminal, TestActor));
+                await t2.AwaitWithTimeout(timeout);
+                var monitor = (IActorRef) t2.Result;
 
                 terminal.Tell(Kill.Instance);
                 terminal.Tell(Kill.Instance);
 
-                var foo = terminal.Ask("foo", timeout).Result as string;
+                var foo = (await terminal.Ask("foo", timeout)) as string;
                 foo.ShouldBe("foo");
 
                 terminal.Tell(Kill.Instance);
 
-                ExpectTerminationOf(terminal);
+                await ExpectTerminationOf(terminal);
                 terminal.IsTerminated.ShouldBe(true);
 
                 Sys.Stop(supervisor);
@@ -163,31 +167,42 @@ namespace Akka.Tests.Actor
 
         // See issue: #61
         [Fact]
-        public void DeathWatch_must_fail_a_monitor_which_doesnt_handle_Terminated()
+        public async Task DeathWatch_must_fail_a_monitor_which_doesnt_handle_Terminated()
         {
-            EventFilter.Exception<ActorKilledException>().And.Exception<DeathPactException>().Expect(2, () =>
+            await EventFilter.Exception<ActorKilledException>().And.Exception<DeathPactException>().ExpectAsync(2, async() =>
             {
                 var strategy = new FailedSupervisorStrategy(TestActor);
                 _supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(strategy)).WithDeploy(Deploy.Local));
 
-                var failed = _supervisor.Ask(Props.Empty).Result as IActorRef;
-                var brother = _supervisor.Ask(Props.Create(() => new BrotherActor(failed))).Result as IActorRef;
+                var failed = (IActorRef) (await _supervisor.Ask(Props.Empty));
+                var brother = (IActorRef) (await _supervisor.Ask(Props.Create(() => new BrotherActor(failed))));
 
-                StartWatching(brother);
+                await StartWatching(brother);
 
                 failed.Tell(Kill.Instance);
-                var result = ReceiveWhile(TimeSpan.FromSeconds(5), msg =>
+                var result = await ReceiveWhileAsync(TimeSpan.FromSeconds(5), msg =>
                 {
                     var res = 0;
-                    msg.Match()
-                        .With<FF>(ff =>
-                        {
-                            if (ff.Fail.Cause is ActorKilledException && ff.Fail.Child == failed) res = 1;
-                            if (ff.Fail.Cause is DeathPactException && ff.Fail.Child == brother) res = 2;
-                        })
-                        .With<WrappedTerminated>(x => res = x.Terminated.ActorRef == brother ? 3 : 0);
+                    switch (msg)
+                    {
+                        case FF ff:
+                            switch (ff.Fail.Cause)
+                            {
+                                case ActorKilledException _ when ReferenceEquals(ff.Fail.Child, failed):
+                                    res = 1;
+                                    break;
+                                case DeathPactException _ when ReferenceEquals(ff.Fail.Child, brother):
+                                    res = 2;
+                                    break;
+                            }
+                            break;
+                        
+                        case WrappedTerminated x:
+                            res = ReferenceEquals(x.Terminated.ActorRef, brother) ? 3 : 0;
+                            break;
+                    }
                     return res.ToString();
-                }, 3);
+                }, 3).ToListAsync();
 
                 ((IInternalActorRef)TestActor).IsTerminated.ShouldBe(false);
                 result.ShouldOnlyContainInOrder("1", "2", "3");
@@ -195,27 +210,27 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void DeathWatch_must_be_able_to_watch_child_with_the_same_name_after_the_old_one_died()
+        public async Task DeathWatch_must_be_able_to_watch_child_with_the_same_name_after_the_old_one_died()
         {
             var parent = Sys.ActorOf(Props.Create(() => new KnobActor(TestActor)).WithDeploy(Deploy.Local));
 
             parent.Tell(Knob);
-            ExpectMsg(Bonk);
+            await ExpectMsgAsync(Bonk);
             parent.Tell(Knob);
-            ExpectMsg(Bonk);
+            await ExpectMsgAsync(Bonk);
         }
 
         [Fact]
-        public void DeathWatch_must_notify_only_when_watching()
+        public async Task DeathWatch_must_notify_only_when_watching()
         {
             var subject = Sys.ActorOf(Props.Create(() => new EchoActor(_terminal)));
             ((IInternalActorRef)TestActor).SendSystemMessage(new DeathWatchNotification(subject, true, false));
-            ExpectNoMsg(TimeSpan.FromSeconds(3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
         }
 
         // See issue: #61
         [Fact]
-        public void DeathWatch_must_discard_Terminated_when_unwatched_between_sysmsg_and_processing()
+        public async Task DeathWatch_must_discard_Terminated_when_unwatched_between_sysmsg_and_processing()
         {
             var t1 = CreateTestLatch(1);
             var t2 = CreateTestLatch(1);
@@ -227,7 +242,7 @@ namespace Akka.Tests.Actor
             t1.Ready(TimeSpan.FromSeconds(3));
             Watch(p.Ref);
             Sys.Stop(p.Ref);
-            ExpectTerminated(p.Ref);
+            await ExpectTerminatedAsync(p.Ref);
             w.Tell(new U(p.Ref));
             t2.CountDown();
 
@@ -237,27 +252,27 @@ namespace Akka.Tests.Actor
             // - process the Terminated
             // If it receives the Terminated it will die, which in fact it should not
             w.Tell(new Identify(null));
-            ExpectMsg<ActorIdentity>(ai => ai.Subject == w);
+            await ExpectMsgAsync<ActorIdentity>(ai => ai.Subject == w);
             w.Tell(new Identify(null));
-            ExpectMsg<ActorIdentity>(ai => ai.Subject == w);
+            await ExpectMsgAsync<ActorIdentity>(ai => ai.Subject == w);
         }
 
-        private void ExpectTerminationOf(IActorRef actorRef)
+        private async Task ExpectTerminationOf(IActorRef actorRef)
         {
-            ExpectMsg<WrappedTerminated>(w => ReferenceEquals(w.Terminated.ActorRef, actorRef));
+            await ExpectMsgAsync<WrappedTerminated>(w => ReferenceEquals(w.Terminated.ActorRef, actorRef));
         }
 
-        private IActorRef StartWatching(IActorRef target)
+        private async Task<IActorRef> StartWatching(IActorRef target)
         {
-            var task = _supervisor.Ask(CreateWatchAndForwarderProps(target, TestActor), TimeSpan.FromSeconds(3));
-            task.Wait(TimeSpan.FromSeconds(3));
+            var task = _supervisor.Ask(CreateWatchAndForwarderProps(target, TestActor));
+            await task.AwaitWithTimeout(TimeSpan.FromSeconds(3));
             return (IActorRef)task.Result;
         }
 
-        private IActorRef StartWatchingWith(IActorRef target, object message)
+        private async Task<IActorRef> StartWatchingWith(IActorRef target, object message)
         {
             var task = _supervisor.Ask(CreateWatchWithAndForwarderProps(target, TestActor, message), TimeSpan.FromSeconds(3));
-            task.Wait(TimeSpan.FromSeconds(3));
+            await task.AwaitWithTimeout(TimeSpan.FromSeconds(3));
             return (IActorRef)task.Result;
         }
 
@@ -297,57 +312,50 @@ namespace Akka.Tests.Actor
 
         internal const string Knob = "KNOB";
         internal const string Bonk = "BONK";
-        internal class KnobKidActor : ActorBase
+        internal class KnobKidActor : ReceiveActor
         {
-            protected override bool Receive(object message)
+            public KnobKidActor()
             {
-                message.Match().With<string>(x =>
+                Receive<string>(s =>
                 {
-                    if (x == Knob)
+                    if (s == Knob)
                     {
                         Context.Stop(Self);
                     }
                 });
-                return true;
             }
         }
-        internal class KnobActor : ActorBase
+        internal class KnobActor : ReceiveActor
         {
             private readonly IActorRef _testActor;
 
             public KnobActor(IActorRef testActor)
             {
                 _testActor = testActor;
-            }
 
-            protected override bool Receive(object message)
-            {
-                message.Match().With<string>(x =>
+                Receive<string>(x =>
                 {
-                    if (x == Knob)
+                    if (x != Knob) 
+                        return;
+                    
+                    var kid = Context.ActorOf(Props.Create(() => new KnobKidActor()), "kid");
+                    Context.Watch(kid);
+                    kid.Forward(Knob);
+                    Context.Become(msg =>
                     {
-                        var kid = Context.ActorOf(Props.Create(() => new KnobKidActor()), "kid");
-                        Context.Watch(kid);
-                        kid.Forward(Knob);
-                        Context.Become(msg =>
+                        if (msg is Terminated y && y.ActorRef == kid)
                         {
-                            msg.Match().With<Terminated>(y =>
-                            {
-                                if (y.ActorRef == kid)
-                                {
-                                    _testActor.Tell(Bonk);
-                                    Context.UnbecomeStacked();
-                                }
-                            });
-                            return true;
-                        });
-                    }
+                            _testActor.Tell(Bonk);
+                            Context.UnbecomeStacked();
+                        }
+
+                        return true;
+                    });
                 });
-                return true;
             }
         }
 
-        internal class WatchAndUnwatchMonitor : ActorBase
+        internal class WatchAndUnwatchMonitor : ReceiveActor
         {
             private readonly IActorRef _testActor;
 
@@ -356,20 +364,14 @@ namespace Akka.Tests.Actor
                 _testActor = testActor;
                 Context.Watch(terminal);
                 Context.Unwatch(terminal);
-            }
 
-            protected override bool Receive(object message)
-            {
-                message.Match()
-                    .With<string>(x =>
-                    {
-                        if (x == "ping")
-                        {
-                            _testActor.Tell("pong");
-                        }
-                    })
-                    .With<Terminated>(x => _testActor.Tell(new WrappedTerminated(x)));
-                return true;
+                Receive<string>(x =>
+                {
+                    if (x == "ping")
+                        _testActor.Tell("pong");
+                });
+
+                Receive<Terminated>(x => _testActor.Tell(new WrappedTerminated(x)));
             }
         }
 
@@ -387,7 +389,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        internal class WatchAndForwardActor : ActorBase
+        internal class WatchAndForwardActor : ReceiveActor
         {
             private readonly IActorRef _forwardToActor;
 
@@ -395,20 +397,13 @@ namespace Akka.Tests.Actor
             {
                 _forwardToActor = forwardToActor;
                 Context.Watch(watchedActor);
-            }
 
-            protected override bool Receive(object message)
-            {
-                var terminated = message as Terminated;
-                if (terminated != null)
-                    _forwardToActor.Forward(new WrappedTerminated(terminated));
-                else
-                    _forwardToActor.Forward(message);
-                return true;
+                Receive<Terminated>(terminated => _forwardToActor.Forward(new WrappedTerminated(terminated)));
+                ReceiveAny(message => _forwardToActor.Forward(message));
             }
         }
 
-        internal class WatchWithAndForwardActor : ActorBase
+        internal class WatchWithAndForwardActor : ReceiveActor
         {
             private readonly IActorRef _forwardToActor;
 
@@ -416,12 +411,7 @@ namespace Akka.Tests.Actor
             {
                 _forwardToActor = forwardToActor;
                 Context.WatchWith(watchedActor, message);
-            }
-
-            protected override bool Receive(object message)
-            {
-                _forwardToActor.Forward(message);
-                return true;
+                ReceiveAny(_forwardToActor.Forward);
             }
         }
 
@@ -436,14 +426,12 @@ namespace Akka.Tests.Actor
 
         public class WrappedTerminated
         {
-            private readonly Terminated _terminated;
-
             public WrappedTerminated(Terminated terminated)
             {
-                _terminated = terminated;
+                Terminated = terminated;
             }
 
-            public Terminated Terminated { get { return _terminated; } }
+            public Terminated Terminated { get; }
         }
 
         internal struct W
