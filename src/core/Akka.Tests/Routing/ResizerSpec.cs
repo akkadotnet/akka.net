@@ -53,9 +53,9 @@ namespace Akka.Tests.Routing
         {
             public PressureActor()
             {
-                Receive<TimeSpan>(d =>
+                ReceiveAsync<TimeSpan>(async d =>
                 {
-                    Thread.Sleep(d);
+                    await Task.Delay(d);
                     Sender.Tell("done");
                 });
 
@@ -92,7 +92,7 @@ namespace Akka.Tests.Routing
             {
                 _dilated = dilated;
 
-                Receive<int>(n =>
+                ReceiveAsync<int>(async n =>
                 {
                     if (n <= 0)
                     {
@@ -100,7 +100,7 @@ namespace Akka.Tests.Routing
                     }
                     else
                     {
-                        Thread.Sleep(_dilated(TimeSpan.FromMilliseconds(n)));
+                        await Task.Delay(_dilated(TimeSpan.FromMilliseconds(n)));
                     }
                 });
             }
@@ -305,7 +305,7 @@ namespace Akka.Tests.Routing
 
             (await RouteeSize(router)).Should().Be(resizer.LowerBound);
 
-            Func<int, TimeSpan, Task> loop = async (loops, d) =>
+            async Task Loop(int loops, TimeSpan d)
             {
                 for (var i = 0; i < loops; i++)
                 {
@@ -323,14 +323,14 @@ namespace Akka.Tests.Routing
                         await ExpectMsgAsync("done");
                     }
                 });
-            };
+            }
 
             // 2 more should go through without triggering more
-            await loop(2, 200.Milliseconds());
+            await Loop(2, 200.Milliseconds());
             (await RouteeSize(router)).Should().Be(resizer.LowerBound);
 
             // a whole bunch should max it out
-            await loop(20, 500.Milliseconds());
+            await Loop(20, 500.Milliseconds());
             (await RouteeSize(router)).Should().Be(resizer.UpperBound);
         }
         
