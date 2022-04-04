@@ -270,7 +270,7 @@ namespace Akka.Actor
         /// </summary>
         internal readonly List<string> OrderedPhases;
 
-        private readonly ConcurrentBag<Func<Task<Done>>> _clrShutdownTasks = new ConcurrentBag<Func<Task<Done>>>();
+        private readonly ConcurrentSet<Func<Task<Done>>> _clrShutdownTasks = new ConcurrentSet<Func<Task<Done>>>();
         private readonly ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>> _tasks = new ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>>();
         private readonly AtomicReference<Reason> _runStarted = new AtomicReference<Reason>(null);
         private readonly AtomicBoolean _clrHooksStarted = new AtomicBoolean(false);
@@ -335,7 +335,7 @@ namespace Akka.Actor
         {
             if (!_clrHooksStarted)
             {
-                _clrShutdownTasks.Add(hook);
+                _clrShutdownTasks.TryAdd(hook);
             }
         }
 
@@ -662,6 +662,7 @@ namespace Akka.Actor
 
                             coord.System = null;
                             coord.Log = null;
+                            coord._tasks.Clear(); // Clear the dictionary, just in case it is retained in memory
                             return Done.Instance;
                         });
                     }
@@ -693,7 +694,11 @@ namespace Akka.Actor
                 var exitTask = TerminateOnClrExit(coord);
                 // run all hooks during termination sequence
                 AppDomain.CurrentDomain.ProcessExit += exitTask;
-                system.WhenTerminated.ContinueWith(tr => { AppDomain.CurrentDomain.ProcessExit -= exitTask; });
+                system.WhenTerminated.ContinueWith(tr =>
+                {
+                    AppDomain.CurrentDomain.ProcessExit -= exitTask;
+                    coord._clrShutdownTasks.Clear(); // Clear the tasks, just in case it is retained in memory
+                });
 
                 coord.AddClrShutdownHook(() =>
                 {
