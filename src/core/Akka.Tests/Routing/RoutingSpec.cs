@@ -20,6 +20,7 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
+using System.Threading.Tasks;
 
 namespace Akka.Tests.Routing
 {
@@ -126,10 +127,10 @@ namespace Akka.Tests.Routing
         {
             public InlineRouterActor()
             {
-                Receive<string>(s => s == "start", c =>
+                ReceiveAsync<string>(s => s == "start", async c =>
                 {
                     var actor = Context.ActorOf(new RoundRobinPool(2).Props(Props.Create<InlineReceiverActor>()));
-                    actor.Ask("hello").PipeTo(Sender);
+                    await actor.Ask("hello").PipeTo(Sender);
                 });
             }
         }
@@ -161,43 +162,43 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Routers_in_general_must_evict_terminated_routees()
+        public async Task Routers_in_general_must_evict_terminated_routees()
         {
             var router = Sys.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()));
             router.Tell("");
             router.Tell("");
 
-            var c1 = ExpectMsg<IActorRef>();
-            var c2 = ExpectMsg<IActorRef>();
+            var c1 = await ExpectMsgAsync<IActorRef>();
+            var c2 = await ExpectMsgAsync<IActorRef>();
 
             Watch(router);
             Watch(c2);
             Sys.Stop(c2);
-            ExpectTerminated(c2).ExistenceConfirmed.Should().BeTrue();
+            (await ExpectTerminatedAsync(c2)).ExistenceConfirmed.Should().BeTrue();
 
             // it might take a while until the Router has actually processed the Terminated message
-            AwaitCondition(() =>
+            await AwaitConditionAsync(async () =>
             {
                 router.Tell("");
                 router.Tell("");
 
-                var res = ReceiveWhile(100.Milliseconds(), x =>
+                var res = await ReceiveWhileAsync(100.Milliseconds(), x =>
                 {
                     if (x is IActorRef)
                         return x.AsInstanceOf<IActorRef>();
 
                     return null;
-                }, msgs: 2);
+                }, msgs: 2).ToListAsync();
 
                 return res.Count == 2 && res.All(c => c.Equals(c1));
             });
 
             Sys.Stop(c1);
-            ExpectTerminated(router).ExistenceConfirmed.Should().BeTrue();
+            (await ExpectTerminatedAsync(router)).ExistenceConfirmed.Should().BeTrue();
         }
 
         [Fact]
-        public void Routers_in_general_must_not_terminate_when_resizer_is_used()
+        public async Task Routers_in_general_must_not_terminate_when_resizer_is_used()
         {
             var latch = new TestLatch(1);
             var resizer = new TestResizer(latch);
@@ -206,49 +207,49 @@ namespace Akka.Tests.Routing
             latch.Ready(RemainingOrDefault);
 
             router.Tell(new GetRoutees());
-            var routees = ExpectMsg<Routees>().Members.ToList();
+            var routees = (await ExpectMsgAsync<Routees>()).Members.ToList();
             routees.Count.Should().Be(2);
 
             routees.ForEach(r => r.Send(PoisonPill.Instance, TestActor));
             
             // expect no Terminated
-            ExpectNoMsg(2.Seconds());
+            await ExpectNoMsgAsync(2.Seconds());
         }
 
         [Fact]
-        public void Routers_in_general_must_use_configured_nr_of_instances_when_FromConfig()
+        public async Task Routers_in_general_must_use_configured_nr_of_instances_when_FromConfig()
         {
             var router = Sys.ActorOf(FromConfig.Instance.Props(Props.Create<BlackHoleActor>()), "router1");
             router.Tell(new GetRoutees());
-            ExpectMsg<Routees>().Members.Count().Should().Be(3);
+            (await ExpectMsgAsync<Routees>()).Members.Count().Should().Be(3);
             Watch(router);
             Sys.Stop(router);
-            ExpectTerminated(router);
+            await ExpectTerminatedAsync(router);
         }
 
         [Fact]
-        public void Routers_in_general_must_use_configured_nr_of_instances_when_router_is_specified()
+        public async Task Routers_in_general_must_use_configured_nr_of_instances_when_router_is_specified()
         {
             var router = Sys.ActorOf(new RoundRobinPool(0).Props(Props.Create<BlackHoleActor>()), "router2");
             router.Tell(new GetRoutees());
-            ExpectMsg<Routees>().Members.Count().Should().Be(3);
+            (await ExpectMsgAsync<Routees>()).Members.Count().Should().Be(3);
             Sys.Stop(router);
         }
 
         [Fact]
-        public void Routers_in_general_must_use_specified_resizer_when_resizer_not_configured()
+        public async Task Routers_in_general_must_use_specified_resizer_when_resizer_not_configured()
         {
             var latch = new TestLatch(1);
             var resizer = new TestResizer2(latch);
             var router = Sys.ActorOf(new RoundRobinPool(0, resizer).Props(Props.Create<BlackHoleActor>()), "router3");
             latch.Ready(RemainingOrDefault);
             router.Tell(new GetRoutees());
-            ExpectMsg<Routees>().Members.Count().Should().Be(3);
+            (await ExpectMsgAsync<Routees>()).Members.Count().Should().Be(3);
             Sys.Stop(router);
         }
 
         [Fact]
-        public void Routers_in_general_must_set_supplied_supervisorStrategy()
+        public async Task Routers_in_general_must_set_supplied_supervisorStrategy()
         {
             var escalator = new OneForOneStrategy(e =>
             {
@@ -258,24 +259,24 @@ namespace Akka.Tests.Routing
 
             var router = Sys.ActorOf(new RoundRobinPool(1, null, escalator, Dispatchers.DefaultDispatcherId).Props(Props.Create<BlackHoleActor>()));
             router.Tell(new GetRoutees());
-            EventFilter.Exception<ActorKilledException>().ExpectOne(() =>
+            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async() =>
             {
-                ExpectMsg<Routees>().Members.First().Send(Kill.Instance, TestActor);
+                (await ExpectMsgAsync<Routees>()).Members.First().Send(Kill.Instance, TestActor);
             });
-            ExpectMsg<ActorKilledException>();
+            await ExpectMsgAsync<ActorKilledException>();
 
             var router2 = Sys.ActorOf(new RoundRobinPool(1).WithSupervisorStrategy(escalator).Props(Props.Create<BlackHoleActor>()));
             router2.Tell(new GetRoutees());
-            EventFilter.Exception<ActorKilledException>().ExpectOne(() =>
+            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async () =>
             {
-                ExpectMsg<Routees>().Members.First().Send(Kill.Instance, TestActor);
+                (await ExpectMsgAsync<Routees>()).Members.First().Send(Kill.Instance, TestActor);
             });
 
-            ExpectMsg<ActorKilledException>();
+            await ExpectMsgAsync<ActorKilledException>();
         }
 
         [Fact]
-        public void Routers_in_general_must_set_supplied_supervisorStrategy_for_FromConfig()
+        public async Task Routers_in_general_must_set_supplied_supervisorStrategy_for_FromConfig()
         {
             var escalator = new OneForOneStrategy(e =>
             {
@@ -285,15 +286,15 @@ namespace Akka.Tests.Routing
 
             var router = Sys.ActorOf(FromConfig.Instance.WithSupervisorStrategy(escalator).Props(Props.Create<BlackHoleActor>()), "router1");
             router.Tell(new GetRoutees());
-            EventFilter.Exception<ActorKilledException>().ExpectOne(() =>
+            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async() =>
             {
-                ExpectMsg<Routees>().Members.First().Send(Kill.Instance, TestActor);
+                (await ExpectMsgAsync<Routees>()).Members.First().Send(Kill.Instance, TestActor);
             });
-            ExpectMsg<ActorKilledException>();
+            await ExpectMsgAsync<ActorKilledException>();
         }
 
         [Fact]
-        public void Routers_in_general_must_default_to_all_for_one_always_escalate_strategy()
+        public async Task Routers_in_general_must_default_to_all_for_one_always_escalate_strategy()
         {
             var restarter = new OneForOneStrategy(e =>
             {
@@ -305,34 +306,34 @@ namespace Akka.Tests.Routing
 
             supervisor.Tell(new RoundRobinPool(3).Props(Props.Create(() => new RestartActor(TestActor))));
 
-            var router = ExpectMsg<IActorRef>();
-            EventFilter.Exception<ArgumentException>("die").ExpectOne(() =>
+            var router = await ExpectMsgAsync<IActorRef>();
+            await EventFilter.Exception<ArgumentException>("die").ExpectOneAsync(() =>
             {
                 router.Tell("die");
             });
-            ExpectMsg<ArgumentException>().Message.Should().Be("die");
-            ExpectMsg("restarted");
-            ExpectMsg("restarted");
-            ExpectMsg("restarted");
+            (await ExpectMsgAsync<ArgumentException>()).Message.Should().Be("die");
+            await ExpectMsgAsync("restarted");
+            await ExpectMsgAsync("restarted");
+            await ExpectMsgAsync("restarted");
         }
 
         [Fact]
-        public void Routers_in_general_must_start_inline_for_context_actorOf()
+        public async Task Routers_in_general_must_start_inline_for_context_actorOf()
         {
             var actor = Sys.ActorOf<InlineRouterActor>();
             actor.Tell("start");
-            ExpectMsg("hello");
+            await ExpectMsgAsync("hello");
         }
 
         [Fact]
-        public void NoRouter_must_send_message_to_connection()
+        public async Task NoRouter_must_send_message_to_connection()
         {
             var routedActor = Sys.ActorOf(NoRouter.Instance.Props(Props.Create(() => new ForwardActor(TestActor))));
             routedActor.Tell("hello");
             routedActor.Tell("end");
 
-            ExpectMsg("hello");
-            ExpectMsg("end");
+            await ExpectMsgAsync("hello");
+            await ExpectMsgAsync("end");
         }
 
         [Fact]
@@ -366,16 +367,16 @@ namespace Akka.Tests.Routing
         // Custom tests
 
         [Fact]
-        public void Routers_must_be_able_to_send_their_routees()
+        public async Task Routers_must_be_able_to_send_their_routees()
         {
             var router = Sys.ActorOf(new BroadcastPool(5).Props(Props.Create<Echo>()));
             router.Tell("hello", TestActor);
-            ExpectMsg<IActorRef>();
-            ExpectMsg<IActorRef>();
-            ExpectMsg<IActorRef>();
-            ExpectMsg<IActorRef>();
-            ExpectMsg<IActorRef>();
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync<IActorRef>();
+            await ExpectMsgAsync<IActorRef>();
+            await ExpectMsgAsync<IActorRef>();
+            await ExpectMsgAsync<IActorRef>();
+            await ExpectMsgAsync<IActorRef>();
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]

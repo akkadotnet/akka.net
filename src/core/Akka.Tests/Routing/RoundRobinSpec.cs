@@ -141,9 +141,9 @@ namespace Akka.Tests.Routing
             }
         }
 
-        private int RouteeSize(IActorRef router)
+        private async Task<int> RouteeSize(IActorRef router)
         {
-            return router.Ask<Routees>(new GetRoutees()).Result.Members.Count();
+            return (await router.Ask<Routees>(new GetRoutees())).Members.Count();
         }
 
         [Fact]
@@ -221,22 +221,22 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Round_robin_pool_must_be_controlled_with_management_messages()
+        public async Task Round_robin_pool_must_be_controlled_with_management_messages()
         {
             IActorRef actor = Sys.ActorOf(new RoundRobinPool(3)
                 .Props(Props.Create<EmptyBehaviorActor>()), "round-robin-managed");
 
-            RouteeSize(actor).Should().Be(3);
+            (await RouteeSize(actor)).Should().Be(3);
             actor.Tell(new AdjustPoolSize(4));
-            RouteeSize(actor).Should().Be(7);
+            (await RouteeSize(actor)).Should().Be(7);
             actor.Tell(new AdjustPoolSize(-2));
-            RouteeSize(actor).Should().Be(5);
+            (await RouteeSize(actor)).Should().Be(5);
 
             var other = new ActorSelectionRoutee(Sys.ActorSelection("/user/other"));
             actor.Tell(new AddRoutee(other));
-            RouteeSize(actor).Should().Be(6);
+            (await RouteeSize(actor)).Should().Be(6);
             actor.Tell(new RemoveRoutee(other));
-            RouteeSize(actor).Should().Be(5);
+            (await RouteeSize(actor)).Should().Be(5);
         }
 
         [Fact]
@@ -303,7 +303,7 @@ namespace Akka.Tests.Routing
 
             Watch(actor);
             actor.Tell(new Broadcast("end"));
-            ExpectTerminated(actor);
+            await ExpectTerminatedAsync(actor);
 
             replies.Values.ForEach(c => c.Should().Be(iterationCount));
         }
