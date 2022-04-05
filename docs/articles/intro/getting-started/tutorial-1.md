@@ -45,7 +45,7 @@ _supervising_ every actor living as a child of them, i.e. under their path. We
 will explain supervision in more detail, all you need to know now is that every
 unhandled failure from actors bubbles up to their parent that, in turn, can
 decide how to handle this failure. These predefined actors are guardians in the
-sense that they are the final lines of defence, where all unhandled failures
+sense that they are the final lines of defense, where all unhandled failures
 from user, or system, actors end up.
 
 > Does the root guardian (the root path `/`) have a parent? As it turns out, it
