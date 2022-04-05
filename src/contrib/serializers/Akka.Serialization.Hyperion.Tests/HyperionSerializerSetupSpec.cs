@@ -130,9 +130,10 @@ akka.actor {
         [MemberData(nameof(DangerousObjectFactory))]
         public void Setup_disallow_unsafe_type_should_work(object dangerousObject, Type type)
         {
-            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, HyperionSerializerSettings.Default);
+            var deserializer = new HyperionSerializer((ExtendedActorSystem)Sys, HyperionSerializerSettings.Default);
+            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, deserializer.Settings.WithDisallowUnsafeType(false));
             var serialized = serializer.ToBinary(dangerousObject);
-            serializer.Invoking(s => s.FromBinary(serialized, type)).Should().Throw<SerializationException>();
+            deserializer.Invoking(s => s.FromBinary(serialized, type)).Should().Throw<SerializationException>();
         }
 
         [Theory]
@@ -146,12 +147,13 @@ akka.actor {
                     .Build());
             
             var settings = setup.ApplySettings(HyperionSerializerSettings.Default);
-            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, settings);
-            
-            ((TypeFilter)serializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
+            var deserializer = new HyperionSerializer((ExtendedActorSystem)Sys, settings);
+            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, deserializer.Settings.WithDisallowUnsafeType(false));
             var serialized = serializer.ToBinary(sampleObject);
+            
+            ((TypeFilter)deserializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
             object deserialized = null;
-            Action act = () => deserialized = serializer.FromBinary<object>(serialized);
+            Action act = () => deserialized = deserializer.FromBinary<object>(serialized);
             if (shouldSucceed)
             {
                 act.Should().NotThrow();

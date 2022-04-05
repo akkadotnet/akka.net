@@ -90,7 +90,7 @@ namespace Akka.Event
         ///
         /// Registers a new subscriber to be death-watched and automatically unsubscribed.
         /// </summary>
-        internal class Register
+        internal class Register : INoSerializationVerificationNeeded
         {
             public Register(IActorRef actor)
             {
@@ -108,7 +108,7 @@ namespace Akka.Event
         ///
         /// Unsubscribes an actor that is no longer subscribed and does not need to be death-watched any longer.
         /// </summary>
-        internal class UnregisterIfNoMoreSubscribedChannels
+        internal class UnregisterIfNoMoreSubscribedChannels : INoSerializationVerificationNeeded
         {
             public UnregisterIfNoMoreSubscribedChannels(IActorRef actor)
             {
