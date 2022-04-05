@@ -273,48 +273,48 @@ namespace Akka.Tests.Routing
         [Fact]
         public void RouterConfig_must_be_fail_with_exception_if_not_correct()
         {
-            Intercept<ConfigurationException>(() =>
+            Assert.Throws<ConfigurationException>(() =>
             {
                 Sys.ActorOf(FromConfig.Instance.Props());
             });
         }
 
         [Fact]
-        public void RouterConfig_must_not_get_confused_when_trying_to_wildcard_configure_children()
+        public async Task RouterConfig_must_not_get_confused_when_trying_to_wildcard_configure_children()
         {
             var router = Sys.ActorOf(FromConfig.Instance.Props(Props.Create<SendRefAtStartup>(TestActor)), "weird");
 
             var received = Enumerable.Range(1, 3).Select(_ => ExpectMsg<IActorRef>()).ToList();
             // TODO: wrong actor names
-            var expected = new List<string> { "a", "b", "c" }.Select(i => Sys.ActorSelection("/user/weird/$" + i).ResolveOne(RemainingOrDefault).Result).ToList();
+            var expected = new List<string> { "a", "b", "c" }.Select( i => Sys.ActorSelection("/user/weird/$" + i).ResolveOne(RemainingOrDefault).Result).ToList();
 
             received.Should().BeEquivalentTo(expected);
-            ExpectNoMsg(1.Seconds());
+            await ExpectNoMsgAsync(1.Seconds());
         }
 
         [Fact]
-        public void RouterConfig_must_support_custom_router()
+        public async Task RouterConfig_must_support_custom_router()
         {
             var myRouter = Sys.ActorOf(FromConfig.Instance.Props(), "myrouter");
             myRouter.Tell("foo");
-            ExpectMsg("bar");
+            await ExpectMsgAsync("bar");
         }
 
         [Fact(Skip = "SystemActors DSN has not implemented yet")]
-        public void RouterConfig_must_load_settings_from_config_for_local_child_router_of_system_actor()
+        public async Task RouterConfig_must_load_settings_from_config_for_local_child_router_of_system_actor()
         {
             var probe = CreateTestProbe();
             var parent = Sys.AsInstanceOf<ExtendedActorSystem>().SystemActorOf(Props.Create<Parent>(), "sys-parent");
             parent.Tell(new PropsName(Props.Create<EchoActor>(), "round"), probe.Ref);
 
-            var router = probe.ExpectMsg<IActorRef>();
+            var router = await probe.ExpectMsgAsync<IActorRef>();
 
             var replies = new List<ActorPath>();
             for (int i = 0; i < 10; i++)
             {
                 var msg = i.ToString();
                 router.Tell(msg, probe.Ref);
-                probe.ExpectMsg(msg);
+                await probe.ExpectMsgAsync(msg);
                 replies.Add(probe.LastSender.Path);
             }
 
