@@ -4,7 +4,7 @@ img.akka-logo{
 }
 </style>
 <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
-  <div class="container">
+  <div class="container-fluid">
     <div class="navbar-header">
       <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
         <span class="sr-only">Toggle navigation</span>
@@ -13,7 +13,7 @@ img.akka-logo{
         <span class="icon-bar"></span>
       </button>
       <a class="navbar-brand" href="{{_rel}}index.html">
-        <img id="logo" class="svg akka-logo" src="{{_rel}}Images/akkalogo.png" alt="{{_appName}}">
+        <img id="logo" class="svg akka-logo" src="{{_rel}}images/akkalogo.png" alt="{{_appName}}">
       </a>
     </div>
     <div class="collapse navbar-collapse" id="navbar">

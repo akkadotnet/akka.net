@@ -2399,7 +2399,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TCtxOut">Resulting context type</typeparam>
         /// <typeparam name="TMat">Materialized value type</typeparam>
         /// <typeparam name="TIn2">Type of passed flow elements</typeparam>
-        public static FlowWithContext<TCtxIn, TIn, TCtxOut, TOut, TMat> AsFlowWithContext<TCtxIn, TIn, TCtxOut, TOut, TMat, TIn2>(
+        public static FlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat> AsFlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat, TIn2>(
             this Flow<TIn2, TOut, TMat> flow,
             Func<TIn, TCtxIn, TIn2> collapseContext,
             Func<TOut, TCtxOut> extractContext)
