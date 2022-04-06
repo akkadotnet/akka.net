@@ -12,6 +12,7 @@ using Akka.Actor.Internal;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Tests.TestUtils;
+using Akka.Tests.Util;
 using Xunit;
 
 namespace Akka.Tests.Actor.Stash
@@ -89,7 +90,7 @@ namespace Akka.Tests.Actor.Stash
         }
 
         [Fact]
-        public void An_actor_Must_process_stashed_messages_after_restart()
+        public async Task An_actor_Must_process_stashed_messages_after_restart()
         {
             SupervisorStrategy strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), e => Directive.Restart);
             var boss = ActorOf(() => new Supervisor(strategy));
@@ -98,7 +99,7 @@ namespace Akka.Tests.Actor.Stash
             var slaveProps = Props.Create(() => new SlaveActor(restartLatch, hasMsgLatch, "stashme"));
 
             //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = boss.AskAndWait<IActorRef>(slaveProps, TestKitSettings.DefaultTimeout);
+            var slave = await boss.Ask<IActorRef>(slaveProps).WithTimeout(TestKitSettings.DefaultTimeout);
 
             //send a message that will be stashed
             slave.Tell("stashme");
@@ -121,7 +122,7 @@ namespace Akka.Tests.Actor.Stash
             var slaveProps = Props.Create(() => new ActorsThatClearsStashOnPreRestart(restartLatch));
 
             //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = boss.AskAndWait<IActorRef>(slaveProps, TestKitSettings.DefaultTimeout);
+            var slave = await boss.Ask<IActorRef>(slaveProps).WithTimeout(TestKitSettings.DefaultTimeout);;
 
             //send messages that will be stashed
             slave.Tell("stashme 1");
