@@ -30,5 +30,33 @@ namespace Akka.Tests.Util
                 }
             }
         }
+        
+        public static async Task<T> WithTimeout<T>(this Task<T> parentTask, TimeSpan timeout)
+        {
+            using (var cts = new CancellationTokenSource())
+            {
+                try
+                {
+                    var delayed = Task.Delay(timeout, cts.Token);
+                    var returnedTask = await Task.WhenAny(delayed, parentTask);
+
+                    if (returnedTask != parentTask)
+                        throw new TaskCanceledException($"Task timed out after {timeout.TotalSeconds} seconds");
+                    
+                    if(returnedTask == parentTask && returnedTask.Exception != null)
+                    {
+                        var flattened = returnedTask.Exception.Flatten();
+                        ExceptionDispatchInfo.Capture(flattened.InnerException).Throw();
+                    }
+                    
+                    return parentTask.Result;
+                }
+                finally
+                {
+                    cts.Cancel();
+                }
+            }
+        }
+        
     }
 }
