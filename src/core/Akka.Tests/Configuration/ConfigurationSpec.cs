@@ -10,6 +10,7 @@ using System.IO;
 using Akka.Configuration.Hocon;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -86,12 +87,12 @@ namespace Akka.Tests.Configuration
 
         // unit test for bug #4330
         [Fact]
-        public void Should_load_config_from_app_config_file()
+        public async Task Should_load_config_from_app_config_file()
         {
 #if !CORECLR
             var system = ActorSystem.Create(Guid.NewGuid().ToString());
             system.Settings.Config.GetBoolean("nonsense.entry").ShouldBeTrue();
-            system.Terminate();
+            await system.Terminate();
 #else
             // Skip this test for Linux targets
             Output.WriteLine("This test is skipped.");
