@@ -30,13 +30,13 @@ namespace Akka.Tests.Actor
         }
         
         [Fact(Skip = "This test is used with Performance Profiler to check memory leaks")]
-        public void Context_WatchWith_Should_not_have_memory_leak()
+        public async Task Context_WatchWith_Should_not_have_memory_leak()
         {
             using (var actorSystem = ActorSystem.Create("repro"))
             {
                 actorSystem.ActorOf(Props.Create<LoadHandler>());
 
-                Thread.Sleep(60.Seconds());
+                await Task.Delay(60.Seconds());
             }
         }
         
