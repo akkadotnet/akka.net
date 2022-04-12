@@ -2243,7 +2243,7 @@ namespace Akka.Cluster
                 {
                     // the reason for not shutting down immediately is to give the gossip a chance to spread
                     // the downing information to other downed nodes, so that they can shutdown themselves
-                    _cluster.LogInfo("Shutting down myself");
+                    _cluster.LogInfo("Node has been marked as DOWN. Shutting down myself");
                     // not crucial to send gossip, but may speedup removal since fallback to failure detection is not needed
                     // if other downed know that this node has seen the version
                     SendGossipRandom(MaxGossipsBeforeShuttingDownMyself);
