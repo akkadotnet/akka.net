@@ -199,7 +199,7 @@ namespace Akka.Actor.Internal
         public override void Abort()
         {
             Aborting = true;
-            Terminate();
+            FinalTerminate(); // Skip CoordinatedShutdown check and aggressively shutdown the ActorSystem
         }
 
         /// <summary>Starts this system</summary>
