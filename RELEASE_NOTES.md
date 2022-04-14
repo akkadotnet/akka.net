@@ -1,6 +1,35 @@
-#### 1.4.36 March 18 2022 ####
+#### 1.4.37 April 14 2022 ####
+Akka.NET v1.4.37 is a minor release that contains some minor bug fixes.
 
-**Placeholder for nightlies**
+* [Persistence.Query: Change AllEvents query failure log severity from Debug to Error](https://github.com/akkadotnet/akka.net/pull/5835)
+* [Coordination: Harden LeaseProvider instance Activator exception handling](https://github.com/akkadotnet/akka.net/pull/5838)
+* [Akka: Make ActorSystemImpl.Abort skip the CoordinatedShutdown check](https://github.com/akkadotnet/akka.net/pull/5839)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.37, click here](https://github.com/akkadotnet/akka.net/milestone/68?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 3       | 15   | 4    | Gregorius Soedharmo |
+| 1       | 2    | 2    | dependabot[bot]     |
+
+#### 1.4.36 April 4 2022 ####
+Akka.NET v1.4.36 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code.
+
+* [Akka: Bump Hyperion to 0.12.2](https://github.com/akkadotnet/akka.net/pull/5805)
+
+__Bug fixes__:
+* [Akka: Fix CoordinatedShutdown memory leak](https://github.com/akkadotnet/akka.net/pull/5816)
+* [Akka: Fix TcpConnection error handling and death pact de-registration](https://github.com/akkadotnet/akka.net/pull/5817)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.36, click here](https://github.com/akkadotnet/akka.net/milestone/67?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 274  | 33   | Gregorius Soedharmo |
+| 4       | 371  | 6    | Ebere Abanonu       |
+| 3       | 9    | 3    | Aaron Stannard      |
+| 1       | 34   | 38   | Ismael Hamed        |
+| 1       | 2    | 3    | Adrian Leonhard     |
 
 #### 1.4.35 March 18 2022 ####
 Akka.NET v1.4.35 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code.
