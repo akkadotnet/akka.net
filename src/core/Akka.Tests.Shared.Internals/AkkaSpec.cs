@@ -115,33 +115,138 @@ namespace Akka.TestKit
 
         public static Config AkkaSpecConfig { get { return _akkaSpecConfig; } }
 
-        protected T ExpectMsgPf<T>(TimeSpan? timeout, string hint, Func<object, T> function)
-            => ExpectMsgPf(timeout, hint, this, function);
+        protected T ExpectMsgOf<T>(
+            TimeSpan? timeout,
+            string hint,
+            Func<object, T> function,
+            CancellationToken cancellationToken = default)
+            => ExpectMsgOfAsync(timeout, hint, this, function, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+
+        protected async Task<T> ExpectMsgOfAsync<T>(
+            TimeSpan? timeout,
+            string hint,
+            Func<object, T> function,
+            CancellationToken cancellationToken = default)
+            => await ExpectMsgOfAsync(timeout, hint, this, function, cancellationToken)
+                .ConfigureAwait(false);
+
+        protected async Task<T> ExpectMsgOfAsync<T>(
+            TimeSpan? timeout,
+            string hint,
+            Func<object, Task<T>> function,
+            CancellationToken cancellationToken = default)
+            => await ExpectMsgOfAsync(timeout, hint, this, function, cancellationToken)
+                .ConfigureAwait(false);
         
-        protected T ExpectMsgPf<T>(TimeSpan? timeout, string hint, TestKitBase probe, Func<object, T> function)
+        protected T ExpectMsgOf<T>(
+            TimeSpan? timeout,
+            string hint,
+            TestKitBase probe,
+            Func<object, T> function,
+            CancellationToken cancellationToken = default)
+            => ExpectMsgOfAsync(timeout, hint, probe, function, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+        
+        protected async Task<T> ExpectMsgOfAsync<T>(
+            TimeSpan? timeout,
+            string hint,
+            TestKitBase probe,
+            Func<object, T> function,
+            CancellationToken cancellationToken = default)
+            => await ExpectMsgOfAsync(timeout, hint, probe, o => Task.FromResult(function(o)), cancellationToken)
+                .ConfigureAwait(false);
+        
+        protected async Task<T> ExpectMsgOfAsync<T>(
+            TimeSpan? timeout,
+            string hint,
+            TestKitBase probe,
+            Func<object, Task<T>> function,
+            CancellationToken cancellationToken = default)
         {
-            MessageEnvelope envelope;
-            var success = probe.TryReceiveOne(out envelope, timeout);
+            var (success, envelope) = await probe.TryReceiveOneAsync(timeout, cancellationToken)
+                .ConfigureAwait(false);
 
             if(!success)
-                Assertions.Fail(string.Format("expected message of type {0} but timed out after {1}", typeof(T), GetTimeoutOrDefault(timeout)));
+                Assertions.Fail($"expected message of type {typeof(T)} but timed out after {GetTimeoutOrDefault(timeout)}");
+            
             var message = envelope.Message;
-            Assertions.AssertTrue(message != null, string.Format("expected {0} but got null message", hint));
+            Assertions.AssertTrue(message != null, $"expected {hint} but got null message");
             //TODO: Check next line. 
-            Assertions.AssertTrue(function.GetMethodInfo().GetParameters().Any(x => x.ParameterType.IsInstanceOfType(message)), string.Format("expected {0} but got {1} instead", hint, message));
-            return function.Invoke(message);
+            Assertions.AssertTrue(
+                function.GetMethodInfo().GetParameters().Any(x => x.ParameterType.IsInstanceOfType(message)),
+                $"expected {hint} but got {message} instead");
+            
+            return await function(message).ConfigureAwait(false);
         }
 
-        protected T ExpectMsgPf<T>(string hint, Func<object, T> pf)
-            => ExpectMsgPf(hint, this, pf);
+        protected T ExpectMsgOf<T>(
+            string hint,
+            TestKitBase probe,
+            Func<object, T> pf,
+            CancellationToken cancellationToken = default)
+            => ExpectMsgOfAsync(hint, probe, pf, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
 
-        protected T ExpectMsgPf<T>(string hint, TestKitBase probe, Func<object, T> pf)
+        protected async Task<T> ExpectMsgOfAsync<T>(
+            string hint,
+            TestKitBase probe,
+            Func<object, T> pf,
+            CancellationToken cancellationToken = default)
+            => await ExpectMsgOfAsync(hint, probe, o => Task.FromResult(pf(o)), cancellationToken)
+                .ConfigureAwait(false);
+        
+        protected async Task<T> ExpectMsgOfAsync<T>(
+            string hint,
+            TestKitBase probe,
+            Func<object, Task<T>> pf,
+            CancellationToken cancellationToken = default)
         {
-            var t = probe.ExpectMsg<T>();
+            var t = await probe.ExpectMsgAsync<T>(cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+            
             //TODO: Check if this really is needed:
-            Assertions.AssertTrue(pf.GetMethodInfo().GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
-            return pf.Invoke(t);
+            Assertions.AssertTrue(pf.GetMethodInfo().GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)),
+                $"expected {hint} but got {t} instead");
+            return await pf(t);
         }
+
+        protected T ExpectMsgOf<T>(
+            string hint,
+            Func<object, T> pf,
+            CancellationToken cancellationToken = default)
+            => ExpectMsgOfAsync(hint, this, pf, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+        
+        protected async Task<T> ExpectMsgOfAsync<T>(
+            string hint,
+            Func<object, T> pf,
+            CancellationToken cancellationToken = default)
+            => await ExpectMsgOfAsync(hint, this, pf, cancellationToken)
+                .ConfigureAwait(false);
+        
+        protected async Task<T> ExpectMsgOfAsync<T>(
+            string hint,
+            Func<object, Task<T>> pf,
+            CancellationToken cancellationToken = default)
+            => await ExpectMsgOfAsync(hint, this, pf, cancellationToken)
+                .ConfigureAwait(false);
+        
+        [Obsolete("Method name typo, please use ExpectMsgOf instead")]
+        protected T ExpectMsgPf<T>(TimeSpan? timeout, string hint, Func<object, T> function)
+            => ExpectMsgOf(timeout, hint, this, function);
+        
+        [Obsolete("Method name typo, please use ExpectMsgOf instead")]
+        protected T ExpectMsgPf<T>(TimeSpan? timeout, string hint, TestKitBase probe, Func<object, T> function)
+            => ExpectMsgOf(timeout, hint, probe, function);
+
+        [Obsolete("Method name typo, please use ExpectMsgOf instead")]
+        protected T ExpectMsgPf<T>(string hint, Func<object, T> pf)
+            => ExpectMsgOf(hint, this, pf);
+
+        [Obsolete("Method name typo, please use ExpectMsgOf instead")]
+        protected T ExpectMsgPf<T>(string hint, TestKitBase probe, Func<object, T> pf)
+            => ExpectMsgOf(hint, probe, pf);
 
         /// <summary>
         /// Intercept and return an exception that's expected to be thrown by the passed function value. The thrown

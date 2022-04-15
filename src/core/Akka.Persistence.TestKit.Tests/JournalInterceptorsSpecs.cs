@@ -46,7 +46,8 @@ namespace Akka.Persistence.TestKit.Tests
         [Fact]
         public async Task delay_must_call_next_interceptor_after_specified_delay()
         {
-            var duration = TimeSpan.FromMilliseconds(100);
+            var duration = TimeSpan.FromMilliseconds(200);
+            var epsilon = TimeSpan.FromMilliseconds(50);
             var probe = new InterceptorProbe();
             var delay = new JournalInterceptors.Delay(duration, probe);
 
@@ -54,7 +55,7 @@ namespace Akka.Persistence.TestKit.Tests
             await delay.InterceptAsync(null);
 
             probe.WasCalled.Should().BeTrue();
-            probe.CalledAt.Should().BeOnOrAfter(startedAt + duration);
+            probe.CalledAt.Should().BeOnOrAfter(startedAt + duration - epsilon);
         }
 
         [Fact]

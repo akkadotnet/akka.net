@@ -463,14 +463,16 @@ namespace Akka.Tests.Dispatch
             {
                 ReceiveAsync<string>(async msg =>
                 {
-                    Task.Run(() =>
-                    {
-                        Thread.Sleep(10);
-                        return msg;
-                    }).PipeTo(Sender, Self); //LogicalContext is lost?!?
+                    Delayed(msg).PipeTo(Sender, Self);
 
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                 });
+            }
+
+            private async Task<string> Delayed(string msg)
+            {
+                await Task.Delay(10);
+                return msg;
             }
         }
 
@@ -490,6 +492,13 @@ namespace Akka.Tests.Dispatch
 
                     Thread.Sleep(3000);
                 });
+            }
+            
+            private async Task<string> Delayed(string msg)
+            {
+                // Sleep to make sure the task is not completed when ContinueWith is called
+                await Task.Delay(100);
+                return msg;
             }
         }
 
