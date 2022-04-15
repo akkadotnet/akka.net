@@ -1,9 +1,56 @@
-#### 1.4.35 March 7 2022 ####
+#### 1.4.37 April 14 2022 ####
+Akka.NET v1.4.37 is a minor release that contains some minor bug fixes.
 
-*Placeholder for nightlies*
+* [Persistence.Query: Change AllEvents query failure log severity from Debug to Error](https://github.com/akkadotnet/akka.net/pull/5835)
+* [Coordination: Harden LeaseProvider instance Activator exception handling](https://github.com/akkadotnet/akka.net/pull/5838)
+* [Akka: Make ActorSystemImpl.Abort skip the CoordinatedShutdown check](https://github.com/akkadotnet/akka.net/pull/5839)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.37, click here](https://github.com/akkadotnet/akka.net/milestone/68?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 3       | 15   | 4    | Gregorius Soedharmo |
+| 1       | 2    | 2    | dependabot[bot]     |
+
+#### 1.4.36 April 4 2022 ####
+Akka.NET v1.4.36 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code.
+
+* [Akka: Bump Hyperion to 0.12.2](https://github.com/akkadotnet/akka.net/pull/5805)
+
+__Bug fixes__:
+* [Akka: Fix CoordinatedShutdown memory leak](https://github.com/akkadotnet/akka.net/pull/5816)
+* [Akka: Fix TcpConnection error handling and death pact de-registration](https://github.com/akkadotnet/akka.net/pull/5817)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.36, click here](https://github.com/akkadotnet/akka.net/milestone/67?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 274  | 33   | Gregorius Soedharmo |
+| 4       | 371  | 6    | Ebere Abanonu       |
+| 3       | 9    | 3    | Aaron Stannard      |
+| 1       | 34   | 38   | Ismael Hamed        |
+| 1       | 2    | 3    | Adrian Leonhard     |
+
+#### 1.4.35 March 18 2022 ####
+Akka.NET v1.4.35 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code.
+
+__Bug fixes__:
+* [Akka: Fixed IActorRef leak inside EventStream](https://github.com/akkadotnet/akka.net/pull/5720)
+* [Akka: Fixed ActorSystemSetup.And forgetting registered types](https://github.com/akkadotnet/akka.net/issues/5728)
+* [Akka.Persistence.Query.Sql: Fixed Query PersistenceIds query bug](https://github.com/akkadotnet/akka.net/pull/5715)
+* [Akka.Streams: Add MapMaterializedValue for SourceWithContext and FlowWithContext](https://github.com/akkadotnet/akka.net/pull/5711)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.35, click here](https://github.com/akkadotnet/akka.net/milestone/66?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 6       | 2178 | 174  | Aaron Stannard      |
+| 2       | 43   | 33   | Gregorius Soedharmo |
+| 1       | 71   | 19   | Ismael Hamed        |
+| 1       | 1    | 1    | dependabot[bot]     |
 
 #### 1.4.34 March 7 2022 ####
-Akka.NET v1.4.33 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code. 
+Akka.NET v1.4.34 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code. 
 
 __Bug fixes__:
 * [Akka: Added support to pass a state object into CircuitBreaker to reduce allocations](https://github.com/akkadotnet/akka.net/pull/5650)
@@ -13,7 +60,7 @@ __Bug fixes__:
 __Improvements__:
 * [Akka: PipeTo can be configured to retain async threading context](https://github.com/akkadotnet/akka.net/pull/5684)
 
-If you want to see the [full set of changes made in Akka.NET v1.4.33, click here](https://github.com/akkadotnet/akka.net/milestone/65?closed=1).
+If you want to see the [full set of changes made in Akka.NET v1.4.34, click here](https://github.com/akkadotnet/akka.net/milestone/65?closed=1).
 
 | COMMITS | LOC+   | LOC-  | AUTHOR              |
 |---------|--------|-------|---------------------|
