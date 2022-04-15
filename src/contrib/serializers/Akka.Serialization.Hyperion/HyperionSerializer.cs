@@ -402,7 +402,74 @@ namespace Akka.Serialization
             TypeFilter = typeFilter;
         }
 
-        public HyperionSerializerSettings WithDisallowUnsafeType(bool disallow)
-            => new HyperionSerializerSettings(PreserveObjectReferences, VersionTolerance, KnownTypesProvider, PackageNameOverrides, Surrogates, disallow, TypeFilter);
+        public HyperionSerializerSettings WithPreserveObjectReference(bool preserveObjectReferences)
+            => new HyperionSerializerSettings(
+                preserveObjectReferences: preserveObjectReferences,
+                versionTolerance: VersionTolerance,
+                knownTypesProvider: KnownTypesProvider,
+                packageNameOverrides: PackageNameOverrides,
+                surrogates: Surrogates,
+                disallowUnsafeType: DisallowUnsafeType,
+                typeFilter: TypeFilter);
+        
+        public HyperionSerializerSettings WithVersionTolerance(bool versionTolerance)
+            => new HyperionSerializerSettings(
+                preserveObjectReferences: PreserveObjectReferences,
+                versionTolerance: versionTolerance,
+                knownTypesProvider: KnownTypesProvider,
+                packageNameOverrides: PackageNameOverrides,
+                surrogates: Surrogates,
+                disallowUnsafeType: DisallowUnsafeType,
+                typeFilter: TypeFilter);
+        
+        public HyperionSerializerSettings WithKnownTypesProvider(Type knownTypesProvider)
+            => new HyperionSerializerSettings(
+                preserveObjectReferences: PreserveObjectReferences,
+                versionTolerance: VersionTolerance,
+                knownTypesProvider: knownTypesProvider,
+                packageNameOverrides: PackageNameOverrides,
+                surrogates: Surrogates,
+                disallowUnsafeType: DisallowUnsafeType,
+                typeFilter: TypeFilter);
+        
+        public HyperionSerializerSettings WithPackageNameOverrides(IEnumerable<Func<string, string>> packageNameOverrides)
+            => new HyperionSerializerSettings(
+                preserveObjectReferences: PreserveObjectReferences,
+                versionTolerance: VersionTolerance,
+                knownTypesProvider: KnownTypesProvider,
+                packageNameOverrides: packageNameOverrides,
+                surrogates: Surrogates,
+                disallowUnsafeType: DisallowUnsafeType,
+                typeFilter: TypeFilter);
+        
+        public HyperionSerializerSettings WithSurrogates(IEnumerable<Surrogate> surrogates)
+            => new HyperionSerializerSettings(
+                preserveObjectReferences: PreserveObjectReferences,
+                versionTolerance: VersionTolerance,
+                knownTypesProvider: KnownTypesProvider,
+                packageNameOverrides: PackageNameOverrides,
+                surrogates: surrogates,
+                disallowUnsafeType: DisallowUnsafeType,
+                typeFilter: TypeFilter);
+        
+        public HyperionSerializerSettings WithDisallowUnsafeType(bool disallowUnsafeType)
+            => new HyperionSerializerSettings(
+                preserveObjectReferences: PreserveObjectReferences,
+                versionTolerance: VersionTolerance,
+                knownTypesProvider: KnownTypesProvider,
+                packageNameOverrides: PackageNameOverrides,
+                surrogates: Surrogates,
+                disallowUnsafeType: disallowUnsafeType,
+                typeFilter: TypeFilter);
+        
+        public HyperionSerializerSettings WithTypeFilter(ITypeFilter typeFilter)
+            => new HyperionSerializerSettings(
+                preserveObjectReferences: PreserveObjectReferences,
+                versionTolerance: VersionTolerance,
+                knownTypesProvider: KnownTypesProvider,
+                packageNameOverrides: PackageNameOverrides,
+                surrogates: Surrogates,
+                disallowUnsafeType: DisallowUnsafeType,
+                typeFilter: typeFilter);
     }
 }

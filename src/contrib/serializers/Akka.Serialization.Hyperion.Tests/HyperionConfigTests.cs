@@ -95,12 +95,14 @@ namespace Akka.Serialization.Hyperion.Tests
             ");
             using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
             {
-                var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+                var deserializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+                var serializer = new HyperionSerializer(null, deserializer.Settings.WithDisallowUnsafeType(false));
             
-                ((TypeFilter)serializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
+                ((TypeFilter)deserializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
+                
                 var serialized = serializer.ToBinary(sampleObject);
                 object deserialized = null;
-                Action act = () => deserialized = serializer.FromBinary<object>(serialized);
+                Action act = () => deserialized = deserializer.FromBinary<object>(serialized);
                 if (shouldSucceed)
                 {
                     act.Should().NotThrow();

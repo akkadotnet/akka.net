@@ -159,12 +159,13 @@ akka.actor {
                     .Build());
             
             var settings = setup.ApplySettings(HyperionSerializerSettings.Default);
-            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, settings);
-            
-            ((TypeFilter)serializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
+            var deserializer = new HyperionSerializer((ExtendedActorSystem)Sys, settings);
+            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, deserializer.Settings.WithDisallowUnsafeType(false));
             var serialized = serializer.ToBinary(sampleObject);
+            
+            ((TypeFilter)deserializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
             object deserialized = null;
-            Action act = () => deserialized = serializer.FromBinary<object>(serialized);
+            Action act = () => deserialized = deserializer.FromBinary<object>(serialized);
             if (shouldSucceed)
             {
                 act.Should().NotThrow();
