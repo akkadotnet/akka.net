@@ -5,15 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Persistence;
 using Akka.Remote;
-using Akka.Streams.Dsl;
 using Xunit;
 using Akka.Persistence.Query;
 using static PublicApiGenerator.ApiGenerator;
@@ -21,6 +18,7 @@ using Akka.Cluster.Sharding;
 using Akka.Cluster.Metrics;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.Sql.Common.Journal;
+using Akka.Streams;
 using VerifyTests;
 using VerifyXunit;
 
@@ -31,116 +29,97 @@ namespace Akka.API.Tests
     {
         static CoreAPISpec()
         {
+            VerifierSettings.ScrubLinesContaining("[assembly: ReleaseDateAttribute(");
             VerifyDiffPlex.Initialize();
+        }
+
+        static Task VerifyAssembly<T>()
+        {
+            return Verifier.Verify(GeneratePublicApi(typeof(T).Assembly));
         }
 
         [Fact]
         public Task ApproveCore()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(ActorSystem).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<ActorSystem>();
         }
 
         [Fact]
         public Task ApproveRemote()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(RemoteSettings).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<RemoteSettings>();
         }
 
         [Fact]
         public Task ApprovePersistence()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(Persistent).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<Persistent>();
         }
 
         [Fact]
         public Task ApprovePersistenceQuery()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(PersistenceQuery).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<PersistenceQuery>();
         }
 
         [Fact]
         public Task ApprovePersistenceSqlCommon()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(SqlJournal).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<SqlJournal>();
         }
 
         [Fact]
         public Task ApprovePersistenceSqlCommonQuery()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(SqlReadJournal).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<SqlReadJournal>();
         }
 
         [Fact]
         public Task ApproveCluster()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(ClusterSettings).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<ClusterSettings>();
         }
 
         [Fact]
         public Task ApproveClusterTools()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(ClusterSingletonManager).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<ClusterSingletonManager>();
         }
 
         [Fact]
         public Task ApproveStreams()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(Source).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<Shape>();
         }
 
         [Fact]
         public Task ApproveClusterSharding()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(ClusterSharding).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<ClusterSharding>();
         }
 
         [Fact]
         public Task ApproveClusterMetrics()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(ClusterMetrics).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<ClusterMetrics>();
         }
 
         [Fact]
         public Task ApproveDistributedData()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(DistributedData.DistributedData).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<DistributedData.DistributedData>();
         }
 
         [Fact]
         public Task ApproveCoordination()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(Coordination.Lease).Assembly));
-            return Verifier.Verify(publicApi);
+            return VerifyAssembly<Coordination.Lease>();
         }
 
         [Fact]
         public Task ApproveDiscovery()
         {
-            var publicApi = Filter(GeneratePublicApi(typeof(Discovery.Lookup).Assembly));
-            return Verifier.Verify(publicApi);
-        }
-
-        static string Filter(string text)
-        {
-            return string.Join(Environment.NewLine, text.Split(new[]
-            {
-                Environment.NewLine
-            }, StringSplitOptions.RemoveEmptyEntries)
-                .Where(l => !l.StartsWith("[assembly: ReleaseDateAttribute("))
-                .Where(l => !string.IsNullOrWhiteSpace(l))
-                );
+            return VerifyAssembly<Discovery.Lookup>();
         }
     }
 }
