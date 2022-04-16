@@ -3,7 +3,6 @@
   <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.API.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     <UserSecretsId>93253ee8-0410-4483-9809-9bb2d32860fa</UserSecretsId>
   </PropertyGroup>
@@ -34,9 +33,5 @@
     <PackageReference Include="Verify.Xunit" Version="16.5.4" />
     <PackageReference Include="Verify.DiffPlex" Version="1.2.0" />
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
 
 </Project>
