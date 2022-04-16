@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
@@ -36,7 +35,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApproveCore()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(ActorSystem).Assembly));
@@ -44,7 +42,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApproveRemote()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(RemoteSettings).Assembly));
@@ -52,7 +49,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApprovePersistence()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(Persistent).Assembly));
@@ -60,7 +56,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApprovePersistenceQuery()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(PersistenceQuery).Assembly));
@@ -68,7 +63,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApprovePersistenceSqlCommon()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(SqlJournal).Assembly));
@@ -76,7 +70,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApprovePersistenceSqlCommonQuery()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(SqlReadJournal).Assembly));
@@ -84,7 +77,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApproveCluster()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(ClusterSettings).Assembly));
@@ -92,7 +84,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApproveClusterTools()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(ClusterSingletonManager).Assembly));
@@ -100,7 +91,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApproveStreams()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(Source).Assembly));
@@ -108,7 +98,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApproveClusterSharding()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(ClusterSharding).Assembly));
@@ -116,7 +105,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApproveClusterMetrics()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(ClusterMetrics).Assembly));
@@ -124,7 +112,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApproveDistributedData()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(DistributedData.DistributedData).Assembly));
@@ -132,7 +119,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApproveCoordination()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(Coordination.Lease).Assembly));
@@ -140,7 +126,6 @@ namespace Akka.API.Tests
         }
 
         [Fact]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Task ApproveDiscovery()
         {
             var publicApi = Filter(GeneratePublicApi(typeof(Discovery.Lookup).Assembly));
