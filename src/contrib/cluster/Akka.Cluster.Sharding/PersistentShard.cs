@@ -125,7 +125,7 @@ namespace Akka.Cluster.Sharding
                     DeleteSnapshots(new SnapshotSelectionCriteria(deleteTo, DateTime.MaxValue, deleteFrom));
                     break;
                 case DeleteMessagesFailure m:
-                    Log.Warning("PersistentShard messages to [{0}] deletion failure: [{1}]", m.ToSequenceNr, m.Cause.Message);
+                    Log.Warning(m.Cause, "PersistentShard messages to [{0}] deletion failure: [{1}]", m.ToSequenceNr, m.Cause.Message);
                     break;
                 case DeleteSnapshotsSuccess m:
                     Log.Debug("PersistentShard snapshots matching [{0}] deleted successfully", m.Criteria);
