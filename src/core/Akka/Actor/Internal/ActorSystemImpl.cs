@@ -199,7 +199,7 @@ namespace Akka.Actor.Internal
         public override void Abort()
         {
             Aborting = true;
-            Terminate();
+            FinalTerminate(); // Skip CoordinatedShutdown check and aggressively shutdown the ActorSystem
         }
 
         /// <summary>Starts this system</summary>
@@ -525,20 +525,19 @@ namespace Akka.Actor.Internal
         {
             if(Settings.CoordinatedShutdownRunByActorSystemTerminate)
             {
-                CoordinatedShutdown.Get(this).Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
-            } else
-            {
-                FinalTerminate();
+                return CoordinatedShutdown.Get(this)
+                    .Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
             }
-            return WhenTerminated;
+            return FinalTerminate();
         }
 
-        internal override void FinalTerminate()
+        internal override Task FinalTerminate()
         {
             Log.Debug("System shutdown initiated");
             if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null)
                 Stop(_logDeadLetterListener);
             _provider.Guardian.Stop();
+            return WhenTerminated;
         }
 
         /// <summary>

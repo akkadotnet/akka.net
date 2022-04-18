@@ -11,11 +11,12 @@
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.4.1</XunitVersion>
+    <XunitRunnerVersion>2.4.3</XunitRunnerVersion>
     <TestSdkVersion>17.0.0</TestSdkVersion>
-    <HyperionVersion>0.12.0</HyperionVersion>
+    <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[12.0.3,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.17.3</ProtobufVersion>
+    <ProtobufVersion>3.19.4</ProtobufVersion>
     <BenchmarkDotNetVersion>0.13.1</BenchmarkDotNetVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetTestVersion>net6.0</NetTestVersion>
@@ -23,7 +24,7 @@
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-    <FsCheckVersion>2.16.3</FsCheckVersion>
+    <FsCheckVersion>2.16.4</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>4.7.0</ConfigurationManagerVersion>
     <MultiNodeAdapterVersion>1.1.0</MultiNodeAdapterVersion>

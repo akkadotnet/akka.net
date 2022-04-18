@@ -1,0 +1,36 @@
+{{!Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE file in the project root for full license information.}}
+
+<footer>
+  <div class="grad-bottom"></div>
+  <div class="footer">
+    <div class="container">
+      <span class="pull-right">
+        <a href="#top">{{__global.backToTop}}</a>
+      </span>
+      {{{_appFooter}}}
+      {{^_appFooter}}
+        <div class='col-md-3 foot-link'>
+          <strong>Contribute</strong>
+          <ul>
+            <li><a href='https://gitter.im/akkadotnet/akka.net'>Project Chat</a></li>
+            <li><a href='https://github.com/akkadotnet/akka.net/discussions'>Discussion Forum</a></li>
+            <li><a href='https://github.com/akkadotnet/akka.net'>Source Code</a></li>
+          </ul>
+          </div>
+          <div class='col-md-3 foot-link'><strong>Support</strong>
+            <ul>
+              <li><a href='https://petabridge.com/services/support/'>Akka.NET Support Plans</a></li>
+              <li><a href='https://phobos.petabridge.com/'>Akka.NET Observability Tools</a></li>
+              <li><a href='https://petabridge.com/services/consulting/'>Akka.NET Training &amp; Consulting</a></li>
+            </ul>
+          </div>
+          <div class='col-md-3 foot-link'><strong>Maintained By</strong>
+            <ul>
+              <li><a href='https://petabridge.com'>Petabridge - The Akka.NET Company</a></li>
+              <li><a href="https://petabridge.com/bootcamp">Learn Akka.NET</a></li>
+            </ul>
+          </div>
+      {{/_appFooter}}
+    </div>
+  </div>
+</footer>

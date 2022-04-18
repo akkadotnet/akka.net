@@ -106,7 +106,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     return true;
                 case SelectCurrentPersistenceIds request:
                     SelectAllPersistenceIdsAsync(request.Offset)
-                        .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result.Ids, request.Offset));
+                        .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result.Ids, result.LastOrdering));
                     return true;
                 case SubscribeTag subscribe:
                     AddTagSubscriber(Sender, subscribe.Tag);

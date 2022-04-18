@@ -1387,7 +1387,9 @@ namespace Akka.Actor
     public class static PipeToSupport
     {
         public static System.Threading.Tasks.Task PipeTo<T>(this System.Threading.Tasks.Task<T> taskToPipe, Akka.Actor.ICanTell recipient, Akka.Actor.IActorRef sender = null, System.Func<T, object> success = null, System.Func<System.Exception, object> failure = null) { }
+        public static System.Threading.Tasks.Task PipeTo<T>(this System.Threading.Tasks.Task<T> taskToPipe, Akka.Actor.ICanTell recipient, bool useConfigureAwait, Akka.Actor.IActorRef sender = null, System.Func<T, object> success = null, System.Func<System.Exception, object> failure = null) { }
         public static System.Threading.Tasks.Task PipeTo(this System.Threading.Tasks.Task taskToPipe, Akka.Actor.ICanTell recipient, Akka.Actor.IActorRef sender = null, System.Func<object> success = null, System.Func<System.Exception, object> failure = null) { }
+        public static System.Threading.Tasks.Task PipeTo(this System.Threading.Tasks.Task taskToPipe, Akka.Actor.ICanTell recipient, bool useConfigureAwait, Akka.Actor.IActorRef sender = null, System.Func<object> success = null, System.Func<System.Exception, object> failure = null) { }
     }
     public sealed class PoisonPill : Akka.Actor.IAutoReceivedMessage, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression
     {
@@ -3042,6 +3044,7 @@ namespace Akka.Event
     public class EventStream : Akka.Event.LoggingBus
     {
         public EventStream(bool debug) { }
+        [System.ObsoleteAttribute("Should be removed in 1.5")]
         public bool InitUnsubscriber(Akka.Actor.IActorRef unsubscriber, Akka.Actor.ActorSystem system) { }
         public void StartUnsubscriber(Akka.Actor.Internal.ActorSystemImpl system) { }
         public override bool Subscribe(Akka.Actor.IActorRef subscriber, System.Type channel) { }
@@ -4043,7 +4046,9 @@ namespace Akka.Pattern
         public Akka.Pattern.CircuitBreaker OnOpen(System.Action callback) { }
         public void Succeed() { }
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.Tasks.Task<T>> body) { }
+        public System.Threading.Tasks.Task<T> WithCircuitBreaker<T, TState>(TState state, System.Func<TState, System.Threading.Tasks.Task<T>> body) { }
         public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.Tasks.Task> body) { }
+        public System.Threading.Tasks.Task WithCircuitBreaker<TState>(TState state, System.Func<TState, System.Threading.Tasks.Task> body) { }
         public Akka.Pattern.CircuitBreaker WithExponentialBackoff(System.TimeSpan maxResetTimeout) { }
         public Akka.Pattern.CircuitBreaker WithRandomFactor(double randomFactor) { }
         public void WithSyncCircuitBreaker(System.Action body) { }

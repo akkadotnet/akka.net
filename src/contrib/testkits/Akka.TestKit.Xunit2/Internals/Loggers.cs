@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Util;
 using Xunit.Abstractions;
 
 namespace Akka.TestKit.Xunit2.Internals
@@ -49,11 +50,17 @@ namespace Akka.TestKit.Xunit2.Internals
                 {
                     var message =
                         $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Args)}]";
-                    if(e.Cause != null)
+                    if (e.Cause != null)
                         throw new AggregateException(message, ex, e.Cause);
                     throw new FormatException(message, ex);
                 }
+
                 throw;
+            }
+            catch (InvalidOperationException ie)
+            {
+                StandardOutWriter.WriteLine($"Received InvalidOperationException: {ie} - probably because the test had completed executing.");
+                Context.Stop(Self); // shut ourselves down, can't do our job any longer
             }
         }
     }

@@ -1797,11 +1797,10 @@ namespace Akka.Cluster
         public void ReceiveGossipStatus(GossipStatus status)
         {
             var from = status.From;
-            if (!LatestGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, from))
+            if(!LatestGossip.HasMember(from))
+                _cluster.LogInfo("Ignoring received gossip status from unknown [{0}]", from);
+            else if (!LatestGossip.IsReachable(SelfUniqueAddress, from))
                 _cluster.LogInfo("Ignoring received gossip status from unreachable [{0}]", from);
-            else if (LatestGossip.Members.All(m => !m.UniqueAddress.Equals(from)))
-                _cluster.LogInfo("Cluster Node [{0}] - Ignoring received gossip status from unknown [{1}]",
-                    _cluster.SelfAddress, from);
             else
             {
                 var comparison = status.Version.CompareTo(LatestGossip.Version);
@@ -1870,14 +1869,14 @@ namespace Akka.Cluster
                     from.Address, envelope.To);
                 return ReceiveGossipType.Ignored;
             }
-            if (!localGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, from))
+            if (!localGossip.HasMember(from))
             {
-                _cluster.LogInfo("Ignoring received gossip from unreachable [{0}]", from);
+                _cluster.LogInfo("Ignoring received gossip from unknown [{0}]", from);
                 return ReceiveGossipType.Ignored;
             }
-            if (localGossip.Members.All(m => !m.UniqueAddress.Equals(from)))
+            if (!localGossip.IsReachable(SelfUniqueAddress, from))
             {
-                _cluster.LogInfo("Cluster Node [{0}] - Ignoring received gossip from unknown [{1}]", _cluster.SelfAddress, from);
+                _cluster.LogInfo("Ignoring received gossip from unreachable [{0}]", from);
                 return ReceiveGossipType.Ignored;
             }
             if (remoteGossip.Members.All(m => !m.UniqueAddress.Equals(SelfUniqueAddress)))
@@ -2244,7 +2243,7 @@ namespace Akka.Cluster
                 {
                     // the reason for not shutting down immediately is to give the gossip a chance to spread
                     // the downing information to other downed nodes, so that they can shutdown themselves
-                    _cluster.LogInfo("Shutting down myself");
+                    _cluster.LogInfo("Node has been marked as DOWN. Shutting down myself");
                     // not crucial to send gossip, but may speedup removal since fallback to failure detection is not needed
                     // if other downed know that this node has seen the version
                     SendGossipRandom(MaxGossipsBeforeShuttingDownMyself);

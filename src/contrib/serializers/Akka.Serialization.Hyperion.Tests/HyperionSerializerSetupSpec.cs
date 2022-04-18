@@ -35,8 +35,12 @@ akka.actor {
 }
 ");
 
+        private readonly ITestOutputHelper _output;
+
         public HyperionSerializerSetupSpec(ITestOutputHelper output) : base (Config, output)
-        { }
+        {
+            _output = output;
+        }
 
         [Fact]
         public void Setup_should_be_converted_to_settings_correctly()
@@ -128,13 +132,22 @@ akka.actor {
 
         [Theory]
         [MemberData(nameof(DangerousObjectFactory))]
-        public void Setup_disallow_unsafe_type_should_work(object dangerousObject, Type type)
+        public void Setup_disallow_unsafe_type_should_work_by_default(byte[] dangerousObject, Type type)
         {
-            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, HyperionSerializerSettings.Default);
-            var serialized = serializer.ToBinary(dangerousObject);
-            serializer.Invoking(s => s.FromBinary(serialized, type)).Should().Throw<SerializationException>();
+            _output.WriteLine($"Dangerous type: [{type}]");
+            var deserializer = new HyperionSerializer((ExtendedActorSystem)Sys, HyperionSerializerSettings.Default);
+            deserializer.Invoking(s => s.FromBinary(dangerousObject, type)).Should().Throw<SerializationException>();
         }
 
+        [Theory]
+        [MemberData(nameof(DangerousObjectFactory))]
+        public void Setup_should_deserialize_unsafe_type_if_allowed(byte[] dangerousObject, Type type)
+        {
+            _output.WriteLine($"Dangerous type: [{type}]");
+            var deserializer = new HyperionSerializer((ExtendedActorSystem)Sys, HyperionSerializerSettings.Default.WithDisallowUnsafeType(false));
+            deserializer.FromBinary(dangerousObject, type); // should not throw
+        }
+        
         [Theory]
         [MemberData(nameof(TypeFilterObjectFactory))]
         public void Setup_TypeFilter_should_filter_types_properly(object sampleObject, bool shouldSucceed)
@@ -146,12 +159,13 @@ akka.actor {
                     .Build());
             
             var settings = setup.ApplySettings(HyperionSerializerSettings.Default);
-            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, settings);
-            
-            ((TypeFilter)serializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
+            var deserializer = new HyperionSerializer((ExtendedActorSystem)Sys, settings);
+            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, deserializer.Settings.WithDisallowUnsafeType(false));
             var serialized = serializer.ToBinary(sampleObject);
+            
+            ((TypeFilter)deserializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
             object deserialized = null;
-            Action act = () => deserialized = serializer.FromBinary<object>(serialized);
+            Action act = () => deserialized = deserializer.FromBinary<object>(serialized);
             if (shouldSucceed)
             {
                 act.Should().NotThrow();
@@ -168,17 +182,23 @@ akka.actor {
         {
             var isWindow = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             
-            yield return new object[]{ new FileInfo("C:\\Windows\\System32"), typeof(FileInfo) };
-            yield return new object[]{ new ClaimsIdentity(), typeof(ClaimsIdentity)};
+            yield return new object[]{ Serialize(new FileInfo("C:\\Windows\\System32")), typeof(FileInfo) };
+            yield return new object[]{ Serialize(new ClaimsIdentity()), typeof(ClaimsIdentity)};
             if (isWindow)
             {
-                yield return new object[]{ WindowsIdentity.GetAnonymous(), typeof(WindowsIdentity) };
-                yield return new object[]{ new WindowsPrincipal(WindowsIdentity.GetAnonymous()), typeof(WindowsPrincipal)};
+                yield return new object[]{ Serialize(WindowsIdentity.GetAnonymous()), typeof(WindowsIdentity) };
+                yield return new object[]{ Serialize(new WindowsPrincipal(WindowsIdentity.GetAnonymous())), typeof(WindowsPrincipal)};
             }
 #if NET471
-            yield return new object[]{ new Process(), typeof(Process)};
+            yield return new object[]{ Serialize(new Process()), typeof(Process)};
 #endif
-            yield return new object[]{ new ClaimsIdentity(), typeof(ClaimsIdentity)};
+            yield return new object[]{ Serialize(new ClaimsIdentity()), typeof(ClaimsIdentity)};
+        }
+
+        private static byte[] Serialize(object obj)
+        {
+            var serializer = new HyperionSerializer(null, HyperionSerializerSettings.Default.WithDisallowUnsafeType(false));
+            return serializer.ToBinary(obj);
         }
 
         public static IEnumerable<object[]> TypeFilterObjectFactory()

@@ -31,6 +31,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
             }}
             akka.persistence {{
                 publish-plugin-commands = on
+                query.journal.sql.refresh-interval = 200ms
                 journal {{
                     plugin = ""akka.persistence.journal.sqlite""
                     sqlite = {{
@@ -40,7 +41,6 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                         metadata-table-name = journal_metadata
                         auto-initialize = on
                         connection-string = ""{ConnectionString("journal")}""
-                        refresh-interval = 200ms
                     }}
                 }}
                 snapshot-store {{

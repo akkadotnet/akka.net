@@ -72,7 +72,8 @@ namespace Akka.Actor.Setup
         /// <returns>A new, immutable <see cref="ActorSystemSetup"/> instance.</returns>
         public ActorSystemSetup WithSetup<T>(T setup) where T : Setup
         {
-            return new ActorSystemSetup(_setups.SetItem(typeof(T), setup));
+            var typeT = setup.GetType();
+            return new ActorSystemSetup(_setups.SetItem(typeT, setup));
         }
 
         /// <summary>
