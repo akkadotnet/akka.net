@@ -24,7 +24,7 @@
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-    <FsCheckVersion>2.16.3</FsCheckVersion>
+    <FsCheckVersion>2.16.4</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>4.7.0</ConfigurationManagerVersion>
     <MultiNodeAdapterVersion>1.1.0</MultiNodeAdapterVersion>
