@@ -1446,7 +1446,7 @@ namespace Akka.Cluster.Sharding
                     DeleteSnapshots(new SnapshotSelectionCriteria(m.ToSequenceNr - 1));
                     break;
                 case DeleteMessagesFailure m:
-                    Log.Warning("Persistent messages to {0} deletion failure: {1}", m.ToSequenceNr, m.Cause.Message);
+                    Log.Warning(m.Cause, "Persistent messages to {0} deletion failure: {1}", m.ToSequenceNr, m.Cause.Message);
                     break;
                 case DeleteSnapshotsSuccess m:
                     Log.Debug("Persistent snapshots matching {0} deleted successfully", m.Criteria);
