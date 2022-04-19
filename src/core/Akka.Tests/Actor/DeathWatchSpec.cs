@@ -16,6 +16,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Tests.TestUtils;
 using Akka.Tests.Util;
 using Akka.Util.Internal;

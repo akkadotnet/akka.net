@@ -20,6 +20,7 @@ using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.TestKit.Extensions;
 using FluentAssertions.Execution;
 using Akka.Tests.Util;
 

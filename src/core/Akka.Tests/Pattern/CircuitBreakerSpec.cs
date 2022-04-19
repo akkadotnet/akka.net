@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Tests.Util;
 using Xunit;
 

@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Util;
 using Xunit;
 using FluentAssertions;

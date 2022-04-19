@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Tests.Util;
 using Xunit;
 
