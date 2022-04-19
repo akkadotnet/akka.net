@@ -14,6 +14,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Configuration;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
 using static Akka.Actor.CoordinatedShutdown;

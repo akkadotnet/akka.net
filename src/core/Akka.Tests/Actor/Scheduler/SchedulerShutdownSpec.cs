@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Tests.Util;
 using Akka.Util.Internal;
 using FluentAssertions;

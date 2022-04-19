@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Xunit;
 using Akka.TestKit.TestActors;
 using Akka.Tests.Util;

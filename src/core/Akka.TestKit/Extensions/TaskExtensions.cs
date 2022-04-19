@@ -3,13 +3,13 @@ using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Akka.Tests.Util
+namespace Akka.TestKit.Extensions
 {
-    public static class TaskHelpers
+    public static class TaskExtensions
     {
-        public static async Task<bool> AwaitWithTimeout(this Task parentTask, TimeSpan timeout)
+        public static async Task<bool> AwaitWithTimeout(this Task parentTask, TimeSpan timeout, CancellationToken cancellationToken = default)
         {
-            using (var cts = new CancellationTokenSource())
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
             {
                 try
                 {
@@ -19,7 +19,10 @@ namespace Akka.Tests.Util
                     if(returnedTask == parentTask && returnedTask.Exception != null)
                     {
                         var flattened = returnedTask.Exception.Flatten();
-                        ExceptionDispatchInfo.Capture(flattened.InnerException).Throw();
+                        if(flattened.InnerExceptions.Count == 1)
+                            ExceptionDispatchInfo.Capture(flattened.InnerExceptions[0]).Throw();
+                        else
+                            ExceptionDispatchInfo.Capture(returnedTask.Exception).Throw();
                     }
                     
                     return parentTask.IsCompleted;
@@ -31,9 +34,9 @@ namespace Akka.Tests.Util
             }
         }
         
-        public static async Task<T> WithTimeout<T>(this Task<T> parentTask, TimeSpan timeout)
+        public static async Task<T> WithTimeout<T>(this Task<T> parentTask, TimeSpan timeout, CancellationToken cancellationToken = default)
         {
-            using (var cts = new CancellationTokenSource())
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
             {
                 try
                 {
@@ -46,7 +49,10 @@ namespace Akka.Tests.Util
                     if(returnedTask == parentTask && returnedTask.Exception != null)
                     {
                         var flattened = returnedTask.Exception.Flatten();
-                        ExceptionDispatchInfo.Capture(flattened.InnerException).Throw();
+                        if(flattened.InnerExceptions.Count == 1)
+                            ExceptionDispatchInfo.Capture(flattened.InnerExceptions[0]).Throw();
+                        else
+                            ExceptionDispatchInfo.Capture(returnedTask.Exception).Throw();
                     }
                     
                     return parentTask.Result;
