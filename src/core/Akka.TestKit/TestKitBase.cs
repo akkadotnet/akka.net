@@ -15,7 +15,7 @@ using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.Pattern;
+using Akka.TestKit.Extensions;
 using Akka.TestKit.Internal;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -189,6 +189,7 @@ namespace Akka.TestKit
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        // Do not convert this method to async, it is being called inside the constructor.
         private static void WaitUntilTestActorIsReady(IActorRef testActor)
         {
             var deadline = TimeSpan.FromSeconds(5);
@@ -485,10 +486,14 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        public virtual void Shutdown(TimeSpan? duration = null, bool verifySystemShutdown = false)
-        {
-            Shutdown(_testState.System, duration, verifySystemShutdown);
-        }
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <exception cref="TimeoutException">TBD</exception>
+        public virtual void Shutdown(
+            TimeSpan? duration = null,
+            bool verifySystemShutdown = false,
+            CancellationToken cancellationToken = default)
+            => ShutdownAsync(_testState.System, duration, verifySystemShutdown, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
 
         /// <summary>
         /// Shuts down the specified system.
@@ -498,20 +503,42 @@ namespace Akka.TestKit
         /// <param name="system">The system to shutdown.</param>
         /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <exception cref="TimeoutException">TBD</exception>
-        protected virtual void Shutdown(ActorSystem system, TimeSpan? duration = null, bool verifySystemShutdown = false)
+        protected virtual void Shutdown(
+            ActorSystem system,
+            TimeSpan? duration = null,
+            bool verifySystemShutdown = false,
+            CancellationToken cancellationToken = default)
+            => ShutdownAsync(system, duration, verifySystemShutdown, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+
+        /// <summary>
+        /// Shuts down the specified system.
+        /// On failure debug output will be logged about the remaining actors in the system.
+        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
+        /// </summary>
+        /// <param name="system">The system to shutdown.</param>
+        /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
+        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <exception cref="TimeoutException">TBD</exception>
+        protected virtual async Task ShutdownAsync(
+            ActorSystem system,
+            TimeSpan? duration = null,
+            bool verifySystemShutdown = false,
+            CancellationToken cancellationToken = default)
         {
-            if (system == null) system = _testState.System;
+            system ??= _testState.System;
 
             var durationValue = duration.GetValueOrDefault(Dilated(TimeSpan.FromSeconds(5)).Min(TimeSpan.FromSeconds(10)));
 
-            var wasShutdownDuringWait = system.Terminate().Wait(durationValue);
+            var wasShutdownDuringWait = await system.Terminate().AwaitWithTimeout(durationValue, cancellationToken);
             if(!wasShutdownDuringWait)
             {
                 const string msg = "Failed to stop [{0}] within [{1}] \n{2}";
                 if(verifySystemShutdown)
                     throw new TimeoutException(string.Format(msg, system.Name, durationValue, ""));
-                //TODO: replace "" with system.PrintTree()
                 system.Log.Warning(msg, system.Name, durationValue, ""); //TODO: replace "" with system.PrintTree()
             }
         }
@@ -522,46 +549,109 @@ namespace Akka.TestKit
         /// <param name="props">Child actor props</param>
         /// <param name="name">Child actor name</param>
         /// <param name="supervisorStrategy">Supervisor strategy for the child actor</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <returns></returns>
-        public IActorRef ChildActorOf(Props props, string name, SupervisorStrategy supervisorStrategy)
+        public IActorRef ChildActorOf(
+            Props props,
+            string name,
+            SupervisorStrategy supervisorStrategy,
+            CancellationToken cancellationToken = default)
+            => ChildActorOfAsync(props, name, supervisorStrategy, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's IActorRef
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <param name="name">Child actor name</param>
+        /// <param name="supervisorStrategy">Supervisor strategy for the child actor</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <returns></returns>
+        public async Task<IActorRef> ChildActorOfAsync(
+            Props props, 
+            string name,
+            SupervisorStrategy supervisorStrategy,
+            CancellationToken cancellationToken = default)
         {
             TestActor.Tell(new TestActor.Spawn(props, name, supervisorStrategy));
-            return ExpectMsg<IActorRef>();
+            return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
         }
-        
+
         /// <summary>
         /// Spawns an actor as a child of this test actor with an auto-generated name, and returns the child's ActorRef.
         /// </summary>
         /// <param name="props">Child actor props</param>
         /// <param name="supervisorStrategy">Supervisor strategy for the child actor</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <returns></returns>
-        public IActorRef ChildActorOf(Props props, SupervisorStrategy supervisorStrategy)
+        public IActorRef ChildActorOf(
+            Props props, SupervisorStrategy supervisorStrategy, CancellationToken cancellationToken = default)
+            => ChildActorOfAsync(props, supervisorStrategy, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+
+        /// <summary>
+        /// Spawns an actor as a child of this test actor with an auto-generated name, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <param name="supervisorStrategy">Supervisor strategy for the child actor</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <returns></returns>
+        public async Task<IActorRef> ChildActorOfAsync(
+            Props props, SupervisorStrategy supervisorStrategy, CancellationToken cancellationToken = default)
         {
             TestActor.Tell(new TestActor.Spawn(props, Option<string>.None, supervisorStrategy));
-            return ExpectMsg<IActorRef>();
+            return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
         }
+
+        /// <summary>
+        /// Spawns an actor as a child of this test actor with a stopping supervisor strategy, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <param name="name">Child actor name</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props, string name, CancellationToken cancellationToken = default)
+            => ChildActorOfAsync(props, name, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
         
         /// <summary>
         /// Spawns an actor as a child of this test actor with a stopping supervisor strategy, and returns the child's ActorRef.
         /// </summary>
         /// <param name="props">Child actor props</param>
         /// <param name="name">Child actor name</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <returns></returns>
-        public IActorRef ChildActorOf(Props props, string name)
+        public async Task<IActorRef> ChildActorOfAsync(
+            Props props, string name, CancellationToken cancellationToken = default)
         {
             TestActor.Tell(new TestActor.Spawn(props, name, Option<SupervisorStrategy>.None));
-            return ExpectMsg<IActorRef>();
+            return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
         }
         
         /// <summary>
         /// Spawns an actor as a child of this test actor with an auto-generated name and stopping supervisor strategy, returning the child's ActorRef.
         /// </summary>
         /// <param name="props">Child actor props</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <returns></returns>
-        public IActorRef ChildActorOf(Props props)
+        public IActorRef ChildActorOf(Props props, CancellationToken cancellationToken = default)
+            => ChildActorOfAsync(props, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+
+        /// <summary>
+        /// Spawns an actor as a child of this test actor with an auto-generated name and stopping supervisor strategy, returning the child's ActorRef.
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <returns></returns>
+        public async Task<IActorRef> ChildActorOfAsync(Props props, CancellationToken cancellationToken = default)
         {
             TestActor.Tell(new TestActor.Spawn(props, Option<string>.None, Option<SupervisorStrategy>.None));
-            return ExpectMsg<IActorRef>();
+            return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
