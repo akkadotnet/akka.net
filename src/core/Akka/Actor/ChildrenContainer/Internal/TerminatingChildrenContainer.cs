@@ -51,6 +51,8 @@ namespace Akka.Actor.Internal
             _reason = reason;
         }
 
+        public ImmutableHashSet<IActorRef> ToDie => _toDie;
+        
         /// <summary>
         /// TBD
         /// </summary>
