@@ -55,7 +55,6 @@ namespace Akka.Actor
     {
         public const int UndefinedUid = 0;
         public ActorCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.IInternalActorRef self, Akka.Actor.Props props, Akka.Dispatch.MessageDispatcher dispatcher, Akka.Actor.IInternalActorRef parent) { }
-        protected Akka.Actor.ActorBase Actor { get; }
         public Akka.Actor.Internal.IChildrenContainer ChildrenContainer { get; }
         public int CurrentEnvelopeId { get; }
         public object CurrentMessage { get; }
@@ -709,6 +708,7 @@ namespace Akka.Actor
         public abstract Akka.Actor.IActorRefProvider Provider { get; }
         public abstract Akka.Actor.IInternalActorRef SystemGuardian { get; }
         public abstract void Abort();
+        public abstract string PrintTree();
         public abstract Akka.Actor.IActorRef SystemActorOf(Akka.Actor.Props props, string name = null);
         public abstract Akka.Actor.IActorRef SystemActorOf<TActor>(string name = null)
             where TActor : Akka.Actor.ActorBase, new ();
@@ -1941,6 +1941,7 @@ namespace Akka.Actor.Internal
         public override bool HasExtension(System.Type type) { }
         public override bool HasExtension<T>()
             where T :  class, Akka.Actor.IExtension { }
+        public override string PrintTree() { }
         public override object RegisterExtension(Akka.Actor.IExtensionId extension) { }
         public override void RegisterOnTermination(System.Action code) { }
         public void Start() { }
@@ -2091,6 +2092,7 @@ namespace Akka.Actor.Internal
         public override bool IsNormal { get; }
         public override bool IsTerminating { get; }
         public Akka.Actor.Internal.SuspendReason Reason { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Actor.IActorRef> ToDie { get; }
         public override Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats) { }
         public Akka.Actor.Internal.IChildrenContainer CreateCopyWithReason(Akka.Actor.Internal.SuspendReason reason) { }
         public override Akka.Actor.Internal.IChildrenContainer Remove(Akka.Actor.IActorRef child) { }
