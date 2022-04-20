@@ -133,8 +133,7 @@ namespace Akka.Cluster.Sharding
             {
                 return EntityId.GetHashCode();
             }
-
-            /// <inheritdoc/>
+            
             public override string ToString() => $"StartEntity({EntityId})";
 
             #endregion

@@ -16,7 +16,7 @@ namespace Akka.Cluster.Sharding
     using ShardId = String;
 
     /// <summary>
-    /// TBD
+    /// Marker interface for all <see cref="ShardRegion"/> commands.
     /// </summary>
     public interface IShardRegionCommand { }
 
@@ -106,8 +106,7 @@ namespace Akka.Cluster.Sharding
         }
 
         #region Equals
-
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as ShardInitialized);
@@ -120,14 +119,12 @@ namespace Akka.Cluster.Sharding
 
             return Equals(ShardId, other.ShardId);
         }
-
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return ShardId.GetHashCode();
         }
-
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ShardInitialized({ShardId})";
 
         #endregion
@@ -155,8 +152,7 @@ namespace Akka.Cluster.Sharding
         private GetCurrentRegions()
         {
         }
-
-        /// <inheritdoc/>
+        
         public override string ToString() => $"GetCurrentRegions";
     }
 
@@ -180,8 +176,7 @@ namespace Akka.Cluster.Sharding
         }
 
         #region Equals
-
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as CurrentRegions);
@@ -194,8 +189,7 @@ namespace Akka.Cluster.Sharding
 
             return Regions.SetEquals(other.Regions);
         }
-
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -206,8 +200,7 @@ namespace Akka.Cluster.Sharding
                 return hashCode;
             }
         }
-
-        /// <inheritdoc/>
+        
         public override string ToString() => $"CurrentRegions({string.Join(", ", Regions.Select(r => $"[{r}]"))})";
 
         #endregion
@@ -240,8 +233,7 @@ namespace Akka.Cluster.Sharding
         }
 
         #region Equals
-
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as GetClusterShardingStats);
@@ -254,14 +246,12 @@ namespace Akka.Cluster.Sharding
 
             return Timeout.Equals(other.Timeout);
         }
-
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return Timeout.GetHashCode();
         }
-
-        /// <inheritdoc/>
+        
         public override string ToString() => $"GetClusterShardingStats({Timeout})";
 
         #endregion
@@ -288,8 +278,7 @@ namespace Akka.Cluster.Sharding
         }
 
         #region Equals
-
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as ClusterShardingStats);
@@ -303,8 +292,7 @@ namespace Akka.Cluster.Sharding
             return Regions.Keys.SequenceEqual(other.Regions.Keys)
                 && Regions.Values.SequenceEqual(other.Regions.Values);
         }
-
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -315,8 +303,7 @@ namespace Akka.Cluster.Sharding
                 return hashCode;
             }
         }
-
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ClusterShardingStats({string.Join(", ", Regions.Select(r => $"[{r.Key}]:[{r.Value}]"))})";
 
         #endregion
@@ -342,8 +329,7 @@ namespace Akka.Cluster.Sharding
         private GetShardRegionStats()
         {
         }
-
-        /// <inheritdoc/>
+        
         public override string ToString() => $"GetShardRegionStats";
     }
 
@@ -384,8 +370,7 @@ namespace Akka.Cluster.Sharding
         }
 
         #region Equals
-
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as ShardRegionStats);
@@ -400,8 +385,7 @@ namespace Akka.Cluster.Sharding
                 && Stats.Values.SequenceEqual(other.Stats.Values)
                 && Failed.SetEquals(other.Failed);
         }
-
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -413,8 +397,7 @@ namespace Akka.Cluster.Sharding
                 return hashCode;
             }
         }
-
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"ShardRegionStats[stats={string.Join(", ", Stats.Select(i => $"({i.Key}:{i.Value})"))}, failed={string.Join(", ", Failed)}]";
@@ -440,8 +423,7 @@ namespace Akka.Cluster.Sharding
         private GetShardRegionState()
         {
         }
-
-        /// <inheritdoc/>
+        
         public override string ToString() => $"GetShardRegionState";
     }
 
@@ -482,8 +464,7 @@ namespace Akka.Cluster.Sharding
 
 
         #region Equals
-
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as CurrentShardRegionState);
@@ -497,8 +478,7 @@ namespace Akka.Cluster.Sharding
             return Shards.SetEquals(other.Shards)
                 && Failed.SetEquals(other.Failed);
         }
-
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -510,8 +490,7 @@ namespace Akka.Cluster.Sharding
                 return hashCode;
             }
         }
-
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"CurrentShardRegionState[shards={string.Join(", ", Shards)}, failed={string.Join(", ", Failed)}]";
@@ -548,8 +527,7 @@ namespace Akka.Cluster.Sharding
         }
 
         #region Equals
-
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as ShardState);
@@ -564,7 +542,6 @@ namespace Akka.Cluster.Sharding
                 && EntityIds.SetEquals(other.EntityIds);
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -576,8 +553,7 @@ namespace Akka.Cluster.Sharding
                 return hashCode;
             }
         }
-
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"ShardState[shardId={ShardId}, entityIds={string.Join(", ", EntityIds)}]";
@@ -585,7 +561,6 @@ namespace Akka.Cluster.Sharding
 
         #endregion
     }
-
 
     /// <summary>
     /// Discover if the shard region is registered with the coordinator.

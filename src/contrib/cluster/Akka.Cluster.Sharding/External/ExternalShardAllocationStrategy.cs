@@ -32,8 +32,7 @@ namespace Akka.Cluster.Sharding.External
             public string Shard { get; }
 
             #region Equals
-
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 return Equals(obj as GetShardLocation);
@@ -47,13 +46,11 @@ namespace Akka.Cluster.Sharding.External
                 return Shard.Equals(other.Shard);
             }
 
-            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return Shard.GetHashCode();
             }
 
-            /// <inheritdoc/>
             public override string ToString() => $"GetShardLocation({Shard})";
 
             #endregion
@@ -67,7 +64,6 @@ namespace Akka.Cluster.Sharding.External
             {
             }
 
-            /// <inheritdoc/>
             public override string ToString() => $"GetShardLocations";
         }
 
@@ -81,8 +77,7 @@ namespace Akka.Cluster.Sharding.External
             public IImmutableDictionary<string, Address> DesiredAllocations { get; }
 
             #region Equals
-
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 return Equals(obj as GetShardLocationsResponse);
@@ -95,8 +90,7 @@ namespace Akka.Cluster.Sharding.External
 
                 return DesiredAllocations.SequenceEqual(other.DesiredAllocations);
             }
-
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 unchecked
@@ -107,8 +101,7 @@ namespace Akka.Cluster.Sharding.External
                     return hashCode;
                 }
             }
-
-            /// <inheritdoc/>
+            
             public override string ToString() => $"GetShardLocationsResponse({string.Join(", ", DesiredAllocations.Select(i => $"{i.Key}: {i.Value}"))})";
 
             #endregion
@@ -125,7 +118,6 @@ namespace Akka.Cluster.Sharding.External
 
             #region Equals
 
-            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 return Equals(obj as GetShardLocationResponse);
@@ -139,13 +131,11 @@ namespace Akka.Cluster.Sharding.External
                 return Equals(Address, other.Address);
             }
 
-            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return Address?.GetHashCode() ?? 0;
             }
 
-            /// <inheritdoc/>
             public override string ToString() => $"GetShardLocationResponse({Address})";
 
             #endregion
@@ -162,8 +152,7 @@ namespace Akka.Cluster.Sharding.External
             public Address Address { get; }
 
             #region Equals
-
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 return Equals(obj as ShardLocation);
@@ -176,14 +165,12 @@ namespace Akka.Cluster.Sharding.External
 
                 return Address.Equals(other.Address);
             }
-
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 return Address.GetHashCode();
             }
-
-            /// <inheritdoc/>
+            
             public override string ToString() => $"ShardLocation({Address})";
 
             #endregion
