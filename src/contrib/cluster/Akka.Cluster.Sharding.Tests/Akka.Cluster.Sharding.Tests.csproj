@@ -8,6 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\AsyncWriteProxyEx.cs" Link="AsyncWriteProxyEx.cs" />
+    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\MemoryJournalShared.cs" Link="MemoryJournalShared.cs" />
+    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\MemorySnapshotStoreShared.cs" Link="MemorySnapshotStoreShared.cs" />
+    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\SnapshotStoreProxy.cs" Link="SnapshotStoreProxy.cs" />
+  </ItemGroup>
+ 
+  <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka.Coordination.Tests\Akka.Coordination.Tests.csproj" />
     <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />

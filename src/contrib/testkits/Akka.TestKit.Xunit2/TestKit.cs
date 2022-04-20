@@ -21,6 +21,28 @@ namespace Akka.TestKit.Xunit2
     /// </summary>
     public class TestKit : TestKitBase , IDisposable
     {
+        private class PrefixedOutput : ITestOutputHelper
+        {
+            private readonly ITestOutputHelper output;
+            private readonly string prefix;
+
+            public PrefixedOutput(ITestOutputHelper output, string prefix)
+            {
+                this.output = output;
+                this.prefix = prefix;
+            }
+
+            public void WriteLine(string message)
+            {
+                output.WriteLine(prefix + message);
+            }
+
+            public void WriteLine(string format, params object[] args)
+            {
+                output.WriteLine(prefix + format, args);
+            }
+        }
+
         private bool _isDisposed; //Automatically initialized to false;
 
         /// <summary>
@@ -102,7 +124,7 @@ namespace Akka.TestKit.Xunit2
 
         /// <summary>
         /// This method is called when a test ends.
-        /// 
+        ///
         /// <remarks>
         /// If you override this, then make sure you either call base.AfterTest() or
         /// <see cref="TestKitBase.Shutdown(System.Nullable{System.TimeSpan},bool)">TestKitBase.Shutdown</see>
@@ -128,7 +150,17 @@ namespace Akka.TestKit.Xunit2
             }
         }
 
-       
+        protected void InitializeLogger(ActorSystem system, string prefix)
+        {
+            if (Output != null)
+            {
+                var extSystem = (ExtendedActorSystem)system;
+                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(
+                    string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))), "log-test");
+                logger.Tell(new InitializeLogger(system.EventStream));
+            }
+        }
+
         public void Dispose()
         {
             Dispose(true);
