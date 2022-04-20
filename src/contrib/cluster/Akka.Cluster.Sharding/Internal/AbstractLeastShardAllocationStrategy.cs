@@ -39,13 +39,12 @@ namespace Akka.Cluster.Sharding.Internal
             public IImmutableList<string> ShardIds { get; }
         }
 
-        internal class ShardSuitabilityOrdering : IComparer<RegionEntry>
+        internal sealed class ShardSuitabilityOrdering : IComparer<RegionEntry>
         {
             public static readonly ShardSuitabilityOrdering Instance = new ShardSuitabilityOrdering();
 
             private ShardSuitabilityOrdering()
             {
-
             }
 
             public int Compare(RegionEntry x, RegionEntry y)
@@ -70,17 +69,17 @@ namespace Akka.Cluster.Sharding.Internal
             }
         }
 
-        private ActorSystem system;
-        private Cluster cluster;
+        private ActorSystem _system;
+        private Cluster _cluster;
 
         // protected for testability
-        protected virtual CurrentClusterState ClusterState => cluster.State;
-        protected virtual Member SelfMember => cluster.SelfMember;
+        protected virtual CurrentClusterState ClusterState => _cluster.State;
+        protected virtual Member SelfMember => _cluster.SelfMember;
 
         public void Start(ActorSystem system)
         {
-            this.system = system;
-            cluster = Cluster.Get(system);
+            _system = system;
+            _cluster = Cluster.Get(system);
         }
 
         public async Task<IActorRef> AllocateShard(IActorRef requester, string shardId, IImmutableDictionary<IActorRef, IImmutableList<string>> currentShardAllocations)
@@ -95,8 +94,8 @@ namespace Akka.Cluster.Sharding.Internal
             }
             else
             {
-                var suitable = MostSuitableRegion(regionEntries);
-                return suitable.Region;
+                var (Region, _) = MostSuitableRegion(regionEntries);
+                return Region;
             }
         }
 
