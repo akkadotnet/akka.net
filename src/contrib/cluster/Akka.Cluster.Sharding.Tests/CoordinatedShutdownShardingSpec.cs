@@ -34,8 +34,6 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly TestProbe _probe2;
         private readonly TestProbe _probe3;
 
-        private static readonly Config SpecConfig;
-
         private class EchoActor : ReceiveActor
         {
             public EchoActor()
@@ -48,30 +46,42 @@ namespace Akka.Cluster.Sharding.Tests
 
         private readonly ExtractShardId _extractShard = message => (MurmurHash.StringHash(message.ToString())).ToString();
 
-        static CoordinatedShutdownShardingSpec()
-        {
-            SpecConfig = ConfigurationFactory.ParseString(@"
+        private static Config SpecConfig =>
+            ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0")
+                akka.remote.dot-netty.tcp.port = 0
+                akka.cluster.sharding.verbose-debug-logging = on")
                 .WithFallback(ClusterSingletonManager.DefaultConfig()
                 .WithFallback(ClusterSharding.DefaultConfig()));
-        }
 
         public CoordinatedShutdownShardingSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
             _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             _sys3 = Sys;
+            InitializeLogger(_sys1, "[Sys1]");
+            InitializeLogger(_sys2, "[Sys2]");
 
             var props = Props.Create(() => new EchoActor());
-            _region1 = ClusterSharding.Get(_sys1).Start("type1", props, ClusterShardingSettings.Create(_sys1),
-                _extractEntityId, _extractShard);
-            _region2 = ClusterSharding.Get(_sys2).Start("type1", props, ClusterShardingSettings.Create(_sys2),
-                _extractEntityId, _extractShard);
-            _region3 = ClusterSharding.Get(_sys3).Start("type1", props, ClusterShardingSettings.Create(_sys3),
-                _extractEntityId, _extractShard);
-
+            _region1 = ClusterSharding.Get(_sys1).Start(
+                "type1",
+                props,
+                ClusterShardingSettings.Create(_sys1),
+                _extractEntityId,
+                _extractShard);
+            _region2 = ClusterSharding.Get(_sys2).Start(
+                "type1",
+                props,
+                ClusterShardingSettings.Create(_sys2),
+                _extractEntityId,
+                _extractShard);
+            _region3 = ClusterSharding.Get(_sys3).Start(
+                "type1",
+                props,
+                ClusterShardingSettings.Create(_sys3),
+                _extractEntityId,
+                _extractShard);
 
             _probe1 = CreateTestProbe(_sys1);
             _probe2 = CreateTestProbe(_sys2);
@@ -109,16 +119,19 @@ namespace Akka.Cluster.Sharding.Tests
         {
             await AwaitAssertAsync(() =>
             {
-                _region2.Tell(1, _probe2.Ref);
-                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(1);
-                _region2.Tell(2, _probe2.Ref);
-                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(2);
-                _region2.Tell(3, _probe2.Ref);
-                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(3);
+                var p1 = CreateTestProbe(_sys2);
+                _region2.Tell(1, p1.Ref);
+                p1.ExpectMsg<int>(1.Seconds()).Should().Be(1);
+                var p2 = CreateTestProbe(_sys2);
+                _region2.Tell(2, p2.Ref);
+                p2.ExpectMsg<int>(1.Seconds()).Should().Be(2);
+                var p3 = CreateTestProbe(_sys2);
+                _region2.Tell(3, p3.Ref);
+                p3.ExpectMsg<int>(1.Seconds()).Should().Be(3);
             }, TimeSpan.FromSeconds(60));
         }
 
-        [Fact(Skip = "Racy")]
+        [Fact]
         public async Task Sharding_and_CoordinatedShutdown_must_run_successfully()
         {
             await InitCluster();
@@ -132,16 +145,16 @@ namespace Akka.Cluster.Sharding.Tests
             await AwaitAssertAsync(() => Cluster.Get(_sys1).SelfMember.Status.Should().Be(MemberStatus.Up));
 
             Cluster.Get(_sys2).Join(Cluster.Get(_sys1).SelfAddress);
-            await WithinAsync(10.Seconds(),async () =>
-            {
-                await AwaitAssertAsync(() =>
-                {
-                    Cluster.Get(_sys1).State.Members.Count.Should().Be(2);
-                    Cluster.Get(_sys1).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
-                    Cluster.Get(_sys2).State.Members.Count.Should().Be(2);
-                    Cluster.Get(_sys2).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
-                });
-            });
+            await WithinAsync(10.Seconds(), async () =>
+             {
+                 await AwaitAssertAsync(() =>
+                 {
+                     Cluster.Get(_sys1).State.Members.Count.Should().Be(2);
+                     Cluster.Get(_sys1).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+                     Cluster.Get(_sys2).State.Members.Count.Should().Be(2);
+                     Cluster.Get(_sys2).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+                 });
+             });
 
             Cluster.Get(_sys3).Join(Cluster.Get(_sys1).SelfAddress);
             await WithinAsync(10.Seconds(), async () =>
