@@ -1,3 +1,6 @@
+#### 1.5.0-beta1 April 20 2022 ####
+**Placeholder for first beta release of Akka.NET v1.5**
+
 #### 1.4.37 April 14 2022 ####
 Akka.NET v1.4.37 is a minor release that contains some minor bug fixes.
 
