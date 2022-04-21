@@ -341,7 +341,6 @@ namespace Akka.Remote
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ResendBufferCapacityReachedException"/> class.
         /// </summary>
@@ -351,7 +350,6 @@ namespace Akka.Remote
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
@@ -365,6 +363,17 @@ namespace Akka.Remote
         public ResendUnfulfillableException()
             : base("Unable to fulfill resend request since negatively acknowledged payload is no longer in buffer. " +
                 "The resend states between two systems are compromised and cannot be recovered") { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ResendUnfulfillableException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected ResendUnfulfillableException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+
     }
 
 #endregion

@@ -3,12 +3,12 @@ uid: cluster-metrics
 title: Akka.Cluster.Metrics module
 ---
 
-# Akka.Cluster.Metrics module
+# Akka.Cluster.Metrics Module
 
-The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes and 
+The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes and
 to the registered subscribers on the system event bus with the help of Cluster Metrics Extension.
 
-Cluster metrics information is primarily used for load-balancing routers, 
+Cluster metrics information is primarily used for load-balancing routers,
 and can also be used to implement advanced metrics-based node life cycles, such as “Node Let-it-crash” when CPU steal time becomes excessive.
 
 Cluster members with status `WeaklyUp`, if that feature is enabled, will participate in Cluster Metrics collection and dissemination.
@@ -17,8 +17,9 @@ Cluster members with status `WeaklyUp`, if that feature is enabled, will partici
 
 Metrics collection is delegated to an implementation of `Akka.Cluster.Metrics.IMetricsCollector`.
 
-Different collector implementations may provide different subsets of metrics published to the cluster. 
+Different collector implementations may provide different subsets of metrics published to the cluster.
 Metrics currently supported are defined in `Akka.Cluster.Metrics.StandardMetrics` class:
+
 * `MemoryUsed` - total memory allocated to the currently running process
 * `MemoryAvailable` - memory, available for the process
 * `MaxMemoryRecommended` - if set, memory limit recommended for current process
@@ -26,15 +27,16 @@ Metrics currently supported are defined in `Akka.Cluster.Metrics.StandardMetrics
 * `CpuProcessUsage` - CPU usage by current process
 * `CpuTotalUsage` - total CPU usage
 
-> Note: currently, due to some .NET Core limitations `CpuTotalUsage` is the same as `CpuProcessUsage` metrics, 
+> Note: currently, due to some .NET Core limitations `CpuTotalUsage` is the same as `CpuProcessUsage` metrics,
 > but this is something to be fixed in near future (see [this issue](https://github.com/akkadotnet/akka.net/issues/4142) for details).
 
-Cluster metrics extension comes with built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector implementation, 
+Cluster metrics extension comes with built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector implementation,
 which collects all metrics defined above.
 
 You can also plug-in your own metrics collector implementation.
 
 By default, metrics extension will use collector provider fall back and will try to load them in this order:
+
 1. configured user-provided collector (see `Configuration` section for details)
 2. built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector
 
@@ -44,40 +46,41 @@ Metrics extension periodically publishes current snapshot of the cluster metrics
 
 The publication interval is controlled by the `akka.cluster.metrics.collector.sample-interval` setting.
 
-The payload of the `Akka.Cluster.Metrics.Events.ClusterMetricsChanged` event will contain latest metrics of the node as well as 
+The payload of the `Akka.Cluster.Metrics.Events.ClusterMetricsChanged` event will contain latest metrics of the node as well as
 other cluster member nodes metrics gossip which was received during the collector sample interval.
 
 You can subscribe your metrics listener actors to these events in order to implement custom node lifecycle:
+
 ```c#
 ClusterMetrics.Get(Sys).Subscribe(metricsListenerActor);
 ```
 
 ## Adaptive Load Balancing
 
-The `AdaptiveLoadBalancingPool` / `AdaptiveLoadBalancingGroup` performs load balancing of messages to cluster nodes based on the cluster metrics data. 
-It uses random selection of routees with probabilities derived from the remaining capacity of the corresponding node. 
+The `AdaptiveLoadBalancingPool` / `AdaptiveLoadBalancingGroup` performs load balancing of messages to cluster nodes based on the cluster metrics data.
+It uses random selection of routees with probabilities derived from the remaining capacity of the corresponding node.
 It can be configured to use a specific `IMetricsSelector` implementation to produce the probabilities, a.k.a. weights:
 
 * `memory` / `MemoryMetricsSelector` - Used and max available memory. Weights based on remaining memory capacity: (max - used) / max
 * `cpu` / `CpuMetricsSelector` - CPU utilization in percentage. Weights based on remaining cpu capacity: 1 - utilization
 * `mix` / `MixMetricsSelector` - Combines memory and cpu. Weights based on mean of remaining capacity of the combined selectors.
 
-The collected metrics values are smoothed with [exponential weighted moving average](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average). 
+The collected metrics values are smoothed with [exponential weighted moving average](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average).
 In the cluster configuration you can adjust how quickly past data is decayed compared to new data.
 
 Let’s take a look at this router in action. What can be more demanding than calculating factorials?
 
 The backend worker that performs the factorial calculation:
 
-[!code-csharp[RouterUsageSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RouterUsageSample.cs?name=FactorialBackend)]
+[!code-csharp[RoutersUsageSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RoutersUsageSample.cs?name=FactorialBackend)]
 
 The frontend that receives user jobs and delegates to the backends via the router:
 
-[!code-csharp[RouterUsageSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RouterUsageSample.cs?name=FactorialFrontend)]
+[!code-csharp[RoutersUsageSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RoutersUsageSample.cs?name=FactorialFrontend)]
 
 As you can see, the router is defined in the same way as other routers, and in this case it is configured as follows:
 
-```
+```hocon
 akka.actor.deployment {
   /factorialFrontend/factorialBackendRouter = {
     # Router type provided by metrics extension.
@@ -125,9 +128,27 @@ Custom metrics collector implementation class must be specified in the `akka.clu
 
 ## Configuration
 
+### Starting Akka.Cluster.Metrics Automatically During ActorSystem Startup
+
+You can automatically startup the Akka.Cluster.Metrics module by providing, at minimum, these settings:
+
+```hocon
+akka {
+    extensions = ["Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics"]
+    actor.provider = "cluster"
+    cluster.metrics.collector {
+        provider = ["Akka.Cluster.Metrics.Collectors.DefaultCollector, Akka.Cluster.Metrics"]
+    }  
+}
+```
+
+These settings will auto-start Akka.Cluster.Metrics using the default memory and CPU metrics collectors.
+
+### Default Configurations
+
 The Cluster metrics extension can be configured with the following properties:
 
-```
+```hocon
 ##############################################
 # Akka Cluster Metrics Reference Config File #
 ##############################################
@@ -154,7 +175,7 @@ akka.cluster.metrics {
     # Supervision strategy.
     strategy {
 
-      # FQCN of class providing `akka.actor.SupervisorStrategy`.
+      # Fully-qualified class name of the class providing `akka.actor.SupervisorStrategy`.
       # Must have a constructor with signature `<init>(com.typesafe.config.Config)`.
       # Default metrics strategy provider is a configurable extension of `OneForOneStrategy`.
       provider = "Akka.Cluster.Metrics.ClusterMetricsStrategy, Akka.Cluster.Metrics"
@@ -183,7 +204,7 @@ akka.cluster.metrics {
     # to /system/cluster-metrics actor: `akka.cluster.metrics.{CollectionStartMessage,CollectionStopMessage}`
     enabled = on
 
-    # FQCN of the metrics collector implementation.
+    # Fully-qualified class name of the metrics collector implementation.
     # It must implement `akka.cluster.metrics.MetricsCollector` and
     # have public constructor with akka.actor.ActorSystem parameter.
     # Will try to load in the following order of priority:

@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.Util;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {

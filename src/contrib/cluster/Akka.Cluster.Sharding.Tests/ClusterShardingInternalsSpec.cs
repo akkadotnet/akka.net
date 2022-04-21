@@ -6,24 +6,20 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingInternalsSpec : Akka.TestKit.Xunit2.TestKit
+    public class ClusterShardingInternalsSpec : AkkaSpec
     {
-        ClusterSharding clusterSharding;
-
-        public ClusterShardingInternalsSpec() : base(GetConfig())
-        {
-            clusterSharding = ClusterSharding.Get(Sys);
-        }
-
         private Option<(string, object)> ExtractEntityId(object message)
         {
             switch (message)
@@ -44,15 +40,21 @@ namespace Akka.Cluster.Sharding.Tests
             throw new NotSupportedException();
         }
 
-
-        public static Config GetConfig()
-        {
-            return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
-                                                     akka.remote.dot-netty.tcp.port = 0")
+        private static Config SpecConfig =>
+            ConfigurationFactory.ParseString(@"
+                akka.actor.provider = cluster
+                akka.remote.dot-netty.tcp.port = 0
+                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
 
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(DistributedData.DistributedData.DefaultConfig())
                 .WithFallback(ClusterSingletonManager.DefaultConfig());
+
+        ClusterSharding clusterSharding;
+
+        public ClusterShardingInternalsSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
+        {
+            clusterSharding = ClusterSharding.Get(Sys);
         }
 
         [Fact]
@@ -88,13 +90,13 @@ namespace Akka.Cluster.Sharding.Tests
             var shard = "7";
             var emptyHandlerActor = Sys.ActorOf(Props.Create(() => new EmptyHandlerActor()));
             var handOffStopper = Sys.ActorOf(
-                Props.Create(() => new ShardRegion.HandOffStopper(typeName, shard, probe.Ref, new IActorRef[] { emptyHandlerActor }, HandOffStopMessage.Instance, TimeSpan.FromMilliseconds(10)))
+                Props.Create(() => new ShardRegion.HandOffStopper(typeName, shard, probe.Ref, ImmutableHashSet.Create(emptyHandlerActor), HandOffStopMessage.Instance, TimeSpan.FromMilliseconds(10)))
               );
 
             Watch(emptyHandlerActor);
             ExpectTerminated(emptyHandlerActor, TimeSpan.FromSeconds(1));
 
-            probe.ExpectMsg(new PersistentShardCoordinator.ShardStopped(shard), TimeSpan.FromSeconds(1));
+            probe.ExpectMsg(new ShardCoordinator.ShardStopped(shard), TimeSpan.FromSeconds(1));
             probe.LastSender.Should().BeSameAs(handOffStopper);
 
             Watch(handOffStopper);

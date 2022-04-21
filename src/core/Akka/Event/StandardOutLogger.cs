@@ -13,6 +13,38 @@ using System.Threading;
 
 namespace Akka.Event
 {
+    public abstract class MinimalLogger : MinimalActorRef
+    {
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <exception cref="NotImplementedException">This exception is automatically thrown since <see cref="MinimalLogger"/> does not support this property.</exception>
+        public sealed override IActorRefProvider Provider
+        {
+            get { throw new NotSupportedException("This logger does not provide."); }
+        }
+
+        /// <summary>
+        /// The path where this logger currently resides.
+        /// </summary>
+        public sealed override ActorPath Path { get; } = new RootActorPath(Address.AllSystems, "/StandardOutLogger");
+        
+        protected sealed override void TellInternal(object message, IActorRef sender)
+        {
+            switch (message)
+            {
+                case null:
+                    throw new ArgumentNullException(nameof(message), "The message to log must not be null.");
+                
+                default:
+                    Log(message);
+                    break;
+            }
+        }
+
+        protected abstract void Log(object message);
+    }
+    
     /// <summary>
     /// This class represents an event logger that logs its messages to standard output (e.g. the console).
     /// 
@@ -21,9 +53,8 @@ namespace Akka.Event
     /// even before normal logging is started.
     /// </remarks>
     /// </summary>
-    public class StandardOutLogger : MinimalActorRef
+    public class StandardOutLogger : MinimalLogger
     {
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/StandardOutLogger");
 
         /// <summary>
         /// Initializes the <see cref="StandardOutLogger"/> class.
@@ -38,23 +69,6 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// N/A
-        /// </summary>
-        /// <exception cref="NotImplementedException">This exception is automatically thrown since <see cref="StandardOutLogger"/> does not support this property.</exception>
-        public override IActorRefProvider Provider
-        {
-            get { throw new NotSupportedException("This logger does not provide."); }
-        }
-
-        /// <summary>
-        /// The path where this logger currently resides.
-        /// </summary>
-        public override ActorPath Path
-        {
-            get { return _path; }
-        }
-
-        /// <summary>
         /// Handles incoming log events by printing them to the console.
         /// </summary>
         /// <param name="message">The message to print</param>
@@ -62,22 +76,20 @@ namespace Akka.Event
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="message"/> is undefined.
         /// </exception>
-        protected override void TellInternal(object message, IActorRef sender)
+        protected override void Log(object message)
         {
-            if(message == null)
-                throw new ArgumentNullException(nameof(message), "The message to log must not be null.");
-
-            var logEvent = message as LogEvent;
-            if (logEvent != null)
+            switch (message)
             {
-                PrintLogEvent(logEvent);
-            }
-            else
-            {
-                Console.WriteLine(message);
+                case LogEvent logEvent:
+                    PrintLogEvent(logEvent);
+                    break;
+                
+                default:
+                    Console.WriteLine(message);
+                    break;
             }
         }
-        
+
         /// <summary>
         /// The foreground color to use when printing Debug events to the console.
         /// </summary>
@@ -107,7 +119,7 @@ namespace Akka.Event
         /// Prints a specified event to the console.
         /// </summary>
         /// <param name="logEvent">The event to print</param>
-        public static void PrintLogEvent(LogEvent logEvent)
+        internal static void PrintLogEvent(LogEvent logEvent)
         {
             try
             {
@@ -135,24 +147,26 @@ namespace Akka.Event
 
                 StandardOutWriter.WriteLine(logEvent.ToString(), color);
             }
-            catch (FormatException)
+            catch (FormatException ex)
             {
                 /*
-                 * If we've reached this point, the `logEvent` itself is informatted incorrectly. 
+                 * If we've reached this point, the `logEvent` itself is formatted incorrectly. 
                  * Therefore we have to treat the data inside the `logEvent` as suspicious and avoid throwing
                  * a second FormatException.
                  */
                 var sb = new StringBuilder();
-                sb.AppendFormat("[ERROR][{0}][Thread {1}][StandardOutLogger] ", logEvent.Timestamp, 0);
-                sb.AppendFormat("Encoutered System.FormatException while recording log: [" +
-                                logEvent.LogLevel().PrettyNameFor() + "]")
-                    .AppendFormat("[" + logEvent.LogSource + "][" + logEvent.Message + "]");
+                sb.AppendFormat("[ERROR][{0}]", logEvent.Timestamp)
+                    .AppendFormat("[Thread {0}]", logEvent.Thread.ManagedThreadId.ToString().PadLeft(4, '0'))
+                    .AppendFormat("[{0}] ", nameof(StandardOutLogger))
+                    .AppendFormat("Encountered System.FormatException while recording log: [{0}]", logEvent.LogLevel().PrettyNameFor())
+                    .AppendFormat("[{0}]. ", logEvent.LogSource)
+                    .Append(ex.Message);
 
                 string msg;
                 switch (logEvent.Message)
                 {
                     case LogMessage formatted: // a parameterized log
-                        msg = "str=[" + formatted.Format + "],args=["+ string.Join(",", formatted.Args) +"]";
+                        msg = " str=[" + formatted.Format + "], args=["+ string.Join(",", formatted.Args) +"]";
                         break;
                     case string unformatted: // pre-formatted or non-parameterized log
                         msg = unformatted;
@@ -163,7 +177,7 @@ namespace Akka.Event
                 }
 
                 sb.Append(msg)
-                    .Append("Please take a look at the logging call where this occurred and fix your format string.");
+                    .Append(" Please take a look at the logging call where this occurred and fix your format string.");
 
                 StandardOutWriter.WriteLine(sb.ToString(), ErrorColor);
             }

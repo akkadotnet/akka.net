@@ -877,7 +877,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public abstract IModule WithAttributes(Attributes attributes);
 
-        /// <inheritdoc/>
+       
         public int CompareTo(IModule other) => GetHashCode().CompareTo(other.GetHashCode());
     }
 
@@ -1087,7 +1087,7 @@ namespace Akka.Streams.Implementation
             return this;
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"{GetHashCode()} copy of {CopyOf}";
     }
 
@@ -1202,7 +1202,7 @@ namespace Akka.Streams.Implementation
                 );
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"\n  CompositeModule [{GetHashCode()}%08x]" +
@@ -1448,7 +1448,7 @@ namespace Akka.Streams.Implementation
                 new FusedModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes,
                     Info);
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             return $"\n  Name: {Attributes.GetNameOrDefault("unnamed")}" +
@@ -2142,7 +2142,6 @@ namespace Akka.Streams.Implementation
             {
             }
 
-#if SERIALIZATION
             /// <summary>
             /// Initializes a new instance of the <see cref="MaterializationPanicException" /> class.
             /// </summary>
@@ -2152,7 +2151,6 @@ namespace Akka.Streams.Implementation
                 : base(info, context)
             {
             }
-#endif
         }
 
         /// <summary>

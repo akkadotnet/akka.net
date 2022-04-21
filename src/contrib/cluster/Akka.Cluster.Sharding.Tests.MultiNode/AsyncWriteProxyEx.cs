@@ -9,15 +9,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using System.Runtime.Serialization;
-using Akka.Event;
-using Akka.Persistence.Journal;
-using Akka.Persistence;
-using System.Threading;
-using Akka.Util.Internal;
 using Akka.Actor.Internal;
+using Akka.Persistence;
+using Akka.Persistence.Journal;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -43,7 +41,6 @@ namespace Akka.Cluster.Sharding.Tests
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
         /// </summary>
@@ -53,7 +50,6 @@ namespace Akka.Cluster.Sharding.Tests
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
@@ -88,6 +84,12 @@ namespace Akka.Cluster.Sharding.Tests
     /// </summary>
     public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash
     {
+        private class InitTimeout
+        {
+            public static readonly InitTimeout Instance = new InitTimeout();
+            private InitTimeout() { }
+        }
+
         private bool _isInitialized;
         private bool _isInitTimedOut;
         private IActorRef _store;
@@ -163,7 +165,7 @@ namespace Akka.Cluster.Sharding.Tests
             if (_store == null)
                 return StoreNotInitialized<IImmutableList<Exception>>();
 
-            return _store.AskEx<object>(sender => new WriteMessages(messages, sender, 1), Timeout)
+            return _store.Ask<object>(sender => new WriteMessages(messages, sender, 1), Timeout, CancellationToken.None)
                 .ContinueWith(r =>
                 {
                     if (r.IsCanceled)
@@ -199,7 +201,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             var result = new TaskCompletionSource<object>();
 
-            _store.AskEx(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout).ContinueWith(r =>
+            _store.Ask<object>(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout, CancellationToken.None).ContinueWith(r =>
             {
                 if (r.IsFaulted)
                     result.TrySetException(r.Exception);
@@ -254,7 +256,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             var result = new TaskCompletionSource<long>();
 
-            _store.AskEx<object>(sender => new ReplayMessages(0, 0, 0, persistenceId, sender), Timeout)
+            _store.Ask<object>(sender => new ReplayMessages(0, 0, 0, persistenceId, sender), Timeout, CancellationToken.None)
                 .ContinueWith(t =>
                 {
                     if (t.IsFaulted)
@@ -280,27 +282,6 @@ namespace Akka.Cluster.Sharding.Tests
         /// TBD
         /// </summary>
         public IStash Stash { get; set; }
-
-        // sent to self only
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public class InitTimeout
-        {
-            private InitTimeout() { }
-            private static readonly InitTimeout _instance = new InitTimeout();
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static InitTimeout Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
-        }
     }
 
     /// <summary>
@@ -340,7 +321,6 @@ namespace Akka.Cluster.Sharding.Tests
             switch (message)
             {
                 case ReplayedMessage rm:
-                    //rm.Persistent
                     _replayCallback(rm.Persistent);
                     return true;
                 case RecoverySuccess _:
@@ -358,112 +338,6 @@ namespace Akka.Cluster.Sharding.Tests
                     return true;
             }
             return false;
-        }
-    }
-
-    internal static class FuturesEx
-    {
-        public static Task<object> AskEx(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout = null)
-        {
-            return self.AskEx<object>(messageFactory, timeout, CancellationToken.None);
-        }
-
-        public static Task<object> AskEx(this ICanTell self, Func<IActorRef, object> messageFactory, CancellationToken cancellationToken)
-        {
-            return self.AskEx<object>(messageFactory, null, cancellationToken);
-        }
-
-        public static Task<object> AskEx(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
-        {
-            return self.AskEx<object>(messageFactory, timeout, cancellationToken);
-        }
-
-        public static Task<T> AskEx<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout = null)
-        {
-            return self.AskEx<T>(messageFactory, timeout, CancellationToken.None);
-        }
-
-        public static Task<T> AskEx<T>(this ICanTell self, Func<IActorRef, object> messageFactory, CancellationToken cancellationToken)
-        {
-            return self.AskEx<T>(messageFactory, null, cancellationToken);
-        }
-
-        public static async Task<T> AskEx<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
-        {
-            IActorRefProvider provider = ResolveProvider(self);
-            if (provider == null)
-                throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
-
-            return (T)await AskEx(self, messageFactory, provider, timeout, cancellationToken);
-        }
-        internal static IActorRefProvider ResolveProvider(ICanTell self)
-        {
-            if (InternalCurrentActorCellKeeper.Current != null)
-                return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
-
-            if (self is IInternalActorRef iar)
-                return iar.Provider;
-
-            if (self is ActorSelection asel)
-                return ResolveProvider(asel.Anchor);
-
-            return null;
-        }
-
-        private static async Task<object> AskEx(ICanTell self, Func<IActorRef, object> messageFactory, IActorRefProvider provider, TimeSpan? timeout, CancellationToken cancellationToken)
-        {
-            var result = new TaskCompletionSource<object>();
-
-            CancellationTokenSource timeoutCancellation = null;
-            timeout = timeout ?? provider.Settings.AskTimeout;
-            var ctrList = new List<CancellationTokenRegistration>(2);
-
-            if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
-            {
-                timeoutCancellation = new CancellationTokenSource();
-
-                ctrList.Add(timeoutCancellation.Token.Register(() =>
-                {
-                    result.TrySetException(new AskTimeoutException($"Timeout after {timeout} seconds"));
-                }));
-
-                timeoutCancellation.CancelAfter(timeout.Value);
-            }
-
-            if (cancellationToken.CanBeCanceled)
-            {
-                ctrList.Add(cancellationToken.Register(() => result.TrySetCanceled()));
-            }
-
-            //create a new tempcontainer path
-            ActorPath path = provider.TempPath();
-
-            var future = new FutureActorRef(result, () => { }, path);
-            //The future actor needs to be registered in the temp container
-            provider.RegisterTempActor(future, path);
-
-            self.Tell(messageFactory(future), future);
-
-            try
-            {
-                return await result.Task;
-            }
-            finally
-            {
-                //callback to unregister from tempcontainer
-
-                provider.UnregisterTempActor(path);
-
-                for (var i = 0; i < ctrList.Count; i++)
-                {
-                    ctrList[i].Dispose();
-                }
-
-                if (timeoutCancellation != null)
-                {
-                    timeoutCancellation.Dispose();
-                }
-            }
         }
     }
 }

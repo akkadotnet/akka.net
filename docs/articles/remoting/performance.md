@@ -5,14 +5,16 @@ title: Network and Performance Optimization
 
 # Akka.Remote Performance Optimization
 
-If you're building a large-scale system using Akka.NET, the performance of Akka.Remote is going to be one of the most critical factors of your application as it's directly responsible for managing the rate at which messages move across a single connection between two nodes. 
+If you're building a large-scale system using Akka.NET, the performance of Akka.Remote is going to be one of the most critical factors of your application as it's directly responsible for managing the rate at which messages move across a single connection between two nodes.
 
 Akka.NET is [horizontally scalable using Akka.Cluster](../clustering/cluster-overview.md), meaning that Akka.NET applications typically respond to surges in demand by scaling up and down the number of nodes inside the network - however, ensuring that the messages per node throughput is consistently high will give you the most value on a per-node basis.
 
 ## Akka.NET v1.4.14 and Later
-In Akka.NET v1.4.14 we introduced a [self-optimizing batching system for DotNetty](https://github.com/akkadotnet/akka.net/pull/4685), which means that end-users no longer manually need to specify explicit batching thresholds in their configuration. The default DotNetty transport for Akka.NET will now automatically group and ungroup batches in a manner that reduces latency for light workloads and increases throughput for heavy workloads automatically without any need for tuning.
+
+In Akka.NET v1.4.14 we introduced a [self-optimizing batching system for DotNetty](https://github.com/akkadotnet/akka.net/pull/4685), which means that end-users no longer manually need to specify explicit batching thresholds in their configuration. The default DotNetty transport for Akka.NET will now automatically group and un-group batches in a manner that reduces latency for light workloads and increases throughput for heavy workloads automatically without any need for tuning.
 
 ### Performance Comparison
+
 Here is how Akka.NET v1.4.14 performs with batching enabled (it's on by default) on an AMD Ryzen 7 1700 Eight Core 3.2 Ghz processor running Windows 10 on .NET Core 3.1:
 
 | Num clients (actors) | Total [msg] | Msgs/sec | Total [ms] |
@@ -25,9 +27,9 @@ Here is how Akka.NET v1.4.14 performs with batching enabled (it's on by default)
 | 25                   | 5000000     | 190462   | 26252.27   |
 | 30                   | 6000000     | 189281   | 31699.14   |
 
-Versus the numbers with 
+Versus the numbers with
 
-```
+```hocon
 akka.remote.dot-netty.tcp.batching.enabled = false
 ```
 
@@ -47,7 +49,7 @@ The way the I/O batching system works is by grouping messages that written in su
 
 The Akka.Remote batching system can be disabled and tuned via the following settings:
 
-```
+```hocon
 akka.remote.dot-netty.tcp{
       batching{
 
@@ -61,14 +63,16 @@ akka.remote.dot-netty.tcp{
 The `max-pending-writes` setting determines the maximum number of writes that can be grouped together before Akka.Remote forces a flush - this is done in order to reduce latency (the amount of time it takes a single write to reach its destination) and to limit the amount of data that needs to be written to the socket all in one go.
 
 ## Pre-Akka.NET v1.4.14
+
 The advice below is applicable to all versions of Akka.NET v1.4.14, which is when the self-optimizing batching system was introduced into Akka.Remote.
 
 ### Optimizing the DotNetty TCP Transport
+
 The default transport in Akka.Remote is the DotNetty TCP transport, which is a good choice for most Akka.NET developers because TCP preserves message order and guarantees delivery of every message over the wire so long as the network remains available, which is consistent with `IActorRef` default messaging. The same cannot be said for alternative transports such as a UDP transport.
 
 As of Akka.NET v1.4.0-beta4, we've added a new feature to Akka.Remote called a "batch writer" which has tremendously improved the performance of outbound writes in Akka.Remote by grouping many logical writes into a smaller number of physical writes (actual flush calls to the underlying socket.)
 
-Here are some performance numbers from our [RemotePingPong benchmark](https://github.com/akkadotnet/akka.net/tree/dev/src/benchmark/RemotePingPong), which uses high volumes of small messages. 
+Here are some performance numbers from our [RemotePingPong benchmark](https://github.com/akkadotnet/akka.net/tree/dev/src/benchmark/RemotePingPong), which uses high volumes of small messages.
 
 These numbers were all produced on a 12 core Intel i7 2.6Ghz Dell laptop over a single Akka.Remote connection running .NET Core 2.1 on Windows 10:
 
@@ -109,9 +113,10 @@ Akka.Remote's flush batching system for DotNetty operates on the principle of tr
 You can achieve similar results for your application.
 
 #### Optimizing Batches for Your Use Case
-To take advantage of I/O batching in DotNetty, you need to [tailor the following Akka.Remote configuration values to your use case](../../configuration/akka.remote.md):
 
-```
+To take advantage of I/O batching in DotNetty, you need to [tailor the following Akka.Remote configuration values to your use case](../../articles/configuration/modules/akka.remote.md):
+
+```hocon
 akka.remote.dot-netty.tcp{
       batching{
 
@@ -140,13 +145,18 @@ The key to performance tuning the DotNetty TCP transport is picking the best val
 * If your application has a small number of remote actors who need to communicate with the lowest possible latency, decrease the `max-pending-writes` value so you don't have to wait for the `flush-interval` to hit.
 * If your application has a large number of actors sending a large number of messages that vary in size, use the default values - they're tailored for that case.
 
+<!-- markdownlint-disable MD028 -->
 > [!TIP]
 > If you're worried about adverse impact of implementing batching in your Akka.NET application because you aren't sure yet how it should be calibrated for your specific use cases, you can disable batching via `akka.remote.dot-netty.tcp.batching.enabled = false` - this will allow the DotNetty transport to continue to run as it did prior to Akka.NET v1.4.0-beta4.
 
 > [!IMPORTANT]
 > Later on in the Akka.NET v1.4.0 release cycle we will be releasing some tools built into Akka.Remote that will make it easier to collect profiling data about your application's performance. This should make it much easier to determine what sort of configuration you may want to use with the DotNetty TCP batching system.
+<!-- markdownlint-enable MD028 -->
 
 ## Further Reading
+
 See [Petabridge](https://petabridge.com/)'s video on the subject, "[Akka.Remote Performance Optimization in Akka.NET v1.4](https://www.youtube.com/watch?v=mP3amXEntmQ)"
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/mP3amXEntmQ" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->

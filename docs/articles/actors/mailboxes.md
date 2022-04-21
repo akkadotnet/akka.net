@@ -23,7 +23,7 @@ To make an actor use a specific mailbox, you can set it up one of the following 
   Props.Create<ActorType>().WithMailbox("my-custom-mailbox");
   ```
 
-2. In the actor's deployment configuration
+1. In the actor's deployment configuration
 
   ```hocon
   akka.actor.deployment {
@@ -65,18 +65,18 @@ public class IssueTrackerMailbox : UnboundedPriorityMailbox
 {
   protected override int PriorityGenerator(object message)
   {
-	  var issue = message as Issue;
+      var issue = message as Issue;
 
-	  if (issue != null)
-	  {
-		  if (issue.IsSecurityFlaw)
-			  return 0;
+      if (issue != null)
+      {
+          if (issue.IsSecurityFlaw)
+              return 0;
 
-		  if (issue.IsBug)
-			  return 1;
-	  }
+          if (issue.IsBug)
+              return 1;
+      }
 
-	  return 2;
+      return 2;
   }
 }
 ```
@@ -85,4 +85,4 @@ Once the class is implemented, you should set it up using the [instructions abov
 
 > [!WARNING]
 > While we have updated the `UnboundedPriorityMailbox` to support Stashing. We don't recommend using it.
-Once you stash messages, they are no longer part of the prioritization process that your PriorityMailbox uses. Once you unstash all messages, they are fed to the Actor, in the order of stashing.
+Once you stash messages, they are no longer part of the prioritization process that your PriorityMailbox uses. Once you un-stash all messages, they are fed to the Actor, in the order of stashing.

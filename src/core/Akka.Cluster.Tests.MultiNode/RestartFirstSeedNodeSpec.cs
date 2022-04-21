@@ -14,6 +14,7 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using FluentAssertions;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -43,7 +44,7 @@ namespace Akka.Cluster.Tests.MultiNode
     {
         private readonly RestartFirstSeedNodeSpecConfig _config;
         private Address _missedSeed;
-        private static Address _seedNode1Address;
+        private static volatile Address _seedNode1Address;
 
         private Lazy<ActorSystem> seed1System;
         private Lazy<ActorSystem> restartedSeed1System;
@@ -104,25 +105,26 @@ namespace Akka.Cluster.Tests.MultiNode
                 // now we can join seed1System, seed2, seed3 together
                 RunOn(() =>
                 {
-                    Cluster.Get(seed1System.Value).JoinSeedNodes(GetSeedNodes());
+                    var seeds = GetSeedNodes();
+                    seeds.Count.Should().Be(4); // validate that we have complete seed node list
+                    var cluster = Cluster.Get(seed1System.Value);
+                    cluster.JoinSeedNodes(seeds);
                     AwaitAssert(() =>
                     {
-                        Cluster.Get(seed1System.Value)
-                            .State.Members.Count
-                            .Should()
-                            .Be(3);
-                    }, TimeSpan.FromSeconds(10));
+                        cluster.State.Members.Count.Should().Be(3);
+                    }, TimeSpan.FromSeconds(20));
                     AwaitAssert(() =>
                     {
-                        Cluster.Get(seed1System.Value)
+                        cluster
                             .State.Members.All(c => c.Status == MemberStatus.Up)
-                            .Should()
-                            .BeTrue();
+                            .Should().BeTrue();
                     });
                 }, _config.Seed1);
                 RunOn(() =>
                 {
-                    Cluster.JoinSeedNodes(GetSeedNodes());
+                    var seeds = GetSeedNodes();
+                    seeds.Count.Should().Be(4); // validate that we have complete seed node list
+                    Cluster.JoinSeedNodes(seeds);
                     AwaitMembersUp(3);
                 }, _config.Seed2, _config.Seed3);
                 EnterBarrier("started");

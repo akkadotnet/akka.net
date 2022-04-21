@@ -95,7 +95,29 @@ namespace Akka.Cluster
                 DowningProviderType = typeof(NoDowning);
 
             RunCoordinatedShutdownWhenDown = clusterConfig.GetBoolean("run-coordinated-shutdown-when-down", false);
-            AllowWeaklyUpMembers = clusterConfig.GetBoolean("allow-weakly-up-members", false);
+
+            // TODO: replace with a switch expression when we upgrade to C#8 or later
+            TimeSpan GetWeaklyUpDuration()
+            {
+                var cKey = "allow-weakly-up-members";
+                switch (clusterConfig.GetString(cKey, string.Empty)
+                    .ToLowerInvariant())
+                {
+                    case "off":
+                        return TimeSpan.Zero;
+                    case "on":
+
+                        return TimeSpan.FromSeconds(7); // for backwards compatibility when it wasn't a duration
+                    default:
+                        var val = clusterConfig.GetTimeSpan(cKey, TimeSpan.FromSeconds(7));
+                        if(!(val > TimeSpan.Zero))
+                            throw new ConfigurationException($"Valid settings for [akka.cluster.{cKey}] are 'off', 'on', or a timespan greater than 0s. Received [{val}]");
+                        return val;
+                }
+            }
+
+            WeaklyUpAfter = GetWeaklyUpDuration();
+
         }
 
         /// <summary>
@@ -263,12 +285,21 @@ namespace Akka.Cluster
         /// <summary>
         /// If this is set to "off", the leader will not move <see cref="MemberStatus.Joining"/> members to <see cref="MemberStatus.Up"/> during a network
         /// split. This feature allows the leader to accept <see cref="MemberStatus.Joining"/> members to be <see cref="MemberStatus.WeaklyUp"/>
-        /// so they become part of the cluster even during a network split. The leader will
-        /// move <see cref="MemberStatus.Joining"/> members to <see cref="MemberStatus.WeaklyUp"/> after 3 rounds of 'leader-actions-interval'
-        /// without convergence.
+        /// so they become part of the cluster even during a network split.
+        ///
         /// The leader will move <see cref="MemberStatus.WeaklyUp"/> members to <see cref="MemberStatus.Up"/> status once convergence has been reached.
         /// </summary>
-        public bool AllowWeaklyUpMembers { get; }
+        public bool AllowWeaklyUpMembers => WeaklyUpAfter != TimeSpan.Zero;
+
+        /// <summary>
+        /// The duration after which a member who is currently <see cref="MemberStatus.Joining"/> will be marked as
+        /// <see cref="MemberStatus.WeaklyUp"/> in the event that members of the cluster are currently unreachable.
+        ///
+        /// This is designed to allow new cluster members to perform work even in the event of a cluster split.
+        /// 
+        /// The leader will move <see cref="MemberStatus.WeaklyUp"/> members to <see cref="MemberStatus.Up"/> status once convergence has been reached.
+        /// </summary>
+        public TimeSpan WeaklyUpAfter { get; }
     }
 }
 

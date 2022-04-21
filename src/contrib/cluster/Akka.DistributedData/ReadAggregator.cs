@@ -15,19 +15,19 @@ namespace Akka.DistributedData
 {
     internal class ReadAggregator : ReadWriteAggregator
     {
-        internal static Props Props(IKey key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, DataEnvelope localValue, IActorRef replyTo) =>
-            Actor.Props.Create(() => new ReadAggregator(key, consistency, req, nodes, unreachable, localValue, replyTo)).WithDeploy(Deploy.Local);
+        internal static Props Props(IKey key, IReadConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, DataEnvelope localValue, IActorRef replyTo) =>
+            Actor.Props.Create(() => new ReadAggregator(key, consistency, req, nodes, unreachable, shuffle, localValue, replyTo)).WithDeploy(Deploy.Local);
 
         private readonly IKey _key;
         private readonly IReadConsistency _consistency;
         private readonly object _req;
         private readonly IActorRef _replyTo;
         private readonly Read _read;
-        
+
         private DataEnvelope _result;
 
-        public ReadAggregator(IKey key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, DataEnvelope localValue, IActorRef replyTo)
-            : base(nodes, unreachable, consistency.Timeout)
+        public ReadAggregator(IKey key, IReadConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, DataEnvelope localValue, IActorRef replyTo)
+            : base(nodes, unreachable, consistency.Timeout, shuffle)
         {
             _key = key;
             _consistency = consistency;
@@ -41,16 +41,29 @@ namespace Akka.DistributedData
 
         private int GetDoneWhenRemainingSize()
         {
-            if (_consistency is ReadFrom) return Nodes.Count - (((ReadFrom) _consistency).N - 1);
-            else if (_consistency is ReadAll) return 0;
-            else if (_consistency is ReadMajority)
+            switch (_consistency)
             {
-                var ncount = Nodes.Count + 1;
-                var w = CalculateMajorityWithMinCapacity(((ReadMajority) _consistency).MinCapacity, ncount);
-                return ncount - w;
+                case ReadFrom read: return Nodes.Count - (read.N - 1);
+                case ReadAll _: return 0;
+                case ReadMajority read:
+                    {
+                        // +1 because local node is not included in 'Nodes'
+                        var n = Nodes.Count + 1;
+                        var r = CalculateMajority(read.MinCapacity, n, 0);
+                        Log.Debug("ReadMajority [{0}] [{1}] of [{2}].", _key, r, n);
+                        return n - r;
+                    }
+                case ReadMajorityPlus read:
+                    {
+                        // +1 because local node is not included in 'Nodes'
+                        var n = Nodes.Count + 1;
+                        var r = CalculateMajority(read.MinCapacity, n, read.Additional);
+                        Log.Debug("ReadMajorityPlus [{0}] [{1}] of [{2}].", _key, r, n);
+                        return n - r;
+                    }
+                case ReadLocal _: throw new ArgumentException("ReadAggregator does not support ReadLocal");
+                default: throw new ArgumentException("Invalid consistency level");
             }
-            else if (_consistency is ReadLocal) throw new ArgumentException("ReadAggregator does not support ReadLocal");
-            else throw new ArgumentException("Invalid consistency level");
         }
 
         protected override void PreStart()
@@ -136,12 +149,12 @@ namespace Akka.DistributedData
 
         private ReadLocal() { }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj != null && obj is ReadLocal;
 
-        /// <inheritdoc/>
+        
         public override string ToString() => "ReadLocal";
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => nameof(ReadLocal).GetHashCode();
     }
 
@@ -157,10 +170,10 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is ReadFrom && Equals((ReadFrom) obj);
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadFrom other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -168,7 +181,7 @@ namespace Akka.DistributedData
             return N == other.N && Timeout.Equals(other.Timeout);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -177,7 +190,7 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadFrom({N}, timeout={Timeout})";
     }
 
@@ -192,16 +205,16 @@ namespace Akka.DistributedData
             MinCapacity = minCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj is ReadMajority && Equals((ReadMajority) obj);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadMajority(timeout={Timeout})";
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadMajority other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -209,12 +222,61 @@ namespace Akka.DistributedData
             return Timeout.Equals(other.Timeout) && MinCapacity == other.MinCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
             {
                 return (Timeout.GetHashCode() * 397) ^ MinCapacity;
+            }
+        }
+    }
+
+    /// <summary>
+    /// <see cref="ReadMajority"/> but with the given number of <see cref="Additional"/> nodes added to the majority count. At most
+    /// all nodes. Exiting nodes are excluded using `ReadMajorityPlus` because those are typically
+    /// about to be removed and will not be able to respond.
+    /// </summary>
+    public sealed class ReadMajorityPlus : IReadConsistency, IEquatable<ReadMajorityPlus>
+    {
+        public TimeSpan Timeout { get; }
+        public int Additional { get; }
+        public int MinCapacity { get; }
+
+        public ReadMajorityPlus(TimeSpan timeout, int additional, int minCapacity = 0)
+        {
+            Timeout = timeout;
+            Additional = additional;
+            MinCapacity = minCapacity;
+        }
+
+        
+        public override bool Equals(object obj)
+        {
+            return obj is ReadMajorityPlus && Equals((ReadMajorityPlus)obj);
+        }
+
+        
+        public override string ToString() => $"ReadMajorityPlus(timeout={Timeout}, additional={Additional})";
+
+        
+        public bool Equals(ReadMajorityPlus other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Timeout.Equals(other.Timeout) && Additional == other.Additional && MinCapacity == other.MinCapacity;
+        }
+
+        
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = 13;
+                hashCode = (hashCode * 397) ^ Timeout.GetHashCode();
+                hashCode = (hashCode * 397) ^ Additional.GetHashCode();
+                hashCode = (hashCode * 397) ^ MinCapacity.GetHashCode();
+                return hashCode;
             }
         }
     }
@@ -228,16 +290,16 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj is ReadAll && Equals((ReadAll) obj);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadAll(timeout={Timeout})";
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadAll other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -245,7 +307,7 @@ namespace Akka.DistributedData
             return Timeout.Equals(other.Timeout);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return Timeout.GetHashCode();

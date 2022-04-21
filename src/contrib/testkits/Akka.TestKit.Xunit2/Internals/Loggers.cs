@@ -5,8 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Util;
 using Xunit.Abstractions;
 
 namespace Akka.TestKit.Xunit2.Internals
@@ -16,20 +18,50 @@ namespace Akka.TestKit.Xunit2.Internals
     /// </summary>
     public class TestOutputLogger : ReceiveActor
     {
+        private readonly ITestOutputHelper _output;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="TestOutputLogger"/> class.
         /// </summary>
         /// <param name="output">The provider used to write test output.</param>
         public TestOutputLogger(ITestOutputHelper output)
         {
-            Receive<Debug>(e => output.WriteLine(e.ToString()));
-            Receive<Info>(e => output.WriteLine(e.ToString()));
-            Receive<Warning>(e => output.WriteLine(e.ToString()));
-            Receive<Error>(e => output.WriteLine(e.ToString()));
+            _output = output;
+
+            Receive<Debug>(HandleLogEvent);
+            Receive<Info>(HandleLogEvent);
+            Receive<Warning>(HandleLogEvent);
+            Receive<Error>(HandleLogEvent);
             Receive<InitializeLogger>(e =>
             {
                 e.LoggingBus.Subscribe(Self, typeof (LogEvent));
             });
+        }
+
+        private void HandleLogEvent(LogEvent e)
+        {
+            try
+            {
+                _output.WriteLine(e.ToString());
+            }
+            catch (FormatException ex)
+            {
+                if (e.Message is LogMessage msg)
+                {
+                    var message =
+                        $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Args)}]";
+                    if (e.Cause != null)
+                        throw new AggregateException(message, ex, e.Cause);
+                    throw new FormatException(message, ex);
+                }
+
+                throw;
+            }
+            catch (InvalidOperationException ie)
+            {
+                StandardOutWriter.WriteLine($"Received InvalidOperationException: {ie} - probably because the test had completed executing.");
+                Context.Stop(Self); // shut ourselves down, can't do our job any longer
+            }
         }
     }
 }

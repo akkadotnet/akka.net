@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.Serialization;
 
 namespace Akka.Coordination
 {
@@ -32,12 +33,10 @@ namespace Akka.Coordination
         {
         }
 
-#if SERIALIZATION
         protected LeaseTimeoutException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
 
         }
-#endif
     }
 }

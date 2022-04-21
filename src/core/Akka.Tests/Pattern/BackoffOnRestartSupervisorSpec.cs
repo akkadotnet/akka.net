@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.TestKit;
@@ -135,6 +136,7 @@ namespace Akka.Tests.Pattern
         private Props SupervisorProps(IActorRef probeRef)
         {
             var options = Backoff.OnFailure(TestActor.Props(probeRef), "someChildName", 200.Milliseconds(), 10.Seconds(), 0.0, -1)
+                .WithManualReset()
                 .WithSupervisorStrategy(new OneForOneStrategy(4, TimeSpan.FromSeconds(30), ex => ex is StoppingException 
                     ? Directive.Stop 
                     : SupervisorStrategy.DefaultStrategy.Decider.Decide(ex)));
@@ -269,7 +271,7 @@ namespace Akka.Tests.Pattern
             EventFilter.Exception<TestException>().Expect(5, () =>
             {
                 probe.Watch(supervisor);
-                for (int i = 1; i <= 5; i++)
+                for (var i = 1; i <= 5; i++)
                 {
                     supervisor.Tell("THROW");
                     if (i < 5)
@@ -284,15 +286,15 @@ namespace Akka.Tests.Pattern
             });
         }
 
-        [Fact]
+        [SkippableFact]
         public void BackoffOnRestartSupervisor_must_respect_withinTimeRange_property_of_OneForOneStrategy()
         {
             var probe = CreateTestProbe();
             // withinTimeRange indicates the time range in which maxNrOfRetries will cause the child to
             // stop. IE: If we restart more than maxNrOfRetries in a time range longer than withinTimeRange
             // that is acceptable.
-            var options = Backoff.OnFailure(TestActor.Props(probe.Ref), "someChildName", 300.Milliseconds(), 10.Seconds(), 0.0, -1)
-                .WithSupervisorStrategy(new OneForOneStrategy(3, 1.Seconds(), ex => ex is StoppingException 
+            var options = Backoff.OnFailure(TestActor.Props(probe.Ref), "someChildName", 100.Milliseconds(), 10.Seconds(), 0.0, -1)
+                .WithSupervisorStrategy(new OneForOneStrategy(3, 2.Seconds(), ex => ex is StoppingException 
                     ? Directive.Stop 
                     : SupervisorStrategy.DefaultStrategy.Decider.Decide(ex)));
             var supervisor = Sys.ActorOf(BackoffSupervisor.Props(options));
@@ -302,21 +304,26 @@ namespace Akka.Tests.Pattern
 
             probe.Watch(supervisor);
             // Throw three times rapidly
-            for (int i = 1; i <= 3; i++)
+            for (var i = 1; i <= 3; i++)
             {
                 supervisor.Tell("THROW");
                 probe.ExpectMsg("STARTED");
             }
 
             // Now wait the length of our window, and throw again. We should still restart.
-            Thread.Sleep(1000);
-            supervisor.Tell("THROW");
-            probe.ExpectMsg("STARTED");
-            // Now we'll issue three more requests, and should be terminated.
-            supervisor.Tell("THROW");
-            probe.ExpectMsg("STARTED");
-            supervisor.Tell("THROW");
-            probe.ExpectMsg("STARTED");
+            Thread.Sleep(2100);
+
+            var stopwatch = Stopwatch.StartNew();
+            // Throw three times rapidly
+            for (var i = 1; i <= 3; i++)
+            {
+                supervisor.Tell("THROW");
+                probe.ExpectMsg("STARTED");
+            }
+            stopwatch.Stop();
+            Skip.If(stopwatch.ElapsedMilliseconds > 1500, "Could not satisfy test condition. Execution time exceeds the prescribed 2 seconds limit.");
+            
+            // Now we'll issue another request and should be terminated.
             supervisor.Tell("THROW");
             probe.ExpectTerminated(supervisor);
         }

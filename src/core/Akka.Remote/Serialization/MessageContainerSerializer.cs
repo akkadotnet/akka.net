@@ -7,7 +7,9 @@
 
 using System;
 using System.Linq;
+using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
@@ -71,7 +73,6 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             var selectionEnvelope = Proto.Msg.SelectionEnvelope.Parser.ParseFrom(bytes);
-            var message = _payloadSupport.PayloadFrom(selectionEnvelope.Payload);
 
             var elements = new SelectionPathElement[selectionEnvelope.Pattern.Count];
             for (var i = 0; i < selectionEnvelope.Pattern.Count; i++)
@@ -83,6 +84,25 @@ namespace Akka.Remote.Serialization
                     elements[i] = new SelectChildPattern(p.Matcher);
                 if (p.Type == Proto.Msg.Selection.Types.PatternType.Parent)
                     elements[i] = new SelectParent();
+            }
+
+            object message;
+            try
+            {
+                message = _payloadSupport.PayloadFrom(selectionEnvelope.Payload);
+            }
+            catch (Exception ex)
+            {
+                var payload = selectionEnvelope.Payload;
+                
+                var manifest = !payload.MessageManifest.IsEmpty
+                    ? payload.MessageManifest.ToStringUtf8()
+                    : string.Empty;
+                
+                throw new SerializationException(
+                    $"Failed to deserialize payload object when deserializing {nameof(ActorSelectionMessage)} with " +
+                    $"payload [SerializerId={payload.SerializerId}, Manifest={manifest}] addressed to [" +
+                    $"{string.Join(",", elements.Select(e => e.ToString()))}]. {GetErrorForSerializerId(payload.SerializerId)}", ex);
             }
 
             return new ActorSelectionMessage(message, elements);

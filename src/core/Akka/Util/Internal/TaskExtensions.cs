@@ -40,5 +40,55 @@ namespace Akka.Util.Internal
                 // Check cancellation, to return task in cancelled state instead of completed
                 .ContinueWith(t => { }, cancellationToken, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
+
+        /// <summary>
+        /// When this Task is completed, either through an exception or a value, invoke the provided function.
+        /// If the Task has already been completed, this will either be applied immediately or be scheduled asynchronously.
+        /// </summary>
+        /// <param name="source">TBD</param>
+        /// <param name="f">The function to be executed when this Task completes</param>
+        public static Task OnComplete(this Task source, Action<Try<Done>> f)
+        {
+            return source.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    var exception = t.Exception?.InnerExceptions != null && t.Exception.InnerExceptions.Count == 1
+                        ? t.Exception.InnerExceptions[0]
+                        : t.Exception;
+
+                    f(new Try<Done>(exception));
+                }
+                else
+                {
+                    f(new Try<Done>(Done.Instance));
+                }
+            }, TaskContinuationOptions.NotOnCanceled);
+        }
+
+        /// <summary>
+        /// When this Task is completed, either through an exception or a value, invoke the provided function.
+        /// If the Task has already been completed, this will either be applied immediately or be scheduled asynchronously.
+        /// </summary>
+        /// <param name="source">TBD</param>
+        /// <param name="f">The function to be executed when this Task completes</param>
+        public static Task OnComplete<TSource>(this Task<TSource> source, Action<Try<TSource>> f)
+        {
+            return source.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    var exception = t.Exception?.InnerExceptions != null && t.Exception.InnerExceptions.Count == 1
+                        ? t.Exception.InnerExceptions[0]
+                        : t.Exception;
+
+                    f(new Try<TSource>(exception));
+                }
+                else
+                {
+                    f(new Try<TSource>(t.Result));
+                }
+            }, TaskContinuationOptions.NotOnCanceled);
+        }
     }
 }

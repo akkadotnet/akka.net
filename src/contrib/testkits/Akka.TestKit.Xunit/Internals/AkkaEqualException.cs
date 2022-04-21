@@ -33,17 +33,16 @@ namespace Akka.TestKit.Xunit.Internals
             _args = args;
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaEqualException"/> class.
         /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        /// <param name="info">The SerializationInfo that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The StreamingContext that contains contextual information about the source or destination.</param>
         protected AkkaEqualException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
-#endif
+
         /// <summary>
         /// The message that describes the error.
         /// </summary>

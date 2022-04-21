@@ -6,9 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
@@ -42,20 +44,87 @@ namespace Akka.TestKit
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
         public T FishForMessage<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "")
         {
+            return FishForMessage(isMessage: isMessage, max: max, hint: hint, allMessages: null);
+        }
+
+        /// <summary>
+        /// Receives messages until <paramref name="isMessage"/> returns <c>true</c>.
+        /// Use it to ignore certain messages while waiting for a specific message.
+        /// </summary>
+        /// <typeparam name="T">The type of the expected message. Messages of other types are ignored.</typeparam>
+        /// <param name="isMessage">The is message.</param>
+        /// <param name="max">The maximum.</param>
+        /// <param name="hint">The hint.</param>
+        /// <param name="allMessages">If null then will be ignored. If not null then will be initially cleared, then filled with all the messages until <paramref name="isMessage"/> returns <c>true</c></param>
+        /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
+        public T FishForMessage<T>(Predicate<T> isMessage, ArrayList allMessages, TimeSpan? max = null, string hint = "")
+        {
             var maxValue = RemainingOrDilated(max);
             var end = Now + maxValue;
+            allMessages?.Clear();
             while (true)
             {
                 var left = end - Now;
                 var msg = ReceiveOne(left);
                 _assertions.AssertTrue(msg != null, "Timeout ({0}) during fishForMessage{1}", maxValue, string.IsNullOrEmpty(hint) ? "" : ", hint: " + hint);
-                if (msg is T && isMessage((T)msg))
+                if (msg is T msg1 && isMessage(msg1))
                 {
-                    return (T)msg;
+                    return msg1;
                 }
+                allMessages?.Add(msg);
             }
         }
 
+        /// <summary>
+        /// Receives messages until <paramref name="max"/>.
+        ///
+        /// Ignores all messages except for a message of type <typeparamref name="T"/>.
+        /// Asserts that all messages are not of the of type <typeparamref name="T"/>.
+        /// </summary>
+        /// <typeparam name="T">The type that the message is not supposed to be.</typeparam>
+        /// <param name="max">Optional. The maximum wait duration. Defaults to <see cref="RemainingOrDefault"/> when unset.</param>
+        public async Task FishUntilMessageAsync<T>(TimeSpan? max = null)
+        {
+            await Task.Run(() =>
+            {
+                ReceiveWhile<object>(max: max, shouldContinue: x =>
+                {
+                    _assertions.AssertFalse(x is T, "did not expect a message of type {0}", typeof(T));
+                    return true; // please continue receiving, don't stop
+                });
+            });
+        }
+
+        /// <summary>
+        /// Waits for a <paramref name="max"/> period of 'radio-silence' limited to a number of <paramref name="maxMessages"/>.
+        /// Note: 'radio-silence' definition: period when no messages arrive at.
+        /// </summary>
+        /// <param name="max">A temporary period of 'radio-silence'.</param>
+        /// <param name="maxMessages">The method asserts that <paramref name="maxMessages"/> is never reached.</param>
+        /// If set to null then this method will loop for an infinite number of <paramref name="max"/> periods. 
+        /// NOTE: If set to null and radio-silence is never reached then this method will never return.  
+        /// <returns>Returns all the messages encountered before 'radio-silence' was reached.</returns>
+        public async Task<ArrayList> WaitForRadioSilenceAsync(TimeSpan? max = null, uint? maxMessages = null)
+        {
+            return await Task.Run(() =>
+            {
+                var messages = new ArrayList();
+
+                for (uint i = 0; ; i++)
+                {
+                    _assertions.AssertFalse(maxMessages.HasValue && i > maxMessages.Value, $"{nameof(maxMessages)} violated (current iteration: {i}).");
+
+                    var message = ReceiveOne(max: max);
+
+                    if (message == null)
+                    {
+                        return ArrayList.ReadOnly(messages);
+                    }
+
+                    messages.Add(message);
+                }
+            });
+        }
 
         /// <summary>
         /// Receive one message from the internal queue of the TestActor.
@@ -207,7 +276,7 @@ namespace Akka.TestKit
         /// <param name="filter">TBD</param>
         /// <param name="msgs">TBD</param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue) where T : class
+        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue)
         {
             return ReceiveWhile(filter, max, idle, msgs);
         }
@@ -227,7 +296,7 @@ namespace Akka.TestKit
         /// <param name="idle">TBD</param>
         /// <param name="msgs">TBD</param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue) where T : class
+        public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue)
         {
             var maxValue = RemainingOrDilated(max);
             var start = Now;
@@ -266,7 +335,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Receive a series of messages.
-        /// It will continue to receive messages until the <paramref name="shouldIgnore"/> predicate returns <c>false</c> or the idle 
+        /// It will continue to receive messages until the <paramref name="shouldContinue"/> predicate returns <c>false</c> or the idle 
         /// timeout is met (disabled by default) or the overall
         /// maximum duration is elapsed or expected messages count is reached.
         /// If a message that isn't of type <typeparamref name="T"/> the parameter <paramref name="shouldIgnoreOtherMessageTypes"/> 
@@ -277,13 +346,13 @@ namespace Akka.TestKit
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        /// <param name="shouldIgnore">TBD</param>
+        /// <param name="shouldContinue">TBD</param>
         /// <param name="max">TBD</param>
         /// <param name="idle">TBD</param>
         /// <param name="msgs">TBD</param>
         /// <param name="shouldIgnoreOtherMessageTypes">TBD</param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldIgnore, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
+        public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldContinue, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
         {
             var start = Now;
             var maxValue = RemainingOrDilated(max);
@@ -307,7 +376,7 @@ namespace Akka.TestKit
                 var shouldStop = false;
                 if (typedMessage != null)
                 {
-                    if (shouldIgnore(typedMessage))
+                    if (shouldContinue(typedMessage))
                     {
                         acc.Add(typedMessage);
                         count++;

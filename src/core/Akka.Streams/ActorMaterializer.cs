@@ -191,8 +191,7 @@ namespace Akka.Streams
         /// <returns>The newly created logging adapter.</returns>
         public abstract ILoggingAdapter MakeLogger(object logSource);
 
-        /// <inheritdoc/>
-        public void Dispose() => Shutdown();
+       public void Dispose() => Shutdown();
     }
 
     /// <summary>
@@ -242,7 +241,6 @@ namespace Akka.Streams
             Actor = actor;
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AbruptTerminationException" /> class.
         /// </summary>
@@ -252,7 +250,6 @@ namespace Akka.Streams
         {
             Actor = (IActorRef)info.GetValue("Actor", typeof(IActorRef));
         }
-#endif
     }
 
     /// <summary>
@@ -267,14 +264,12 @@ namespace Akka.Streams
         /// <param name="innerException">The exception that is the cause of the current exception.</param>
         public MaterializationException(string message, Exception innerException) : base(message, innerException) { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="MaterializationException"/> class.
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected MaterializationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
-#endif
     }
 
     /// <summary>
@@ -289,6 +284,13 @@ namespace Akka.Streams
         {
 
         }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AbruptStageTerminationException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected AbruptStageTerminationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
@@ -696,8 +698,7 @@ namespace Akka.Streams
             Mode = mode;
             Timeout = timeout;
         }
-
-        /// <inheritdoc/>
+               
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(obj, null))
@@ -709,12 +710,11 @@ namespace Akka.Streams
 
             return false;
         }
-
-        /// <inheritdoc/>
+        
         public bool Equals(StreamSubscriptionTimeoutSettings other)
             => Mode == other.Mode && Timeout.Equals(other.Timeout);
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -723,7 +723,6 @@ namespace Akka.Streams
             }
         }
 
-        /// <inheritdoc/>
         public override string ToString() => $"StreamSubscriptionTimeoutSettings<{Mode}, {Timeout}>";
     }
 

@@ -60,7 +60,7 @@ namespace Akka.Persistence.Tests
         public ManyRecoveriesSpec() : base(ConfigurationFactory.ParseString(@"
             akka.actor.default-dispatcher.Type = ForkJoinDispatcher
             akka.actor.default-dispatcher.dedicated-thread-pool.thread-count = 5
-            akka.persistence.max-concurrent-recoveries = 3
+            akka.persistence.max-concurrent-recoveries = 1
             akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
 
             # snapshot store plugin is NOT defined, things should still work

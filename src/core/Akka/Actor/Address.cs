@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Xml.Xsl;
 using Akka.Util;
 
 namespace Akka.Actor
@@ -23,10 +24,7 @@ namespace Akka.Actor
     /// for example a remote transport would want to associate additional
     /// information with an address, then this must be done externally.
     /// </summary>
-    public sealed class Address : IEquatable<Address>, IComparable<Address>, IComparable, ISurrogated
-#if CLONEABLE
-        , ICloneable
-#endif
+    public sealed class Address : IEquatable<Address>, IComparable<Address>, IComparable, ISurrogated, ICloneable
     {
         #region comparer
 
@@ -43,7 +41,7 @@ namespace Akka.Actor
                 if (result != 0) return result;
                 result = string.CompareOrdinal(x.System, y.System);
                 if (result != 0) return result;
-                result = string.CompareOrdinal(x.Host ?? "", y.Host ?? "");
+                result = string.CompareOrdinal(x.Host ?? string.Empty, y.Host ?? string.Empty);
                 if (result != 0) return result;
                 result = (x.Port ?? 0).CompareTo(y.Port ?? 0);
                 return result;
@@ -62,7 +60,7 @@ namespace Akka.Actor
         /// </summary>
         public static readonly Address AllSystems = new Address("akka", "all-systems");
 
-        private readonly Lazy<string> _toString;
+        private string _toString;
         private readonly string _host;
         private readonly int? _port;
         private readonly string _system;
@@ -81,7 +79,7 @@ namespace Akka.Actor
             _system = system;
             _host = host?.ToLowerInvariant();
             _port = port;
-            _toString = CreateLazyToString();
+            _toString = null;
         }
 
         /// <summary>
@@ -117,19 +115,14 @@ namespace Akka.Actor
         /// </summary>
         public bool HasGlobalScope => !string.IsNullOrEmpty(Host);
 
-        private Lazy<string> CreateLazyToString()
+        private static string CreateLazyToString(Address addr)
         {
-            return new Lazy<string>(() =>
-            {
-                var sb = new StringBuilder();
-                sb.AppendFormat("{0}://{1}", Protocol, System);
-                if (!string.IsNullOrWhiteSpace(Host))
-                    sb.AppendFormat("@{0}", Host);
-                if (Port.HasValue)
-                    sb.AppendFormat(":{0}", Port.Value);
+            if (!string.IsNullOrWhiteSpace(addr.Host) && addr.Port.HasValue)
+                return $"{addr.Protocol}://{addr.System}@{addr.Host}:{addr.Port}";
+            if (!string.IsNullOrWhiteSpace(addr.Host)) // host, but no port - rare case
+                return $"{addr.Protocol}://{addr.System}@{addr.Host}";
 
-                return sb.ToString();
-            }, true);
+            return $"{addr.Protocol}://{addr.System}";
         }
 
         /// <summary>
@@ -142,10 +135,17 @@ namespace Akka.Actor
             return Comparer.Compare(this, other);
         }
 
-        /// <inheritdoc/>
-        public override string ToString() => _toString.Value;
+        public override string ToString()
+        {
+            if (_toString == null)
+            {
+                _toString = CreateLazyToString(this);
+            }
 
-        /// <inheritdoc/>
+            return _toString;
+        }
+
+
         public bool Equals(Address other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -153,10 +153,9 @@ namespace Akka.Actor
             return Port == other.Port && string.Equals(Host, other.Host) && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
         }
 
-        /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is Address && Equals((Address)obj);
 
-        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as Address);
+
         public override int GetHashCode()
         {
             unchecked
@@ -245,7 +244,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Address left, Address right)
         {
-            return Equals(left, right);
+            return left?.Equals(right) ?? right is null;
         }
 
         /// <summary>
@@ -256,7 +255,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both addresses are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Address left, Address right)
         {
-            return !Equals(left, right);
+            return !(left == right);
         }
 
         /// <summary>
@@ -282,7 +281,7 @@ namespace Akka.Actor
             if (string.IsNullOrEmpty(uri.UserInfo))
             {
                 var systemName = uri.Host;
-                
+
                 return new Address(protocol, systemName);
             }
             else
@@ -299,10 +298,161 @@ namespace Akka.Actor
         }
 
         /// <summary>
+        /// Parses a new <see cref="Address"/> from a given path
+        /// </summary>
+        /// <param name="path">The span of address to parse</param>
+        /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
+        /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
+        public static bool TryParse(string path, out Address address)
+        {
+            return TryParse(path.AsSpan(), out address);
+        }
+
+        /// <summary>
+        /// Parses a new <see cref="Address"/> from a given path
+        /// </summary>
+        /// <param name="path">The span of address to parse</param>
+        /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
+        /// <param name="absolutUri">If <c>true</c>, the absolut uri of the path. Otherwise default.</param>
+        /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
+        public static bool TryParse(string path, out Address address, out string absolutUri)
+        {
+            if (TryParse(path.AsSpan(), out address, out var uri))
+            {
+                absolutUri = uri.ToString();
+                return true;
+            }
+
+            absolutUri = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Parses a new <see cref="Address"/> from a given path
+        /// </summary>
+        /// <param name="span">The span of address to parse</param>
+        /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
+        /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
+        public static bool TryParse(ReadOnlySpan<char> span, out Address address)
+        {
+            return TryParse(span, out address, out _);
+        }
+
+        /// <summary>
+        /// Parses a new <see cref="Address"/> from a given path
+        /// </summary>
+        /// <param name="span">The span of address to parse</param>
+        /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
+        /// <param name="absolutUri">If <c>true</c>, the absolut uri of the path. Otherwise default.</param>
+        /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
+        public static bool TryParse(ReadOnlySpan<char> span, out Address address, out ReadOnlySpan<char> absolutUri)
+        {
+            address = default;
+            absolutUri = default;
+
+            var firstColonPos = span.IndexOf(':');
+
+            if (firstColonPos == -1) // not an absolute Uri
+                return false;
+
+            if (firstColonPos < 4 || 255 < firstColonPos)
+            {
+                //invalid scheme length
+                return false;
+            }
+
+            Span<char> fullScheme = stackalloc char[firstColonPos];
+            span.Slice(0, firstColonPos).ToLowerInvariant(fullScheme);
+            if (!fullScheme.StartsWith("akka".AsSpan()))
+            {
+                //invalid scheme
+                return false;
+            }
+
+            span = span.Slice(firstColonPos + 1);
+            if (span.Length < 2 || !(span[0] == '/' && span[1] == '/'))
+                return false;
+
+            span = span.Slice(2); // move past the double //
+
+            // cut the absolute Uri off
+            var uriStart = span.IndexOf('/');
+            if (uriStart > -1)
+            {
+                absolutUri = span.Slice(uriStart);
+                span = span.Slice(0, uriStart);
+            } 
+            else
+            {
+                absolutUri = "/".AsSpan();
+            }               
+
+            var firstAtPos = span.IndexOf('@');
+            string sysName;
+
+            if (firstAtPos == -1)
+            {
+                // dealing with an absolute local Uri
+                sysName = span.ToString();
+                address = new Address(fullScheme.ToString(), sysName);
+                return true;
+            }
+
+            // dealing with a remote Uri
+            sysName = span.Slice(0, firstAtPos).ToString();
+            span = span.Slice(firstAtPos + 1);
+
+            /*
+             * Need to check for:
+             * - IPV4 / hostnames
+             * - IPV6 (must be surrounded by '[]') according to spec.
+             */
+            string host;
+
+            // check for IPV6 first
+            var openBracket = span.IndexOf('[');
+            var closeBracket = span.IndexOf(']');
+            if (openBracket > -1 && closeBracket > openBracket)
+            {
+                // found an IPV6 address
+                host = span.Slice(openBracket, closeBracket - openBracket + 1).ToString();
+                span = span.Slice(closeBracket + 1); // advance past the address
+
+                // need to check for trailing colon
+                var secondColonPos = span.IndexOf(':');
+                if (secondColonPos == -1)
+                    return false;
+
+                span = span.Slice(secondColonPos + 1);
+            }
+            else
+            {
+                var secondColonPos = span.IndexOf(':');
+                if (secondColonPos == -1)
+                    return false;
+
+                host = span.Slice(0, secondColonPos).ToString();
+
+                // move past the host
+                span = span.Slice(secondColonPos + 1);
+            }
+
+            
+
+            if (SpanHacks.TryParse(span, out var port) && port >= 0)
+            {
+                address = new Address(fullScheme.ToString(), sysName, host, port);
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// This class represents a surrogate of an <see cref="Address"/>.
         /// Its main use is to help during the serialization process.
         /// </summary>
-        public class AddressSurrogate : ISurrogate
+        public sealed class AddressSurrogate : ISurrogate
         {
             /// <summary>
             /// TBD

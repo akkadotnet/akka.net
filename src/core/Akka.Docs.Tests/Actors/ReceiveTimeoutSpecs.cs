@@ -6,13 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit.Xunit2;
-using FluentAssertions;
 using Xunit;
 
 namespace DocsExamples.Actors

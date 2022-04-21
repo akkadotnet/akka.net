@@ -40,7 +40,6 @@ namespace Akka.Configuration
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationException"/> class.
         /// </summary>
@@ -50,7 +49,6 @@ namespace Akka.Configuration
             : base(info, context)
         {
         }
-#endif
     }
 }
 

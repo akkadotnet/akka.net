@@ -277,6 +277,7 @@ namespace Akka.Cluster
 
         #region Messaging classes
 
+        // <Heartbeat>
         /// <summary>
         /// Sent at regular intervals for failure detection
         /// </summary>
@@ -318,6 +319,7 @@ namespace Akka.Cluster
                 }
             }
         }
+        // </Heartbeat>
 
         /// <summary>
         /// Sends replies to <see cref="Heartbeat"/> messages
@@ -429,7 +431,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly ImmutableHashSet<UniqueAddress> ActiveReceivers;
+        public readonly IImmutableSet<UniqueAddress> ActiveReceivers;
 
         /// <summary>
         /// TBD
@@ -510,7 +512,9 @@ namespace Akka.Cluster
             foreach (var r in removedReceivers)
             {
                 if (FailureDetector.IsAvailable(r.Address))
+                {
                     FailureDetector.Remove(r.Address);
+                }
                 else
                 {
                     adjustedOldReceiversNowUnreachable = adjustedOldReceiversNowUnreachable.Add(r);
@@ -550,7 +554,7 @@ namespace Akka.Cluster
         /// <param name="oldReceiversNowUnreachable">TBD</param>
         /// <param name="failureDetector">TBD</param>
         /// <returns>TBD</returns>
-        public ClusterHeartbeatSenderState Copy(HeartbeatNodeRing ring = null, ImmutableHashSet<UniqueAddress> oldReceiversNowUnreachable = null, IFailureDetectorRegistry<Address> failureDetector = null)
+        public ClusterHeartbeatSenderState Copy(HeartbeatNodeRing? ring = null, ImmutableHashSet<UniqueAddress> oldReceiversNowUnreachable = null, IFailureDetectorRegistry<Address> failureDetector = null)
         {
             return new ClusterHeartbeatSenderState(ring ?? Ring, oldReceiversNowUnreachable ?? OldReceiversNowUnreachable, failureDetector ?? FailureDetector);
         }
@@ -564,9 +568,10 @@ namespace Akka.Cluster
     /// 
     /// It is immutable, i.e. the methods all return new instances.
     /// </summary>
-    internal sealed class HeartbeatNodeRing
+    internal struct HeartbeatNodeRing
     {
         private readonly bool _useAllAsReceivers;
+        private Option<IImmutableSet<UniqueAddress>> _myReceivers;
 
         /// <summary>
         /// TBD
@@ -586,14 +591,15 @@ namespace Akka.Cluster
         {
             SelfAddress = selfAddress;
             Nodes = nodes;
+            NodeRing = nodes.ToImmutableSortedSet(RingComparer.Instance);
             Unreachable = unreachable;
             MonitoredByNumberOfNodes = monitoredByNumberOfNodes;
 
             if (!nodes.Contains(selfAddress))
                 throw new ArgumentException($"Nodes [${string.Join(", ", nodes)}] must contain selfAddress [{selfAddress}]");
 
-            _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing().Count - 1);
-            MyReceivers = new Lazy<ImmutableHashSet<UniqueAddress>>(() => Receivers(SelfAddress));
+            _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing.Count - 1);
+            _myReceivers = Option<IImmutableSet<UniqueAddress>>.None;
         }
 
         /// <summary>
@@ -616,26 +622,34 @@ namespace Akka.Cluster
         /// </summary>
         public int MonitoredByNumberOfNodes { get; }
 
-        private ImmutableSortedSet<UniqueAddress> NodeRing()
-        {
-            return Nodes.ToImmutableSortedSet(RingComparer.Instance);
-        }
+        public ImmutableSortedSet<UniqueAddress> NodeRing { get; }
 
         /// <summary>
         /// Receivers for <see cref="SelfAddress"/>. Cached for subsequent access.
         /// </summary>
-        public readonly Lazy<ImmutableHashSet<UniqueAddress>> MyReceivers;
+        public Option<IImmutableSet<UniqueAddress>> MyReceivers
+        {
+            get
+            {
+                if (_myReceivers.IsEmpty)
+                {
+                    _myReceivers = new Option<IImmutableSet<UniqueAddress>>(Receivers(SelfAddress));
+                }
+
+                return _myReceivers;
+            }
+        }
 
         /// <summary>
-        /// TBD
+        /// The set of Akka.Cluster nodes designated for receiving heartbeats from this node.
         /// </summary>
-        /// <param name="sender">TBD</param>
-        /// <returns>TBD</returns>
-        public ImmutableHashSet<UniqueAddress> Receivers(UniqueAddress sender)
+        /// <param name="sender">The node sending heartbeats.</param>
+        /// <returns>An organized ring of unique nodes.</returns>
+        public IImmutableSet<UniqueAddress> Receivers(UniqueAddress sender)
         {
             if (_useAllAsReceivers)
             {
-                return NodeRing().Remove(sender).ToImmutableHashSet();
+                return NodeRing.Remove(sender);
             }
             else
             {
@@ -644,41 +658,42 @@ namespace Akka.Cluster
                 // The reason for not limiting it to strictly monitoredByNrOfMembers is that the leader must
                 // be able to continue its duties (e.g. removal of downed nodes) when many nodes are shutdown
                 // at the same time and nobody in the remaining cluster is monitoring some of the shutdown nodes.
-                Func<int, IEnumerator<UniqueAddress>, ImmutableSortedSet<UniqueAddress>, (int, ImmutableSortedSet<UniqueAddress>)> take = null;
-                take = (n, iter, acc) =>
+                (int, ImmutableSortedSet<UniqueAddress>) Take(int n, IEnumerator<UniqueAddress> iter, ImmutableSortedSet<UniqueAddress> acc, ImmutableHashSet<UniqueAddress> unreachable, int monitoredByNumberOfNodes)
                 {
-                    if (iter.MoveNext() == false || n == 0)
+                    while (true)
                     {
-                        return (n, acc);
-                    }
-                    else
-                    {
-                        UniqueAddress next = iter.Current;
-                        var isUnreachable = Unreachable.Contains(next);
-                        if (isUnreachable && acc.Count >= MonitoredByNumberOfNodes)
+                        if (iter.MoveNext() == false || n == 0)
                         {
-                            return take(n, iter, acc); // skip the unreachable, since we have already picked `MonitoredByNumberOfNodes`
-                        }
-                        else if (isUnreachable)
-                        {
-                            return take(n, iter, acc.Add(next)); // include the unreachable, but don't count it
+                            iter.Dispose(); // dispose enumerator
+                            return (n, acc);
                         }
                         else
                         {
-                            return take(n - 1, iter, acc.Add(next)); // include the reachable
+                            var next = iter.Current;
+                            var isUnreachable = unreachable.Contains(next);
+                            if (isUnreachable && acc.Count >= monitoredByNumberOfNodes)
+                            {
+                            }
+                            else if (isUnreachable)
+                            {
+                                acc = acc.Add(next);
+                            }
+                            else
+                            {
+                                n = n - 1;
+                                acc = acc.Add(next);
+                            }
                         }
                     }
-                };
+                }
 
-                var tuple = take(MonitoredByNumberOfNodes, NodeRing().From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
-                var remaining = tuple.Item1;
-                var slice1 = tuple.Item2;
+                var (remaining, slice1) = Take(MonitoredByNumberOfNodes, NodeRing.From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty, Unreachable, MonitoredByNumberOfNodes);
 
                 IImmutableSet<UniqueAddress> slice = remaining == 0 
-                    ? slice1 
-                    : take(remaining, NodeRing().Until(sender).Where(c => !c.Equals(sender)).GetEnumerator(), slice1).Item2;
+                    ? slice1 // or, wrap-around
+                    : Take(remaining, NodeRing.TakeWhile(x => x != sender).GetEnumerator(), slice1, Unreachable, MonitoredByNumberOfNodes).Item2;
 
-                return slice.ToImmutableHashSet();
+                return slice;
             }
         }
 
@@ -696,7 +711,7 @@ namespace Akka.Cluster
                 selfAddress ?? SelfAddress,
                 nodes ?? Nodes,
                 unreachable ?? Unreachable,
-                monitoredByNumberOfNodes.HasValue ? monitoredByNumberOfNodes.Value : MonitoredByNumberOfNodes);
+                monitoredByNumberOfNodes ?? MonitoredByNumberOfNodes);
         }
 
         #region Operators
@@ -729,7 +744,9 @@ namespace Akka.Cluster
 
         #region Comparer
         /// <summary>
-        /// TBD
+        /// Data structure for picking heartbeat receivers. The node ring is
+        /// shuffled by deterministic hashing to avoid picking physically co-located
+        /// neighbors.
         /// </summary>
         internal class RingComparer : IComparer<UniqueAddress>
         {
@@ -742,12 +759,10 @@ namespace Akka.Cluster
             /// <inheritdoc/>
             public int Compare(UniqueAddress x, UniqueAddress y)
             {
-                var result = Member.AddressOrdering.Compare(x.Address, y.Address);
-                if (result == 0)
-                    if (x.Uid < y.Uid) return -1;
-                    else if (x.Uid == y.Uid) return 0;
-                    else return 1;
-                return result;
+                var ha = x.Uid;
+                var hb = y.Uid;
+                var c = ha.CompareTo(hb);
+                return c == 0 ? Member.AddressOrdering.Compare(x.Address, y.Address) : c;
             }
         }
         #endregion

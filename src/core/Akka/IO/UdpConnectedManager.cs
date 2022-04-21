@@ -8,7 +8,6 @@
 using System;
 using Akka.Actor;
 using Akka.Annotations;
-using Akka.Event;
 
 namespace Akka.IO
 {
@@ -29,7 +28,6 @@ namespace Akka.IO
         public UdpConnectedManager(UdpConnectedExt udpConn)
         {
             _udpConn = udpConn;
-            Context.System.EventStream.Subscribe(Self, typeof(DeadLetter));
         }
 
         protected override bool Receive(object message)
@@ -42,22 +40,7 @@ namespace Akka.IO
                         Context.ActorOf(Props.Create(() => new UdpConnection(_udpConn, commander, connect)));
                         return true;
                     }
-                case DeadLetter dl when dl.Message is UdpConnected.SocketCompleted completed:
-                    {
-                        var e = completed.EventArgs;
-                        if (e.Buffer != null)
-                        {
-                            // no need to check for e.BufferList: release buffer only 
-                            // on complete reads, which are always mono-buffered 
-                            var buffer = new ByteBuffer(e.Buffer, e.Offset, e.Count);
-                            _udpConn.BufferPool.Release(buffer);
-                        }
-                        _udpConn.SocketEventArgsPool.Release(e);
-                        return true;
-                    }
-                case DeadLetter _: return true;
                 default: throw new ArgumentException($"The supplied message type [{message.GetType()}] is invalid. Only Connect messages are supported.", nameof(message));
-
             }
         }
 

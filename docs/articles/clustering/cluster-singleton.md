@@ -8,10 +8,10 @@ For some use cases it is convenient and sometimes also mandatory to ensure that 
 
 Some examples:
 
-- single point of responsibility for certain cluster-wide consistent decisions, or coordination of actions across the cluster system
-- single entry point to an external system
-- single master, many workers
-- centralized naming service, or routing logic
+* single point of responsibility for certain cluster-wide consistent decisions, or coordination of actions across the cluster system
+* single entry point to an external system
+* single master, many workers
+* centralized naming service, or routing logic
 
 Using a singleton should not be the first design choice. It has several drawbacks, such as single-point of bottleneck. Single-point of failure is also a relevant concern, but for some cases this feature takes care of that by making sure that another singleton instance will eventually be started.
 
@@ -25,19 +25,18 @@ You can access the singleton actor by using the provided `Akka.Cluster.Tools.Sin
 
 It's worth noting that messages can always be lost because of the distributed nature of these actors. As always, additional logic should be implemented in the singleton (acknowledgement) and in the client (retry) actors to ensure at-least-once message delivery.
 
-## Potential problems to be aware of
+## Potential Problems to Be Aware Of
+
 This pattern may seem to be very tempting to use at first, but it has several drawbacks, some of them are listed below:
 
-- the cluster singleton may quickly become a performance bottleneck,
-- you can not rely on the cluster singleton to be non-stop available — e.g. when the node on which the singleton has been running dies, it will take a few seconds for this to be noticed and the singleton be migrated to another node,
-- in the case of a network partition appearing in a Cluster that is using Automatic Downing, it may happen that the isolated clusters each decide to spin up their own singleton, meaning that there might be multiple singletons running in the system, yet the Clusters have no way of finding out about them (because of the partition).
+* the cluster singleton may quickly become a performance bottleneck,
+* you can not rely on the cluster singleton to be non-stop available — e.g. when the node on which the singleton has been running dies, it will take a few seconds for this to be noticed and the singleton be migrated to another node,
+* in the case of a network partition appearing in a Cluster that is using Automatic Downing, it may happen that the isolated clusters each decide to spin up their own singleton, meaning that there might be multiple singletons running in the system, yet the Clusters have no way of finding out about them (because of the partition).
 
 Especially the last point is something you should be aware of — in general when using the Cluster Singleton pattern you should take care of downing nodes yourself and not rely on the timing based auto-down feature.
 
-> [!WARNING]
-> Be very careful when using Cluster Singleton together with Automatic Downing, since it allows the cluster to split up into two separate clusters, which in turn will result in `multiple Singletons` being started, one in each separate cluster!
-
 ## An Example
+
 Assume that we need one single entry point to an external system. An actor that receives messages from a JMS queue with the strict requirement that only one JMS consumer must exist to be make sure that the messages are processed in order. That is perhaps not how one would like to design things, but a typical real-world scenario when integrating with external systems.
 
 On each node in the cluster you need to start the `ClusterSingletonManager` and supply the Props of the singleton actor, in this case the JMS queue consumer.
@@ -64,6 +63,7 @@ system.ActorOf(ClusterSingletonProxy.Props(
 ```
 
 ## Configuration
+
 The following configuration properties are read by the `ClusterSingletonManagerSettings` when created with a `ActorSystem` parameter. It is also possible to amend the `ClusterSingletonManagerSettings` or create it from another config section with the same layout as below. `ClusterSingletonManagerSettings` is a parameter to the `ClusterSingletonManager.props` factory method, i.e. each singleton can be configured with different settings if needed.
 
 ```hocon

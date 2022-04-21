@@ -525,7 +525,6 @@ namespace Akka.Cluster.Tools.Singleton
         /// <param name="message">The message that describes the error.</param>
         public ClusterSingletonManagerIsStuckException(string message) : base(message) { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterSingletonManagerIsStuckException"/> class.
         /// </summary>
@@ -534,7 +533,6 @@ namespace Akka.Cluster.Tools.Singleton
         public ClusterSingletonManagerIsStuckException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
@@ -753,7 +751,7 @@ namespace Akka.Cluster.Tools.Singleton
 
         private void CleanupOverdueNotMemberAnyMore()
         {
-            _removed = _removed.Where(kv => kv.Value.IsOverdue).ToImmutableDictionary();
+            _removed = _removed.Where(kv => !kv.Value.IsOverdue).ToImmutableDictionary();
         }
 
         private ActorSelection Peer(Address at)
@@ -909,7 +907,7 @@ namespace Akka.Cluster.Tools.Singleton
                 if (e.FsmEvent is OldestChangedBuffer.OldestChanged oldestChanged && e.StateData is YoungerData youngerData)
                 {
                     _oldestChangedReceived = true;
-                    if (oldestChanged.Oldest.Equals(_selfUniqueAddress))
+                    if (oldestChanged.Oldest != null && oldestChanged.Oldest.Equals(_selfUniqueAddress))
                     {
                         Log.Info("Younger observed OldestChanged: [{0} -> myself]", youngerData.Oldest.Head()?.Address);
 

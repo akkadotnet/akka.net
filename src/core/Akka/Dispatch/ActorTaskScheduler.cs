@@ -21,11 +21,21 @@ namespace Akka.Dispatch
     public class ActorTaskScheduler : TaskScheduler
     {
         private readonly ActorCell _actorCell;
+
         /// <summary>
         /// TBD
         /// </summary>
         public object CurrentMessage { get; private set; }
-
+        
+        /// <summary>
+        /// Called when async task is scheduled, before Task.StartNew call
+        /// </summary>
+        protected virtual void OnBeforeTaskStarted() { }
+        /// <summary>
+        /// Called in completed scheduled task continuation
+        /// </summary>
+        protected virtual void OnAfterTaskCompleted() { }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -34,7 +44,7 @@ namespace Akka.Dispatch
         {
             _actorCell = actorCell;
         }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -116,7 +126,7 @@ namespace Akka.Dispatch
             RunTask(() =>
             {
                 action();
-                return Task.FromResult(0);
+                return Task.CompletedTask;
             });
         }
 
@@ -142,6 +152,8 @@ namespace Akka.Dispatch
             ActorTaskScheduler actorScheduler = context.TaskScheduler;
             actorScheduler.CurrentMessage = context.CurrentMessage;
 
+            actorScheduler.OnBeforeTaskStarted();
+            
             Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler)
                               .Unwrap()
                               .ContinueWith(parent =>
@@ -160,6 +172,7 @@ namespace Akka.Dispatch
                                   }
                                   //clear the current message field of the scheduler
                                   actorScheduler.CurrentMessage = null;
+                                  actorScheduler.OnAfterTaskCompleted();
                               }, actorScheduler);
         }
 

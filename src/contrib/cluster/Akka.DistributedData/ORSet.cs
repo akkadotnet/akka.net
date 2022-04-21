@@ -432,7 +432,7 @@ namespace Akka.DistributedData
             return new ORSet<T>(updated, VersionVector.PruningCleanup(removedNode));
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(ORSet<T> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -441,14 +441,14 @@ namespace Akka.DistributedData
             return VersionVector == other.VersionVector && ElementsMap.SequenceEqual(other.ElementsMap);
         }
 
-        /// <inheritdoc/>
+        
         public IEnumerator<T> GetEnumerator() => ElementsMap.Keys.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is ORSet<T> && Equals((ORSet<T>)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -518,35 +518,38 @@ namespace Akka.DistributedData
             public override ORSet<T> Underlying { get; }
             public override IReplicatedData Merge(IReplicatedData other)
             {
-                if (other is AddDeltaOperation)
+                switch (other)
                 {
-                    var u = ((AddDeltaOperation)other).Underlying;
-                    // Note that we only merge deltas originating from the same node
-                    return new AddDeltaOperation(new ORSet<T>(
-                        ConcatElementsMap(u.ElementsMap),
-                        Underlying.VersionVector.Merge(u.VersionVector)));
+                    case AddDeltaOperation operation:
+                    {
+                        var u = operation.Underlying;
+                        // Note that we only merge deltas originating from the same node
+                        return new AddDeltaOperation(new ORSet<T>(
+                            ConcatElementsMap(u.ElementsMap),
+                            Underlying.VersionVector.Merge(u.VersionVector)));
+                    }
+                    case AtomicDeltaOperation _:
+                        return new DeltaGroup(ImmutableArray.Create(this, other));
+                    case DeltaGroup dg:
+                    {
+                        var vector = dg.Operations;
+                        return new DeltaGroup(vector.Add(this));
+                    }
+                    default:
+                        throw new ArgumentException($"Unknown delta operation of type {other.GetType()}", nameof(other));
                 }
-                else if (other is AtomicDeltaOperation)
-                {
-                    return new DeltaGroup(ImmutableArray.Create(this, other));
-                }
-                else if (other is DeltaGroup)
-                {
-                    var vector = ((DeltaGroup)other).Operations;
-                    return new DeltaGroup(vector.Add(this));
-                }
-                else throw new ArgumentException($"Unknown delta operation of type {other.GetType()}", nameof(other));
             }
 
             private ImmutableDictionary<T, VersionVector> ConcatElementsMap(
                 ImmutableDictionary<T, VersionVector> thatMap)
             {
-                var u = Underlying.ElementsMap.ToBuilder();
-                foreach (var entry in thatMap)
-                {
-                    u[entry.Key] = entry.Value;
-                }
-                return u.ToImmutable();
+                //var u = Underlying.ElementsMap.ToBuilder();
+                //foreach (var entry in thatMap)
+                //{
+                //    u[entry.Key] = entry.Value;
+                //}
+                //return u.ToImmutable();
+                return Underlying.ElementsMap.SetItems(thatMap);
             }
         }
 
@@ -610,12 +613,12 @@ namespace Akka.DistributedData
 
             public IReplicatedData Merge(IReplicatedData other)
             {
-                if (other is AddDeltaOperation)
+                if (other is AddDeltaOperation thatAdd)
                 {
                     // merge AddDeltaOp into last AddDeltaOp in the group, if possible
                     var last = Operations[Operations.Length - 1];
-                    return last is AddDeltaOperation
-                        ? new DeltaGroup(Operations.SetItem(Operations.Length - 1, other.Merge(last)))
+                    return last is AddDeltaOperation thisAdd
+                        ? new DeltaGroup(Operations.SetItem(Operations.Length - 1, thisAdd.Merge(thatAdd)))
                         : new DeltaGroup(Operations.Add(other));
                 }
                 else if (other is DeltaGroup @group)
@@ -709,9 +712,9 @@ namespace Akka.DistributedData
             {
                 while (deleteDots.MoveNext())
                 {
-                    var curr = deleteDots.Current;
-                    deleteDotNodes.Add(curr.Key);
-                    deleteDotsAreGreater &= (thisDot != null && (thisDot.VersionAt(curr.Key) <= curr.Value));
+                    var current = deleteDots.Current;
+                    deleteDotNodes.Add(current.Key);
+                    deleteDotsAreGreater &= (thisDot != null && (thisDot.VersionAt(current.Key) <= current.Value));
                 }
             }
 

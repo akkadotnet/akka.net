@@ -83,7 +83,7 @@ namespace Akka.Coordination
         }
 
         private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<LeaseKey, Lease> leases = new ConcurrentDictionary<LeaseKey, Lease>();
+        private readonly ConcurrentDictionary<LeaseKey, Lease> _leases = new ConcurrentDictionary<LeaseKey, Lease>();
 
         private ILoggingAdapter _log;
 
@@ -122,7 +122,7 @@ namespace Akka.Coordination
         {
             var leaseKey = new LeaseKey(leaseName, configPath, ownerName);
 
-            return leases.GetOrAdd(leaseKey, lk =>
+            return _leases.GetOrAdd(leaseKey, lk =>
             {
                 var leaseConfig = _system.Settings.Config
                     .GetConfig(configPath)
@@ -141,21 +141,32 @@ namespace Akka.Coordination
                     {
                         return (Lease)Activator.CreateInstance(leaseType, settings, _system);
                     }
-                    catch
+                    catch(MissingMethodException)
                     {
                         return (Lease)Activator.CreateInstance(leaseType, settings);
                     }
                 }
-                catch (Exception ex)
+                catch (MissingMethodException ex)
                 {
                     Log.Error(
                       ex,
                       "Invalid lease configuration for leaseName [{0}], configPath [{1}] lease-class [{2}]. " +
-                      "The class must implement scaladsl.Lease or javadsl.Lease and have constructor with LeaseSettings parameter and " +
+                      "The class must implement Akka.Coordination.Lease and have constructor with LeaseSettings parameter and " +
                       "optionally ActorSystem parameter.",
                       settings.LeaseName,
                       configPath,
                       leaseType);
+
+                    throw;
+                }
+                catch(Exception ex)
+                {
+                    Log.Error(
+                        ex,
+                        "Failed to instantiate lease class [{2}] for leaseName [{0}], configPath [{1}].",
+                        settings.LeaseName,
+                        configPath,
+                        leaseType);
 
                     throw;
                 }

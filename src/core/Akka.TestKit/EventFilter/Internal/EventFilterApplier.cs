@@ -93,8 +93,14 @@ namespace Akka.TestKit.Internal
         /// Async version of Expect
         /// </summary>
         public Task ExpectAsync(int expectedCount, Func<Task> actionAsync)
+            => InternalExpectAsync(actionAsync, _actorSystem, expectedCount, null);
+
+        /// <summary>
+        /// Async version of Expect
+        /// </summary>
+        public Task ExpectAsync(int expectedCount, Func<Task> actionAsync, TimeSpan? timeout)
         {
-            return InternalExpectAsync(actionAsync, _actorSystem, expectedCount, null);
+            return InternalExpectAsync(actionAsync, _actorSystem, expectedCount, timeout);
         }
 
         /// <summary>
@@ -198,6 +204,7 @@ namespace Akka.TestKit.Internal
         
         /// <summary>
         /// Async version of Expect
+        /// Note: <paramref name="func"/> might not get awaited.
         /// </summary>
         public async Task<T> ExpectAsync<T>(int expectedCount, TimeSpan timeout, Func<T> func)
         {
@@ -456,7 +463,7 @@ namespace Akka.TestKit.Internal
         /// </summary>
         private async Task InternalExpectAsync(Func<Task> actionAsync, ActorSystem actorSystem, int expectedCount, TimeSpan? timeout = null)
         {
-            await InterceptAsync<object>(() => { actionAsync(); return Task.FromResult<object>(null); }, actorSystem, timeout, expectedCount);
+            await InterceptAsync<object>(async () => { await actionAsync(); return Task.FromResult<object>(null); }, actorSystem, timeout, expectedCount);
         }
         
         /// <summary>
@@ -531,7 +538,7 @@ namespace Akka.TestKit.Internal
             //    Dispose(false);
             //}
 
-            /// <inheritdoc/>
+           
             public void Dispose()
             {
                 Dispose(true);

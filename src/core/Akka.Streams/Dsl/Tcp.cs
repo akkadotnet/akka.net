@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Net;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
@@ -302,6 +303,13 @@ namespace Akka.Streams.Dsl
         {
             Duration = duration;
         }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TcpIdleTimeoutException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected TcpIdleTimeoutException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 
         public TimeSpan Duration { get; }
     }

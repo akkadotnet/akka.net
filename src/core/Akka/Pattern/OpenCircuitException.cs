@@ -82,7 +82,6 @@ namespace Akka.Pattern
             : this("Circuit Breaker is open; calls are failing fast", cause, remainingDuration)
         { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="OpenCircuitException"/> class.
         /// </summary>
@@ -91,7 +90,15 @@ namespace Akka.Pattern
         protected OpenCircuitException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
+            var duration = (string)info.GetValue("RemainingDuration", typeof(string));
+            RemainingDuration = TimeSpan.Parse(duration);
         }
-#endif
+
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            if (info == null) throw new ArgumentNullException(nameof(info));
+            info.AddValue("RemainingDuration", RemainingDuration);
+            base.GetObjectData(info, context);
+        }
     }
 }

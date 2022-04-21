@@ -7,7 +7,9 @@
 
 using System;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Event;
+using Akka.TestKit.Xunit2.Internals;
 using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
@@ -170,6 +172,34 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             ex.Should().NotBeNull("Expected 0 errors logged, but there are error logs");
         }
 
+        /// issue: InternalExpectAsync does not await actionAsync() - causing actionAsync to run as a detached task #5537
+        [Fact]
+        public async Task ExpectAsync_should_await_actionAsync()
+        {
+            await Assert.ThrowsAnyAsync<FalseException>(async () =>
+            {
+                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(0, actionAsync: async () =>
+                {
+                    Assert.False(true);
+                    await Task.CompletedTask;
+                });
+            });
+        }
+
+        // issue: InterceptAsync seems to run func() as a detached task #5586
+        [Fact]
+        public async Task InterceptAsync_should_await_func()
+        {
+            await Assert.ThrowsAnyAsync<FalseException>(async () =>
+            {
+                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(0, async () =>
+                {
+                    Assert.False(true);
+                    await Task.CompletedTask;
+                }, TimeSpan.FromSeconds(.1));
+            });
+        }
+
         [Fact]
         public void Messages_can_be_muted()
         {
@@ -207,7 +237,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         [Fact]
         public void Make_sure_async_works()
         {
-            _testingEventFilter.ForLogLevel(LogLevel).Expect(1, TimeSpan.FromMilliseconds(100), () =>
+            _testingEventFilter.ForLogLevel(LogLevel).Expect(1, TimeSpan.FromSeconds(2), () =>
             {
                 Task.Delay(TimeSpan.FromMilliseconds(10)).ContinueWith(t => { LogMessage("whatever"); });
             });
@@ -220,12 +250,12 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
                 .ForLogLevel(LogLevel,message:"Message 1").And
                 .ForLogLevel(LogLevel,message:"Message 3")
                 .Expect(2,() =>
-                {
-                    LogMessage("Message 1");
-                    LogMessage("Message 2");
-                    LogMessage("Message 3");
+                 {
+                     LogMessage("Message 1");
+                     LogMessage("Message 2");
+                     LogMessage("Message 3");
 
-                });
+                 });
             ExpectMsg<TLogEvent>(m => (string) m.Message == "Message 2");
         }
 

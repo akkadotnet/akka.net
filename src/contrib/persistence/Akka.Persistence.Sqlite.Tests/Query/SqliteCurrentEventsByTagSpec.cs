@@ -22,6 +22,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
         public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
+            akka.persistence.query.journal.sql.refresh-interval = 1s
             akka.persistence.journal.sqlite {{
                 event-adapters {{
                   color-tagger  = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""
@@ -35,7 +36,6 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                 metadata-table-name = journal_metadata
                 auto-initialize = on
                 connection-string = ""Filename=file:memdb-journal-currenteventsbytag-{id}.db;Mode=Memory;Cache=Shared""
-                refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());
@@ -43,11 +43,6 @@ namespace Akka.Persistence.Sqlite.Tests.Query
         public SqliteCurrentEventsByTagSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(SqliteCurrentEventsByTagSpec), output)
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
-        }
-
-        [Fact(Skip = "Test work good, but raises an exception")]
-        public override void ReadJournal_query_CurrentEventsByTag_should_complete_when_no_events()
-        {
         }
     }
 }

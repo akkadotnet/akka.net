@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Coordination.Tests;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
@@ -117,7 +118,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         private ClusterSingletonManagerSettings NextSettings() => ClusterSingletonManagerSettings.Create(Sys).WithSingletonName(NextName());
 
-        private string LeaseNameFor(ClusterSingletonManagerSettings settings) => $"AkkaSpec-singleton-akka://AkkaSpec/user/{settings.SingletonName}";
+        private string LeaseNameFor(ClusterSingletonManagerSettings settings) => $"{Sys.Name}-singleton-akka://{Sys.Name}/user/{settings.SingletonName}";
 
         [Fact]
         public void ClusterSingleton_with_lease_should_not_start_until_lease_is_available()

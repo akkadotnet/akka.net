@@ -37,12 +37,7 @@ namespace Akka.Util
         /// <returns><c>true</c> if the current runtime is Windows</returns>
         private static bool _IsWindows()
         {
-#if CORECLR
-            return System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-#else
-            return System.Environment.OSVersion.Platform != PlatformID.MacOSX &&
-                   System.Environment.OSVersion.Platform != PlatformID.Unix;
-#endif
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
     }
 }

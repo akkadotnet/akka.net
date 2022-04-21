@@ -12,14 +12,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Dispatch;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
+using Akka.Streams.Implementation.IO;
 using Akka.Streams.IO;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using Akka.Tests.Shared.Internals;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -311,12 +310,12 @@ namespace Akka.Streams.Tests.IO
         {
             Within(_expectTimeout, () =>
             {
+                // LazySink must wait for result of initialization even if got UpstreamComplete
                 TargetFile(f => 
                 {
-                    var lazySink = Sink.LazySink(
-                            (ByteString _) => Task.FromResult(FileIO.ToFile(f)),
-                            () => Task.FromResult(IOResult.Success(0)))
-                        .MapMaterializedValue(t => t.AwaitResult());
+                    var lazySink = Sink.LazyInitAsync(() => Task.FromResult(FileIO.ToFile(f)))
+                        // map a Task<Option<Task<IOResult>>> into a Task<IOResult>
+                        .MapMaterializedValue(t => t.Result.GetOrElse(Task.FromResult(IOResult.Success(0))));
 
                     var completion = Source.From(new []{_testByteStrings.Head()})
                         .RunWith(lazySink, _materializer);
@@ -327,6 +326,37 @@ namespace Akka.Streams.Tests.IO
                         Remaining);
                 }, _materializer);
             });
+        }
+
+        [Fact]
+        public void SynchronousFileSink_should_complete_materialized_task_with_an_exception_when_upstream_fails()
+        {
+            TargetFile(f =>
+            {
+                var completion = Source.From(_testByteStrings)
+                    .Select(bytes =>
+                    {
+                        if (bytes.Contains(Convert.ToByte('b'))) throw new TestException("bees!");
+                        return bytes;
+                    })
+                    .RunWith(FileIO.ToFile(f), _materializer);
+
+                var ex = Intercept<AbruptIOTerminationException>(() => completion.Wait(TimeSpan.FromSeconds(3)));
+                ex.IoResult.Count.ShouldBe(1001);
+                CheckFileContent(f, string.Join("", _testLines.TakeWhile(s => !s.Contains('b'))));
+            }, _materializer);
+        }
+
+        [Fact]
+        public void SynchronousFileSink_should_complete_with_failure_when_file_cannot_be_open()
+        {
+            TargetFile(f =>
+            {
+                var completion = Source.Single(ByteString.FromString("42"))
+                    .RunWith(FileIO.ToFile(new FileInfo("I-hope-this-file-doesnt-exist.txt"), FileMode.Open), _materializer);
+
+                AssertThrows<FileNotFoundException>(completion.Wait);
+            }, _materializer);
         }
 
         [Fact]
@@ -366,6 +396,47 @@ namespace Akka.Streams.Tests.IO
                     CheckFileContent(f, "a\nb\na\nb\n");
                 }, _materializer);
             });
+        }
+
+        [Fact]
+        public void SynchronousFileSink_should_write_buffered_element_if_manual_flush_is_called()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                TargetFile(f =>
+                {
+                    var flusher = new FlushSignaler();
+                    var (actor, task) = Source.ActorRef<string>(64, OverflowStrategy.DropNew)
+                        .Select(ByteString.FromString)
+                        .ToMaterialized(
+                            FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: 0, flushSignaler:flusher), 
+                            (a, t) => (a, t))
+                        .Run(_materializer);
+                    Thread.Sleep(100); // wait for stream to catch up
+
+                    actor.Tell("a\n");
+                    actor.Tell("b\n");
+                    Thread.Sleep(200); // wait for stream to catch up
+
+                    flusher.Flush();
+                    Thread.Sleep(100); // wait for flush
+                    CheckFileContent(f, "a\nb\n"); // file should be flushed
+
+                    actor.Tell("c\n");
+                    actor.Tell("d\n");
+                    Thread.Sleep(200); // wait for stream to catch up
+                    CheckFileContent(f, "a\nb\n"); // file content should not change
+
+                    flusher.Flush();
+                    Thread.Sleep(100); // wait for flush
+                    CheckFileContent(f, "a\nb\nc\nd\n"); // file content should all be flushed
+
+                    actor.Tell(new Status.Success(NotUsed.Instance));
+                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                    task.Result.WasSuccessful.Should().BeTrue();
+                    task.Result.Count.Should().Be(8);
+                }, _materializer);
+            }, _materializer);
         }
 
         private void TargetFile(

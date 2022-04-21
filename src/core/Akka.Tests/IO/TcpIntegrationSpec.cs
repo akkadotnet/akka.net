@@ -16,14 +16,11 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
-using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
-#if CORECLR
 using System.Runtime.InteropServices;
-#endif
 
 namespace Akka.Tests.IO
 {
@@ -45,6 +42,8 @@ namespace Akka.Tests.IO
         
         public TcpIntegrationSpec(ITestOutputHelper output)
             : base($@"akka.loglevel = DEBUG
+                     akka.actor.serialize-creators = on
+                     akka.actor.serialize-messages = on
                      akka.io.tcp.trace-logging = true
                      akka.io.tcp.write-commands-queue-max-size = {InternalConnectionActorMaxQueueSize}", output: output)
         { }
@@ -172,14 +171,10 @@ namespace Akka.Tests.IO
         public void The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints(AddressFamily family)
         {
             // Aaronontheweb, 9/2/2017 - POSIX-based OSES are still having trouble with IPV6 DNS resolution
-#if CORECLR
-            if(!System.Runtime.InteropServices.RuntimeInformation
+            if(!RuntimeInformation
                 .IsOSPlatform(OSPlatform.Windows) && family == AddressFamily.InterNetworkV6)
-            return;
-#else
-            if (RuntimeDetector.IsMono && family == AddressFamily.InterNetworkV6) // same as above
                 return;
-#endif
+
             var serverHandler = CreateTestProbe();
             var bindCommander = CreateTestProbe();
             bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(family == AddressFamily.InterNetwork ? IPAddress.Loopback 
@@ -190,7 +185,7 @@ namespace Akka.Tests.IO
             var targetAddress = new DnsEndPoint("localhost", boundMsg.LocalAddress.AsInstanceOf<IPEndPoint>().Port);
             var clientHandler = CreateTestProbe();
             Sys.Tcp().Tell(new Tcp.Connect(targetAddress), clientHandler);
-            clientHandler.ExpectMsg<Tcp.Connected>(TimeSpan.FromMinutes(10));
+            clientHandler.ExpectMsg<Tcp.Connected>(TimeSpan.FromSeconds(3));
             var clientEp = clientHandler.Sender;
             clientEp.Tell(new Tcp.Register(clientHandler));
             serverHandler.ExpectMsg<Tcp.Connected>();
@@ -475,20 +470,33 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
+        public void Should_report_Error_only_once_when_connecting_to_unreachable_DnsEndpoint()
+        {
+            var probe = CreateTestProbe();
+            var endpoint = new DnsEndPoint("fake", 1000);
+            Sys.Tcp().Tell(new Tcp.Connect(endpoint), probe.Ref);
+            
+            // expecting CommandFailed or no reply (within timeout)
+            var replies = probe.ReceiveWhile(TimeSpan.FromSeconds(5), x => x as Tcp.CommandFailed);
+            replies.Count.ShouldBe(1);
+        }
+
+        [Fact]
         public void The_TCP_transport_implementation_handle_tcp_connection_actor_death_properly()
         {
             new TestSetup(this, shouldBindServer:false).Run(x =>
             {
                 var serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-                serverSocket.Bind(x.Endpoint);
+                serverSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
                 serverSocket.Listen(100);
+                var endpoint = (IPEndPoint) serverSocket.LocalEndPoint;
 
                 var connectCommander = CreateTestProbe();
-                connectCommander.Send(Sys.Tcp(), new Tcp.Connect(x.Endpoint));
+                connectCommander.Send(Sys.Tcp(), new Tcp.Connect(endpoint));
 
                 var accept = serverSocket.Accept();
                 var connected = connectCommander.ExpectMsg<Tcp.Connected>();
-                connected.RemoteAddress.AsInstanceOf<IPEndPoint>().Port.ShouldBe(x.Endpoint.Port);
+                connected.RemoteAddress.AsInstanceOf<IPEndPoint>().Port.ShouldBe(endpoint.Port);
                 var connectionActor = connectCommander.LastSender;
                 connectCommander.Send(connectionActor, PoisonPill.Instance);
 
@@ -526,7 +534,7 @@ namespace Akka.Tests.IO
             private readonly AkkaSpec _spec;
             private readonly bool _shouldBindServer;
             private readonly TestProbe _bindHandler;
-            private readonly IPEndPoint _endpoint;
+            private IPEndPoint _endpoint;
 
             public TestSetup(AkkaSpec spec, bool shouldBindServer = true)
             {
@@ -535,14 +543,13 @@ namespace Akka.Tests.IO
                 _spec = spec;
                 _shouldBindServer = shouldBindServer;
                 _bindHandler = _spec.CreateTestProbe("bind-handler-probe");
-                _endpoint = TestUtils.TemporaryServerAddress();
             }
 
             public void BindServer()
             {
                 var bindCommander = _spec.CreateTestProbe();
-                bindCommander.Send(_spec.Sys.Tcp(), new Tcp.Bind(_bindHandler.Ref, _endpoint, options: BindOptions));
-                bindCommander.ExpectMsg<Tcp.Bound>(); //TODO: check endpoint
+                bindCommander.Send(_spec.Sys.Tcp(), new Tcp.Bind(_bindHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0), options: BindOptions));
+                bindCommander.ExpectMsg<Tcp.Bound>(bound => _endpoint = (IPEndPoint) bound.LocalAddress);
             }
 
             public ConnectionDetail EstablishNewClientConnection(bool registerClientHandler = true)

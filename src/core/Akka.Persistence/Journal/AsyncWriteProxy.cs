@@ -37,7 +37,6 @@ namespace Akka.Persistence.Journal
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
         /// </summary>
@@ -47,7 +46,6 @@ namespace Akka.Persistence.Journal
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
@@ -131,7 +129,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public long HighestSequenceNr { get; }
 
-            /// <inheritdoc/>
+            
             public bool Equals(ReplaySuccess other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -203,7 +201,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public long Max { get; }
 
-            /// <inheritdoc/>
+            
             public bool Equals(ReplayMessages other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -243,7 +241,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public long ToSequenceNr { get; }
 
-            /// <inheritdoc/>
+            
             public bool Equals(DeleteMessagesTo other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -303,22 +301,28 @@ namespace Akka.Persistence.Journal
                 if (!(message is InitTimeout))
                     return base.AroundReceive(receive, message);
             }
-            else if (message is SetStore)
+            else switch (message)
             {
-                _store = ((SetStore) message).Store;
-                Stash.UnstashAll();
-                _isInitialized = true;
+                case SetStore store:
+                    _store = store.Store;
+                    Stash.UnstashAll();
+                    _isInitialized = true;
+                    break;
+                case InitTimeout _:
+                    _isInitTimedOut = true;
+                    Stash.UnstashAll(); // will trigger appropriate failures
+                    break;
+                default:
+                {
+                    if (_isInitTimedOut)
+                    {
+                        return base.AroundReceive(receive, message);
+                    }
+                    else Stash.Stash();
+
+                    break;
+                }
             }
-            else if (message is InitTimeout)
-            {
-                _isInitTimedOut = true;
-                Stash.UnstashAll(); // will trigger appropriate failures
-            }
-            else if (_isInitTimedOut)
-            {
-                return base.AroundReceive(receive, message);
-            }
-            else Stash.Stash();
             return true;
         }
 

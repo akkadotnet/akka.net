@@ -2,14 +2,14 @@
 uid: what-problems-does-actor-model-solve
 title: What problems does the actor model solve?
 ---
-# What problems does the actor model solve?
+# What Problems Does the Actor Model Solve?
 
 Akka.NET uses the actor model to overcome the limitations of traditional object-oriented programming models and meet the
 unique challenges of highly distributed systems. To fully understand why the actor model is necessary, it helps to
 identify mismatches between traditional approaches to programming and the realities of concurrent and distributed
 computing.
 
-### The illusion of encapsulation
+## The Illusion of Encapsulation
 
 Object-oriented programming (OOP) is a widely-accepted, familiar programming model. One of its core pillars is
 _encapsulation_. Encapsulation dictates that the internal data of an object is not accessible directly from the outside;
@@ -45,18 +45,18 @@ type of coordination between two threads. Now, imagine this issue compounded by 
 The common approach to solving this problem is to add a lock around these methods. While this ensures that at most
 one thread will enter the method at any given time, this is a very costly strategy:
 
- * Locks _seriously limit_ concurrency, they are very costly on modern CPU architectures,
+* Locks _seriously limit_ concurrency, they are very costly on modern CPU architectures,
    requiring heavy-lifting from the operating system to suspend the thread and restore it later.
- * The caller thread is now blocked, so it cannot do any other meaningful work. Even in desktop applications this is
+* The caller thread is now blocked, so it cannot do any other meaningful work. Even in desktop applications this is
    unacceptable, we want to keep user-facing parts of applications (its UI) to be responsive even when a
    long background job is running. In the backend, blocking is outright wasteful.
    One might think that this can be compensated by launching new threads, but threads are also a costly abstraction.
- * Locks introduce a new menace: deadlocks.     
+* Locks introduce a new menace: deadlocks.
 
 These realities result in a no-win situation:
 
- * Without sufficient locks, the state gets corrupted.     
- * With many locks in place, performance suffers and very easily leads to deadlocks.
+* Without sufficient locks, the state gets corrupted.
+* With many locks in place, performance suffers and very easily leads to deadlocks.
 
 Additionally, locks only really work well locally. When it comes to coordinating across multiple machines,
 the only alternative is distributed locks. Unfortunately, distributed locks are several magnitudes less efficient
@@ -76,14 +76,14 @@ As a result, threads are what really drive execution:
 
 **In summary**:
 
- * **Objects can only guarantee encapsulation (protection of invariants) in the face of single-threaded access,
+* **Objects can only guarantee encapsulation (protection of invariants) in the face of single-threaded access,
    multi-thread execution almost always leads to corrupted internal state. Every invariant can be violated by
    having two contending threads in the    same code segment.**
- * **While locks seem to be the natural remedy to uphold encapsulation with multiple threads, in practice they
+* **While locks seem to be the natural remedy to uphold encapsulation with multiple threads, in practice they
    are inefficient and easily lead to deadlocks in any application of real-world scale.**
- * **Locks work locally, attempts to make them distributed exist, but offer limited potential for scaling out.**
+* **Locks work locally, attempts to make them distributed exist, but offer limited potential for scaling out.**
 
-### The illusion of shared memory on modern computer architectures
+## The Illusion of Shared Memory on Modern Computer Architectures
 
 Programming models of the 80'-90's conceptualize that writing to a variable means writing to a memory location directly
 (which somewhat muddies the water that local variables might exist only in registers). On modern architectures -
@@ -104,13 +104,10 @@ or which atomic structures to use is a dark art.
 
 **In summary**:
 
- * **There is no real shared memory anymore, CPU cores pass chunks of data (cache lines) explicitly to each other
-   just as computers on a network do. Inter-CPU communication and network communication have more in common than many realize. Passing messages is the norm now be it across CPUs or networked computers.**
- * **Instead of hiding the message passing aspect through variables marked as shared or using atomic data structures,
-   a more disciplined and principled approach is to keep state local to a concurrent entity and propagate data or events
-   between concurrent entities explicitly via messages.**
+* **There is no real shared memory anymore, CPU cores pass chunks of data (cache lines) explicitly to each other just as computers on a network do. Inter-CPU communication and network communication have more in common than many realize. Passing messages is the norm now be it across CPUs or networked computers.**
+* **Instead of hiding the message passing aspect through variables marked as shared or using atomic data structures, a more disciplined and principled approach is to keep state local to a concurrent entity and propagate data or events between concurrent entities explicitly via messages.**
 
-### The illusion of a call stack
+## The Illusion of a Call Stack
 
 Today, we often take call stacks for granted. But, they were invented in an era where concurrent programming
 was not as important because multi-CPU systems were not common. Call stacks do not cross threads and hence,
@@ -147,17 +144,17 @@ involved (where message losses are to be expected).**
 
 **In summary:**
 
- * **To achieve any meaningful concurrency and performance on current systems, threads must delegate tasks among each
+* **To achieve any meaningful concurrency and performance on current systems, threads must delegate tasks among each
    other in an efficient way without blocking. With this style of task-delegating concurrency
    (and even more so with networked/distributed computing) call stack-based error handling breaks down and new,
    explicit error signaling mechanisms need to be introduced. Failures become part of the domain model.**
- * **Concurrent systems with work delegation needs to handle service faults and have principled means to recover from them.
+* **Concurrent systems with work delegation needs to handle service faults and have principled means to recover from them.
    Clients of such services need to be aware that tasks/messages might get lost during restarts.
    Even if loss does not happen, a response might be delayed arbitrarily due to previously enqueued tasks
    (a long queue), delays caused by garbage collection, etc. In face of these, concurrent systems should handle response
    deadlines in the form of timeouts, just like networked/distributed systems.**  
 
-### How the actor model meets the needs of concurrent, distributed systems
+## How the Actor Model Meets the Needs of Concurrent, Distributed Systems
 
 As described in the sections above, common programming practices cannot properly address the needs of modern concurrent
 and distributed systems.
@@ -166,18 +163,18 @@ principled way, allowing systems to behave in a way that better matches our ment
 
 In particular, we would like to:
 
- * Enforce encapsulation without resorting to locks.
- * Use the model of cooperative entities reacting to signals, changing state and sending signals to each other
+* Enforce encapsulation without resorting to locks.
+* Use the model of cooperative entities reacting to signals, changing state and sending signals to each other
    to drive the whole application forward.
- * Stop worrying about an executing mechanism which is a mismatch to our world view.
+* Stop worrying about an executing mechanism which is a mismatch to our world view.
 
 The actor model accomplishes all of these goals. The following topics describe how.
 
-### Usage of message passing avoids locking and blocking
+## Usage of Message Passing Avoids Locking and Blocking
 
 Instead of calling methods, actors send messages to each other. Sending a message does not transfer the thread
 of execution from the sender to the destination. An actor can send a message and continue without blocking.
-It can, therefore, do more work, send and receive messages.      
+It can, therefore, do more work, send and receive messages.
 
 With objects, when a method returns, it releases control of its executing thread. In this respect, actors behave
 much like objects, they react to messages and return execution when they finish processing the current message.
@@ -211,12 +208,12 @@ In summary, this is what happens when an actor receives a message:
 
 To accomplish this behavior, actors have:
 
- * A Mailbox (the queue where messages end up).
- * A Behavior (the state of the actor, internal variables etc.).
- * Messages (pieces of data representing a signal, similar to method calls and their parameters).
- * An Execution Environment (the machinery that takes actors that have messages to react to and invokes
+* A Mailbox (the queue where messages end up).
+* A Behavior (the state of the actor, internal variables etc.).
+* Messages (pieces of data representing a signal, similar to method calls and their parameters).
+* An Execution Environment (the machinery that takes actors that have messages to react to and invokes
    their message handling code).
- * An Address (more on this later).
+* An Address (more on this later).
 
 Messages are put into so-called Mailboxes of Actors. The Behavior of the actor describes how the actor responds to
 messages (like sending more messages and/or changing state). An Execution Environment orchestrates a pool of threads
@@ -224,25 +221,25 @@ to drive all these actions completely transparently.
 
 This is a very simple model and it solves the issues enumerated previously:
 
- * Encapsulation is preserved by decoupling execution from signaling (method calls transfer execution,
+* Encapsulation is preserved by decoupling execution from signaling (method calls transfer execution,
    message passing does not).
- * There is no need for locks. Modifying the internal state of an actor is only possible via messages, which are
+* There is no need for locks. Modifying the internal state of an actor is only possible via messages, which are
    processed one at a time eliminating races when trying to keep invariants.
- * There are no locks used anywhere, and senders are not blocked. Millions of actors can be efficiently scheduled on a
+* There are no locks used anywhere, and senders are not blocked. Millions of actors can be efficiently scheduled on a
    dozen of threads reaching the full potential of modern CPUs. Task delegation is the natural mode of operation for actors.
- * State of actors is local and not shared, changes and data is propagated via messages, which maps to how modern
+* State of actors is local and not shared, changes and data is propagated via messages, which maps to how modern
    memory hierarchy actually works.    In many cases, this means transferring over only the cache lines that contain the data in the message while keeping local state and data cached at the original core. The same model maps exactly to remote communication where the state is kept in the RAM of machines and changes/data is propagated over the network as packets.
 
-### Actors handle error situations gracefully
+## Actors Handle Error Situations Gracefully
 
 Since we have no longer a shared call stack between actors that send messages to each other, we need to handle
 error situations differently. There are two kinds of errors we need to consider:
 
- * The first case is when the delegated task on the target actor failed due to an error in the task (typically some
+* The first case is when the delegated task on the target actor failed due to an error in the task (typically some
    validation issue, like a non-existent user ID). In this case, the service encapsulated by the target actor is intact,
    it is only the task that itself is erroneous.
    The service actor should reply to the sender with a message, presenting the error case. There is nothing special here, errors are part of the domain and hence become ordinary messages.
- * The second case is when a service itself encounters an internal fault. Akka.NET enforces that all actors are organized
+* The second case is when a service itself encounters an internal fault. Akka.NET enforces that all actors are organized
    into a tree-like hierarchy, i.e. an actor that creates another actor becomes the parent of that new actor. This is very similar how operating systems organize processes into a tree. Just like with processes, when an actor fails,
    its parent actor is notified and it can react to the failure. Also, if the parent actor is stopped,
    all of its children are recursively stopped, too. This service is called supervision and it is central to Akka.NET.

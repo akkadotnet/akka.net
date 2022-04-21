@@ -33,7 +33,7 @@ namespace Akka.TestKit
         /// <param name="interval">The interval to wait between executing the assertion.</param>
         public void AwaitAssert(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null)
         {
-            var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(800));
+            var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
             intervalValue.EnsureIsPositiveFinite("interval");
             var max = RemainingOrDilated(duration);
@@ -72,9 +72,9 @@ namespace Akka.TestKit
         /// <param name="interval">The interval to wait between executing the assertion.</param>
         public async Task AwaitAssertAsync(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null)
         {
-            var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(800));
+            var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
-            intervalValue.EnsureIsPositiveFinite("interval");
+            intervalValue.EnsureIsPositiveFinite(nameof(interval));
             var max = RemainingOrDilated(duration);
             var stop = Now + max;
             var t = max.Min(intervalValue);
@@ -111,7 +111,7 @@ namespace Akka.TestKit
         /// <param name="interval">The interval to wait between executing the assertion.</param>
         public async Task AwaitAssertAsync(Func<Task> assertion, TimeSpan? duration=null, TimeSpan? interval=null)
         {
-            var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(800));
+            var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
             intervalValue.EnsureIsPositiveFinite("interval");
             var max = RemainingOrDilated(duration);

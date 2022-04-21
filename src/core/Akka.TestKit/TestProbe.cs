@@ -124,7 +124,7 @@ namespace Akka.TestKit
 
         bool IInternalActorRef.IsTerminated { get { return ((IInternalActorRef)TestActor).IsTerminated; } }
 
-        IActorRef IInternalActorRef.GetChild(IEnumerable<string> name)
+        IActorRef IInternalActorRef.GetChild(IReadOnlyList<string> name)
         {
             return ((IInternalActorRef)TestActor).GetChild(name);
         }
@@ -241,25 +241,25 @@ namespace Akka.TestKit
             ((IInternalActorRef)TestActor).SendSystemMessage(message);
         }
 
-        /// <inheritdoc/>
+   
         public int CompareTo(object obj)
         {
             return TestActor.CompareTo(obj);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return TestActor.Equals(obj);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             return TestActor.GetHashCode();
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"TestProbe({TestActor})";

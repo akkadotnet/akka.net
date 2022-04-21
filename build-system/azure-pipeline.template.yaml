@@ -8,18 +8,20 @@ parameters:
   scriptArgs: 'all'
   outputDirectory: ''
   timeoutInMinutes: 120
+  run_if: true
 
 jobs:
   - job: ${{ parameters.name }}
+    condition: eq( ${{ parameters.run_if }}, true )
     displayName: ${{ parameters.displayName }}
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     pool:
       vmImage: ${{ parameters.vmImage }}
     steps:
       - task: UseDotNet@2
-        displayName: 'Use .NET 5 SDK 5.0.101'
+        displayName: 'Use .NET 6 SDK 6.0.100'
         inputs:
-          version: 5.0.101
+          version: 6.0.100
       - task: UseDotNet@2
         displayName: 'Use .NET Core Runtime 3.1.10'
         inputs:

@@ -10,6 +10,7 @@ using System.Threading;
 using Akka.Cluster.TestKit;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {

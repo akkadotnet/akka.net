@@ -363,6 +363,35 @@ namespace Akka.Streams.Dsl
             => RunWith(Sink.ForEach(action), materializer);
 
         /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
+        /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
+        /// This is implemented using a SourceQueue and will buffer elements based on configured stream defaults.
+        /// For custom buffers Please use <see cref="RunAsAsyncEnumerableBuffer"/>
+        /// </summary>
+        /// <param name="materializer">The materializer to use for each enumeration</param>
+        /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
+        public IAsyncEnumerable<TOut> RunAsAsyncEnumerable(
+            IMaterializer materializer) =>
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(this, materializer);
+
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
+        /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
+        /// This is implemented using a SourceQueue and will buffer elements and/or backpressure,
+        /// based on the buffer values provided.
+        /// </summary>
+        /// <param name="materializer">The materializer to use for each enumeration</param>
+        /// <param name="minBuffer">The minimum input buffer size</param>
+        /// <param name="maxBuffer">The Max input buffer size.</param>
+        /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
+        public IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(
+            IMaterializer materializer, int minBuffer = 4,
+            int maxBuffer = 16) =>
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(
+                this, materializer,minBuffer,maxBuffer);
+        
+
+        /// <summary>
         /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
@@ -526,7 +555,27 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="task">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<T, NotUsed> FromTask<T>(Task<T> task) => FromGraph(new TaskSource<T>(task));
+        public static Source<T, NotUsed> FromTask<T>(Task<T> task) => FromGraph(new TaskSource<T>(task));        
+
+        /// <summary>
+        /// Never emits any elements, never completes and never fails.
+        /// This stream could be useful in tests.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
+        public static Source<T, NotUsed> Never<T>() => FromTask(new TaskCompletionSource<T>().Task).WithAttributes(DefaultAttributes.NeverSource);
+
+        /// <summary>
+        /// Streams the elements of the given future source once it successfully completes.
+        /// If the <see cref="Task{T}"/> fails the stream is failed with the exception from the future. If downstream cancels before the
+        /// stream completes the materialized <see cref="Task{M}"/> will be failed with a <see cref="StreamDetachedException"/>
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="M">TBD</typeparam>
+        /// <param name="task">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<T, Task<M>> FromTaskSource<T, M>(Task<Source<T, M>> task) =>
+            FromGraph(new TaskFlattenSource<T, M>(task));
 
         /// <summary>
         /// Elements are emitted periodically with the specified interval.
@@ -930,7 +979,7 @@ namespace Akka.Streams.Dsl
         /// <param name="close">function that closes resource</param>
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> UnfoldResourceAsync<T, TSource>(Func<Task<TSource>> create,
-            Func<TSource, Task<Option<T>>> read, Func<TSource, Task> close)
+            Func<TSource, Task<Option<T>>> read, Func<TSource, Task<Done>> close)
         {
             return FromGraph(new UnfoldResourceSourceAsync<T, TSource>(create, read, close));
         }

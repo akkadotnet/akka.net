@@ -13,7 +13,6 @@ using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.IO;
-using Akka.Util;
 
 namespace Akka.Streams.Implementation.IO
 {
@@ -75,12 +74,12 @@ namespace Akka.Streams.Implementation.IO
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            return message.Match()
-                .With<OnNext>(next =>
-                {
+            switch (message)
+            {
+                case OnNext next:
                     try
                     {
-                        var bytes = next.Element as ByteString;
+                        var bytes = (ByteString)next.Element;
                         //blocking write
                         _outputStream.Write(bytes.ToArray(), 0, bytes.Count);
                         _bytesWritten += bytes.Count;
@@ -92,20 +91,19 @@ namespace Akka.Streams.Implementation.IO
                         _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
                         Cancel();
                     }
-                })
-                .With<OnError>(error =>
-                {
-                    _log.Error(error.Cause,
-                        $"Tearing down OutputStreamSink due to upstream error, wrote bytes: {_bytesWritten}");
-                    _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, error.Cause));
+                    return true;
+                case OnError error:
+                    _log.Error(error.Cause, "Tearing down OutputStreamSink due to upstream error, wrote bytes: {0}", _bytesWritten);
+                    _completionPromise.TrySetException(new AbruptIOTerminationException(IOResult.Success(_bytesWritten), error.Cause));
                     Context.Stop(Self);
-                })
-                .With<OnComplete>(() =>
-                {
+                    return true;
+                case OnComplete _:
                     Context.Stop(Self);
                     _outputStream.Flush();
-                })
-                .WasHandled;
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>

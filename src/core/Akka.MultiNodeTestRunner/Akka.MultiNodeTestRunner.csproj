@@ -9,6 +9,7 @@
     <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <NuspecFile>Akka.MultiNodeTestRunner.nuspec</NuspecFile>
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
 
   <ItemGroup>

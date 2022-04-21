@@ -337,18 +337,7 @@ namespace Akka.Tests.Actor
 
             var result = co.Run(CoordinatedShutdown.UnknownReason.Instance);
             ExpectMsg("B");
-            Intercept<AggregateException>(() =>
-            {
-                if (result.Wait(RemainingOrDefault))
-                {
-                    result.Exception?.Flatten().InnerException.Should().BeOfType<TimeoutException>();
-                }
-                else
-                {
-                    throw new Exception("CoordinatedShutdown task did not complete");
-                }
-            });
-
+            Intercept<TimeoutException>(() => result.Wait(RemainingOrDefault));
             ExpectNoMsg(TimeSpan.FromMilliseconds(200)); // C not run
         }
 

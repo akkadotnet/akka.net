@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Akka.Cluster.Sharding;
 using Akka.Persistence;
 
 namespace ClusterSharding.Node
@@ -38,15 +39,22 @@ namespace ClusterSharding.Node
 
         #endregion
         
-        public override string PersistenceId { get; } = Context.Parent.Path.Name + "/" + Context.Self.Path.Name;
+        public override string PersistenceId { get; }
 
         public ICollection<string> _purchasedItems = new List<string>();
 
-        public Customer()
+        public Customer(string persistenceId)
         {
+            PersistenceId = persistenceId;
             SetReceiveTimeout(TimeSpan.FromSeconds(60));
             Recover<ItemPurchased>(purchased => _purchasedItems.Add(purchased.ItemName));
 
+            Command<ShardRegion.StartEntity>(e =>
+            {
+                Console.WriteLine($"'{PersistenceId}' started via remember-entities");
+
+            });
+            
             Command<PurchaseItem>(purchase =>
             {
                 Persist(new ItemPurchased(purchase.ItemName), purchased =>

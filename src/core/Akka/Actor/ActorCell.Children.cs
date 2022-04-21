@@ -10,8 +10,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor.Internal;
+using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -133,8 +135,7 @@ namespace Akka.Actor
         private string GetRandomActorName(string prefix = "$")
         {
             var id = Interlocked.Increment(ref _nextRandomNameDoNotCallMeDirectly);
-            var sb = new StringBuilder(prefix);
-            return id.Base64Encode(sb).ToString();
+            return id.Base64Encode(prefix);
         }
 
         /// <summary>
@@ -264,8 +265,7 @@ namespace Akka.Actor
         {
             get
             {
-                var terminating = ChildrenContainer as TerminatingChildrenContainer;
-                return terminating != null && terminating.Reason is SuspendReason.IWaitingForChildren;
+                return ChildrenContainer is TerminatingChildrenContainer terminating && terminating.Reason is SuspendReason.IWaitingForChildren;
             }
         }
 
@@ -324,8 +324,7 @@ namespace Akka.Actor
         /// </summary>
         private bool TryGetChildRestartStatsByName(string name, out ChildRestartStats child)
         {
-            IChildStats stats;
-            if (ChildrenContainer.TryGetByName(name, out stats))
+            if (ChildrenContainer.TryGetByName(name, out var stats))
             {
                 child = stats as ChildRestartStats;
                 if (child != null)
@@ -350,61 +349,41 @@ namespace Akka.Actor
         // In Akka JVM there is a getAllChildStats here. Use ChildrenRefs.Stats instead
 
         /// <summary>
-        /// Obsolete. Use <see cref="TryGetSingleChild(string, out IInternalActorRef)"/> instead.
+        /// Get a single child matching the name supplied
         /// </summary>
-        /// <param name="name">N/A</param>
-        /// <returns>N/A</returns>
-        [Obsolete("Use TryGetSingleChild [0.7.1]")]
+        /// <param name="name">the child's name</param>
+        /// <returns>IInternalActorRef</returns>
         public IInternalActorRef GetSingleChild(string name)
-        {
-            IInternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
-        public bool TryGetSingleChild(string name, out IInternalActorRef child)
         {
             if (name.IndexOf('#') < 0)
             {
                 // optimization for the non-uid case
-                if (TryGetChildRestartStatsByName(name, out var stats))
+                if (ChildrenContainer.TryGetByName(name, out var stats) && stats is ChildRestartStats r)
                 {
-                    child = stats.Child;
-                    return true;
+                    return r.Child;
                 }
-                else if (TryGetFunctionRef(name, out var functionRef))
+
+                if (TryGetFunctionRef(name, out var functionRef))
                 {
-                    child = functionRef;
-                    return true;
+                    return functionRef;
                 }
             }
             else
             {
-                var nameAndUid = SplitNameAndUid(name);
-                if (TryGetChildRestartStatsByName(nameAndUid.Name, out var stats))
+                var (s, uid) = GetNameAndUid(name);
+                if (TryGetChildRestartStatsByName(s, out var stats) && (uid == ActorCell.UndefinedUid || uid == stats.Uid))
                 {
-                    var uid = nameAndUid.Uid;
-                    if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
-                    {
-                        child = stats.Child;
-                        return true;
-                    }
+                    return stats.Child;
                 }
-                else if (TryGetFunctionRef(nameAndUid.Name, nameAndUid.Uid, out var functionRef))
+
+                if (TryGetFunctionRef(s, uid, out var functionRef))
                 {
-                    child = functionRef;
-                    return true;
+                    return functionRef;
                 }
             }
-            child = ActorRefs.Nobody;
-            return false;
+            return ActorRefs.Nobody;
         }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -452,6 +431,7 @@ namespace Akka.Actor
             if (_systemImpl.Settings.SerializeAllCreators && !systemService && !(props.Deploy.Scope is LocalScope))
             {
                 var oldInfo = Serialization.Serialization.CurrentTransportInformation;
+                object propArgument = null;
                 try
                 {
                     if (oldInfo == null)
@@ -465,16 +445,23 @@ namespace Akka.Actor
                         {
                             if (argument != null && !(argument is INoSerializationVerificationNeeded))
                             {
+                                propArgument = argument;
                                 var serializer = ser.FindSerializerFor(argument);
                                 var bytes = serializer.ToBinary(argument);
                                 var ms = Serialization.Serialization.ManifestFor(serializer, argument);
-                                if(ser.Deserialize(bytes, serializer.Identifier, ms) == null)
+                                if (ser.Deserialize(bytes, serializer.Identifier, ms) == null)
                                     throw new ArgumentException(
-                                            $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
-                                            nameof(name));
+                                        $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
+                                        nameof(name));
                             }
                         }
                     }
+                }
+                catch (Exception e)
+                {
+                    throw new SerializationException(
+                        $"Failed to serialize and deserialize actor props argument of type {propArgument?.GetType()} for actor type [{props.Type}].",
+                        e);
                 }
                 finally
                 {

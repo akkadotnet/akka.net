@@ -16,6 +16,7 @@ using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -163,14 +164,15 @@ namespace Akka.Remote.Tests.Transport
             get
             {
                 Sys.ActorSelection(RootB / "user" / "echo").Tell(new Identify(null), TestActor);
-                return ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(300)).Subject;
+                var subject = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(3)).Subject;
+                return subject;
             }
         }
 
 
         #endregion
 
-        public AkkaProtocolStressTest() : base(AkkaProtocolStressTestConfig)
+        public AkkaProtocolStressTest(ITestOutputHelper output) : base(AkkaProtocolStressTestConfig, output)
         {
             systemB = ActorSystem.Create("systemB", Sys.Settings.Config);
             remote = systemB.ActorOf(Props.Create<Echo>(), "echo");
@@ -178,7 +180,7 @@ namespace Akka.Remote.Tests.Transport
 
         #region Tests
 
-        [Fact(Skip = "Extremely racy")]
+        [Fact]
         public void AkkaProtocolTransport_must_guarantee_at_most_once_delivery_and_message_ordering_despite_packet_loss()
         {
             //todo mute both systems for deadletters for any type of message
@@ -190,7 +192,12 @@ namespace Akka.Remote.Tests.Transport
                         new FailureInjectorTransportAdapter.Drop(0.1, 0.1)));
             AwaitCondition(() => mc.IsCompleted && mc.Result, TimeSpan.FromSeconds(3));
 
-            var here = Here;
+            IActorRef here = null;
+            AwaitCondition(() =>
+            {
+                here = Here;
+                return here != null && !here.Equals(ActorRefs.Nobody);
+            }, TimeSpan.FromSeconds(3));
 
             var tester = Sys.ActorOf(Props.Create(() => new SequenceVerifier(here, TestActor)));
             tester.Tell("start");

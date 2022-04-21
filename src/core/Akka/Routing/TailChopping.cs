@@ -122,7 +122,14 @@ namespace Akka.Routing
                     try
                     {
 
-                        completion.TrySetResult(await (_routees[currentIndex].Ask(message, _within)).ConfigureAwait(false));
+                        completion.TrySetResult(
+                            await (_routees[currentIndex].Ask(message, _within)).ConfigureAwait(false));
+                    }
+                    catch (AskTimeoutException)
+                    {
+                        completion.TrySetResult(
+                            new Status.Failure(
+                                new AskTimeoutException($"Ask timed out on {sender} after {_within}")));
                     }
                     catch (TaskCanceledException)
                     {

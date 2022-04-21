@@ -251,15 +251,6 @@ namespace Akka.DistributedData.Serialization
         }
 
         #region ORSet
-
-        private static Proto.Msg.ORSet ORSetToProto<T>(ORSet<T> set)
-        {
-            var p = new Proto.Msg.ORSet();
-            p.Vvector = SerializationSupport.VersionVectorToProto(set.VersionVector);
-            p.Dots.Add(set.ElementsMap.Values.Select(SerializationSupport.VersionVectorToProto));
-            p.TypeInfo = new TypeDescriptor();
-            return p;
-        }
         private IORSet ORSetFromBinary(byte[] bytes)
         {
             return FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
@@ -267,41 +258,70 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.ORSet ToProto(IORSet orset)
         {
+            var b = new Proto.Msg.ORSet
+            {
+                TypeInfo = new TypeDescriptor()
+            };
+
             switch (orset)
             {
                 case ORSet<int> ints:
                     {
-                        var p = ORSetToProto(ints);
-                        p.TypeInfo.Type = ValType.Int;
-                        p.IntElements.Add(ints.Elements);
-                        return p;
+                        b.Vvector =  SerializationSupport.VersionVectorToProto(ints.VersionVector);
+                        b.TypeInfo.Type = ValType.Int;
+                        var intElements = new List<int>(ints.ElementsMap.Keys);
+                        intElements.Sort();
+                        foreach (var val in intElements)
+                        {
+                            b.IntElements.Add(val);
+                            b.Dots.Add(SerializationSupport.VersionVectorToProto(ints.ElementsMap[val]));
+                        }
+                        return b;
                     }
                 case ORSet<long> longs:
                     {
-                        var p = ORSetToProto(longs);
-                        p.TypeInfo.Type = ValType.Long;
-                        p.LongElements.Add(longs.Elements);
-                        return p;
+                        b.Vvector =  SerializationSupport.VersionVectorToProto(longs.VersionVector);
+                        b.TypeInfo.Type = ValType.Long;
+                        var longElements = new List<long>(longs.ElementsMap.Keys);
+                        longElements.Sort();
+                        foreach (var val in longElements)
+                        {
+                            b.LongElements.Add(val);
+                            b.Dots.Add(SerializationSupport.VersionVectorToProto(longs.ElementsMap[val]));
+                        }
+                        return b;
                     }
                 case ORSet<string> strings:
                     {
-                        var p = ORSetToProto(strings);
-                        p.TypeInfo.Type = ValType.String;
-                        p.StringElements.Add(strings.Elements);
-                        return p;
+                        b.Vvector =  SerializationSupport.VersionVectorToProto(strings.VersionVector);
+                        b.TypeInfo.Type = ValType.String;
+                        var stringElements = new List<string>(strings.ElementsMap.Keys);
+                        stringElements.Sort();
+                        foreach (var val in stringElements)
+                        {
+                            b.StringElements.Add(val);
+                            b.Dots.Add(SerializationSupport.VersionVectorToProto(strings.ElementsMap[val]));
+                        }
+                        return b;
                     }
                 case ORSet<IActorRef> refs:
                     {
-                        var p = ORSetToProto(refs);
-                        p.TypeInfo.Type = ValType.ActorRef;
-                        p.ActorRefElements.Add(refs.Select(Akka.Serialization.Serialization.SerializedActorPath));
-                        return p;
+                        b.Vvector =  SerializationSupport.VersionVectorToProto(refs.VersionVector);
+                        b.TypeInfo.Type = ValType.ActorRef;
+                        var actorRefElements = new List<IActorRef>(refs.ElementsMap.Keys);
+                        actorRefElements.Sort();
+                        foreach (var val in actorRefElements)
+                        {
+                            b.ActorRefElements.Add(Akka.Serialization.Serialization.SerializedActorPath(val));
+                            b.Dots.Add(SerializationSupport.VersionVectorToProto(refs.ElementsMap[val]));
+                        }
+                        return b;
                     }
                 default: // unknown type
                     {
                         // runtime type - enter horrible dynamic serialization stuff
                         var makeProto = ORSetUnknownMaker.MakeGenericMethod(orset.SetType);
-                        return (Proto.Msg.ORSet)makeProto.Invoke(this, new object[] { orset });
+                        return (Proto.Msg.ORSet)makeProto.Invoke(this, new object[] { orset, b });
                     }
             }
         }
@@ -368,14 +388,29 @@ namespace Akka.DistributedData.Serialization
         /// <summary>
         /// Called when we're serializing none of the standard object types with ORSet
         /// </summary>
-        private Proto.Msg.ORSet ORSetUnknownToProto<T>(IORSet o)
+        private Proto.Msg.ORSet ORSetUnknownToProto<T>(IORSet o, Proto.Msg.ORSet b)
         {
             var orset = (ORSet<T>)o;
-            var p = ORSetToProto(orset);
-            p.TypeInfo.Type = ValType.Other;
-            p.TypeInfo.TypeName = typeof(T).TypeQualifiedName();
-            p.OtherElements.Add(orset.Elements.Select(x => _ser.OtherMessageToProto(x)));
-            return p;
+            b.Vvector =  SerializationSupport.VersionVectorToProto(orset.VersionVector);
+            b.TypeInfo.Type = ValType.Other;
+            b.TypeInfo.TypeName = typeof(T).TypeQualifiedName();
+
+            var otherElements = new List<OtherMessage>();
+            var otherElementsDict = new Dictionary<OtherMessage, Proto.Msg.VersionVector>();
+            foreach (var kvp in orset.ElementsMap)
+            {
+                var otherElement = _ser.OtherMessageToProto(kvp.Key);
+                otherElements.Add(otherElement);
+                otherElementsDict[otherElement] = SerializationSupport.VersionVectorToProto(kvp.Value);
+            }
+            otherElements.Sort(OtherMessageComparer.Instance);
+            
+            foreach (var val in otherElements)
+            {
+                b.OtherElements.Add(val);
+                b.Dots.Add(otherElementsDict[val]);
+            }
+            return b;
         }
 
         private ORSet.IAddDeltaOperation ORAddDeltaOperationFromBinary(byte[] bytes)
@@ -494,9 +529,14 @@ namespace Akka.DistributedData.Serialization
         private Proto.Msg.GSet GSetToProtoUnknown<T>(IGSet g)
         {
             var gset = (GSet<T>)g;
-            var p = new Proto.Msg.GSet();
-            p.TypeInfo = GetTypeDescriptor(typeof(T));
-            p.OtherElements.Add(gset.Select(x => _ser.OtherMessageToProto(x)));
+            var otherElements = new List<OtherMessage>(gset.Select(x => _ser.OtherMessageToProto(x)));
+            otherElements.Sort(OtherMessageComparer.Instance);
+
+            var p = new Proto.Msg.GSet
+            {
+                TypeInfo = GetTypeDescriptor(typeof(T))
+            };
+            p.OtherElements.Add(otherElements);
             return p;
         }
 
@@ -510,25 +550,33 @@ namespace Akka.DistributedData.Serialization
                 case GSet<int> ints:
                     {
                         var p = GSetToProto(ints);
-                        p.IntElements.Add(ints.Elements);
+                        var intElements = new List<int>(ints.Elements);
+                        intElements.Sort();
+                        p.IntElements.Add(intElements);
                         return p;
                     }
                 case GSet<long> longs:
                     {
                         var p = GSetToProto(longs);
-                        p.LongElements.Add(longs.Elements);
+                        var longElements = new List<long>(longs.Elements);
+                        longElements.Sort();
+                        p.LongElements.Add(longElements);
                         return p;
                     }
                 case GSet<string> strings:
                     {
                         var p = GSetToProto(strings);
-                        p.StringElements.Add(strings.Elements);
+                        var stringElements = new List<string>(strings.Elements);
+                        stringElements.Sort();
+                        p.StringElements.Add(stringElements);
                         return p;
                     }
                 case GSet<IActorRef> refs:
                     {
                         var p = GSetToProto(refs);
-                        p.ActorRefElements.Add(refs.Select(Akka.Serialization.Serialization.SerializedActorPath));
+                        var refElements = new List<IActorRef>(refs.Elements);
+                        refElements.Sort();
+                        p.ActorRefElements.Add(refElements.Select(Akka.Serialization.Serialization.SerializedActorPath));
                         return p;
                     }
                 default: // unknown type

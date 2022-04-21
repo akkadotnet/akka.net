@@ -99,13 +99,13 @@ namespace Akka.TestKit.Xunit
         /// Commonly used assertions used throughout the testkit.
         /// </summary>
         protected static XunitAssertions Assertions { get; } = new XunitAssertions();
-        
+
         /// <summary>
         /// This method is called when a test ends.
         /// 
         /// <remarks>
         /// If you override this, then make sure you either call base.AfterTest() or
-        /// <see cref="TestKitBase.Shutdown(System.Nullable{System.TimeSpan},bool)">TestKitBase.Shutdown</see>
+        /// <see cref="TestKitBase.Shutdown(TimeSpan?,bool)">TestKitBase.Shutdown</see>
         /// to shut down the system. Otherwise a memory leak will occur.
         /// </remarks>
         /// </summary>
@@ -128,7 +128,7 @@ namespace Akka.TestKit.Xunit
             }
         }
 
-        /// <inheritdoc/>
+        
         public void Dispose()
         {
             Dispose(true);

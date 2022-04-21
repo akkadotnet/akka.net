@@ -425,30 +425,16 @@ namespace Akka.Streams.Tests.Dsl
                 // Exhaust bucket first
                 downstream.Request(5);
                 Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
-                // Check later, takes too long
-                var exhaustElemens = downstream.ReceiveWhile(filter: o => o, max: TimeSpan.FromMilliseconds(300),
-                    msgs: 5);
+                downstream.ReceiveWithin<int>(TimeSpan.FromMilliseconds(300), 5)
+                    .Should().BeEquivalentTo(Enumerable.Range(1, 5));
 
-                downstream.Request(1);
-                upstream.SendNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(6);
                 downstream.Request(5);
                 downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(1200));
-                var expected = new List<OnNext>();
-                for (var i = 7; i < 12; i++)
-                {
-                    upstream.SendNext(i);
-                    expected.Add(new OnNext(i));
-                }
-                downstream.ReceiveWhile(TimeSpan.FromMilliseconds(300), filter: x => x, msgs: 5)
-                    .Should().BeEquivalentTo(expected);
+                Enumerable.Range(7, 5).ForEach(i => upstream.SendNext(i));
+                downstream.ReceiveWithin<int>(TimeSpan.FromMilliseconds(300), 5)
+                    .Should().BeEquivalentTo(Enumerable.Range(7, 5));
 
                 downstream.Cancel();
-                exhaustElemens
-                    .Cast<TestSubscriber.OnNext<int>>()
-                    .Select(n => n.Element)
-                    .Should().BeEquivalentTo(Enumerable.Range(1, 5));
             }, Materializer);
         }
 

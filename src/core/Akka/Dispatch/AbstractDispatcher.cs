@@ -116,6 +116,31 @@ namespace Akka.Dispatch
         public IDispatcherPrerequisites Prerequisites { get; private set; }
     }
 
+    internal sealed class ChannelExecutorConfigurator : ExecutorServiceConfigurator
+    {
+        private static readonly Config PriorityDefault = ConfigurationFactory.ParseString(@"
+executor = channel-executor 
+channel-executor.priority = normal");
+        
+        public ChannelExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
+        {
+            config = config == null ? PriorityDefault : config.WithFallback(PriorityDefault);
+            
+            var priority = config.GetString("channel-executor.priority", "normal");
+            Priority = (TaskSchedulerPriority)Enum.Parse(typeof(TaskSchedulerPriority), priority, true);
+        }
+
+        public TaskSchedulerPriority Priority { get; }
+
+        public override ExecutorService Produce(string id)
+        {
+            Prerequisites.EventStream.Publish(new Debug($"ChannelExecutor-[{id}]", typeof(TaskSchedulerExecutor), $"Launched Dispatcher [{id}] with Priority[{Priority}]"));
+
+            var scheduler = ChannelTaskScheduler.Get(Prerequisites.Settings.System).GetScheduler(Priority);
+            return new TaskSchedulerExecutor(id, scheduler);
+        }
+    }
+
     /// <summary>
     /// INTERNAL API
     /// 
@@ -306,6 +331,8 @@ namespace Akka.Dispatch
                     return new CurrentSynchronizationContextExecutorServiceFactory(Config, Prerequisites);
                 case "task-executor":
                     return new DefaultTaskSchedulerExecutorConfigurator(Config, Prerequisites);
+                case "channel-executor":
+                    return new ChannelExecutorConfigurator(Config, Prerequisites);
                 default:
                     Type executorConfiguratorType = Type.GetType(executor);
                     if (executorConfiguratorType == null)

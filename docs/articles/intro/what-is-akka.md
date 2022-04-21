@@ -2,7 +2,7 @@
 uid: what-is-akka
 title: What is Akka
 ---
-# What is Akka.NET?
+# What Is Akka.NET?
 
 Welcome to Akka.NET, a set of open-source libraries for designing scalable, resilient systems that
 span processor cores and networks. Akka allows you to focus on meeting business needs instead
@@ -16,11 +16,11 @@ architectures.
 
 To deal with these realities, Akka.NET provides:
 
- * Multi-threaded behavior without the use of low-level concurrency constructs like
+* Multi-threaded behavior without the use of low-level concurrency constructs like
    atomics or locks. You do not even need to think about memory visibility issues.
- * Transparent remote communication between systems and their components. You do
+* Transparent remote communication between systems and their components. You do
    not need to write or maintain difficult networking code.
- * A clustered, high-availability architecture that is elastic, scales in or out, on demand.
+* A clustered, high-availability architecture that is elastic, scales in or out, on demand.
 
 All of these features are available through a uniform programming model: Akka.NET exploits the actor model
 to provide a level of abstraction that makes it easier to write correct concurrent, parallel and distributed systems.
@@ -32,7 +32,7 @@ By learning Akka.NET and its actor model, you will gain access to a vast and dee
 distributed/parallel systems problems in a uniform programming model where everything fits together tightly and
 efficiently.
 
-## What is the Actor Model?
+## What Is the Actor Model?
 
 The characteristics of today's computing environments are vastly different from the ones in use when the programming
 models of yesterday were conceived. Actors were invented decades ago by [Carl Hewitt](https://en.wikipedia.org/wiki/Carl_Hewitt#Actor_model).
@@ -48,7 +48,6 @@ As computational entities, actors have these characteristics:
 * They communicate with asynchronous messaging instead of method calls
 * They manage their own state
 * When responding to a message, they can:
-    * Create other (child) actors
-    * Send messages to other actors
-    * Stop (child) actors or themselves
-
+  * Create other (child) actors
+  * Send messages to other actors
+  * Stop (child) actors or themselves

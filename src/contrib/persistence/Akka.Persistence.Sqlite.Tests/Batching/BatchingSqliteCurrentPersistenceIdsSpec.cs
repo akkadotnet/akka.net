@@ -21,6 +21,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
         public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
+            akka.persistence.query.journal.sql.refresh-interval = 1s
             akka.persistence.journal.sqlite {{
                 class = ""Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite""
                 plugin-dispatcher = ""akka.actor.default-dispatcher""
@@ -28,7 +29,6 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                 metadata-table-name = journal_metadata
                 auto-initialize = on
                 connection-string = ""Datasource=memdb-journal-batch-currentpersistenceids-{id}.db;Mode=Memory;Cache=Shared""
-                refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());
@@ -37,11 +37,6 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
         public BatchingSqliteCurrentPersistenceIdsSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(BatchingSqliteCurrentPersistenceIdsSpec), output)
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
-        }
-
-        [Fact(Skip = "Not implemented, due to bugs on NetCore")]
-        public override void ReadJournal_query_CurrentPersistenceIds_should_not_see_new_events_after_complete()
-        {
         }
     }
 }

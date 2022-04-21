@@ -76,7 +76,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract Inlet CarbonCopy();
 
-        /// <inheritdoc/>
+        
         public sealed override string ToString() => Name;
     }
 
@@ -138,7 +138,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract Outlet CarbonCopy();
 
-        /// <inheritdoc/>
+        
         public sealed override string ToString() => Name;
     }
 
@@ -173,10 +173,7 @@ namespace Akka.Streams
     /// matters from the outside are the connections that can be made with it,
     /// otherwise it is just a black box.
     /// </summary>
-    public abstract class Shape
-#if CLONEABLE
-     : ICloneable
-#endif
+    public abstract class Shape : ICloneable
     {
         /// <summary>
         /// Gets list of all input ports.
@@ -231,7 +228,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public object Clone() => DeepCopy();
 
-        /// <inheritdoc/>
+        
         public sealed override string ToString() => $"{GetType().Name}([{string.Join(", ", Inlets)}] [{string.Join(", ", Outlets)}])";
     }
 
@@ -389,7 +386,7 @@ namespace Akka.Streams
             return new SourceShape<TOut>(outlets[0] as Outlet<TOut>);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
@@ -403,7 +400,7 @@ namespace Akka.Streams
         /// <inheritdoc/>
         private bool Equals(SourceShape<TOut> other) => Outlet.Equals(other.Outlet);
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode() => Outlet.GetHashCode();
     }
 
@@ -558,7 +555,7 @@ namespace Akka.Streams
             return new SinkShape<TIn>(inlets[0] as Inlet<TIn>);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
@@ -571,7 +568,7 @@ namespace Akka.Streams
 
         private bool Equals(SinkShape<TIn> other) => Equals(Inlet, other.Inlet);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Inlet.GetHashCode();
     }
 

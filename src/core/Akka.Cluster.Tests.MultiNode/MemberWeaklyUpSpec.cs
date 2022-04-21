@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -35,7 +36,7 @@ namespace Akka.Cluster.Tests.MultiNode
             CommonConfig = DebugConfig(on: false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     akka.remote.retry-gate-closed-for = 3s
-                    akka.cluster.allow-weakly-up-members = on"))
+                    akka.cluster.allow-weakly-up-members = 3s"))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             TestTransport = true;

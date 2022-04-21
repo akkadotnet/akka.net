@@ -8,43 +8,98 @@
 using System;
 using System.Text;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Serialization;
 using Akka.Util;
 
 namespace Akka.Remote.Serialization
 {
-    public sealed class PrimitiveSerializers : Serializer
+    public sealed class PrimitiveSerializers : SerializerWithStringManifest
     {
+        internal const string StringManifest = "S";
+        internal const string Int32Manifest = "I";
+        internal const string Int64Manifest = "L";
+
+        // .Net Core manifests
+        internal const string StringManifestNetCore = "System.String, System.Private.CoreLib";
+        internal const string Int32ManifestNetCore = "System.Int32, System.Private.CoreLib";
+        internal const string Int64ManifestNetCore = "System.Int64, System.Private.CoreLib";
+
+        // .Net Framework manifests
+        internal const string StringManifestNetFx = "System.String, mscorlib";
+        internal const string Int32ManifestNetFx = "System.Int32, mscorlib";
+        internal const string Int64ManifestNetFx = "System.Int64, mscorlib";
+
+        private readonly bool _useLegacyBehavior;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="PrimitiveSerializers" /> class.
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer. </param>
-        public PrimitiveSerializers(ExtendedActorSystem system) : base(system)
+        /// <param name="config">Config object containing the serializer settings</param>
+        public PrimitiveSerializers(ExtendedActorSystem system, Config config) : base(system)
         {
+            if (config == null)
+                throw new ConfigurationException("configuration is null");
+                    
+            _useLegacyBehavior = config.GetBoolean("use-legacy-behavior");
         }
-
-        /// <inheritdoc />
-        public override bool IncludeManifest { get; } = true;
 
         /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
-            var str = obj as string;
-            if (str != null) return Encoding.UTF8.GetBytes(str);
-            if (obj is int) return BitConverter.GetBytes((int)obj);
-            if (obj is long) return BitConverter.GetBytes((long)obj);
-
-            throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");
+            switch (obj)
+            {
+                case string s:
+                    return Encoding.UTF8.GetBytes(s);
+                case int i:
+                    return BitConverter.GetBytes(i);
+                case long l:
+                    return BitConverter.GetBytes(l);
+                default:
+                    throw new ArgumentException($"Cannot serialize object of type [{obj.GetType()}]");
+            }
         }
 
         /// <inheritdoc />
-        public override object FromBinary(byte[] bytes, Type type)
+        public override object FromBinary(byte[] bytes, string manifest)
         {
-            if (type == typeof(string)) return Encoding.UTF8.GetString(bytes);
-            if (type == typeof(int)) return BitConverter.ToInt32(bytes, 0);
-            if (type == typeof(long)) return BitConverter.ToInt64(bytes, 0);
+            switch (manifest)
+            {
+                case StringManifest:
+                case StringManifestNetCore:
+                case StringManifestNetFx:
+                    return Encoding.UTF8.GetString(bytes);
+                case Int32Manifest:
+                case Int32ManifestNetCore:
+                case Int32ManifestNetFx:
+                    return BitConverter.ToInt32(bytes, 0);
+                case Int64Manifest:
+                case Int64ManifestNetCore:
+                case Int64ManifestNetFx:
+                    return BitConverter.ToInt64(bytes, 0);
+                default:
+                    throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [${GetType()}]");
+            }
+        }
 
-            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{type.TypeQualifiedName()}] in [${nameof(PrimitiveSerializers)}]");
+        /// <inheritdoc />
+        public override string Manifest(object obj)
+        {
+            if (_useLegacyBehavior)
+                return obj.GetType().TypeQualifiedName();
+            
+            switch (obj)
+            {
+                case string _:
+                    return StringManifest;
+                case int _:
+                    return Int32Manifest;
+                case long _:
+                    return Int64Manifest;
+                default:
+                    throw new ArgumentException($"Cannot serialize object of type [{obj.GetType()}] in [{GetType()}]");
+            }
         }
     }
 }

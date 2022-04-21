@@ -43,27 +43,32 @@ namespace Akka.Pattern
         }
 
         /// <summary>
-        /// N/A
+        /// Fail-fast on any invocation
         /// </summary>
         /// <typeparam name="T">N/A</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
-        /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
-        /// <returns>N/A</returns>
-        public override Task<T> Invoke<T>(Func<Task<T>> body)
-        {
-            throw new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration());
-        }
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public override Task<T> Invoke<T>(Func<Task<T>> body) => 
+            Task.FromException<T>(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
+
+        public override Task
+            InvokeState<TState>(TState state, Func<TState, Task> body) =>
+            Task.FromException(
+                new OpenCircuitException(_breaker.LastCaughtException,
+                    RemainingDuration()));
+
+        public override Task<T> InvokeState<T, TState>(TState state,
+            Func<TState, Task<T>> body) => Task.FromException<T>(
+            new OpenCircuitException(_breaker.LastCaughtException,
+                RemainingDuration()));
 
         /// <summary>
-        /// N/A
+        /// Fail-fast on any invocation
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
-        /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
-        /// <returns>N/A</returns>
-        public override Task Invoke(Func<Task> body)
-        {
-            throw new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration());
-        }
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public override Task Invoke(Func<Task> body) => 
+            Task.FromException(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
 
         /// <summary>
         /// No-op for open, calls are never executed so cannot succeed or fail
@@ -94,7 +99,8 @@ namespace Akka.Pattern
             GetAndSet(DateTime.UtcNow.Ticks);
             _breaker.Scheduler.Advanced.ScheduleOnce(_breaker.CurrentResetTimeout, () => _breaker.AttemptReset());
 
-            var nextResetTimeout = TimeSpan.FromTicks(_breaker.CurrentResetTimeout.Ticks * (long)_breaker.ExponentialBackoffFactor);
+            var rnd = 1.0 + ThreadLocalRandom.Current.NextDouble() * _breaker.RandomFactor;
+            var nextResetTimeout = TimeSpan.FromTicks(_breaker.CurrentResetTimeout.Ticks * (long)_breaker.ExponentialBackoffFactor * (long)rnd);
             if (nextResetTimeout < _breaker.MaxResetTimeout)
             {
                 _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, nextResetTimeout);
@@ -126,21 +132,31 @@ namespace Akka.Pattern
             _lock = new AtomicBoolean();
         }
 
+        private void CheckState()
+        {
+            if (!_lock.CompareAndSet(true, false))
+            {
+                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
+            }
+        }
+
         /// <summary>
         /// Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
         /// If the call succeeds, the breaker closes.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
-        /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public override async Task<T> Invoke<T>(Func<Task<T>> body)
         {
-            if (!_lock.CompareAndSet(true, false))
-            {
-                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
-            }
+            CheckState();
             return await CallThrough(body);
+        }
+        
+        public override async Task<T> InvokeState<T,TState>(TState state, Func<TState, Task<T>> body)
+        {
+            CheckState();
+            return await CallThrough(state,body);
         }
 
         /// <summary>
@@ -148,15 +164,18 @@ namespace Akka.Pattern
         /// If the call succeeds, the breaker closes.
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
-        /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public override async Task Invoke(Func<Task> body)
         {
-            if (!_lock.CompareAndSet(true, false))
-            {
-                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
-            }
+            CheckState();
             await CallThrough(body);
+        }
+
+        public override async Task InvokeState<TState>(TState state,
+            Func<TState, Task> body)
+        {
+            CheckState();
+            await CallThrough(state,body);
         }
 
         /// <summary>
@@ -223,6 +242,11 @@ namespace Akka.Pattern
             return CallThrough(body);
         }
 
+        public override Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body)
+        {
+            return CallThrough(state, body);
+        }
+
         /// <summary>
         /// Implementation of invoke, which simply attempts the call
         /// </summary>
@@ -231,6 +255,11 @@ namespace Akka.Pattern
         public override Task Invoke(Func<Task> body)
         {
             return CallThrough(body);
+        }
+
+        public override Task InvokeState<TState>(TState state, Func<TState, Task> body)
+        {
+            return CallThrough(state, body);
         }
 
         /// <summary>

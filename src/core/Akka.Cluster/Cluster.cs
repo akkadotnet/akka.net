@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -62,13 +63,29 @@ namespace Akka.Cluster
             return system.WithExtension<Cluster, ClusterExtension>();
         }
 
+        static Cluster()
+        {
+            bool GetAssertInvariants()
+            {
+                var isOn = Environment.GetEnvironmentVariable("AKKA_CLUSTER_ASSERT")?.ToLowerInvariant();
+                switch (isOn)
+                {
+                    case "on":
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            IsAssertInvariantsEnabled = GetAssertInvariants();
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
         internal static bool IsAssertInvariantsEnabled
         {
-            //TODO: Consequences of this?
-            get { return false; }
+            get;
         }
 
         /// <summary>
@@ -135,7 +152,7 @@ namespace Akka.Cluster
             var timeout = System.Settings.CreationTimeout;
             try
             {
-                return await _clusterDaemons.Ask<IActorRef>(InternalClusterAction.GetClusterCoreRef.Instance, timeout).ConfigureAwait(false);
+                return await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), timeout).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -697,6 +714,16 @@ namespace Akka.Cluster
     public class ClusterJoinFailedException : AkkaException
     {
         public ClusterJoinFailedException(string message) : base(message)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ClusterJoinFailedException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected ClusterJoinFailedException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }

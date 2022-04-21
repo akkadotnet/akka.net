@@ -171,21 +171,6 @@ namespace Akka.Tools.MatchHandler
             return partialAction;
         }
 
-#if !CORECLR
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="typeBuilder">TBD</param>
-        /// <param name="methodName">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
-        public void BuildToMethod(TypeBuilder typeBuilder, string methodName, MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.Static)
-        {
-            _compiler.CompileToMethod(_typeHandlers, _arguments, new MatchBuilderSignature(_signature), typeBuilder, methodName, methodAttributes: attributes);
-            _state = State.Built;
-        }
-#endif
-
         private static void EnsureCanHandleType(Type handlesType)
         {
             if(!_itemType.IsAssignableFrom(handlesType))

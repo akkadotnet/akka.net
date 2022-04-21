@@ -15,218 +15,116 @@ using Akka.Util.Internal;
 namespace Akka.Cluster
 {
     /// <summary>
-    /// Immutable data structure that holds the reachability status of subject nodes as seen
-    /// from observer nodes. Failure detector for the subject nodes exist on the
-    /// observer nodes. Changes (reachable, unreachable, terminated) are only performed
-    /// by observer nodes to its own records. Each change bumps the version number of the
-    /// record, and thereby it is always possible to determine which record is newest 
-    /// merging two instances.
-    ///
-    /// Aggregated status of a subject node is defined as (in this order):
-    /// - Terminated if any observer node considers it as Terminated
-    /// - Unreachable if any observer node considers it as Unreachable
-    /// - Reachable otherwise, i.e. no observer node considers it as Unreachable
+    ///     Immutable data structure that holds the reachability status of subject nodes as seen
+    ///     from observer nodes. Failure detector for the subject nodes exist on the
+    ///     observer nodes. Changes (reachable, unreachable, terminated) are only performed
+    ///     by observer nodes to its own records. Each change bumps the version number of the
+    ///     record, and thereby it is always possible to determine which record is newest
+    ///     merging two instances.
+    ///     Aggregated status of a subject node is defined as (in this order):
+    ///     - Terminated if any observer node considers it as Terminated
+    ///     - Unreachable if any observer node considers it as Unreachable
+    ///     - Reachable otherwise, i.e. no observer node considers it as Unreachable
     /// </summary>
-    internal class Reachability //TODO: ISerializable?
+    internal class Reachability
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
-        public static readonly Reachability Empty = 
-            new Reachability(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());
+        public enum ReachabilityStatus
+        {
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            Reachable,
+
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            Unreachable,
+
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            Terminated
+        }
 
         /// <summary>
-        /// TBD
+        ///     TBD
+        /// </summary>
+        public static readonly Reachability Empty =
+            new Reachability(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());
+
+        private readonly Lazy<Cache> _cache;
+
+        /// <summary>
+        ///     TBD
         /// </summary>
         /// <param name="records">TBD</param>
         /// <param name="versions">TBD</param>
         public Reachability(ImmutableList<Record> records, ImmutableDictionary<UniqueAddress, long> versions)
         {
             _cache = new Lazy<Cache>(() => new Cache(records));
-            _versions = versions;
-            _records = records;
+            Versions = versions;
+            Records = records;
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
-        public sealed class Record
+        public ImmutableList<Record> Records { get; }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public ImmutableDictionary<UniqueAddress, long> Versions { get; }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public bool IsAllReachable => Records.IsEmpty;
+
+        /// <summary>
+        ///     Doesn't include terminated
+        /// </summary>
+        public ImmutableHashSet<UniqueAddress> AllUnreachable => _cache.Value.AllUnreachable;
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public ImmutableHashSet<UniqueAddress> AllUnreachableOrTerminated => _cache.Value.AllUnreachableOrTerminated;
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public ImmutableDictionary<UniqueAddress, ImmutableHashSet<UniqueAddress>> ObserversGroupedByUnreachable
         {
-            readonly UniqueAddress _observer;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public UniqueAddress Observer { get { return _observer; } }
-            readonly UniqueAddress _subject;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public UniqueAddress Subject { get { return _subject; } }
-            readonly ReachabilityStatus _status;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public ReachabilityStatus Status { get { return _status; } }
-            readonly long _version;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public long Version { get { return _version; } }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="observer">TBD</param>
-            /// <param name="subject">TBD</param>
-            /// <param name="status">TBD</param>
-            /// <param name="version">TBD</param>
-            public Record(UniqueAddress observer, UniqueAddress subject, ReachabilityStatus status, long version)
+            get
             {
-                _observer = observer;
-                _subject = subject;
-                _status = status;
-                _version = version;
-            }
+                var builder = new Dictionary<UniqueAddress, ImmutableHashSet<UniqueAddress>>();
 
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                var other = obj as Record;
-                if (other == null) return false;
-                return _version.Equals(other._version) &&
-                       _status == other.Status &&
-                       _observer.Equals(other._observer) &&
-                       _subject.Equals(other._subject);
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    var hashCode = (Observer != null ? Observer.GetHashCode() : 0);
-                    hashCode = (hashCode * 397) ^ Version.GetHashCode();
-                    hashCode = (hashCode * 397) ^ Status.GetHashCode();
-                    hashCode = (hashCode * 397) ^ (Subject != null ? Subject.GetHashCode() : 0);
-                    return hashCode;
-                }
+                var grouped = Records.GroupBy(p => p.Subject);
+                foreach (var records in grouped)
+                    if (records.Any(r => r.Status == ReachabilityStatus.Unreachable))
+                        builder.Add(records.Key, records.Where(r => r.Status == ReachabilityStatus.Unreachable)
+                            .Select(r => r.Observer).ToImmutableHashSet());
+                return builder.ToImmutableDictionary();
             }
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
-        public enum ReachabilityStatus
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            Reachable,
-            /// <summary>
-            /// TBD
-            /// </summary>
-            Unreachable,
-            /// <summary>
-            /// TBD
-            /// </summary>
-            Terminated
-        }
+        public ImmutableHashSet<UniqueAddress> AllObservers => Records.Select(i => i.Observer).ToImmutableHashSet();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public ImmutableList<Record> Records { get { return _records; } }
-        readonly ImmutableList<Record> _records;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public ImmutableDictionary<UniqueAddress, long> Versions { get { return _versions; } }
-        readonly ImmutableDictionary<UniqueAddress, long> _versions;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        class Cache
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public ImmutableDictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>> ObserverRowMap { get { return _observerRowsMap; } }
-            readonly ImmutableDictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>> _observerRowsMap;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public ImmutableHashSet<UniqueAddress> AllTerminated { get { return _allTerminated; } }
-            readonly ImmutableHashSet<UniqueAddress> _allTerminated;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public ImmutableHashSet<UniqueAddress> AllUnreachable { get { return _allUnreachable; } }
-            readonly ImmutableHashSet<UniqueAddress> _allUnreachable;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public ImmutableHashSet<UniqueAddress> AllUnreachableOrTerminated { get { return _allUnreachableOrTerminated; } }
-            readonly ImmutableHashSet<UniqueAddress> _allUnreachableOrTerminated;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="records">TBD</param>
-            public Cache(ImmutableList<Record> records)
-            {
-                if (records.IsEmpty)
-                {
-                    _observerRowsMap = ImmutableDictionary.Create<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>>();
-                    _allTerminated = ImmutableHashSet.Create<UniqueAddress>();
-                    _allUnreachable = ImmutableHashSet.Create<UniqueAddress>();
-                }
-                else
-                {
-                    var mapBuilder = new Dictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>>();
-                    var terminatedBuilder = ImmutableHashSet.CreateBuilder<UniqueAddress>();
-                    var unreachableBuilder = ImmutableHashSet.CreateBuilder<UniqueAddress>();
-
-                    foreach (var r in records)
-                    {
-                        ImmutableDictionary<UniqueAddress, Record> m = mapBuilder.TryGetValue(r.Observer, out m) 
-                            ? m.SetItem(r.Subject, r) 
-                            //TODO: Other collections take items for Create. Create unnecessary array here
-                            : ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, Record>(r.Subject, r) });
-                        
-
-                        mapBuilder.AddOrSet(r.Observer, m);
-
-                        if (r.Status == ReachabilityStatus.Unreachable) unreachableBuilder.Add(r.Subject);
-                        else if (r.Status == ReachabilityStatus.Terminated) terminatedBuilder.Add(r.Subject);
-                    }
-
-                    _observerRowsMap = ImmutableDictionary.CreateRange(mapBuilder);
-                    _allTerminated = terminatedBuilder.ToImmutable();
-                    _allUnreachable = unreachableBuilder.ToImmutable().Except(AllTerminated);
-                }
-
-                _allUnreachableOrTerminated = _allTerminated.IsEmpty
-                    ? AllUnreachable
-                    : AllUnreachable.Union(AllTerminated);
-            }
-        }
-
-        //TODO: Serialization should ignore
-        readonly Lazy<Cache> _cache;
-
-        ImmutableDictionary<UniqueAddress, Record> ObserverRows(UniqueAddress observer)
+        private ImmutableDictionary<UniqueAddress, Record> ObserverRows(UniqueAddress observer)
         {
             _cache.Value.ObserverRowMap.TryGetValue(observer, out var observerRows);
             return observerRows;
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="observer">TBD</param>
         /// <param name="subject">TBD</param>
@@ -237,7 +135,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="observer">TBD</param>
         /// <param name="subject">TBD</param>
@@ -248,7 +146,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="observer">TBD</param>
         /// <param name="subject">TBD</param>
@@ -258,12 +156,12 @@ namespace Akka.Cluster
             return Change(observer, subject, ReachabilityStatus.Terminated);
         }
 
-        long CurrentVersion(UniqueAddress observer)
+        private long CurrentVersion(UniqueAddress observer)
         {
-            return _versions.TryGetValue(observer, out long version) ? version : 0;
+            return Versions.TryGetValue(observer, out var version) ? version : 0;
         }
 
-        long NextVersion(UniqueAddress observer)
+        private long NextVersion(UniqueAddress observer)
         {
             return CurrentVersion(observer) + 1;
         }
@@ -271,18 +169,22 @@ namespace Akka.Cluster
         private Reachability Change(UniqueAddress observer, UniqueAddress subject, ReachabilityStatus status)
         {
             var v = NextVersion(observer);
-            var newVersions = _versions.SetItem(observer, v);
+            var newVersions = Versions.SetItem(observer, v);
             var newRecord = new Record(observer, subject, status, v);
             var oldObserverRows = ObserverRows(observer);
-            if (oldObserverRows == null && status == ReachabilityStatus.Reachable) return this;
-            if (oldObserverRows == null) return new Reachability(_records.Add(newRecord), newVersions);
 
-            if(!oldObserverRows.TryGetValue(subject, out var oldRecord))
+            // don't record Reachable observation if nothing has been noted so far
+            if (oldObserverRows == null && status == ReachabilityStatus.Reachable) return this;
+
+            // otherwise, create new instance including this first observation
+            if (oldObserverRows == null) return new Reachability(Records.Add(newRecord), newVersions);
+
+            if (!oldObserverRows.TryGetValue(subject, out var oldRecord))
             {
                 if (status == ReachabilityStatus.Reachable &&
                     oldObserverRows.Values.All(r => r.Status == ReachabilityStatus.Reachable))
-                    return new Reachability(_records.FindAll(r => !r.Observer.Equals(observer)), newVersions);
-                return new Reachability(_records.Add(newRecord), newVersions);
+                    return new Reachability(Records.FindAll(r => !r.Observer.Equals(observer)), newVersions);
+                return new Reachability(Records.Add(newRecord), newVersions);
             }
 
             if (oldRecord.Status == ReachabilityStatus.Terminated || oldRecord.Status == status)
@@ -290,23 +192,23 @@ namespace Akka.Cluster
 
             if (status == ReachabilityStatus.Reachable &&
                 oldObserverRows.Values.All(r => r.Status == ReachabilityStatus.Reachable || r.Subject.Equals(subject)))
-                return new Reachability(_records.FindAll(r => !r.Observer.Equals(observer)), newVersions);
+                return new Reachability(Records.FindAll(r => !r.Observer.Equals(observer)), newVersions);
 
-            var newRecords = _records.SetItem(_records.IndexOf(oldRecord), newRecord);
+            var newRecords = Records.SetItem(Records.IndexOf(oldRecord), newRecord);
             return new Reachability(newRecords, newVersions);
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="allowed">TBD</param>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public Reachability Merge(IEnumerable<UniqueAddress> allowed, Reachability other)
+        public Reachability Merge(IImmutableSet<UniqueAddress> allowed, Reachability other)
         {
             var recordBuilder = ImmutableList.CreateBuilder<Record>();
             //TODO: Size hint somehow?
-            var newVersions = _versions;
+            var newVersions = Versions;
             foreach (var observer in allowed)
             {
                 var observerVersion1 = CurrentVersion(observer);
@@ -318,21 +220,18 @@ namespace Akka.Cluster
                 if (rows1 != null && rows2 != null)
                 {
                     var rows = observerVersion1 > observerVersion2 ? rows1 : rows2;
-                    foreach(var record in rows.Values.Where(r => allowed.Contains(r.Subject)))
+                    foreach (var record in rows.Values.Where(r => allowed.Contains(r.Subject)))
                         recordBuilder.Add(record);
                 }
+
                 if (rows1 != null && rows2 == null)
-                {
-                    if(observerVersion1 > observerVersion2)
+                    if (observerVersion1 > observerVersion2)
                         foreach (var record in rows1.Values.Where(r => allowed.Contains(r.Subject)))
                             recordBuilder.Add(record);
-                }
                 if (rows1 == null && rows2 != null)
-                {
                     if (observerVersion2 > observerVersion1)
                         foreach (var record in rows2.Values.Where(r => allowed.Contains(r.Subject)))
-                           recordBuilder.Add(record);
-                }
+                            recordBuilder.Add(record);
 
                 if (observerVersion2 > observerVersion1)
                     newVersions = newVersions.SetItem(observer, observerVersion2);
@@ -344,20 +243,20 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="nodes">TBD</param>
         /// <returns>TBD</returns>
         public Reachability Remove(IEnumerable<UniqueAddress> nodes)
         {
             var nodesSet = nodes.ToImmutableHashSet();
-            var newRecords = _records.FindAll(r => !nodesSet.Contains(r.Observer) && !nodesSet.Contains(r.Subject));
-            var newVersions = _versions.RemoveRange(nodes);
+            var newRecords = Records.FindAll(r => !nodesSet.Contains(r.Observer) && !nodesSet.Contains(r.Subject));
+            var newVersions = Versions.RemoveRange(nodes);
             return new Reachability(newRecords, newVersions);
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="nodes">TBD</param>
         /// <returns>TBD</returns>
@@ -367,12 +266,10 @@ namespace Akka.Cluster
             {
                 return this;
             }
-            else
-            {
-                var newRecords = _records.FindAll(r => !nodes.Contains(r.Observer));
-                var newVersions = _versions.RemoveRange(nodes);
-                return new Reachability(newRecords, newVersions);
-            }
+
+            var newRecords = Records.FindAll(r => !nodes.Contains(r.Observer));
+            var newVersions = Versions.RemoveRange(nodes);
+            return new Reachability(newRecords, newVersions);
         }
 
         public Reachability FilterRecords(Predicate<Record> f)
@@ -381,7 +278,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="observer">TBD</param>
         /// <param name="subject">TBD</param>
@@ -391,14 +288,14 @@ namespace Akka.Cluster
             var observerRows = ObserverRows(observer);
             if (observerRows == null) return ReachabilityStatus.Reachable;
 
-            if(!observerRows.TryGetValue(subject, out var record))
+            if (!observerRows.TryGetValue(subject, out var record))
                 return ReachabilityStatus.Reachable;
 
             return record.Status;
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="node">TBD</param>
         /// <returns>TBD</returns>
@@ -410,7 +307,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="node">TBD</param>
         /// <returns>TBD</returns>
@@ -420,7 +317,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="observer">TBD</param>
         /// <param name="subject">TBD</param>
@@ -430,116 +327,56 @@ namespace Akka.Cluster
             return Status(observer, subject) == ReachabilityStatus.Reachable;
         }
 
-        /*
-         *  def isReachable(observer: UniqueAddress, subject: UniqueAddress): Boolean =
-            status(observer, subject) == Reachable
-         */
-
         /// <summary>
-        /// TBD
-        /// </summary>
-        public bool IsAllReachable
-        {
-            get { return _records.IsEmpty; } 
-        }
-
-        /// <summary>
-        /// Doesn't include terminated
-        /// </summary>
-        public ImmutableHashSet<UniqueAddress> AllUnreachable
-        {
-            get { return _cache.Value.AllUnreachable; }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public ImmutableHashSet<UniqueAddress> AllUnreachableOrTerminated
-        {
-            get { return _cache.Value.AllUnreachableOrTerminated; }
-        }
-
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="observer">TBD</param>
         /// <returns>TBD</returns>
         public ImmutableHashSet<UniqueAddress> AllUnreachableFrom(UniqueAddress observer)
         {
             var observerRows = ObserverRows(observer);
-            if (observerRows == null) return ImmutableHashSet.Create<UniqueAddress>();
+            if (observerRows == null) return ImmutableHashSet<UniqueAddress>.Empty;
             return
                 ImmutableHashSet.CreateRange(
                     observerRows.Where(p => p.Value.Status == ReachabilityStatus.Unreachable).Select(p => p.Key));
         }
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        public ImmutableDictionary<UniqueAddress, ImmutableHashSet<UniqueAddress>> ObserversGroupedByUnreachable
-        {
-            get
-            {
-                var builder = new Dictionary<UniqueAddress, ImmutableHashSet<UniqueAddress>>();
-
-                var grouped = _records.GroupBy(p => p.Subject);
-                foreach (var records in grouped)
-                {
-                    if (records.Any(r => r.Status == ReachabilityStatus.Unreachable))
-                    {
-                        builder.Add(records.Key, records.Where(r => r.Status == ReachabilityStatus.Unreachable)
-                            .Select(r => r.Observer).ToImmutableHashSet());
-                    }
-                }
-                return builder.ToImmutableDictionary();
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public ImmutableHashSet<UniqueAddress> AllObservers
-        {
-            get
-            {
-                return _records.Select(i => i.Observer).ToImmutableHashSet();
-        }
-        }
-
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="observer">TBD</param>
         /// <returns>TBD</returns>
         public ImmutableList<Record> RecordsFrom(UniqueAddress observer)
         {
             var rows = ObserverRows(observer);
-            if (rows == null) return ImmutableList.Create<Record>();
+            if (rows == null) return ImmutableList<Record>.Empty;
             return rows.Values.ToImmutableList();
         }
 
-        /// <inheritdoc/>
+        /// only used for testing
+        /// <inheritdoc />
         public override int GetHashCode()
         {
-            return _versions.GetHashCode();
+            return Versions.GetHashCode();
         }
 
-        /// <inheritdoc/>
+        /// only used for testing
+        /// <inheritdoc />
         public override bool Equals(object obj)
         {
             var other = obj as Reachability;
             if (other == null) return false;
-            return _records.Count == other._records.Count && 
-                _versions.Equals(other._versions) && 
-                _cache.Value.ObserverRowMap.Equals(other._cache.Value.ObserverRowMap);
+            return Records.Count == other.Records.Count &&
+                   Versions.Equals(other.Versions) &&
+                   _cache.Value.ObserverRowMap.Equals(other._cache.Value.ObserverRowMap);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public override string ToString()
         {
             var builder = new StringBuilder("Reachability(");
 
-            foreach (var observer in _versions.Keys)
+            foreach (var observer in Versions.Keys)
             {
                 var rows = ObserverRows(observer);
                 if (rows == null) continue;
@@ -550,6 +387,142 @@ namespace Akka.Cluster
             }
 
             return builder.Append(')').ToString();
+        }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public sealed class Record
+        {
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            /// <param name="observer">TBD</param>
+            /// <param name="subject">TBD</param>
+            /// <param name="status">TBD</param>
+            /// <param name="version">TBD</param>
+            public Record(UniqueAddress observer, UniqueAddress subject, ReachabilityStatus status, long version)
+            {
+                Observer = observer;
+                Subject = subject;
+                Status = status;
+                Version = version;
+            }
+
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            public UniqueAddress Observer { get; }
+
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            public UniqueAddress Subject { get; }
+
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            public ReachabilityStatus Status { get; }
+
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            public long Version { get; }
+
+            /// <inheritdoc />
+            public override bool Equals(object obj)
+            {
+                var other = obj as Record;
+                if (other == null) return false;
+                return Version.Equals(other.Version) &&
+                       Status == other.Status &&
+                       Observer.Equals(other.Observer) &&
+                       Subject.Equals(other.Subject);
+            }
+
+            /// <inheritdoc />
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = Observer != null ? Observer.GetHashCode() : 0;
+                    hashCode = (hashCode * 397) ^ Version.GetHashCode();
+                    hashCode = (hashCode * 397) ^ Status.GetHashCode();
+                    hashCode = (hashCode * 397) ^ (Subject != null ? Subject.GetHashCode() : 0);
+                    return hashCode;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        private class Cache
+        {
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            /// <param name="records">TBD</param>
+            public Cache(ImmutableList<Record> records)
+            {
+                if (records.IsEmpty)
+                {
+                    ObserverRowMap = ImmutableDictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>>
+                        .Empty;
+                    AllTerminated = ImmutableHashSet<UniqueAddress>.Empty;
+                    AllUnreachable = ImmutableHashSet<UniqueAddress>.Empty;
+                }
+                else
+                {
+                    var mapBuilder = new Dictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>>();
+                    var terminatedBuilder = ImmutableHashSet.CreateBuilder<UniqueAddress>();
+                    var unreachableBuilder = ImmutableHashSet.CreateBuilder<UniqueAddress>();
+
+                    foreach (var r in records)
+                    {
+                        ImmutableDictionary<UniqueAddress, Record> m = mapBuilder.TryGetValue(r.Observer, out var mR)
+                            ? mR.SetItem(r.Subject, r)
+                            : ImmutableDictionary<UniqueAddress, Record>.Empty.Add(r.Subject, r);
+
+
+                        mapBuilder[r.Observer] = m;
+
+                        if (r.Status == ReachabilityStatus.Unreachable) unreachableBuilder.Add(r.Subject);
+                        else if (r.Status == ReachabilityStatus.Terminated) terminatedBuilder.Add(r.Subject);
+                    }
+
+                    ObserverRowMap = ImmutableDictionary.CreateRange(mapBuilder);
+                    AllTerminated = terminatedBuilder.ToImmutable();
+                    AllUnreachable = unreachableBuilder.ToImmutable().Except(AllTerminated);
+                }
+
+                AllUnreachableOrTerminated = AllTerminated.IsEmpty
+                    ? AllUnreachable
+                    : AllUnreachable.Union(AllTerminated);
+            }
+
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            public ImmutableDictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>> ObserverRowMap
+            {
+                get;
+            }
+
+            /// <summary>
+            /// Contains all nodes that have been observed as Terminated by at least one other node.
+            /// </summary>
+            public ImmutableHashSet<UniqueAddress> AllTerminated { get; }
+
+            /// <summary>
+            ///  Contains all nodes that have been observed as Unreachable by at least one other node.
+            /// </summary>
+            public ImmutableHashSet<UniqueAddress> AllUnreachable { get; }
+
+            /// <summary>
+            ///     TBD
+            /// </summary>
+            public ImmutableHashSet<UniqueAddress> AllUnreachableOrTerminated { get; }
         }
     }
 }

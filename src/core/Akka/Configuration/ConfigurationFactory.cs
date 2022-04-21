@@ -61,12 +61,8 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the configuration file.</returns>
         public static Config Load()
         {
-#if CONFIGURATION
             var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka") ?? new AkkaConfigurationSection();
             return section.AkkaConfig;
-#else
-            return ConfigurationFactory.Empty;
-#endif
         }
 
         /// <summary>

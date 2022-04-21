@@ -385,7 +385,24 @@ namespace Akka.DistributedData.Serialization
                 case ReadFrom r: proto.Consistency = r.N; break;
                 case ReadMajority rm:
                     proto.Consistency = 0;
-                    proto.ConsistencyMinCap = rm.MinCapacity;
+                    if (rm.MinCapacity != 0)
+                    {
+                        proto.ConsistencyMinCap = rm.MinCapacity;
+                        proto.HasConsistencyMinCap = true;
+                    }
+                    break;
+                case ReadMajorityPlus rmp:
+                    proto.Consistency = 0;
+                    if (rmp.MinCapacity != 0)
+                    {
+                        proto.ConsistencyMinCap = rmp.MinCapacity;
+                        proto.HasConsistencyMinCap = true;
+                    }
+                    if(rmp.Additional != 0)
+                    {
+                        proto.ConsistencyAdditional = rmp.Additional;
+                        proto.HasConsistencyAdditional = true;
+                    }
                     break;
                 case ReadAll _: proto.Consistency = -1; break;
             }
@@ -672,10 +689,17 @@ namespace Akka.DistributedData.Serialization
             var key = (IKey)_ser.OtherMessageFromProto(proto.Key);
             var request = proto.Request != null ? _ser.OtherMessageFromProto(proto.Request) : null;
             var timeout = new TimeSpan(proto.Timeout * TimeSpan.TicksPerMillisecond);
+            var minCap = proto.HasConsistencyMinCap ? proto.ConsistencyMinCap : 0;
             IReadConsistency consistency;
             switch (proto.Consistency)
             {
-                case 0: consistency = new ReadMajority(timeout, proto.ConsistencyMinCap); break;
+                case 0:
+                    if (proto.HasConsistencyAdditional)
+                        consistency = new ReadMajorityPlus(timeout, proto.ConsistencyAdditional, minCap);
+                    else
+                        consistency = new ReadMajority(timeout, minCap);
+                    break;
+
                 case -1: consistency = new ReadAll(timeout); break;
                 case 1: consistency = ReadLocal.Instance; break;
                 default: consistency = new ReadFrom(proto.Consistency, timeout); break;

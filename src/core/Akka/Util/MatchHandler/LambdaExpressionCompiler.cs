@@ -25,19 +25,6 @@ namespace Akka.Tools.MatchHandler
         {
             return expression.Compile();
         }
-
-#if !CORECLR
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="expression">TBD</param>
-        /// <param name="method"></param>
-        /// <returns>TBD</returns>
-        public void CompileToMethod(LambdaExpression expression, MethodBuilder method)
-        {
-            expression.CompileToMethod(method);
-        }
-#endif
     }
 }
 

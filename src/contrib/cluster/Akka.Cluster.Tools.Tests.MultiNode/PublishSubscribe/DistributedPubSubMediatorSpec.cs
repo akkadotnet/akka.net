@@ -20,6 +20,7 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using System.Collections.Immutable;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 {

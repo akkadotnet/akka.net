@@ -6,25 +6,25 @@ title: DI Core
 # Akka.DI.Core
 
 > [!WARNING]
-> As of [Akka.NET v1.4.15](https://github.com/akkadotnet/akka.net/releases/tag/1.4.15), Akka.DI.Core and all of the libraries that implement it are deprecated. Going forward Akka.NET users are encouraged to use the [Akka.DependencyInjection library](xref:dependency-injection) instead, which uses the Microsoft.Extensions.DependencyInjection interfaces to integration DI directly into your Akka.NET actors.
+> As of [Akka.NET v1.4.15](https://github.com/akkadotnet/akka.net/releases/tag/1.4.15), Akka.DI.Core and all of the libraries that implement it are deprecated. Going forward Akka.NET users are encouraged to use the [Akka.DependencyInjection library](xref:dependency-injection) instead, which uses the Microsoft.Extensions.DependencyInjection interfaces to integrate DI directly into your Akka.NET actors.
 
 **Actor Producer Extension** library is used to create a Dependency Injection Container for the [Akka.NET](https://github.com/akkadotnet/akka.net) framework.
 
-# What is it?
+## What Is It?
 
 **Akka.DI.Core** is an **ActorSystem extension** library for the Akka.NET
 framework that provides a simple way to create an Actor Dependency Resolver
 that can be used an alternative to the basic capabilities of [Props](xref:receive-actor-api#props)
 when you have actors with multiple dependencies.
 
-# How do you create an Extension?
+## How Do You Create an Extension?
 
-- Create a new class library
-- Reference your favorite IoC Container, the Akka.DI.Core, and of course Akka
-- Create a class and implement the `IDependencyResolver`
+* Create a new class library
+* Reference your favorite IoC Container, the Akka.DI.Core, and of course Akka
+* Create a class and implement the `IDependencyResolver`
 
 Let's walk through the process of creating one for the CastleWindsor container.
-You need to create  a new project named Akka.DI.CastleWindsor with all the necessary references including Akka.DI.Core, Akka, and CastleWindosor.
+You need to create  a new project named Akka.DI.CastleWindsor with all the necessary references including Akka.DI.Core, Akka, and CastleWindsor.
 Name the initial class `WindsorDependencyResolver`.
 
 ```csharp
@@ -54,9 +54,9 @@ public WindsorDependencyResolver(IWindsorContainer container, ActorSystem system
 
 You have defined three private fields
 
-- ```IWindsorContainer _container``` is a reference to the CastleWindsor container.
-- ```ConcurrentDictionary<string, Type> _typeCache``` is a thread safe map that contains actor name/type associations.
-- ```ActorSystem _system``` is a reference to the ActorSystem.
+* ```IWindsorContainer _container``` is a reference to the CastleWindsor container.
+* ```ConcurrentDictionary<string, Type> _typeCache``` is a thread safe map that contains actor name/type associations.
+* ```ActorSystem _system``` is a reference to the ActorSystem.
 
 First you need to implement ```GetType```. This is a basic implementation and
 is just for demonstration purposes. Essentially this is used by the extension

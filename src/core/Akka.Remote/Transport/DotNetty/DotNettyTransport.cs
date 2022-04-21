@@ -104,7 +104,6 @@ namespace Akka.Remote.Transport.DotNetty
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="DotNettyTransportException"/> class.
         /// </summary>
@@ -113,7 +112,6 @@ namespace Akka.Remote.Transport.DotNetty
         protected DotNettyTransportException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 
     internal abstract class DotNettyTransport : Transport
@@ -161,12 +159,19 @@ namespace Akka.Remote.Transport.DotNetty
             if (InternalTransport != TransportMode.Tcp)
                 throw new NotImplementedException("Haven't implemented UDP transport at this time");
 
-            if (listenAddress is DnsEndPoint dns)
+            try
             {
-                listenAddress = await DnsToIPEndpoint(dns).ConfigureAwait(false);
-            }
+                if (listenAddress is DnsEndPoint dns)
+                {
+                    listenAddress = await DnsToIPEndpoint(dns).ConfigureAwait(false);
+                }
 
-            return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
+                return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                throw new RemoteTransportException($"Failed to bind to [{listenAddress}]. See InnerException for details.", ex);
+            }
         }
 
         public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()

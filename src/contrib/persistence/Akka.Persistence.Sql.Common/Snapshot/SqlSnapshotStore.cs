@@ -123,23 +123,27 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             }
             catch (Exception e)
             {
-                return new Failure {Exception = e};
+                return new Status.Failure(e);
             }
         }
 
-        private bool WaitingForInitialization(object message) => message.Match()
-            .With<Initialized>(_ =>
+        private bool WaitingForInitialization(object message)
+        {
+            switch(message)
             {
-                UnbecomeStacked();
-                Stash.UnstashAll();
-            })
-            .With<Failure>(failure =>
-            {
-                Log.Error(failure.Exception, "Error during snapshot store initialization");
-                Context.Stop(Self);
-            })
-            .Default(_ => Stash.Stash())
-            .WasHandled;
+                case Initialized _:
+                    UnbecomeStacked();
+                    Stash.UnstashAll();
+                    return true;
+                case Status.Failure msg:
+                    Log.Error(msg.Cause, "Error during snapshot store initialization");
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    Stash.Stash();
+                    return true;
+            }
+        }
 
         /// <summary>
         /// TBD
@@ -149,12 +153,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         {
             var connectionString = _settings.ConnectionString;
 
-#if CONFIGURATION
             if (string.IsNullOrEmpty(connectionString))
             {
                 connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
             }
-#endif
 
             return connectionString;
         }

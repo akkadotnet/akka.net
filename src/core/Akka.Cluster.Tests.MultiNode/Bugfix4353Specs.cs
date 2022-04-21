@@ -15,6 +15,7 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -36,7 +37,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void Bugfix4353Spec_Cluster_of_3_must_reach_cnovergence()
+        public void Bugfix4353Spec_Cluster_of_3_must_reach_convergence()
         {
             AwaitClusterUp(First, Second, Third);
             EnterBarrier("after-1");

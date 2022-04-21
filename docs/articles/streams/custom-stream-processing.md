@@ -3,13 +3,15 @@ uid: custom-stream-processing
 title: Custom stream processing
 ---
 
-# Custom stream processing
+# Custom Stream Processing
+
 While the processing vocabulary of Akka Streams is quite rich (see the [Streams Cookbook](xref:streams-cookbook) for examples) it is sometimes necessary to define new transformation stages either because some functionality is missing from the stock operations, or for performance reasons. In this part we show how to build custom processing stages and graph junctions of various kinds.
 
 > [!NOTE]
 > A custom graph stage should not be the first tool you reach for, defining graphs using flows and the graph DSL is in general easier and does to a larger extent protect you from mistakes that might be easy to make with a custom `GraphStage`
 
-## Custom processing with GraphStage
+## Custom Processing with GraphStage
+
 The `GraphStage` abstraction can be used to create arbitrary graph processing stages with any number of input or output ports. It is a counterpart of the `GraphDSL.Create()` method which creates new stream processing stages by composing others. Where `GraphStage` differs is that it creates a stage that is itself not divisible into smaller ones, and allows state to be maintained inside it in a safe way.
 
 As a first motivating example, we will build a new `Source` that will simply emit numbers from 1 until it is cancelled. To start, we need to define the "interface" of our stage, which is called shape in Akka Streams terminology (this is explained in more detail in the section [Modularity, Composition and Hierarchy](xref:streams-modularity)). This is how this looks like:
@@ -93,23 +95,23 @@ var result1Task = mySource.Take(10).RunAggregate(0, (sum, next) => sum + next, m
 var result2Task = mySource.Take(100).RunAggregate(0, (sum, next) => sum + next, materializer);
 ```
 
-### Port states, InHandler and OutHandler
+### Port States, InHandler and OutHandler
 
 In order to interact with a port (`Inlet` or `Outlet`) of the stage we need to be able to receive events and generate new events belonging to the port. From the `GraphStageLogic` the following operations are available on an output port:
 
-   * `Push(out,elem)` pushes an element to the output port. Only possible after the port has been pulled by downstream.
-   * `Complete(out)` closes the output port normally.
-   * `Fail(out,exception)` closes the port with a failure signal.
+* `Push(out,elem)` pushes an element to the output port. Only possible after the port has been pulled by downstream.
+* `Complete(out)` closes the output port normally.
+* `Fail(out,exception)` closes the port with a failure signal.
 
 The events corresponding to an *output* port can be received in an `Action` registered to the output port using `SetHandler(out, action)`. This handler has two callbacks:
 
-  * `onPull` is called when the output port is ready to emit the next element, `Push(out, elem)` is now allowed to be called on this port.
-  * `onDownstreamFinish` is called once the downstream has cancelled and no longer allows messages to be pushed to it. No more `onPull` will arrive after this event. If not overridden this will default to stopping the stage.
+* `onPull` is called when the output port is ready to emit the next element, `Push(out, elem)` is now allowed to be called on this port.
+* `onDownstreamFinish` is called once the downstream has cancelled and no longer allows messages to be pushed to it. No more `onPull` will arrive after this event. If not overridden this will default to stopping the stage.
 
 Also, there are two query methods available for output ports:
 
- * `IsAvailable(out)` returns true if the port can be pushed
- * `IsClosed(out)` returns true if the port is closed. At this point the port can not be pushed and will not be pulled anymore.
+* `IsAvailable(out)` returns true if the port can be pushed
+* `IsClosed(out)` returns true if the port is closed. At this point the port can not be pushed and will not be pulled anymore.
 
 The relationship of the above operations, events and queries are summarized in the state machine below. Green shows the initial state while orange indicates the end state. If an operation is not listed for a state, then it is invalid to call it while the port is in that state. If an event is not listed for a state, then that event cannot happen in that state.
 
@@ -117,12 +119,11 @@ The relationship of the above operations, events and queries are summarized in t
 
 The following operations are available for *input* ports:
 
- * `Pull(in)` requests a new element from an input port. This is only possible after the port has been pushed by upstream.
- * `Grab(in)` acquires the element that has been received during an `onPush` It cannot be called again until the port is pushed again by the upstream.
- * `Cancel(in)` closes the input port.
+* `Pull(in)` requests a new element from an input port. This is only possible after the port has been pushed by upstream.
+* `Grab(in)` acquires the element that has been received during an `onPush` It cannot be called again until the port is pushed again by the upstream.
+* `Cancel(in)` closes the input port.
 
 The events corresponding to an *input* port can be received in an `Action` registered to the input port using `setHandler(in, action)`. This handler has three callbacks:
-
 
 * `onPush` is called when the output port has now a new element. Now it is possible to acquire this element using `Grab(in)` and/or call `Pull(in)` on the port to request the next element. It is not mandatory to grab the element, but if it is pulled while the element has not been grabbed it will drop the buffered element.
 * `onUpstreamFinish` is called once the upstream has completed and no longer can be pulled for new elements. No more `onPush` will arrive after this event. If not overridden this will default to stopping the stage.
@@ -155,7 +156,7 @@ Note that since the above methods are implemented by temporarily replacing the h
 
 An example of how this API simplifies a stage can be found below in the second version of the Duplicator.
 
-### Custom linear processing stages using GraphStage
+### Custom Linear Processing Stages Using GraphStage
 
 Graph stages allows for custom linear processing stages through letting them have one input and one output and using `FlowShape` as their shape.
 
@@ -366,14 +367,14 @@ Completion handling usually (but not exclusively) comes into the picture when pr
 
 Stages by default automatically stop once all of their ports (input and output) have been closed externally or internally. It is possible to opt out from this behavior by invoking `SetKeepGoing(true)` (which is not supported from the stage's constructor and usually done in `PreStart`). In this case the stage **must** be explicitly closed by calling `CompleteStage()` or `FailStage(exception)`. This feature carries the risk of leaking streams and actors, therefore it should be used with care.
 
-### Logging inside GraphStages
+### Logging Inside GraphStages
 
 Logging debug or other important information in your stages is often a very good idea, especially when developing
 more advances stages which may need to be debugged at some point.
- 
+
 The `Log` property is provided to enable you to easily obtain a `LoggingAdapter`
 inside of a `GraphStage` as long as the `Materializer` you're using is able to provide you with a logger.
-In that sense, it serves a very similar purpose as `ActorLogging` does for Actors. 
+In that sense, it serves a very similar purpose as `ActorLogging` does for Actors.
 
 > [!NOTE]
 > Please note that you can always simply use a logging library directly inside a Stage.
@@ -384,30 +385,30 @@ The stage gets access to the `Log` property which it can safely use from any ``G
 ```csharp
 private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
 {
-	#region internal classes
+    #region internal classes
 
-	private sealed class Logic : GraphStageLogic
-	{
-		public Logic(RandomLettersSource stage) : base(stage.Shape)
-		{
-			SetHandler(stage.Out, onPull: () =>
-			{
-				var c = NextChar(); // ASCII lower case letters
+    private sealed class Logic : GraphStageLogic
+    {
+        public Logic(RandomLettersSource stage) : base(stage.Shape)
+        {
+            SetHandler(stage.Out, onPull: () =>
+            {
+                var c = NextChar(); // ASCII lower case letters
 
-				Log.Debug($"Randomly generated: {c}");	
+                Log.Debug($"Randomly generated: {c}");    
 
-				Push(stage.Out, c.ToString());
-			});
-		}
+                Push(stage.Out, c.ToString());
+            });
+        }
 
-		private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z'1);
-	}
+        private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z'1);
+    }
 
-	#endregion
+    #endregion
 
     public RandomLettersSource()
     {
-	    Shape = new SourceShape<string>(Out);
+        Shape = new SourceShape<string>(Out);
     }
 
     private Outlet<string> Out { get; } = new Outlet<string>("RandomLettersSource.out");
@@ -421,22 +422,22 @@ private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
 [Fact]
 public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
 {
-	const int n = 10;
-	EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
-	{
-		Source.FromGraph(new RandomLettersSource())
-			.Take(n)
-			.RunWith(Sink.Ignore<string>(), Materializer)
-			.Wait(TimeSpan.FromSeconds(3));
-	});
+    const int n = 10;
+    EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
+    {
+        Source.FromGraph(new RandomLettersSource())
+            .Take(n)
+            .RunWith(Sink.Ignore<string>(), Materializer)
+            .Wait(TimeSpan.FromSeconds(3));
+    });
 }
 ```
 
 > [!NOTE]
-> **SPI Note:** If you're implementing a Materializer, you can add this ability to your materializer by implementing 
+> **SPI Note:** If you're implementing a Materializer, you can add this ability to your materializer by implementing
 `IMaterializerLoggingProvider` in your `Materializer`.
 
-### Using timers
+### Using Timers
 
 It is possible to use timers in `GraphStages` by using `TimerGraphStageLogic` as the base class for the returned logic. Timers can be scheduled by calling one of `ScheduleOnce(key,delay)`, `SchedulePeriodically(key,period)` or `SchedulePeriodicallyWithInitialDelay(key,delay,period)` and passing an object as a key for that timer (can be any object, for example a String). The `OnTimer(key)` method needs to be overridden and it will be called once the timer of key fires. It is possible to cancel a timer using `CancelTimer(key)` and check the status of a timer with `IsTimerActive(key)`. Timers will be automatically cleaned up when the stage completes.
 
@@ -490,7 +491,7 @@ class TimedGate<T> : GraphStage<FlowShape<T, T>>
 }
 ```
 
-### Using asynchronous side-channels
+### Using Asynchronous Side-Channels
 
 In order to receive asynchronous events that are not arriving as stream elements (for example a completion of a task or a callback from a 3rd party API) one must acquire a `AsyncCallback` by calling `GetAsyncCallback()` from the stage logic. The method `GetAsyncCallback` takes as a parameter a callback that will be called once the asynchronous event fires. It is important to **not call the callback directly**, instead, the external API must `invoke` the returned `Action`. The execution engine will take care of calling the provided callback in a thread-safe way. The callback can safely access the state of the `GraphStageLogic` implementation.
 
@@ -538,7 +539,7 @@ class KillSwitch<T> : GraphStage<FlowShape<T, T>>
 }
 ```
 
-### Integration with actors
+### Integration with Actors
 
 **This section is a stub and will be extended in the next release This is an experimental feature***
 
@@ -548,7 +549,7 @@ It is possible to acquire an ActorRef that can be addressed from the outside of 
 * they cannot be returned as materialized values.
 * they cannot be accessed from the constructor of the `GraphStageLogic`, but they can be accessed from the `PreStart()` method.
 
-### Custom materialized values
+### Custom Materialized Values
 
 Custom stages can return materialized values instead of `NotUsed` by inheriting from `GraphStageWithMaterializedValue` instead of the simpler `GraphStage`. The difference is that in this case the method `CreateLogicAndMaterializedValue(inheritedAttributes)` needs to be overridden, and in addition to the stage logic the materialized value must be provided
 
@@ -598,15 +599,16 @@ class FirstValue<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<T>>
 }
 ```
 
-## Using attributes to affect the behavior of a stage
+## Using Attributes to Affect the Behavior of a Stage
 
-**This section is a stub and will be extended in the next release**
+> [!NOTE]
+> This section is a stub and will be extended in the next release.
 
 Stages can access the `Attributes` object created by the materializer. This contains all the applied (inherited) attributes applying to the stage, ordered from least specific (outermost) towards the most specific (innermost) attribute. It is the responsibility of the stage to decide how to reconcile this inheritance chain to a final effective decision.
 
 See [Modularity, Composition and Hierarchy](xref:streams-modularity) for an explanation on how attributes work.
 
-### Rate decoupled graph stages
+### Rate Decoupled Graph Stages
 
 Sometimes it is desirable to decouple the rate of the upstream and downstream of a stage, synchronizing only when needed.
 
@@ -701,7 +703,7 @@ class TwoBuffer<T> : GraphStage<FlowShape<T, T>>
 }
 ```
 
-## Thread safety of custom processing stages
+## Thread Safety of Custom Processing Stages
 
 **All of the above custom stages (linear or graph) provide a few simple guarantees that implementors can rely on.**
 
@@ -713,8 +715,7 @@ In essence, the above guarantees are similar to what `Actor`'s provide, if one t
 > [!WARNING]
 > It is **not** safe to access the state of any custom stage outside of the callbacks that it provides, just like it is unsafe to access the state of an actor from the outside. This means that Future callbacks should not close over internal state of custom stages because such access can be concurrent with the provided callbacks, leading to undefined behavior.
 
-
-## Resources and the stage lifecycle
+## Resources and the Stage Lifecycle
 
 If a stage manages a resource with a lifecycle, for example objects that need to be shutdown when they are not
 used anymore it is important to make sure this will happen in all circumstances when the stage shuts down.
@@ -724,7 +725,6 @@ callbacks. The reason for this is that when the stage itself completes or is fai
 for the downstreams. Even for stages that do not complete or fail in this manner, this can happen when the
 `Materializer` is shutdown or the `ActorSystem` is terminated while a stream is still running, what is called an
 "abrupt termination".
-
 
 ## Extending Flow Combinators with Custom Operators
 

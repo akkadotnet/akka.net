@@ -23,6 +23,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Nito.AsyncEx;
 using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
+using Akka.Remote.Serialization;
 
 namespace Akka.Remote.Tests
 {
@@ -174,9 +175,9 @@ namespace Akka.Remote.Tests
             //so the token is cancelled before the delay completed.. 
             var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout);
             Assert.Equal("pong", msg);
-            Assert.IsType<FutureActorRef>(actorRef);
+            Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
         }
-
+        
         [Fact(Skip = "Racy")]
         public async Task Ask_does_not_deadlock()
         {

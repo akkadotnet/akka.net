@@ -3,7 +3,7 @@
 
     <PropertyGroup>
         <AssemblyTitle>Akka.Cluster.Metrics.Tests.MultiNode</AssemblyTitle>
-        <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+        <TargetFrameworks>$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,10 +13,13 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-        <PackageReference Include="xunit" Version="$(XunitVersion)" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
         <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup>

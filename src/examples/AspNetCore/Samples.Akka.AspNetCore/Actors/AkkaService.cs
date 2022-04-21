@@ -18,7 +18,6 @@ using Akka.Routing;
 using Microsoft.Extensions.Hosting;
 using Samples.Akka.AspNetCore.Messages;
 using Samples.Akka.AspNetCore.Services;
-using ServiceProvider = Akka.DependencyInjection.ServiceProvider;
 
 namespace Samples.Akka.AspNetCore.Actors
 {
@@ -41,14 +40,14 @@ namespace Samples.Akka.AspNetCore.Actors
         {
             var hocon = ConfigurationFactory.ParseString(await File.ReadAllTextAsync("app.conf", cancellationToken));
             var bootstrap = BootstrapSetup.Create().WithConfig(hocon);
-            var di = ServiceProviderSetup.Create(_sp);
+            var di = DependencyResolverSetup.Create(_sp);
             var actorSystemSetup = bootstrap.And(di);
             _actorSystem = ActorSystem.Create("AspNetDemo", actorSystemSetup);
             // </AkkaServiceSetup>
 
             // <ServiceProviderFor>
             // props created via IServiceProvider dependency injection
-            var hasherProps = ServiceProvider.For(_actorSystem).Props<HasherActor>();
+            var hasherProps = DependencyResolver.For(_actorSystem).Props<HasherActor>();
             RouterActor = _actorSystem.ActorOf(hasherProps.WithRouter(FromConfig.Instance), "hasher");
             // </ServiceProviderFor>
 

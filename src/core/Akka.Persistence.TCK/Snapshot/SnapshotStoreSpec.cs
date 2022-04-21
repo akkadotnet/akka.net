@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.TCK.Serialization;
@@ -52,6 +53,18 @@ namespace Akka.Persistence.TCK.Snapshot
         
         protected SnapshotStoreSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null) 
             : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "SnapshotStoreSpec", output)
+        {
+            _senderProbe = CreateTestProbe();
+        }
+
+        protected SnapshotStoreSpec(ActorSystemSetup setup, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(setup, actorSystemName ?? "SnapshotStoreSpec", output)
+        {
+            _senderProbe = CreateTestProbe();
+        }
+
+        protected SnapshotStoreSpec(ActorSystem system = null, ITestOutputHelper output = null)
+            : base(system, output)
         {
             _senderProbe = CreateTestProbe();
         }

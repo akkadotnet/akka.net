@@ -31,31 +31,37 @@ namespace Akka.Cluster.Tests
         static readonly Member e2 = TestMember.Create(e1.Address, MemberStatus.Up);
         static readonly Member e3 = TestMember.Create(e1.Address, MemberStatus.Down);
 
+        private MembershipState State(Gossip g, Member selfMember = null)
+        {
+            selfMember = selfMember ?? a1;
+            return new MembershipState(g, selfMember.UniqueAddress);
+        }
+
         [Fact]
         public void A_gossip_must_reach_convergence_when_its_empty()
         {
-            Gossip.Empty.Convergence(a1.UniqueAddress, new HashSet<UniqueAddress>()).Should().BeTrue();
+            State(Gossip.Empty).Convergence(ImmutableHashSet<UniqueAddress>.Empty).Should().BeTrue();
         }
 
         [Fact]
         public void A_gossip_must_reach_convergence_for_one_node()
         {
             var g1 = new Gossip(ImmutableSortedSet.Create(a1)).Seen(a1.UniqueAddress);
-            g1.Convergence(a1.UniqueAddress, new HashSet<UniqueAddress>()).Should().BeTrue();
+            State(g1).Convergence(ImmutableHashSet<UniqueAddress>.Empty).Should().BeTrue();
         }
 
         [Fact]
         public void A_gossip_must_not_reach_convergence_until_all_have_seen_version()
         {
             var g1 = new Gossip(ImmutableSortedSet.Create(a1, b1)).Seen(a1.UniqueAddress);
-            g1.Convergence(a1.UniqueAddress, new HashSet<UniqueAddress>()).Should().BeFalse();
+            State(g1).Convergence(ImmutableHashSet<UniqueAddress>.Empty).Should().BeFalse();
         }
 
         [Fact]
         public void A_gossip_must_reach_convergence_for_two_nodes()
         {
             var g1 = new Gossip(ImmutableSortedSet.Create(a1, b1)).Seen(a1.UniqueAddress).Seen(b1.UniqueAddress);
-            g1.Convergence(a1.UniqueAddress, new HashSet<UniqueAddress>()).Should().BeTrue();
+            State(g1).Convergence(ImmutableHashSet<UniqueAddress>.Empty).Should().BeTrue();
         }
 
         [Fact]
@@ -63,7 +69,7 @@ namespace Akka.Cluster.Tests
         {
             // e1 is joining
             var g1 = new Gossip(ImmutableSortedSet.Create(a1, b1, e1)).Seen(a1.UniqueAddress).Seen(b1.UniqueAddress);
-            g1.Convergence(a1.UniqueAddress, new HashSet<UniqueAddress>()).Should().BeTrue();
+            State(g1).Convergence(ImmutableHashSet<UniqueAddress>.Empty).Should().BeTrue();
         }
 
         [Fact]
@@ -71,7 +77,7 @@ namespace Akka.Cluster.Tests
         {
             // e3 is down
             var g1 = new Gossip(ImmutableSortedSet.Create(a1, b1, e3)).Seen(a1.UniqueAddress).Seen(b1.UniqueAddress);
-            g1.Convergence(a1.UniqueAddress, new HashSet<UniqueAddress>()).Should().BeTrue();
+            State(g1).Convergence(ImmutableHashSet<UniqueAddress>.Empty).Should().BeTrue();
         }
 
         [Fact]
@@ -79,7 +85,7 @@ namespace Akka.Cluster.Tests
         {
             // c1 is leaving
             var g1 = new Gossip(ImmutableSortedSet.Create(a1, b1, c1)).Seen(a1.UniqueAddress).Seen(b1.UniqueAddress);
-            g1.Convergence(a1.UniqueAddress, new HashSet<UniqueAddress>() { c1.UniqueAddress }).Should().BeTrue();
+            State(g1).Convergence(ImmutableHashSet<UniqueAddress>.Empty.Add(c1.UniqueAddress)).Should().BeTrue();
         }
 
         [Fact]
@@ -88,7 +94,7 @@ namespace Akka.Cluster.Tests
             // c1 is leaving
             var r1 = Reachability.Empty.Unreachable(b1.UniqueAddress, c1.UniqueAddress);
             var g1 = new Gossip(ImmutableSortedSet.Create(a1, b1, c1), new GossipOverview(r1)).Seen(a1.UniqueAddress).Seen(b1.UniqueAddress);
-            g1.Convergence(a1.UniqueAddress, new HashSet<UniqueAddress>() { c1.UniqueAddress }).Should().BeTrue();
+            State(g1).Convergence(ImmutableHashSet<UniqueAddress>.Empty.Add(c1.UniqueAddress)).Should().BeTrue();
         }
 
         [Fact]
@@ -97,9 +103,9 @@ namespace Akka.Cluster.Tests
             var r1 = Reachability.Empty.Unreachable(b1.UniqueAddress, a1.UniqueAddress);
             var g1 = new Gossip(ImmutableSortedSet.Create(a1, b1), new GossipOverview(r1))
                 .Seen(a1.UniqueAddress).Seen(b1.UniqueAddress);
-            g1.Convergence(b1.UniqueAddress, new HashSet<UniqueAddress>()).Should().BeFalse();
+            State(g1, b1).Convergence(ImmutableHashSet<UniqueAddress>.Empty).Should().BeFalse();
             // but from a1's point of view (it knows that itself is not unreachable)
-            g1.Convergence(a1.UniqueAddress, new HashSet<UniqueAddress>()).Should().BeTrue();
+            State(g1).Convergence(ImmutableHashSet<UniqueAddress>.Empty).Should().BeTrue();
         }
 
         [Fact]
@@ -109,7 +115,7 @@ namespace Akka.Cluster.Tests
             var r1 = Reachability.Empty.Unreachable(e3.UniqueAddress, a1.UniqueAddress);
             var g1 = new Gossip(ImmutableSortedSet.Create(a1, b1, e3), new GossipOverview(r1))
                 .Seen(a1.UniqueAddress).Seen(b1.UniqueAddress).Seen(e3.UniqueAddress);
-            g1.Convergence(b1.UniqueAddress, new HashSet<UniqueAddress>()).Should().BeTrue();
+            State(g1, b1).Convergence(ImmutableHashSet<UniqueAddress>.Empty).Should().BeTrue();
         }
 
         [Fact]
@@ -171,15 +177,15 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void A_gossip_must_have_leader_as_first_member_based_on_ordering_except_exiting_status()
         {
-            new Gossip(ImmutableSortedSet.Create(c2, e2)).Leader(c2.UniqueAddress).Should().Be(c2.UniqueAddress);
-            new Gossip(ImmutableSortedSet.Create(c3, e2)).Leader(c3.UniqueAddress).Should().Be(e2.UniqueAddress);
-            new Gossip(ImmutableSortedSet.Create(c3)).Leader(c3.UniqueAddress).Should().Be(c3.UniqueAddress);
+            State(new Gossip(ImmutableSortedSet.Create(c2, e2))).Leader.Should().Be(c2.UniqueAddress);
+            State(new Gossip(ImmutableSortedSet.Create(c3, e2))).Leader.Should().Be(e2.UniqueAddress);
+            State(new Gossip(ImmutableSortedSet.Create(c3))).Leader.Should().Be(c3.UniqueAddress);
         }
 
         [Fact]
         public void A_gossip_must_not_have_Down_member_as_leader()
         {
-            new Gossip(ImmutableSortedSet.Create(e3)).Leader(e3.UniqueAddress).Should().BeNull();
+            State(new Gossip(ImmutableSortedSet.Create(e3))).Leader.Should().BeNull();
         }
 
         [Fact]

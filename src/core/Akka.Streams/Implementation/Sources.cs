@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Pattern;
@@ -15,7 +14,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -75,7 +73,6 @@ namespace Akka.Streams.Implementation
 
             private Completion()
             {
-
             }
         }
 
@@ -99,7 +96,7 @@ namespace Akka.Streams.Implementation
             public Exception Ex { get; }
         }
 
-        #endregion  
+        #endregion
 
         private sealed class Logic : GraphStageLogicWithCallbackWrapper<IInput>, IOutHandler
         {
@@ -170,14 +167,13 @@ namespace Akka.Streams.Implementation
 
             public override void PostStop()
             {
+                var exception = new StreamDetachedException();
+                _completion.TrySetException(exception);
                 StopCallback(input =>
                 {
-                    var offer = input as Offer<TOut>;
-                    if (offer != null)
-                    {
-                        var promise = offer.CompletionSource;
-                        promise.NonBlockingTrySetException(new IllegalStateException("Stream is terminated. SourceQueue is detached."));
-                    }
+                    if (!(input is Offer<TOut> offer)) return;
+                    var promise = offer.CompletionSource;
+                    promise.NonBlockingTrySetException(exception);
                 });
             }
 
@@ -441,6 +437,7 @@ namespace Akka.Streams.Implementation
                         switch (directive)
                         {
                             case Directive.Stop:
+                                _open = false;
                                 _stage._close(_blockingStream);
                                 FailStage(ex);
                                 stop = true;
@@ -458,7 +455,7 @@ namespace Akka.Streams.Implementation
             }
 
             public override void OnDownstreamFinish() => CloseStage();
-            
+
             public override void PreStart()
             {
                 _blockingStream = _stage._create();
@@ -467,6 +464,7 @@ namespace Akka.Streams.Implementation
 
             private void RestartState()
             {
+                _open = false;
                 _stage._close(_blockingStream);
                 _blockingStream = _stage._create();
                 _open = true;
@@ -556,196 +554,160 @@ namespace Akka.Streams.Implementation
 
         private sealed class Logic : OutGraphStageLogic
         {
-            private readonly UnfoldResourceSourceAsync<TOut, TSource> _source;
+            private readonly UnfoldResourceSourceAsync<TOut, TSource> _stage;
             private readonly Lazy<Decider> _decider;
-            private TaskCompletionSource<TSource> _resource;
-            private Action<Either<Option<TOut>, Exception>> _createdCallback;
-            private Action<(Action, Task)> _closeCallback;
-            private bool _open;
+            private Option<TSource> _state = Option<TSource>.None;
 
-            public Logic(UnfoldResourceSourceAsync<TOut, TSource> source, Attributes inheritedAttributes) : base(source.Shape)
+            public Logic(UnfoldResourceSourceAsync<TOut, TSource> stage, Attributes inheritedAttributes)
+                : base(stage.Shape)
             {
-                _source = source;
-                _resource = new TaskCompletionSource<TSource>();
-
-                Decider CreateDecider()
+                _stage = stage;
+                _decider = new Lazy<Decider>(() =>
                 {
                     var strategy = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
-                }
+                });
 
-                _decider = new Lazy<Decider>(CreateDecider);
-
-                SetHandler(source.Out, this);
+                SetHandler(_stage.Out, this);
             }
 
-            public override void OnPull()
+            private Action<Try<TSource>> CreatedCallback => GetAsyncCallback<Try<TSource>>(resource =>
             {
-                void Ready(TSource source)
+                if (resource.IsSuccess)
                 {
-                    try
-                    {
-                        void Continune(Task<Option<TOut>> t)
-                        {
-                            if (!t.IsFaulted && !t.IsCanceled)
-                                _createdCallback(new Left<Option<TOut>, Exception>(t.Result));
-                            else
-                                _createdCallback(new Right<Option<TOut>, Exception>(t.Exception));
-                        }
-
-                        _source._readData(source).ContinueWith(Continune);
-                    }
-                    catch (Exception ex)
-                    {
-                        ErrorHandler(ex);
-                    }
+                    _state = resource.Success;
+                    if (IsAvailable(_stage.Out)) OnPull();
                 }
-
-                OnResourceReady(Ready);
-            }
-
-            public override void OnDownstreamFinish() => CloseStage();
-
-            public override void PreStart()
-            {
-                CreateStream(false);
-
-                void CreatedHandler(Either<Option<TOut>, Exception> either)
-                {
-                    if (either.IsLeft)
-                    {
-                        var element = either.ToLeft().Value;
-                        if (element.HasValue)
-                            Push(_source.Out, element.Value);
-                        else
-                            CloseStage();
-                    }
-                    else
-                        ErrorHandler(either.ToRight().Value);
-                }
-
-                _createdCallback = GetAsyncCallback<Either<Option<TOut>, Exception>>(CreatedHandler);
-
-                void CloseHandler((Action, Task) t)
-                {
-                    if (t.Item2.IsCompleted && !t.Item2.IsFaulted)
-                    {
-                        _open = false;
-                        t.Item1();
-                    }
-                    else
-                    {
-                        _open = false;
-                        FailStage(t.Item2.Exception);
-                    }
-                }
-
-                _closeCallback = GetAsyncCallback<(Action, Task)>(CloseHandler);
-            }
-
-            private void CreateStream(bool withPull)
-            {
-                void Handler(Either<TSource, Exception> either)
-                {
-                    if (either.IsLeft)
-                    {
-                        _open = true;
-                        _resource.SetResult(either.ToLeft().Value);
-                        if (withPull)
-                            OnPull();
-                    }
-                    else
-                        FailStage(either.ToRight().Value);
-                }
-
-                var cb = GetAsyncCallback<Either<TSource, Exception>>(Handler);
-
-                try
-                {
-                    void Continue(Task<TSource> t)
-                    {
-
-                        if (t.IsCanceled || t.IsFaulted)
-                            cb(new Right<TSource, Exception>(t.Exception));
-                        else
-                            cb(new Left<TSource, Exception>(t.Result));
-                    }
-
-                    _source._create().ContinueWith(Continue);
-                }
-                catch (Exception ex)
-                {
-                    FailStage(ex);
-                }
-            }
-
-            private void OnResourceReady(Action<TSource> action) => _resource.Task.ContinueWith(t =>
-            {
-                if (!t.IsFaulted && !t.IsCanceled)
-                    action(t.Result);
+                else FailStage(resource.Failure.Value);
             });
 
             private void ErrorHandler(Exception ex)
             {
-                var directive = _decider.Value(ex);
-                switch (directive)
+                switch (_decider.Value(ex))
                 {
                     case Directive.Stop:
-                        OnResourceReady(s => _source._close(s));
                         FailStage(ex);
+                        break;
+                    case Directive.Restart:
+                        try
+                        {
+                            RestartResource();
+                        }
+                        catch (Exception ex1)
+                        {
+                            FailStage(ex1);
+                        }
                         break;
                     case Directive.Resume:
                         OnPull();
-                        break;
-                    case Directive.Restart:
-                        RestartState();
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
             }
 
-            private void CloseAndThen(Action action)
+            private Action<Try<Option<TOut>>> ReadCallback => GetAsyncCallback<Try<Option<TOut>>>(read =>
             {
-                SetKeepGoing(true);
+                if (read.IsSuccess)
+                {
+                    var data = read.Success.Value;
+                    if (data.HasValue)
+                    {
+                        var some = data.Value;
+                        Push(_stage.Out, some);
+                    }
+                    else
+                    {
+                        // end of resource reached, lets close it
+                        if (_state.HasValue)
+                        {
+                            var resource = _state.Value;
+                            _stage._close(resource).OnComplete(GetAsyncCallback<Try<Done>>(done =>
+                            {
+                                if (done.IsSuccess) CompleteStage();
+                                else FailStage(done.Failure.Value);
+                            }));
+                            _state = Option<TSource>.None;
+                        }
+                        else
+                        {
+                            // cannot happen, but for good measure
+                            throw new InvalidOperationException("Reached end of data but there is no open resource");
+                        }
+                    }
+                }
+                else ErrorHandler(read.Failure.Value);
+            });
 
-                void Ready(TSource source)
+            public override void PreStart() => CreateResource();
+
+            public override void OnPull()
+            {
+                if (_state.HasValue)
                 {
                     try
                     {
-                        _source._close(source).ContinueWith(t => _closeCallback((action, t)));
+                        var resource = _state.Value;
+                        _stage._readData(resource).OnComplete(ReadCallback);
                     }
                     catch (Exception ex)
                     {
-                        var fail = GetAsyncCallback(() => FailStage(ex));
-                        fail();
-                    }
-                    finally
-                    {
-                        _open = false;
+                        ErrorHandler(ex);
                     }
                 }
-
-                OnResourceReady(Ready);
-            }
-
-            private void RestartState()
-            {
-                void Restart()
+                else
                 {
-                    _resource = new TaskCompletionSource<TSource>();
-                    CreateStream(true);
+                    // we got a pull but there is no open resource, we are either
+                    // currently creating/restarting then the read will be triggered when creating the
+                    // resource completes, or shutting down and then the pull does not matter anyway
                 }
-
-                CloseAndThen(Restart);
             }
-
-            private void CloseStage() => CloseAndThen(CompleteStage);
 
             public override void PostStop()
             {
-                if (_open)
-                    CloseStage();
+                if (_state.HasValue)
+                    _stage._close(_state.Value);
+            }
+
+            private void RestartResource()
+            {
+                if (_state.HasValue)
+                {
+                    var resource = _state.Value;
+                    // wait for the resource to close before restarting
+                    _stage._close(resource).OnComplete(GetAsyncCallback<Try<Done>>(done =>
+                    {
+                        if (done.IsSuccess) CreateResource();
+                        else FailStage(done.Failure.Value);
+                    }));
+                    _state = Option<TSource>.None;
+                }
+                else CreateResource();
+            }
+
+            private void CreateResource()
+            {
+                _stage._create().OnComplete(resource =>
+                {
+                    try
+                    {
+                        CreatedCallback(resource);
+                    }
+                    catch (StreamDetachedException)
+                    {
+                        // stream stopped before created callback could be invoked, we need
+                        // to close the resource if it is was opened, to not leak it
+                        if (resource.IsSuccess)
+                        {
+                            _stage._close(resource.Success.Value);
+                        }
+                        else
+                        {
+                            // failed to open but stream is stopped already
+                            throw resource.Failure.Value;
+                        }
+                    }
+                });
             }
         }
 
@@ -754,7 +716,6 @@ namespace Akka.Streams.Implementation
         private readonly Func<Task<TSource>> _create;
         private readonly Func<TSource, Task<Option<TOut>>> _readData;
         private readonly Func<TSource, Task> _close;
-
 
         /// <summary>
         /// TBD
@@ -774,7 +735,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        protected override Attributes InitialAttributes { get; } = DefaultAttributes.UnfoldResourceSourceAsync;
+        protected override Attributes InitialAttributes => DefaultAttributes.UnfoldResourceSourceAsync;
 
         /// <summary>
         /// TBD
@@ -949,7 +910,7 @@ namespace Akka.Streams.Implementation
 
         public override string ToString() => "EmptySource";
     }
-    
+
     internal sealed class EventWrapper<TDelegate, TEventArgs> : IObservable<TEventArgs>
     {
         #region disposer
@@ -1005,7 +966,7 @@ namespace Akka.Streams.Implementation
     internal sealed class ObservableSourceStage<T> : GraphStage<SourceShape<T>>
     {
         #region internal classes
-        
+
         private sealed class Logic : GraphStageLogic, IObserver<T>
         {
             private readonly ObservableSourceStage<T> _stage;
@@ -1091,7 +1052,10 @@ namespace Akka.Streams.Implementation
                             Enqueue(message);
                         };
                     case OverflowStrategy.DropNew:
-                        return message => { /* do nothing */ };
+                        return message =>
+                        {
+                            /* do nothing */
+                        };
                     case OverflowStrategy.DropBuffer:
                         return message =>
                         {

@@ -32,7 +32,6 @@ namespace Akka.Streams
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="StreamTcpException"/> class.
         /// </summary>
@@ -41,7 +40,28 @@ namespace Akka.Streams
         protected StreamTcpException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
+    }
+
+    /// <summary>
+    /// This exception signals that materialized value is already detached from stream. This usually happens
+    /// when stream is completed and an ActorSystem is shut down while materialized object is still available.
+    /// </summary>
+    public class StreamDetachedException : Exception
+    {
+        /// <summary>
+        /// Initializes a single instance of the <see cref="StreamDetachedException"/> class.
+        /// </summary>
+        public static readonly StreamDetachedException Instance = new StreamDetachedException();
+
+        public StreamDetachedException()
+            : this("Stream is terminated. Materialized value is detached.")
+        {
+        }
+
+        public StreamDetachedException(string message)
+            : base(message)
+        {
+        }
     }
 
     /// <summary>
@@ -58,7 +78,6 @@ namespace Akka.Streams
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="BindFailedException"/> class.
         /// </summary>
@@ -67,7 +86,6 @@ namespace Akka.Streams
         protected BindFailedException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
@@ -92,7 +110,6 @@ namespace Akka.Streams
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectionException"/> class.
         /// </summary>
@@ -101,6 +118,5 @@ namespace Akka.Streams
         protected ConnectionException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 }

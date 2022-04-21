@@ -201,7 +201,7 @@ namespace Akka.Routing
         /// </summary>
         protected override ActorBase CreateNewActorInstance()
         {
-            RouterActor instance = RouterConfig.CreateRouterActor();
+            ActorBase instance = RouterConfig.CreateRouterActor();
             return instance;
         }
     }

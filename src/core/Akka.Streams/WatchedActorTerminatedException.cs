@@ -24,7 +24,6 @@ namespace Akka.Streams
             : base($"Actor watched by [{stageName}] has terminated! Was: {actorRef}")
         { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaException"/> class.
         /// </summary>
@@ -34,6 +33,5 @@ namespace Akka.Streams
             : base(info, context)
         {
         }
-#endif
     }
 }

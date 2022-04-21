@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Event;
 using Akka.Util;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.DistributedData
 {
@@ -25,9 +26,10 @@ namespace Akka.DistributedData
         private const int MaxSecondaryNodes = 10;
 
         protected TimeSpan Timeout { get; }
-        protected IImmutableSet<Address> Nodes { get; }
+        protected IImmutableList<Address> Nodes { get; }
         protected IImmutableSet<Address> Unreachable { get; }
-        protected IImmutableSet<Address> Reachable { get; }
+        protected IImmutableList<Address> Reachable { get; }
+        protected bool Shuffle { get; }
 
         private readonly ICancelable _sendToSecondarySchedule;
         private readonly ICancelable _timeoutSchedule;
@@ -38,46 +40,53 @@ namespace Akka.DistributedData
 
         protected abstract int DoneWhenRemainingSize { get; }
 
-        private readonly Lazy<(IImmutableSet<Address>, IImmutableSet<Address>)> _primaryAndSecondaryNodes;
+        private readonly Lazy<(IImmutableList<Address>, IImmutableList<Address>)> _primaryAndSecondaryNodes;
 
-        protected IImmutableSet<Address> PrimaryNodes => _primaryAndSecondaryNodes.Value.Item1;
-        protected IImmutableSet<Address> SecondaryNodes => _primaryAndSecondaryNodes.Value.Item2;
+        protected IImmutableList<Address> PrimaryNodes => _primaryAndSecondaryNodes.Value.Item1;
+        protected IImmutableList<Address> SecondaryNodes => _primaryAndSecondaryNodes.Value.Item2;
 
         protected IImmutableSet<Address> Remaining;
 
-        protected ReadWriteAggregator(IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, TimeSpan timeout)
+        protected ReadWriteAggregator(IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, TimeSpan timeout, bool shuffle)
         {
             Timeout = timeout;
             Nodes = nodes;
             Unreachable = unreachable;
-            Reachable = nodes.Except(unreachable);
-            Remaining = Nodes;
+            Shuffle = shuffle;
+            Reachable = nodes.Except(unreachable).ToImmutableList();
+            Remaining = Nodes.ToImmutableHashSet();
             _sendToSecondarySchedule = Context.System.Scheduler.ScheduleTellOnceCancelable((int)Timeout.TotalMilliseconds / 5, Self, SendToSecondary.Instance, Self);
             _timeoutSchedule = Context.System.Scheduler.ScheduleTellOnceCancelable(Timeout, Self, ReceiveTimeout.Instance, Self);
-            _primaryAndSecondaryNodes = new Lazy<(IImmutableSet<Address>, IImmutableSet<Address>)>(() =>
+            _primaryAndSecondaryNodes = new Lazy<(IImmutableList<Address>, IImmutableList<Address>)>(() =>
             {
                 var primarySize = Nodes.Count - DoneWhenRemainingSize;
-                if(primarySize >= nodes.Count)
+                if (primarySize >= nodes.Count)
                 {
-                    return (nodes, (IImmutableSet<Address>)ImmutableHashSet<Address>.Empty);
+                    return (nodes, ImmutableList<Address>.Empty);
                 }
                 else
                 {
-                    var n = Nodes.OrderBy(x => ThreadLocalRandom.Current.Next()).ToArray();
-                    var p = n.Take(primarySize).ToImmutableHashSet();
-                    var s = n.Skip(primarySize).Take(MaxSecondaryNodes).ToImmutableHashSet();
-                    return ((IImmutableSet<Address>)p, (IImmutableSet<Address>)s);
+                    // Prefer to use reachable nodes over the unreachable nodes first.
+                    // When RequiresCausalDeliveryOfDeltas (shuffle=false) use deterministic order to so that sequence numbers
+                    // of subsequent updates are in sync on the destination nodes.
+                    // The order is also kept when prefer-oldest is enabled.
+                    var orderedNodes = Shuffle ?
+                        Reachable.Shuffle().AddRange(unreachable.ToImmutableList().Shuffle())
+                        :
+                        Reachable.AddRange(Unreachable);
+
+                    var p = orderedNodes.Take(primarySize).ToImmutableList();
+                    var s = orderedNodes.Skip(primarySize).Take(MaxSecondaryNodes).ToImmutableList();
+                    return (p, s.Take(MaxSecondaryNodes).ToImmutableList());
                 }
             });
         }
 
-        public static int CalculateMajorityWithMinCapacity(int minCapacity, int numberOfNodes)
+        public static int CalculateMajority(int minCapacity, int numberOfNodes, int additional)
         {
-            if (numberOfNodes <= minCapacity) return numberOfNodes;
-            
-            return Math.Max(minCapacity, numberOfNodes / 2 + 1);
+            var majority = numberOfNodes / 2 + 1;
+            return Math.Min(numberOfNodes, Math.Max(majority + additional, minCapacity));
         }
-
         protected override void PostStop()
         {
             _sendToSecondarySchedule.Cancel();

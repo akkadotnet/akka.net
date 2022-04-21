@@ -14,6 +14,7 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -103,7 +104,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.cluster.min-nr-of-members = 3
-                akka.cluster.allow-weakly-up-members = on
+                akka.cluster.allow-weakly-up-members = 3s
             ").WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
         }
     }

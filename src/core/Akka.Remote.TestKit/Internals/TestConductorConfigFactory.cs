@@ -36,11 +36,7 @@ namespace Akka.Remote.TestKit.Internals
         /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
-#if CORECLR
-            var assembly = typeof(TestConductorConfigFactory).GetTypeInfo().Assembly;
-#else
             var assembly = typeof(TestConductorConfigFactory).Assembly;
-#endif
 
             using (var stream = assembly.GetManifestResourceStream(resourceName))
             {

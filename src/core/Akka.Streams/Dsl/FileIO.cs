@@ -53,9 +53,10 @@ namespace Akka.Streams.Dsl
         /// <param name="fileMode">the write file mode, defaults to <see cref="FileMode.OpenOrCreate"/></param>
         /// <param name="startPosition">the start position to write to, defaults to 0</param>
         /// <param name="autoFlush">when set, auto flush the file buffer to disk for every incoming element</param>
+        /// <param name="flushSignaler">when passed an instance of <see cref="FlushSignaler"/>, can be used to send a manual flush signal to the file sink</param>
         /// <returns>TBD</returns>
-        public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null, long startPosition = 0, bool autoFlush = false) =>
+        public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null, long startPosition = 0, bool autoFlush = false, FlushSignaler flushSignaler = null) =>
             new Sink<ByteString, Task<IOResult>>(new FileSink(f, startPosition, fileMode ?? FileMode.Create, DefaultAttributes.FileSink,
-                new SinkShape<ByteString>(new Inlet<ByteString>("FileSink")), autoFlush));
+                new SinkShape<ByteString>(new Inlet<ByteString>("FileSink")), autoFlush, flushSignaler));
     }
 }

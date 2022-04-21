@@ -64,15 +64,15 @@ namespace Akka.DistributedData
             return Enabled == other.Enabled;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is Flag && Equals((Flag) obj);
 
         public override int GetHashCode() => Enabled.GetHashCode();
-        /// <inheritdoc/>
+        
         public int CompareTo(object obj) => obj is Flag ? CompareTo((Flag) obj) : 1;
-        /// <inheritdoc/>
+        
         public int CompareTo(Flag other) => other == null ? 1 : Enabled.CompareTo(other.Enabled);
-        /// <inheritdoc/>
+        
         public override string ToString() => Enabled.ToString();
 
         /// <summary>

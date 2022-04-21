@@ -21,10 +21,10 @@ namespace Akka.DistributedData
 
         private GetKeyIds() { }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is GetKeyIds;
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => nameof(GetKeyIds).GetHashCode();
     }
 
@@ -38,11 +38,11 @@ namespace Akka.DistributedData
             Keys = keys;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) =>
             obj is GetKeysIdsResult && Equals((GetKeysIdsResult)obj);
 
-        /// <inheritdoc/>
+        
         public bool Equals(GetKeysIdsResult other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -51,10 +51,10 @@ namespace Akka.DistributedData
             return Keys.SetEquals(other.Keys);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Keys.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"GetKeysIdsResult({string.Join(", ", Keys)})";
     }
 
@@ -85,7 +85,7 @@ namespace Akka.DistributedData
             Request = request;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(Get other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -95,10 +95,10 @@ namespace Akka.DistributedData
                    Equals(Consistency, other.Consistency);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is Get && Equals((Get)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -110,7 +110,7 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"Get({Key}:{Consistency}{(Request == null ? "" : ", req=" + Request)})";
     }
 
@@ -154,10 +154,10 @@ namespace Akka.DistributedData
 
         /// <summary>
         /// Tries to return a result of the request, given a replicated collection 
-        /// <paramref name="key"/> used when sending a <see cref="Replicator.Get"/> request.
+        /// <paramref name="key"/> used when sending a <see cref="Replicator"/> request.
         /// </summary>
         /// <typeparam name="T">Replicated data.</typeparam>
-        /// <param name="key">Key send originally with a <see cref="Replicator.Get"/> request.</param>
+        /// <param name="key">Key send originally with a <see cref="Replicator"/> request.</param>
         /// <exception cref="KeyNotFoundException">Thrown when no value for provided <paramref name="key"/> was found.</exception>
         /// <exception cref="TimeoutException">Thrown when response with given consistency didn't arrive within specified timeout.</exception>
         /// <returns></returns>
@@ -181,7 +181,7 @@ namespace Akka.DistributedData
             Data = data;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(GetSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -190,10 +190,10 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key) && Equals(Request, other.Request) && Equals(Data, other.Data);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is GetSuccess && Equals((GetSuccess)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -216,7 +216,7 @@ namespace Akka.DistributedData
             throw new InvalidCastException($"Response returned for key '{Key}' is of type [{Data?.GetType()}] and cannot be casted using key '{key}' to type [{typeof(T)}]");
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"GetSuccess({Key}:{Data}{(Request == null ? "" : ", req=" + Request)})";
     }
 
@@ -241,13 +241,13 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key) && Equals(Request, other.Request);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is NotFound && Equals((NotFound)obj);
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"NotFound({Key}{(Request == null ? "" : ", req=" + Request)})";
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -282,7 +282,7 @@ namespace Akka.DistributedData
             Request = request;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(GetFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -291,10 +291,10 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key) && Equals(Request, other.Request);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is GetFailure && Equals((GetFailure)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -312,7 +312,7 @@ namespace Akka.DistributedData
             throw new TimeoutException($"A timeout occurred when trying to retrieve a value for key '{Key}' withing given read consistency");
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"GetFailure({Key}{(Request == null ? "" : ", req=" + Request)})";
     }
 
@@ -342,7 +342,7 @@ namespace Akka.DistributedData
             Subscriber = subscriber;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(Subscribe other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -351,10 +351,10 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key) && Equals(Subscriber, other.Subscriber);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is Subscribe && Equals((Subscribe)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -363,7 +363,7 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"Subscribe({Key}, {Subscriber})";
     }
 
@@ -383,7 +383,7 @@ namespace Akka.DistributedData
             Subscriber = subscriber;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(Unsubscribe other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -392,10 +392,10 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key) && Equals(Subscriber, other.Subscriber);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is Unsubscribe && Equals((Unsubscribe)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -404,7 +404,7 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"Unsubscribe({Key}, {Subscriber})";
     }
 
@@ -432,7 +432,7 @@ namespace Akka.DistributedData
 
         IKey IChanged.Key => Key;
 
-        /// <inheritdoc/>
+        
         public bool Equals(Changed other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -447,10 +447,10 @@ namespace Akka.DistributedData
             return (T)Data;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is Changed && Equals((Changed)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -459,7 +459,7 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"Changed({Key}:{Data})";
     }
 
@@ -515,7 +515,7 @@ namespace Akka.DistributedData
             Modify = x => ModifyWithInitial(initial, modify, x);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"Update({Key}, {Consistency}{(Request == null ? "" : ", req=" + Request)})";
     }
 
@@ -562,7 +562,7 @@ namespace Akka.DistributedData
             Request = request;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(UpdateSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -571,10 +571,10 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key) && Equals(Request, other.Request);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is UpdateSuccess && Equals((UpdateSuccess)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -583,7 +583,7 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"UpdateSuccess({Key}{(Request == null ? "" : ", req=" + Request)})";
 
         public bool IsSuccessful => true;
@@ -621,7 +621,7 @@ namespace Akka.DistributedData
             Request = request;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(UpdateTimeout other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -630,13 +630,13 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key) && Equals(Request, other.Request);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is UpdateTimeout && Equals((UpdateTimeout)obj);
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"UpdateTimeout({Key}{(Request == null ? "" : ", req=" + Request)})";
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -674,7 +674,7 @@ namespace Akka.DistributedData
             Cause = cause;
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ModifyFailure({Key}, {Cause}{(Request == null ? "" : ", req=" + Request)})";
 
         public bool IsSuccessful => false;
@@ -722,10 +722,10 @@ namespace Akka.DistributedData
 
         public Exception Cause => new Exception($"Failed to store value under the key {_key}");
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"StoreFailure({_key}{(_request == null ? "" : ", req=" + _request)})";
 
-        /// <inheritdoc/>
+        
         public bool Equals(StoreFailure other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -733,7 +733,7 @@ namespace Akka.DistributedData
             return Equals(_key, other._key) && Equals(_request, other._request);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -741,7 +741,7 @@ namespace Akka.DistributedData
             return obj is StoreFailure && Equals((StoreFailure)obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -769,7 +769,7 @@ namespace Akka.DistributedData
             Request = request;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(Delete other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -778,10 +778,10 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key) && Equals(Consistency, other.Consistency) && Equals(Request, other.Request);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is Delete && Equals((Delete)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -790,7 +790,7 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"Delete({Key}, {Consistency}{(Request == null ? "" : ", req=" + Request)})";
     }
 
@@ -843,7 +843,7 @@ namespace Akka.DistributedData
         public bool IsSuccessful => true;
         public bool AlreadyDeleted => false;
 
-        /// <inheritdoc/>
+        
         public bool Equals(DeleteSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -852,13 +852,13 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is DeleteSuccess && Equals((DeleteSuccess)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Key.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"DeleteSuccess({Key}{(Request == null ? "" : ", req=" + Request)})";
     }
 
@@ -874,7 +874,7 @@ namespace Akka.DistributedData
         public bool IsSuccessful => false;
         public bool AlreadyDeleted => false;
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReplicationDeleteFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -883,13 +883,13 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is ReplicationDeleteFailure && Equals((ReplicationDeleteFailure)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Key.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReplicationDeletedFailure({Key})";
     }
 
@@ -907,10 +907,10 @@ namespace Akka.DistributedData
         public bool IsSuccessful => true;
         public bool AlreadyDeleted => true;
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"DataDeleted({Key}{(Request == null ? "" : ", req=" + Request)})";
 
-        /// <inheritdoc/>
+        
         public bool Equals(DataDeleted other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -919,10 +919,10 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key) && Equals(Request, other.Request);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is DataDeleted && Equals((DataDeleted)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Key.GetHashCode();
         public bool IsFound => false;
         public bool IsFailure => true;
@@ -963,16 +963,16 @@ namespace Akka.DistributedData
             N = n;
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReplicaCount other) => other != null && N == other.N;
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is ReplicaCount && Equals((ReplicaCount)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => N.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReplicaCount({N})";
     }
 
@@ -987,7 +987,7 @@ namespace Akka.DistributedData
 
         private FlushChanges() { }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj is FlushChanges;
@@ -997,6 +997,7 @@ namespace Akka.DistributedData
     /// <summary>
     /// TBD
     /// </summary>
+    [Serializable]
     public class DataDeletedException : Exception
     {
         /// <summary>
@@ -1006,6 +1007,13 @@ namespace Akka.DistributedData
         public DataDeletedException(string message) : base(message)
         {
         }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DataDeletedException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected DataDeletedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
     public interface IReplicatorMessage { }

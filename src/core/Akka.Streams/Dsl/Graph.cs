@@ -9,10 +9,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.Serialization;
+using Akka.Annotations;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
+using Akka.Util;
 using Akka.Util.Internal;
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -1211,6 +1214,13 @@ namespace Akka.Streams.Dsl
         {
 
         }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PartitionOutOfBoundsException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected PartitionOutOfBoundsException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
     /// <summary>
@@ -1791,7 +1801,6 @@ namespace Akka.Streams.Dsl
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
-
     /// <summary>
     /// TBD
     /// </summary>
@@ -1924,5 +1933,100 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <returns>TBD</returns>
         public override string ToString() => "OrElse";
+    }
+    
+    public static class WireTap
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
+        public static WireTap<T> Create<T>() => new WireTap<T>();
+    }
+
+    /// <summary>
+    /// <para>
+    /// Fan-out the stream to two output streams - a 'main' and a 'tap' one. Each incoming element is emitted
+    /// to the 'main' output; elements are also emitted to the 'tap' output if there is demand;
+    /// otherwise they are dropped.
+    /// </para>
+    /// <para>Emits when element is available and demand exists from the 'main' output; the element will also be sent to the 'tap' output if there is demand.</para>
+    /// <para>Backpressures when the 'main' output backpressures</para>
+    /// <para>Completes when upstream completes</para>
+    /// <para>Cancels when the 'main' output cancels</para>
+    /// </summary>
+    [InternalApi]
+    public sealed class WireTap<T> : GraphStage<FanOutShape<T, T, T>>
+    {
+        #region Logic
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private Option<T> _pendingTap = Option<T>.None;
+
+            public Logic(WireTap<T> stage) : base(stage.Shape)
+            {
+                SetHandler(stage.In, () =>
+                {
+                    var elem = Grab(stage.In);
+                    Push(stage.OutMain, elem);
+                    if (IsAvailable(stage.OutTap))
+                        Push(stage.OutTap, elem);
+                    else
+                        _pendingTap = elem;
+                });
+                
+                SetHandler(stage.OutMain, () => Pull(stage.In), CompleteStage);
+                
+                // The 'tap' output can neither backpressure, nor cancel, the stage.
+                SetHandler(stage.OutTap, 
+                    () =>
+                    {
+                        if (!_pendingTap.HasValue)
+                        {
+                            // no pending element to emit
+                            return;
+                        }
+                        
+                        Push(stage.OutTap, _pendingTap.Value);
+                        _pendingTap = Option<T>.None;
+                    },
+                    () =>
+                    {
+                        SetHandler(stage.In, () => Push(stage.OutMain, Grab(stage.In)));
+                        // Allow any outstanding element to be garbage-collected
+                        _pendingTap = Option<T>.None;
+                    });
+            }
+        }
+
+        #endregion
+        
+        /// <summary>
+        /// Initializes a new instance of the <see cref="WireTap{T}"/> class.
+        /// </summary>
+        public WireTap() => Shape = new FanOutShape<T, T, T>(In, OutMain, OutTap);
+        
+        public Inlet<T> In { get; }   = new Inlet<T>("WireTap.In");
+        public Outlet<T> OutMain { get; } = new Outlet<T>("WireTap.OutMain");
+        public Outlet<T> OutTap { get; } = new Outlet<T>("WireTap.OutTap");
+
+        public override FanOutShape<T, T, T> Shape { get; }
+        
+        protected override Attributes InitialAttributes => DefaultAttributes.WireTap;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override string ToString() => "WireTap";
     }
 }

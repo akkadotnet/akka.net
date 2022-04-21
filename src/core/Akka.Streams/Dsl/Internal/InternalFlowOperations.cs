@@ -196,6 +196,37 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
+        /// This is a simplified version of <seealso cref="WireTap{T}"/> that takes only a simple procedure.
+        /// Elements will be passed into this "side channel" delegate, and any of its results will be ignored.
+        /// <para>
+        /// If the wire-tap operation is slow (it backpressures), elements that would've been sent to it will be dropped instead.
+        /// </para>
+        /// <para>
+        /// This operation is useful for inspecting the passed through element, usually by means of side-effecting
+        /// operations (such as `Log`, or emitting metrics), for each element without having to modify it.
+        /// </para>
+        /// <para>
+        /// For logging signals (elements, completion, error) consider using the <see cref="Log"/> stage instead,
+        /// along with appropriate <see cref="Attributes.LogLevels"/>.
+        /// </para>
+        /// <para>
+        /// Emits when upstream emits an element; the same element will be passed to the attached function,
+        /// as well as to the downstream stage
+        /// </para>
+        /// <para>Backpressures when downstream backpressures</para>
+        /// <para>Completes when upstream completes</para>
+        /// <para>Cancels when downstream cancels</para>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<TOut, TMat> WireTap<TOut, TMat>(this IFlow<TOut, TMat> flow, Action<TOut> action) =>
+            //flow.WireTap(Sink.ForEach(action)); // should be this, but can't be due to type constraints
+            flow.WireTapMaterialized(Sink.ForEach(action), Keep.Left);
+
+        /// <summary>
         /// Transform each input element into a sequence of output elements that is
         /// then flattened into the output stream.
         /// 
@@ -499,8 +530,8 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="collector">TBD</param>
         /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(
-            this IFlow<TIn, TMat> flow, 
-            Func<TIn, bool> isDefined, 
+            this IFlow<TIn, TMat> flow,
+            Func<TIn, bool> isDefined,
             Func<TIn, TOut> collector)
         {
             return flow.Via(new Fusing.Collect<TIn, TOut>(isDefined, collector));
@@ -1824,7 +1855,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int cost, TimeSpan per,
             int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
         {
-            if(cost <= 0) throw new ArgumentException("cost must be > 0", nameof(cost));
+            if (cost <= 0) throw new ArgumentException("cost must be > 0", nameof(cost));
             if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
@@ -1993,7 +2024,7 @@ namespace Akka.Streams.Dsl.Internal
             return flow.StatefulSelectMany<T1, (T1, long), TMat>(() =>
             {
                 var index = 0L;
-                return element => new[] {(element, index++)};
+                return element => new[] { (element, index++) };
             });
         }
 
@@ -2436,6 +2467,103 @@ namespace Akka.Streams.Dsl.Internal
             });
         }
 
+        /// <summary>
+        /// <para>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/> as a wire tap, meaning that elements that pass
+        /// through will also be sent to the wire-tap Sink, without the latter affecting the mainline flow. If the wire-tap Sink backpressures,
+        /// elements that would've been sent to it will be dropped instead.
+        /// </para>
+        /// <para>It is similar to <seealso cref="AlsoToMaterialized{TOut,TMat,TMat2,TMat3}"/> which does backpressure instead of dropping elements.</para>
+        /// <para>@see <seealso cref="WireTap{TOut,TMat}"/></para>
+        /// <para>
+        /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </para>
+        /// </summary>
+        public static IFlow<TOut, TMat3> WireTapMaterialized<TOut, TMat, TMat2, TMat3>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat2> that, Func<TMat, TMat2, TMat3> materializerFunction) =>
+            flow.ViaMaterialized(WireTapGraph(that), materializerFunction);
+
+        /// <summary>
+        /// <para>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/> as a wire tap, meaning that elements that pass
+        /// through will also be sent to the wire-tap Sink, without the latter affecting the mainline flow. If the wire-tap Sink backpressures,
+        /// elements that would've been sent to it will be dropped instead.
+        /// </para>
+        /// <para>It is similar to <seealso cref="AlsoTo{TOut,TMat}"/> which does backpressure instead of dropping elements.</para>
+        /// <para>Emits when element is available and demand exists from the downstream; the element will also be sent to the wire-tap Sink if there is demand.</para>
+        /// <para>Backpressures when downstream backpressures</para>
+        /// <para>Completes when upstream completes</para>
+        /// <para>Cancels when downstream cancels</para>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<TOut, TMat> WireTap<TOut, TMat>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that) =>
+            flow.Via(WireTapGraph(that));
+
+        private static IGraph<FlowShape<TOut, TOut>, TMat> WireTapGraph<TOut, TMat>(IGraph<SinkShape<TOut>, TMat> that)
+        {
+            return GraphDsl.Create(that, (b, r) =>
+            {
+                var writeTap = b.Add(Dsl.WireTap.Create<TOut>());
+                b.From(writeTap.Out1).To(r);
+                return new FlowShape<TOut, TOut>(writeTap.In, writeTap.Out0);
+            });
+        }
+
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements 
+        /// will be sent to the <seealso cref="Sink{TIn,TMat}"/> instead of being passed through if the predicate `when` returns `true`.
+        /// 
+        /// <para>@see <seealso cref="DivertTo{TOut,TMat}"/></para>
+        /// 
+        /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="when">TBD</param>
+        /// <param name="materializerFunction">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<TOut, TMat3> DivertToMaterialized<TOut, TMat, TMat2, TMat3>(
+            this IFlow<TOut, TMat> flow,
+            IGraph<SinkShape<TOut>, TMat2> that,
+            Func<TOut, bool> when,
+            Func<TMat, TMat2, TMat3> materializerFunction) => flow.ViaMaterialized(DivertToGraph(that, when), materializerFunction);
+
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements 
+        /// will be sent to the <seealso cref="Sink{TIn,TMat}"/> instead of being passed through if the predicate `when` returns `true`.
+        /// 
+        /// <para>Emits when an element is available from the input and the chosen output has demand</para>
+        /// <para>Backpressures when the currently chosen output back-pressures</para>
+        /// <para>Completes when upstream completes and no output is pending</para>
+        /// <para>Cancels when when all downstreams cancel</para>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="when">TBD</param>
+        public static IFlow<TOut, TMat> DivertTo<TOut, TMat>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when) =>
+            flow.Via(DivertToGraph(that, when));
+
+        private static IGraph<FlowShape<TOut, TOut>, TMat> DivertToGraph<TOut, TMat>(IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when)
+        {
+            return GraphDsl.Create(that, (b, r) =>
+            {
+                var partition = b.Add(new Partition<TOut>(2, @out => when(@out) ? 1 : 0));
+                b.From(partition.Out(1)).To(r);
+                return new FlowShape<TOut, TOut>(partition.In, partition.Out(0));
+            });
+        }
+
         ///<summary>
         /// Materializes to <see cref="Task{NotUsed}"/> that completes on getting termination message.
         /// The task completes with success when received complete message from upstream or cancel
@@ -2451,11 +2579,8 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="materializerFunction">TBD</param>
         /// <returns>TBD</returns>
-        public static IFlow<T, TMat2> WatchTermination<T, TMat, TMat2>(this IFlow<T, TMat> flow,
-            Func<TMat, Task, TMat2> materializerFunction)
-        {
-            return flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
-        }
+        public static IFlow<T, TMat2> WatchTermination<T, TMat, TMat2>(this IFlow<T, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) => 
+            flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
 
         /// <summary>
         /// Materializes to <see cref="IFlowMonitor"/> that allows monitoring of the the current flow. All events are propagated

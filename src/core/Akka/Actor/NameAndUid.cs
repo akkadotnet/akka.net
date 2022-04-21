@@ -5,11 +5,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
+    [Obsolete("Not used. Will be removed in Akka.NET v1.5.")]
     public class NameAndUid
     {
         private readonly string _name;

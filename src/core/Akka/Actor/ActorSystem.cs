@@ -93,7 +93,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Core boostrap settings for the <see cref="ActorSystem"/>, which can be created using one of the static factory methods
+    /// Core bootstrap settings for the <see cref="ActorSystem"/>, which can be created using one of the static factory methods
     /// on this class.
     /// </summary>
     public sealed class BootstrapSetup : Setup.Setup
@@ -364,7 +364,7 @@ namespace Akka.Actor
         /// </returns>
         public abstract Task Terminate();
 
-        internal abstract void FinalTerminate();
+        internal abstract Task FinalTerminate();
 
         /// <summary>
         /// Returns a task which will be completed after the <see cref="ActorSystem"/> has been
@@ -385,7 +385,6 @@ namespace Akka.Actor
 
         private bool _isDisposed; //Automatically initialized to false;
 
-        /// <inheritdoc/>
         public void Dispose()
         {
             Dispose(true);

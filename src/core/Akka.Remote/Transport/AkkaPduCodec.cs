@@ -28,7 +28,6 @@ namespace Akka.Remote.Transport
         /// <param name="cause">The exception that is the cause of the current exception.</param>
         public PduCodecException(string message, Exception cause = null) : base(message, cause) { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="PduCodecException"/> class.
         /// </summary>
@@ -38,7 +37,6 @@ namespace Akka.Remote.Transport
             : base(info, context)
         {
         }
-#endif
     }
 
     /*
@@ -204,12 +202,12 @@ namespace Akka.Remote.Transport
     internal abstract class AkkaPduCodec
     {
         protected readonly ActorSystem System;
-        protected readonly AddressThreadLocalCache AddressCache;
+        protected readonly ActorPathThreadLocalCache ActorPathCache;
 
         protected AkkaPduCodec(ActorSystem system)
         {
             System = system;
-            AddressCache = AddressThreadLocalCache.For(system);
+            ActorPathCache = ActorPathThreadLocalCache.For(system);
         }
 
         /// <summary>
@@ -428,22 +426,15 @@ namespace Akka.Remote.Transport
                 if (envelopeContainer != null)
                 {
                     var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
-                    Address recipientAddress;
-                    if (AddressCache != null)
-                    {
-                        recipientAddress = AddressCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path);
-                    }
-                    else
-                    {
-                        ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
-                    }
+                    
+                    //todo get parsed address from provider
+                    var recipientAddress = ActorPathCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path).Address;
                     
                     var serializedMessage = envelopeContainer.Message;
                     IActorRef senderOption = null;
                     if (envelopeContainer.Sender != null)
-                    {
                         senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
-                    }
+                    
                     SeqNo seqOption = null;
                     if (envelopeContainer.Seq != SeqUndefined)
                     {
@@ -452,6 +443,7 @@ namespace Akka.Remote.Transport
                             seqOption = new SeqNo((long)envelopeContainer.Seq); //proto takes a ulong
                         }
                     }
+
                     messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
                 }
             }

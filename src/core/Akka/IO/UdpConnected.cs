@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -14,6 +13,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.IO.Buffers;
 
 namespace Akka.IO
@@ -34,20 +34,33 @@ namespace Akka.IO
     {
         #region internal connection messages
 
-        internal abstract class SocketCompleted
+        // SocketAsyncEventArgs data are copied into these response messages instead of being referenced/embedded
+        // inside the message. This is done because it is very dangerous to embed SocketAsyncEventArgs in an actor
+        // message.
+        //
+        // SocketAsyncEventArgs might held a reference to a buffer who are managed by DirectBufferPool and
+        // an actor message might end up being sent to the DeadLetters mailbox, resulting in memory leak since the
+        // buffer would never get returned properly to the buffer pool.
+        // 
+        // SocketAsyncEventArgs should never leave the ReceiveAsync() method and the OnComplete callback. It should
+        // be returned immediately to PreallocatedSocketEventAgrsPool so that the buffer can be safely pooled back.
+        
+        internal abstract class SocketCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
-            public readonly SocketAsyncEventArgs EventArgs;
+            public ByteString Data { get; }
 
             protected SocketCompleted(SocketAsyncEventArgs eventArgs)
             {
-                EventArgs = eventArgs;
+                Data = ByteString.CopyFrom(eventArgs.Buffer, eventArgs.Offset, eventArgs.BytesTransferred);
             }
         }
 
         internal sealed class SocketSent : SocketCompleted
         {
+            public int BytesTransferred { get; }
             public SocketSent(SocketAsyncEventArgs eventArgs) : base(eventArgs)
             {
+                BytesTransferred = eventArgs.BytesTransferred;
             }
         }
 
@@ -92,7 +105,7 @@ namespace Akka.IO
         /// <summary>
         /// The common interface for <see cref="Command"/> and <see cref="Event"/>.
         /// </summary>
-        public abstract class Message { }
+        public abstract class Message : INoSerializationVerificationNeeded { }
 
         /// <summary>
         /// The common type of all commands supported by the UDP implementation.
@@ -372,7 +385,7 @@ namespace Akka.IO
     /// <summary>
     /// TBD
     /// </summary>
-    public class UdpConnectedExt : IOExtension
+    public class UdpConnectedExt : IOExtension, INoSerializationVerificationNeeded
     {
         public UdpConnectedExt(ExtendedActorSystem system)
             : this(system, UdpSettings.Create(system.Settings.Config.GetConfig("akka.io.udp-connected")))
@@ -387,8 +400,10 @@ namespace Akka.IO
                 throw new ConfigurationException($"Cannot retrieve UDP buffer pool configuration: {settings.BufferPoolConfigPath} configuration node not found");
 
             Settings = settings;
-            BufferPool = CreateBufferPool(system, bufferPoolConfig);
-            SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(Settings.InitialSocketAsyncEventArgs, OnComplete);
+            SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(
+                Settings.InitialSocketAsyncEventArgs,
+                CreateBufferPool(system, bufferPoolConfig),
+                OnComplete);
             Manager = system.SystemActorOf(
                 props: Props.Create(() => new UdpConnectedManager(this)).WithDeploy(Deploy.Local),
                 name: "IO-UDP-CONN");
@@ -399,15 +414,11 @@ namespace Akka.IO
         /// </summary>
         public override IActorRef Manager { get; }
 
-        /// <summary>
-        /// A buffer pool used by current plugin.
-        /// </summary>
-        public IBufferPool BufferPool { get; }
-
         internal ISocketEventArgsPool SocketEventArgsPool { get; }
         internal UdpSettings Settings { get; }
 
-        private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
         {
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<IBufferPool>();
@@ -433,23 +444,17 @@ namespace Akka.IO
         {
             var actorRef = e.UserToken as IActorRef;
             actorRef?.Tell(ResolveMessage(e));
+            SocketEventArgsPool.Release(e);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private UdpConnected.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
+        private static UdpConnected.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
         {
             switch (e.LastOperation)
             {
                 case SocketAsyncOperation.Receive:
                 case SocketAsyncOperation.ReceiveFrom:
                     return new UdpConnected.SocketReceived(e);
-                case SocketAsyncOperation.Send:
-                case SocketAsyncOperation.SendTo:
-                    return new UdpConnected.SocketSent(e);
-                case SocketAsyncOperation.Accept:
-                    return new UdpConnected.SocketAccepted(e);
-                case SocketAsyncOperation.Connect:
-                    return new UdpConnected.SocketConnected(e);
                 default:
                     throw new NotSupportedException($"Socket operation {e.LastOperation} is not supported");
             }

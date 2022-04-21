@@ -15,38 +15,41 @@ using BenchmarkDotNet.Engines;
 namespace Akka.Benchmarks.Actor
 {
     [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob(RunStrategy.Throughput, targetCount:10, warmupCount:5, invocationCount: ActorCount)]
+    [SimpleJob(RunStrategy.Throughput, targetCount:10, warmupCount:5)]
     public class SpawnActorBenchmarks
     {
-        public const int ActorCount = 100_000;
-        private TimeSpan timeout;
+        [Params(100_000)]
+        public int ActorCount { get;set; }
         private ActorSystem system;
 
-        [GlobalSetup]
+        [IterationSetup]
         public void Setup()
         {
-            timeout = TimeSpan.FromMinutes(1);
             system = ActorSystem.Create("system");
         }
 
-        [GlobalCleanup]
+        [IterationCleanup]
         public void Cleanup()
         {
-            system.Dispose();
+           system.Terminate().Wait();
         }
 
         [Benchmark]
-        public void Actor_spawn()
+        public async Task Actor_spawn()
         {
             var parent = system.ActorOf(Parent.Props);
+            await parent.Ask<TestDone>(new StartTest(ActorCount), TimeSpan.FromMinutes(2));
         }
 
         #region actors
 
         sealed class StartTest
         {
-            public static readonly StartTest Instance = new StartTest();
-            private StartTest() { }
+            public StartTest(int actorCount) {
+                ActorCount = actorCount;
+            }
+
+            public int ActorCount { get; }
         }
 
         sealed class ChildReady
@@ -64,12 +67,13 @@ namespace Akka.Benchmarks.Actor
         sealed class Parent : ReceiveActor
         {
             public static readonly Props Props = Props.Create<Parent>();
-            private int count = ActorCount - 1; // -1 because we also create the parent
+            private int count;
             private IActorRef replyTo;
             public Parent()
             {
                 Receive<StartTest>(_ =>
                 {
+                    count = _.ActorCount - 1; // -1 because we also create the parent
                     replyTo = Sender;
                     for (int i = 0; i < count; i++)
                     {

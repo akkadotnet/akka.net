@@ -233,7 +233,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 queue.OfferAsync(6).PipeTo(TestActor);
                 queue.OfferAsync(7).PipeTo(TestActor);
-                ExpectMsg<Status.Failure>().Cause.InnerException.Should().BeOfType<IllegalStateException>();
+                ExpectMsg<Status.Failure>().Cause.Should().BeOfType<IllegalStateException>();
                 probe.RequestNext(1);
                 ExpectMsg(Enqueued.Instance);
                 queue.Complete();
@@ -257,6 +257,22 @@ namespace Akka.Streams.Tests.Dsl
                 queue.WatchCompletionAsync().PipeTo(TestActor);
                 queue.OfferAsync(1); // need to wait when first offer is done as initialization can be done in this moment
                 queue.OfferAsync(2);
+                ExpectMsg<Status.Failure>();
+            }, _materializer);
+        }
+
+        [Fact]
+        public void QueueSource_should_complete_watching_future_with_failure_if_materializer_shut_down()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var tempMap = ActorMaterializer.Create(Sys);
+                var s = this.CreateManualSubscriberProbe<int>();
+                var queue = Source.Queue<int>(1, OverflowStrategy.Fail)
+                    .To(Sink.FromSubscriber(s))
+                    .Run(tempMap);
+                queue.WatchCompletionAsync().PipeTo(TestActor);
+                tempMap.Shutdown();
                 ExpectMsg<Status.Failure>();
             }, _materializer);
         }
@@ -322,11 +338,12 @@ namespace Akka.Streams.Tests.Dsl
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
 
-                queue.WatchCompletionAsync().ContinueWith(t => "done").PipeTo(TestActor);
+                queue.WatchCompletionAsync().ContinueWith(t => Done.Instance).PipeTo(TestActor);
                 sub.Cancel();
-                ExpectMsg("done");
+                ExpectMsg(Done.Instance);
 
-                queue.OfferAsync(1).ContinueWith(t => t.Exception.Should().BeOfType<IllegalStateException>());
+                var exception = Record.ExceptionAsync(async () => await queue.OfferAsync(1)).Result;
+                exception.Should().BeOfType<StreamDetachedException>();
             }, _materializer);
         }
 

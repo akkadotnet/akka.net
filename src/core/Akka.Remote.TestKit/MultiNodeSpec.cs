@@ -17,6 +17,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
@@ -382,14 +383,14 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        readonly RoleName _myself;
+        private readonly RoleName _myself;
         public RoleName Myself { get { return _myself; } }
-        readonly ILoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private bool _isDisposed; //Automatically initialized to false;
-        readonly ImmutableList<RoleName> _roles;
-        readonly Func<RoleName, ImmutableList<string>> _deployments;
-        readonly ImmutableDictionary<RoleName, Replacement> _replacements;
-        readonly Address _myAddress;
+        private readonly ImmutableList<RoleName> _roles;
+        private readonly Func<RoleName, ImmutableList<string>> _deployments;
+        private readonly ImmutableDictionary<RoleName, Replacement> _replacements;
+        private readonly Address _myAddress;
 
         protected MultiNodeSpec(MultiNodeConfig config, Type type) :
             this(config.Myself, ActorSystem.Create(type.Name, config.Config), config.Roles, config.Deployments)
@@ -401,29 +402,42 @@ namespace Akka.Remote.TestKit
             ActorSystem system,
             ImmutableList<RoleName> roles,
             Func<RoleName, ImmutableList<string>> deployments)
-            : base(new XunitAssertions(), system)
+            : this(myself, system, null, roles, deployments)
+        {
+        }
+
+        protected MultiNodeSpec(
+            RoleName myself,
+            ActorSystemSetup setup,
+            ImmutableList<RoleName> roles,
+            Func<RoleName, ImmutableList<string>> deployments)
+            : this(myself, null, setup, roles, deployments)
+        {
+        }
+
+        private MultiNodeSpec(
+            RoleName myself,
+            ActorSystem system,
+            ActorSystemSetup setup,
+            ImmutableList<RoleName> roles,
+            Func<RoleName, ImmutableList<string>> deployments)
+            : base(new XunitAssertions(), system, setup, null, null)
         {
             _myself = myself;
             _log = Logging.GetLogger(Sys, this);
             _roles = roles;
             _deployments = deployments;
 
-#if CORECLR
-            var dnsTask = Dns.GetHostAddressesAsync(ServerName);
-            dnsTask.Wait();
-            var node = new IPEndPoint(dnsTask.Result[0], ServerPort);
-#else
             var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
-#endif
             _controllerAddr = node;
 
-            AttachConductor(new TestConductor(system));
+            AttachConductor(new TestConductor(Sys));
 
             _replacements = _roles.ToImmutableDictionary(r => r, r => new Replacement("@" + r.Name + "@", r, this));
 
-            InjectDeployments(system, myself);
+            InjectDeployments(Sys, myself);
 
-            _myAddress = system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
+            _myAddress = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
 
             Log.Info("Role [{0}] started with address [{1}]", myself.Name, _myAddress);
             MultiNodeSpecBeforeAll();
@@ -508,7 +522,6 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void RunOn(Action thunk, params RoleName[] nodes)
         {
-            if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
             if (IsNode(nodes)) thunk();
         }
 
@@ -518,7 +531,6 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public async Task RunOnAsync(Func<Task> thunkAsync, params RoleName[] nodes)
         {
-            if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
             if (IsNode(nodes)) await thunkAsync();
         }
 
@@ -666,7 +678,7 @@ namespace Akka.Remote.TestKit
             return system;
         }
 
-        /// <inheritdoc/>
+        
         public void Dispose()
         {
             Dispose(true);
