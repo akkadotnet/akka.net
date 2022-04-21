@@ -7,6 +7,7 @@
 
 using System;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.Configuration;
@@ -44,15 +45,17 @@ namespace Akka.Remote.Tests
                 ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port=2666").WithFallback(_config));
         }
 
-        protected override void BeforeTermination()
+        protected override Task BeforeTerminationAsync()
         {
             var mute = EventFilter.Warning(pattern: new Regex("received dead letter.*Disassociate")).Mute();
             Sys.EventStream.Publish(mute);
+            return Task.CompletedTask;
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterAllAsync()
         {
-            _other.Terminate().Wait(TimeSpan.FromSeconds(20));
+            await base.AfterAllAsync();
+            await ShutdownAsync(_other, verifySystemShutdown: true);
         }
 
         [Fact]

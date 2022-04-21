@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -185,11 +186,12 @@ namespace Akka.Remote.Tests
             _heartbeatRspB = new RemoteWatcher.HeartbeatRsp(remoteAddressUid);
         }
 
-        protected override void AfterAll()
+        protected override async Task AfterAllAsync()
         {
-            Shutdown(_remoteSystem);
-            base.AfterAll();
+            await ShutdownAsync(_remoteSystem);
+            await base.AfterAllAsync();
         }
+
         readonly ActorSystem _remoteSystem;
         readonly Address _remoteAddress;
         readonly RemoteWatcher.HeartbeatRsp _heartbeatRspB;

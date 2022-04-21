@@ -496,6 +496,22 @@ namespace Akka.TestKit
                 .ConfigureAwait(false).GetAwaiter().GetResult();
 
         /// <summary>
+        /// Shuts down this system.
+        /// On failure debug output will be logged about the remaining actors in the system.
+        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
+        /// </summary>
+        /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
+        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <exception cref="TimeoutException">TBD</exception>
+        public virtual async Task ShutdownAsync(
+            TimeSpan? duration = null,
+            bool verifySystemShutdown = false,
+            CancellationToken cancellationToken = default)
+            => await ShutdownAsync(_testState.System, duration, verifySystemShutdown, cancellationToken)
+                .ConfigureAwait(false);
+
+        /// <summary>
         /// Shuts down the specified system.
         /// On failure debug output will be logged about the remaining actors in the system.
         /// If verifySystemShutdown is true, then an exception will be thrown on failure.
@@ -538,8 +554,8 @@ namespace Akka.TestKit
             {
                 const string msg = "Failed to stop [{0}] within [{1}] \n{2}";
                 if(verifySystemShutdown)
-                    throw new TimeoutException(string.Format(msg, system.Name, durationValue, ""));
-                system.Log.Warning(msg, system.Name, durationValue, ""); //TODO: replace "" with system.PrintTree()
+                    throw new TimeoutException(string.Format(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree()));
+                system.Log.Warning(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree());
             }
         }
 

@@ -7,6 +7,7 @@
 
 using System;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -180,15 +181,10 @@ namespace Akka.Remote.Tests.Transport
 
         #region helper classes / methods
 
-
-        protected override void Dispose(bool disposing)
+        protected override async Task AfterAllAsync()
         {
-            base.Dispose(disposing);
-            if (disposing)
-            {
-                Shutdown(sys2, TimeSpan.FromSeconds(3));
-            }
-
+            await ShutdownAsync(sys2, TimeSpan.FromSeconds(3));
+            await base.AfterAllAsync();
         }
 
         private void InstallCert()

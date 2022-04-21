@@ -148,12 +148,11 @@ namespace Akka.Remote.Tests
 
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
 
-
-        protected override void AfterAll()
+        protected override async Task AfterAllAsync()
         {
-            Shutdown(_remoteSystem, RemainingOrDefault);
+            await ShutdownAsync(_remoteSystem);
             AssociationRegistry.Clear();
-            base.AfterAll();
+            await base.AfterAllAsync();
         }
 
 

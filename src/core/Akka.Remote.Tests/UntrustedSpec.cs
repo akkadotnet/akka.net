@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -71,9 +72,9 @@ namespace Akka.Remote.Tests
         }
 
 
-        protected override void AfterTermination()
+        protected override async Task AfterTerminationAsync()
         {
-            Shutdown(_client);
+            await ShutdownAsync(_client);
         }
 
 
