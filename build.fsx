@@ -342,13 +342,13 @@ Target "MultiNodeTestsNetCore" (fun _ ->
         let runSingleProject projectDll =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -teamcity" projectDll testNetCoreVersion outputMultiNode)
-                | false -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\"" projectDll testNetCoreVersion outputMultiNode)
+                | true -> (sprintf "test \"%s\" -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -teamcity" projectDll testNetCoreVersion outputMultiNode)
+                | false -> (sprintf "test \"%s\" -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\"" projectDll testNetCoreVersion outputMultiNode)
 
             let resultPath = (directory projectDll)
             File.WriteAllText(
                 (resultPath @@ "xunit.multinode.runner.json"),
-                (sprintf "{\"outputDirectory\":\"%s\"}" outputMultiNode).Replace("\\", "\\\\"))
+                (sprintf "{\"outputDirectory\":\"%s\", \"useBuiltInTrxReporter\":true}" outputMultiNode).Replace("\\", "\\\\"))
             
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
@@ -381,13 +381,13 @@ Target "MultiNodeTestsNet" (fun _ ->
         let runSingleProject projectDll =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -teamcity" projectDll testNetVersion outputMultiNode)
-                | false -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\"" projectDll testNetVersion outputMultiNode)
+                | true -> (sprintf "test \"%s\" -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -teamcity" projectDll testNetVersion outputMultiNode)
+                | false -> (sprintf "test \"%s\" -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\"" projectDll testNetVersion outputMultiNode)
 
             let resultPath = (directory projectDll)
             File.WriteAllText(
                 (resultPath @@ "xunit.multinode.runner.json"),
-                (sprintf "{\"outputDirectory\":\"%s\"}" outputMultiNode).Replace("\\", "\\\\"))
+                (sprintf "{\"outputDirectory\":\"%s\", \"useBuiltInTrxReporter\":true}" outputMultiNode).Replace("\\", "\\\\"))
             
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
