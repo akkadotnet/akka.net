@@ -120,7 +120,7 @@ namespace Akka.Cluster.Sharding.Internal
                     _shards.UnionWith(state.Shards.Keys.Union(state.UnallocatedShards));
                     return true;
                 case SnapshotOffer offer when (offer.Snapshot is State state):
-                    _shards.Union(state.Shards);
+                    _shards.UnionWith(state.Shards);
                     _writtenMarker = state.WrittenMigrationMarker;
                     return true;
                 case RecoveryCompleted _:
