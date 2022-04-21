@@ -23,7 +23,7 @@ namespace Akka.Cluster.Tests
         {
             private readonly TestProbe _probe;
 
-            public TestClusterHeartbeatSender(TestProbe probe)
+            public TestClusterHeartbeatSender(TestProbe probe) : base(Cluster.Get(Context.System))
             {
                 _probe = probe;
             }

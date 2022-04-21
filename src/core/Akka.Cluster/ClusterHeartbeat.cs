@@ -76,11 +76,12 @@ namespace Akka.Cluster
         private DateTime _tickTimestamp;
 
         /// <summary>
-        /// TBD
+        /// Create a new instance of the <see cref="ClusterHeartbeatSender"/> and pass in a reference to the <see cref="Cluster"/>
+        /// to which it belongs.
         /// </summary>
-        public ClusterHeartbeatSender()
+        public ClusterHeartbeatSender(Cluster cluster)
         {
-            _cluster = Cluster.Get(Context.System);
+            _cluster = cluster;
             var tickInitialDelay = _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.HeartbeatInterval);
             _tickTimestamp = DateTime.UtcNow + tickInitialDelay;
 
