@@ -179,10 +179,10 @@ namespace Akka.Remote.Tests.Serialization
             ExpectMsg(echo);
         }
 
-        protected override void AfterAll()
+        protected override async Task AfterAllAsync()
         {
-            base.AfterAll();
-            Shutdown(System2, verifySystemShutdown: true);
+            await ShutdownAsync(System2, verifySystemShutdown: true);
+            await base.AfterAllAsync();
         }
     }
 

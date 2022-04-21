@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -37,12 +38,12 @@ namespace Akka.Cluster.Tests
             _ordinary1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterAllAsync()
         {
-            base.AfterTermination();
-            Shutdown(_seed1);
-            Shutdown(_seed2);
-            Shutdown(_ordinary1);
+            await base.AfterAllAsync();
+            await ShutdownAsync(_seed1);
+            await ShutdownAsync(_seed2);
+            await ShutdownAsync(_ordinary1);
         }
 
         [Fact]

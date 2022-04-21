@@ -132,9 +132,9 @@ namespace Akka.Remote.Tests
                 .Replace("${port}", port.ToString()));
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterTerminationAsync()
         {
-            Shutdown(masterSystem);
+            await ShutdownAsync(masterSystem);
         }
 
         private IEnumerable<ActorPath> CollectRouteePaths(TestProbe probe, IActorRef router, int n)

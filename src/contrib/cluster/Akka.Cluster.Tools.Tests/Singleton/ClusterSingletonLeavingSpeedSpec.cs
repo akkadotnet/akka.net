@@ -160,10 +160,11 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterAllAsync()
         {
+            await base.AfterAllAsync();
             foreach (var s in _systems)
-                Shutdown(s);
+                await ShutdownAsync(s);
         }
     }
 }

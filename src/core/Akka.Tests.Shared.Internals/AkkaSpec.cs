@@ -86,29 +86,35 @@ namespace Akka.TestKit
             AtStartup();
         }
 
-        protected override void AfterAll()
+        protected override async Task AfterAllAsync()
         {
-            BeforeTermination();
-            base.AfterAll();
-            AfterTermination();
+            await BeforeTerminationAsync();
+            await base.AfterAllAsync();
+            await AfterTerminationAsync();
         }
 
         protected virtual void AtStartup() { }
 
-        protected virtual void BeforeTermination() { }
+        protected virtual Task BeforeTerminationAsync()
+        {
+            return Task.CompletedTask;
+        }
 
-        protected virtual void AfterTermination() { }
+        protected virtual Task AfterTerminationAsync()
+        {
+            return Task.CompletedTask;
+        }
 
         private static string GetCallerName()
         {
             var systemNumber = Interlocked.Increment(ref _systemNumber);
             var stackTrace = new StackTrace(0);
-            var name = stackTrace.GetFrames().
-                Select(f => f.GetMethod()).
-                Where(m => m.DeclaringType != null).
-                SkipWhile(m => m.DeclaringType.Name == "AkkaSpec").
-                Select(m => _nameReplaceRegex.Replace(m.DeclaringType.Name + "-" + systemNumber, "-")).
-                FirstOrDefault() ?? "test";
+            var name = stackTrace.GetFrames()?
+                .Select(f => f.GetMethod())
+                .Where(m => m.DeclaringType != null)
+                .SkipWhile(m => m.DeclaringType.Name == "AkkaSpec")
+                .Select(m => _nameReplaceRegex.Replace(m.DeclaringType.Name + "-" + systemNumber, "-"))
+                .FirstOrDefault() ?? "test";
 
             return name;
         }

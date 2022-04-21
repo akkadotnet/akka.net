@@ -574,12 +574,12 @@ namespace Akka.DistributedData.Tests
             });
         }
 
-
-        protected override void BeforeTermination()
+        protected override async Task AfterAllAsync()
         {
-            Shutdown(_sys1);
-            Shutdown(_sys2);
-            Shutdown(_sys3);
+            await base.AfterAllAsync();
+            await ShutdownAsync(_sys1);
+            await ShutdownAsync(_sys2);
+            await ShutdownAsync(_sys3);
             GC.Collect();
         }
 

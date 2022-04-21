@@ -12,6 +12,7 @@ using Akka.TestKit;
 using Xunit;
 using Akka.Serialization;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 
 namespace Akka.Remote.Tests
 {
@@ -167,9 +168,9 @@ namespace Akka.Remote.Tests
             ";
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterTerminationAsync()
         {
-            Shutdown(system2);
+            await ShutdownAsync(system2);
         }
 
 

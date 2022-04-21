@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Testkit.Tests.TestEventListenerTests;
 
@@ -31,14 +32,14 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
         protected abstract void SendRawLogEventMessage(object message);
 
-        protected override void AfterAll()
+        protected override Task AfterAllAsync()
         {
             //After every test we make sure no uncatched messages have been logged
             if(TestSuccessful)
             {
                 EnsureNoMoreLoggedMessages();
             }
-            base.AfterAll();
+            return base.AfterAllAsync();
         }
 
         private void EnsureNoMoreLoggedMessages()

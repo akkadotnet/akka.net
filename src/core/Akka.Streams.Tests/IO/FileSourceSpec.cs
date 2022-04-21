@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.Streams.Dsl;
@@ -364,14 +365,15 @@ namespace Akka.Streams.Tests.IO
             return f;
         }
 
-        protected override void AfterAll()
+        protected override async Task AfterAllAsync()
         {
-            base.AfterAll();
-
+            await base.AfterAllAsync();
+            
             //give the system enough time to shutdown and release the file handle
-            Thread.Sleep(500);
+            await Task.Delay(500);
             _manyLinesPath?.Delete();
             _testFilePath?.Delete();
         }
+
     }
 }

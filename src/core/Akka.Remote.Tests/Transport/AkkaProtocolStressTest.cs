@@ -7,6 +7,7 @@
 
 using System;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
@@ -209,20 +210,21 @@ namespace Akka.Remote.Tests.Transport
 
         #region Cleanup
 
-        protected override void BeforeTermination()
+        protected override async Task BeforeTerminationAsync()
         {
             EventFilter.Warning(start: "received dead letter").Mute();
             EventFilter.Warning(new Regex("received dead letter.*(InboundPayload|Disassociate)")).Mute();
             systemB.EventStream.Publish(new Mute(new WarningFilter(new RegexMatcher(new Regex("received dead letter.*(InboundPayload|Disassociate)"))),
                 new ErrorFilter(typeof(EndpointException)),
                 new ErrorFilter(new StartsWithString("AssociationError"))));
-            base.BeforeTermination();
+
+            await base.BeforeTerminationAsync();
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterTerminationAsync()
         {
-            Shutdown(systemB);
-            base.AfterTermination();
+            await ShutdownAsync(systemB);
+            await base.AfterTerminationAsync();
         }
 
         #endregion
