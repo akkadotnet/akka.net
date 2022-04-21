@@ -26,16 +26,16 @@ namespace Akka.Cluster
     {
         // Important - don't use Cluster.Get(Context.System) in constructor because that would
         // cause deadlock. See startup sequence in ClusterDaemon.
-        private readonly Lazy<Cluster> _cluster;
+        private readonly Cluster _cluster;
 
-        public bool VerboseHeartbeat => _cluster.Value.Settings.VerboseHeartbeatLogging;
+        public bool VerboseHeartbeat => _cluster.Settings.VerboseHeartbeatLogging;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public ClusterHeartbeatReceiver(Func<Cluster> getCluster)
+        public ClusterHeartbeatReceiver(Cluster cluster)
         {
-            _cluster = new Lazy<Cluster>(getCluster);
+            _cluster = cluster;
         }
 
         protected override void OnReceive(object message)
@@ -44,8 +44,8 @@ namespace Akka.Cluster
             {
                 case ClusterHeartbeatSender.Heartbeat hb:
                     // TODO log the sequence nr once serializer is enabled
-                    if(VerboseHeartbeat) _cluster.Value.CurrentInfoLogger.LogDebug("Heartbeat from [{0}]", hb.From);
-                    Sender.Tell(new ClusterHeartbeatSender.HeartbeatRsp(_cluster.Value.SelfUniqueAddress,
+                    if(VerboseHeartbeat) _cluster.CurrentInfoLogger.LogDebug("Heartbeat from [{0}]", hb.From);
+                    Sender.Tell(new ClusterHeartbeatSender.HeartbeatRsp(_cluster.SelfUniqueAddress,
                         hb.SequenceNr, hb.CreationTimeNanos));
                     break;
                 default:
@@ -54,7 +54,7 @@ namespace Akka.Cluster
             }
         }
 
-        public static Props Props(Func<Cluster> getCluster)
+        public static Props Props(Cluster getCluster)
         {
             return Akka.Actor.Props.Create(() => new ClusterHeartbeatReceiver(getCluster));
         }

@@ -895,7 +895,7 @@ namespace Akka.Cluster
             _cluster = cluster;
             _coreSupervisor = Context.ActorOf(Props.Create<ClusterCoreSupervisor>(), "core");
 
-            Context.ActorOf(ClusterHeartbeatReceiver.Props(() => _cluster), "heartbeatReceiver");
+            Context.ActorOf(ClusterHeartbeatReceiver.Props(cluster), "heartbeatReceiver");
         }
 
         protected override void PostStop()
