@@ -86,11 +86,13 @@ namespace Akka.Cluster.SBR
             {
                 _cluster = Cluster.Get(Context.System);
                 _cluster.Subscribe(Self, InitialStateAsEvents, typeof(IClusterDomainEvent));
+                return true;
             }
             catch (Exception ex)
             {
                 Timers.StartSingleTimer(AcquireClusterKey, AcquireCluster.Instance, TimeSpan.FromSeconds(0.5));
                 Log.Warning("Received error when trying to resolve Cluster - retrying in 500ms");
+                return false;
             }
         }
 
