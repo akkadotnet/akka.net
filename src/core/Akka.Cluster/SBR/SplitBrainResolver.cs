@@ -90,8 +90,8 @@ namespace Akka.Cluster.SBR
             }
             catch (Exception ex)
             {
-                Timers.StartSingleTimer(AcquireClusterKey, AcquireCluster.Instance, TimeSpan.FromSeconds(0.5));
-                Log.Warning("Received error when trying to resolve Cluster - retrying in 500ms");
+                Timers.StartSingleTimer(AcquireClusterKey, AcquireCluster.Instance, TimeSpan.FromMilliseconds(20));
+                Log.Warning("Received error when trying to resolve Cluster - retrying in 20ms");
                 return false;
             }
         }
