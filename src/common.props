@@ -27,7 +27,7 @@
     <FsCheckVersion>2.16.4</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>4.7.0</ConfigurationManagerVersion>
-    <MultiNodeAdapterVersion>1.1.0</MultiNodeAdapterVersion>
+    <MultiNodeAdapterVersion>1.1.1</MultiNodeAdapterVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
