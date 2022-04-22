@@ -730,7 +730,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ReceiveN(int, CancellationToken)"/>
         public async IAsyncEnumerable<object> ReceiveNAsync(
             int numberOfMessages,
-            [EnumeratorCancellation] CancellationToken cancellationToken)
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var enumerable = InternalReceiveNAsync(numberOfMessages, RemainingOrDefault, true, cancellationToken)
                 .ConfigureAwait(false).WithCancellation(cancellationToken);
