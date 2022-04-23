@@ -483,7 +483,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_Work_if_pull_is_exercised_from_both_substream_and_main()
+        public void GroupBy_must_work_if_pull_is_exercised_from_both_substream_and_main()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -512,6 +512,63 @@ namespace Akka.Streams.Tests.Dsl
 
                 // Cleanup, not part of the actual test
                 substream.Cancel();
+                downstreamMaster.Cancel();
+                upstream.SendComplete();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void GroupBy_must_work_if_pull_is_exercised_from_multiple_substreams_while_downstream_is_backpressuring()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstreamMaster = this.CreateSubscriberProbe<Source<int, NotUsed>>();
+
+                Source.FromPublisher(upstream)
+                    .Via(new GroupBy<int, int>(10, element => element))
+                    .RunWith(Sink.FromSubscriber(downstreamMaster), Materializer);
+
+                var substream1 = this.CreateSubscriberProbe<int>();
+                downstreamMaster.Request(1);
+                upstream.SendNext(1);
+                downstreamMaster.ExpectNext().RunWith(Sink.FromSubscriber(substream1), Materializer);
+
+                var substream2 = this.CreateSubscriberProbe<int>();
+                downstreamMaster.Request(1);
+                upstream.SendNext(2);
+                downstreamMaster.ExpectNext().RunWith(Sink.FromSubscriber(substream2), Materializer);
+
+                substream1.Request(1);
+                substream1.ExpectNext(1);
+                substream2.Request(1);
+                substream2.ExpectNext(2);
+
+                // Both substreams pull
+                substream1.Request(1);
+                substream2.Request(1);
+
+                // Upstream sends new groups
+                upstream.SendNext(3);
+                upstream.SendNext(4);
+
+                var substream3 = this.CreateSubscriberProbe<int>();
+                var substream4 = this.CreateSubscriberProbe<int>();
+                downstreamMaster.Request(1);
+                downstreamMaster.ExpectNext().RunWith(Sink.FromSubscriber(substream3), Materializer);
+                downstreamMaster.Request(1);
+                downstreamMaster.ExpectNext().RunWith(Sink.FromSubscriber(substream4), Materializer);
+
+                substream3.Request(1);
+                substream3.ExpectNext(3);
+                substream4.Request(1);
+                substream4.ExpectNext(4);
+
+                // Cleanup, not part of the actual test
+                substream1.Cancel();
+                substream2.Cancel();
+                substream3.Cancel();
+                substream4.Cancel();
                 downstreamMaster.Cancel();
                 upstream.SendComplete();
             }, Materializer);
@@ -681,7 +738,7 @@ namespace Akka.Streams.Tests.Dsl
                         map[key] = new SubFlowState(state.Probe, false, null);
                     }
                     else if (props.BlockingNextElement == null)
-                     break;
+                        break;
                 }
             }
 

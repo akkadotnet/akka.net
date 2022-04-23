@@ -181,7 +181,7 @@ namespace Akka.Streams.Implementation.Fusing
     internal sealed class PrefixAndTail<T> : GraphStage<FlowShape<T, (IImmutableList<T>, Source<T, NotUsed>)>>
     {
         #region internal classes
-        
+
         private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private const string SubscriptionTimer = "SubstreamSubscriptionTimer";
@@ -205,11 +205,11 @@ namespace Akka.Streams.Implementation.Fusing
                     Pull(_stage._in);
                     _tailSource.SetHandler(new LambdaOutHandler(onPull: () => Pull(_stage._in)));
                 });
-                
+
                 SetHandler(_stage._in, this);
                 SetHandler(_stage._out, this);
             }
-            
+
             protected internal override void OnTimer(object timerKey)
             {
                 var materializer = ActorMaterializerHelper.Downcast(Interpreter.Materializer);
@@ -360,7 +360,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <typeparam name="TKey">TBD</typeparam>
     internal sealed class GroupBy<T, TKey> : GraphStage<FlowShape<T, Source<T, NotUsed>>>
     {
-        #region Loigc 
+        #region Logic 
 
         private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
@@ -370,7 +370,7 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly HashSet<SubstreamSource> _substreamsJustStarted = new HashSet<SubstreamSource>();
             private readonly Lazy<Decider> _decider;
             private TimeSpan _timeout;
-            private SubstreamSource _substreamWaitingToBePushed;
+            private Option<SubstreamSource> _substreamWaitingToBePushed = Option<SubstreamSource>.None;
             private Option<TKey> _nextElementKey = Option<TKey>.None;
             private Option<T> _nextElementValue = Option<T>.None;
             private long _nextId;
@@ -379,12 +379,12 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(GroupBy<T, TKey> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
-                
+
                 _decider = new Lazy<Decider>(() =>
                 {
                     var attribute = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                     return attribute != null ? attribute.Decider : Deciders.StoppingDecider;
-                }); 
+                });
 
                 SetHandler(_stage.In, this);
                 SetHandler(_stage.Out, this);
@@ -431,11 +431,12 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPull()
             {
-                if (_substreamWaitingToBePushed != null)
+                if (_substreamWaitingToBePushed.HasValue)
                 {
-                    Push(_stage.Out, Source.FromGraph(_substreamWaitingToBePushed.Source));
-                    ScheduleOnce(_substreamWaitingToBePushed.Key.Value, _timeout);
-                    _substreamWaitingToBePushed = null;
+                    var substreamSource = _substreamWaitingToBePushed.Value;
+                    Push(_stage.Out, Source.FromGraph(substreamSource.Source));
+                    ScheduleOnce(substreamSource.Key.Value, _timeout);
+                    _substreamWaitingToBePushed = Option<SubstreamSource>.None;
                 }
                 else
                 {
@@ -500,7 +501,7 @@ namespace Akka.Streams.Implementation.Fusing
                 FailStage(ex);
             }
 
-            private bool NeedToPull => !(HasBeenPulled(_stage.In) || IsClosed(_stage.In) || HasNextElement);
+            private bool NeedToPull => !(HasBeenPulled(_stage.In) || IsClosed(_stage.In) || HasNextElement || _substreamWaitingToBePushed.HasValue);
 
             public override void PreStart()
             {
@@ -530,7 +531,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     Push(_stage.Out, Source.FromGraph(substreamSource.Source));
                     ScheduleOnce(key, _timeout);
-                    _substreamWaitingToBePushed = null;
+                    _substreamWaitingToBePushed = Option<SubstreamSource>.None;
                 }
                 else
                 {
@@ -628,7 +629,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             _maxSubstreams = maxSubstreams;
             _keyFor = keyFor;
-            
+
             Shape = new FlowShape<T, Source<T, NotUsed>>(In, Out);
         }
 
@@ -778,7 +779,7 @@ namespace Akka.Streams.Implementation.Fusing
                     else
                         // Start draining
                         if (!_logic.HasBeenPulled(_inlet))
-                            _logic.Pull(_inlet);
+                        _logic.Pull(_inlet);
                 }
 
                 public override void OnPush()
@@ -1010,7 +1011,7 @@ namespace Akka.Streams.Implementation.Fusing
         internal class RequestOneScheduledBeforeMaterialization : CommandScheduledBeforeMaterialization
         {
             public static readonly RequestOneScheduledBeforeMaterialization Instance = new RequestOneScheduledBeforeMaterialization(RequestOne.Instance);
-            
+
             private RequestOneScheduledBeforeMaterialization(ICommand command) : base(command)
             {
             }
@@ -1046,7 +1047,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
             }
         }
-        
+
         internal class Cancel : ICommand
         {
             public static readonly Cancel Instance = new Cancel();
