@@ -575,6 +575,50 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void GroupBy_must_cancel_if_downstream_has_cancelled_and_all_substreams_cancel()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstreamMaster = this.CreateSubscriberProbe<Source<int, NotUsed>>();
+
+                Source.FromPublisher(upstream)
+                    .Via(new GroupBy<int, int>(10, element => element))
+                    .RunWith(Sink.FromSubscriber(downstreamMaster), Materializer);
+
+                var substream1 = this.CreateSubscriberProbe<int>();
+                downstreamMaster.Request(1);
+                upstream.SendNext(1);
+                downstreamMaster.ExpectNext().RunWith(Sink.FromSubscriber(substream1), Materializer);
+
+                var substream2 = this.CreateSubscriberProbe<int>();
+                downstreamMaster.Request(1);
+                upstream.SendNext(2);
+                downstreamMaster.ExpectNext().RunWith(Sink.FromSubscriber(substream2), Materializer);
+
+                // Cancel downstream
+                downstreamMaster.Cancel();
+
+                // Both substreams still work
+                substream1.Request(1);
+                substream1.ExpectNext(1);
+                substream2.Request(1);
+                substream2.ExpectNext(2);
+
+                // New keys are ignored
+                upstream.SendNext(3);
+                upstream.SendNext(4);
+
+                // Cancel all substreams
+                substream1.Cancel();
+                substream2.Cancel();
+
+                // Upstream gets cancelled
+                upstream.ExpectCancellation();
+            }, Materializer);
+        }
+
+        [Fact]
         public void GroupBy_must_work_with_random_demand()
         {
             this.AssertAllStagesStopped(() =>

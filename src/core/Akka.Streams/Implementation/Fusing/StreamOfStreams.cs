@@ -15,7 +15,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -464,9 +463,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnDownstreamFinish()
             {
-                if (_activeSubstreams.Count == 0)
-                    CompleteStage();
-                else
+                if (!TryCancel()) 
                     SetKeepGoing(true);
             }
 
@@ -486,6 +483,18 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     foreach (var value in _activeSubstreams.Values)
                         value.Complete();
+                    CompleteStage();
+                    return true;
+                }
+
+                return false;
+            }
+
+            private bool TryCancel()
+            {
+                // if there's no active substreams or there's only one but it's not been pushed yet
+                if (_activeSubstreams.Count == 0 || (_activeSubstreams.Count == 1 && _substreamWaitingToBePushed.HasValue))
+                {
                     CompleteStage();
                     return true;
                 }
@@ -602,15 +611,12 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public void OnDownstreamFinish()
                 {
-                    if(_logic.HasNextElement && _logic._nextElementKey.Equals(Key))
-                        _logic.ClearNextElement();
-                    if (FirstPush)
-                        _logic._firstPushCounter--;
+                    if(_logic.HasNextElement && _logic._nextElementKey.Equals(Key)) _logic.ClearNextElement();
+                    if (FirstPush) _logic._firstPushCounter--;
                     CompleteSubStream();
-                    if (_logic.IsClosed(_logic._stage.In))
-                        _logic.TryCompleteAll();
-                    else if (_logic.NeedToPull)
-                        _logic.Pull(_logic._stage.In);
+                    if (_logic.IsClosed(_logic._stage.Out)) _logic.TryCancel();
+                    if (_logic.IsClosed(_logic._stage.In)) _logic.TryCompleteAll(); 
+                    else if (_logic.NeedToPull) _logic.Pull(_logic._stage.In);
                 }
             }
         }
