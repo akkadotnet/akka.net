@@ -410,7 +410,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     else
                     {
-                        if (_activeSubstreams.Count == _stage._maxSubstreams)
+                        if (_activeSubstreams.Count + _closedSubstreams.Count == _stage._maxSubstreams)
                             throw new TooManySubstreamsOpenException();
                         else if (_closedSubstreams.Contains(key) && !HasBeenPulled(_stage.In))
                             Pull(_stage.In);

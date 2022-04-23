@@ -38,63 +38,6 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private sealed class StreamPuppet
-        {
-            private readonly TestSubscriber.ManualProbe<int> _probe;
-            private readonly ISubscription _subscription;
-
-            public StreamPuppet(IPublisher<int> p, TestKitBase kit)
-            {
-                _probe = kit.CreateManualSubscriberProbe<int>();
-                p.Subscribe(_probe);
-                _subscription = _probe.ExpectSubscription();
-            }
-
-            public void Request(int demand) => _subscription.Request(demand);
-
-            public void ExpectNext(int element) => _probe.ExpectNext(element);
-
-            public void ExpectNoMsg(TimeSpan max) => _probe.ExpectNoMsg(max);
-
-            public void ExpectComplete() => _probe.ExpectComplete();
-
-            public void ExpectError(Exception ex) => _probe.ExpectError().Should().Be(ex);
-
-            public void Cancel() => _subscription.Cancel();
-        }
-
-        private void WithSubstreamsSupport(int groupCount = 2, int elementCount = 6, int maxSubstream = -1,
-            Action<TestSubscriber.ManualProbe<(int, Source<int, NotUsed>)>, ISubscription, Func<int, Source<int, NotUsed>>> run = null)
-        {
-
-            var source = Source.From(Enumerable.Range(1, elementCount)).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            var max = maxSubstream > 0 ? maxSubstream : groupCount;
-            var groupStream =
-                Source.FromPublisher(source)
-                    .GroupBy(max, x => x % groupCount)
-                    .Lift(x => x % groupCount)
-                    .RunWith(Sink.AsPublisher<(int, Source<int, NotUsed>)>(false), Materializer);
-            var masterSubscriber = this.CreateManualSubscriberProbe<(int, Source<int, NotUsed>)>();
-
-            groupStream.Subscribe(masterSubscriber);
-            var masterSubscription = masterSubscriber.ExpectSubscription();
-
-            run?.Invoke(masterSubscriber, masterSubscription, expectedKey =>
-            {
-                masterSubscription.Request(1);
-                var tuple = masterSubscriber.ExpectNext();
-                tuple.Item1.Should().Be(expectedKey);
-                return tuple.Item2;
-            });
-        }
-
-        private ByteString RandomByteString(int size)
-        {
-            var a = new byte[size];
-            ThreadLocalRandom.Current.NextBytes(a);
-            return ByteString.FromBytes(a);
-        }
-
         [Fact]
         public void GroupBy_must_work_in_the_happy_case()
         {
@@ -167,11 +110,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_support_cancelling_substreams()
+        public void GroupBy_must_accept_cancelling_substreams()
         {
             this.AssertAllStagesStopped(() =>
             {
-                WithSubstreamsSupport(2, run: (masterSubscriber, masterSubscription, getSubFlow) =>
+                WithSubstreamsSupport(2, maxSubstream: 3, run: (masterSubscriber, masterSubscription, getSubFlow) =>
                 {
                     new StreamPuppet(getSubFlow(1).RunWith(Sink.AsPublisher<int>(false), Materializer), this).Cancel();
                     var substream = new StreamPuppet(getSubFlow(0).RunWith(Sink.AsPublisher<int>(false), Materializer), this);
@@ -738,6 +681,63 @@ namespace Akka.Streams.Tests.Dsl
                 }
                 upstreamSubscription.SendComplete();
             }, Materializer);
+        }
+
+        private sealed class StreamPuppet
+        {
+            private readonly TestSubscriber.ManualProbe<int> _probe;
+            private readonly ISubscription _subscription;
+
+            public StreamPuppet(IPublisher<int> p, TestKitBase kit)
+            {
+                _probe = kit.CreateManualSubscriberProbe<int>();
+                p.Subscribe(_probe);
+                _subscription = _probe.ExpectSubscription();
+            }
+
+            public void Request(int demand) => _subscription.Request(demand);
+
+            public void ExpectNext(int element) => _probe.ExpectNext(element);
+
+            public void ExpectNoMsg(TimeSpan max) => _probe.ExpectNoMsg(max);
+
+            public void ExpectComplete() => _probe.ExpectComplete();
+
+            public void ExpectError(Exception ex) => _probe.ExpectError().Should().Be(ex);
+
+            public void Cancel() => _subscription.Cancel();
+        }
+
+        private void WithSubstreamsSupport(int groupCount = 2, int elementCount = 6, int maxSubstream = -1,
+            Action<TestSubscriber.ManualProbe<(int, Source<int, NotUsed>)>, ISubscription, Func<int, Source<int, NotUsed>>> run = null)
+        {
+
+            var source = Source.From(Enumerable.Range(1, elementCount)).RunWith(Sink.AsPublisher<int>(false), Materializer);
+            var max = maxSubstream > 0 ? maxSubstream : groupCount;
+            var groupStream =
+                Source.FromPublisher(source)
+                    .GroupBy(max, x => x % groupCount)
+                    .Lift(x => x % groupCount)
+                    .RunWith(Sink.AsPublisher<(int, Source<int, NotUsed>)>(false), Materializer);
+            var masterSubscriber = this.CreateManualSubscriberProbe<(int, Source<int, NotUsed>)>();
+
+            groupStream.Subscribe(masterSubscriber);
+            var masterSubscription = masterSubscriber.ExpectSubscription();
+
+            run?.Invoke(masterSubscriber, masterSubscription, expectedKey =>
+            {
+                masterSubscription.Request(1);
+                var tuple = masterSubscriber.ExpectNext();
+                tuple.Item1.Should().Be(expectedKey);
+                return tuple.Item2;
+            });
+        }
+
+        private ByteString RandomByteString(int size)
+        {
+            var a = new byte[size];
+            ThreadLocalRandom.Current.NextBytes(a);
+            return ByteString.FromBytes(a);
         }
 
         private sealed class SubFlowState
