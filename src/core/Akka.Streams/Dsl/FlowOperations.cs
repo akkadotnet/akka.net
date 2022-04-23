@@ -1315,48 +1315,75 @@ namespace Akka.Streams.Dsl
         /// This operation demultiplexes the incoming stream into separate output
         /// streams, one for each element key. The key is computed for each element
         /// using the given function. When a new key is encountered for the first time
-        /// it is emitted to the downstream subscriber together with a fresh
-        /// flow that will eventually produce all the elements of the substream
-        /// for that key. Not consuming the elements from the created streams will
-        /// stop this processor from processing more elements, therefore you must take
-        /// care to unblock (or cancel) all of the produced streams even if you want
-        /// to consume only one of them.
-        /// 
+        /// a new substream is opened and subsequently fed with all elements belonging to
+        /// that key.
+        /// <para>
+        /// WARNING: If <paramref name="allowClosedSubstreamRecreation"/> is set to false (default behavior) the operator 
+        /// keeps track of all keys of streams that have already been closed. If you expect an infinite number of keys this 
+        /// can cause memory issues. Elements belonging to those keys are drained directly and not send to the substream.
+        /// </para>
+        /// <para>
+        /// Note: If <paramref name="allowClosedSubstreamRecreation"/> is set to true substream completion and incoming 
+        /// elements are subject to race-conditions. If elements arrive for a stream that is in the process of closing 
+        /// these elements might get lost.
+        /// </para>
+        /// <para>
+        /// The object returned from this method is not a normal <see cref="Flow"/>, it is a 
+        /// <see cref="SubFlow{TOut, TMat, TClosed}"/>. This means that after this operator 
+        /// all transformations are applied to all encountered substreams in the same fashion. 
+        /// Substream mode is exited either by closing the substream (i.e. connecting it to a <see cref="Sink"/>)
+        /// or by merging the substreams back together; see the <c>To</c> and <c>MergeBack</c> methods
+        /// on <see cref="SubFlow{TOut, TMat, TClosed}"/> for more information.
+        /// </para>
+        /// <para>
+        /// It is important to note that the substreams also propagate back-pressure as any other stream, which means 
+        /// that blocking one substream will block the <c>GroupBy</c> operator itself —and thereby all substreams— once all 
+        /// internal or explicit buffers are filled.
+        /// </para>
+        /// <para>
         /// If the group by function <paramref name="groupingFunc"/> throws an exception and the supervision decision
-        /// is <see cref="Supervision.Directive.Stop"/> the stream and substreams will be completed
-        /// with failure.
-        /// 
+        /// is <see cref="Supervision.Directive.Stop"/> the stream and substreams will be completed with failure.
+        /// </para>
+        /// <para>
         /// If the group by <paramref name="groupingFunc"/> throws an exception and the supervision decision
         /// is <see cref="Supervision.Directive.Resume"/> or <see cref="Supervision.Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
-        /// 
-        /// Function <paramref name="groupingFunc"/>  MUST NOT return null. This will throw exception and trigger supervision decision mechanism.
-        /// <para>
-        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
         /// </para>
         /// <para>
-        /// Emits when an element for which the grouping function returns a group that has not yet been created.
-        /// Emits the new group
+        /// Function <paramref name="groupingFunc"/> MUST NOT return <c>null</c>. This will throw exception and trigger supervision decision mechanism.
         /// </para>
-        /// Backpressures when there is an element pending for a group whose substream backpressures
-        /// <para>
-        /// Completes when upstream completes
-        /// </para>
-        /// Cancels when downstream cancels and all substreams cancel
+        /// <para>**Emits when** an element for which the grouping function returns a group that has not yet been created. Emits the new group.</para>
+        /// <para>**Backpressures when** there is an element pending for a group whose substream backpressures</para>
+        /// <para>**Completes when** upstream completes</para>
+        /// <para>**Cancels when** downstream cancels and all substreams cancel</para>
         /// </summary> 
         /// <typeparam name="TIn">TBD</typeparam>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <typeparam name="TKey">TBD</typeparam>
         /// <param name="flow">TBD</param>
-        /// <param name="maxSubstreams">TBD</param>
-        /// <param name="groupingFunc">TBD</param>
+        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails</param>
+        /// <param name="groupingFunc">Computes the key for each element</param>
+        /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
         /// <returns>TBD</returns>
-        public static SubFlow<TOut, TMat, Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Flow<TIn, TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc)
-        {
-            return flow.GroupBy(maxSubstreams, groupingFunc,
-                (f, s) => ((Flow<TIn, Source<TOut, NotUsed>, TMat>) f).To(s));
-        }
+        public static SubFlow<TOut, TMat, Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Flow<TIn, TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc, bool allowClosedSubstreamRecreation) => 
+            flow.GroupBy(maxSubstreams, groupingFunc, (f, s) => ((Flow<TIn, Source<TOut, NotUsed>, TMat>)f).To(s), allowClosedSubstreamRecreation);
+
+        /// <summary>
+        /// This operation demultiplexes the incoming stream into separate output
+        /// streams, one for each element key. The key is computed for each element
+        /// using the given function. When a new key is encountered for the first time
+        /// a new substream is opened and subsequently fed with all elements belonging to
+        /// that key.
+        /// <para>
+        /// WARNING: The stage keeps track of all keys of streams that have already been closed.
+        /// If you expect an infinite number of keys this can cause memory issues. Elements belonging
+        /// to those keys are drained directly and not send to the substream.
+        /// </para>
+        /// See <seealso cref="GroupBy{TIn, TOut, TMat, TKey}(Flow{TIn, TOut, TMat}, int, Func{TOut, TKey}, bool)"/>
+        /// </summary> 
+        public static SubFlow<TOut, TMat, Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Flow<TIn, TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc) =>
+            flow.GroupBy(maxSubstreams, groupingFunc, (f, s) => ((Flow<TIn, Source<TOut, NotUsed>, TMat>)f).To(s), false);
 
         /// <summary>
         /// This operation applies the given predicate to all incoming elements and
