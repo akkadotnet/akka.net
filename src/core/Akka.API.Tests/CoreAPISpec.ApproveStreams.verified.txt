@@ -1012,6 +1012,10 @@ namespace Akka.Streams
         Shaping = 0,
         Enforcing = 1,
     }
+    public class TooManySubstreamsOpenException : System.InvalidOperationException
+    {
+        public TooManySubstreamsOpenException() { }
+    }
     public abstract class TransformerLikeBase<TIn, TOut> : Akka.Streams.ITransformerLike<TIn, TOut>
     {
         protected TransformerLikeBase() { }

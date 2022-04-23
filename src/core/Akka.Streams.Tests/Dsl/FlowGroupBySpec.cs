@@ -428,6 +428,20 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void GroupBy_must_resume_when_exceeding_maxSubstreams()
+        {
+            var f = Flow.Create<int>().GroupBy(0, x => x).MergeSubstreams();
+            var (up, down) = ((Flow<int, int, NotUsed>)f)
+                .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
+                .RunWith(this.SourceProbe<int>(), this.SinkProbe<int>(), Materializer);
+
+            down.Request(1);
+
+            up.SendNext(1);
+            down.ExpectNoMsg(TimeSpan.FromSeconds(1));
+        }
+
+        [Fact]
         public void GroupBy_must_emit_subscribe_before_completed()
         {
             this.AssertAllStagesStopped(() =>
