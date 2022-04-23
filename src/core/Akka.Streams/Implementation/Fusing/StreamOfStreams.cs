@@ -520,14 +520,15 @@ namespace Akka.Streams.Implementation.Fusing
 
             protected internal override void OnTimer(object timerKey)
             {
-                var key = (TKey) timerKey;
-                if (_activeSubstreams.TryGetValue(key, out var substreamSource))
+                var key = (TKey)timerKey;
+                if (_activeSubstreams.ContainsKey(key))
                 {
-                    substreamSource.Timeout(_timeout);
-                    _closedSubstreams.Add(key);
+                    if (!_stage._allowClosedSubstreamRecreation)
+                    {
+                        _closedSubstreams.Add(key);
+                    }
                     _activeSubstreams.Remove(key);
-                    if (IsClosed(_stage.In))
-                        TryCompleteAll();
+                    if (IsClosed(_stage.In)) TryCompleteAll();
                 }
             }
 
@@ -574,7 +575,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     Complete();
                     _logic._activeSubstreams.Remove(Key.Value);
-                    _logic._closedSubstreams.Add(Key.Value);
+                    if (!_logic._stage._allowClosedSubstreamRecreation) _logic._closedSubstreams.Add(Key.Value);
                 }
 
                 private void TryCompleteHandler()
@@ -625,16 +626,19 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly int _maxSubstreams;
         private readonly Func<T, TKey> _keyFor;
+        private readonly bool _allowClosedSubstreamRecreation;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="maxSubstreams">TBD</param>
         /// <param name="keyFor">TBD</param>
-        public GroupBy(int maxSubstreams, Func<T, TKey> keyFor)
+        /// <param name="allowClosedSubstreamRecreation">TBD</param>
+        public GroupBy(int maxSubstreams, Func<T, TKey> keyFor, bool allowClosedSubstreamRecreation = false)
         {
             _maxSubstreams = maxSubstreams;
             _keyFor = keyFor;
+            _allowClosedSubstreamRecreation = allowClosedSubstreamRecreation;
 
             Shape = new FlowShape<T, Source<T, NotUsed>>(In, Out);
         }

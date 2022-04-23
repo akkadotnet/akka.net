@@ -575,6 +575,41 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void GroupBy_must_allow_to_recreate_an_already_closed_substream()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var f = Flow.Create<int>()
+                    .GroupBy(2, x => x, allowClosedSubstreamRecreation: true)
+                    .Take(1) // close the substream after 1 element
+                    .MergeSubstreams();
+
+                var (up, down) = ((Flow<int, int, NotUsed>)f)
+                    .RunWith(this.SourceProbe<int>(), this.SinkProbe<int>(), Materializer);
+
+                down.Request(4);
+
+                // Creates and closes substream "1"
+                up.SendNext(1);
+                down.ExpectNext(1);
+
+                // Creates and closes substream "2"
+                up.SendNext(2);
+                down.ExpectNext(2);
+
+                // Recreates and closes substream "1" twice
+                up.SendNext(1);
+                down.ExpectNext(1);
+                up.SendNext(1);
+                down.ExpectNext(1);
+
+                // Cleanup, not part of the actual test
+                up.SendComplete();
+                down.ExpectComplete();
+            }, Materializer);
+        }
+
+        [Fact]
         public void GroupBy_must_cancel_if_downstream_has_cancelled_and_all_substreams_cancel()
         {
             this.AssertAllStagesStopped(() =>
