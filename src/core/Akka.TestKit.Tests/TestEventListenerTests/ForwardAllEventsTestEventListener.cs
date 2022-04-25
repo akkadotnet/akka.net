@@ -7,9 +7,8 @@
 
 using Akka.Actor;
 using Akka.Event;
-using Akka.TestKit;
 
-namespace Akka.Testkit.Tests.TestEventListenerTests
+namespace Akka.TestKit.Tests.TestEventListenerTests
 {
     public class ForwardAllEventsTestEventListener : TestEventListener
     {
@@ -17,9 +16,9 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
 
         protected override void Print(LogEvent m)
         {           
-            if(m.Message is ForwardAllEventsTo)
+            if(m.Message is ForwardAllEventsTo to)
             {
-                _forwarder = ((ForwardAllEventsTo)m.Message).Forwarder;
+                _forwarder = to.Forwarder;
                 _forwarder.Tell("OK");
             }
             else if(_forwarder != null)
@@ -34,14 +33,12 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
 
         public class ForwardAllEventsTo
         {
-            private readonly IActorRef _forwarder;
-
             public ForwardAllEventsTo(IActorRef forwarder)
             {
-                _forwarder = forwarder;
+                Forwarder = forwarder;
             }
 
-            public IActorRef Forwarder { get { return _forwarder; } }
+            public IActorRef Forwarder { get; }
         }
     }
 
