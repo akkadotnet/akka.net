@@ -157,13 +157,13 @@ Wrap an actor extending ``ActorPublisher`` as a source.
 
 ### ActorRef
 
-Materialize an ``IActorRef``, sending messages to it will emit them on the stream. The actor contain
+Materialize an ``IActorRef``, sending messages to it will emit them on the stream. The actor contains
 a buffer but since communication is one way, there is no back pressure. Handling overflow is done by either dropping
-elements or failing the stream, the strategy is chosen by the user.
+elements or failing the stream; the strategy is chosen by the user.
 
-**emits** when there is demand and there are messages in the buffer or a message is sent to the actorref
+**emits** when there is demand and there are messages in the buffer or a message is sent to the ``IActorRef``
 
-**completes** when the actorref is sent ``Akka.Actor.Status.Success`` or ``PoisonPill``
+**completes** when the ``IActorRef`` is sent ``Akka.Actor.Status.Success``
 
 ### PreMaterialize
 
