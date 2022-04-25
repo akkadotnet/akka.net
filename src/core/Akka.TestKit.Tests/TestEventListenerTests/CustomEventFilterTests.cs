@@ -5,15 +5,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Event;
 using Xunit;
 
-namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
+namespace Akka.TestKit.Tests.TestEventListenerTests
 {
     public abstract class CustomEventFilterTestsBase : EventFilterTestBase
     {
-        // ReSharper disable ConvertToLambdaExpression
-        public CustomEventFilterTestsBase() : base("akka.loglevel=ERROR") { }
+        protected CustomEventFilterTestsBase() : base("akka.loglevel=ERROR") { }
 
         protected override void SendRawLogEventMessage(object message)
         {
@@ -23,25 +23,26 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         protected abstract EventFilterFactory CreateTestingEventFilter();
 
         [Fact]
-        public void Custom_filter_should_match()
+        public async Task Custom_filter_should_match()
         {
             var eventFilter = CreateTestingEventFilter();
-            eventFilter.Custom(logEvent => logEvent is Error && (string) logEvent.Message == "whatever").ExpectOne(() =>
-            {
-                Log.Error("whatever");
-            });
+            await eventFilter.Custom(logEvent => logEvent is Error && (string) logEvent.Message == "whatever")
+                .ExpectOneAsync(() =>
+                {
+                    Log.Error("whatever");
+                });
         }
 
         [Fact]
-        public void Custom_filter_should_match2()
+        public async Task Custom_filter_should_match2()
         {
             var eventFilter = CreateTestingEventFilter();
-            eventFilter.Custom<Error>(logEvent => (string)logEvent.Message == "whatever").ExpectOne(() =>
-            {
-                Log.Error("whatever");
-            });
+            await eventFilter.Custom<Error>(logEvent => (string)logEvent.Message == "whatever")
+                .ExpectOneAsync(() =>
+                {
+                    Log.Error("whatever");
+                });
         }
-        // ReSharper restore ConvertToLambdaExpression
     }
 
     public class CustomEventFilterTests : CustomEventFilterTestsBase
