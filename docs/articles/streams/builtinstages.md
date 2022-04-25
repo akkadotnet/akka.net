@@ -1004,11 +1004,13 @@ This operation demultiplexes the incoming stream into separate output streams, o
 key is computed for each element using the given function. When a new key is encountered for the first time
 a new substream is opened and subsequently fed with all elements belonging to that key.
 
+<!-- markdownlint-disable MD028 -->
 > [!NOTE]
 > If `allowClosedSubstreamRecreation` is set to `true` substream completion and incoming elements are subject to race-conditions. If elements arrive for a stream that is in the process of closing these elements might get lost.
 
 > [!WARNING]
 > If `allowClosedSubstreamRecreation` is set to `false` (default behavior) the stage keeps track of all keys of streams that have already been closed. If you expect an infinite number of keys this can cause memory issues. Elements belonging to those keys are drained directly and not send to the substream.
+<!-- markdownlint-enable MD028 -->
 
 **emits** an element for which the grouping function returns a group that has not yet been created. Emits the new group
 there is an element pending for a group whose substream backpressures
