@@ -114,8 +114,7 @@ for this Source type, i.e. elements will be dropped if the buffer is filled by s
 at a rate that is faster than the stream can consume. You should consider using ``Source.Queue``
 if you want a backpressured actor interface.
 
-The stream can be completed successfully by sending ``Akka.Actor.PoisonPill`` or
-``Akka.Actor.Status.Success`` to the actor reference.
+The stream can be completed successfully by sending `Akka.Actor.Status.Success` to the actor reference.
 
 The stream can be completed with failure by sending ``Akka.Actor.Status.Failure`` to the
 actor reference.
