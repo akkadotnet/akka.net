@@ -7,11 +7,14 @@
 
 using System;
 using System.Diagnostics;
-using Akka.TestKit;
+using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Sdk;
+using FluentAssertions;
+using static FluentAssertions.FluentActions;
 
-namespace Akka.Testkit.Tests.TestKitBaseTests
+namespace Akka.TestKit.Tests.TestKitBaseTests
 {
     public class DilatedTests : AkkaSpec
     {
@@ -33,37 +36,41 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         }
 
         [Fact]
-        public void AwaitCondition_should_dilate_timeout()
+        public async Task AwaitConditionAsync_should_dilate_timeout()
         {
             var stopwatch = Stopwatch.StartNew();
-            AssertThrows<TrueException>(() => AwaitCondition(() => false, TimeSpan.FromMilliseconds(Timeout)));
+            await Awaiting(() => AwaitConditionAsync(() => Task.FromResult(false), TimeSpan.FromMilliseconds(Timeout)))
+                .Should().ThrowAsync<TrueException>();
             stopwatch.Stop();
             AssertDilated(stopwatch.ElapsedMilliseconds, $"Expected the timeout to be {ExpectedTimeout} but in fact it was {stopwatch.ElapsedMilliseconds}.");
         }
 
         [Fact]
-        public void ReceiveN_should_dilate_timeout()
+        public async Task ReceiveNAsync_should_dilate_timeout()
         {
             var stopwatch = Stopwatch.StartNew();
-            AssertThrows<TrueException>(() => ReceiveN(42, TimeSpan.FromMilliseconds(Timeout)));
+            await Awaiting(async () => await ReceiveNAsync(42, TimeSpan.FromMilliseconds(Timeout)).ToListAsync())
+                .Should().ThrowAsync<TrueException>();
             stopwatch.Stop();
             AssertDilated(stopwatch.ElapsedMilliseconds, $"Expected the timeout to be {ExpectedTimeout} but in fact it was {stopwatch.ElapsedMilliseconds}.");
         }
 
         [Fact]
-        public void ExpectMsgAllOf_should_dilate_timeout()
+        public async Task ExpectMsgAllOfAsync_should_dilate_timeout()
         {
             var stopwatch = Stopwatch.StartNew();
-            AssertThrows<TrueException>(() => ExpectMsgAllOf(TimeSpan.FromMilliseconds(Timeout), new []{ "1", "2" }));
+            await Awaiting(async () => await ExpectMsgAllOfAsync(TimeSpan.FromMilliseconds(Timeout), new []{ "1", "2" }).ToListAsync())
+                .Should().ThrowAsync<TrueException>();
             stopwatch.Stop();
             AssertDilated(stopwatch.ElapsedMilliseconds, $"Expected the timeout to be {ExpectedTimeout} but in fact it was {stopwatch.ElapsedMilliseconds}.");
         }
 
         [Fact]
-        public void FishForMessage_should_dilate_timeout()
+        public async Task FishForMessageAsync_should_dilate_timeout()
         {
             var stopwatch = Stopwatch.StartNew();
-            AssertThrows<TrueException>(() => FishForMessage(_=>false, TimeSpan.FromMilliseconds(Timeout)));
+            await Awaiting(async () => await FishForMessageAsync(_=>false, TimeSpan.FromMilliseconds(Timeout)))
+                .Should().ThrowAsync<TrueException>();
             stopwatch.Stop();
             AssertDilated(stopwatch.ElapsedMilliseconds, $"Expected the timeout to be {ExpectedTimeout} but in fact it was {stopwatch.ElapsedMilliseconds}.");
         }
