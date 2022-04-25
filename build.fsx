@@ -108,8 +108,8 @@ let getAffectedProjects =
 Target "ComputeIncrementalChanges" (fun _ ->
     if runIncrementally then
         let targetBranch = match getBuildParam "targetBranch" with
-                            | "" -> "v1.4"
-                            | null -> "v1.4"
+                            | "" -> "dev"
+                            | null -> "dev"
                             | b -> b
         let incrementalistPath =
                 let incrementalistDir = toolsDir @@ "incrementalist"
