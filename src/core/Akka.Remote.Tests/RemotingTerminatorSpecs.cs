@@ -32,15 +32,15 @@ namespace Akka.Remote.Tests
             }
         ");
 
-        private ActorSystem Sys2;
+        private ActorSystem _sys2;
         
         public RemotingTerminatorSpecs(ITestOutputHelper output) : base(RemoteConfig, output) { }
 
         protected override async Task AfterAllAsync()
         {
             await base.AfterAllAsync();
-            if (Sys2 != null)
-                await ShutdownAsync(Sys2);
+            if (_sys2 != null)
+                await ShutdownAsync(_sys2);
         }
 
         [Fact]
@@ -57,8 +57,8 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task RemotingTerminator_should_shutdown_promptly_with_some_associations()
         {
-            Sys2 = ActorSystem.Create("System2", RemoteConfig);
-            var sys2Address = RARP.For(Sys2).Provider.DefaultAddress;
+            _sys2 = ActorSystem.Create("System2", RemoteConfig);
+            var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
 
             // open an association
             var associated = await Sys.ActorSelection(new RootActorPath(sys2Address)/"system"/"remote-watcher")
@@ -71,14 +71,14 @@ namespace Akka.Remote.Tests
             Assert.True(await terminationTask.AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
 
             // now terminate the second system
-            Assert.True(await Sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
+            Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
         }
 
         [Fact]
         public async Task RemotingTerminator_should_shutdown_properly_with_remotely_deployed_actor()
         {
-            Sys2 = ActorSystem.Create("System2", RemoteConfig);
-            var sys2Address = RARP.For(Sys2).Provider.DefaultAddress;
+            _sys2 = ActorSystem.Create("System2", RemoteConfig);
+            var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
             
             // open an association via remote deployment
             var associated =
@@ -91,7 +91,7 @@ namespace Akka.Remote.Tests
             
             
             // terminate the DEPLOYED system
-            Assert.True(await Sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
+            Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
             await ExpectTerminatedAsync(associated); // expect that the remote deployed actor is dead
 
             // now terminate the DEPLOYER system
@@ -104,8 +104,8 @@ namespace Akka.Remote.Tests
             await EventFilter.Exception<ShutDownAssociation>().ExpectAsync(0,
                 async () =>
                 {
-                    Sys2 = ActorSystem.Create("System2", RemoteConfig);
-                    var sys2Address = RARP.For(Sys2).Provider.DefaultAddress;
+                    _sys2 = ActorSystem.Create("System2", RemoteConfig);
+                    var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
 
                     // open an association via remote deployment
                     var associated = Sys.ActorOf(BlackHoleActor.Props.WithDeploy(Deploy.None.WithScope(new RemoteScope(sys2Address))), "remote");
@@ -116,7 +116,7 @@ namespace Akka.Remote.Tests
                     associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault).Result.MessageId.ShouldBe("foo");
 
                     // terminate the DEPLOYED system
-                    Assert.True(await Sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
+                    Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
                     await ExpectTerminatedAsync(associated); // expect that the remote deployed actor is dead
                     
                     // now terminate the DEPLOYER system
