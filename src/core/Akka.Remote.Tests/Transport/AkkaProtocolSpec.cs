@@ -236,9 +236,7 @@ namespace Akka.Remote.Tests.Transport
 
             await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
             
-            // Make sure that heartbeat has been called before checking the failure detector
-            await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
-            Assert.True(collaborators.FailureDetector.IsMonitoring);
+            await AwaitConditionAsync(() => collaborators.FailureDetector.IsMonitoring, DefaultTimeout);
 
             //keeps sending heartbeats
             await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
