@@ -58,6 +58,7 @@ namespace Akka.Remote.Tests
         public async Task RemotingTerminator_should_shutdown_promptly_with_some_associations()
         {
             _sys2 = ActorSystem.Create("System2", RemoteConfig);
+            InitializeLogger(_sys2);
             var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
 
             // open an association
@@ -78,6 +79,7 @@ namespace Akka.Remote.Tests
         public async Task RemotingTerminator_should_shutdown_properly_with_remotely_deployed_actor()
         {
             _sys2 = ActorSystem.Create("System2", RemoteConfig);
+            InitializeLogger(_sys2);
             var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
             
             // open an association via remote deployment
@@ -105,6 +107,7 @@ namespace Akka.Remote.Tests
                 async () =>
                 {
                     _sys2 = ActorSystem.Create("System2", RemoteConfig);
+                    InitializeLogger(_sys2);
                     var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
 
                     // open an association via remote deployment
@@ -113,7 +116,7 @@ namespace Akka.Remote.Tests
                     Watch(associated);
 
                     // verify that the association is open (don't terminate until handshake is finished)
-                    associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault).Result.MessageId.ShouldBe("foo");
+                    (await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault)).MessageId.ShouldBe("foo");
 
                     // terminate the DEPLOYED system
                     Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
