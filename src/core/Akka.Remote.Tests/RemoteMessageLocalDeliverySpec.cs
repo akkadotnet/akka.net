@@ -14,6 +14,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.TestKit.TestActors;
 using Xunit;
 using Xunit.Abstractions;
@@ -71,12 +72,12 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void RemoteActorRefProvider_should_correctly_resolve_valid_LocalActorRef_from_second_remote_system()
+        public async Task RemoteActorRefProvider_should_correctly_resolve_valid_LocalActorRef_from_second_remote_system()
         {
-           var sys2 = ActorSystem.Create("Sys2", RemoteConfiguration);
+            var sys2 = ActorSystem.Create("Sys2", RemoteConfiguration);
             try
             {
-                Within(TimeSpan.FromSeconds(15), () =>
+                await WithinAsync(TimeSpan.FromSeconds(15), async () =>
                 {
                     var actorRef = sys2.ActorOf(BlackHoleActor.Props, "myActor");
                     var sys2Address = RARP.For(sys2).Provider.DefaultAddress;
@@ -86,33 +87,31 @@ namespace Akka.Remote.Tests
                     var remoteActorRef = Sys.ActorSelection(actorPath).ResolveOne(TimeSpan.FromSeconds(3)).Result;
 
                     // disconnect us from the second actorsystem
-                    var mc =
-                        RARP.For(Sys)
-                            .Provider.Transport.ManagementCommand(new SetThrottle(sys2Address,
-                                ThrottleTransportAdapter.Direction.Both, Blackhole.Instance));
-                    Assert.True(mc.Wait(TimeSpan.FromSeconds(3)));
+                    Assert.True(await RARP.For(Sys)
+                        .Provider.Transport.ManagementCommand(new SetThrottle(sys2Address,
+                            ThrottleTransportAdapter.Direction.Both, Blackhole.Instance))
+                        .WithTimeout(TimeSpan.FromSeconds(3)));
 
                     // start deathwatch (won't be delivered initially)
                     Watch(remoteActorRef);
-                    Task.Delay(TimeSpan.FromSeconds(3)).Wait(); // if we delay the initial send, this spec will fail
+                    await Task.Delay(TimeSpan.FromSeconds(3)); // if we delay the initial send, this spec will fail
 
-                    var mc2 =
-                       RARP.For(Sys)
-                           .Provider.Transport.ManagementCommand(new SetThrottle(sys2Address,
-                               ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance));
-                    Assert.True(mc2.Wait(TimeSpan.FromSeconds(3)));
+                    Assert.True(await RARP.For(Sys)
+                        .Provider.Transport.ManagementCommand(new SetThrottle(sys2Address,
+                            ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance))
+                        .WithTimeout(TimeSpan.FromSeconds(3)));
 
                     // fire off another non-system message
-                    var ai =
-                        Sys.ActorSelection(actorPath).Ask<ActorIdentity>(new Identify(null), TimeSpan.FromSeconds(3)).Result;
+                    var ai = 
+                        await Sys.ActorSelection(actorPath).Ask<ActorIdentity>(new Identify(null), TimeSpan.FromSeconds(3));
 
                     remoteActorRef.Tell(PoisonPill.Instance); // WATCH should be applied first
-                    ExpectTerminated(remoteActorRef);
+                    await ExpectTerminatedAsync(remoteActorRef);
                 });
             }
             finally
             {
-                Assert.True(sys2.Terminate().Wait(TimeSpan.FromSeconds(5)));
+                await ShutdownAsync(sys2);
             }
         }
     }
