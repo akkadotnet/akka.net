@@ -552,7 +552,10 @@ namespace Akka.TestKit
             var wasShutdownDuringWait = await system.Terminate().AwaitWithTimeout(durationValue, cancellationToken);
             if(!wasShutdownDuringWait)
             {
-                const string msg = "Failed to stop [{0}] within [{1}] \n{2}";
+                // Forcefully close the ActorSystem to make sure we exit the test cleanly
+                ((ExtendedActorSystem) system).Guardian.Stop();
+                
+                const string msg = "Failed to stop [{0}] within [{1}]. ActorSystem is being forcefully shut down.\n{2}";
                 if(verifySystemShutdown)
                     throw new TimeoutException(string.Format(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree()));
                 system.Log.Warning(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree());

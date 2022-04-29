@@ -58,40 +58,40 @@ namespace Akka.Remote.Tests
 
 
         [Fact]
-        public void RemoteMetricsMustNotLogMessagesLargerThanFrameSizeExceeding()
+        public async Task RemoteMetricsMustNotLogMessagesLargerThanFrameSizeExceeding()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_subject.Path.Elements);
             sel.Tell(new byte[200]);
-            ExpectMsg<PayloadSize>();
+            await ExpectMsgAsync<PayloadSize>();
         }
 
         [Fact]
-        public void RemoteMetricsMustLogNewMessageSizeForTheSameMessageTypeLargerThanThePreviousOneOnTheThreshold()
+        public async Task RemoteMetricsMustLogNewMessageSizeForTheSameMessageTypeLargerThanThePreviousOneOnTheThreshold()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_subject.Path.Elements);
             sel.Tell(new byte[200]);
-            ExpectMsg<PayloadSize>();
+            await ExpectMsgAsync<PayloadSize>();
             sel.Tell(new byte[300]);
-            ExpectMsg<NewMaximum>();
+            await ExpectMsgAsync<NewMaximum>();
         }
 
 
         [Fact]
-        public void RemoteMetricsMustNotLogMessagesLessThanFrameSizeExceeding()
+        public async Task RemoteMetricsMustNotLogMessagesLessThanFrameSizeExceeding()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_subject.Path.Elements);
             sel.Tell(new byte[1]);
-            ExpectNoMsg();
+            await ExpectNoMsgAsync();
         }
 
         [Fact]
-        public void RemoteMetricsMustNotLogTheSameMessageSizeTwice()
+        public async Task RemoteMetricsMustNotLogTheSameMessageSizeTwice()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_subject.Path.Elements);
             sel.Tell(new byte[200]);
-            ExpectMsg<PayloadSize>();
+            await ExpectMsgAsync<PayloadSize>();
             sel.Tell(new byte[200]);
-            ExpectNoMsg();
+            await ExpectNoMsgAsync();
         }
 
         private class Subject : ActorBase
@@ -114,9 +114,8 @@ namespace Akka.Remote.Tests
 
             protected override bool Receive(object message)
             {
-                if (message is Info)
+                if (message is Info info)
                 {
-                    var info = ((Info) message);
                     if (info.Message.ToString().Contains("New maximum payload size for"))
                     {
                         _testActor.Tell(new NewMaximum());
