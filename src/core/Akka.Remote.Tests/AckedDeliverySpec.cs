@@ -16,7 +16,7 @@ using Xunit;
 namespace Akka.Remote.Tests
 {
     
-    public class AckedDeliverySpec : AkkaSpec
+    public class AckedDeliverySpec
     {
         sealed class Sequenced : IHasSequenceNumber
         {

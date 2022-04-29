@@ -117,19 +117,18 @@ namespace Akka.Remote.Tests.Transport
         private class TestFailureDetector : FailureDetector
         {
 #pragma warning disable CS0420
-            // ReSharper disable once InconsistentNaming
-            internal volatile bool isAvailable = true;
-            public override bool IsAvailable => Volatile.Read(ref isAvailable);
-
-            // ReSharper disable once InconsistentNaming
-            internal volatile bool called;
-            public override bool IsMonitoring => Volatile.Read(ref called);
-#pragma warning restore CS0420
+            private volatile bool _isAvailable = true;
+            public override bool IsAvailable => Volatile.Read(ref _isAvailable);
+            public void SetAvailable(bool available) => Volatile.Write(ref _isAvailable, available);
+            
+            private volatile bool _called;
+            public override bool IsMonitoring => Volatile.Read(ref _called);
 
             public override void HeartBeat()
             {
-                called = true;
+                Volatile.Write(ref _called, true);
             }
+#pragma warning restore CS0420
         }
 
         private readonly Config _config;
@@ -167,7 +166,7 @@ namespace Akka.Remote.Tests.Transport
 
             reader.Tell(TestAssociate(33), TestActor);
 
-            await AwaitConditionAsync(() => collaborators.FailureDetector.called, DefaultTimeout);
+            await AwaitConditionAsync(() => collaborators.FailureDetector.IsMonitoring, DefaultTimeout);
 
             var wrappedHandle = await ExpectMsgOfAsync(DefaultTimeout, "expected InboundAssociation", o =>
             {
@@ -181,7 +180,7 @@ namespace Akka.Remote.Tests.Transport
 
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
-            Assert.True(collaborators.FailureDetector.called);
+            Assert.True(collaborators.FailureDetector.IsMonitoring);
 
             // Heartbeat was sent in response to Associate
             await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
@@ -236,7 +235,8 @@ namespace Akka.Remote.Tests.Transport
                 failureDetector: collaborators.FailureDetector));
 
             await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
-            Assert.True(collaborators.FailureDetector.called);
+            
+            await AwaitConditionAsync(() => collaborators.FailureDetector.IsMonitoring, DefaultTimeout);
 
             //keeps sending heartbeats
             await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
@@ -393,9 +393,7 @@ namespace Akka.Remote.Tests.Transport
             //wait for one heartbeat
             await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
 
-#pragma warning disable CS0420
-            Volatile.Write(ref collaborators.FailureDetector.isAvailable, false);
-#pragma warning restore CS0420
+            collaborators.FailureDetector.SetAvailable(false);
 
             await ExpectMsgOfAsync("expected Disassociated(DisassociateInfo.Unknown", o =>
             {
