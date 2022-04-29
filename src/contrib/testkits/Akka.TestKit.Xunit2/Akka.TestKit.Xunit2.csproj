@@ -12,7 +12,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
