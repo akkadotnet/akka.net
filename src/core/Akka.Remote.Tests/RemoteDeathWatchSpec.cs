@@ -141,6 +141,7 @@ namespace Akka.Remote.Tests
 
             var probe = CreateTestProbe();
             probe.Watch(extinctRef);
+            (await probe.ExpectMsgAsync<Terminated>()).ActorRef.ShouldBe(extinctRef);
             probe.Unwatch(extinctRef);
 
             await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(5));
