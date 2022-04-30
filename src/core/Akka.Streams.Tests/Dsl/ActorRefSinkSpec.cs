@@ -9,7 +9,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -28,7 +27,7 @@ namespace Akka.Streams.Tests.Dsl
 
         public ActorMaterializer Materializer { get; }
 
-        public ActorRefSinkSpec(ITestOutputHelper output) : base(output, ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf"))
+        public ActorRefSinkSpec(ITestOutputHelper output) : base(output, StreamTestDefaultMailbox.DefaultConfig)
         {
             Materializer = Sys.Materializer();
         }

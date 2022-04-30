@@ -12,7 +12,7 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.IO;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;

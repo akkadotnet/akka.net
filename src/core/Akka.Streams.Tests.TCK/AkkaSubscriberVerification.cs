@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;

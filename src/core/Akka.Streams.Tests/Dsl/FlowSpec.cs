@@ -18,7 +18,6 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.TestEvent;
@@ -45,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         public ActorMaterializerSettings Settings { get; }
         private ActorMaterializer Materializer { get; }
 
-        public FlowSpec(ITestOutputHelper helper) : base(Config.WithFallback(ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")), helper)
+        public FlowSpec(ITestOutputHelper helper) : base(Config.WithFallback(StreamTestDefaultMailbox.DefaultConfig), helper)
         {
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 2);
             Materializer = ActorMaterializer.Create(Sys, Settings);

@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.Util;
 using NBench;
 using Reactive.Streams;

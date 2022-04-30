@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;

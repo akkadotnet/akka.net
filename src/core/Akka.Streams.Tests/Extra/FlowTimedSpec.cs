@@ -12,7 +12,6 @@ using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.Extra;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;

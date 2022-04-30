@@ -17,7 +17,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.IO;
 using Akka.Streams.IO;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
