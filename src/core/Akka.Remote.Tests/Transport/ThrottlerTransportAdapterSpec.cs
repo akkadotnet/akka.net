@@ -6,22 +6,22 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
-using static FluentAssertions.FluentActions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -29,7 +29,7 @@ namespace Akka.Remote.Tests.Transport
     {
         #region Setup / Config
 
-        public static Config ThrottlerTransportAdapterSpecConfig
+        private static Config ThrottlerTransportAdapterSpecConfig
         {
             get
             {
@@ -53,12 +53,12 @@ namespace Akka.Remote.Tests.Transport
         private const int PingPacketSize = 350;
         private const int MessageCount = 15;
         private const int BytesPerSecond = 700;
-        private static readonly long TotalTime = (MessageCount * PingPacketSize) / BytesPerSecond;
+        private const long TotalTime = (MessageCount * PingPacketSize) / BytesPerSecond;
 
         public class ThrottlingTester : ReceiveActor
         {
-            private IActorRef _remoteRef;
-            private IActorRef _controller;
+            private readonly IActorRef _remoteRef;
+            private readonly IActorRef _controller;
 
             private int _received = 0;
             private int _messageCount = MessageCount;
@@ -110,7 +110,7 @@ namespace Akka.Remote.Tests.Transport
                 {
                     if (ReferenceEquals(null, obj)) return false;
                     if (ReferenceEquals(this, obj)) return true;
-                    return obj is Lost && Equals((Lost) obj);
+                    return obj is Lost lost && Equals(lost);
                 }
 
                 public override int GetHashCode()
@@ -140,14 +140,15 @@ namespace Akka.Remote.Tests.Transport
         private readonly ActorSystem _systemB;
         private readonly IActorRef _remote;
 
+        private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
+            
         private RootActorPath RootB
-        {
-            get { return new RootActorPath(_systemB.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress); }
-        }
+            => new RootActorPath(_systemB.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress);
 
         private async Task<IActorRef> Here()
         {
-            var identity = await Sys.ActorSelection(RootB / "user" / "echo").Ask<ActorIdentity>(new Identify(null));
+            var identity = await Sys.ActorSelection(RootB / "user" / "echo").Ask<ActorIdentity>(new Identify(null))
+                .ShouldCompleteWithin(DefaultTimeout);
             return identity.Subject;
         }
 
@@ -157,7 +158,8 @@ namespace Akka.Remote.Tests.Transport
             var transport =
                 Sys.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
             
-            return await transport.ManagementCommand(new SetThrottle(rootBAddress, direction, mode));
+            return await transport.ManagementCommand(new SetThrottle(rootBAddress, direction, mode))
+                .ShouldCompleteWithin(DefaultTimeout);
         }
 
         private async Task<bool> Disassociate()
@@ -166,7 +168,8 @@ namespace Akka.Remote.Tests.Transport
             var transport =
                 Sys.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
             
-            return await transport.ManagementCommand(new ForceDisassociate(rootBAddress));
+            return await transport.ManagementCommand(new ForceDisassociate(rootBAddress))
+                .ShouldCompleteWithin(DefaultTimeout);
         }
 
         #endregion
@@ -183,23 +186,21 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task ThrottlerTransportAdapter_must_maintain_average_message_rate()
         {
-            await ShouldCompleteWithin(
-                () => Throttle(
+            await Throttle(
                     ThrottleTransportAdapter.Direction.Send,
-                    new Remote.Transport.TokenBucket(PingPacketSize * 4, BytesPerSecond, 0, 0)),
-                true, TimeSpan.FromSeconds(3));
-            
+                    new Remote.Transport.TokenBucket(PingPacketSize * 4, BytesPerSecond, 0, 0))
+                .ShouldCompleteWithin(true, TimeSpan.FromSeconds(3));
+
             var here = await Here();
             var tester = Sys.ActorOf(Props.Create(() => new ThrottlingTester(here, TestActor)));
             tester.Tell("start");
 
-            var time = TimeSpan.FromTicks(ExpectMsg<long>(TimeSpan.FromSeconds(TotalTime + 12))).TotalSeconds;
+            var time = TimeSpan.FromTicks(await ExpectMsgAsync<long>(TimeSpan.FromSeconds(TotalTime + 12))).TotalSeconds;
             Log.Warning("Total time of transmission: {0}", time);
             time.Should().BeGreaterThan(TotalTime - 12);
-            
-            await ShouldCompleteWithin(
-                () => Throttle(ThrottleTransportAdapter.Direction.Send, Unthrottled.Instance),
-                true, TimeSpan.FromSeconds(3));
+
+            await Throttle(ThrottleTransportAdapter.Direction.Send, Unthrottled.Instance)
+                .ShouldCompleteWithin(true, TimeSpan.FromSeconds(3));
         }
 
         [Fact]
@@ -208,25 +209,21 @@ namespace Akka.Remote.Tests.Transport
             
             var here = await Here();
             here.Tell(new ThrottlingTester.Lost("BlackHole 1"));
-            ExpectMsg(new ThrottlingTester.Lost("BlackHole 1"));
+            await ExpectMsgAsync(new ThrottlingTester.Lost("BlackHole 1"));
 
             MuteDeadLetters(typeof(ThrottlingTester.Lost));
             MuteDeadLetters(_systemB, typeof(ThrottlingTester.Lost));
 
-            await ShouldCompleteWithin(
-                func: () => Throttle(ThrottleTransportAdapter.Direction.Both, Blackhole.Instance), 
-                expected: true, 
-                timeout: TimeSpan.FromSeconds(3));
+            await Throttle(ThrottleTransportAdapter.Direction.Both, Blackhole.Instance)
+                .ShouldCompleteWithin(true, 3.Seconds());
 
             here.Tell(new ThrottlingTester.Lost("BlackHole 2"));
             await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-            await ShouldCompleteWithin(Disassociate, true, TimeSpan.FromSeconds(3));
+            await Disassociate().ShouldCompleteWithin(true, TimeSpan.FromSeconds(3));
             await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
-            await ShouldCompleteWithin(
-                func: () => Throttle(ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance), 
-                expected: true,
-                timeout: TimeSpan.FromSeconds(3));
+            await Throttle(ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance)
+                .ShouldCompleteWithin(true, TimeSpan.FromSeconds(3));
 
             // after we remove the Blackhole we can't be certain of the state
             // of the connection, repeat until success
@@ -246,17 +243,6 @@ namespace Akka.Remote.Tests.Transport
             await FishForMessageAsync(o => o.Equals("Cleanup"), TimeSpan.FromSeconds(5));
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task ShouldCompleteWithin<T>(Func<Task<T>> func, T expected, TimeSpan timeout)
-        {
-            T result = default;
-            await Awaiting(async () =>
-            {
-                result = await func();
-            }).Should().CompleteWithinAsync(timeout);
-            result.Should().Be(expected);
-        }
-
         #endregion
 
         #region Cleanup 
@@ -271,10 +257,10 @@ namespace Akka.Remote.Tests.Transport
             await base.BeforeTerminationAsync();
         }
 
-        protected override async Task AfterTerminationAsync()
+        protected override async Task AfterAllAsync()
         {
+            await base.AfterAllAsync();
             await ShutdownAsync(_systemB);
-            await base.AfterTerminationAsync();
         }
 
         #endregion
