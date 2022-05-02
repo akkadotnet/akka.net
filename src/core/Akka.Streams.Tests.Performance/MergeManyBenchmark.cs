@@ -30,8 +30,7 @@ namespace Akka.Streams.Tests.Performance
         [PerfSetup]
         public void Setup(BenchmarkContext context)
         {
-            _actorSystem = ActorSystem.Create("MergeManyBenchmark",
-                ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf"));
+            _actorSystem = ActorSystem.Create("MergeManyBenchmark", StreamTestDefaultMailbox.DefaultConfig);
             _actorSystem.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             _materializerSettings = ActorMaterializerSettings.Create(_actorSystem).WithDispatcher("akka.test.stream-dispatcher");
             _materializer = _actorSystem.Materializer(_materializerSettings);

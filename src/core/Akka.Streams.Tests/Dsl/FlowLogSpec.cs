@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Ignore<int>(), Materializer);
 
             var error = LogProbe.ExpectMsg<Debug>();
-            error.Message.ToString().Should().Be("[flow-6e] Upstream failed, cause: Akka.Streams.TestKit.Tests.TestException test");
+            error.Message.ToString().Should().Be("[flow-6e] Upstream failed, cause: Akka.Streams.TestKit.TestException test");
         }
 
         [Fact]

@@ -35,8 +35,7 @@ namespace Akka.Streams.Tests.TCK
                 new TestEnvironment(Timeouts.DefaultTimeoutMillis,
                     TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds(), writeLineDebug),
                 Timeouts.PublisherShutdownTimeoutMillis,
-                AkkaSpec.AkkaSpecConfig.WithFallback(
-                    ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")))
+                AkkaSpec.AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig))
         {
         }
 
