@@ -134,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
             }, _materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void TaskSource_must_fail_as_the_underlying_task_fails_after_outer_source_materialization()
         {
             this.AssertAllStagesStopped(() =>
@@ -239,7 +239,7 @@ namespace Akka.Streams.Tests.Dsl
             }, _materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void TaskSource_must_fail_when_the_task_source_materialization_fails()
         {
             this.AssertAllStagesStopped(() =>
