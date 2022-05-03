@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using FluentAssertions;
@@ -62,74 +63,74 @@ namespace Akka.Streams.TestKit
         }
 
         [Fact]
-        public void Should_work_with_two_immediately_completed_publishers()
+        public async Task Should_work_with_two_immediately_completed_publishers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = Setup(CompletedPublisher<int>(), CompletedPublisher<int>());
-                subscriber.ExpectSubscriptionAndComplete();
+                await subscriber.ExpectSubscriptionAndCompleteAsync().Task;
             }, Materializer);
         }
 
         [Fact]
-        public void Should_work_with_two_delayed_completed_publishers()
+        public async Task Should_work_with_two_delayed_completed_publishers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = Setup(SoonToCompletePublisher<int>(), SoonToCompletePublisher<int>());
-                subscriber.ExpectSubscriptionAndComplete();
+                await subscriber.ExpectSubscriptionAndCompleteAsync().Task;
             }, Materializer);
         }
 
         [Fact]
-        public void Should_work_with_one_immediately_completed_and_one_delayed_completed_publisher()
+        public async Task Should_work_with_one_immediately_completed_and_one_delayed_completed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = Setup(CompletedPublisher<int>(), SoonToCompletePublisher<int>());
-                subscriber.ExpectSubscriptionAndComplete();
+                await subscriber.ExpectSubscriptionAndCompleteAsync().Task;
             }, Materializer);
         }
 
         [Fact]
-        public void Should_work_with_two_immediately_failed_publishers()
+        public async Task Should_work_with_two_immediately_failed_publishers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = Setup(FailedPublisher<int>(), FailedPublisher<int>());
-                subscriber.ExpectSubscriptionAndError().Should().Be(TestException());
+                (await subscriber.ExpectSubscriptionAndErrorAsync()).Should().Be(TestException());
             }, Materializer);
         }
 
         [Fact]
-        public void Should_work_with_two_delayed_failed_publishers()
+        public async Task Should_work_with_two_delayed_failed_publishers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = Setup(SoonToFailPublisher<int>(), SoonToFailPublisher<int>());
-                subscriber.ExpectSubscriptionAndError().Should().Be(TestException());
+                (await subscriber.ExpectSubscriptionAndErrorAsync()).Should().Be(TestException());
             }, Materializer);
         }
 
         // Warning: The two test cases below are somewhat implementation specific and might fail if the implementation
         // is changed. They are here to be an early warning though.
         [Fact]
-        public void Should_work_with_one_immediately_failed_and_one_delayed_failed_publisher_case_1()
+        public async Task Should_work_with_one_immediately_failed_and_one_delayed_failed_publisher_case_1()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = Setup(SoonToFailPublisher<int>(), FailedPublisher<int>());
-                subscriber.ExpectSubscriptionAndError().Should().Be(TestException());
+                (await subscriber.ExpectSubscriptionAndErrorAsync()).Should().Be(TestException());
             }, Materializer);
         }
 
         [Fact]
-        public void Should_work_with_one_immediately_failed_and_one_delayed_failed_publisher_case_2()
+        public async Task Should_work_with_one_immediately_failed_and_one_delayed_failed_publisher_case_2()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = Setup(FailedPublisher<int>(), SoonToFailPublisher<int>());
-                subscriber.ExpectSubscriptionAndError().Should().Be(TestException());
+                (await subscriber.ExpectSubscriptionAndErrorAsync()).Should().Be(TestException());
             }, Materializer);
         }
     }
