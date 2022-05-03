@@ -12,7 +12,7 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;

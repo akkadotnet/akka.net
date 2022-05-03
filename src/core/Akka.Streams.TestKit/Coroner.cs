@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Akka.Streams.TestKit.Tests
+namespace Akka.Streams.TestKit
 {
     public interface IWatchedByCoroner
     {

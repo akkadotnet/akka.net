@@ -11,7 +11,7 @@ using Akka.Streams.Dsl;
 using Akka.TestKit;
 using Reactive.Streams;
 
-namespace Akka.Streams.TestKit.Tests
+namespace Akka.Streams.TestKit
 {
     public class ChainSetup<TIn, TOut, TMat>
     {

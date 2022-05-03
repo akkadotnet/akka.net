@@ -11,7 +11,6 @@
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka.Streams.Tests\Akka.Streams.Tests.csproj" />
     <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
-    <ProjectReference Include="..\Akka.Streams.TestKit.Tests\Akka.Streams.TestKit.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>

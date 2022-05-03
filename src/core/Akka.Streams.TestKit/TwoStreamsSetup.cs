@@ -9,7 +9,7 @@ using Akka.Streams.Dsl;
 using Reactive.Streams;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.TestKit.Tests
+namespace Akka.Streams.TestKit
 {
     public abstract class TwoStreamsSetup<TOutputs> : BaseTwoStreamsSetup<TOutputs>
     {

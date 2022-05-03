@@ -9,7 +9,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
@@ -19,7 +18,7 @@ using Akka.Util;
 using Reactive.Streams;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.TestKit.Tests
+namespace Akka.Streams.TestKit
 {
     [Serializable]
     public class ScriptException : Exception

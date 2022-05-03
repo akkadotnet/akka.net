@@ -10,11 +10,11 @@ using System.Collections.Generic;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using FluentAssertions;
+using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
-using Reactive.Streams;
 
-namespace Akka.Streams.TestKit.Tests
+namespace Akka.Streams.TestKit
 {
     public abstract class BaseTwoStreamsSetup<TOutputs> : AkkaSpec
     {

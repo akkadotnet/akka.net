@@ -15,7 +15,7 @@ using Akka.Streams.Implementation;
 using Akka.TestKit;
 using Akka.Util.Internal;
 
-namespace Akka.Streams.TestKit.Tests
+namespace Akka.Streams.TestKit
 {
     public static class Utils
     {
@@ -23,33 +23,41 @@ namespace Akka.Streams.TestKit.Tests
             ConfigurationFactory.ParseString(@"akka.actor.default-mailbox.mailbox-type = ""Akka.Dispatch.UnboundedMailbox, Akka""");
 
         public static void AssertAllStagesStopped(this AkkaSpec spec, Action block, IMaterializer materializer)
-        {
-            AssertAllStagesStopped(spec, () =>
-            {
-                block();
-                return NotUsed.Instance;
-            }, materializer);
-        }
+            => AssertAllStagesStoppedAsync(spec, () =>
+                {
+                    block();
+                    return NotUsed.Instance;
+                }, materializer)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
 
         public static T AssertAllStagesStopped<T>(this AkkaSpec spec, Func<T> block, IMaterializer materializer)
+            => AssertAllStagesStoppedAsync(spec, () => Task.FromResult(block()), materializer)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+
+        public static async Task<T> AssertAllStagesStoppedAsync<T>(this AkkaSpec spec, Func<T> block,
+            IMaterializer materializer)
+            => await AssertAllStagesStoppedAsync(spec, () => Task.FromResult(block()), materializer)
+                .ConfigureAwait(false);
+        
+        public static async Task<T> AssertAllStagesStoppedAsync<T>(this AkkaSpec spec, Func<Task<T>> block, IMaterializer materializer)
         {
             if (!(materializer is ActorMaterializerImpl impl))
-                return block();
+                return await block();
 
             var probe = spec.CreateTestProbe(impl.System);
             probe.Send(impl.Supervisor, StreamSupervisor.StopChildren.Instance);
-            probe.ExpectMsg<StreamSupervisor.StoppedChildren>();
-            var result = block();
+            await probe.ExpectMsgAsync<StreamSupervisor.StoppedChildren>();
+            var result = await block();
 
-            probe.Within(TimeSpan.FromSeconds(5), () =>
+            await probe.WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
                 IImmutableSet<IActorRef> children = ImmutableHashSet<IActorRef>.Empty;
                 try
                 {
-                    probe.AwaitAssert(() =>
+                    await probe.AwaitAssertAsync(async () =>
                     {
                         impl.Supervisor.Tell(StreamSupervisor.GetChildren.Instance, probe.Ref);
-                        children = probe.ExpectMsg<StreamSupervisor.Children>().Refs;
+                        children = (await probe.ExpectMsgAsync<StreamSupervisor.Children>()).Refs;
                         if (children.Count != 0)
                             throw new Exception($"expected no StreamSupervisor children, but got {children.Aggregate("", (s, @ref) => s + @ref + ", ")}");
                     });
@@ -66,9 +74,7 @@ namespace Akka.Streams.TestKit.Tests
 
         public static void AssertDispatcher(IActorRef @ref, string dispatcher)
         {
-            var r = @ref as ActorRefWithCell;
-
-            if (r == null)
+            if (!(@ref is ActorRefWithCell r))
                 throw new Exception($"Unable to determine dispatcher of {@ref}");
 
             if (r.Underlying.Props.Dispatcher != dispatcher)

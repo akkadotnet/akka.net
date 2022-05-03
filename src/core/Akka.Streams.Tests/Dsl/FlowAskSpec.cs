@@ -13,7 +13,6 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util;

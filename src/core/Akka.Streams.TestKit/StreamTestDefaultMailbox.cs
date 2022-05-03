@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reflection;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Configuration;
@@ -14,7 +13,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.MessageQueues;
 using Akka.Util.Internal;
 
-namespace Akka.Streams.TestKit.Tests
+namespace Akka.Streams.TestKit
 {
     /// <summary>
     /// INTERNAL API
@@ -24,6 +23,8 @@ namespace Akka.Streams.TestKit.Tests
     [InternalApi]
     public sealed class StreamTestDefaultMailbox : MailboxType, IProducesMessageQueue<UnboundedMessageQueue>
     {
+        public static Config DefaultConfig =>
+            ConfigurationFactory.FromResource<StreamTestDefaultMailbox>("Akka.Streams.TestKit.reference.conf");
 
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
         {

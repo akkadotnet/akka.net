@@ -12,7 +12,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.IO;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Reactive.Streams;
 using Xunit.Abstractions;
@@ -24,8 +23,7 @@ namespace Akka.Streams.Tests.IO
         protected TcpHelper(string config, ITestOutputHelper helper)
             : base(
                 ConfigurationFactory.ParseString(config)
-                    .WithFallback(
-                        ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")),
+                    .WithFallback(StreamTestDefaultMailbox.DefaultConfig),
                 helper)
         {
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(4, 4);
