@@ -81,6 +81,7 @@ namespace Akka.Streams.TestKit
                 throw new Exception($"Expected {@ref} to use dispatcher [{dispatcher}], yet used : [{r.Underlying.Props.Dispatcher}]");
         }
 
+        [Obsolete("Use ShouldCompleteWithin instead")]
         public static T AwaitResult<T>(this Task<T> task, TimeSpan? timeout = null)
         {
             task.Wait(timeout??TimeSpan.FromSeconds(3)).ShouldBeTrue();
