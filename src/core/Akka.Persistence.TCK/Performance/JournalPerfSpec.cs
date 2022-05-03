@@ -247,7 +247,7 @@ namespace Akka.Persistence.TestKit.Performance
             RunPersistGroupBenchmark(numGroup, numCommands);
         }
         
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void PersistenceActor_performance_must_measure_PersistGroup100()
         {
             int numGroup = 100;
