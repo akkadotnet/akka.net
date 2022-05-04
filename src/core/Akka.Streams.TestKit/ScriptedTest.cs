@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Internal;
 using Reactive.Streams;
 using Xunit.Abstractions;
 
@@ -306,7 +307,8 @@ namespace Akka.Streams.TestKit
             Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
             int maximumOverrun = 3, int maximumRequest = 3, int maximumBuffer = 3)
         {
-            new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this).Run();
+            new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this)
+                .Initialize().AsInstanceOf<ScriptRunner<TIn2, TOut2, TMat2>>().Run();
         }
 
         protected static IPublisher<TOut> ToPublisher<TOut>(Source<TOut, NotUsed> source, IMaterializer materializer)

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
@@ -15,6 +16,9 @@ namespace Akka.Streams.TestKit
 {
     public class ChainSetup<TIn, TOut, TMat>
     {
+        private readonly Func<Source<TOut, NotUsed>, ActorMaterializer, IPublisher<TOut>> _toPublisher;
+        private readonly Func<Flow<TIn, TIn, NotUsed>, Flow<TIn, TOut, TMat>> _stream;
+        private readonly ActorMaterializer _materializer;
         protected readonly TestKitBase System;
 
         public ChainSetup(
@@ -24,18 +28,11 @@ namespace Akka.Streams.TestKit
             Func<Source<TOut, NotUsed>, ActorMaterializer, IPublisher<TOut>> toPublisher,
             TestKitBase system)
         {
-
             Settings = settings;
             System = system;
-
-            Upstream = system.CreateManualPublisherProbe<TIn>();
-            Downstream = system.CreateSubscriberProbe<TOut>();
-
-            var s = Source.FromPublisher(Upstream).Via(stream(Flow.Identity<TIn>().Select(x => x).Named("buh")));
-            Publisher = toPublisher(s, materializer);
-            UpstreamSubscription = Upstream.ExpectSubscription();
-            Publisher.Subscribe(Downstream);
-            DownstreamSubscription = Downstream.ExpectSubscription();
+            _toPublisher = toPublisher;
+            _stream = stream;
+            _materializer = materializer;
         }
 
         public ChainSetup(
@@ -57,11 +54,87 @@ namespace Akka.Streams.TestKit
         {
         }
 
+        [Obsolete("Will be removed after async_testkit conversion is complete. Use InitializeAsync instead")]
+        public ChainSetup<TIn, TOut, TMat> Initialize()
+            => InitializeAsync()
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+        
+        public virtual async Task<ChainSetup<TIn, TOut, TMat>> InitializeAsync()
+        {
+            _upstream = System.CreateManualPublisherProbe<TIn>();
+            _downstream = System.CreateSubscriberProbe<TOut>();
+
+            var s = Source.FromPublisher(_upstream).Via(_stream(Flow.Identity<TIn>().Select(x => x).Named("buh")));
+            _publisher = _toPublisher(s, _materializer);
+            _upstreamSubscription = await _upstream.ExpectSubscriptionAsync();
+            _publisher.Subscribe(_downstream);
+            _downstreamSubscription = await _downstream.ExpectSubscriptionAsync();
+
+            Initialized = true;
+            
+            return this;
+        }
+
+        private TestPublisher.ManualProbe<TIn> _upstream;
+        private TestSubscriber.ManualProbe<TOut> _downstream;
+        private IPublisher<TOut> _publisher;
+        private StreamTestKit.PublisherProbeSubscription<TIn> _upstreamSubscription;
+        private ISubscription _downstreamSubscription;
+
+        public bool Initialized { get; private set; }
+
         public ActorMaterializerSettings Settings { get; }
-        public TestPublisher.ManualProbe<TIn> Upstream { get; }
-        public TestSubscriber.ManualProbe<TOut> Downstream { get; }
-        public IPublisher<TOut> Publisher { get; }
-        public StreamTestKit.PublisherProbeSubscription<TIn> UpstreamSubscription { get; }
-        public ISubscription DownstreamSubscription { get; }
+
+        public TestPublisher.ManualProbe<TIn> Upstream
+        {
+            get
+            {
+                EnsureInitialized();
+                return _upstream;
+            }
+        }
+
+        public TestSubscriber.ManualProbe<TOut> Downstream
+        {
+            get
+            {
+                EnsureInitialized();
+                return _downstream;
+            }
+        }
+
+        public IPublisher<TOut> Publisher
+        {
+            get
+            {
+                EnsureInitialized();
+                return _publisher;
+            }
+        }
+
+        public StreamTestKit.PublisherProbeSubscription<TIn> UpstreamSubscription
+        {
+            get
+            {
+                EnsureInitialized();
+                return _upstreamSubscription;
+            }
+        }
+
+        public ISubscription DownstreamSubscription
+        {
+            get
+            {
+                EnsureInitialized();
+                return _downstreamSubscription;
+            }
+        }
+
+        protected virtual void EnsureInitialized()
+        {
+            if (!Initialized)
+                throw new InvalidOperationException(
+                    $"ChainSetup has not been initialized. Please make sure to call {nameof(InitializeAsync)} first.");
+        }
     }
 }
