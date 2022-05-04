@@ -179,7 +179,7 @@ namespace Akka.Persistence.TestKit.Performance
             );
         }
 
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void PersistenceActor_performance_must_measure_Persist()
         {
             var p1 = BenchActor("PersistPid", EventsCount);
@@ -190,7 +190,7 @@ namespace Akka.Persistence.TestKit.Performance
             });
         }
 
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void PersistenceActor_performance_must_measure_PersistAll()
         {
             var p1 = BenchActor("PersistAllPid", EventsCount);
@@ -223,7 +223,7 @@ namespace Akka.Persistence.TestKit.Performance
             });
         }
         
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void PersistenceActor_performance_must_measure_PersistGroup10()
         {
             int numGroup = 10;
@@ -255,7 +255,7 @@ namespace Akka.Persistence.TestKit.Performance
             RunPersistGroupBenchmark(numGroup, numCommands);
         }
         
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void PersistenceActor_performance_must_measure_PersistGroup200()
         {
             int numGroup = 200;
@@ -263,7 +263,7 @@ namespace Akka.Persistence.TestKit.Performance
             RunPersistGroupBenchmark(numGroup, numCommands);
         }
 
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void PersistenceActor_performance_must_measure_Recovering()
         {
             var p1 = BenchActor("PersistRecoverPid", EventsCount);
@@ -276,7 +276,7 @@ namespace Akka.Persistence.TestKit.Performance
             });
         }
         
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void PersistenceActor_performance_must_measure_RecoveringTwo()
         {
             var p1 = BenchActorNewProbe("DoublePersistRecoverPid1", EventsCount);
@@ -300,7 +300,7 @@ namespace Akka.Persistence.TestKit.Performance
 
             },EventsCount,2);
         }
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void PersistenceActor_performance_must_measure_RecoveringFour()
         {
             var p1 = BenchActorNewProbe("QuadPersistRecoverPid1", EventsCount);

@@ -439,13 +439,35 @@ namespace Akka.Streams.TestKit
             /// <param name="min"></param>
             /// <param name="max"></param>
             /// <param name="execute"></param>
+            /// <param name="cancellationToken"></param>
             /// <returns></returns>
-            public TOther Within<TOther>(TimeSpan min, TimeSpan max, Func<TOther> execute) => TestProbe.Within(min, max, execute);
+            public TOther Within<TOther>(TimeSpan min, TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) => 
+                TestProbe.Within(min, max, execute, cancellationToken: cancellationToken);
+
+            public async Task<TOther> WithinAsync<TOther>(TimeSpan min, TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) => 
+                await TestProbe.WithinAsync(min, max, execute, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
 
             /// <summary>
             /// Sane as calling Within(TimeSpan.Zero, max, function).
             /// </summary>
-            public TOther Within<TOther>(TimeSpan max, Func<TOther> execute) => TestProbe.Within(max, execute);
+            public TOther Within<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) =>
+                TestProbe.Within(max, execute, cancellationToken: cancellationToken);
+
+            /// <summary>
+            /// Sane as calling Within(TimeSpan.Zero, max, function).
+            /// </summary>
+            public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) => 
+                await TestProbe.WithinAsync(max, execute, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+
+            public async Task WithinAsync(
+                TimeSpan max,
+                Func<Task> actionAsync,
+                TimeSpan? epsilonValue = null,
+                CancellationToken cancellationToken = default)
+                => await TestProbe.WithinAsync(max, actionAsync, epsilonValue, cancellationToken)
+                    .ConfigureAwait(false);
 
             /// <summary>
             /// Attempt to drain the stream into a strict collection (by requesting long.MaxValue elements).
@@ -453,17 +475,28 @@ namespace Akka.Streams.TestKit
             /// <remarks>
             /// Use with caution: Be warned that this may not be a good idea if the stream is infinite or its elements are very large!
             /// </remarks>
-            public IList<T> ToStrict(TimeSpan atMost)
+            public IList<T> ToStrict(TimeSpan atMost, CancellationToken cancellationToken = default)
+                => ToStrictAsync(atMost, cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+            
+            /// <summary>
+            /// Attempt to drain the stream into a strict collection (by requesting long.MaxValue elements).
+            /// </summary>
+            /// <remarks>
+            /// Use with caution: Be warned that this may not be a good idea if the stream is infinite or its elements are very large!
+            /// </remarks>
+            public async Task<IList<T>> ToStrictAsync(TimeSpan atMost, CancellationToken cancellationToken = default)
             {
                 var deadline = DateTime.UtcNow + atMost;
                 // if no subscription was obtained yet, we expect it
-                if (_subscription == null) ExpectSubscription();
+                if (_subscription == null) 
+                    await ExpectSubscriptionAsync(cancellationToken);
                 _subscription.Request(long.MaxValue);
 
                 var result = new List<T>();
                 while (true)
                 {
-                    var e = ExpectEvent(TimeSpan.FromTicks(Math.Max(deadline.Ticks - DateTime.UtcNow.Ticks, 0)));
+                    var e = await ExpectEventAsync(TimeSpan.FromTicks(Math.Max(deadline.Ticks - DateTime.UtcNow.Ticks, 0)), cancellationToken);
                     if (e is OnError error)
                         throw new ArgumentException(
                             $"ToStrict received OnError while draining stream! Accumulated elements: ${string.Join(", ", result)}",
