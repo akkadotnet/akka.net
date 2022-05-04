@@ -16,6 +16,7 @@ using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Internal;
 using Reactive.Streams;
 using Xunit.Abstractions;
 
