@@ -165,6 +165,12 @@ namespace Akka.Streams.TestKit
                 DebugLog($"Starting with remaining demand={_remainingDemand}");
             }
 
+            public new async Task<ScriptRunner<TIn, TOut, TMat>> InitializeAsync()
+            {
+                await base.InitializeAsync();
+                return this;
+            }
+
             public bool MayProvideInput => _currentScript.SomeInputsPending && (_pendingRequests > 0) && (_currentScript.PendingOutputs <= _maximumBuffer);
             public bool MayRequestMore => _remainingDemand > 0;
 
@@ -333,8 +339,9 @@ namespace Akka.Streams.TestKit
             int maximumRequest = 3,
             int maximumBuffer = 3)
         {
-            await new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this)
-                .RunAsync();
+            var runner = await new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this)
+                .InitializeAsync();
+            await runner.RunAsync();
         }
 
         protected static IPublisher<TOut> ToPublisher<TOut>(Source<TOut, NotUsed> source, IMaterializer materializer)
