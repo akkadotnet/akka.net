@@ -25,44 +25,11 @@ namespace Akka.Cluster.SBR
     /// </summary>
     internal class SplitBrainResolver : SplitBrainResolverBase
     {
-        private sealed class AcquireCluster : INoSerializationVerificationNeeded
-        {
-            public static readonly AcquireCluster Instance = new AcquireCluster();
-            private AcquireCluster(){}
-        }
-
-        private const string AcquireClusterKey = "acquire-cluster-key";
         private Cluster _cluster;
 
         public SplitBrainResolver(TimeSpan stableAfter, DowningStrategy strategy)
             : base(stableAfter, strategy)
         {
-            
-            // ReSharper restore VirtualMemberCallInConstructor
-            
-            Context.Become(WaitingForCluster);
-        }
-
-        private bool WaitingForCluster(object message)
-        {
-            if (message is AcquireCluster)
-            {
-                if (!CanAcquireCluster()) return true;
-                
-                Log.Info(
-                    "SBR started. Config: strategy [{0}], stable-after [{1}], down-all-when-unstable [{2}], selfUniqueAddress [{3}].",
-                    Logging.SimpleName(Strategy.GetType()),
-                    StableAfter,
-                    // ReSharper disable VirtualMemberCallInConstructor
-                    DownAllWhenUnstable == TimeSpan.Zero ? "off" : DownAllWhenUnstable.ToString(),
-                    SelfUniqueAddress.Address);
-                Context.Become(base.Receive);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
         }
 
         public override UniqueAddress SelfUniqueAddress => _cluster.SelfUniqueAddress;
@@ -75,26 +42,12 @@ namespace Akka.Cluster.SBR
         // re-subscribe when restart
         protected override void PreStart()
         {
-            CanAcquireCluster();
+            _cluster = Cluster.Get(Context.System);
+            _cluster.Subscribe(Self, InitialStateAsEvents, typeof(IClusterDomainEvent));
 
             base.PreStart();
         }
-
-        private bool CanAcquireCluster()
-        {
-            try
-            {
-                _cluster = Cluster.Get(Context.System);
-                _cluster.Subscribe(Self, InitialStateAsEvents, typeof(IClusterDomainEvent));
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Timers.StartSingleTimer(AcquireClusterKey, AcquireCluster.Instance, TimeSpan.FromMilliseconds(20));
-                Log.Warning("Received error when trying to resolve Cluster - retrying in 20ms");
-                return false;
-            }
-        }
+        
 
         protected override void PostStop()
         {
