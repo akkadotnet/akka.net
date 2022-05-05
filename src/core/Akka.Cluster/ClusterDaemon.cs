@@ -895,7 +895,7 @@ namespace Akka.Cluster
             _cluster = cluster;
             _coreSupervisor = Context.ActorOf(Props.Create<ClusterCoreSupervisor>(), "core");
 
-            Context.ActorOf(ClusterHeartbeatReceiver.Props(() => _cluster), "heartbeatReceiver");
+            Context.ActorOf(ClusterHeartbeatReceiver.Props(cluster), "heartbeatReceiver");
         }
 
         protected override void PostStop()
@@ -1333,7 +1333,7 @@ namespace Akka.Cluster
         {
             // start heartbeatSender here, and not in constructor to make sure that
             // heartbeating doesn't start before Welcome is received
-            Context.ActorOf(Props.Create<ClusterHeartbeatSender>().WithDispatcher(_cluster.Settings.UseDispatcher),
+            Context.ActorOf(Props.Create(() => new ClusterHeartbeatSender(_cluster)).WithDispatcher(_cluster.Settings.UseDispatcher),
                 "heartbeatSender");
             // make sure that join process is stopped
             StopSeedNodeProcess();

@@ -520,7 +520,7 @@ namespace Akka.Cluster
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get; }
 
         /// <summary>
-        /// TBD
+        /// The downing provider used to execute automatic downing inside Akka.Cluster.
         /// </summary>
         public IDowningProvider DowningProvider => _downingProvider.Value;
 
@@ -535,7 +535,6 @@ namespace Akka.Cluster
 
         private static IScheduler CreateScheduler(ActorSystem system)
         {
-            //TODO: Whole load of stuff missing here!
             return system.Scheduler;
         }
 
