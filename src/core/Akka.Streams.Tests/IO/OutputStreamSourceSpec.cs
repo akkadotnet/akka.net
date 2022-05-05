@@ -10,7 +10,6 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -19,10 +18,12 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.IO;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.IO
 {
@@ -50,157 +51,157 @@ namespace Akka.Streams.Tests.IO
             _byteString = ByteString.FromBytes(_bytesArray);
         }
 
-        private void ExpectTimeout(Task f, TimeSpan duration) => f.Wait(duration).Should().BeFalse();
+        private async Task ExpectTimeout(Task f, TimeSpan duration) => 
+            (await f.AwaitWithTimeout(duration)).Should().BeFalse();
 
-        private void ExpectSuccess<T>(Task<T> f, T value)
+        private async Task ExpectSuccess<T>(Task<T> f, T value)
         {
-            f.Wait(); // just let it run
+            await f.ShouldCompleteWithin(Timeout); // just let it run
             f.Result.Should().Be(value);
         }
 
         [Fact]
-        public void OutputStreamSource_must_read_bytes_from_OutputStream()
+        public async Task OutputStreamSource_must_read_bytes_from_OutputStream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var t = StreamConverters.AsOutputStream()
-                        .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
-                        .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
-                var s = probe.ExpectSubscription();
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
+                    .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
+                    .Run(_materializer);
+                var s = await probe.ExpectSubscriptionAsync();
 
-                outputStream.Write(_bytesArray, 0, _bytesArray.Length);
+                await outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length);
                 s.Request(1);
-                probe.ExpectNext(_byteString);
+                await probe.ExpectNextAsync(_byteString).Task;
                 outputStream.Dispose();
-                probe.ExpectComplete();
+                await probe.ExpectCompleteAsync().Task;
             }, _materializer);
         }
 
         [Fact]
-        public void OutputStreamSource_must_block_flush_call_until_send_all_buffer_to_downstream()
+        public async Task OutputStreamSource_must_block_flush_call_until_send_all_buffer_to_downstream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var t = StreamConverters.AsOutputStream()
-                        .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
-                        .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
-                var s = probe.ExpectSubscription();
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
+                    .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
+                    .Run(_materializer);
 
-                outputStream.Write(_bytesArray, 0, _bytesArray.Length);
-                var f = Task.Run(() =>
+                using (outputStream)
                 {
-                    outputStream.Flush();
-                    return NotUsed.Instance;
-                });
+                    var s = await probe.ExpectSubscriptionAsync();
+                    
+                    await outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length);
+                    var f = Task.Run(() =>
+                    {
+                        outputStream.Flush();
+                        return NotUsed.Instance;
+                    });
 
-                ExpectTimeout(f, Timeout);
-                probe.ExpectNoMsg(TimeSpan.MinValue);
+                    await ExpectTimeout(f, Timeout);
+                    await probe.ExpectNoMsgAsync(TimeSpan.MinValue).Task;
 
-                s.Request(1);
-                ExpectSuccess(f, NotUsed.Instance);
-                probe.ExpectNext(_byteString);
+                    s.Request(1);
+                    await ExpectSuccess(f, NotUsed.Instance);
+                    await probe.ExpectNextAsync(_byteString).Task;
+                }
 
-                outputStream.Dispose();
-                probe.ExpectComplete();
+                await probe.ExpectCompleteAsync().Task;
             }, _materializer);
         }
 
         [Fact]
-        public void OutputStreamSource_must_not_block_flushes_when_buffer_is_empty()
+        public async Task OutputStreamSource_must_not_block_flushes_when_buffer_is_empty()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var t = StreamConverters.AsOutputStream()
-                        .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
-                        .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
-                var s = probe.ExpectSubscription();
-
-                outputStream.Write(_bytesArray, 0, _byteString.Count);
-                var f = Task.Run(() =>
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
+                    .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
+                    .Run(_materializer);
+                
+                using (outputStream)
                 {
-                    outputStream.Flush();
-                    return NotUsed.Instance;
-                });
-                s.Request(1);
-                ExpectSuccess(f, NotUsed.Instance);
-                probe.ExpectNext(_byteString);
+                    var s = await probe.ExpectSubscriptionAsync();
 
-                var f2 = Task.Run(() =>
-                {
-                    outputStream.Flush();
-                    return NotUsed.Instance;
-                });
-                ExpectSuccess(f2, NotUsed.Instance);
+                    await outputStream.WriteAsync(_bytesArray, 0, _byteString.Count);
+                    var f = Task.Run(() =>
+                    {
+                        outputStream.Flush();
+                        return NotUsed.Instance;
+                    });
+                    s.Request(1);
+                    await ExpectSuccess(f, NotUsed.Instance);
+                    await probe.ExpectNextAsync(_byteString).Task;
 
-                outputStream.Dispose();
-                probe.ExpectComplete();
+                    var f2 = Task.Run(() =>
+                    {
+                        outputStream.Flush();
+                        return NotUsed.Instance;
+                    });
+                    await ExpectSuccess(f2, NotUsed.Instance);
+                }
+
+                await probe.ExpectComplete().Task;
 
             }, _materializer);
         }
         
         [Fact]
-        public void OutputStreamSource_must_block_writes_when_buffer_is_full()
+        public async Task  OutputStreamSource_must_block_writes_when_buffer_is_full()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var t = StreamConverters.AsOutputStream()
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
                     .WithAttributes(Attributes.CreateInputBuffer(16, 16))
                     .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
                     .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
-                var s = probe.ExpectSubscription();
-
-                for (var i = 1; i <= 16; i++)
-                    outputStream.Write(_bytesArray, 0, _byteString.Count);
-
-                //blocked call
-                var f = Task.Run(() =>
+                using (outputStream)
                 {
-                    outputStream.Write(_bytesArray, 0, _byteString.Count);
-                    return NotUsed.Instance;
-                });
-                ExpectTimeout(f, Timeout);
-                probe.ExpectNoMsg(TimeSpan.MinValue);
+                    var s = await probe.ExpectSubscriptionAsync();
 
-                s.Request(17);
-                ExpectSuccess(f, NotUsed.Instance);
-                probe.ExpectNextN(Enumerable.Repeat(_byteString, 17).ToList());
+                    for (var i = 1; i <= 16; i++)
+                        await outputStream.WriteAsync(_bytesArray, 0, _byteString.Count);
 
-                outputStream.Dispose();
-                probe.ExpectComplete();
+                    //blocked call
+                    var f = Task.Run(() =>
+                    {
+                        outputStream.Write(_bytesArray, 0, _byteString.Count);
+                        return NotUsed.Instance;
+                    });
+                    await ExpectTimeout(f, Timeout);
+                    await probe.ExpectNoMsgAsync(TimeSpan.MinValue).Task;
+
+                    s.Request(17);
+                    await ExpectSuccess(f, NotUsed.Instance);
+                    await probe.ExpectNextNAsync(Enumerable.Repeat(_byteString, 17).ToList()).Task;
+                }
+
+                await probe.ExpectCompleteAsync().Task;
             }, _materializer);
         }
 
         [Fact]
-        public void OutputStreamSource_must_throw_error_when_writer_after_stream_is_closed()
+        public async Task OutputStreamSource_must_throw_error_when_writer_after_stream_is_closed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var t = StreamConverters.AsOutputStream()
-                        .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
-                        .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
+                    .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
+                    .Run(_materializer);
 
-                probe.ExpectSubscription();
+                await probe.ExpectSubscriptionAsync();
                 outputStream.Dispose();
-                probe.ExpectComplete();
+                await probe.ExpectCompleteAsync().Task;
 
-                outputStream.Invoking(s => s.Write(_bytesArray, 0, _byteString.Count)).Should().Throw<IOException>();
+                await Awaiting(() => outputStream.WriteAsync(_bytesArray, 0, _byteString.Count).ShouldCompleteWithin(Timeout))
+                    .Should().ThrowAsync<IOException>();
             }, _materializer);
         }
 
         [Fact]
-        public void OutputStreamSource_must_use_dedicated_default_blocking_io_dispatcher_by_default()
+        public async Task OutputStreamSource_must_use_dedicated_default_blocking_io_dispatcher_by_default()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
                 var materializer = sys.Materializer();
@@ -210,44 +211,42 @@ namespace Akka.Streams.Tests.IO
                     StreamConverters.AsOutputStream().RunWith(this.SinkProbe<ByteString>(), materializer);
                     ((ActorMaterializerImpl) materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance,
                         TestActor);
-                    var actorRef = ExpectMsg<StreamSupervisor.Children>()
+                    var actorRef = (await ExpectMsgAsync<StreamSupervisor.Children>())
                             .Refs.First(c => c.Path.ToString().Contains("outputStreamSource"));
                     Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                 }
                 finally
                 {
-                    Shutdown(sys);
+                    await ShutdownAsync(sys);
                 }
 
             }, _materializer);
         }
 
         [Fact]
-        public void OutputStreamSource_must_throw_IOException_when_writing_to_the_stream_after_the_subscriber_has_cancelled_the_reactive_stream()
+        public async Task OutputStreamSource_must_throw_IOException_when_writing_to_the_stream_after_the_subscriber_has_cancelled_the_reactive_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var sourceProbe = CreateTestProbe();
-                var t =
-                    TestSourceStage<ByteString, Stream>.Create(new OutputStreamSourceStage(Timeout), sourceProbe)
-                        .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
-                        .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
+                var (outputStream, probe) = TestSourceStage<ByteString, Stream>.Create(new OutputStreamSourceStage(Timeout), sourceProbe)
+                    .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
+                    .Run(_materializer);
 
-                var s = probe.ExpectSubscription();
+                var s = await probe.ExpectSubscriptionAsync();
 
-                outputStream.Write(_bytesArray, 0, _bytesArray.Length);
+                await outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length);
                 s.Request(1);
-                sourceProbe.ExpectMsg<GraphStageMessages.Pull>();
+                await sourceProbe.ExpectMsgAsync<GraphStageMessages.Pull>();
 
-                probe.ExpectNext(_byteString);
+                await probe.ExpectNextAsync(_byteString).Task;
 
                 s.Cancel();
-                sourceProbe.ExpectMsg<GraphStageMessages.DownstreamFinish>();
+                await sourceProbe.ExpectMsgAsync<GraphStageMessages.DownstreamFinish>();
 
-                Thread.Sleep(500);
-                outputStream.Invoking(os => os.Write(_bytesArray, 0, _bytesArray.Length)).Should().Throw<IOException>();
+                await Task.Delay(500);
+                await Awaiting(() => outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length).ShouldCompleteWithin(Timeout))
+                    .Should().ThrowAsync<IOException>();
             }, _materializer);
         }
 
@@ -268,16 +267,13 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void OutputStreamSource_must_not_leave_blocked_threads()
+        public async Task OutputStreamSource_must_not_leave_blocked_threads()
         {
-            var tuple =
-                StreamConverters.AsOutputStream(Timeout)
-                    .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
-                    .Run(_materializer);
-            var outputStream = tuple.Item1;
-            var probe = tuple.Item2;
+            var (outputStream, probe) = StreamConverters.AsOutputStream(Timeout)
+                .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
+                .Run(_materializer);
 
-            var sub = probe.ExpectSubscription();
+            var sub = await probe.ExpectSubscriptionAsync();
 
             // triggers a blocking read on the queue
             // and then cancel the stage before we got anything
@@ -293,46 +289,46 @@ namespace Akka.Streams.Tests.IO
             //t.getLockName.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer"))
             //awaitAssert(threadsBlocked should === (Seq()), 3.seconds)
 
-            var bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic |
-                            BindingFlags.Static;
+            const BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic |
+                                           BindingFlags.Static;
             var field = typeof(OutputStreamAdapter).GetField("_dataQueue", bindFlags);
-            var blockingCollection = field.GetValue(outputStream) as BlockingCollection<ByteString>;
+            if (field == null)
+                throw new Exception($"Failed to retrieve the field `_dataQueue` from class {nameof(OutputStreamAdapter)}");
+            var blockingCollection = (BlockingCollection<ByteString>) field.GetValue(outputStream);
 
             //give the stage enough time to finish, otherwise it may take the hello message
-            Thread.Sleep(1000);
+            await Task.Delay(1000);
 
             // if a take operation is pending inside the stage it will steal this one and the next take will not succeed
             blockingCollection.Add(ByteString.FromString("hello"));
 
-            ByteString result;
-            blockingCollection.TryTake(out result, TimeSpan.FromSeconds(3)).Should().BeTrue();
+            blockingCollection.TryTake(out var result, TimeSpan.FromSeconds(3)).Should().BeTrue();
             result.ToString().Should().Be("hello");
         }
 
         [Fact(Skip = "Racy")]
-        public void OutputStreamSource_must_correctly_complete_the_stage_after_close()
+        public async Task OutputStreamSource_must_correctly_complete_the_stage_after_close()
         {
             // actually this was a race, so it only happened in at least one of 20 runs
 
             const int bufferSize = 4;
 
-            var t = StreamConverters.AsOutputStream(Timeout)
+            var (outputStream, probe) = StreamConverters.AsOutputStream(Timeout)
                 .AddAttributes(Attributes.CreateInputBuffer(bufferSize, bufferSize))
                 .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
                 .Run(_materializer);
-            var outputStream = t.Item1;
-            var probe = t.Item2;
 
-            // fill the buffer up
-            Enumerable.Range(1, bufferSize - 1).ForEach(i => outputStream.WriteByte((byte)i));
-
-            Task.Run(() => outputStream.Dispose());
+            using (outputStream)
+            {
+                // fill the buffer up
+                Enumerable.Range(1, bufferSize - 1).ForEach(i => outputStream.WriteByte((byte)i));
+            }
 
             // here is the race, has the elements reached the stage buffer yet?
-            Thread.Sleep(500);
+            await Task.Delay(500);
             probe.Request(bufferSize - 1);
-            probe.ExpectNextN(bufferSize - 1);
-            probe.ExpectComplete();
+            await probe.ExpectNextNAsync(bufferSize - 1).ToListAsync();
+            await probe.ExpectCompleteAsync().Task;
         }
     }
 }
