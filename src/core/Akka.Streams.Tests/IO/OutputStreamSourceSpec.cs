@@ -72,9 +72,9 @@ namespace Akka.Streams.Tests.IO
 
                 await outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length);
                 s.Request(1);
-                await probe.ExpectNextAsync(_byteString).Task;
+                await probe.AsyncBuilder().ExpectNext(_byteString).ExecuteAsync();
                 outputStream.Dispose();
-                await probe.ExpectCompleteAsync().Task;
+                await probe.AsyncBuilder().ExpectComplete().ExecuteAsync();
             }, _materializer);
         }
 
@@ -99,14 +99,14 @@ namespace Akka.Streams.Tests.IO
                     });
 
                     await ExpectTimeout(f, Timeout);
-                    await probe.ExpectNoMsgAsync(TimeSpan.MinValue).Task;
+                    await probe.AsyncBuilder().ExpectNoMsg(TimeSpan.MinValue).ExecuteAsync();
 
                     s.Request(1);
                     await ExpectSuccess(f, NotUsed.Instance);
-                    await probe.ExpectNextAsync(_byteString).Task;
+                    await probe.AsyncBuilder().ExpectNext(_byteString).ExecuteAsync();
                 }
 
-                await probe.ExpectCompleteAsync().Task;
+                await probe.AsyncBuilder().ExpectComplete().ExecuteAsync();
             }, _materializer);
         }
 
@@ -131,7 +131,7 @@ namespace Akka.Streams.Tests.IO
                     });
                     s.Request(1);
                     await ExpectSuccess(f, NotUsed.Instance);
-                    await probe.ExpectNextAsync(_byteString).Task;
+                    await probe.AsyncBuilder().ExpectNext(_byteString).ExecuteAsync();
 
                     var f2 = Task.Run(() =>
                     {
@@ -141,7 +141,7 @@ namespace Akka.Streams.Tests.IO
                     await ExpectSuccess(f2, NotUsed.Instance);
                 }
 
-                await probe.ExpectComplete().Task;
+                await probe.AsyncBuilder().ExpectComplete().ExecuteAsync();
 
             }, _materializer);
         }
@@ -169,14 +169,14 @@ namespace Akka.Streams.Tests.IO
                         return NotUsed.Instance;
                     });
                     await ExpectTimeout(f, Timeout);
-                    await probe.ExpectNoMsgAsync(TimeSpan.MinValue).Task;
+                    await probe.AsyncBuilder().ExpectNoMsg(TimeSpan.MinValue).ExecuteAsync();
 
                     s.Request(17);
                     await ExpectSuccess(f, NotUsed.Instance);
-                    await probe.ExpectNextNAsync(Enumerable.Repeat(_byteString, 17).ToList()).Task;
+                    await probe.AsyncBuilder().ExpectNextN(Enumerable.Repeat(_byteString, 17).ToList()).ExecuteAsync();
                 }
 
-                await probe.ExpectCompleteAsync().Task;
+                await probe.AsyncBuilder().ExpectComplete().ExecuteAsync();
             }, _materializer);
         }
 
@@ -191,7 +191,7 @@ namespace Akka.Streams.Tests.IO
 
                 await probe.ExpectSubscriptionAsync();
                 outputStream.Dispose();
-                await probe.ExpectCompleteAsync().Task;
+                await probe.AsyncBuilder().ExpectComplete().ExecuteAsync();
 
                 await Awaiting(() => outputStream.WriteAsync(_bytesArray, 0, _byteString.Count).ShouldCompleteWithin(Timeout))
                     .Should().ThrowAsync<IOException>();
@@ -239,7 +239,7 @@ namespace Akka.Streams.Tests.IO
                 s.Request(1);
                 await sourceProbe.ExpectMsgAsync<GraphStageMessages.Pull>();
 
-                await probe.ExpectNextAsync(_byteString).Task;
+                await probe.AsyncBuilder().ExpectNext(_byteString).ExecuteAsync();
 
                 s.Cancel();
                 await sourceProbe.ExpectMsgAsync<GraphStageMessages.DownstreamFinish>();
@@ -328,7 +328,7 @@ namespace Akka.Streams.Tests.IO
             await Task.Delay(500);
             probe.Request(bufferSize - 1);
             await probe.ExpectNextNAsync(bufferSize - 1).ToListAsync();
-            await probe.ExpectCompleteAsync().Task;
+            await probe.AsyncBuilder().ExpectComplete().ExecuteAsync();
         }
     }
 }
