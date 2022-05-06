@@ -170,7 +170,7 @@ namespace Akka.Streams.Tests.Dsl
             exception = exception ?? new Exception("boom");
             decider = decider ?? Deciders.StoppingDecider;
 
-            return Source.From(elements)
+            var probe = Source.From(elements)
                 .ScanAsync(zero, (i, i1) =>
                 {
                     if (i1 >= 0)
@@ -179,9 +179,10 @@ namespace Akka.Streams.Tests.Dsl
                     throw exception;
                 })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(elements.Count + 1)
-                .ExpectNext(zero).Probe;
+                .RunWith(this.SinkProbe<int>(), Materializer);
+            probe.Request(elements.Count + 1)
+                .ExpectNext(zero);
+            return probe;
         }
 
         private TestSubscriber.ManualProbe<int> WhenFailedTask(ICollection<int> elements, int zero,
@@ -191,7 +192,7 @@ namespace Akka.Streams.Tests.Dsl
             exception = exception ?? new Exception("boom");
             decider = decider ?? Deciders.StoppingDecider;
 
-            return Source.From(elements)
+            var probe = Source.From(elements)
                 .ScanAsync(zero, (i, i1) => Task.Run(() =>
                 {
                     if (i1 >= 0)
@@ -200,21 +201,23 @@ namespace Akka.Streams.Tests.Dsl
                     throw exception;
                 }))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(elements.Count + 1)
-                .ExpectNext(zero).Probe;
+                .RunWith(this.SinkProbe<int>(), Materializer);
+            probe.Request(elements.Count + 1)
+                .ExpectNext(zero);
+            return probe;
         }
 
         private TestSubscriber.ManualProbe<string> WhenNullElement(ICollection<string> elements, string zero, Decider decider = null)
         {
             decider = decider ?? Deciders.StoppingDecider;
 
-            return Source.From(elements)
+            var probe = Source.From(elements)
                 .ScanAsync(zero, (i, i1) => Task.FromResult(i1 != "null" ? i1 : null))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
-                .RunWith(this.SinkProbe<string>(), Materializer)
-                .Request(elements.Count + 1)
-                .ExpectNext(zero).Probe;
+                .RunWith(this.SinkProbe<string>(), Materializer);
+            probe.Request(elements.Count + 1)
+                .ExpectNext(zero);
+            return probe;
         }
     }
 }

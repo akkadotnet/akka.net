@@ -72,10 +72,10 @@ namespace Akka.Persistence.TCK.Query
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("f");
             var src = queries.CurrentEventsByPersistenceId("f", 0L, long.MaxValue);
-            var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
-                .Request(2)
+            var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
+            probe.Request(2)
                 .ExpectNext("f-1", "f-2")
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(100)).Probe as TestSubscriber.Probe<object>;
+                .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             pref.Tell("f-4");
             ExpectMsg("f-4-done");
