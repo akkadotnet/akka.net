@@ -352,10 +352,6 @@ namespace Akka.Streams.Tests.IO
 
             public TestSubscriber.ManualProbe<ByteString> SubscriberProbe { get; }
 
-            public ByteString Read(int count)
-                => ReadAsync(count)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
-            
             public async Task<ByteString> ReadAsync(int count)
             {
                 var result = ByteString.Empty;
