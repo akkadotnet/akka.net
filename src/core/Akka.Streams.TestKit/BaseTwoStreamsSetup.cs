@@ -68,7 +68,9 @@ namespace Akka.Streams.TestKit
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = Setup(CompletedPublisher<int>(), CompletedPublisher<int>());
-                await subscriber.ExpectSubscriptionAndCompleteAsync().Task;
+                await subscriber.AsyncBuilder()
+                    .ExpectSubscriptionAndComplete()
+                    .ExecuteAsync();
             }, Materializer);
         }
 
@@ -78,7 +80,9 @@ namespace Akka.Streams.TestKit
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = Setup(SoonToCompletePublisher<int>(), SoonToCompletePublisher<int>());
-                await subscriber.ExpectSubscriptionAndCompleteAsync().Task;
+                await subscriber.AsyncBuilder()
+                    .ExpectSubscriptionAndComplete()
+                    .ExecuteAsync();
             }, Materializer);
         }
 
@@ -88,7 +92,9 @@ namespace Akka.Streams.TestKit
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = Setup(CompletedPublisher<int>(), SoonToCompletePublisher<int>());
-                await subscriber.ExpectSubscriptionAndCompleteAsync().Task;
+                await subscriber.AsyncBuilder()
+                    .ExpectSubscriptionAndComplete()
+                    .ExecuteAsync();
             }, Materializer);
         }
 
