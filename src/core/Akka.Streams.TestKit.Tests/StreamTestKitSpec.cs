@@ -70,7 +70,7 @@ namespace Akka.Streams.TestKit.Tests
             var result = await Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
                 .AsyncBuilder()
                 .EnsureSubscription()
-                .ToStrictAsync(300.Milliseconds())
+                .ToStrictAsync(3.Seconds())
                 .ToListAsync();
             result.Should().Equal(1, 2, 3, 4);
         }
