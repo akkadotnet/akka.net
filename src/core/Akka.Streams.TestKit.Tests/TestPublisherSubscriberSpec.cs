@@ -51,7 +51,7 @@ namespace Akka.Streams.TestKit.Tests
 
                 upstreamSubscription.SendNext(1);
                 downstreamSubscription.Request(1);
-                await downstream.ExpectNextAsync(1).Task;
+                await downstream.AsyncBuilder().ExpectNext(1).ExecuteAsync();
 
                 upstreamSubscription.SendComplete();
                 evt = await downstream.ExpectEventAsync();
@@ -75,7 +75,7 @@ namespace Akka.Streams.TestKit.Tests
 
                 (await upstream.ExpectRequestAsync()).Should().Be(10);
                 upstream.SendNext(1);
-                await downstream.ExpectNextAsync(1).Task;
+                await downstream.AsyncBuilder().ExpectNext(1).ExecuteAsync();
             }, Materializer);
         }
     }
