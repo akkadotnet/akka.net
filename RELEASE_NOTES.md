@@ -1,5 +1,20 @@
-#### 1.4.38 April 14 2022 ####
-**Placeholder for nightlies**
+#### 1.4.38 May 6 2022 ####
+Akka.NET v1.4.38 is a minor release that contains some minor bug fixes.
+
+* [Streams: Add `allowClosedSubstreamRecreation` option to GroupBy](https://github.com/akkadotnet/akka.net/pull/5882)
+* [Streams: Fix `Source.ActorRef` not completing bug](https://github.com/akkadotnet/akka.net/pull/5883)
+* [Remote: Fix typo thumbprint in `akka.remote` HOCON configuration](https://github.com/akkadotnet/akka.net/pull/5903)
+* [Cluster: Fix `ChannelTaskScheduler` to work inside `Akka.Cluster`](https://github.com/akkadotnet/akka.net/pull/5920)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.38, click here](https://github.com/akkadotnet/akka.net/milestone/69?closed=1).
+
+| COMMITS | LOC+  | LOC- | AUTHOR              |
+|---------|-------|------|---------------------|
+| 6       | 177   | 93   | Gregorius Soedharmo |
+| 5       | 424   | 156  | Ismael Hamed        |
+| 2       | 86    | 89   | Aaron Stannard      |
+| 1       | 45    | 209  | Simon Cropp         |
+| 1       | 1     | 1    | dependabot[bot]     |
 
 #### 1.4.37 April 14 2022 ####
 Akka.NET v1.4.37 is a minor release that contains some minor bug fixes.
