@@ -79,10 +79,10 @@ namespace Akka.Persistence.TCK.Query
             var pref = Setup("e");
 
             var src = queries.EventsByPersistenceId("e", 0, long.MaxValue);
-            var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
-                .Request(2)
+            var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
+            probe.Request(2)
                 .ExpectNext("e-1", "e-2")
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(100)).Probe as TestSubscriber.Probe<object>;
+                .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             pref.Tell("e-4");
             ExpectMsg("e-4-done");
