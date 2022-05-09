@@ -21,7 +21,7 @@ namespace Akka.Streams.TestKit
     /// <summary>
     /// Provides factory methods for various Publishers.
     /// </summary>
-    public static class TestPublisher
+    public static partial class TestPublisher
     {
         #region messages
 
@@ -66,13 +66,14 @@ namespace Akka.Streams.TestKit
         /// This probe does not track demand.Therefore you need to expect demand before sending
         ///  elements downstream.
         /// </summary>
-        public class ManualProbe<T> : IPublisher<T>
+        public partial class ManualProbe<T> : IPublisher<T>
         {
-            private readonly TestProbe _probe;
+            private volatile StreamTestKit.PublisherProbeSubscription<T> _subscription_DoNotUseDirectly;
+            public TestProbe Probe { get; }
 
             internal ManualProbe(TestKitBase system, bool autoOnSubscribe = true)
             {
-                _probe = system.CreateTestProbe();
+                Probe = system.CreateTestProbe();
                 AutoOnSubscribe = autoOnSubscribe;
             }
 
@@ -80,13 +81,21 @@ namespace Akka.Streams.TestKit
 
             public IPublisher<T> Publisher => this;
 
+            public StreamTestKit.PublisherProbeSubscription<T> Subscription
+            {
+#pragma warning disable CS0420
+                get => Volatile.Read(ref _subscription_DoNotUseDirectly);
+                protected set => Volatile.Write(ref _subscription_DoNotUseDirectly, value);
+#pragma warning restore CS0420
+            }
+            
             /// <summary>
             /// Subscribes a given <paramref name="subscriber"/> to this probe.
             /// </summary>
             public void Subscribe(ISubscriber<T> subscriber)
             {
-                var subscription = new StreamTestKit.PublisherProbeSubscription<T>(subscriber, _probe);
-                _probe.Ref.Tell(new Subscribe(subscription));
+                var subscription = new StreamTestKit.PublisherProbeSubscription<T>(subscriber, Probe);
+                Probe.Ref.Tell(new Subscribe(subscription));
                 if (AutoOnSubscribe) subscriber.OnSubscribe(subscription);
             }
 
@@ -95,7 +104,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public StreamTestKit.PublisherProbeSubscription<T> ExpectSubscription(
                 CancellationToken cancellationToken = default)
-                => ExpectSubscriptionAsync(cancellationToken)
+                => ExpectSubscriptionTask(Probe, cancellationToken)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
 
             /// <summary>
@@ -103,64 +112,32 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public async Task<StreamTestKit.PublisherProbeSubscription<T>> ExpectSubscriptionAsync(
                 CancellationToken cancellationToken = default)
-            {
-                var msg = await _probe.ExpectMsgAsync<Subscribe>(cancellationToken: cancellationToken)
-                    .ConfigureAwait(false); 
-                return (StreamTestKit.PublisherProbeSubscription<T>) msg.Subscription;
-            }
+                => await ExpectSubscriptionTask(Probe, cancellationToken)
+                    .ConfigureAwait(false);
 
-            /// <summary>
-            /// Expect demand from the given subscription.
-            /// </summary>
-            public void ExpectRequest(
-                ISubscription subscription,
-                int n,
-                CancellationToken cancellationToken = default)
-                => ExpectRequestAsync(subscription, n, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
-            
             /// <summary>
             /// Expect demand from the given subscription.
             /// </summary>
             public async Task ExpectRequestAsync(
                 ISubscription subscription, 
-                int n,
+                int nrOfElements,
                 CancellationToken cancellationToken = default)
-            {
-                await _probe.ExpectMsgAsync<RequestMore>(
-                    isMessage: x => x.NrOfElements == n && x.Subscription == subscription, 
-                    cancellationToken: cancellationToken);
-            }
-
-            /// <summary>
-            /// Expect no messages.
-            /// </summary>
-            public void ExpectNoMsg(CancellationToken cancellationToken = default)
-                => ExpectNoMsgAsync(cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                => await ExpectRequestTask(Probe, subscription, nrOfElements, cancellationToken)
+                    .ConfigureAwait(false);
 
             /// <summary>
             /// Expect no messages.
             /// </summary>
             public async Task ExpectNoMsgAsync(CancellationToken cancellationToken = default)
-            {
-                await _probe.ExpectNoMsgAsync(cancellationToken);
-            }
-
-            /// <summary>
-            /// Expect no messages for given duration.
-            /// </summary>
-            public void ExpectNoMsg(TimeSpan duration, CancellationToken cancellationToken = default)
-                => ExpectNoMsgAsync(duration, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                => await ExpectNoMsgTask(Probe, cancellationToken)
+                    .ConfigureAwait(false);
 
             /// <summary>
             /// Expect no messages for given duration.
             /// </summary>
             public async Task ExpectNoMsgAsync(TimeSpan duration, CancellationToken cancellationToken = default)
-            {
-                await _probe.ExpectNoMsgAsync(duration, cancellationToken);
-            }
+                => await ExpectNoMsgTask(Probe, duration, cancellationToken)
+                    .ConfigureAwait(false);
 
             /// <summary>
             /// Receive messages for a given duration or until one does not match a given partial function.
@@ -169,10 +146,10 @@ namespace Akka.Streams.TestKit
                 TimeSpan? max = null,
                 TimeSpan? idle = null,
                 Func<object, TOther> filter = null,
-                int msgs = int.MaxValue,
+                int msgCount = int.MaxValue,
                 CancellationToken cancellationToken = default) where TOther : class
-                => ReceiveWhileAsync(max, idle, filter, msgs, cancellationToken)
-                    .ToListAsync(cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+                => ReceiveWhileTask(Probe, max, idle, filter, msgCount, cancellationToken).ToListAsync(cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
 
             /// <summary>
             /// Receive messages for a given duration or until one does not match a given partial function.
@@ -181,16 +158,22 @@ namespace Akka.Streams.TestKit
                 TimeSpan? max = null,
                 TimeSpan? idle = null,
                 Func<object, TOther> filter = null, 
-                int msgs = int.MaxValue,
+                int msgCount = int.MaxValue,
                 CancellationToken cancellationToken = default) where TOther : class
-                => _probe.ReceiveWhileAsync(max, idle, filter, msgs, cancellationToken);
+                => ReceiveWhileTask(Probe, max, idle, filter, msgCount, cancellationToken);
 
+            /// <summary>
+            /// Expect a publisher event from the stream.
+            /// </summary>
             public IPublisherEvent ExpectEvent(CancellationToken cancellationToken = default)
-                => ExpectEventAsync(cancellationToken)
+                => ExpectEventTask(Probe, cancellationToken)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
 
+            /// <summary>
+            /// Expect a publisher event from the stream.
+            /// </summary>
             public async Task<IPublisherEvent> ExpectEventAsync(CancellationToken cancellationToken = default)
-                => await _probe.ExpectMsgAsync<IPublisherEvent>(cancellationToken: cancellationToken)
+                => await ExpectEventTask(Probe, cancellationToken)
                     .ConfigureAwait(false);
 
             /// <summary>
@@ -254,7 +237,7 @@ namespace Akka.Streams.TestKit
                 TimeSpan max,
                 Func<TOther> execute,
                 CancellationToken cancellationToken = default)
-                => await _probe.WithinAsync(min, max, execute, cancellationToken: cancellationToken)
+                => await Probe.WithinAsync(min, max, execute, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
             
             /// <summary>
@@ -278,7 +261,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             /// <param name="min"></param>
             /// <param name="max"></param>
-            /// <param name="execute"></param>
+            /// <param name="actionAsync"></param>
             /// <param name="cancellationToken"></param>
             /// <returns></returns>
             public async Task<TOther> WithinAsync<TOther>(
@@ -286,28 +269,28 @@ namespace Akka.Streams.TestKit
                 TimeSpan max,
                 Func<Task<TOther>> actionAsync,
                 CancellationToken cancellationToken = default)
-                => await _probe.WithinAsync(min, max, actionAsync, cancellationToken: cancellationToken)
+                => await Probe.WithinAsync(min, max, actionAsync, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
 
             /// <summary>
             /// Sane as calling Within(TimeSpan.Zero, max, function, cancellationToken).
             /// </summary>
-            public TOther Within<TOther>(TimeSpan max, Func<TOther> execute)
-                => WithinAsync(max, execute)
+            public TOther Within<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default)
+                => WithinAsync(max, execute, cancellationToken)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
             
             /// <summary>
             /// Sane as calling WithinAsync(TimeSpan.Zero, max, function, cancellationToken).
             /// </summary>
             public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) 
-                => await _probe.WithinAsync(max, execute, cancellationToken: cancellationToken)
+                => await Probe.WithinAsync(max, execute, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
             
             /// <summary>
             /// Sane as calling WithinAsync(TimeSpan.Zero, max, function, cancellationToken).
             /// </summary>
             public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<Task<TOther>> execute, CancellationToken cancellationToken = default) 
-                => await _probe.WithinAsync(max, execute, cancellationToken: cancellationToken)
+                => await Probe.WithinAsync(max, execute, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
         }
 
@@ -315,11 +298,10 @@ namespace Akka.Streams.TestKit
         /// Single subscription and demand tracking for <see cref="ManualProbe{T}"/>.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        public class Probe<T> : ManualProbe<T>
+        public partial class Probe<T> : ManualProbe<T>
         {
             private readonly long _initialPendingRequests;
-            private StreamTestKit.PublisherProbeSubscription<T> _subscription = null;
-
+            
             internal Probe(TestKitBase system, long initialPendingRequests) : base(system)
             {
                 _initialPendingRequests = Pending = initialPendingRequests;
@@ -334,71 +316,40 @@ namespace Akka.Streams.TestKit
             /// Asserts that a subscription has been received or will be received
             /// </summary>
             public void EnsureSubscription(CancellationToken cancellationToken = default)
-            {
-                if(_subscription == null)
-                    _subscription = ExpectSubscription(cancellationToken);
-            }
+                => EnsureSubscriptionTask(this, cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
 
             public async Task EnsureSubscriptionAsync(CancellationToken cancellationToken = default)
-            {
-                if(_subscription == null)
-                    _subscription = await ExpectSubscriptionAsync(cancellationToken)
-                        .ConfigureAwait(false);
-            }
-            public Probe<T> SendNext(T element)
-            {
-                EnsureSubscription();
-                var sub = _subscription;
-                if (Pending == 0)
-                    Pending = sub.ExpectRequest();
-                Pending--;
-                sub.SendNext(element);
-                return this;
-            }
+                => await EnsureSubscriptionTask(this, cancellationToken)
+                    .ConfigureAwait(false);
 
-            public Probe<T> UnsafeSendNext(T element)
-            {
-                EnsureSubscription();
-                _subscription.SendNext(element);
-                return this;
-            }
+            public async Task SendNextAsync(T element, CancellationToken cancellationToken = default)
+                => await SendNextTask(this, element, cancellationToken)
+                    .ConfigureAwait(false);
+            
+            public async Task UnsafeSendNextAsync(T element, CancellationToken cancellationToken = default)
+                => await UnsafeSendNextTask(this, element, cancellationToken)
+                    .ConfigureAwait(false);
 
-            public Probe<T> SendComplete()
-            {
-                EnsureSubscription();
-                _subscription.SendComplete();
-                return this;
-            }
+            public async Task SendCompleteAsync(CancellationToken cancellationToken = default)
+                => await SendCompleteTask(this, cancellationToken)
+                    .ConfigureAwait(false);
 
-            public Probe<T> SendError(Exception e)
-            {
-                EnsureSubscription();
-                _subscription.SendError(e);
-                return this;
-            }
+            public async Task SendErrorAsync(Exception e, CancellationToken cancellationToken = default)
+                => await SendErrorTask(this, e, cancellationToken)
+                    .ConfigureAwait(false);
 
             public long ExpectRequest(CancellationToken cancellationToken = default)
-                => ExpectRequestAsync(cancellationToken)
+                => ExpectRequestTask(this, cancellationToken)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
 
             public async Task<long> ExpectRequestAsync(CancellationToken cancellationToken = default)
-            {
-                await EnsureSubscriptionAsync(cancellationToken);
-                var requests = await _subscription.ExpectRequestAsync(cancellationToken)
+                => await ExpectRequestTask(this, cancellationToken)
                     .ConfigureAwait(false);
-                Pending += requests;
-                return requests;
-            }
 
-            public void ExpectCancellation(CancellationToken cancellationToken = default)
-                => ExpectCancellationAsync(cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
-            
             public async Task ExpectCancellationAsync(CancellationToken cancellationToken = default)
-            {
-                await EnsureSubscriptionAsync(cancellationToken);
-                await _subscription.ExpectCancellationAsync(cancellationToken);
-            }
+                => await ExpectCancellationTask(this, cancellationToken)
+                    .ConfigureAwait(false);
         }
 
         internal sealed class LazyEmptyPublisher<T> : IPublisher<T>
