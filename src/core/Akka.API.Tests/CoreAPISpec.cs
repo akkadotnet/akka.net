@@ -37,6 +37,7 @@ namespace Akka.API.Tests
         {
             var settings = new VerifySettings() { };
             settings.UniqueForRuntime();
+            settings.UseDirectory("verify");
             return Verifier.Verify(GeneratePublicApi(typeof(T).Assembly), settings);
         }
 
