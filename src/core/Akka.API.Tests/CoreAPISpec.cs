@@ -35,7 +35,9 @@ namespace Akka.API.Tests
 
         static Task VerifyAssembly<T>()
         {
-            return Verifier.Verify(GeneratePublicApi(typeof(T).Assembly));
+            var settings = new VerifySettings() { };
+            settings.UniqueForRuntime();
+            return Verifier.Verify(GeneratePublicApi(typeof(T).Assembly), settings);
         }
 
         [Fact]
