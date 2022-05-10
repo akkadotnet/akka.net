@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Dispatch;
@@ -39,7 +40,7 @@ namespace Akka.Cluster.Tests.Routing
         }
 
         [Fact]
-        public void Cluster_aware_routers_must_use_provided_supervisor_strategy()
+        public async Task Cluster_aware_routers_must_use_provided_supervisor_strategy()
         {
             var escalator = new OneForOneStrategy(
                 exception =>
@@ -57,7 +58,7 @@ namespace Akka.Cluster.Tests.Routing
                         .Props(Props.Create(() => new KillableActor(TestActor))), "therouter");
 
             router.Tell("go away");
-            ExpectMsg("supervised");
+            await ExpectMsgAsync("supervised");
         }
     }
 }
