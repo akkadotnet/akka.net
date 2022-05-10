@@ -30,6 +30,7 @@ namespace Akka.Streams.Tests.IO
     public class TcpSpec : TcpHelper
     {
         public TcpSpec(ITestOutputHelper helper) : base(@"
+akka.loglevel = DEBUG
 akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
         }
@@ -525,7 +526,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 // and is possible to communicate with 
                 await Source.Single(ByteString.FromString(""))
                     .Via(sys2.TcpStream().OutgoingConnection(address))
-                    .RunWith(Sink.Ignore<ByteString>(), mat2);
+                    .RunWith(Sink.Ignore<ByteString>(), mat2).ShouldCompleteWithin(10.Seconds());
 
                 await sys2.Terminate().ShouldCompleteWithin(10.Seconds());
                 await binding.Unbind().ShouldCompleteWithin(10.Seconds());
@@ -606,6 +607,31 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             
             result.Should().BeEquivalentTo(expectedOutput);
             await binding.Unbind().ShouldCompleteWithin(3.Seconds());
+            await echoServerFinish.ShouldCompleteWithin(3.Seconds());
+        }
+
+        [Fact]
+        public async Task Tcp_stream_must_be_able_to_be_unbound_multiple_times()
+        {
+            var serverAddress = TestUtils.TemporaryServerAddress();
+            var (bindTask, echoServerFinish) = Sys.TcpStream()
+                .Bind(serverAddress.Address.ToString(), serverAddress.Port)
+                .ToMaterialized(EchoHandler(), Keep.Both)
+                .Run(Materializer);
+
+            // make sure that the server has bound to the socket
+            var binding = await bindTask.ShouldCompleteWithin(3.Seconds());
+
+            await Task.WhenAll(
+                binding.Unbind(),
+                binding.Unbind(),
+                binding.Unbind(),
+                binding.Unbind(),
+                binding.Unbind(),
+                binding.Unbind(),
+                binding.Unbind())
+                .ShouldCompleteWithin(3.Seconds());
+            
             await echoServerFinish.ShouldCompleteWithin(3.Seconds());
         }
 
