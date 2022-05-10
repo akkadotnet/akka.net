@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Immutable;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -49,7 +50,7 @@ namespace Akka.Cluster.Tests
             : base(Config, output){ }
 
         [Fact]
-        public void ClusterHeartBeatSender_must_increment_heartbeat_SeqNo()
+        public async Task ClusterHeartBeatSender_must_increment_heartbeat_SeqNo()
         {
             var probe = CreateTestProbe();
             var underTest = Sys.ActorOf(Props.Create(() => new TestClusterHeartbeatSender(probe)));
@@ -59,8 +60,8 @@ namespace Akka.Cluster.Tests
                 new UniqueAddress(new Address("akka", Sys.Name), 1), 1, 
                 MemberStatus.Up, ImmutableHashSet<string>.Empty, AppVersion.Zero)));
 
-            probe.ExpectMsg<Heartbeat>().SequenceNr.Should().Be(1L);
-            probe.ExpectMsg<Heartbeat>().SequenceNr.Should().Be(2L);
+            (await probe.ExpectMsgAsync<Heartbeat>()).SequenceNr.Should().Be(1L);
+            (await probe.ExpectMsgAsync<Heartbeat>()).SequenceNr.Should().Be(2L);
         }
     }
 }
