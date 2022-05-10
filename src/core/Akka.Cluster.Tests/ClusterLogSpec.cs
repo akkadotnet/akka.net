@@ -77,7 +77,7 @@ namespace Akka.Cluster.Tests
             {
                 await EventFilter
                     .Info(contains: expected)
-                    .ExpectOneAsync(TimeSpan.FromMinutes(1), () => _cluster.Join(_selfAddress));
+                    .ExpectOneAsync(TimeSpan.FromMinutes(1), async () => await _cluster.JoinAsync(_selfAddress));
             });
         }
 
@@ -105,7 +105,7 @@ namespace Akka.Cluster.Tests
             {
                 await EventFilter
                 .Info(contains: expected)
-                .ExpectOneAsync(() => _cluster.Down(_selfAddress));
+                .ExpectOneAsync(() =>  _cluster.Down(_selfAddress));
             });
         }
     }
