@@ -4751,7 +4751,9 @@ namespace Akka.Streams.Stage
         protected void SetHandler<T>(Akka.Streams.Inlet<T> inlet, System.Action onPush, System.Action onUpstreamFinish = null, System.Action<System.Exception> onUpstreamFailure = null) { }
         protected void SetHandler<T>(Akka.Streams.Outlet<T> outlet, Akka.Streams.Stage.IOutHandler handler) { }
         protected void SetHandler<T>(Akka.Streams.Outlet<T> outlet, System.Action onPull, System.Action onDownstreamFinish = null) { }
+        [System.ObsoleteAttribute("Use method `SetHandlers` instead. Will be removed in v1.5")]
         protected void SetHandler<TIn, TOut>(Akka.Streams.Inlet<TIn> inlet, Akka.Streams.Outlet<TOut> outlet, Akka.Streams.Stage.InAndOutGraphStageLogic handler) { }
+        protected void SetHandlers<TIn, TOut>(Akka.Streams.Inlet<TIn> inlet, Akka.Streams.Outlet<TOut> outlet, Akka.Streams.Stage.InAndOutGraphStageLogic handler) { }
         protected void SetKeepGoing(bool enabled) { }
         protected void TryPull<T>(Akka.Streams.Inlet<T> inlet) { }
         protected sealed class LambdaInHandler : Akka.Streams.Stage.InHandler
