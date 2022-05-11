@@ -1,0 +1,1091 @@
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DistributedData.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DistributedData.Tests.MultiNode")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+[assembly: System.Runtime.InteropServices.GuidAttribute("f22db348-9ab3-4c6a-b1e8-9b835308d367")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+namespace Akka.DistributedData
+{
+    public sealed class Changed : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Changed>
+    {
+        public Changed(Akka.DistributedData.IKey key, object data) { }
+        public object Data { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public bool Equals(Akka.DistributedData.Changed other) { }
+        public override bool Equals(object obj) { }
+        public T Get<T>(Akka.DistributedData.IKey<T> key)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public delegate long Clock<in T>(long currentTimestamp, T value);
+    public sealed class DataDeleted : System.Exception, Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IDeleteResponse, Akka.DistributedData.IGetResponse, Akka.DistributedData.IUpdateResponse, System.IEquatable<Akka.DistributedData.DataDeleted>
+    {
+        public DataDeleted(Akka.DistributedData.IKey key, object request = null) { }
+        public bool AlreadyDeleted { get; }
+        public bool IsFailure { get; }
+        public bool IsFound { get; }
+        public bool IsSuccessful { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public object Request { get; }
+        public bool Equals(Akka.DistributedData.DataDeleted other) { }
+        public override bool Equals(object obj) { }
+        public T Get<T>(Akka.DistributedData.IKey<T> key)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public override int GetHashCode() { }
+        public void ThrowOnFailure() { }
+        public override string ToString() { }
+    }
+    public class DataDeletedException : System.Exception
+    {
+        public DataDeletedException(string message) { }
+        protected DataDeletedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public sealed class Delete : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.DistributedData.Delete>
+    {
+        public Delete(Akka.DistributedData.IKey key, Akka.DistributedData.IWriteConsistency consistency, object request = null) { }
+        public Akka.DistributedData.IWriteConsistency Consistency { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public object Request { get; }
+        public bool Equals(Akka.DistributedData.Delete other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class DeleteSuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IDeleteResponse, System.IEquatable<Akka.DistributedData.DeleteSuccess>
+    {
+        public DeleteSuccess(Akka.DistributedData.IKey key, object request = null) { }
+        public bool AlreadyDeleted { get; }
+        public bool IsSuccessful { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public object Request { get; }
+        public bool Equals(Akka.DistributedData.DeleteSuccess other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public class DistributedData : Akka.Actor.IExtension
+    {
+        public DistributedData(Akka.Actor.ExtendedActorSystem system) { }
+        public bool IsDurable { get; }
+        public bool IsTerminated { get; }
+        public Akka.Actor.IActorRef Replicator { get; }
+        public static Akka.Configuration.Config DefaultConfig() { }
+        public System.Threading.Tasks.Task DeleteAsync<T>(Akka.DistributedData.IKey<T> key, Akka.DistributedData.IWriteConsistency consistency = null, System.Threading.CancellationToken cancellation = null)
+            where T : Akka.DistributedData.IReplicatedData<T> { }
+        public static Akka.DistributedData.DistributedData Get(Akka.Actor.ActorSystem system) { }
+        public System.Threading.Tasks.Task<T> GetAsync<T>(Akka.DistributedData.IKey<T> key, Akka.DistributedData.IReadConsistency consistency = null, System.Threading.CancellationToken cancellation = null)
+            where T :  class, Akka.DistributedData.IReplicatedData<T> { }
+        public System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableSet<string>> GetKeysAsync(System.Threading.CancellationToken cancellation = null) { }
+        public System.Threading.Tasks.Task UpdateAsync<T>(Akka.DistributedData.IKey<T> key, T replica, Akka.DistributedData.IWriteConsistency consistency = null, System.Threading.CancellationToken cancellation = null)
+            where T : Akka.DistributedData.IReplicatedData<T> { }
+    }
+    public class static DistributedDataExtensions
+    {
+        public static Akka.DistributedData.DistributedData DistributedData(this Akka.Actor.ActorSystem system) { }
+    }
+    public class DistributedDataProvider : Akka.Actor.ExtensionIdProvider<Akka.DistributedData.DistributedData>
+    {
+        public DistributedDataProvider() { }
+        public override Akka.DistributedData.DistributedData CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public class static Dsl
+    {
+        public static Akka.DistributedData.GetKeyIds GetKeyIds { get; }
+        public static Akka.DistributedData.GetReplicaCount GetReplicaCount { get; }
+        public static Akka.DistributedData.ReadLocal ReadLocal { get; }
+        public static Akka.DistributedData.WriteLocal WriteLocal { get; }
+        public static Akka.DistributedData.Delete Delete<T>(Akka.DistributedData.IKey<T> key, Akka.DistributedData.IWriteConsistency consistency, object request = null)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public static Akka.DistributedData.Get Get<T>(Akka.DistributedData.IKey<T> key, Akka.DistributedData.IReadConsistency consistency = null, object request = null)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public static Akka.DistributedData.Subscribe Subscribe<T>(Akka.DistributedData.IKey<T> key, Akka.Actor.IActorRef subscriber)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public static Akka.DistributedData.Unsubscribe Unsubscribe<T>(Akka.DistributedData.IKey<T> key, Akka.Actor.IActorRef subscriber)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public static Akka.DistributedData.Update Update<T>(Akka.DistributedData.IKey<T> key, T value, Akka.DistributedData.IWriteConsistency consistency = null)
+            where T : Akka.DistributedData.IReplicatedData<T> { }
+        public static Akka.DistributedData.Update Update<T>(Akka.DistributedData.IKey<T> key, Akka.DistributedData.IWriteConsistency consistency, System.Func<T, T> modify)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public static Akka.DistributedData.Update Update<T>(Akka.DistributedData.IKey<T> key, T initial, Akka.DistributedData.IWriteConsistency consistency, System.Func<T, T> modify)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public static Akka.DistributedData.Update Update<T>(Akka.DistributedData.IKey<T> key, T initial, Akka.DistributedData.IWriteConsistency consistency, object request, System.Func<T, T> modify)
+            where T : Akka.DistributedData.IReplicatedData { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public abstract class FastMerge<T> : Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedData<T>
+        where T : Akka.DistributedData.FastMerge<T>
+    {
+        protected FastMerge() { }
+        [Akka.Annotations.InternalApiAttribute()]
+        protected T AssignAncestor(T newData) { }
+        [Akka.Annotations.InternalApiAttribute()]
+        protected T ClearAncestor() { }
+        [Akka.Annotations.InternalApiAttribute()]
+        protected bool IsAncestorOf(T newData) { }
+        public abstract T Merge(T other);
+        public Akka.DistributedData.IReplicatedData Merge(Akka.DistributedData.IReplicatedData other) { }
+    }
+    public sealed class Flag : Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.Flag>, System.IComparable, System.IComparable<Akka.DistributedData.Flag>, System.IEquatable<Akka.DistributedData.Flag>
+    {
+        public static readonly Akka.DistributedData.Flag False;
+        public static readonly Akka.DistributedData.Flag True;
+        public Flag() { }
+        public Flag(bool enabled) { }
+        public bool Enabled { get; }
+        public int CompareTo(object obj) { }
+        public int CompareTo(Akka.DistributedData.Flag other) { }
+        public bool Equals(Akka.DistributedData.Flag other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public Akka.DistributedData.Flag Merge(Akka.DistributedData.Flag other) { }
+        public Akka.DistributedData.Flag SwitchOn() { }
+        public override string ToString() { }
+        public static bool op_Implicit(Akka.DistributedData.Flag flag) { }
+    }
+    public sealed class FlagKey : Akka.DistributedData.Key<Akka.DistributedData.Flag>
+    {
+        public FlagKey(string id) { }
+    }
+    public sealed class FlushChanges
+    {
+        public static readonly Akka.DistributedData.FlushChanges Instance;
+        public override bool Equals(object obj) { }
+    }
+    public sealed class GCounter : Akka.DistributedData.FastMerge<Akka.DistributedData.GCounter>, Akka.DistributedData.IDeltaReplicatedData, Akka.DistributedData.IDeltaReplicatedData<Akka.DistributedData.GCounter, Akka.DistributedData.GCounter>, Akka.DistributedData.IRemovedNodePruning, Akka.DistributedData.IRemovedNodePruning<Akka.DistributedData.GCounter>, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.GCounter>, Akka.DistributedData.IReplicatedDelta, System.IEquatable<Akka.DistributedData.GCounter>
+    {
+        public GCounter() { }
+        public Akka.DistributedData.GCounter Delta { get; }
+        public static Akka.DistributedData.GCounter Empty { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        public System.Collections.Immutable.ImmutableDictionary<Akka.Cluster.UniqueAddress, ulong> State { get; }
+        public ulong Value { get; }
+        public bool Equals(Akka.DistributedData.GCounter other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public Akka.DistributedData.GCounter Increment(Akka.Cluster.Cluster node, ulong delta = 1) { }
+        public Akka.DistributedData.GCounter Increment(Akka.Cluster.UniqueAddress node, ulong n = 1) { }
+        public override Akka.DistributedData.GCounter Merge(Akka.DistributedData.GCounter other) { }
+        public Akka.DistributedData.GCounter MergeDelta(Akka.DistributedData.GCounter delta) { }
+        public bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.GCounter Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto) { }
+        public Akka.DistributedData.GCounter PruningCleanup(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.GCounter ResetDelta() { }
+        public override string ToString() { }
+        public static ulong op_Implicit(Akka.DistributedData.GCounter counter) { }
+    }
+    public sealed class GCounterKey : Akka.DistributedData.Key<Akka.DistributedData.GCounter>
+    {
+        public GCounterKey(string id) { }
+    }
+    public class static GSet
+    {
+        public static Akka.DistributedData.GSet<T> Create<T>(params T[] elements) { }
+        public static Akka.DistributedData.GSet<T> Create<T>(System.Collections.Immutable.IImmutableSet<T> elements) { }
+    }
+    public sealed class GSetKey<T> : Akka.DistributedData.Key<Akka.DistributedData.GSet<T>>, Akka.DistributedData.IReplicatedDataSerialization
+    {
+        public GSetKey(string id) { }
+        public System.Type SetType { get; }
+    }
+    public sealed class GSet<T> : Akka.DistributedData.FastMerge<Akka.DistributedData.GSet<T>>, Akka.DistributedData.IDeltaReplicatedData, Akka.DistributedData.IDeltaReplicatedData<Akka.DistributedData.GSet<T>, Akka.DistributedData.GSet<T>>, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.GSet<T>>, Akka.DistributedData.IReplicatedDelta, System.Collections.Generic.IEnumerable<T>, System.Collections.IEnumerable, System.IEquatable<Akka.DistributedData.GSet<T>>
+    {
+        public static readonly Akka.DistributedData.GSet<T> Empty;
+        public GSet() { }
+        public GSet(System.Collections.Immutable.IImmutableSet<T> elements) { }
+        public GSet(System.Collections.Immutable.IImmutableSet<T> elements, Akka.DistributedData.GSet<T> delta) { }
+        public int Count { get; }
+        public Akka.DistributedData.GSet<T> Delta { get; }
+        public System.Collections.Immutable.IImmutableSet<T> Elements { get; }
+        public bool IsEmpty { get; }
+        public System.Type SetType { get; }
+        public Akka.DistributedData.GSet<T> Add(T element) { }
+        public bool Contains(T element) { }
+        public bool Equals(Akka.DistributedData.GSet<T> other) { }
+        public override bool Equals(object obj) { }
+        public System.Collections.Generic.IEnumerator<T> GetEnumerator() { }
+        public override int GetHashCode() { }
+        public override Akka.DistributedData.GSet<T> Merge(Akka.DistributedData.GSet<T> other) { }
+        public Akka.DistributedData.GSet<T> MergeDelta(Akka.DistributedData.GSet<T> delta) { }
+        public Akka.DistributedData.GSet<T> ResetDelta() { }
+        public override string ToString() { }
+    }
+    public sealed class Get : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Get>
+    {
+        public Get(Akka.DistributedData.IKey key, Akka.DistributedData.IReadConsistency consistency, object request = null) { }
+        public Akka.DistributedData.IReadConsistency Consistency { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public object Request { get; }
+        public bool Equals(Akka.DistributedData.Get other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class GetFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IGetResponse, Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.GetFailure>
+    {
+        public GetFailure(Akka.DistributedData.IKey key, object request) { }
+        public bool IsFailure { get; }
+        public bool IsFound { get; }
+        public bool IsSuccessful { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public object Request { get; }
+        public bool Equals(Akka.DistributedData.GetFailure other) { }
+        public override bool Equals(object obj) { }
+        public T Get<T>(Akka.DistributedData.IKey<T> key)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public class GetKeyIds
+    {
+        public static readonly Akka.DistributedData.GetKeyIds Instance;
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+    public sealed class GetKeysIdsResult : System.IEquatable<Akka.DistributedData.GetKeysIdsResult>
+    {
+        public GetKeysIdsResult(System.Collections.Immutable.IImmutableSet<string> keys) { }
+        public System.Collections.Immutable.IImmutableSet<string> Keys { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.GetKeysIdsResult other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class GetReplicaCount
+    {
+        public static readonly Akka.DistributedData.GetReplicaCount Instance;
+    }
+    public sealed class GetSuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IGetResponse, Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.GetSuccess>
+    {
+        public GetSuccess(Akka.DistributedData.IKey key, object request, Akka.DistributedData.IReplicatedData data) { }
+        public Akka.DistributedData.IReplicatedData Data { get; }
+        public bool IsFailure { get; }
+        public bool IsFound { get; }
+        public bool IsSuccessful { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public object Request { get; }
+        public bool Equals(Akka.DistributedData.GetSuccess other) { }
+        public override bool Equals(object obj) { }
+        public T Get<T>(Akka.DistributedData.IKey<T> key)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public interface IDeleteResponse : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        bool AlreadyDeleted { get; }
+        bool IsSuccessful { get; }
+        Akka.DistributedData.IKey Key { get; }
+    }
+    public interface IDeltaReplicatedData : Akka.DistributedData.IReplicatedData
+    {
+        Akka.DistributedData.IReplicatedDelta Delta { get; }
+        Akka.DistributedData.IReplicatedData MergeDelta(Akka.DistributedData.IReplicatedDelta delta);
+        Akka.DistributedData.IReplicatedData ResetDelta();
+    }
+    public interface IDeltaReplicatedData<T, TDelta> : Akka.DistributedData.IDeltaReplicatedData, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedData<T>
+        where T : Akka.DistributedData.IReplicatedData
+        where TDelta : Akka.DistributedData.IReplicatedDelta
+    {
+        TDelta Delta { get; }
+        T MergeDelta(TDelta delta);
+        T ResetDelta();
+    }
+    public interface IGetResponse : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        bool IsFailure { get; }
+        bool IsFound { get; }
+        bool IsSuccessful { get; }
+        Akka.DistributedData.IKey Key { get; }
+        object Request { get; }
+        T Get<T>(Akka.DistributedData.IKey<T> key)
+            where T : Akka.DistributedData.IReplicatedData;
+    }
+    public interface IKey : Akka.DistributedData.IReplicatedDataSerialization
+    {
+        string Id { get; }
+    }
+    public interface IKey<out T> : Akka.DistributedData.IKey, Akka.DistributedData.IReplicatedDataSerialization
+        where out T : Akka.DistributedData.IReplicatedData { }
+    public interface IPruningState
+    {
+        Akka.DistributedData.IPruningState AddSeen(Akka.Actor.Address node);
+        Akka.DistributedData.IPruningState Merge(Akka.DistributedData.IPruningState other);
+    }
+    public interface IReadConsistency
+    {
+        System.TimeSpan Timeout { get; }
+    }
+    public interface IRemovedNodePruning : Akka.DistributedData.IReplicatedData
+    {
+        System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode);
+        Akka.DistributedData.IReplicatedData Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto);
+        Akka.DistributedData.IReplicatedData PruningCleanup(Akka.Cluster.UniqueAddress removedNode);
+    }
+    public interface IRemovedNodePruning<T> : Akka.DistributedData.IRemovedNodePruning, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedData<T>
+        where T : Akka.DistributedData.IReplicatedData
+    {
+        T Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto);
+        T PruningCleanup(Akka.Cluster.UniqueAddress removedNode);
+    }
+    public interface IReplicatedData
+    {
+        Akka.DistributedData.IReplicatedData Merge(Akka.DistributedData.IReplicatedData other);
+    }
+    public interface IReplicatedDataSerialization { }
+    public interface IReplicatedData<T> : Akka.DistributedData.IReplicatedData
+        where T : Akka.DistributedData.IReplicatedData
+    {
+        T Merge(T other);
+    }
+    public interface IReplicatedDelta : Akka.DistributedData.IReplicatedData
+    {
+        Akka.DistributedData.IDeltaReplicatedData Zero { get; }
+    }
+    public interface IReplicatedDeltaSize
+    {
+        int DeltaSize { get; }
+    }
+    public interface IReplicatorMessage { }
+    public interface IRequireCausualDeliveryOfDeltas : Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDelta { }
+    public interface IUpdateFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IUpdateResponse
+    {
+        System.Exception Cause { get; }
+    }
+    public interface IUpdateResponse : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        bool IsSuccessful { get; }
+        Akka.DistributedData.IKey Key { get; }
+        object Request { get; }
+        void ThrowOnFailure();
+    }
+    public interface IWriteConsistency
+    {
+        System.TimeSpan Timeout { get; }
+    }
+    public abstract class Key<T> : Akka.DistributedData.IKey, Akka.DistributedData.IKey<T>, Akka.DistributedData.IReplicatedDataSerialization
+        where T : Akka.DistributedData.IReplicatedData
+    {
+        protected Key(string id) { }
+        public string Id { get; }
+        public bool Equals(Akka.DistributedData.IKey key) { }
+        public virtual bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+        public static string op_Implicit(Akka.DistributedData.Key<T> key) { }
+    }
+    public class static LWWDictionary
+    {
+        public static Akka.DistributedData.LWWDictionary<TKey, TValue> Create<TKey, TValue>(Akka.Cluster.UniqueAddress node, TKey key, TValue value, Akka.DistributedData.Clock<TValue> clock = null) { }
+        public static Akka.DistributedData.LWWDictionary<TKey, TValue> Create<TKey, TValue>(params System.ValueTuple<, , >[] elements) { }
+        public static Akka.DistributedData.LWWDictionary<TKey, TValue> Create<TKey, TValue>(System.Collections.Generic.IEnumerable<System.ValueTuple<Akka.Cluster.UniqueAddress, TKey, TValue>> elements, Akka.DistributedData.Clock<TValue> clock = null) { }
+    }
+    public sealed class LWWDictionaryKey<TKey, TValue> : Akka.DistributedData.Key<Akka.DistributedData.LWWDictionary<TKey, TValue>>
+    {
+        public LWWDictionaryKey(string id) { }
+        public System.Type KeyType { get; }
+        public System.Type ValueType { get; }
+    }
+    public sealed class LWWDictionary<TKey, TValue> : Akka.DistributedData.IDeltaReplicatedData, Akka.DistributedData.IDeltaReplicatedData<Akka.DistributedData.LWWDictionary<TKey, TValue>, Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.LWWRegister<TValue>>.IDeltaOperation>, Akka.DistributedData.IRemovedNodePruning, Akka.DistributedData.IRemovedNodePruning<Akka.DistributedData.LWWDictionary<TKey, TValue>>, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.LWWDictionary<TKey, TValue>>, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<TKey, TValue>>, System.Collections.IEnumerable, System.IEquatable<Akka.DistributedData.LWWDictionary<TKey, TValue>>
+    {
+        public static readonly Akka.DistributedData.LWWDictionary<TKey, TValue> Empty;
+        public LWWDictionary(Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.LWWRegister<TValue>> underlying) { }
+        public int Count { get; }
+        public Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.LWWRegister<TValue>>.IDeltaOperation Delta { get; }
+        public System.Collections.Immutable.IImmutableDictionary<TKey, TValue> Entries { get; }
+        public bool IsEmpty { get; }
+        public TValue this[TKey key] { get; }
+        public System.Type KeyType { get; }
+        public System.Collections.Generic.IEnumerable<TKey> Keys { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        public System.Type ValueType { get; }
+        public System.Collections.Generic.IEnumerable<TValue> Values { get; }
+        public bool ContainsKey(TKey key) { }
+        public bool Equals(Akka.DistributedData.LWWDictionary<TKey, TValue> other) { }
+        public override bool Equals(object obj) { }
+        public System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<TKey, TValue>> GetEnumerator() { }
+        public override int GetHashCode() { }
+        public Akka.DistributedData.LWWDictionary<TKey, TValue> Merge(Akka.DistributedData.LWWDictionary<TKey, TValue> other) { }
+        public Akka.DistributedData.IReplicatedData Merge(Akka.DistributedData.IReplicatedData other) { }
+        public Akka.DistributedData.LWWDictionary<TKey, TValue> MergeDelta(Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.LWWRegister<TValue>>.IDeltaOperation delta) { }
+        public bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.LWWDictionary<TKey, TValue> Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto) { }
+        public Akka.DistributedData.LWWDictionary<TKey, TValue> PruningCleanup(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.LWWDictionary<TKey, TValue> Remove(Akka.Cluster.Cluster node, TKey key) { }
+        public Akka.DistributedData.LWWDictionary<TKey, TValue> Remove(Akka.Cluster.UniqueAddress node, TKey key) { }
+        public Akka.DistributedData.LWWDictionary<TKey, TValue> ResetDelta() { }
+        public Akka.DistributedData.LWWDictionary<TKey, TValue> SetItem(Akka.Cluster.Cluster node, TKey key, TValue value, Akka.DistributedData.Clock<TValue> clock = null) { }
+        public Akka.DistributedData.LWWDictionary<TKey, TValue> SetItem(Akka.Cluster.UniqueAddress node, TKey key, TValue value, Akka.DistributedData.Clock<TValue> clock = null) { }
+        public override string ToString() { }
+        public bool TryGetValue(TKey key, out TValue value) { }
+    }
+    public sealed class LWWRegisterKey<T> : Akka.DistributedData.Key<Akka.DistributedData.LWWRegister<T>>
+    {
+        public LWWRegisterKey(string id) { }
+        public System.Type RegisterType { get; }
+    }
+    public sealed class LWWRegister<T> : Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.LWWRegister<T>>, System.IEquatable<Akka.DistributedData.LWWRegister<T>>
+    {
+        public static readonly Akka.DistributedData.Clock<T> DefaultClock;
+        public static readonly Akka.DistributedData.Clock<T> ReverseClock;
+        public LWWRegister(Akka.Cluster.UniqueAddress node, T initial) { }
+        public LWWRegister(Akka.Cluster.UniqueAddress node, T value, long timestamp) { }
+        public LWWRegister(Akka.Cluster.UniqueAddress node, T initial, Akka.DistributedData.Clock<T> clock) { }
+        public System.Type RegisterType { get; }
+        public long Timestamp { get; }
+        public Akka.Cluster.UniqueAddress UpdatedBy { get; }
+        public T Value { get; }
+        public bool Equals(Akka.DistributedData.LWWRegister<T> other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public Akka.DistributedData.LWWRegister<T> Merge(Akka.DistributedData.LWWRegister<T> other) { }
+        public Akka.DistributedData.IReplicatedData Merge(Akka.DistributedData.IReplicatedData other) { }
+        public override string ToString() { }
+        public Akka.DistributedData.LWWRegister<T> WithValue(Akka.Cluster.UniqueAddress node, T value, Akka.DistributedData.Clock<T> clock = null) { }
+    }
+    public sealed class ModifyFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IUpdateFailure, Akka.DistributedData.IUpdateResponse
+    {
+        public ModifyFailure(Akka.DistributedData.IKey key, string errorMessage, System.Exception cause, object request) { }
+        public System.Exception Cause { get; }
+        public string ErrorMessage { get; }
+        public bool IsSuccessful { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public object Request { get; }
+        public void ThrowOnFailure() { }
+        public override string ToString() { }
+    }
+    public sealed class MultiVersionVector : Akka.DistributedData.VersionVector
+    {
+        public MultiVersionVector(params System.Collections.Generic.KeyValuePair<, >[] nodeVersions) { }
+        public MultiVersionVector(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Akka.Cluster.UniqueAddress, long>> versions) { }
+        public MultiVersionVector(System.Collections.Immutable.ImmutableDictionary<Akka.Cluster.UniqueAddress, long> nodeVersions) { }
+        public override int Count { get; }
+        public override bool IsEmpty { get; }
+        public override System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        public override System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<Akka.Cluster.UniqueAddress, long>> VersionEnumerator { get; }
+        public override bool Contains(Akka.Cluster.UniqueAddress node) { }
+        public override int GetHashCode() { }
+        public override Akka.DistributedData.VersionVector Increment(Akka.Cluster.UniqueAddress node) { }
+        public override Akka.DistributedData.VersionVector Merge(Akka.DistributedData.VersionVector other) { }
+        public override bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode) { }
+        public override Akka.DistributedData.VersionVector Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto) { }
+        public override Akka.DistributedData.VersionVector PruningCleanup(Akka.Cluster.UniqueAddress removedNode) { }
+        public override string ToString() { }
+        public override long VersionAt(Akka.Cluster.UniqueAddress node) { }
+    }
+    public sealed class NotFound : Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IGetResponse, Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.NotFound>
+    {
+        public NotFound(Akka.DistributedData.IKey key, object request) { }
+        public bool IsFailure { get; }
+        public bool IsFound { get; }
+        public bool IsSuccessful { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public object Request { get; }
+        public bool Equals(Akka.DistributedData.NotFound other) { }
+        public override bool Equals(object obj) { }
+        public T Get<T>(Akka.DistributedData.IKey<T> key)
+            where T : Akka.DistributedData.IReplicatedData { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public class static ORDictionary
+    {
+        public static Akka.DistributedData.ORDictionary<TKey, TValue> Create<TKey, TValue>(Akka.Cluster.UniqueAddress node, TKey key, TValue value)
+            where TValue : Akka.DistributedData.IReplicatedData<TValue> { }
+        public static Akka.DistributedData.ORDictionary<TKey, TValue> Create<TKey, TValue>(params System.ValueTuple<, , >[] elements)
+            where TValue : Akka.DistributedData.IReplicatedData<TValue> { }
+        public static Akka.DistributedData.ORDictionary<TKey, TValue> Create<TKey, TValue>(System.Collections.Generic.IEnumerable<System.ValueTuple<Akka.Cluster.UniqueAddress, TKey, TValue>> elements)
+            where TValue : Akka.DistributedData.IReplicatedData<TValue> { }
+    }
+    public sealed class ORDictionaryKey<TKey, TValue> : Akka.DistributedData.Key<Akka.DistributedData.ORDictionary<TKey, TValue>>
+        where TValue : Akka.DistributedData.IReplicatedData<TValue>
+    {
+        public ORDictionaryKey(string id) { }
+        public System.Type KeyType { get; }
+        public System.Type ValueType { get; }
+    }
+    public sealed class ORDictionary<TKey, TValue> : Akka.DistributedData.IDeltaReplicatedData, Akka.DistributedData.IDeltaReplicatedData<Akka.DistributedData.ORDictionary<TKey, TValue>, Akka.DistributedData.ORDictionary<TKey, TValue>.IDeltaOperation>, Akka.DistributedData.IRemovedNodePruning, Akka.DistributedData.IRemovedNodePruning<Akka.DistributedData.ORDictionary<TKey, TValue>>, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.ORDictionary<TKey, TValue>>, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<TKey, TValue>>, System.Collections.IEnumerable, System.IEquatable<Akka.DistributedData.ORDictionary<TKey, TValue>>
+        where TValue : Akka.DistributedData.IReplicatedData<TValue>
+    {
+        public static readonly Akka.DistributedData.ORDictionary<TKey, TValue> Empty;
+        public ORDictionary(Akka.DistributedData.ORSet<TKey> keySet, System.Collections.Immutable.IImmutableDictionary<TKey, TValue> valueMap) { }
+        public int Count { get; }
+        public Akka.DistributedData.ORDictionary<TKey, TValue>.IDeltaOperation Delta { get; }
+        public System.Collections.Immutable.IImmutableDictionary<TKey, TValue> Entries { get; }
+        public bool IsEmpty { get; }
+        public TValue this[TKey key] { get; }
+        public System.Type KeyType { get; }
+        public System.Collections.Generic.IEnumerable<TKey> Keys { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        public System.Type ValueType { get; }
+        public System.Collections.Generic.IEnumerable<TValue> Values { get; }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> AddOrUpdate(Akka.Cluster.Cluster node, TKey key, TValue initial, System.Func<TValue, TValue> modify) { }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> AddOrUpdate(Akka.Cluster.UniqueAddress node, TKey key, TValue initial, System.Func<TValue, TValue> modify) { }
+        public bool ContainsKey(TKey key) { }
+        public bool Equals(Akka.DistributedData.ORDictionary<TKey, TValue> other) { }
+        public override bool Equals(object obj) { }
+        public System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<TKey, TValue>> GetEnumerator() { }
+        public override int GetHashCode() { }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> Merge(Akka.DistributedData.ORDictionary<TKey, TValue> other) { }
+        public Akka.DistributedData.IReplicatedData Merge(Akka.DistributedData.IReplicatedData other) { }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> MergeDelta(Akka.DistributedData.ORDictionary<TKey, TValue>.IDeltaOperation delta) { }
+        public bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto) { }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> PruningCleanup(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> Remove(Akka.Cluster.Cluster node, TKey key) { }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> Remove(Akka.Cluster.UniqueAddress node, TKey key) { }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> ResetDelta() { }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> SetItem(Akka.Cluster.Cluster node, TKey key, TValue value) { }
+        public Akka.DistributedData.ORDictionary<TKey, TValue> SetItem(Akka.Cluster.UniqueAddress node, TKey key, TValue value) { }
+        public override string ToString() { }
+        public bool TryGetValue(TKey key, out TValue value) { }
+        public interface IDeltaOperation<TKey, TValue> : Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedDelta, Akka.DistributedData.IRequireCausualDeliveryOfDeltas, System.IEquatable<Akka.DistributedData.ORDictionary<TKey, TValue>.IDeltaOperation>
+            where TValue : Akka.DistributedData.IReplicatedData<TValue> { }
+    }
+    public sealed class ORMultiValueDictionaryKey<TKey, TValue> : Akka.DistributedData.Key<Akka.DistributedData.ORMultiValueDictionary<TKey, TValue>>
+    {
+        public ORMultiValueDictionaryKey(string id) { }
+        public System.Type KeyType { get; }
+        public System.Type ValueType { get; }
+    }
+    public sealed class ORMultiValueDictionary<TKey, TValue> : Akka.DistributedData.IDeltaReplicatedData, Akka.DistributedData.IDeltaReplicatedData<Akka.DistributedData.ORMultiValueDictionary<TKey, TValue>, Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.ORSet<TValue>>.IDeltaOperation>, Akka.DistributedData.IRemovedNodePruning, Akka.DistributedData.IRemovedNodePruning<Akka.DistributedData.ORMultiValueDictionary<TKey, TValue>>, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.ORMultiValueDictionary<TKey, TValue>>, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<TKey, System.Collections.Immutable.IImmutableSet<TValue>>>, System.Collections.IEnumerable, System.IEquatable<Akka.DistributedData.ORMultiValueDictionary<TKey, TValue>>
+    {
+        public static readonly Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> Empty;
+        public static readonly Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> EmptyWithValueDeltas;
+        public int Count { get; }
+        public Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.ORSet<TValue>>.IDeltaOperation Delta { get; }
+        public bool DeltaValues { get; }
+        public System.Collections.Immutable.IImmutableDictionary<TKey, System.Collections.Immutable.IImmutableSet<TValue>> Entries { get; }
+        public bool IsEmpty { get; }
+        public System.Collections.Immutable.IImmutableSet<TValue> this[TKey key] { get; }
+        public System.Type KeyType { get; }
+        public System.Collections.Generic.IEnumerable<TKey> Keys { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        public System.Type ValueType { get; }
+        public System.Collections.Generic.IEnumerable<TValue> Values { get; }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> AddItem(Akka.Cluster.Cluster node, TKey key, TValue element) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> AddItem(Akka.Cluster.UniqueAddress node, TKey key, TValue element) { }
+        public bool ContainsKey(TKey key) { }
+        public bool Equals(Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> other) { }
+        public override bool Equals(object obj) { }
+        public System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<TKey, System.Collections.Immutable.IImmutableSet<TValue>>> GetEnumerator() { }
+        public override int GetHashCode() { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> Merge(Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> other) { }
+        public Akka.DistributedData.IReplicatedData Merge(Akka.DistributedData.IReplicatedData other) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> MergeDelta(Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.ORSet<TValue>>.IDeltaOperation delta) { }
+        public bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> PruningCleanup(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> Remove(Akka.Cluster.Cluster node, TKey key) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> Remove(Akka.Cluster.UniqueAddress node, TKey key) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> RemoveItem(Akka.Cluster.Cluster node, TKey key, TValue element) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> RemoveItem(Akka.Cluster.UniqueAddress node, TKey key, TValue element) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> ReplaceItem(Akka.Cluster.Cluster node, TKey key, TValue oldElement, TValue newElement) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> ReplaceItem(Akka.Cluster.UniqueAddress node, TKey key, TValue oldElement, TValue newElement) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> ResetDelta() { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> SetItems(Akka.Cluster.Cluster node, TKey key, System.Collections.Immutable.IImmutableSet<TValue> bucket) { }
+        public Akka.DistributedData.ORMultiValueDictionary<TKey, TValue> SetItems(Akka.Cluster.UniqueAddress node, TKey key, System.Collections.Immutable.IImmutableSet<TValue> bucket) { }
+        public override string ToString() { }
+        public bool TryGetValue(TKey key, out System.Collections.Immutable.IImmutableSet<TValue> value) { }
+    }
+    public class static ORSet
+    {
+        public static Akka.DistributedData.ORSet<T> Create<T>(Akka.Cluster.UniqueAddress node, T element) { }
+        public static Akka.DistributedData.ORSet<T> Create<T>(params System.Collections.Generic.KeyValuePair<, >[] elements) { }
+        public static Akka.DistributedData.ORSet<T> Create<T>(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Akka.Cluster.UniqueAddress, T>> elements) { }
+    }
+    public sealed class ORSetKey<T> : Akka.DistributedData.Key<Akka.DistributedData.ORSet<T>>
+    {
+        public ORSetKey(string id) { }
+        public System.Type SetType { get; }
+    }
+    public sealed class ORSet<T> : Akka.DistributedData.FastMerge<Akka.DistributedData.ORSet<T>>, Akka.DistributedData.IDeltaReplicatedData, Akka.DistributedData.IDeltaReplicatedData<Akka.DistributedData.ORSet<T>, Akka.DistributedData.ORSet<T>.IDeltaOperation>, Akka.DistributedData.IRemovedNodePruning, Akka.DistributedData.IRemovedNodePruning<Akka.DistributedData.ORSet<T>>, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.ORSet<T>>, System.Collections.Generic.IEnumerable<T>, System.Collections.IEnumerable, System.IEquatable<Akka.DistributedData.ORSet<T>>
+    {
+        public static readonly Akka.DistributedData.ORSet<T> Empty;
+        public ORSet() { }
+        public ORSet(System.Collections.Immutable.ImmutableDictionary<T, Akka.DistributedData.VersionVector> elementsMap, Akka.DistributedData.VersionVector versionVector) { }
+        public int Count { get; }
+        public Akka.DistributedData.ORSet<T>.IDeltaOperation Delta { get; }
+        public System.Collections.Immutable.IImmutableSet<T> Elements { get; }
+        public bool IsEmpty { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        public System.Type SetType { get; }
+        public Akka.DistributedData.ORSet<T> Add(Akka.Cluster.Cluster cluster, T element) { }
+        public Akka.DistributedData.ORSet<T> Add(Akka.Cluster.UniqueAddress node, T element) { }
+        public Akka.DistributedData.ORSet<T> Clear(Akka.Cluster.Cluster node) { }
+        public Akka.DistributedData.ORSet<T> Clear(Akka.Cluster.UniqueAddress node) { }
+        public bool Contains(T elem) { }
+        public bool Equals(Akka.DistributedData.ORSet<T> other) { }
+        public override bool Equals(object obj) { }
+        public System.Collections.Generic.IEnumerator<T> GetEnumerator() { }
+        public override int GetHashCode() { }
+        public override Akka.DistributedData.ORSet<T> Merge(Akka.DistributedData.ORSet<T> other) { }
+        public Akka.DistributedData.ORSet<T> MergeDelta(Akka.DistributedData.ORSet<T>.IDeltaOperation delta) { }
+        public bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.ORSet<T> Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto) { }
+        public Akka.DistributedData.ORSet<T> PruningCleanup(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.ORSet<T> Remove(Akka.Cluster.Cluster node, T element) { }
+        public Akka.DistributedData.ORSet<T> Remove(Akka.Cluster.UniqueAddress node, T element) { }
+        public Akka.DistributedData.ORSet<T> ResetDelta() { }
+        public override string ToString() { }
+        public interface IDeltaOperation<T> : Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedDelta, Akka.DistributedData.IRequireCausualDeliveryOfDeltas, System.IEquatable<Akka.DistributedData.ORSet<T>.IDeltaOperation> { }
+    }
+    public sealed class PNCounter : Akka.DistributedData.IDeltaReplicatedData, Akka.DistributedData.IDeltaReplicatedData<Akka.DistributedData.PNCounter, Akka.DistributedData.PNCounter>, Akka.DistributedData.IRemovedNodePruning, Akka.DistributedData.IRemovedNodePruning<Akka.DistributedData.PNCounter>, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.PNCounter>, Akka.DistributedData.IReplicatedDelta, System.IEquatable<Akka.DistributedData.PNCounter>
+    {
+        public static readonly Akka.DistributedData.PNCounter Empty;
+        public PNCounter() { }
+        public PNCounter(Akka.DistributedData.GCounter increments, Akka.DistributedData.GCounter decrements) { }
+        public Akka.DistributedData.GCounter Decrements { get; }
+        public Akka.DistributedData.PNCounter Delta { get; }
+        public Akka.DistributedData.GCounter Increments { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        public System.Numerics.BigInteger Value { get; }
+        public Akka.DistributedData.PNCounter Decrement(Akka.Cluster.Cluster node, long delta = 1) { }
+        public Akka.DistributedData.PNCounter Decrement(Akka.Cluster.UniqueAddress address, long delta = 1) { }
+        public bool Equals(Akka.DistributedData.PNCounter other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public Akka.DistributedData.PNCounter Increment(Akka.Cluster.Cluster node, long delta = 1) { }
+        public Akka.DistributedData.PNCounter Increment(Akka.Cluster.UniqueAddress address, long delta = 1) { }
+        public Akka.DistributedData.PNCounter Merge(Akka.DistributedData.PNCounter other) { }
+        public Akka.DistributedData.IReplicatedData Merge(Akka.DistributedData.IReplicatedData other) { }
+        public Akka.DistributedData.PNCounter MergeDelta(Akka.DistributedData.PNCounter delta) { }
+        public bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.PNCounter Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto) { }
+        public Akka.DistributedData.PNCounter PruningCleanup(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.PNCounter ResetDelta() { }
+        public override string ToString() { }
+    }
+    public class PNCounterDictionaryKey<T> : Akka.DistributedData.Key<Akka.DistributedData.PNCounterDictionary<T>>
+    {
+        public PNCounterDictionaryKey(string id) { }
+        public System.Type KeyType { get; }
+    }
+    public sealed class PNCounterDictionary<TKey> : Akka.DistributedData.IDeltaReplicatedData, Akka.DistributedData.IDeltaReplicatedData<Akka.DistributedData.PNCounterDictionary<TKey>, Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.PNCounter>.IDeltaOperation>, Akka.DistributedData.IRemovedNodePruning, Akka.DistributedData.IRemovedNodePruning<Akka.DistributedData.PNCounterDictionary<TKey>>, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.PNCounterDictionary<TKey>>, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<TKey, System.Numerics.BigInteger>>, System.Collections.IEnumerable, System.IEquatable<Akka.DistributedData.PNCounterDictionary<TKey>>
+    {
+        public static readonly Akka.DistributedData.PNCounterDictionary<TKey> Empty;
+        public PNCounterDictionary(Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.PNCounter> underlying) { }
+        public int Count { get; }
+        public Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.PNCounter>.IDeltaOperation Delta { get; }
+        public System.Collections.Immutable.IImmutableDictionary<TKey, System.Numerics.BigInteger> Entries { get; }
+        public bool IsEmpty { get; }
+        public System.Numerics.BigInteger this[TKey key] { get; }
+        public System.Type KeyType { get; }
+        public System.Collections.Generic.IEnumerable<TKey> Keys { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        public System.Collections.Generic.IEnumerable<System.Numerics.BigInteger> Values { get; }
+        public bool ContainsKey(TKey key) { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> Decrement(Akka.Cluster.Cluster node, TKey key, long delta = 1) { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> Decrement(Akka.Cluster.UniqueAddress node, TKey key, long delta = 1) { }
+        public bool Equals(Akka.DistributedData.PNCounterDictionary<TKey> other) { }
+        public override bool Equals(object obj) { }
+        public System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<TKey, System.Numerics.BigInteger>> GetEnumerator() { }
+        public override int GetHashCode() { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> Increment(Akka.Cluster.Cluster node, TKey key, long delta = 1) { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> Increment(Akka.Cluster.UniqueAddress node, TKey key, long delta = 1) { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> Merge(Akka.DistributedData.PNCounterDictionary<TKey> other) { }
+        public Akka.DistributedData.IReplicatedData Merge(Akka.DistributedData.IReplicatedData other) { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> MergeDelta(Akka.DistributedData.ORDictionary<TKey, Akka.DistributedData.PNCounter>.IDeltaOperation delta) { }
+        public bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto) { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> PruningCleanup(Akka.Cluster.UniqueAddress removedNode) { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> Remove(Akka.Cluster.Cluster node, TKey key) { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> Remove(Akka.Cluster.UniqueAddress node, TKey key) { }
+        public Akka.DistributedData.PNCounterDictionary<TKey> ResetDelta() { }
+        public override string ToString() { }
+        public bool TryGetValue(TKey key, out System.Numerics.BigInteger value) { }
+    }
+    public sealed class PNCounterKey : Akka.DistributedData.Key<Akka.DistributedData.PNCounter>
+    {
+        public PNCounterKey(string id) { }
+    }
+    public sealed class ReadAll : Akka.DistributedData.IReadConsistency, System.IEquatable<Akka.DistributedData.ReadAll>
+    {
+        public ReadAll(System.TimeSpan timeout) { }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.ReadAll other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class ReadFrom : Akka.DistributedData.IReadConsistency, System.IEquatable<Akka.DistributedData.ReadFrom>
+    {
+        public ReadFrom(int n, System.TimeSpan timeout) { }
+        public int N { get; }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.ReadFrom other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class ReadLocal : Akka.DistributedData.IReadConsistency
+    {
+        public static readonly Akka.DistributedData.ReadLocal Instance;
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class ReadMajority : Akka.DistributedData.IReadConsistency, System.IEquatable<Akka.DistributedData.ReadMajority>
+    {
+        public ReadMajority(System.TimeSpan timeout, int minCapacity = 0) { }
+        public int MinCapacity { get; }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.ReadMajority other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class ReadMajorityPlus : Akka.DistributedData.IReadConsistency, System.IEquatable<Akka.DistributedData.ReadMajorityPlus>
+    {
+        public ReadMajorityPlus(System.TimeSpan timeout, int additional, int minCapacity = 0) { }
+        public int Additional { get; }
+        public int MinCapacity { get; }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.ReadMajorityPlus other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class ReplicaCount : System.IEquatable<Akka.DistributedData.ReplicaCount>
+    {
+        public ReplicaCount(int n) { }
+        public int N { get; }
+        public bool Equals(Akka.DistributedData.ReplicaCount other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class ReplicationDeleteFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IDeleteResponse, System.IEquatable<Akka.DistributedData.ReplicationDeleteFailure>
+    {
+        public ReplicationDeleteFailure(Akka.DistributedData.IKey key) { }
+        public bool AlreadyDeleted { get; }
+        public bool IsSuccessful { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public bool Equals(Akka.DistributedData.ReplicationDeleteFailure other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class ReplicatorSettings
+    {
+        [System.ObsoleteAttribute()]
+        public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize) { }
+        [System.ObsoleteAttribute()]
+        public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure) { }
+        public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure, bool preferOldest) { }
+        public string Dispatcher { get; }
+        public System.Collections.Immutable.IImmutableSet<string> DurableKeys { get; }
+        public System.TimeSpan DurablePruningMarkerTimeToLive { get; }
+        public Akka.Actor.Props DurableStoreProps { get; }
+        public System.TimeSpan GossipInterval { get; }
+        public bool IsDurable { get; }
+        public int MaxDeltaElements { get; }
+        public int MaxDeltaSize { get; }
+        public System.TimeSpan MaxPruningDissemination { get; }
+        public System.TimeSpan NotifySubscribersInterval { get; }
+        public bool PreferOldest { get; }
+        public System.TimeSpan PruningInterval { get; }
+        public System.TimeSpan PruningMarkerTimeToLive { get; }
+        public bool RestartReplicatorOnFailure { get; }
+        public string Role { get; }
+        public static Akka.DistributedData.ReplicatorSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.DistributedData.ReplicatorSettings Create(Akka.Configuration.Config config) { }
+        public Akka.DistributedData.ReplicatorSettings WithDispatcher(string dispatcher) { }
+        public Akka.DistributedData.ReplicatorSettings WithDurableKeys(System.Collections.Immutable.IImmutableSet<string> durableKeys) { }
+        public Akka.DistributedData.ReplicatorSettings WithDurableStoreProps(Akka.Actor.Props durableStoreProps) { }
+        public Akka.DistributedData.ReplicatorSettings WithGossipInterval(System.TimeSpan gossipInterval) { }
+        public Akka.DistributedData.ReplicatorSettings WithMaxDeltaElements(int maxDeltaElements) { }
+        public Akka.DistributedData.ReplicatorSettings WithMaxDeltaSize(int maxDeltaSize) { }
+        public Akka.DistributedData.ReplicatorSettings WithNotifySubscribersInterval(System.TimeSpan notifySubscribersInterval) { }
+        public Akka.DistributedData.ReplicatorSettings WithPreferOldest(bool preferOldest) { }
+        public Akka.DistributedData.ReplicatorSettings WithPruning(System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination) { }
+        public Akka.DistributedData.ReplicatorSettings WithPruningMarkerTimeToLive(System.TimeSpan pruningMarkerTtl, System.TimeSpan durablePruningMarkerTtl) { }
+        public Akka.DistributedData.ReplicatorSettings WithRestartReplicatorOnFailure(bool restart) { }
+        public Akka.DistributedData.ReplicatorSettings WithRole(string role) { }
+    }
+    [System.Diagnostics.DebuggerDisplayAttribute("VersionVector({Node}->{Version})")]
+    public sealed class SingleVersionVector : Akka.DistributedData.VersionVector
+    {
+        public SingleVersionVector(Akka.Cluster.UniqueAddress node, long version) { }
+        public override int Count { get; }
+        public override bool IsEmpty { get; }
+        public override System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        public override System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<Akka.Cluster.UniqueAddress, long>> VersionEnumerator { get; }
+        public override bool Contains(Akka.Cluster.UniqueAddress node) { }
+        public override int GetHashCode() { }
+        public override Akka.DistributedData.VersionVector Increment(Akka.Cluster.UniqueAddress node) { }
+        public override Akka.DistributedData.VersionVector Merge(Akka.DistributedData.VersionVector other) { }
+        public override bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode) { }
+        public override Akka.DistributedData.VersionVector Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto) { }
+        public override Akka.DistributedData.VersionVector PruningCleanup(Akka.Cluster.UniqueAddress removedNode) { }
+        public override string ToString() { }
+        public override long VersionAt(Akka.Cluster.UniqueAddress node) { }
+    }
+    public sealed class StoreFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IDeleteResponse, Akka.DistributedData.IUpdateFailure, Akka.DistributedData.IUpdateResponse, System.IEquatable<Akka.DistributedData.StoreFailure>
+    {
+        public StoreFailure(Akka.DistributedData.IKey key, object request = null) { }
+        public bool AlreadyDeleted { get; }
+        public System.Exception Cause { get; }
+        public object Request { get; }
+        public bool Equals(Akka.DistributedData.StoreFailure other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public void ThrowOnFailure() { }
+        public override string ToString() { }
+    }
+    public sealed class Subscribe : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Subscribe>
+    {
+        public Subscribe(Akka.DistributedData.IKey key, Akka.Actor.IActorRef subscriber) { }
+        public Akka.DistributedData.IKey Key { get; }
+        public Akka.Actor.IActorRef Subscriber { get; }
+        public bool Equals(Akka.DistributedData.Subscribe other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class Unsubscribe : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Unsubscribe>
+    {
+        public Unsubscribe(Akka.DistributedData.IKey key, Akka.Actor.IActorRef subscriber) { }
+        public Akka.DistributedData.IKey Key { get; }
+        public Akka.Actor.IActorRef Subscriber { get; }
+        public bool Equals(Akka.DistributedData.Unsubscribe other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class Update : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        public Update(Akka.DistributedData.IKey key, Akka.DistributedData.IWriteConsistency consistency, System.Func<Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedData> modify, object request = null) { }
+        public Update(Akka.DistributedData.IKey key, Akka.DistributedData.IReplicatedData initial, Akka.DistributedData.IWriteConsistency consistency, System.Func<Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedData> modify, object request = null) { }
+        public Akka.DistributedData.IWriteConsistency Consistency { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public System.Func<Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedData> Modify { get; }
+        public object Request { get; }
+        public override string ToString() { }
+    }
+    public sealed class UpdateSuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IUpdateResponse, System.IEquatable<Akka.DistributedData.UpdateSuccess>
+    {
+        public UpdateSuccess(Akka.DistributedData.IKey key, object request) { }
+        public bool IsSuccessful { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public object Request { get; }
+        public bool Equals(Akka.DistributedData.UpdateSuccess other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public void ThrowOnFailure() { }
+        public override string ToString() { }
+    }
+    public sealed class UpdateTimeout : Akka.Actor.INoSerializationVerificationNeeded, Akka.DistributedData.IUpdateFailure, Akka.DistributedData.IUpdateResponse, System.IEquatable<Akka.DistributedData.UpdateTimeout>
+    {
+        public UpdateTimeout(Akka.DistributedData.IKey key, object request) { }
+        public System.Exception Cause { get; }
+        public bool IsSuccessful { get; }
+        public Akka.DistributedData.IKey Key { get; }
+        public object Request { get; }
+        public bool Equals(Akka.DistributedData.UpdateTimeout other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public void ThrowOnFailure() { }
+        public override string ToString() { }
+    }
+    public abstract class VersionVector : Akka.DistributedData.IRemovedNodePruning, Akka.DistributedData.IRemovedNodePruning<Akka.DistributedData.VersionVector>, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.VersionVector>, System.IEquatable<Akka.DistributedData.VersionVector>
+    {
+        protected static readonly Akka.Util.Internal.AtomicCounterLong Counter;
+        public static readonly Akka.DistributedData.VersionVector Empty;
+        protected VersionVector() { }
+        public abstract int Count { get; }
+        public abstract bool IsEmpty { get; }
+        public abstract System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> ModifiedByNodes { get; }
+        public abstract System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<Akka.Cluster.UniqueAddress, long>> VersionEnumerator { get; }
+        public Akka.DistributedData.VersionVector.Ordering Compare(Akka.DistributedData.VersionVector other) { }
+        public abstract bool Contains(Akka.Cluster.UniqueAddress node);
+        public static Akka.DistributedData.VersionVector Create(Akka.Cluster.UniqueAddress node, long version) { }
+        public static Akka.DistributedData.VersionVector Create(System.Collections.Immutable.ImmutableDictionary<Akka.Cluster.UniqueAddress, long> versions) { }
+        public bool Equals(Akka.DistributedData.VersionVector other) { }
+        public override bool Equals(object obj) { }
+        public abstract Akka.DistributedData.VersionVector Increment(Akka.Cluster.UniqueAddress node);
+        public bool IsAfter(Akka.DistributedData.VersionVector y) { }
+        public bool IsBefore(Akka.DistributedData.VersionVector y) { }
+        public bool IsConcurrent(Akka.DistributedData.VersionVector y) { }
+        public bool IsSame(Akka.DistributedData.VersionVector y) { }
+        public abstract Akka.DistributedData.VersionVector Merge(Akka.DistributedData.VersionVector other);
+        public Akka.DistributedData.IReplicatedData Merge(Akka.DistributedData.IReplicatedData other) { }
+        public abstract bool NeedPruningFrom(Akka.Cluster.UniqueAddress removedNode);
+        public abstract Akka.DistributedData.VersionVector Prune(Akka.Cluster.UniqueAddress removedNode, Akka.Cluster.UniqueAddress collapseInto);
+        public abstract Akka.DistributedData.VersionVector PruningCleanup(Akka.Cluster.UniqueAddress removedNode);
+        public abstract long VersionAt(Akka.Cluster.UniqueAddress node);
+        public static bool ==(Akka.DistributedData.VersionVector x, Akka.DistributedData.VersionVector y) { }
+        public static bool >(Akka.DistributedData.VersionVector x, Akka.DistributedData.VersionVector y) { }
+        public static bool !=(Akka.DistributedData.VersionVector x, Akka.DistributedData.VersionVector y) { }
+        public static bool <(Akka.DistributedData.VersionVector x, Akka.DistributedData.VersionVector y) { }
+        public enum Ordering
+        {
+            After = 0,
+            Before = 1,
+            Same = 2,
+            Concurrent = 3,
+            FullOrder = 4,
+        }
+    }
+    public sealed class WriteAll : Akka.DistributedData.IWriteConsistency, System.IEquatable<Akka.DistributedData.WriteAll>
+    {
+        public WriteAll(System.TimeSpan timeout) { }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.WriteAll other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class WriteLocal : Akka.DistributedData.IWriteConsistency
+    {
+        public static readonly Akka.DistributedData.WriteLocal Instance;
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public override string ToString() { }
+    }
+    public sealed class WriteMajority : Akka.DistributedData.IWriteConsistency, System.IEquatable<Akka.DistributedData.WriteMajority>
+    {
+        public WriteMajority(System.TimeSpan timeout, int minCapacity = 0) { }
+        public int MinCapacity { get; }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.WriteMajority other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class WriteMajorityPlus : Akka.DistributedData.IWriteConsistency, System.IEquatable<Akka.DistributedData.WriteMajorityPlus>
+    {
+        public WriteMajorityPlus(System.TimeSpan timeout, int additional, int minCapacity = 0) { }
+        public int Additional { get; }
+        public int MinCapacity { get; }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.WriteMajorityPlus other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class WriteTo : Akka.DistributedData.IWriteConsistency, System.IEquatable<Akka.DistributedData.WriteTo>
+    {
+        public WriteTo(int count, System.TimeSpan timeout) { }
+        public int Count { get; }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.WriteTo other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+}
+namespace Akka.DistributedData.Durable
+{
+    public sealed class DurableDataEnvelope : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Durable.DurableDataEnvelope>
+    {
+        public DurableDataEnvelope(Akka.DistributedData.Internal.DataEnvelope dataEnvelope) { }
+        public DurableDataEnvelope(Akka.DistributedData.IReplicatedData data) { }
+        public Akka.DistributedData.IReplicatedData Data { get; }
+        public bool Equals(Akka.DistributedData.Durable.DurableDataEnvelope other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+    public sealed class LoadAll : System.IEquatable<Akka.DistributedData.Durable.LoadAll>
+    {
+        public static readonly Akka.DistributedData.Durable.LoadAll Instance;
+        public bool Equals(Akka.DistributedData.Durable.LoadAll other) { }
+        public override bool Equals(object obj) { }
+    }
+    public sealed class LoadAllCompleted : System.IEquatable<Akka.DistributedData.Durable.LoadAllCompleted>
+    {
+        public static readonly Akka.DistributedData.Durable.LoadAllCompleted Instance;
+        public bool Equals(Akka.DistributedData.Durable.LoadAllCompleted other) { }
+        public override bool Equals(object obj) { }
+    }
+    public sealed class LoadData
+    {
+        public readonly System.Collections.Immutable.ImmutableDictionary<string, Akka.DistributedData.Durable.DurableDataEnvelope> Data;
+        public LoadData(System.Collections.Immutable.ImmutableDictionary<string, Akka.DistributedData.Durable.DurableDataEnvelope> data) { }
+    }
+    public sealed class LoadFailedException : Akka.Actor.AkkaException
+    {
+        public LoadFailedException(string message) { }
+        public LoadFailedException(string message, System.Exception cause) { }
+        public LoadFailedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public sealed class Store
+    {
+        public readonly Akka.DistributedData.Durable.DurableDataEnvelope Data;
+        public readonly string Key;
+        public readonly Akka.DistributedData.Durable.StoreReply Reply;
+        public Store(string key, Akka.DistributedData.Durable.DurableDataEnvelope data, Akka.DistributedData.Durable.StoreReply reply = null) { }
+    }
+    public sealed class StoreReply
+    {
+        public readonly object FailureMessage;
+        public readonly Akka.Actor.IActorRef ReplyTo;
+        public readonly object SuccessMessage;
+        public StoreReply(object successMessage, object failureMessage, Akka.Actor.IActorRef replyTo) { }
+    }
+}
+namespace Akka.DistributedData.Internal
+{
+    public sealed class DataEnvelope : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Internal.DataEnvelope>
+    {
+        public Akka.DistributedData.IReplicatedData Data { get; }
+        public static Akka.DistributedData.Internal.DataEnvelope DeletedEnvelope { get; }
+        public Akka.DistributedData.VersionVector DeltaVersions { get; }
+        public System.Collections.Immutable.ImmutableDictionary<Akka.Cluster.UniqueAddress, Akka.DistributedData.IPruningState> Pruning { get; }
+        public bool Equals(Akka.DistributedData.Internal.DataEnvelope other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class Delta : System.IEquatable<Akka.DistributedData.Internal.Delta>
+    {
+        public Delta(Akka.DistributedData.Internal.DataEnvelope dataEnvelope, long fromSeqNr, long toSeqNr) { }
+        public Akka.DistributedData.Internal.DataEnvelope DataEnvelope { get; }
+        public long FromSeqNr { get; }
+        public bool RequiresCausalDeliveryOfDeltas { get; }
+        public long ToSeqNr { get; }
+        public bool Equals(Akka.DistributedData.Internal.Delta other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+    public sealed class DeltaNack : Akka.DistributedData.IReplicatorMessage, Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.DistributedData.Internal.DeltaNack>
+    {
+        public static readonly Akka.DistributedData.Internal.DeltaNack Instance;
+        public bool Equals(Akka.DistributedData.Internal.DeltaNack other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+    public sealed class DeltaPropagation : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Internal.DeltaPropagation>
+    {
+        public static readonly Akka.DistributedData.IReplicatedDelta NoDeltaPlaceholder;
+        public DeltaPropagation(Akka.Cluster.UniqueAddress fromNode, bool shouldReply, System.Collections.Immutable.ImmutableDictionary<string, Akka.DistributedData.Internal.Delta> deltas) { }
+        public System.Collections.Immutable.ImmutableDictionary<string, Akka.DistributedData.Internal.Delta> Deltas { get; }
+        public Akka.Cluster.UniqueAddress FromNode { get; }
+        public bool ShouldReply { get; }
+        public bool Equals(Akka.DistributedData.Internal.DeltaPropagation other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+}
+namespace Akka.DistributedData.Serialization
+{
+    public sealed class ReplicatedDataSerializer : Akka.Serialization.SerializerWithStringManifest
+    {
+        public ReplicatedDataSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object o) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+    public sealed class ReplicatorMessageSerializer : Akka.Serialization.SerializerWithStringManifest
+    {
+        public ReplicatorMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object o) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+}

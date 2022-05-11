@@ -442,6 +442,32 @@ namespace Akka.Streams.Dsl
                 .To(Ignore<NotUsed>())
                 .Named("OnCompleteSink");
 
+        /// <summary>
+        /// INTERNAL API
+        /// 
+        /// <para>
+        /// Sends the elements of the stream to the given <see cref="IActorRef"/>.
+        /// If the target actor terminates the stream will be canceled.
+        /// When the stream is completed successfully the given <paramref name="onCompleteMessage"/> 
+        /// will be sent to the destination actor.
+        /// When the stream is completed with failure the <paramref name="onFailureMessage"/> will be 
+        /// invoked and its result will be sent to the destination actor.
+        /// </para>
+        /// <para>
+        /// It will request at most <see cref="ActorMaterializerSettings.MaxInputBufferSize"/> number of elements from
+        /// upstream, but there is no back-pressure signal from the destination actor,
+        /// i.e. if the actor is not consuming the messages fast enough the mailbox
+        /// of the actor will grow. For potentially slow consumer actors it is recommended
+        /// to use a bounded mailbox with zero <see cref="BoundedMessageQueue.PushTimeOut"/> or use a rate
+        /// limiting stage in front of this <see cref="Sink{TIn, TMat}"/>.
+        /// </para>
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="onCompleteMessage">TBD</param>
+        /// <param name="onFailureMessage">TBD</param>
+        public static Sink<TIn, NotUsed> ActorRef<TIn>(IActorRef actorRef, object onCompleteMessage, Func<Exception, object> onFailureMessage)
+            => FromGraph(new ActorRefSinkStage<TIn>(actorRef, onCompleteMessage, onFailureMessage));
 
         ///<summary>
         /// Sends the elements of the stream to the given <see cref="IActorRef"/>.
@@ -462,8 +488,9 @@ namespace Akka.Streams.Dsl
         /// <param name="actorRef">TBD</param>
         /// <param name="onCompleteMessage">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Use overload accepting both on complete and on failure message")]
         public static Sink<TIn, NotUsed> ActorRef<TIn>(IActorRef actorRef, object onCompleteMessage)
-            => new Sink<TIn, NotUsed>(new ActorRefSink<TIn>(actorRef, onCompleteMessage, DefaultAttributes.ActorRefSink, Shape<TIn>("ActorRefSink")));
+            => FromGraph(new ActorRefSinkStage<TIn>(actorRef, onCompleteMessage, ex => new Status.Failure(ex)));
 
         /// <summary>
         /// Sends the elements of the stream to the given <see cref="IActorRef"/> that sends back back-pressure signal.

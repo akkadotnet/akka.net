@@ -6,12 +6,15 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.TCK.Query;
+using Akka.Streams.TestKit;
 using Akka.Util.Internal;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Query
@@ -32,6 +35,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
             }}
             akka.persistence {{
                 publish-plugin-commands = on
+                query.journal.sql.refresh-interval = 200ms
                 journal {{
                     plugin = ""akka.persistence.journal.sqlite""
                     sqlite = {{
@@ -41,7 +45,6 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                         metadata-table-name = journal_metadata
                         auto-initialize = on
                         connection-string = ""{ConnectionString("journal")}""
-                        refresh-interval = 200ms
                     }}
                 }}
                 snapshot-store {{

@@ -5,22 +5,20 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2;
-using Xunit;
 using FluentAssertions;
-using System.Collections;
-using System;
 using FluentAssertions.Execution;
+using Xunit;
+using Xunit.Abstractions;
 using static Akka.Cluster.ClusterEvent;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class LeastShardAllocationStrategyRandomizedSpec : TestKit.Xunit2.TestKit
+    public class LeastShardAllocationStrategyRandomizedSpec : AkkaSpec
     {
         private readonly IShardAllocationStrategy strategyWithoutLimits;
         private int rndSeed;
@@ -30,7 +28,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private ImmutableSortedSet<Member> clusterMembers = ImmutableSortedSet<Member>.Empty;
 
-        public LeastShardAllocationStrategyRandomizedSpec()
+        public LeastShardAllocationStrategyRandomizedSpec(ITestOutputHelper helper) : base(helper)
         {
             rndSeed = DateTime.UtcNow.Millisecond;
             rnd = new Random(rndSeed);

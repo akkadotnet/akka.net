@@ -127,7 +127,7 @@ namespace Akka.Persistence.Query.Sql
                     ReceiveRecoverySuccess(success.HighestSequenceNr);
                     return true;
                 case EventReplayFailure failure:
-                    Log.Debug("event replay failed, due to [{0}]", failure.Cause.Message);
+                    Log.Error(failure.Cause, "event replay failed, due to [{0}]", failure.Cause.Message);
                     Buffer.DeliverBuffer(TotalDemand);
                     OnErrorThenStop(failure.Cause);
                     return true;
