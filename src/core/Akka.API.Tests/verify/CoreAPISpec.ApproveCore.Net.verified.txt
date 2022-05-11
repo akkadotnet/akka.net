@@ -2553,9 +2553,9 @@ namespace Akka.Dispatch
     }
     public sealed class Dispatchers
     {
-        public static readonly string DefaultBlockingDispatcherId;
-        public static readonly string DefaultDispatcherId;
-        public static readonly string SynchronizedDispatcherId;
+        public const string DefaultBlockingDispatcherId = "akka.actor.default-blocking-io-dispatcher";
+        public const string DefaultDispatcherId = "akka.actor.default-dispatcher";
+        public const string SynchronizedDispatcherId = "akka.actor.synchronized-dispatcher";
         public Dispatchers(Akka.Actor.ActorSystem system, Akka.Dispatch.IDispatcherPrerequisites prerequisites, Akka.Event.ILoggingAdapter logger) { }
         public Akka.Configuration.Config DefaultDispatcherConfig { get; }
         public Akka.Dispatch.MessageDispatcher DefaultGlobalDispatcher { get; }

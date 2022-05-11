@@ -2475,14 +2475,16 @@ namespace Akka.Configuration.Hocon
 }
 namespace Akka.Dispatch
 {
-    public sealed class ActionRunnable : Akka.Dispatch.IRunnable
+    public sealed class ActionRunnable : Akka.Dispatch.IRunnable, System.Threading.IThreadPoolWorkItem
     {
         public ActionRunnable(System.Action action) { }
+        public void Execute() { }
         public void Run() { }
     }
-    public sealed class ActionWithStateRunnable : Akka.Dispatch.IRunnable
+    public sealed class ActionWithStateRunnable : Akka.Dispatch.IRunnable, System.Threading.IThreadPoolWorkItem
     {
         public ActionWithStateRunnable(System.Action<object> actionWithState, object state) { }
+        public void Execute() { }
         public void Run() { }
     }
     public class ActorTaskScheduler : System.Threading.Tasks.TaskScheduler
@@ -2553,9 +2555,9 @@ namespace Akka.Dispatch
     }
     public sealed class Dispatchers
     {
-        public static readonly string DefaultBlockingDispatcherId;
-        public static readonly string DefaultDispatcherId;
-        public static readonly string SynchronizedDispatcherId;
+        public const string DefaultBlockingDispatcherId = "akka.actor.default-blocking-io-dispatcher";
+        public const string DefaultDispatcherId = "akka.actor.default-dispatcher";
+        public const string SynchronizedDispatcherId = "akka.actor.synchronized-dispatcher";
         public Dispatchers(Akka.Actor.ActorSystem system, Akka.Dispatch.IDispatcherPrerequisites prerequisites, Akka.Event.ILoggingAdapter logger) { }
         public Akka.Configuration.Config DefaultDispatcherConfig { get; }
         public Akka.Dispatch.MessageDispatcher DefaultGlobalDispatcher { get; }
@@ -2615,14 +2617,14 @@ namespace Akka.Dispatch
         where TQueue : Akka.Dispatch.MessageQueues.IMessageQueue { }
     public interface IRequiresMessageQueue<T>
         where T : Akka.Dispatch.ISemantics { }
-    public interface IRunnable
+    public interface IRunnable : System.Threading.IThreadPoolWorkItem
     {
         void Run();
     }
     public interface ISemantics { }
     public interface IUnboundedDequeBasedMessageQueueSemantics : Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics { }
     public interface IUnboundedMessageQueueSemantics : Akka.Dispatch.ISemantics { }
-    public class Mailbox : Akka.Dispatch.IRunnable
+    public class Mailbox : Akka.Dispatch.IRunnable, System.Threading.IThreadPoolWorkItem
     {
         public Mailbox(Akka.Dispatch.MessageQueues.IMessageQueue messageQueue) { }
         public Akka.Dispatch.MessageDispatcher Dispatcher { get; }
@@ -2630,6 +2632,7 @@ namespace Akka.Dispatch
         public virtual void CleanUp() { }
         [System.Diagnostics.ConditionalAttribute("MAILBOXDEBUG")]
         public static void DebugPrint(string message, params object[] args) { }
+        public void Execute() { }
         public void Run() { }
         public virtual void SetActor(Akka.Actor.ActorCell actorCell) { }
     }
