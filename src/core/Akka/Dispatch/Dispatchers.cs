@@ -57,7 +57,13 @@ namespace Akka.Dispatch
         /// <param name="run">TBD</param>
         public override void Execute(IRunnable run)
         {
+#if NETSTANDARD
             ThreadPool.UnsafeQueueUserWorkItem(Executor, run);
+#else
+            // use native .NET 6 APIs here to reduce allocations
+            // preferLocal to help reduce context switching
+            ThreadPool.UnsafeQueueUserWorkItem(run, true);
+#endif
         }
 
         /// <summary>
@@ -99,9 +105,7 @@ namespace Akka.Dispatch
     /// </summary>
     internal sealed class FixedConcurrencyTaskScheduler : TaskScheduler
     {
-
-        [ThreadStatic]
-        private static bool _threadRunning = false;
+        [ThreadStatic] private static bool _threadRunning = false;
         private ConcurrentQueue<Task> _tasks = new ConcurrentQueue<Task>();
 
         private int _readers = 0;
@@ -298,26 +302,26 @@ namespace Akka.Dispatch
         /// <summary>
         ///     The default dispatcher identifier, also the full key of the configuration of the default dispatcher.
         /// </summary>
-        public static readonly string DefaultDispatcherId = "akka.actor.default-dispatcher";
+        public const string DefaultDispatcherId = "akka.actor.default-dispatcher";
 
         ///<summary>
         /// The id of a default dispatcher to use for operations known to be blocking. Note that
         /// for optimal performance you will want to isolate different blocking resources
         /// on different thread pools.
         /// </summary>
-        public static readonly string DefaultBlockingDispatcherId = "akka.actor.default-blocking-io-dispatcher";
+        public const string DefaultBlockingDispatcherId = "akka.actor.default-blocking-io-dispatcher";
 
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        internal static readonly string InternalDispatcherId = "akka.actor.internal-dispatcher";
+        internal const string InternalDispatcherId = "akka.actor.internal-dispatcher";
 
         private const int MaxDispatcherAliasDepth = 20;
 
         /// <summary>
         ///     The identifier for synchronized dispatchers.
         /// </summary>
-        public static readonly string SynchronizedDispatcherId = "akka.actor.synchronized-dispatcher";
+        public const string SynchronizedDispatcherId = "akka.actor.synchronized-dispatcher";
 
         private readonly ActorSystem _system;
         private Config _cachingConfig;
@@ -329,7 +333,8 @@ namespace Akka.Dispatch
         /// 
         /// Has to be thread-safe, as this collection can be accessed concurrently by many actors.
         /// </summary>
-        private readonly ConcurrentDictionary<string, MessageDispatcherConfigurator> _dispatcherConfigurators = new ConcurrentDictionary<string, MessageDispatcherConfigurator>();
+        private readonly ConcurrentDictionary<string, MessageDispatcherConfigurator> _dispatcherConfigurators =
+            new ConcurrentDictionary<string, MessageDispatcherConfigurator>();
 
         /// <summary>Initializes a new instance of the <see cref="Dispatchers" /> class.</summary>
         /// <param name="system">The system.</param>
@@ -443,13 +448,20 @@ namespace Akka.Dispatch
                     if (valueAtPath.IsObject())
                     {
                         var newConfigurator = ConfiguratorFrom(Config(id));
-                        return _dispatcherConfigurators.TryAdd(id, newConfigurator) ? newConfigurator : _dispatcherConfigurators[id];
+                        return _dispatcherConfigurators.TryAdd(id, newConfigurator)
+                            ? newConfigurator
+                            : _dispatcherConfigurators[id];
                     }
-                    throw new ConfigurationException($"Expected either a dispatcher config or an alias at [{id}] but found [{valueAtPath}]");
+
+                    throw new ConfigurationException(
+                        $"Expected either a dispatcher config or an alias at [{id}] but found [{valueAtPath}]");
                 }
+
                 throw new ConfigurationException($"Dispatcher {id} not configured.");
             }
-            throw new ConfigurationException($"Could not find a concrete dispatcher config after following {MaxDispatcherAliasDepth} deep. Is there a circular reference in your config? Last followed Id was [{id}]");
+
+            throw new ConfigurationException(
+                $"Could not find a concrete dispatcher config after following {MaxDispatcherAliasDepth} deep. Is there a circular reference in your config? Last followed Id was [{id}]");
         }
 
         /// <summary>
@@ -517,12 +529,14 @@ namespace Akka.Dispatch
         }
 
 
-        private static readonly Config ForkJoinExecutorConfig = ConfigurationFactory.ParseString("executor=fork-join-executor");
+        private static readonly Config ForkJoinExecutorConfig =
+            ConfigurationFactory.ParseString("executor=fork-join-executor");
 
         private static readonly Config CurrentSynchronizationContextExecutorConfig =
             ConfigurationFactory.ParseString(@"executor=current-context-executor");
 
         private static readonly Config TaskExecutorConfig = ConfigurationFactory.ParseString(@"executor=task-executor");
+
         private MessageDispatcherConfigurator ConfiguratorFrom(Config cfg)
         {
             if (cfg.IsNullOrEmpty())
@@ -565,7 +579,9 @@ namespace Akka.Dispatch
                     {
                         throw new ConfigurationException($"Could not resolve dispatcher type {type} for path {id}");
                     }
-                    dispatcher = (MessageDispatcherConfigurator)Activator.CreateInstance(dispatcherType, cfg, Prerequisites);
+
+                    dispatcher =
+                        (MessageDispatcherConfigurator)Activator.CreateInstance(dispatcherType, cfg, Prerequisites);
                     break;
             }
 
@@ -620,4 +636,3 @@ namespace Akka.Dispatch
         }
     }
 }
-

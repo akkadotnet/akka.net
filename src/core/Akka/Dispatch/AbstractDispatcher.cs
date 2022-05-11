@@ -59,9 +59,9 @@ namespace Akka.Dispatch
         /// <param name="settings">TBD</param>
         /// <param name="mailboxes">TBD</param>
         public DefaultDispatcherPrerequisites(
-            EventStream eventStream, 
-            IScheduler scheduler, 
-            Settings settings, 
+            EventStream eventStream,
+            IScheduler scheduler,
+            Settings settings,
             Mailboxes mailboxes)
         {
             Mailboxes = mailboxes;
@@ -74,14 +74,17 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         public EventStream EventStream { get; private set; }
+
         /// <summary>
         /// TBD
         /// </summary>
         public IScheduler Scheduler { get; private set; }
+
         /// <summary>
         /// TBD
         /// </summary>
         public Settings Settings { get; private set; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -121,11 +124,12 @@ namespace Akka.Dispatch
         private static readonly Config PriorityDefault = ConfigurationFactory.ParseString(@"
 executor = channel-executor 
 channel-executor.priority = normal");
-        
-        public ChannelExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
+
+        public ChannelExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config,
+            prerequisites)
         {
             config = config == null ? PriorityDefault : config.WithFallback(PriorityDefault);
-            
+
             var priority = config.GetString("channel-executor.priority", "normal");
             Priority = (TaskSchedulerPriority)Enum.Parse(typeof(TaskSchedulerPriority), priority, true);
         }
@@ -134,7 +138,8 @@ channel-executor.priority = normal");
 
         public override ExecutorService Produce(string id)
         {
-            Prerequisites.EventStream.Publish(new Debug($"ChannelExecutor-[{id}]", typeof(TaskSchedulerExecutor), $"Launched Dispatcher [{id}] with Priority[{Priority}]"));
+            Prerequisites.EventStream.Publish(new Debug($"ChannelExecutor-[{id}]", typeof(TaskSchedulerExecutor),
+                $"Launched Dispatcher [{id}] with Priority[{Priority}]"));
 
             var scheduler = ChannelTaskScheduler.Get(Prerequisites.Settings.System).GetScheduler(Priority);
             return new TaskSchedulerExecutor(id, scheduler);
@@ -163,7 +168,7 @@ channel-executor.priority = normal");
         /// </summary>
         /// <param name="config">TBD</param>
         /// <param name="prerequisites">TBD</param>
-        public DefaultTaskSchedulerExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) 
+        public DefaultTaskSchedulerExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
         }
@@ -214,8 +219,9 @@ channel-executor.priority = normal");
         {
             var dtp = config.GetConfig("dedicated-thread-pool");
             var fje = config.GetConfig("fork-join-executor");
-            if (dtp.IsNullOrEmpty() && fje.IsNullOrEmpty()) throw new ConfigurationException(
-                $"must define section 'dedicated-thread-pool' OR 'fork-join-executor' for fork-join-executor {config.GetString("id", "unknown")}");
+            if (dtp.IsNullOrEmpty() && fje.IsNullOrEmpty())
+                throw new ConfigurationException(
+                    $"must define section 'dedicated-thread-pool' OR 'fork-join-executor' for fork-join-executor {config.GetString("id", "unknown")}");
 
             if (!dtp.IsNullOrEmpty())
             {
@@ -231,13 +237,12 @@ channel-executor.priority = normal");
             {
                 var settings = new DedicatedThreadPoolSettings(
                     ThreadPoolConfig.ScaledPoolSize(
-                        fje.GetInt("parallelism-min"), 
-                        1.0, 
+                        fje.GetInt("parallelism-min"),
+                        1.0,
                         fje.GetInt("parallelism-max")),
-                        name:config.GetString("id"));
+                    name: config.GetString("id"));
                 return settings;
             }
-            
         }
     }
 
@@ -267,7 +272,8 @@ channel-executor.priority = normal");
         /// </summary>
         /// <param name="config">TBD</param>
         /// <param name="prerequisites">TBD</param>
-        public ThreadPoolExecutorServiceFactory(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
+        public ThreadPoolExecutorServiceFactory(Config config, IDispatcherPrerequisites prerequisites) : base(config,
+            prerequisites)
         {
         }
     }
@@ -340,11 +346,11 @@ channel-executor.priority = normal");
                         throw new ConfigurationException(
                             $"Could not resolve executor service configurator type {executor} for path {Config.GetString("id", "unknown")}");
                     }
+
                     var args = new object[] { Config, Prerequisites };
                     return (ExecutorServiceConfigurator)Activator.CreateInstance(executorConfiguratorType, args);
             }
         }
-
     }
 
     /// <summary>
@@ -358,11 +364,16 @@ channel-executor.priority = normal");
         private const int Rescheduled = 2;
 
         /* dispatcher debugging helpers */
-        private const bool DebugDispatcher = false; // IMPORTANT: make this a compile-time constant so compiler will elide debug code in production
+        private const bool
+            DebugDispatcher =
+                false; // IMPORTANT: make this a compile-time constant so compiler will elide debug code in production
+
         /// <summary>
         /// TBD
         /// </summary>
-        internal static readonly Lazy<Index<MessageDispatcher, IInternalActorRef>> Actors = new Lazy<Index<MessageDispatcher, IInternalActorRef>>(() => new Index<MessageDispatcher, IInternalActorRef>(), LazyThreadSafetyMode.PublicationOnly);
+        internal static readonly Lazy<Index<MessageDispatcher, IInternalActorRef>> Actors =
+            new Lazy<Index<MessageDispatcher, IInternalActorRef>>(
+                () => new Index<MessageDispatcher, IInternalActorRef>(), LazyThreadSafetyMode.PublicationOnly);
 
 #pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         /// <summary>
@@ -464,10 +475,12 @@ channel-executor.priority = normal");
             {
                 // We haven't succeeded in decreasing the inhabitants yet but the simple fact that we're trying to
                 // go below zero means that there is an imbalance and we might as well throw the exception
-                var e = new InvalidOperationException("ACTOR SYSTEM CORRUPTED!!! A dispatcher can't have less than 0 inhabitants!");
+                var e = new InvalidOperationException(
+                    "ACTOR SYSTEM CORRUPTED!!! A dispatcher can't have less than 0 inhabitants!");
                 ReportFailure(e);
                 throw e;
             }
+
             return ret;
         }
 
@@ -508,6 +521,13 @@ channel-executor.priority = normal");
                     _runnable = null;
                 }
             }
+
+#if !NETSTANDARD
+            public void Execute()
+            {
+                Run();
+            }
+#endif
         }
 
         /// <summary>
@@ -558,6 +578,7 @@ channel-executor.priority = normal");
         protected abstract void Shutdown();
 
         private readonly ShutdownAction _shutdownAction;
+
         sealed class ShutdownAction : IRunnable
         {
             private readonly MessageDispatcher _dispatcher;
@@ -578,15 +599,25 @@ channel-executor.priority = normal");
                     }
                     finally
                     {
-                        while (!_dispatcher.UpdateShutdownSchedule(_dispatcher.ShutdownSchedule, Unscheduled)) { }
+                        while (!_dispatcher.UpdateShutdownSchedule(_dispatcher.ShutdownSchedule, Unscheduled))
+                        {
+                        }
                     }
                 }
                 else if (sched == Rescheduled)
                 {
-                    if (_dispatcher.UpdateShutdownSchedule(Rescheduled, Scheduled)) _dispatcher.ScheduleShutdownAction();
+                    if (_dispatcher.UpdateShutdownSchedule(Rescheduled, Scheduled))
+                        _dispatcher.ScheduleShutdownAction();
                     else Run();
                 }
             }
+
+#if !NETSTANDARD
+            public void Execute()
+            {
+                Run();
+            }
+#endif
         }
 
         private void IfSensibleToDoSoThenScheduleShutdown()
@@ -600,9 +631,12 @@ channel-executor.priority = normal");
                 if (UpdateShutdownSchedule(Unscheduled, Scheduled)) ScheduleShutdownAction();
                 else IfSensibleToDoSoThenScheduleShutdown();
             }
+
             if (sched == Scheduled)
             {
-                if (UpdateShutdownSchedule(Scheduled, Rescheduled)) { }
+                if (UpdateShutdownSchedule(Scheduled, Rescheduled))
+                {
+                }
                 else IfSensibleToDoSoThenScheduleShutdown();
             }
 
@@ -637,7 +671,7 @@ channel-executor.priority = normal");
         /// <param name="cell">Cell of the actor.</param>
         /// <param name="mailboxType">The mailbox configurator.</param>
         /// <returns>The configured <see cref="Mailbox"/> for this actor.</returns>
-        internal Mailbox CreateMailbox(ActorCell cell, MailboxType mailboxType)
+        internal static Mailbox CreateMailbox(ActorCell cell, MailboxType mailboxType)
         {
             return new Mailbox(mailboxType.Create(cell.Self, cell.System));
         }
@@ -706,15 +740,18 @@ channel-executor.priority = normal");
         /// <returns><c>true</c> if the <see cref="Mailbox"/> was scheduled for execution, otherwise <c>false</c>.</returns>
         internal bool RegisterForExecution(Mailbox mbox, bool hasMessageHint, bool hasSystemMessageHint)
         {
-            if (mbox.CanBeScheduledForExecution(hasMessageHint, hasSystemMessageHint)) //This needs to be here to ensure thread safety and no races
+            if (mbox.CanBeScheduledForExecution(hasMessageHint,
+                    hasSystemMessageHint)) //This needs to be here to ensure thread safety and no races
             {
                 if (mbox.SetAsScheduled())
                 {
                     ExecuteTask(mbox);
                     return true;
                 }
+
                 return false;
             }
+
             return false;
         }
 
@@ -762,7 +799,8 @@ channel-executor.priority = normal");
         internal virtual void Suspend(ActorCell actorCell)
         {
             var mbox = actorCell.Mailbox;
-            if (mbox.Actor == actorCell && mbox.Dispatcher == this) //make sure everything is referring to the same instance
+            if (mbox.Actor == actorCell &&
+                mbox.Dispatcher == this) //make sure everything is referring to the same instance
             {
                 mbox.Suspend();
             }
@@ -775,11 +813,11 @@ channel-executor.priority = normal");
         internal virtual void Resume(ActorCell actorCell)
         {
             var mbox = actorCell.Mailbox;
-            if (mbox.Actor == actorCell && mbox.Dispatcher == this && mbox.Resume()) //make sure everything is referring to the same instance
+            if (mbox.Actor == actorCell && mbox.Dispatcher == this &&
+                mbox.Resume()) //make sure everything is referring to the same instance
             {
                 RegisterForExecution(mbox, false, false); // force the mailbox to re-run after resume
             }
         }
     }
 }
-

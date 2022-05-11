@@ -189,7 +189,7 @@ namespace Akka.Actor
              * Create the mailbox and enqueue the Create() message to ensure that
              * this is processed before anything else.
              */
-            var mailbox = Dispatcher.CreateMailbox(this, mailboxType);
+            var mailbox = MessageDispatcher.CreateMailbox(this, mailboxType);
 
             Create createMessage;
             /*

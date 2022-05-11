@@ -6,16 +6,21 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 
 namespace Akka.Dispatch
 {
     /// <summary>
     /// An asynchronous operation will be executed by a <see cref="MessageDispatcher"/>.
     /// </summary>
+#if NETSTANDARD
     public interface IRunnable
+#else
+    public interface IRunnable : IThreadPoolWorkItem
+#endif
     {
         /// <summary>
-        /// TBD
+        /// Executes the task.
         /// </summary>
         void Run();
     }
@@ -28,21 +33,25 @@ namespace Akka.Dispatch
         private readonly Action _action;
 
         /// <summary>
-        /// TBD
+        /// Creates a new thread pool work item that executes a delegate.
         /// </summary>
-        /// <param name="action">TBD</param>
+        /// <param name="action">The delegate to execute</param>
         public ActionRunnable(Action action)
         {
             _action = action;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public void Run()
         {
             _action();
         }
+
+#if !NETSTANDARD
+        public void Execute()
+        {
+            _action();
+        }
+#endif
     }
 
     /// <summary>
@@ -54,23 +63,26 @@ namespace Akka.Dispatch
         private readonly object _state;
 
         /// <summary>
-        /// TBD
+        /// Creates a new thread pool work item that executes a delegate along with state.
         /// </summary>
-        /// <param name="actionWithState">TBD</param>
-        /// <param name="state">TBD</param>
+        /// <param name="actionWithState">The delegate to execute.</param>
+        /// <param name="state">The state to execute with this delegate.</param>
         public ActionWithStateRunnable(Action<object> actionWithState, object state)
         {
             _actionWithState = actionWithState;
             _state = state;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public void Run()
         {
             _actionWithState(_state);
         }
+
+#if !NETSTANDARD
+        public void Execute()
+        {
+            _actionWithState(_state);
+        }
+#endif
     }
 }
-
