@@ -1896,6 +1896,8 @@ namespace Akka.Streams.Dsl
     }
     public class static Sink
     {
+        public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> ActorRef<TIn>(Akka.Actor.IActorRef actorRef, object onCompleteMessage, System.Func<System.Exception, object> onFailureMessage) { }
+        [System.ObsoleteAttribute("Use overload accepting both on complete and on failure message")]
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> ActorRef<TIn>(Akka.Actor.IActorRef actorRef, object onCompleteMessage) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> ActorRefWithAck<TIn>(Akka.Actor.IActorRef actorRef, object onInitMessage, object ackMessage, object onCompleteMessage, System.Func<System.Exception, object> onFailureMessage = null) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.Actor.IActorRef> ActorSubscriber<TIn>(Akka.Actor.Props props) { }
@@ -2738,25 +2740,14 @@ namespace Akka.Streams.Implementation
         public void Subscribe(Reactive.Streams.ISubscriber<TOut> subscriber) { }
         public System.Collections.Generic.IEnumerable<Reactive.Streams.ISubscriber<TOut>> TakePendingSubscribers() { }
     }
-    public class ActorRefSinkActor : Akka.Streams.Actors.ActorSubscriber
-    {
-        protected readonly int HighWatermark;
-        protected readonly object OnCompleteMessage;
-        protected readonly Akka.Actor.IActorRef Ref;
-        public ActorRefSinkActor(Akka.Actor.IActorRef @ref, int highWatermark, object onCompleteMessage) { }
-        protected Akka.Event.ILoggingAdapter Log { get; }
-        public override Akka.Streams.Actors.IRequestStrategy RequestStrategy { get; }
-        public static Akka.Actor.Props Props(Akka.Actor.IActorRef @ref, int highWatermark, object onCompleteMessage) { }
-        protected override bool Receive(object message) { }
-    }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class ActorRefSink<TIn> : Akka.Streams.Implementation.SinkModule<TIn, Akka.NotUsed>
+    public sealed class ActorRefSinkStage<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.SinkShape<T>>
     {
-        public ActorRefSink(Akka.Actor.IActorRef @ref, object onCompleteMessage, Akka.Streams.Attributes attributes, Akka.Streams.SinkShape<TIn> shape) { }
-        public override Akka.Streams.Attributes Attributes { get; }
-        public override object Create(Akka.Streams.MaterializationContext context, out Akka.NotUsed materializer) { }
-        protected override Akka.Streams.Implementation.SinkModule<TIn, Akka.NotUsed> NewInstance(Akka.Streams.SinkShape<TIn> shape) { }
-        public override Akka.Streams.Implementation.IModule WithAttributes(Akka.Streams.Attributes attributes) { }
+        public ActorRefSinkStage(Akka.Actor.IActorRef actorRef, object onCompleteMessage, System.Func<System.Exception, object> onFailureMessage) { }
+        public Akka.Streams.Inlet<T> In { get; }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public override Akka.Streams.SinkShape<T> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class ActorRefSource<TOut> : Akka.Streams.Implementation.SourceModule<TOut, Akka.Actor.IActorRef>
