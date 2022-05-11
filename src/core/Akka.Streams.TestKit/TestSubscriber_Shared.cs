@@ -305,11 +305,11 @@ namespace Akka.Streams.TestKit
                 TimeSpan atMost,
                 [EnumeratorCancellation] CancellationToken cancellationToken = default)
             {
-                var deadline = DateTime.UtcNow + atMost;
                 // if no subscription was obtained yet, we expect it
                 await EnsureSubscriptionTask(probe, cancellationToken);
                 probe.Subscription.Request(long.MaxValue);
 
+                var deadline = DateTime.UtcNow + atMost;
                 var result = new List<T>();
                 while (true)
                 {
@@ -330,6 +330,8 @@ namespace Akka.Streams.TestKit
                             result.Add(next.Element);
                             yield return next.Element;
                             break;
+                        default:
+                            throw new InvalidOperationException($"Invalid response, expected {nameof(OnError)}, {nameof(OnComplete)}, or {nameof(OnNext<T>)}, received [{e.GetType()}]");
                     }
                 }
             }

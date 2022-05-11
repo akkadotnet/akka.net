@@ -41,13 +41,13 @@ namespace Akka.Streams.TestKit
         
         public static async Task<T> AssertAllStagesStoppedAsync<T>(this AkkaSpec spec, Func<Task<T>> block, IMaterializer materializer)
         {
+            var result = await block();
             if (!(materializer is ActorMaterializerImpl impl))
-                return await block();
+                return result;
 
             var probe = spec.CreateTestProbe(impl.System);
             probe.Send(impl.Supervisor, StreamSupervisor.StopChildren.Instance);
             await probe.ExpectMsgAsync<StreamSupervisor.StoppedChildren>();
-            var result = await block();
 
             await probe.WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
