@@ -689,7 +689,9 @@ namespace Akka.Actor
     {
         public Envelope(object message, Akka.Actor.IActorRef sender, Akka.Actor.ActorSystem system) { }
         public Envelope(object message, Akka.Actor.IActorRef sender) { }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public object Message { get; }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public Akka.Actor.IActorRef Sender { get; }
         public override string ToString() { }
     }
@@ -3121,7 +3123,9 @@ namespace Akka.Event
     }
     public struct LogSource
     {
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public string Source { get; }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public System.Type Type { get; }
         public static Akka.Event.LogSource Create(object o) { }
         public static Akka.Event.LogSource Create(object o, Akka.Actor.ActorSystem system) { }
@@ -5022,6 +5026,7 @@ namespace Akka.Util
         public static int StringHash(string s) { }
         public static int SymmetricHash<T>(System.Collections.Generic.IEnumerable<T> xs, uint seed) { }
     }
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
     public struct Option<T>
     {
         public static readonly Akka.Util.Option<T> None;

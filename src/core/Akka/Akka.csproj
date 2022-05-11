@@ -4,7 +4,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka</AssemblyTitle>
     <Description>Akka.NET is a port of the popular Java/Scala framework Akka to .NET</Description>
-    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
