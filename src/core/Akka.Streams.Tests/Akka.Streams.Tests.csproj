@@ -5,6 +5,7 @@
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests</AssemblyName>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
