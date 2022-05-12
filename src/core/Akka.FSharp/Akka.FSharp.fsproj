@@ -1,15 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <Import Project="..\..\common.props"/>
 
-  <PropertyGroup>
-    <AssemblyTitle>Akka.FSharp</AssemblyTitle>
-    <Description>F# API support for Akka.NET</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
-    <PackageTags>$(AkkaPackageTags);F#;fsharp</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
-    <NoWarn></NoWarn>    
-  </PropertyGroup>
     <PropertyGroup>
         <AssemblyTitle>Akka.FSharp</AssemblyTitle>
         <Description>F# API support for Akka.NET</Description>

@@ -1,13 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <Import Project="..\..\..\common.props"/>
 
-  <PropertyGroup>
-    <AssemblyTitle>Akka.TestKit.Xunit2</AssemblyTitle>
-    <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
-    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
-    <PackageTags>$(AkkaPackageTags);testkit;xunit</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
     <PropertyGroup>
         <AssemblyTitle>Akka.TestKit.Xunit2</AssemblyTitle>
         <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
