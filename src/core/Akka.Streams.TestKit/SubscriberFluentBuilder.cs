@@ -35,7 +35,7 @@ namespace Akka.Streams.TestKit
 
         /// <summary>
         /// Execute the async chain and then expect and return a <see cref="ISubscriberEvent"/>
-        /// (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
+        /// (any of: <see cref="OnSubscribe"/>, <see cref="OnNext{T}"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
         /// NOTE: This method will execute the async chain
         /// </summary>
         public async Task<ISubscriberEvent> ExpectEventAsync(CancellationToken cancellationToken = default)
@@ -48,7 +48,7 @@ namespace Akka.Streams.TestKit
         
         /// <summary>
         /// Execute the async chain and then expect and return a <see cref="ISubscriberEvent"/>
-        /// (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
+        /// (any of: <see cref="OnSubscribe"/>, <see cref="OnNext{T}"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
         /// NOTE: This method will execute the async chain
         /// </summary>
         public async Task<ISubscriberEvent> ExpectEventAsync(
