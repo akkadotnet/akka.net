@@ -10,7 +10,6 @@
   href: persistence/toc.yml
 - name: Streams
   href: streams/toc.yml
-    href: configuration/akka.streams.md
 - name: Remoting
   href: remoting/toc.yml  
 - name: Clustering
