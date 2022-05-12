@@ -78,7 +78,7 @@ namespace Akka.TestKit.Extensions
         /// is needed. If the phrase does not start with the word <i>because</i>, it is prepended automatically.
         /// </param>
         /// <param name="becauseArgs">
-        /// Zero or more objects to format using the placeholders in <see cref="because" />.
+        /// Zero or more objects to format using the placeholders in <paramref name="because"/>.
         /// </param>
         /// <typeparam name="T"></typeparam>
         public static async Task ShouldCompleteWithin<T>(
@@ -101,7 +101,7 @@ namespace Akka.TestKit.Extensions
         /// is needed. If the phrase does not start with the word <i>because</i>, it is prepended automatically.
         /// </param>
         /// <param name="becauseArgs">
-        /// Zero or more objects to format using the placeholders in <see cref="because" />.
+        /// Zero or more objects to format using the placeholders in <paramref name="because"/>.
         /// </param>
         /// <typeparam name="T"></typeparam>
         public static async Task<T> ShouldCompleteWithin<T>(
@@ -121,7 +121,7 @@ namespace Akka.TestKit.Extensions
         /// is needed. If the phrase does not start with the word <i>because</i>, it is prepended automatically.
         /// </param>
         /// <param name="becauseArgs">
-        /// Zero or more objects to format using the placeholders in <see cref="because" />.
+        /// Zero or more objects to format using the placeholders in <paramref name="because"/>.
         /// </param>
         public static async Task ShouldCompleteWithin(
             this Task task, TimeSpan timeout, string because = "", params object[] becauseArgs)
