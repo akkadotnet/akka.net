@@ -183,15 +183,19 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(1).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                    .Run(Materializer);
-                var sink = t.Item1;
-                var result = t.Item2;
+                Within(TimeSpan.FromSeconds(10), () =>
+                {
+                    var t = MergeHub.Source<int>(1).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
+                        .Run(Materializer);
+                    var sink = t.Item1;
+                    var result = t.Item2;
 
-                Source.From(Enumerable.Range(1, 10000)).RunWith(sink, Materializer);
-                Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
+                    Source.From(Enumerable.Range(1, 10000)).RunWith(sink, Materializer);
+                    Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
 
-                result.AwaitResult().OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
+                    result.AwaitResult(RemainingOrDefault).OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
+                });
+                
             }, Materializer);
         }
 
