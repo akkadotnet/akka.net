@@ -205,10 +205,18 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public class Cancel : ITestEvent
             {
                 public GraphStageLogic Source { get; }
+                public Exception Cause { get; }
 
-                public Cancel(GraphStageLogic source) => Source = source;
+                public Cancel(GraphStageLogic source, Exception cause)
+                {
+                    Source = source;
+                    Cause = cause;
+                }
 
-                protected bool Equals(Cancel other) => Equals(Source, other.Source);
+                protected bool Equals(Cancel other) => 
+                    Equals(Source, other.Source)
+                    && Cause.GetType() == other.Cause.GetType()
+                    && Cause.Message == other.Cause.Message;
 
                 public override bool Equals(object obj)
                 {
@@ -387,7 +395,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     Outlet = new Outlet<T>("out") {Id = 0};
 
                     var probe = this;
-                    SetHandler(Outlet, () => setup.LastEvent.Add(new RequestOne(probe)), cause => setup.LastEvent.Add(new Cancel(probe)));
+                    SetHandler(Outlet, () => setup.LastEvent.Add(new RequestOne(probe)), cause => setup.LastEvent.Add(new Cancel(probe, cause)));
                 }
 
                 public sealed override Outlet Out => Outlet;
@@ -728,7 +736,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public class Cancel : ITestEvent
             {
-                protected bool Equals(Cancel other) => true;
+                public Cancel(Exception cause)
+                {
+                    Cause = cause;
+                }
+
+                public Exception Cause { get; }
+
+                protected bool Equals(Cancel other) =>
+                    Cause.GetType() == other.Cause.GetType()
+                    && Cause.Message == other.Cause.Message;
 
                 public override bool Equals(object obj)
                 {
@@ -846,7 +863,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                             setup.LastEvent.Add(new RequestAnother());
                         else
                             setup.LastEvent.Add(new RequestOne());
-                    }, cause => setup.LastEvent.Add(new Cancel()));
+                    }, cause => setup.LastEvent.Add(new Cancel(cause)));
                 }
 
                 public override Outlet Out => _outlet;
@@ -902,7 +919,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public void Cancel()
                 {
-                    Cancel(_inlet);
+                    Cancel(_inlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
                     _setup.Run();
                 }
             }

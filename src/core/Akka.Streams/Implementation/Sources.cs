@@ -786,8 +786,8 @@ namespace Akka.Streams.Implementation
 
             public override void OnDownstreamFinish(Exception cause)
             {
-                _completion.SetException(new Exception("Downstream canceled without triggering lazy source materialization"));
-                InternalOnDownstreamFinish(cause);
+                _completion.SetException(new Exception("Downstream canceled without triggering lazy source materialization", cause));
+                CompleteStage();
             }
 
 

@@ -514,7 +514,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet));
+            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -581,7 +581,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet));
+            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -647,7 +647,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet));
+            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -716,7 +716,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet));
+            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -771,7 +771,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet));
+            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -809,7 +809,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             stepAll();
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet));
+            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
