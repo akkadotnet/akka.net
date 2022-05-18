@@ -387,7 +387,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     Outlet = new Outlet<T>("out") {Id = 0};
 
                     var probe = this;
-                    SetHandler(Outlet, () => setup.LastEvent.Add(new RequestOne(probe)), () => setup.LastEvent.Add(new Cancel(probe)));
+                    SetHandler(Outlet, () => setup.LastEvent.Add(new RequestOne(probe)), cause => setup.LastEvent.Add(new Cancel(probe)));
                 }
 
                 public sealed override Outlet Out => Outlet;
@@ -513,7 +513,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     public void OnPull() => Pull(_stage.In);
 
-                    public void OnDownstreamFinish() => Cancel(_stage.In);
+                    public void OnDownstreamFinish(Exception cause) => Cancel(_stage.In, cause);
                 }
 
                 public EventPropagateStage() => Shape  = new FlowShape<int, int>(In, Out);
@@ -640,7 +640,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     SetHandler(setup._stageOut,
                         () => MayFail(() => Pull(setup._stageIn)),
-                        () => MayFail(CompleteStage));
+                        cause => MayFail(CompleteStage));
                 }
 
                 private void MayFail(Action task)
@@ -846,7 +846,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                             setup.LastEvent.Add(new RequestAnother());
                         else
                             setup.LastEvent.Add(new RequestOne());
-                    }, () => setup.LastEvent.Add(new Cancel()));
+                    }, cause => setup.LastEvent.Add(new Cancel()));
                 }
 
                 public override Outlet Out => _outlet;

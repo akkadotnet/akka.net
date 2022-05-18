@@ -835,7 +835,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 return context.Pull();
             }
 
-            public override ITerminationDirective OnDownstreamFinish(IContext<T> context)
+            public override ITerminationDirective OnDownstreamFinish(IContext<T> context, Exception cause)
             {
                 return context.AbsorbTermination();
             }

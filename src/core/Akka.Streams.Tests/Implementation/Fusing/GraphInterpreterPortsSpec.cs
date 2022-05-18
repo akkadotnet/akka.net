@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         private Action step;
         private Action clearEvents;
 
-        public GraphInterpreterPortsSpec(ITestOutputHelper output = null) : base(output)
+        public GraphInterpreterPortsSpec(ITestOutputHelper output) : base(output)
         {
         }
 

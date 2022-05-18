@@ -147,7 +147,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            public void OnDownstreamFinish()
+            public void OnDownstreamFinish(Exception cause)
             {
                 if (_pendingOffer != null)
                 {
@@ -454,7 +454,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            public override void OnDownstreamFinish() => CloseStage();
+            public override void OnDownstreamFinish(Exception cause) => CloseStage();
 
             public override void PreStart()
             {
@@ -784,10 +784,10 @@ namespace Akka.Streams.Implementation
                 SetHandler(stage.Out, this);
             }
 
-            public override void OnDownstreamFinish()
+            public override void OnDownstreamFinish(Exception cause)
             {
                 _completion.SetException(new Exception("Downstream canceled without triggering lazy source materialization"));
-                CompleteStage();
+                InternalOnDownstreamFinish(cause);
             }
 
 
@@ -797,10 +797,10 @@ namespace Akka.Streams.Implementation
                 var subSink = new SubSinkInlet<TOut>(this, "LazySource");
                 subSink.Pull();
 
-                SetHandler(_stage.Out, () => subSink.Pull(), () =>
+                SetHandler(_stage.Out, () => subSink.Pull(), cause =>
                 {
-                    subSink.Cancel();
-                    CompleteStage();
+                    subSink.Cancel(cause);
+                    InternalOnDownstreamFinish(cause);
                 });
 
                 subSink.SetHandler(new LambdaInHandler(() => Push(_stage.Out, subSink.Grab())));
@@ -813,7 +813,7 @@ namespace Akka.Streams.Implementation
                 }
                 catch (Exception e)
                 {
-                    subSink.Cancel();
+                    subSink.Cancel(e);
                     FailStage(e);
                     _completion.TrySetException(e);
                 }
@@ -974,7 +974,7 @@ namespace Akka.Streams.Implementation
             private readonly Action<T> _onOverflow;
             private readonly Action<T> _onEvent;
             private readonly Action<Exception> _onError;
-            private readonly Action _onCompleted;
+            private readonly Action<Exception> _onCompleted;
 
             private IDisposable _disposable;
 
@@ -996,7 +996,7 @@ namespace Akka.Streams.Implementation
                     }
                 });
                 _onError = GetAsyncCallback<Exception>(e => Fail(_stage.Outlet, e));
-                _onCompleted = GetAsyncCallback(() => Complete(_stage.Outlet));
+                _onCompleted = GetAsyncCallback<Exception>(InternalOnDownstreamFinish);
                 _onOverflow = SetupOverflowStrategy(stage._overflowStrategy);
 
                 SetHandler(stage.Outlet, onPull: () =>
@@ -1011,7 +1011,8 @@ namespace Akka.Streams.Implementation
 
             public void OnNext(T value) => _onEvent(value);
             public void OnError(Exception error) => _onError(error);
-            public void OnCompleted() => _onCompleted();
+            public void OnCompleted() => _onCompleted(SubscriptionWithCancelException.StageWasCompleted.Instance);
+            public void OnCompleted(Exception cause) => _onCompleted(cause);
 
             public override void PreStart()
             {
