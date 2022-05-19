@@ -1664,12 +1664,11 @@ namespace Akka.Streams.Implementation
                 {
                     Rec(Inert.Subscriber);
                 }
-                catch (Exception e)
+                finally
                 {
-                    throw new AggregateException(e, ReactiveStreamsCompliance.SubscriberMustNotBeNullException);
+                    // must throw ArgumentNullEx, rule 2:13
+                    throw ReactiveStreamsCompliance.SubscriberMustNotBeNullException;
                 }
-                // must throw ArgumentNullEx, rule 2:13
-                throw ReactiveStreamsCompliance.SubscriberMustNotBeNullException;
             }
 
             Rec(subscriber);
@@ -1731,12 +1730,11 @@ namespace Akka.Streams.Implementation
                 {
                     Rec(new ErrorPublisher<T>(ex, "failed-VirtualProcessor"));
                 }
-                catch (Exception e)
+                finally
                 {
-                    throw new AggregateException(e, ex);
+                    // must throw ArgumentNullEx, rule 2:13
+                    throw ex;
                 }
-                // must throw ArgumentNullEx, rule 2:13
-                throw ex;
             }
             
             Rec(subscription);
