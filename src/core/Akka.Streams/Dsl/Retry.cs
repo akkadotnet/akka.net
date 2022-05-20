@@ -176,7 +176,7 @@ namespace Akka.Streams.Dsl
                             else if (!HasBeenPulled(retry.In1))
                                 Pull(retry.In1);
                         }
-                    }, onDownstreamFinish: () =>
+                    }, onDownstreamFinish: cause =>
                     {
                         //Do Nothing, intercept completion as downstream
                     });
@@ -327,7 +327,7 @@ namespace Akka.Streams.Dsl
                                     Pull(_retry.In2);
                             }
                         }
-                    }, onDownstreamFinish: () =>
+                    }, onDownstreamFinish: cause =>
                     {
                         //Do Nothing, intercept completion as downstream
                     });

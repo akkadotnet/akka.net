@@ -106,6 +106,8 @@ namespace Akka.Streams.Stage
         /// <returns>TBD</returns>
         FreeDirective Finish();
         
+        FreeDirective Finish(Exception cause);
+
         /// <summary>
         /// Cancel upstreams and complete downstreams with failure.
         /// </summary>

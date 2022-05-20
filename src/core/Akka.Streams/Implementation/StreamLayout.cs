@@ -1647,41 +1647,37 @@ namespace Akka.Streams.Implementation
 
         private void TryOnSubscribe(object obj, ISubscription s)
         {
-            if (Value == null)
+            while (true)
             {
-                if (!CompareAndSet(null, obj))
-                    TryOnSubscribe(obj, s);
-                return;
-            }
-
-            var subscriber = Value as ISubscriber<T>;
-            if (subscriber != null)
-            {
-                var subscription = obj as ISubscription;
-                if (subscription != null)
+                switch (Value)
                 {
-                    if (CompareAndSet(subscriber, new Both(subscriber)))
-                        EstablishSubscription(subscriber, subscription);
-                    else
-                        TryOnSubscribe(obj, s);
-
-                    return;
+                    case null:
+                        if (!CompareAndSet(null, obj)) 
+                            continue;
+                        return;
+                    case ISubscriber<T> subscriber:
+                        switch (obj)
+                        {
+                            case ISubscription subscription:
+                                if (CompareAndSet(subscriber, new Both(subscriber)))
+                                    EstablishSubscription(subscriber, subscription);
+                                else
+                                    continue;
+                                return;
+                            case IPublisher<T> publisher:
+                                var inert = GetAndSet(Inert.Instance);
+                                if (inert != Inert.Instance) 
+                                    publisher.Subscribe(subscriber);
+                                return;
+                            case var other:
+                                throw new IllegalStateException($"Unexpected state in VirtualProcessor: {other.GetType()}");
+                        }
+                    case var state:
+                        // spec violation
+                        ReactiveStreamsCompliance.TryCancel(s, new IllegalStateException($"Spec violation: VirtualProcessor in wrong state [{state.GetType()}]."));
+                        return;
                 }
-
-                var publisher = Value as IPublisher<T>;
-                if (publisher != null)
-                {
-                    var inert = GetAndSet(Inert.Instance);
-                    if (inert != Inert.Instance)
-                        publisher.Subscribe(subscriber);
-                    return;
-                }
-
-                return;
             }
-
-            // spec violation
-            ReactiveStreamsCompliance.TryCancel(s);
         }
 
         private void EstablishSubscription(ISubscriber<T> subscriber, ISubscription subscription)
@@ -1697,7 +1693,7 @@ namespace Akka.Streams.Implementation
             catch (Exception ex)
             {
                 Value = Inert.Instance;
-                ReactiveStreamsCompliance.TryCancel(subscription);
+                ReactiveStreamsCompliance.TryCancel(subscription, ex);
                 ReactiveStreamsCompliance.TryOnError(subscriber, ex);
             }
         }
@@ -1956,7 +1952,7 @@ namespace Akka.Streams.Implementation
             {
                 if (n < 1)
                 {
-                    ReactiveStreamsCompliance.TryCancel(_real);
+                    ReactiveStreamsCompliance.TryCancel(_real, new IllegalStateException($"Demand must not be < 1. Was: {n}"));
                     var value = _processor.GetAndSet(Inert.Instance);
                     var both = value as Both;
                     if (both != null)

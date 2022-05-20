@@ -494,7 +494,7 @@ namespace Akka.Streams.Tests.Implementation
                 interpreter =>
                 {
                     interpreter.Complete(interpreter.Connections[0]);
-                    interpreter.Cancel(interpreter.Connections[1]);
+                    interpreter.Cancel(interpreter.Connections[1], SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
                     interpreter.Execute(2);
 
                     ExpectMsg("postStop2");

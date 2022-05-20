@@ -56,7 +56,19 @@ namespace Akka.Streams.Implementation.IO
                 _listener?.Tell(new Tcp.ResumeAccepting(1), StageActor.Ref);
             }
 
-            public void OnDownstreamFinish() => TryUnbind();
+            public void OnDownstreamFinish(Exception cause)
+            {
+                if (Log.IsDebugEnabled)
+                {
+                    var endpoint = (IPEndPoint)_stage._endpoint;
+                    if (cause is SubscriptionWithCancelException.NonFailureCancellation)
+                        Log.Debug("Unbinding from {0} because downstream cancelled stream", endpoint);
+                    else
+                        Log.Debug(cause, "Unbinding from {0} because of downstream failure", endpoint);
+                }
+                
+                TryUnbind();
+            }
 
             private StreamTcp.IncomingConnection ConnectionFor(Tcp.Connected connected, IActorRef connection)
             {
@@ -407,14 +419,23 @@ namespace Akka.Streams.Implementation.IO
 
                 _readHandler = new LambdaOutHandler(
                     onPull: () => _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref),
-                    onDownstreamFinish: () =>
+                    onDownstreamFinish: cause =>
                     {
-                        if (!IsClosed(_bytesIn))
-                            _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                        if (cause is SubscriptionWithCancelException.NonFailureCancellation)
+                        {
+                            if(Log.IsDebugEnabled)
+                                Log.Debug("Closing connection from {0} because downstream cancelled stream without failure", (IPEndPoint)_remoteAddress);
+                            if(IsClosed(_bytesIn))
+                                _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
+                            else
+                                _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                        }
                         else
                         {
+                            if(Log.IsDebugEnabled)
+                                Log.Debug(cause, "Aborting connection from {0} because of downstream failure", (IPEndPoint)_remoteAddress);
                             _connection.Tell(Tcp.Abort.Instance, StageActor.Ref);
-                            CompleteStage();
+                            FailStage(cause);
                         }
                     });
 

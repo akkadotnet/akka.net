@@ -284,7 +284,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>
             {
                 var events = lastEvents().ToArray();
-                events[0].Should().Be(new Cancel());
+                events[0].Should().Be(new Cancel(new TestException("Boom!")));
                 events[1].Should().BeOfType<OnError>();
                 ((OnError) events[1]).Cause.Should().BeOfType<TestException>();
                 ((OnError) events[1]).Cause.Message.Should().Be("Boom!");
@@ -322,7 +322,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
             {
                 var events = lastEvents().ToArray();
-                events[0].Should().Be(new Cancel());
+                events[0].Should().Be(new Cancel(new TestException("Boom!")));
                 events[1].Should().BeOfType<OnError>();
                 ((OnError)events[1]).Cause.Should().BeOfType<TestException>();
                 ((OnError)events[1]).Cause.Message.Should().Be("Boom!");
