@@ -15,7 +15,7 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode
     public class HyperionSerializerWrapper : Serializer
     {
         private readonly HyperionSerializer _serializer;
-        
+
         public HyperionSerializerWrapper(ExtendedActorSystem system) : base(system)
         {
             _serializer = new HyperionSerializer(system);
@@ -25,21 +25,21 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode
         {
             _serializer = new HyperionSerializer(system, config);
         }
-        
+
         public HyperionSerializerWrapper(ExtendedActorSystem system, HyperionSerializerSettings settings) : base(system)
         {
             _serializer = new HyperionSerializer(system, settings);
         }
 
         public override int Identifier => -6;
-        
+
         public override bool IncludeManifest => false;
-        
+
         public override byte[] ToBinary(object obj)
         {
             if (obj is IClusterShardingSerializable)
                 throw new Exception($"THIS ISN'T SUPPOSED TO BE SERIALIZED. Type: {obj.GetType().FullName}");
-            
+
             // IShardRegionCommand isn't serialized using cluster sharding serializer
             if (!(obj is IShardRegionCommand))
             {
@@ -54,10 +54,10 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode
         public override object FromBinary(byte[] bytes, Type type)
         {
             var obj = _serializer.FromBinary(bytes, type);
-            
+
             if (obj is IClusterShardingSerializable)
                 throw new Exception($"THIS ISN'T SUPPOSED TO BE SERIALIZED. Type: {obj.GetType().FullName}");
-            
+
             // IShardRegionCommand isn't serialized using cluster sharding serializer
             if (!(obj is IShardRegionCommand))
             {

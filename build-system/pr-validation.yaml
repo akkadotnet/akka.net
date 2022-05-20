@@ -30,7 +30,7 @@ jobs:
       - task: Npm@1
         inputs:
           command: "custom"
-          customCommand: "install -g cspell"
+          customCommand: "install -g cspell@5.17.0"
       - task: CmdLine@2
         inputs:
           script: 'cspell --config ./docs/cSpell.json "docs/**/*.md"'
@@ -134,6 +134,17 @@ jobs:
 #      outputDirectory: "TestResults"
 #      artifactName: "docfx_test-$(Build.BuildId)"
 #      run_if: eq(variables['Build.Reason'], 'PullRequest')
+      
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: "docfx_test"
+      displayName: "DocFX warning check"
+      vmImage: "windows-2019"
+      scriptFileName: build.cmd
+      scriptArgs: docfx
+      outputDirectory: "TestResults"
+      artifactName: "docfx_test-$(Build.BuildId)"
+      run_if: eq(variables['Build.Reason'], 'PullRequest')
       
   - template: azure-pipeline.template.yaml
     parameters:

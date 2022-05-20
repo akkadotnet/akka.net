@@ -9,15 +9,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using System.Runtime.Serialization;
-using Akka.Event;
-using Akka.Persistence.Journal;
-using Akka.Persistence;
-using System.Threading;
-using Akka.Util.Internal;
 using Akka.Actor.Internal;
+using Akka.Persistence;
+using Akka.Persistence.Journal;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -86,6 +84,12 @@ namespace Akka.Cluster.Sharding.Tests
     /// </summary>
     public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash
     {
+        private class InitTimeout
+        {
+            public static readonly InitTimeout Instance = new InitTimeout();
+            private InitTimeout() { }
+        }
+
         private bool _isInitialized;
         private bool _isInitTimedOut;
         private IActorRef _store;
@@ -278,27 +282,6 @@ namespace Akka.Cluster.Sharding.Tests
         /// TBD
         /// </summary>
         public IStash Stash { get; set; }
-
-        // sent to self only
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public class InitTimeout
-        {
-            private InitTimeout() { }
-            private static readonly InitTimeout _instance = new InitTimeout();
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static InitTimeout Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
-        }
     }
 
     /// <summary>
@@ -338,7 +321,6 @@ namespace Akka.Cluster.Sharding.Tests
             switch (message)
             {
                 case ReplayedMessage rm:
-                    //rm.Persistent
                     _replayCallback(rm.Persistent);
                     return true;
                 case RecoverySuccess _:

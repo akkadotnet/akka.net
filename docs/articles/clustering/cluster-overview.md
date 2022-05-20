@@ -11,7 +11,7 @@ A cluster represents a fault-tolerant, elastic, decentralized peer-to-peer netwo
 
 ## What Does Akka.Cluster Do?
 
-The best way to begin introducing Akka.Cluster is with brief overview of what it does. Akka.Cluster is the [package](https://www.nuget.org/packages/Akka.Cluster/1.0.3.11-beta) that brings clustering support to Akka.NET, and it accomplishes this by adding the following capabilities to Akka.NET:
+The best way to begin introducing Akka.Cluster is with brief overview of what it does. Akka.Cluster is the [package](https://www.nuget.org/packages/Akka.Cluster/) that brings clustering support to Akka.NET, and it accomplishes this by adding the following capabilities to Akka.NET:
 
 * Makes it easy to create peer-to-peer networks of Akka.NET applications
 * Allows peers to automatically discover new nodes and removed dead ones automatically with no configuration changes
@@ -236,6 +236,7 @@ A node might also exit the cluster gracefully, preventing it from being marked a
 <iframe width="560" height="315" src="https://www.youtube.com/embed/mUTKvGyxbOA" frameborder="0" allowfullscreen></iframe>
 <!-- markdownlint-enable MD033 -->
 
+* [Cluster Member Roles](xref:member-roles)
 * [How to Create Scalable Clustered Akka.NET Apps Using Akka.Cluster](https://petabridge.com/blog/intro-to-akka-cluster/)
 * [Video: Introduction to Akka.Cluster](https://www.youtube.com/watch?v=mUTKvGyxbOA)
 * [Gossip Protocol](https://en.wikipedia.org/wiki/Gossip_protocol)

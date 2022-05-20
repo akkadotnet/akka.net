@@ -19,7 +19,9 @@ namespace DocsExamples.Actor.FiniteStateMachine
 
         public ExampleFSMActor()
         {
+            // <StartWith>
             StartWith(State.Idle, Uninitialized.Instance);
+            // </StartWith>
 
             #region FSMHandlers
             When(State.Idle, state =>

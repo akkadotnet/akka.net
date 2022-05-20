@@ -1,25 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\common.props" />
+    <Import Project="..\..\..\common.props"/>
 
-  <PropertyGroup>
-    <AssemblyTitle>Akka.DistributedData.LightningDB</AssemblyTitle>
-    <Description>Replicated data using CRDT structures</Description>
-    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
-    <PackageTags>$(AkkaPackageTags);network;cluster;crdt;replication;lightningdb;lmdb</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+    <PropertyGroup>
+        <AssemblyTitle>Akka.DistributedData.LightningDB</AssemblyTitle>
+        <Description>Replicated data using CRDT structures</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags);network;cluster;crdt;replication;lightningdb;lmdb</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="reference.conf" />
-    <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="reference.conf"/>
+        <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="LightningDB" Version="0.14.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="LightningDB" Version="0.14.0"/>
+    </ItemGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
 
 </Project>

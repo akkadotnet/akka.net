@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg width="279px" height="59px" viewBox="0 0 279 59" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+  <desc>Created with Lunacy</desc>
+  <defs>
+    <filter id="filter_1">
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0" />
+    </filter>
+    <path d="M0 0L178 0L178 144L0 144L0 0Z" transform="translate(0.48175567 0)" id="path_1" />
+    <path d="M0 0L137 0L137 84L0 84L0 0Z" transform="translate(0 -0.38709676)" id="path_2" />
+    <clipPath id="mask_1">
+      <use xlink:href="#path_1" />
+    </clipPath>
+    <clipPath id="mask_2">
+      <use xlink:href="#path_2" />
+    </clipPath>
+  </defs>
+  <g id="Group-23" transform="translate(0 -85)">
+    <g id="Group-19" transform="translate(100.51819 0)" opacity="0.03" filter="url(#filter_1)">
+      <path d="M0 0L178 0L178 144L0 144L0 0Z" transform="translate(0.48175567 0)" id="Clip-18" fill="none" fill-rule="evenodd" stroke="none" />
+      <g clip-path="url(#mask_1)">
+        <path d="M0 77.4466L53.495 144L178 144L62.2525 0L0 77.4466Z" transform="translate(0.48175567 0)" id="Fill-17" fill="#6DC9ED" fill-rule="evenodd" stroke="none" />
+      </g>
+    </g>
+    <g id="Group-22" transform="translate(0 60.387085)" opacity="0.03" filter="url(#filter_1)">
+      <path d="M0 0L137 0L137 84L0 84L0 0Z" transform="translate(0 -0.38709676)" id="Clip-21" fill="none" fill-rule="evenodd" stroke="none" />
+      <g clip-path="url(#mask_2)">
+        <path d="M0 84L137 83.9971L68.4982 0L0 84Z" transform="translate(0 -0.38709676)" id="Fill-20" fill="#64A1D7" fill-rule="evenodd" stroke="none" />
+      </g>
+    </g>
+  </g>
+</svg>

@@ -125,7 +125,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             var probe = CreateTestProbe();
             var settings = ShardedDaemonProcessSettings.Create(Sys).WithRole("workers");
-            ShardedDaemonProcess.Get(Sys).Init("roles", 3, id => MyActor.Props(id, probe.Ref), settings);
+            ShardedDaemonProcess.Get(Sys).Init("roles", 3, id => MyActor.Props(id, probe.Ref), settings, PoisonPill.Instance);
 
             probe.ExpectNoMsg();
         }
