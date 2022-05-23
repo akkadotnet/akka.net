@@ -330,7 +330,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected override void OnResume(Exception ex)
             {
@@ -514,7 +514,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPull() => Pull(_stage.In);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected override void OnResume(Exception ex)
             {
@@ -1556,7 +1556,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
         }
 
         #endregion
@@ -1758,7 +1758,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected override void OnResume(Exception ex) => TryPull();
 
@@ -2923,12 +2923,17 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull() => Pull(_stage.Inlet);
 
-            public override void OnDownstreamFinish()
+            public override void OnDownstreamFinish(Exception cause)
             {
                 if (IsEnabled(_logLevels.OnFinish))
-                    _log.Log(_logLevels.OnFinish, $"[{_stage._name}] Downstream finished.");
+                    _log.Log(
+                        _logLevels.OnFinish, 
+                        "[{0}] Downstream finished. cause: {1}: {2}.", 
+                        _stage._name,
+                        Logging.SimpleName(cause.GetType()),
+                        cause.Message);
 
-                CompleteStage();
+                InternalOnDownstreamFinish(cause);
             }
 
             public override void PreStart()
@@ -3076,7 +3081,7 @@ namespace Akka.Streams.Implementation.Fusing
                     EmitGroup();
             }
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             public override void PreStart()
             {
@@ -3231,7 +3236,7 @@ namespace Akka.Streams.Implementation.Fusing
                 CompleteIfReady();
             }
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             private long NextElementWaitTime => (long)_stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1) * 1000 * 10;
 
@@ -3382,7 +3387,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey) => CompleteStage();
 
@@ -3448,7 +3453,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             public override void PreStart() => ScheduleOnce("DropWithinTimer", _stage._timeout);
 
@@ -3651,7 +3656,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     if (sinkIn.IsAvailable)
                         PushOut();
-                }, onDownstreamFinish: () => sinkIn.Cancel());
+                }, onDownstreamFinish: cause => sinkIn.Cancel(cause));
 
                 Source.FromGraph(source).RunWith(sinkIn.Sink, Interpreter.SubFusingMaterializer);
                 SetHandler(_stage.Outlet, outHandler);
@@ -3725,7 +3730,8 @@ namespace Akka.Streams.Implementation.Fusing
                 _decider = inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
                 _plainConcat = stage._concatFactory();
 
-                SetHandler(stage._in, stage._out, this);
+                SetHandler(stage._in, this);
+                SetHandler(stage._out, this);
             }
 
             public override void OnPush()
@@ -3918,10 +3924,10 @@ namespace Akka.Streams.Implementation.Fusing
                 base.OnUpstreamFailure(ex);
             }
 
-            public override void OnDownstreamFinish()
+            public override void OnDownstreamFinish(Exception cause)
             {
                 _promise.TrySetResult(Option<TMat>.None);
-                base.OnDownstreamFinish();
+                base.OnDownstreamFinish(cause);
             }
 
             private TMat SwitchTo(Flow<TIn, TOut, TMat> flow, TIn firstElement)
@@ -3979,9 +3985,9 @@ namespace Akka.Streams.Implementation.Fusing
 
                 SetHandler(_stage.Out, new LambdaOutHandler(
                     () => subInlet.Pull(),
-                    () =>
+                    cause =>
                     {
-                        subInlet.Cancel();
+                        subInlet.Cancel(cause);
                         MaybeCompleteStage();
                     }));
 
@@ -4004,9 +4010,9 @@ namespace Akka.Streams.Implementation.Fusing
                             }
                         }
                     },
-                    () =>
+                    cause =>
                     {
-                        if (!IsClosed(_stage.In)) Cancel(_stage.In);
+                        if (!IsClosed(_stage.In)) Cancel(_stage.In, cause);
                         MaybeCompleteStage();
                     }));
 
