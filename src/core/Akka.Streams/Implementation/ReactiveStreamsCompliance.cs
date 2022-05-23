@@ -362,14 +362,25 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="subscription">TBD</param>
+        /// <param name="cause">TBD</param>
         /// <exception cref="SignalThrewException">
         /// This exception is thrown when an exception occurs while canceling the specified <paramref name="subscription"/>.
         /// </exception>
-        public static void TryCancel(ISubscription subscription)
+        public static void TryCancel(ISubscription subscription, Exception cause)
         {
+            if (subscription == null)
+                throw new IllegalStateException("Subscription must be not null on cancel() call, rule 1.3");
+            
             try
             {
-                subscription.Cancel();
+                if (subscription is ISubscriptionWithCancelException s)
+                {
+                    s.Cancel(cause);
+                }
+                else
+                {
+                    subscription.Cancel();
+                }
             }
             catch (Exception e)
             {
