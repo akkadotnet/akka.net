@@ -1683,41 +1683,43 @@ namespace Akka.Streams.Implementation
         {
             void Rec(object obj)
             {
-                switch (Value)
+                while (true)
                 {
-                    case null:
-                        PrintDebug($"VirtualProcessor#{_hashCode}({null}).OnSubscribe.Rec({obj}) -> {obj.GetType()}");
-                        if (!CompareAndSet(null, obj))
-                            Rec(obj);
-                        return;
-                    case ISubscriber<T> subscriber:
-                        switch (obj)
-                        {
-                            case ISubscription sub:
-                                PrintDebug($"VirtualProcessor#{_hashCode}({subscriber}).OnSubscribe.Rec({obj}) -> Establishing");                               
-                                var establishing = new Establishing(subscriber);
-                                if(CompareAndSet(subscriber, establishing))
-                                    EstablishSubscription(establishing, sub);
-                                else
-                                    Rec(obj);
-                                return;
-                            
-                            case IPublisher<T> publisher:
-                                PrintDebug($"VirtualProcessor#{_hashCode}({publisher}).OnSubscribe.Rec({obj}) -> Inert");
-                                var inert = GetAndSet(Inert.Instance);
-                                if (inert != Inert.Instance)
-                                    publisher.Subscribe(subscriber);
-                                return;
-                            
-                            case var other:
-                                throw new IllegalStateException($"Unexpected state in VirtualProcessor: {other}");
-                        }
-                        
-                    case var state:
-                        PrintDebug($"VirtualProcessor#{_hashCode}({state}).OnSubscribe.Rec({obj}): Spec violation.");
-                        // spec violation
-                        ReactiveStreamsCompliance.TryCancel(subscription, new IllegalStateException($"Spec violation: VirtualProcessor in wrong state [{state.GetType()}]."));
-                        return;
+                    switch (Value)
+                    {
+                        case null:
+                            PrintDebug($"VirtualProcessor#{_hashCode}({null}).OnSubscribe.Rec({obj}) -> {obj.GetType()}");
+                            if (!CompareAndSet(null, obj)) 
+                                continue;
+                            return;
+                        case ISubscriber<T> subscriber:
+                            switch (obj)
+                            {
+                                case ISubscription sub:
+                                    PrintDebug($"VirtualProcessor#{_hashCode}({subscriber}).OnSubscribe.Rec({obj}) -> Establishing");
+                                    var establishing = new Establishing(subscriber);
+                                    if (CompareAndSet(subscriber, establishing))
+                                        EstablishSubscription(establishing, sub);
+                                    else
+                                        continue;
+                                    return;
+
+                                case IPublisher<T> publisher:
+                                    PrintDebug($"VirtualProcessor#{_hashCode}({publisher}).OnSubscribe.Rec({obj}) -> Inert");
+                                    var inert = GetAndSet(Inert.Instance);
+                                    if (inert != Inert.Instance) publisher.Subscribe(subscriber);
+                                    return;
+
+                                case var other:
+                                    throw new IllegalStateException($"Unexpected state in VirtualProcessor: {other}");
+                            }
+
+                        case var state:
+                            PrintDebug($"VirtualProcessor#{_hashCode}({state}).OnSubscribe.Rec({obj}): Spec violation.");
+                            // spec violation
+                            ReactiveStreamsCompliance.TryCancel(subscription, new IllegalStateException($"Spec violation: VirtualProcessor in wrong state [{state.GetType()}]."));
+                            return;
+                    }
                 }
             }
             
@@ -1807,52 +1809,60 @@ namespace Akka.Streams.Implementation
             */
             void Rec(Exception ex)
             {
-                switch (Value)
+                while (true)
                 {
-                    case null:
-                        PrintDebug($"VirtualProcessor#{_hashCode}(null).OnError({ex.Message}) -> ErrorPublisher");
-                        if (!CompareAndSet(null, new ErrorPublisher<T>(ex, "failed-VirtualProcessor")))
-                            Rec(ex);
-                        break;
-                    
-                    case ISubscription s:
-                        PrintDebug($"VirtualProcessor#{_hashCode}({s}).OnError({ex.Message}) -> ErrorPublisher");
-                        if (!CompareAndSet(s, new ErrorPublisher<T>(ex, "failed-VirtualProcessor")))
-                            Rec(ex);
-                        break;
-                    
-                    case Both both:
-                        PrintDebug($"VirtualProcessor#{_hashCode}(Both({both.Subscriber})).OnError({ex.Message}) -> ErrorPublisher");
-                        Value = Inert.Instance;
-                        ReactiveStreamsCompliance.TryOnError(both.Subscriber, ex);
-                        break;
-                    
-                    case ISubscriber<T> s:
-                        // spec violation
-                        PrintDebug($"VirtualProcessor#{_hashCode}({s}).OnError({ex.Message}) -> Inert: Spec violation.");
-                        var inert = GetAndSet(Inert.Instance);
-                        if (inert != Inert.Instance)
-                            new ErrorPublisher<T>(ex, "failed-VirtualProcessor").Subscribe(s);
-                        break;
-                    
-                    case Establishing { OnCompleteBuffered: false, OnErrorBuffered: null } est:
-                        PrintDebug($"VirtualProcessor#{_hashCode}({est}).OnError({ex.Message}) -> loop");
-                        if(!CompareAndSet(est, est.Copy(onErrorBuffered:ex)))
-                            Rec(ex);
-                        break;
-                    
-                    case var other:
-                        // spec violation or cancellation race, but nothing we can do
-                        PrintDebug($"VirtualProcessor#{_hashCode}({other}).OnError({ex.Message}): Spec violation or cancellation race");
-                        break;
+                    switch (Value)
+                    {
+                        case null:
+                            PrintDebug($"VirtualProcessor#{_hashCode}(null).OnError({ex.Message}) -> ErrorPublisher");
+                            if (!CompareAndSet(null, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) 
+                                continue;
+                            return;
+
+                        case ISubscription s:
+                            PrintDebug($"VirtualProcessor#{_hashCode}({s}).OnError({ex.Message}) -> ErrorPublisher");
+                            if (!CompareAndSet(s, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) 
+                                continue;
+                            return;
+
+                        case Both both:
+                            PrintDebug($"VirtualProcessor#{_hashCode}(Both({both.Subscriber})).OnError({ex.Message}) -> ErrorPublisher");
+                            Value = Inert.Instance;
+                            ReactiveStreamsCompliance.TryOnError(both.Subscriber, ex);
+                            return;
+
+                        case ISubscriber<T> s:
+                            // spec violation
+                            PrintDebug($"VirtualProcessor#{_hashCode}({s}).OnError({ex.Message}) -> Inert: Spec violation.");
+                            var inert = GetAndSet(Inert.Instance);
+                            if (inert != Inert.Instance) new ErrorPublisher<T>(ex, "failed-VirtualProcessor").Subscribe(s);
+                            return;
+
+                        case Establishing { OnCompleteBuffered: false, OnErrorBuffered: null } est:
+                            PrintDebug($"VirtualProcessor#{_hashCode}({est}).OnError({ex.Message}) -> loop");
+                            if (!CompareAndSet(est, est.Copy(onErrorBuffered: ex))) 
+                                continue;
+                            return;
+
+                        case var other:
+                            // spec violation or cancellation race, but nothing we can do
+                            PrintDebug($"VirtualProcessor#{_hashCode}({other}).OnError({ex.Message}): Spec violation or cancellation race");
+                            return;
+                    }
                 }
             }
 
             var ex = cause ?? ReactiveStreamsCompliance.ExceptionMustNotBeNullException;
-            Rec(ex);
-            // must throw NPE, rule 2.13
-            if (cause == null)
-                throw ex;
+            try
+            {
+                Rec(ex);
+            }
+            finally
+            {
+                // must throw NPE, rule 2.13
+                if (cause == null)
+                    throw ex;
+            }
         }
 
         /// <summary>
@@ -1913,91 +1923,98 @@ namespace Akka.Streams.Implementation
 
                 void Rec()
                 {
-                    switch (Value)
+                    while (true)
                     {
-                        case null:
-                        case ISubscription _:
-                            if (!CompareAndSet(Value, new ErrorPublisher<T>(ex, "failed-VirtualProcessor")))
-                                Rec();
-                            return;
-                        
-                        case ISubscriber<T> subscriber:
-                            try
-                            {
-                                subscriber.OnError(ex);
-                            }
-                            finally
-                            {
-                                Value = Inert.Instance;
-                            }
-                            return;
-                        
-                        case Both both:
-                            try
-                            {
-                                both.Subscriber.OnError(ex);
-                            }
-                            finally
-                            {
-                                Value = Inert.Instance;
-                            }
-                            return;
-                        
-                        default:
-                            // spec violation or cancellation race, but nothing we can do
-                            return;
+                        switch (Value)
+                        {
+                            case null:
+                            case ISubscription _:
+                                if (!CompareAndSet(Value, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) continue;
+                                return;
+
+                            case ISubscriber<T> subscriber:
+                                try
+                                {
+                                    subscriber.OnError(ex);
+                                }
+                                finally
+                                {
+                                    Value = Inert.Instance;
+                                }
+                                return;
+
+                            case Both both:
+                                try
+                                {
+                                    both.Subscriber.OnError(ex);
+                                }
+                                finally
+                                {
+                                    Value = Inert.Instance;
+                                }
+                                return;
+
+                            default:
+                                // spec violation or cancellation race, but nothing we can do
+                                return;
+                        }
                     }
                 }
 
-                Rec();
-                // must throw ArgumentNullEx, rule 2:13
-                throw ex;
+                try
+                {
+                    Rec();
+                }
+                finally
+                {
+                    // must throw ArgumentNullEx, rule 2:13
+                    throw ex;
+                }
             }
             else
             {
                 void Rec()
                 {
-                    switch (Value)
+                    while (true)
                     {
-                        case IHasActualSubscriber h:
-                            var s = h.Subscriber;
-                            try
-                            {
-                                PrintDebug($"VirtualProcessor#{_hashCode}({h.GetType()}({s})).OnNext({element}).Rec()");
-                                s.OnNext(element);
-                            }
-                            catch (Exception e)
-                            {
-                                PrintDebug($"VirtualProcessor#{_hashCode}({h.GetType()}({s})).OnNext({element}) threw {e.Message} -> Inert. Spec violation");
-                                Value = Inert.Instance;
-                                throw new IllegalStateException(
-                                    "Subscriber threw exception, this is in violation of rule 2:13", e);
-                            }
-                            return;
-                        
-                        case ISubscriber<T> subscriber:
-                            // spec violation
-                            PrintDebug($"VirtualProcessor#{_hashCode}({subscriber}).OnNext({element}).Rec() -> Inert: Spec violation");
-                            var ex = new IllegalStateException(NoDemand);
-                            var inert = GetAndSet(Inert.Instance);
-                            if (inert != Inert.Instance)
-                                new ErrorPublisher<T>(ex, "failed-VirtualProcessor").Subscribe(subscriber);
-                            throw ex;
-                            
-                        case Inert _:
-                        case IPublisher<T> _:
-                            // nothing to be done
-                            PrintDebug($"VirtualProcessor#{_hashCode}(Inert|Publisher).OnNext({element}).Rec(): noop");
-                            return;
-                        
-                        case var other:
-                            PrintDebug($"VirtualProcessor#{_hashCode}({other}).OnNext({element}).Rec() -> ErrorPublisher");
-                            var publisher = new ErrorPublisher<T>(new IllegalStateException(NoDemand), "failed-VirtualPublisher");
-                            if (!CompareAndSet(other, publisher))
-                                Rec();
-                            else
+                        switch (Value)
+                        {
+                            case IHasActualSubscriber h:
+                                var s = h.Subscriber;
+                                try
+                                {
+                                    PrintDebug($"VirtualProcessor#{_hashCode}({h.GetType()}({s})).OnNext({element}).Rec()");
+                                    s.OnNext(element);
+                                }
+                                catch (Exception e)
+                                {
+                                    PrintDebug($"VirtualProcessor#{_hashCode}({h.GetType()}({s})).OnNext({element}) threw {e.Message} -> Inert. Spec violation");
+                                    Value = Inert.Instance;
+                                    throw new IllegalStateException("Subscriber threw exception, this is in violation of rule 2:13", e);
+                                }
+                                return;
+
+                            case ISubscriber<T> subscriber:
+                                // spec violation
+                                PrintDebug($"VirtualProcessor#{_hashCode}({subscriber}).OnNext({element}).Rec() -> Inert: Spec violation");
+                                var ex = new IllegalStateException(NoDemand);
+                                var inert = GetAndSet(Inert.Instance);
+                                if (inert != Inert.Instance) new ErrorPublisher<T>(ex, "failed-VirtualProcessor").Subscribe(subscriber);
+                                throw ex;
+
+                            case Inert _:
+                            case IPublisher<T> _:
+                                // nothing to be done
+                                PrintDebug($"VirtualProcessor#{_hashCode}(Inert|Publisher).OnNext({element}).Rec(): noop");
+                                return;
+
+                            case var other:
+                                PrintDebug($"VirtualProcessor#{_hashCode}({other}).OnNext({element}).Rec() -> ErrorPublisher");
+                                var publisher = new ErrorPublisher<T>(new IllegalStateException(NoDemand), "failed-VirtualPublisher");
+                                if (!CompareAndSet(other, publisher))
+                                    continue;
                                 throw publisher.Cause;
-                            return;
+                        }
                     }
                 }
 
