@@ -147,7 +147,7 @@ namespace Akka.Streams.Dsl
                     Pull(_valve.In);
             }
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
         }
 
         #endregion
