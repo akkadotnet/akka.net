@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace Akka.Util
@@ -26,8 +27,13 @@ namespace Akka.Util
         /// <returns>An <see cref="int"/>.</returns>
         public static int Parse(ReadOnlySpan<char> str)
         {
+#if NETSTANDARD
             if (TryParse(str, out var i))
                 return i;
+#else
+            if (int.TryParse(str, out var i))
+                return i;
+#endif
             throw new FormatException($"[{str.ToString()}] is now a valid numeric format");
         }
 
@@ -42,6 +48,7 @@ namespace Akka.Util
         /// <returns>An <see cref="int"/>.</returns>
         public static bool TryParse(ReadOnlySpan<char> str, out int returnValue)
         {
+#if NETSTANDARD
             var pos = 0;
             returnValue = 0;
             var sign = 1;
@@ -61,6 +68,9 @@ namespace Akka.Util
             returnValue = sign * returnValue;
 
             return true;
+#else
+            return int.TryParse(str, out returnValue);
+#endif
         }
 
         /// <summary>
@@ -76,6 +86,7 @@ namespace Akka.Util
             {
                 output[i] = char.ToLowerInvariant(input[i]);
             }
+
             return output.ToString();
         }
     }
