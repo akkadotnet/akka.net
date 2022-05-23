@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\common.props"/>
+    <Import Project="..\..\common.props" />
     <PropertyGroup>
         <AssemblyTitle>Akka.Streams</AssemblyTitle>
         <Description>Reactive stream support for Akka.NET</Description>
@@ -9,12 +9,12 @@
         <LangVersion>8.0</LangVersion>
     </PropertyGroup>
     <ItemGroup>
-        <EmbeddedResource Include="reference.conf"/>
-        <ProjectReference Include="..\Akka\Akka.csproj"/>
+        <EmbeddedResource Include="reference.conf" />
+        <ProjectReference Include="..\Akka\Akka.csproj" />
     </ItemGroup>
     <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-        <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0"/>
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0"/>
+        <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
     </ItemGroup>
     <ItemGroup>
         <None Update="CodeGen\Dsl\GraphApply.tt">
@@ -64,8 +64,8 @@
         </Compile>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)"/>
-        <PackageReference Include="Reactive.Streams" Version="1.0.2"/>
+        <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+        <PackageReference Include="Reactive.Streams" Version="1.0.2" />
     </ItemGroup>
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
         <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>

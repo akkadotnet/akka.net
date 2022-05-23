@@ -1716,9 +1716,7 @@ namespace Akka.Streams.Implementation
                     case var state:
                         PrintDebug($"VirtualProcessor#{_hashCode}({state}).OnSubscribe.Rec({obj}): Spec violation.");
                         // spec violation
-                        // We don't have SubscriptionWithCancelException support
-                        // ReactiveStreamsCompliance.TryCancel(s, new IllegalStateException($"VirtualProcessor in wrong state [{state}]. Spec violation."));
-                        ReactiveStreamsCompliance.TryCancel(subscription);
+                        ReactiveStreamsCompliance.TryCancel(subscription, new IllegalStateException($"Spec violation: VirtualProcessor in wrong state [{state.GetType()}]."));
                         return;
                 }
             }
@@ -1778,9 +1776,7 @@ namespace Akka.Streams.Implementation
                             break;
                         
                         case Inert _:
-                            // We don't have SubscriptionWithCancelException support
-                            // ReactiveStreamsCompliance.TryCancel(subscription, new IllegalStateException("VirtualProcessor was already subscribed to."));
-                            ReactiveStreamsCompliance.TryCancel(subscription);
+                            ReactiveStreamsCompliance.TryCancel(subscription, new IllegalStateException("VirtualProcessor was already subscribed to."));
                             break;
                         
                         default:
@@ -1792,7 +1788,7 @@ namespace Akka.Streams.Implementation
             catch (Exception ex)
             {
                 Value = Inert.Instance;
-                ReactiveStreamsCompliance.TryCancel(subscription);
+                ReactiveStreamsCompliance.TryCancel(subscription, ex);
                 ReactiveStreamsCompliance.TryOnError(establishing.Subscriber, ex);
             }
         }
@@ -2050,7 +2046,7 @@ namespace Akka.Streams.Implementation
                 if (n < 1)
                 {
                     PrintDebug($"VirtualProcessor#{_processor._hashCode}.WrappedSubscription({_real}.Request({n})");
-                    ReactiveStreamsCompliance.TryCancel(_real);
+                    ReactiveStreamsCompliance.TryCancel(_real, new IllegalStateException($"Demand must not be < 1. Was: {n}"));
                     var value = _processor.GetAndSet(Inert.Instance);
                     switch (value)
                     {

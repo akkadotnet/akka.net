@@ -1,10 +1,10 @@
-﻿//-----------------------------------------------------------------------
+﻿// --- auto generated: 5/18/2022 2:05:03 AM --- //
+//-----------------------------------------------------------------------
 // <copyright file="UnzipWith.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
 using System;
 using Akka.Streams.Stage;
 
@@ -277,9 +277,9 @@ namespace Akka.Streams.Dsl
                     _pending0 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending0) _pendingCount--;
@@ -292,9 +292,9 @@ namespace Akka.Streams.Dsl
                     _pending1 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending1) _pendingCount--;
@@ -401,9 +401,9 @@ namespace Akka.Streams.Dsl
                     _pending0 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending0) _pendingCount--;
@@ -416,9 +416,9 @@ namespace Akka.Streams.Dsl
                     _pending1 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending1) _pendingCount--;
@@ -431,9 +431,9 @@ namespace Akka.Streams.Dsl
                     _pending2 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending2) _pendingCount--;
@@ -552,9 +552,9 @@ namespace Akka.Streams.Dsl
                     _pending0 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending0) _pendingCount--;
@@ -567,9 +567,9 @@ namespace Akka.Streams.Dsl
                     _pending1 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending1) _pendingCount--;
@@ -582,9 +582,9 @@ namespace Akka.Streams.Dsl
                     _pending2 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending2) _pendingCount--;
@@ -597,9 +597,9 @@ namespace Akka.Streams.Dsl
                     _pending3 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending3) _pendingCount--;
@@ -730,9 +730,9 @@ namespace Akka.Streams.Dsl
                     _pending0 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending0) _pendingCount--;
@@ -745,9 +745,9 @@ namespace Akka.Streams.Dsl
                     _pending1 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending1) _pendingCount--;
@@ -760,9 +760,9 @@ namespace Akka.Streams.Dsl
                     _pending2 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending2) _pendingCount--;
@@ -775,9 +775,9 @@ namespace Akka.Streams.Dsl
                     _pending3 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending3) _pendingCount--;
@@ -790,9 +790,9 @@ namespace Akka.Streams.Dsl
                     _pending4 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending4) _pendingCount--;
@@ -935,9 +935,9 @@ namespace Akka.Streams.Dsl
                     _pending0 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending0) _pendingCount--;
@@ -950,9 +950,9 @@ namespace Akka.Streams.Dsl
                     _pending1 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending1) _pendingCount--;
@@ -965,9 +965,9 @@ namespace Akka.Streams.Dsl
                     _pending2 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending2) _pendingCount--;
@@ -980,9 +980,9 @@ namespace Akka.Streams.Dsl
                     _pending3 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending3) _pendingCount--;
@@ -995,9 +995,9 @@ namespace Akka.Streams.Dsl
                     _pending4 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending4) _pendingCount--;
@@ -1010,9 +1010,9 @@ namespace Akka.Streams.Dsl
                     _pending5 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending5) _pendingCount--;
@@ -1167,9 +1167,9 @@ namespace Akka.Streams.Dsl
                     _pending0 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending0) _pendingCount--;
@@ -1182,9 +1182,9 @@ namespace Akka.Streams.Dsl
                     _pending1 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending1) _pendingCount--;
@@ -1197,9 +1197,9 @@ namespace Akka.Streams.Dsl
                     _pending2 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending2) _pendingCount--;
@@ -1212,9 +1212,9 @@ namespace Akka.Streams.Dsl
                     _pending3 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending3) _pendingCount--;
@@ -1227,9 +1227,9 @@ namespace Akka.Streams.Dsl
                     _pending4 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending4) _pendingCount--;
@@ -1242,9 +1242,9 @@ namespace Akka.Streams.Dsl
                     _pending5 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending5) _pendingCount--;
@@ -1257,9 +1257,9 @@ namespace Akka.Streams.Dsl
                     _pending6 = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending6) _pendingCount--;

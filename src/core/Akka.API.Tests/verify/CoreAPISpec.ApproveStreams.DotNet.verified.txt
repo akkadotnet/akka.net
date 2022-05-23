@@ -723,6 +723,10 @@ namespace Akka.Streams
     {
         Akka.Streams.Dsl.Source<TOut, Akka.NotUsed> Source { get; }
     }
+    public interface ISubscriptionWithCancelException : Reactive.Streams.ISubscription
+    {
+        void Cancel(System.Exception cause);
+    }
     public interface ITransformerLike<in TIn, out TOut>
     {
         bool IsComplete { get; }
@@ -919,6 +923,7 @@ namespace Akka.Streams
         public static readonly Akka.Streams.StreamDetachedException Instance;
         public StreamDetachedException() { }
         public StreamDetachedException(string message) { }
+        public StreamDetachedException(string message, System.Exception innerException) { }
     }
     public class StreamLimitReachedException : System.Exception
     {
@@ -996,6 +1001,23 @@ namespace Akka.Streams
         public StreamTcpException(string message) { }
         public StreamTcpException(string message, System.Exception innerException) { }
         protected StreamTcpException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public class static SubscriptionWithCancelException
+    {
+        public sealed class NoMoreElementsNeeded : Akka.Streams.SubscriptionWithCancelException.NonFailureCancellation
+        {
+            public static readonly Akka.Streams.SubscriptionWithCancelException.NoMoreElementsNeeded Instance;
+        }
+        [Akka.Annotations.DoNotInheritAttribute()]
+        public abstract class NonFailureCancellation : System.Exception
+        {
+            protected NonFailureCancellation() { }
+            public virtual string StackTrace { get; }
+        }
+        public sealed class StageWasCompleted : Akka.Streams.SubscriptionWithCancelException.NonFailureCancellation
+        {
+            public static readonly Akka.Streams.SubscriptionWithCancelException.StageWasCompleted Instance;
+        }
     }
     public enum SubstreamCancelStrategy
     {
@@ -3461,7 +3483,7 @@ namespace Akka.Streams.Implementation
         public static void RequireNonNullException(System.Exception exception) { }
         public static void RequireNonNullSubscriber<T>(Reactive.Streams.ISubscriber<T> subscriber) { }
         public static void RequireNonNullSubscription(Reactive.Streams.ISubscription subscription) { }
-        public static void TryCancel(Reactive.Streams.ISubscription subscription) { }
+        public static void TryCancel(Reactive.Streams.ISubscription subscription, System.Exception cause) { }
         public static void TryOnComplete<T>(Reactive.Streams.ISubscriber<T> subscriber) { }
         public static void TryOnError<T>(Reactive.Streams.ISubscriber<T> subscriber, System.Exception cause) { }
         public static void TryOnNext<T>(Reactive.Streams.ISubscriber<T> subscriber, T element) { }
@@ -3839,7 +3861,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             public BatchingActorInputBoundary(int size, int id) { }
             public override Akka.Streams.Outlet Out { get; }
-            public void Cancel() { }
+            public void Cancel(System.Exception cause) { }
             public void OnComplete() { }
             public void OnError(System.Exception reason) { }
             public void OnInternalError(System.Exception reason) { }
@@ -3860,17 +3882,20 @@ namespace Akka.Streams.Implementation.Fusing
             public void OnNext(T element) { }
             public void OnSubscribe(Reactive.Streams.ISubscription subscription) { }
         }
-        public sealed class BoundarySubscription : Reactive.Streams.ISubscription
+        public sealed class BoundarySubscription : Akka.Streams.ISubscriptionWithCancelException, Reactive.Streams.ISubscription
         {
             public BoundarySubscription(Akka.Actor.IActorRef parent, Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id) { }
             public void Cancel() { }
+            public void Cancel(System.Exception cause) { }
             public void Request(long elements) { }
             public override string ToString() { }
         }
         public struct Cancel : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Streams.Implementation.Fusing.ActorGraphInterpreter.IBoundaryEvent
         {
             public readonly int Id;
-            public Cancel(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id) { }
+            public Cancel(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id, System.Exception cause) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
+            public System.Exception Cause { get; }
             [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
@@ -4076,6 +4101,11 @@ namespace Akka.Streams.Implementation.Fusing
         public void SetHandler(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection, Akka.Streams.Stage.IInHandler handler) { }
         public void SetHandler(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection, Akka.Streams.Stage.IOutHandler handler) { }
         public override string ToString() { }
+        public sealed class Cancelled
+        {
+            public readonly System.Exception Cause;
+            public Cancelled(System.Exception cause) { }
+        }
         [Akka.Annotations.InternalApiAttribute()]
         public sealed class Connection
         {
@@ -4640,7 +4670,7 @@ namespace Akka.Streams.Stage
         protected AbstractStage() { }
         protected virtual bool IsDetached { get; }
         public virtual Akka.Streams.Supervision.Directive Decide(System.Exception cause) { }
-        public abstract Akka.Streams.Stage.ITerminationDirective OnDownstreamFinish(Akka.Streams.Stage.IContext context);
+        public abstract Akka.Streams.Stage.ITerminationDirective OnDownstreamFinish(Akka.Streams.Stage.IContext context, System.Exception cause);
         public abstract Akka.Streams.Stage.IDirective OnPull(Akka.Streams.Stage.IContext context);
         public abstract Akka.Streams.Stage.IDirective OnPush(TIn element, Akka.Streams.Stage.IContext context);
         public abstract Akka.Streams.Stage.ITerminationDirective OnUpstreamFailure(System.Exception cause, Akka.Streams.Stage.IContext context);
@@ -4657,8 +4687,8 @@ namespace Akka.Streams.Stage
     {
         protected TContext Context;
         protected AbstractStage() { }
-        public virtual Akka.Streams.Stage.ITerminationDirective OnDownstreamFinish(Akka.Streams.Stage.IContext context) { }
-        public virtual Akka.Streams.Stage.ITerminationDirective OnDownstreamFinish(TContext context) { }
+        public virtual Akka.Streams.Stage.ITerminationDirective OnDownstreamFinish(Akka.Streams.Stage.IContext context, System.Exception cause) { }
+        public virtual Akka.Streams.Stage.ITerminationDirective OnDownstreamFinish(TContext context, System.Exception cause) { }
         public abstract TPullDirective OnPull(TContext context);
         public override Akka.Streams.Stage.IDirective OnPull(Akka.Streams.Stage.IContext context) { }
         public abstract TPushDirective OnPush(TIn element, TContext context);
@@ -4679,7 +4709,7 @@ namespace Akka.Streams.Stage
     public class ConditionalTerminateOutput : Akka.Streams.Stage.OutHandler
     {
         public ConditionalTerminateOutput(System.Func<bool> predicate) { }
-        public override void OnDownstreamFinish() { }
+        public override void OnDownstreamFinish(System.Exception cause) { }
         public override void OnPull() { }
     }
     [System.ObsoleteAttribute("Please use GraphStage instead. [1.1.0]")]
@@ -4726,7 +4756,9 @@ namespace Akka.Streams.Stage
         protected void AbortReading<T>(Akka.Streams.Inlet<T> inlet) { }
         protected virtual void AfterPostStop() { }
         protected virtual void BeforePreStart() { }
+        protected void Cancel<T>(Akka.Streams.Inlet<T> inlet, System.Exception cause) { }
         protected void Cancel<T>(Akka.Streams.Inlet<T> inlet) { }
+        public void CancelStage(System.Exception cause) { }
         protected void Complete<T>(Akka.Streams.Outlet<T> outlet) { }
         public void CompleteStage() { }
         public static Akka.Streams.Stage.InHandler ConditionalTerminateInput(System.Func<bool> predicate) { }
@@ -4748,6 +4780,8 @@ namespace Akka.Streams.Stage
         protected Akka.Streams.Stage.StageActor GetStageActor(Akka.Streams.Stage.StageActorRef.Receive receive) { }
         protected T Grab<T>(Akka.Streams.Inlet<T> inlet) { }
         protected bool HasBeenPulled<T>(Akka.Streams.Inlet<T> inlet) { }
+        [Akka.Annotations.InternalApiAttribute()]
+        public void InternalOnDownstreamFinish(System.Exception cause) { }
         protected bool IsAvailable<T>(Akka.Streams.Inlet<T> inlet) { }
         protected bool IsAvailable<T>(Akka.Streams.Outlet<T> outlet) { }
         protected bool IsClosed<T>(Akka.Streams.Inlet<T> inlet) { }
@@ -4763,7 +4797,7 @@ namespace Akka.Streams.Stage
         protected void SetHandler<T>(Akka.Streams.Inlet<T> inlet, Akka.Streams.Stage.IInHandler handler) { }
         protected void SetHandler<T>(Akka.Streams.Inlet<T> inlet, System.Action onPush, System.Action onUpstreamFinish = null, System.Action<System.Exception> onUpstreamFailure = null) { }
         protected void SetHandler<T>(Akka.Streams.Outlet<T> outlet, Akka.Streams.Stage.IOutHandler handler) { }
-        protected void SetHandler<T>(Akka.Streams.Outlet<T> outlet, System.Action onPull, System.Action onDownstreamFinish = null) { }
+        protected void SetHandler<T>(Akka.Streams.Outlet<T> outlet, System.Action onPull, System.Action<System.Exception> onDownstreamFinish = null) { }
         [System.ObsoleteAttribute("Use method `SetHandlers` instead. Will be removed in v1.5")]
         protected void SetHandler<TIn, TOut>(Akka.Streams.Inlet<TIn> inlet, Akka.Streams.Outlet<TOut> outlet, Akka.Streams.Stage.InAndOutGraphStageLogic handler) { }
         protected void SetHandlers<TIn, TOut>(Akka.Streams.Inlet<TIn> inlet, Akka.Streams.Outlet<TOut> outlet, Akka.Streams.Stage.InAndOutGraphStageLogic handler) { }
@@ -4778,8 +4812,8 @@ namespace Akka.Streams.Stage
         }
         protected sealed class LambdaOutHandler : Akka.Streams.Stage.OutHandler
         {
-            public LambdaOutHandler(System.Action onPull, System.Action onDownstreamFinish = null) { }
-            public override void OnDownstreamFinish() { }
+            public LambdaOutHandler(System.Action onPull, System.Action<System.Exception> onDownstreamFinish = null) { }
+            public override void OnDownstreamFinish(System.Exception cause) { }
             public override void OnPull() { }
         }
         [Akka.Annotations.InternalApiAttribute()]
@@ -4791,6 +4825,7 @@ namespace Akka.Streams.Stage
             public bool IsClosed { get; }
             public Akka.Streams.IGraph<Akka.Streams.SinkShape<T>, Akka.NotUsed> Sink { get; }
             public void Cancel() { }
+            public void Cancel(System.Exception cause) { }
             public T Grab() { }
             public void Pull() { }
             public void SetHandler(Akka.Streams.Stage.IInHandler handler) { }
@@ -4851,6 +4886,7 @@ namespace Akka.Streams.Stage
         Akka.Streams.Stage.ITerminationDirective AbsorbTermination();
         Akka.Streams.Stage.FreeDirective Fail(System.Exception cause);
         Akka.Streams.Stage.FreeDirective Finish();
+        Akka.Streams.Stage.FreeDirective Finish(System.Exception cause);
         Akka.Streams.Stage.IUpstreamDirective Pull();
         Akka.Streams.Stage.IDownstreamDirective Push(object element);
         Akka.Streams.Stage.IDownstreamDirective PushAndFinish(object element);
@@ -4901,7 +4937,7 @@ namespace Akka.Streams.Stage
     }
     public interface IOutHandler
     {
-        void OnDownstreamFinish();
+        void OnDownstreamFinish(System.Exception cause);
         void OnPull();
     }
     public interface IStageLogging
@@ -4922,14 +4958,14 @@ namespace Akka.Streams.Stage
     public sealed class IgnoreTerminateOutput : Akka.Streams.Stage.OutHandler
     {
         public static readonly Akka.Streams.Stage.IgnoreTerminateOutput Instance;
-        public override void OnDownstreamFinish() { }
+        public override void OnDownstreamFinish(System.Exception cause) { }
         public override void OnPull() { }
     }
     public abstract class InAndOutGraphStageLogic : Akka.Streams.Stage.GraphStageLogic, Akka.Streams.Stage.IInHandler, Akka.Streams.Stage.IOutHandler
     {
         protected InAndOutGraphStageLogic(int inCount, int outCount) { }
         protected InAndOutGraphStageLogic(Akka.Streams.Shape shape) { }
-        public virtual void OnDownstreamFinish() { }
+        public virtual void OnDownstreamFinish(System.Exception cause) { }
         public abstract void OnPull();
         public abstract void OnPush();
         public virtual void OnUpstreamFailure(System.Exception e) { }
@@ -4938,7 +4974,7 @@ namespace Akka.Streams.Stage
     public abstract class InAndOutHandler : Akka.Streams.Stage.IInHandler, Akka.Streams.Stage.IOutHandler
     {
         protected InAndOutHandler() { }
-        public virtual void OnDownstreamFinish() { }
+        public virtual void OnDownstreamFinish(System.Exception cause) { }
         public abstract void OnPull();
         public abstract void OnPush();
         public virtual void OnUpstreamFailure(System.Exception e) { }
@@ -4971,13 +5007,13 @@ namespace Akka.Streams.Stage
     {
         protected OutGraphStageLogic(int inCount, int outCount) { }
         protected OutGraphStageLogic(Akka.Streams.Shape shape) { }
-        public virtual void OnDownstreamFinish() { }
+        public virtual void OnDownstreamFinish(System.Exception cause) { }
         public abstract void OnPull();
     }
     public abstract class OutHandler : Akka.Streams.Stage.IOutHandler
     {
         protected OutHandler() { }
-        public virtual void OnDownstreamFinish() { }
+        public virtual void OnDownstreamFinish(System.Exception cause) { }
         public abstract void OnPull();
     }
     public class PushPullGraphStageWithMaterializedValue<TIn, TOut, TMat> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.FlowShape<TIn, TOut>, TMat>

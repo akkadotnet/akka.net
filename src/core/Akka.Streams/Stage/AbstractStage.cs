@@ -52,7 +52,7 @@ namespace Akka.Streams.Stage
 
             SetHandler(_shape.Outlet, 
                 onPull: () => _currentStage.OnPull(Context),
-                onDownstreamFinish: () => _currentStage.OnDownstreamFinish(Context));
+                onDownstreamFinish: cause => _currentStage.OnDownstreamFinish(Context, cause));
         }
 
         /// <summary>
@@ -116,7 +116,12 @@ namespace Akka.Streams.Stage
         /// <returns>TBD</returns>
         public FreeDirective Finish()
         {
-            CompleteStage();
+            return Finish(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
+        }
+
+        public FreeDirective Finish(Exception cause)
+        {
+            CancelStage(cause);
             return null;
         }
 
@@ -452,7 +457,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="context">TBD</param>
         /// <returns>TBD</returns>
-        public abstract ITerminationDirective OnDownstreamFinish(IContext context);
+        public abstract ITerminationDirective OnDownstreamFinish(IContext context, Exception cause);
 
         /// <summary>
         /// <para>
@@ -625,16 +630,18 @@ namespace Akka.Streams.Stage
         /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
         /// </summary>
         /// <param name="context">TBD</param>
+        /// <param name="cause"></param>
         /// <returns>TBD</returns>
-        public sealed override ITerminationDirective OnDownstreamFinish(IContext context) => OnDownstreamFinish((TContext) context);
+        public sealed override ITerminationDirective OnDownstreamFinish(IContext context, Exception cause) => OnDownstreamFinish((TContext) context, cause);
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
         /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
         /// </summary>
         /// <param name="context">TBD</param>
+        /// <param name="cause"></param>
         /// <returns>TBD</returns>
-        public virtual ITerminationDirective OnDownstreamFinish(TContext context) => context.Finish();
+        public virtual ITerminationDirective OnDownstreamFinish(TContext context, Exception cause) => context.Finish(cause);
 
         /// <summary>
         /// <para>

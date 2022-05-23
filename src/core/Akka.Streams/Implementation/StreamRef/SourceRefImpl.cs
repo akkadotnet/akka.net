@@ -149,10 +149,7 @@ namespace Akka.Streams.Implementation.StreamRef
                 TriggerCumulativeDemand();
             }
 
-            public void OnDownstreamFinish()
-            {
-                CompleteStage();
-            }
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             private void TriggerCumulativeDemand()
             {
