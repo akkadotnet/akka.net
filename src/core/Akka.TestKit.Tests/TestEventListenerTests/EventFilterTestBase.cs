@@ -5,10 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Event;
-using Akka.Testkit.Tests.TestEventListenerTests;
 
-namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
+namespace Akka.TestKit.Tests.TestEventListenerTests
 {
     public abstract class EventFilterTestBase : TestKit.Xunit2.TestKit
     {
@@ -20,34 +20,38 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         protected EventFilterTestBase(string config)
             : base(@"akka.loggers = [""" + typeof(ForwardAllEventsTestEventListener).AssemblyQualifiedName + @"""], " + (string.IsNullOrEmpty(config) ? "" : config))
         {
+        }
+
+        public override async Task InitializeAsync()
+        {
             //We send a ForwardAllEventsTo containing message to the TestEventListenerToForwarder logger (configured as a logger above).
             //It should respond with an "OK" message when it has received the message.
             var initLoggerMessage = new ForwardAllEventsTestEventListener.ForwardAllEventsTo(TestActor);
-            // ReSharper disable once DoNotCallOverridableMethodsInConstructor
+            
             SendRawLogEventMessage(initLoggerMessage);
-            ExpectMsg("OK");
+            await ExpectMsgAsync("OK");
             //From now on we know that all messages will be forwarded to TestActor
         }
 
         protected abstract void SendRawLogEventMessage(object message);
 
-        protected override void AfterAll()
+        protected override async Task AfterAllAsync()
         {
             //After every test we make sure no uncatched messages have been logged
             if(TestSuccessful)
             {
-                EnsureNoMoreLoggedMessages();
+                await EnsureNoMoreLoggedMessages();
             }
-            base.AfterAll();
+            await base.AfterAllAsync();
         }
 
-        private void EnsureNoMoreLoggedMessages()
+        private async Task EnsureNoMoreLoggedMessages()
         {
             //We log a Finished message. When it arrives to TestActor we know no other message has been logged.
             //If we receive something else it means another message was logged, and ExpectMsg will fail
             const string message = "<<Finished>>";
             SendRawLogEventMessage(message);
-            ExpectMsg<LogEvent>(err => (string) err.Message == message,hint: "message to be \"" + message + "\"");
+            await ExpectMsgAsync<LogEvent>(err => (string) err.Message == message,hint: "message to be \"" + message + "\"");
         }
 
     }

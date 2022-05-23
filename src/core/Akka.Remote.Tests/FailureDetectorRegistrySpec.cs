@@ -7,13 +7,12 @@
 
 using System;
 using System.Collections.Generic;
-using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Remote.Tests
 {
     
-    public class FailureDetectorRegistrySpec : AkkaSpec
+    public class FailureDetectorRegistrySpec
     {
         [Fact]
         public void FailureDetectorRegistry_must_mark_node_as_available_after_a_series_of_successful_heartbeats()

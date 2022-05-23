@@ -4,14 +4,20 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Streams.TestKit</AssemblyTitle>
     <Description>Testkit for Reactive stream support for Akka.NET</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <PackageTags>$(AkkaPackageTags);reactive;stream;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

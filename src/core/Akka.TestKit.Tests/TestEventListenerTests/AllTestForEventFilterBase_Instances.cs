@@ -7,7 +7,7 @@
 
 using Akka.Event;
 
-namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
+namespace Akka.TestKit.Tests.TestEventListenerTests
 {
     public class EventFilterDebugTests : AllTestForEventFilterBase<Debug>
     {

@@ -16,48 +16,44 @@ namespace Akka.Tests.Pattern
     public class RetrySpec : AkkaSpec
     {
         [Fact]
-        public Task Pattern_Retry_must_run_a_successful_task_immediately()
+        public async Task Pattern_Retry_must_run_a_successful_task_immediately()
         {
-            var retried = Retry(() => Task.FromResult(5), 5, TimeSpan.FromSeconds(1), Sys.Scheduler);
-
-            return WithinAsync(TimeSpan.FromSeconds(3), async () =>
+            await WithinAsync(TimeSpan.FromSeconds(3), async () =>
             {
-                var remaining = await retried;
+                var remaining = await Retry(() => Task.FromResult(5), 5, TimeSpan.FromSeconds(1), Sys.Scheduler);
                 Assert.Equal(5, remaining);
             });
         }
 
         [Fact]
-        public Task Pattern_Retry_must_run_a_successful_task_only_once()
+        public async Task Pattern_Retry_must_run_a_successful_task_only_once()
         {
-            var counter = 0;
-            var retried = Retry(() =>
+            await WithinAsync(TimeSpan.FromSeconds(3), async () =>
             {
-                counter++;
-                return Task.FromResult(counter);
-            }, 5, TimeSpan.FromSeconds(1), Sys.Scheduler);
-
-            return WithinAsync(TimeSpan.FromSeconds(3), async () =>
-            {
-                var remaining = await retried;
+                var counter = 0;
+                var remaining = await Retry(() =>
+                {
+                    counter++;
+                    return Task.FromResult(counter);
+                }, 5, TimeSpan.FromSeconds(1), Sys.Scheduler);
                 Assert.Equal(1, remaining);
             });
         }
 
         [Fact]
-        public Task Pattern_Retry_must_eventually_return_a_failure_for_a_task_that_will_never_succeed()
+        public async Task Pattern_Retry_must_eventually_return_a_failure_for_a_task_that_will_never_succeed()
         {
-            var retried = Retry(() => Task.FromException<int>(new InvalidOperationException("Mexico")), 5, TimeSpan.FromMilliseconds(100), Sys.Scheduler);
-
-            return WithinAsync(TimeSpan.FromSeconds(3), async () =>
+            await WithinAsync(TimeSpan.FromSeconds(3), async () =>
             {
-                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => retried);
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => 
+                    await Retry(() => Task.FromException<int>(new InvalidOperationException("Mexico")), 
+                        5, TimeSpan.FromMilliseconds(100), Sys.Scheduler));
                 Assert.Equal("Mexico", exception.Message);
             });
         }
 
         [Fact]
-        public Task Pattern_Retry_must_return_a_success_for_a_task_that_succeeds_eventually()
+        public async Task Pattern_Retry_must_return_a_success_for_a_task_that_succeeds_eventually()
         {
             var failCount = 0;
 
@@ -74,17 +70,15 @@ namespace Akka.Tests.Pattern
                 }
             }
 
-            var retried = Retry(() => Attempt(), 10, TimeSpan.FromMilliseconds(100), Sys.Scheduler);
-
-            return WithinAsync(TimeSpan.FromSeconds(3), async () =>
+            await WithinAsync(TimeSpan.FromSeconds(3), async () =>
             {
-                var remaining = await retried;
+                var remaining = await Retry(Attempt, 10, TimeSpan.FromMilliseconds(100), Sys.Scheduler);
                 Assert.Equal(5, remaining);
             });
         }
 
         [Fact]
-        public Task Pattern_Retry_must_return_a_failure_for_a_task_that_would_have_succeeded_but_retries_were_exhausted()
+        public async Task Pattern_Retry_must_return_a_failure_for_a_task_that_would_have_succeeded_but_retries_were_exhausted()
         {
             var failCount = 0;
 
@@ -101,17 +95,16 @@ namespace Akka.Tests.Pattern
                 }
             }
 
-            var retried = Retry(() => Attempt(), 5, TimeSpan.FromMilliseconds(100), Sys.Scheduler);
-
-            return WithinAsync(TimeSpan.FromSeconds(3), async () =>
+            await WithinAsync(TimeSpan.FromSeconds(3), async () =>
             {
-                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => retried);
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => 
+                    await Retry(Attempt, 5, TimeSpan.FromMilliseconds(100), Sys.Scheduler));
                 Assert.Equal("6", exception.Message);
             });
         }
 
         [Fact]
-        public Task Pattern_Retry_must_return_a_failure_for_a_task_that_would_have_succeeded_but_retries_were_exhausted_with_delay_function()
+        public async Task Pattern_Retry_must_return_a_failure_for_a_task_that_would_have_succeeded_but_retries_were_exhausted_with_delay_function()
         {
             var failCount = 0;
             var attemptedCount = 0;
@@ -129,22 +122,21 @@ namespace Akka.Tests.Pattern
                 }
             }
 
-            var retried = Retry(() => Attempt(), 5, attempted =>
+            await WithinAsync(TimeSpan.FromSeconds(3), async () =>
             {
-                attemptedCount = attempted;
-                return TimeSpan.FromMilliseconds(100 + attempted);
-            }, Sys.Scheduler);
-
-            return WithinAsync(TimeSpan.FromSeconds(3), async () =>
-            {
-                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => retried);
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => 
+                    await Retry(Attempt, 5, attempted =>
+                    {
+                        attemptedCount = attempted;
+                        return TimeSpan.FromMilliseconds(100 + attempted);
+                    }, Sys.Scheduler));
                 Assert.Equal("6", exception.Message);
                 Assert.Equal(5, attemptedCount);
             });
         }
 
         [Fact]
-        public Task Pattern_Retry_can_be_attempted_without_any_delay()
+        public async Task Pattern_Retry_can_be_attempted_without_any_delay()
         {
             var failCount = 0;
 
@@ -162,11 +154,9 @@ namespace Akka.Tests.Pattern
             }
 
             var start = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            var retried = Retry(() => Attempt(), 999);
-
-            return WithinAsync(TimeSpan.FromSeconds(1), async () =>
+            await WithinAsync(TimeSpan.FromSeconds(1), async () =>
             {
-                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => retried);
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>( async () => await Retry(Attempt, 999));
                 Assert.Equal("1000", exception.Message);
 
                 var elapse = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - start;
@@ -175,7 +165,7 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public Task Pattern_Retry_must_handle_thrown_exceptions_in_same_way_as_failed_task()
+        public async Task Pattern_Retry_must_handle_thrown_exceptions_in_same_way_as_failed_task()
         {
             var failCount = 0;
 
@@ -192,11 +182,9 @@ namespace Akka.Tests.Pattern
                 }
             }
 
-            var retried = Retry(() => Attempt(), 10, TimeSpan.FromMilliseconds(100), Sys.Scheduler);
-
-            return WithinAsync(TimeSpan.FromSeconds(3), async () =>
+            await WithinAsync(TimeSpan.FromSeconds(3), async () =>
             {
-                var remaining = await retried;
+                var remaining = await Retry(Attempt, 10, TimeSpan.FromMilliseconds(100), Sys.Scheduler);
                 Assert.Equal(5, remaining);
             });
         }

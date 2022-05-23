@@ -5,25 +5,26 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 
 namespace Akka.TestKit.Internal
 {
     /// <summary>
     /// This class represents an implementation of <see cref="ITestActorQueue{T}"/>
-    /// that uses a <see cref="BlockingQueue{T}"/> as its backing store.
+    /// that uses a <see cref="ITestQueue{T}"/> as its backing store.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     /// <typeparam name="T">The type of item to store.</typeparam>
     public class BlockingCollectionTestActorQueue<T> : ITestActorQueue<T>
     {
-        private readonly BlockingQueue<T> _queue;
+        private readonly ITestQueue<T> _queue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BlockingCollectionTestActorQueue{T}"/> class.
         /// </summary>
         /// <param name="queue">The queue to use as the backing store.</param>
-        public BlockingCollectionTestActorQueue(BlockingQueue<T> queue)
+        public BlockingCollectionTestActorQueue(ITestQueue<T> queue)
         {
             _queue = queue;
         }

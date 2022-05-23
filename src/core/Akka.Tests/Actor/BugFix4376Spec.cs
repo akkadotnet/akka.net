@@ -185,12 +185,12 @@ namespace Akka.Tests.Actor
             }
 
             poolActorRef.Tell(2);
-            ExpectMsg<int>();
-            ExpectMsg<int>();
-            ExpectMsg<int>();
-            ExpectMsg<int>();
-            ExpectMsg<int>();
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync<int>();
+            await ExpectMsgAsync<int>();
+            await ExpectMsgAsync<int>();
+            await ExpectMsgAsync<int>();
+            await ExpectMsgAsync<int>();
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]

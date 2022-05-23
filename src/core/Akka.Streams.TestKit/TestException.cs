@@ -7,7 +7,7 @@
 
 using System;
 
-namespace Akka.Streams.TestKit.Tests
+namespace Akka.Streams.TestKit
 {
     public class TestException : Exception
     {

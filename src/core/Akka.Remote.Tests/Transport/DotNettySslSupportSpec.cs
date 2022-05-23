@@ -7,6 +7,7 @@
 
 using System;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -80,35 +81,35 @@ namespace Akka.Remote.Tests.Transport
                 }");
         }
 
-        private ActorSystem sys2;
-        private Address address1;
-        private Address address2;
+        private ActorSystem _sys2;
+        private Address _address1;
+        private Address _address2;
 
-        private ActorPath echoPath;
+        private ActorPath _echoPath;
 
         private void Setup(string certPath, string password)
         {
-            sys2 = ActorSystem.Create("sys2", TestConfig(certPath, password));
-            InitializeLogger(sys2);
+            _sys2 = ActorSystem.Create("sys2", TestConfig(certPath, password));
+            InitializeLogger(_sys2);
 
-            var echo = sys2.ActorOf(Props.Create<Echo>(), "echo");
+            var echo = _sys2.ActorOf(Props.Create<Echo>(), "echo");
 
-            address1 = RARP.For(Sys).Provider.DefaultAddress;
-            address2 = RARP.For(sys2).Provider.DefaultAddress;
-            echoPath = new RootActorPath(address2) / "user" / "echo";
+            _address1 = RARP.For(Sys).Provider.DefaultAddress;
+            _address2 = RARP.For(_sys2).Provider.DefaultAddress;
+            _echoPath = new RootActorPath(_address2) / "user" / "echo";
         }
 
         private void SetupThumbprint(string certPath, string password)
         {
             InstallCert();
-            sys2 = ActorSystem.Create("sys2", TestThumbprintConfig(Thumbprint));
-            InitializeLogger(sys2);
+            _sys2 = ActorSystem.Create("sys2", TestThumbprintConfig(Thumbprint));
+            InitializeLogger(_sys2);
 
-            var echo = sys2.ActorOf(Props.Create<Echo>(), "echo");
+            var echo = _sys2.ActorOf(Props.Create<Echo>(), "echo");
 
-            address1 = RARP.For(Sys).Provider.DefaultAddress;
-            address2 = RARP.For(sys2).Provider.DefaultAddress;
-            echoPath = new RootActorPath(address2) / "user" / "echo";
+            _address1 = RARP.For(Sys).Provider.DefaultAddress;
+            _address2 = RARP.For(_sys2).Provider.DefaultAddress;
+            _echoPath = new RootActorPath(_address2) / "user" / "echo";
         }
 
         #endregion
@@ -123,7 +124,7 @@ namespace Akka.Remote.Tests.Transport
 
 
         [Fact]
-        public void Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
+        public async Task Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
@@ -132,15 +133,15 @@ namespace Akka.Remote.Tests.Transport
 
             var probe = CreateTestProbe();
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async () =>
             {
-                Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-                probe.ExpectMsg("hello", TimeSpan.FromSeconds(3));
+                Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
             }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
 
         [Fact]
-        public void Secure_transport_should_be_possible_between_systems_using_thumbprint()
+        public async Task Secure_transport_should_be_possible_between_systems_using_thumbprint()
         {
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
@@ -150,12 +151,12 @@ namespace Akka.Remote.Tests.Transport
 
                 var probe = CreateTestProbe();
 
-                Within(TimeSpan.FromSeconds(12), () =>
+                await WithinAsync(TimeSpan.FromSeconds(12), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(async () =>
                     {
-                        Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-                        probe.ExpectMsg("hello", TimeSpan.FromMilliseconds(100));
+                        Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
+                        await probe.ExpectMsgAsync("hello", TimeSpan.FromMilliseconds(100));
                     }, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100));
                 });
             }
@@ -166,29 +167,24 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public void Secure_transport_should_NOT_be_possible_between_systems_using_SSL_and_one_not_using_it()
+        public async Task Secure_transport_should_NOT_be_possible_between_systems_using_SSL_and_one_not_using_it()
         {
             Setup(null, null);
 
             var probe = CreateTestProbe();
-            Assert.Throws<RemoteTransportException>(() =>
+            await Assert.ThrowsAsync<RemoteTransportException>(async () =>
             {
-                Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-                probe.ExpectNoMsg();
+                Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
+                await probe.ExpectNoMsgAsync();
             });
         }
 
         #region helper classes / methods
 
-
-        protected override void Dispose(bool disposing)
+        protected override async Task AfterAllAsync()
         {
-            base.Dispose(disposing);
-            if (disposing)
-            {
-                Shutdown(sys2, TimeSpan.FromSeconds(3));
-            }
-
+            await ShutdownAsync(_sys2, TimeSpan.FromSeconds(3));
+            await base.AfterAllAsync();
         }
 
         private void InstallCert()
@@ -217,7 +213,7 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
-        public class Echo : ReceiveActor
+        private class Echo : ReceiveActor
         {
             public Echo()
             {

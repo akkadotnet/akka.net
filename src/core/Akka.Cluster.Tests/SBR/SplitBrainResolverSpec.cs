@@ -1572,14 +1572,14 @@ namespace Akka.Cluster.Tests.SBR
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_not_down_unreachable_when_not_leader()
+        public async Task Split_Brain_Resolver_must_not_down_unreachable_when_not_leader()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.Zero, MemberB.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
             setup.Leader(MemberA);
             setup.Unreachable(MemberC);
             setup.Tick();
-            ExpectNoMsg(500);
+            await ExpectNoMsgAsync(500);
             setup.Stop();
         }
 
@@ -1597,19 +1597,19 @@ namespace Akka.Cluster.Tests.SBR
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_down_unreachable_after_specified_duration()
+        public async Task Split_Brain_Resolver_must_down_unreachable_after_specified_duration()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.FromSeconds(2), MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
             setup.Leader(MemberA);
             setup.Unreachable(MemberB);
-            ExpectNoMsg(1000);
+            await ExpectNoMsgAsync(1000);
             setup.ExpectDownCalled(MemberB);
             setup.Stop();
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_down_unreachable_when_becoming_leader_inbetween_detection_and_specified_duration()
+        public async Task Split_Brain_Resolver_must_down_unreachable_when_becoming_leader_inbetween_detection_and_specified_duration()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.FromSeconds(2), MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
@@ -1617,13 +1617,13 @@ namespace Akka.Cluster.Tests.SBR
             setup.Unreachable(MemberC);
             setup.Leader(MemberA);
             setup.Tick();
-            ExpectNoMsg(1000);
+            await ExpectNoMsgAsync(1000);
             setup.ExpectDownCalled(MemberC);
             setup.Stop();
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_not_down_unreachable_when_loosing_leadership_inbetween_detection_and_specified_duration()
+        public async Task Split_Brain_Resolver_must_not_down_unreachable_when_loosing_leadership_inbetween_detection_and_specified_duration()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.FromSeconds(1), MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
@@ -1631,7 +1631,7 @@ namespace Akka.Cluster.Tests.SBR
             setup.Unreachable(MemberC);
             setup.Leader(MemberB);
             setup.Tick();
-            ExpectNoMsg(1500);
+            await ExpectNoMsgAsync(1500);
             setup.Stop();
         }
 
@@ -1649,7 +1649,7 @@ namespace Akka.Cluster.Tests.SBR
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_not_down_when_unreachable_become_reachable_inbetween_detection_and_specified_duration()
+        public async Task Split_Brain_Resolver_must_not_down_when_unreachable_become_reachable_inbetween_detection_and_specified_duration()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.FromSeconds(1), MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
@@ -1657,12 +1657,12 @@ namespace Akka.Cluster.Tests.SBR
             setup.Unreachable(MemberB);
             setup.Reachable(MemberB);
             setup.Tick();
-            ExpectNoMsg(1500);
+            await ExpectNoMsgAsync(1500);
             setup.Stop();
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_not_down_when_unreachable_is_removed_inbetween_detection_and_specified_duration()
+        public async Task Split_Brain_Resolver_must_not_down_when_unreachable_is_removed_inbetween_detection_and_specified_duration()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.FromSeconds(1), MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
@@ -1670,19 +1670,19 @@ namespace Akka.Cluster.Tests.SBR
             setup.Unreachable(MemberB);
             setup.A.Tell(new ClusterEvent.MemberRemoved(MemberB.Copy(MemberStatus.Removed), MemberStatus.Exiting));
             setup.Tick();
-            ExpectNoMsg(1500);
+            await ExpectNoMsgAsync(1500);
             setup.Stop();
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_not_down_when_unreachable_is_already_Down()
+        public async Task Split_Brain_Resolver_must_not_down_when_unreachable_is_already_Down()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.Zero, MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
             setup.Leader(MemberA);
             setup.Unreachable(MemberB.Copy(MemberStatus.Down));
             setup.Tick();
-            ExpectNoMsg(1500);
+            await ExpectNoMsgAsync(1500);
             setup.Stop();
         }
 

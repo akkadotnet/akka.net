@@ -115,7 +115,7 @@ namespace Akka.Remote.Tests.Serialization
 
     public abstract class AbstractSerializationTransportInformationSpec : AkkaSpec
     {
-        public static readonly Config Config = @"
+        private static readonly Config Config = @"
             akka {
                 loglevel = info
                 actor
@@ -151,7 +151,7 @@ namespace Akka.Remote.Tests.Serialization
         public Address System2Address => RARP.For(System2).Provider.DefaultAddress;
 
         [Fact]
-        public void Serialization_of_ActorRef_in_remote_message_must_resolve_Address()
+        public async Task Serialization_of_ActorRef_in_remote_message_must_resolve_Address()
         {
             System2.ActorOf(act =>
             {
@@ -160,29 +160,29 @@ namespace Akka.Remote.Tests.Serialization
 
             var echoSel = Sys.ActorSelection(new RootActorPath(System2Address) / "user" / "echo");
             echoSel.Tell(new Identify(1));
-            var echo = ExpectMsg<ActorIdentity>().Subject;
+            var echo = (await ExpectMsgAsync<ActorIdentity>()).Subject;
 
             echo.Tell(new TestMessage(TestActor, echo));
-            var t1 = ExpectMsg<TestMessage>();
+            var t1 = await ExpectMsgAsync<TestMessage>();
             t1.From.Should().Be(TestActor);
             t1.To.Should().Be(echo);
 
             echo.Tell(new JsonSerTestMessage(TestActor, echo));
-            var t2 = ExpectMsg<JsonSerTestMessage>();
+            var t2 = await ExpectMsgAsync<JsonSerTestMessage>();
             t2.From.Should().Be(TestActor);
             t2.To.Should().Be(echo);
 
             echo.Tell(TestActor);
-            ExpectMsg(TestActor);
+            await ExpectMsgAsync(TestActor);
 
             echo.Tell(echo);
-            ExpectMsg(echo);
+            await ExpectMsgAsync(echo);
         }
 
-        protected override void AfterAll()
+        protected override async Task AfterAllAsync()
         {
-            base.AfterAll();
-            Shutdown(System2, verifySystemShutdown: true);
+            await ShutdownAsync(System2);
+            await base.AfterAllAsync();
         }
     }
 

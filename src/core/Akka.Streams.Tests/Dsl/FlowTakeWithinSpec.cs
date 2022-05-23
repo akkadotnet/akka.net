@@ -9,7 +9,6 @@ using System;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
@@ -46,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
             var demand3 = (int)pSub.ExpectRequest();
             var sentN = demand1 + demand2;
             Enumerable.Range(1, sentN).ForEach(n => c.ExpectNext(n));
-            Within(TimeSpan.FromSeconds(2), c.ExpectComplete);
+            Within(TimeSpan.FromSeconds(2), () => c.ExpectComplete());
             Enumerable.Range(1, demand3).ForEach(_ => pSub.SendNext(input++));
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
         }

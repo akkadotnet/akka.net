@@ -13,7 +13,6 @@ using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;

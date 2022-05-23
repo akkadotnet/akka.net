@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -176,10 +177,10 @@ akka {
             return ((ExtendedActorSystem) system).Provider.DefaultAddress;
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterAllAsync()
         {
-            _remoteSystem.Terminate().Wait(TimeSpan.FromSeconds(2));
-            base.AfterTermination();
+            await base.AfterAllAsync();
+            await ShutdownAsync(_remoteSystem);
         }
 
         [Fact]

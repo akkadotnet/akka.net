@@ -13,7 +13,6 @@ using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;

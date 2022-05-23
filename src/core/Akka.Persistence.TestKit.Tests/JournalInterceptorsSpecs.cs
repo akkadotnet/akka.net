@@ -12,37 +12,42 @@ namespace Akka.Persistence.TestKit.Tests
     using Akka.Persistence.TestKit;
     using FluentAssertions;
     using Xunit;
+    using static FluentAssertions.FluentActions;
 
     public class JournalInterceptorsSpecs
     {
         [Fact]
-        public void noop_immediately_returns_without_exception()
+        public async Task noop_immediately_returns_without_exception()
         {
-            JournalInterceptors.Noop.Instance
-                .Awaiting(x => x.InterceptAsync(null))
-                .Should().NotThrow();
+            await Awaiting(async () =>
+            {
+                await JournalInterceptors.Noop.Instance.InterceptAsync(null);
+            }).Should().NotThrowAsync();
         }
 
         [Fact]
-        public void failure_must_throw_specific_exception()
+        public async Task failure_must_throw_specific_exception()
         {
-            JournalInterceptors.Failure.Instance
-                .Awaiting(x => x.InterceptAsync(null))
-                .Should().ThrowExactly<TestJournalFailureException>();
+            await Assert.ThrowsAsync<TestJournalFailureException>(async () =>
+            {
+                await JournalInterceptors.Failure.Instance.InterceptAsync(null);
+            });
         }
 
         [Fact]
-        public void rejection_must_throw_specific_exception()
+        public async Task rejection_must_throw_specific_exception()
         {
-            JournalInterceptors.Rejection.Instance
-                .Awaiting(x => x.InterceptAsync(null))
-                .Should().ThrowExactly<TestJournalRejectionException>();
+            await Assert.ThrowsAsync<TestJournalRejectionException>(async () =>
+            {
+                await JournalInterceptors.Rejection.Instance.InterceptAsync(null);
+            });
         }
 
         [Fact]
         public async Task delay_must_call_next_interceptor_after_specified_delay()
         {
-            var duration = TimeSpan.FromMilliseconds(100);
+            var duration = TimeSpan.FromMilliseconds(200);
+            var epsilon = TimeSpan.FromMilliseconds(50);
             var probe = new InterceptorProbe();
             var delay = new JournalInterceptors.Delay(duration, probe);
 
@@ -50,7 +55,7 @@ namespace Akka.Persistence.TestKit.Tests
             await delay.InterceptAsync(null);
 
             probe.WasCalled.Should().BeTrue();
-            probe.CalledAt.Should().BeOnOrAfter(startedAt + duration);
+            probe.CalledAt.Should().BeOnOrAfter(startedAt + duration - epsilon);
         }
 
         [Fact]

@@ -104,7 +104,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        protected ActorBase Actor { get { return _actor; } }
+        internal ActorBase Actor { get { return _actor; } }
         /// <summary>
         /// TBD
         /// </summary>
