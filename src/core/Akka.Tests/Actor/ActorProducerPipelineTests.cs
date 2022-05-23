@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -126,17 +127,17 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Pipeline_application_should_survive_internal_plugin_exceptions()
+        public async Task Pipeline_application_should_survive_internal_plugin_exceptions()
         {
             _resolver.Register(new FailingPlugin());
             _resolver.Register(new WorkingPlugin());
 
-            EventFilter.Exception<TestException>("plugin failed").ExpectOne(() =>
+            await EventFilter.Exception<TestException>("plugin failed").ExpectOneAsync(async () =>
             {
                 var actor = ActorOf<PlugActor>();
-                var ask = actor.Ask<string[]>("plugins", TimeSpan.FromSeconds(1));
+                var ask = await actor.Ask<string[]>("plugins", TimeSpan.FromSeconds(1));
 
-                ask.Result.ShouldOnlyContainInOrder("failing plugin", "working plugin");
+                ask.ShouldOnlyContainInOrder("failing plugin", "working plugin");
             });
         }
 
@@ -152,7 +153,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Pipeline_should_allow_to_register_multiple_generic_plugins_with_different_generic_types()
+        public async Task Pipeline_should_allow_to_register_multiple_generic_plugins_with_different_generic_types()
         {
             _resolver.Register(new WorkingPlugin()).ShouldBeTrue();
             _resolver.Register(new GenericPlugin<PlugActorA>()).ShouldBeTrue();
@@ -161,34 +162,34 @@ namespace Akka.Tests.Actor
             var plugA = ActorOf<PlugActorA>();
             var plugB = ActorOf<PlugActorB>();
 
-            plugA.Ask<string[]>("plugins", TimeSpan.FromSeconds(3)).Result.ShouldOnlyContainInOrder("working plugin", typeof(PlugActorA).ToString());
-            plugB.Ask<string[]>("plugins", TimeSpan.FromSeconds(3)).Result.ShouldOnlyContainInOrder("working plugin", typeof(PlugActorB).ToString());
+            (await plugA.Ask<string[]>("plugins", TimeSpan.FromSeconds(3))).ShouldOnlyContainInOrder("working plugin", typeof(PlugActorA).ToString());
+            (await plugB.Ask<string[]>("plugins", TimeSpan.FromSeconds(3))).ShouldOnlyContainInOrder("working plugin", typeof(PlugActorB).ToString());
         }
 
         [Fact]
-        public void Pipeline_application_should_apply_plugins_in_specified_order()
+        public async Task Pipeline_application_should_apply_plugins_in_specified_order()
         {
             _resolver.Insert(0, new OrderedPlugin1()).ShouldBeTrue();
             _resolver.Insert(2, new OrderedPlugin3()).ShouldBeTrue();
             _resolver.Insert(1, new OrderedPlugin2()).ShouldBeTrue();
 
             var actor = ActorOf<PlugActor>();
-            actor.Ask<string[]>("plugins", TimeSpan.FromSeconds(3)).Result.ShouldOnlyContainInOrder("plugin-1", "plugin-2", "plugin-3");
+            (await actor.Ask<string[]>("plugins", TimeSpan.FromSeconds(3))).ShouldOnlyContainInOrder("plugin-1", "plugin-2", "plugin-3");
         }
 
         [Fact]
-        public void DefaultPipeline_should_apply_stashing_to_actors_implementing_it()
+        public async Task DefaultPipeline_should_apply_stashing_to_actors_implementing_it()
         {
             var actor = ActorOf<StashingActor>();
-            actor.Ask<string>(StashStatus.Instance, TimeSpan.FromSeconds(3)).Result.ShouldBe("actor stash is initialized");
+            (await actor.Ask<string>(StashStatus.Instance, TimeSpan.FromSeconds(3))).ShouldBe("actor stash is initialized");
         }
 
         [Fact]
-        public void DefaultPipeline_should_unstash_all_terminated_actors_stashed_messages_on_stop()
+        public async Task DefaultPipeline_should_unstash_all_terminated_actors_stashed_messages_on_stop()
         {
             // we'll send 3 int messages to stash by the actor and then stop it,
             // all stashed messages should then be unstashed back and sent to dead letters
-            EventFilter.DeadLetter<int>().Expect(3, () =>
+            await EventFilter.DeadLetter<int>().ExpectAsync(3, () =>
             {
                 var actor = ActorOf<StashingActor>();
                 // send some messages to stash

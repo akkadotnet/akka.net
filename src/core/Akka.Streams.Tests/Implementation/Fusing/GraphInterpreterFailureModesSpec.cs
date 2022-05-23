@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Streams.Stage;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;

@@ -18,7 +18,6 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.TestEvent;
@@ -45,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         public ActorMaterializerSettings Settings { get; }
         private ActorMaterializer Materializer { get; }
 
-        public FlowSpec(ITestOutputHelper helper) : base(Config.WithFallback(ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")), helper)
+        public FlowSpec(ITestOutputHelper helper) : base(Config.WithFallback(StreamTestDefaultMailbox.DefaultConfig), helper)
         {
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 2);
             Materializer = ActorMaterializer.Create(Sys, Settings);
@@ -64,10 +63,12 @@ namespace Akka.Streams.Tests.Dsl
 
             if (name.Equals("identity"))
                 setup = new ChainSetup<int, int, NotUsed>(Identity, Settings.WithInputBuffer(n, n),
-                    (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
+                    (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this)
+                    .Initialize();
             else
                 setup = new ChainSetup<int, int, NotUsed>(Identity2, Settings.WithInputBuffer(n, n),
-                    (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
+                    (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this)
+                    .Initialize();
 
             setup.Upstream.ExpectRequest(setup.UpstreamSubscription, setup.Settings.MaxInputBufferSize);
         }
@@ -76,7 +77,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_must_request_more_elements_from_upstream_when_downstream_requests_more_elements()
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings,
-                (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
+                (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this)
+                .Initialize();
             setup.Upstream.ExpectRequest(setup.UpstreamSubscription, Settings.MaxInputBufferSize);
             setup.DownstreamSubscription.Request(1);
             setup.Upstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
@@ -97,7 +99,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_must_deliver_events_when_publisher_sends_elements_and_then_completes()
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings,
-                (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
+                (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this)
+                .Initialize();
             setup.DownstreamSubscription.Request(1);
             setup.UpstreamSubscription.SendNext("test");
             setup.UpstreamSubscription.SendComplete();
@@ -109,7 +112,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_must_deliver_complete_signal_when_publisher_immediately_completes()
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings,
-                  (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
+                  (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this)
+                .Initialize();
             setup.UpstreamSubscription.SendComplete();
             setup.Downstream.ExpectComplete();
         }
@@ -118,7 +122,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_must_deliver_error_signal_when_publisher_immediately_fails()
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings,
-                (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
+                (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this)
+                .Initialize();
             var weirdError = new Exception("weird test exception");
             setup.UpstreamSubscription.SendError(weirdError);
             setup.Downstream.ExpectError().Should().Be(weirdError);
@@ -128,7 +133,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_must_cancel_upstream_when_single_subscriber_cancels_subscription_while_receiving_data()
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
-                (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
+                (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this)
+                .Initialize();
             setup.DownstreamSubscription.Request(5);
             setup.UpstreamSubscription.ExpectRequest(1);
             setup.UpstreamSubscription.SendNext("test");
@@ -351,7 +357,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
-                (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
+                (source, materializer) => ToFanoutPublisher(source, materializer, 1), this)
+                .Initialize();
             var downstream2 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream2);
             var downstream2Subscription = downstream2.ExpectSubscription();
@@ -380,7 +387,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
-                (source, materializer) => ToFanoutPublisher(source, materializer, 2), this);
+                (source, materializer) => ToFanoutPublisher(source, materializer, 2), this)
+                .Initialize();
             var downstream2 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream2);
             var downstream2Subscription = downstream2.ExpectSubscription();
@@ -423,7 +431,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
-                (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
+                (source, materializer) => ToFanoutPublisher(source, materializer, 1), this)
+                .Initialize();
 
             setup.DownstreamSubscription.Request(5);
             setup.Upstream.ExpectRequest(setup.UpstreamSubscription, 1);
@@ -464,7 +473,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
-                (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
+                (source, materializer) => ToFanoutPublisher(source, materializer, 1), this)
+                .Initialize();
             var downstream2 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream2);
             var downstream2Subscription = downstream2.ExpectSubscription();
@@ -504,7 +514,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
-                (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
+                (source, materializer) => ToFanoutPublisher(source, materializer, 1), this)
+                .Initialize();
             var downstream2 = this.CreateManualSubscriberProbe<string>();
             // don't link it just yet
 
@@ -548,7 +559,8 @@ namespace Akka.Streams.Tests.Dsl
                 throw new TestException("test");
             }), Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
-                (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
+                (source, materializer) => ToFanoutPublisher(source, materializer, 1), this)
+                .Initialize();
 
             setup.DownstreamSubscription.Request(1);
             setup.UpstreamSubscription.ExpectRequest(1);
@@ -568,7 +580,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
-                (source, materializer) => ToFanoutPublisher(source, materializer, 16), this);
+                (source, materializer) => ToFanoutPublisher(source, materializer, 16), this)
+                .Initialize();
 
             // make sure stream is initialized before canceling downstream
             Thread.Sleep(100);
@@ -597,7 +610,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var setup = new ChainSetup<string, string, NotUsed>(FaultyFlow<string,string,string>, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
-                (source, materializer) => ToFanoutPublisher(source, materializer, 16), this);
+                (source, materializer) => ToFanoutPublisher(source, materializer, 16), this)
+                .Initialize();
 
             Action<TestSubscriber.ManualProbe<string>> checkError = sprobe =>
             {

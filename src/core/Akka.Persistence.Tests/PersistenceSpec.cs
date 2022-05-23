@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -61,9 +62,9 @@ namespace Akka.Persistence.Tests
         public string NamePrefix { get { return Sys.Name; } }
         public string Name { get { return _name; } }
 
-        protected override void AfterAll()
+        protected override async Task AfterAllAsync()
         {
-            base.AfterAll();
+            await base.AfterAllAsync();
             Clean.Dispose();
         }
 

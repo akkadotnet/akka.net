@@ -189,8 +189,11 @@ namespace Akka.DistributedData.Tests.MultiNode
             void UpdateAfterPruning(ulong expectedValue)
             {
                 // inject data from removed node to simulate bad data
-                _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty, new WriteAll(_timeout), x => x.Merge(oldCounter).Increment(_cluster, 1)));
-                ExpectMsg<UpdateSuccess>(msg =>
+                _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty,
+                    new WriteAll(_timeout), x => x.Merge(oldCounter).Increment(_cluster, 1)));
+                ExpectMsg<UpdateSuccess>();
+                
+                AwaitAssert(() =>
                 {
                     _replicator.Tell(Dsl.Get(_keyA, ReadLocal.Instance));
                     var retrieved = ExpectMsg<GetSuccess>().Get(_keyA);

@@ -14,7 +14,7 @@ using TokenBucket = Akka.Remote.Transport.TokenBucket;
 
 namespace Akka.Remote.Tests.Transport
 {
-    public class ThrottleModeSpec : AkkaSpec
+    public class ThrottleModeSpec 
     {
         static readonly long HalfSecond = TimeSpan.FromSeconds(0.5).Ticks.ToNanos();
 

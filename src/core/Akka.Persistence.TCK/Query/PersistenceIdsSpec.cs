@@ -254,11 +254,10 @@ namespace Akka.Persistence.TCK.Query
             return pref;
         }
 
-
-        protected override void Dispose(bool disposing)
+        public override Task DisposeAsync()
         {
             Materializer.Dispose();
-            base.Dispose(disposing);
+            return base.DisposeAsync();
         }
     }
 }

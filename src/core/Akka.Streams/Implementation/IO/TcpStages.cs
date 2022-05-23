@@ -138,8 +138,13 @@ namespace Akka.Streams.Implementation.IO
                     var thisStage = StageActor.Ref;
                     var binding = new StreamTcp.ServerBinding(bound.LocalAddress, () =>
                     {
-                        // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
-                        thisStage.Tell(Tcp.Unbind.Instance, thisStage);
+                        // To allow unbind() to be invoked multiple times with minimal chance of dead letters, we check if
+                        // it's already unbound before sending the message.
+                        if (!_unbindPromise.Task.IsCompleted)
+                        {
+                            // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
+                            thisStage.Tell(Tcp.Unbind.Instance, thisStage);
+                        }
                         return _unbindPromise.Task;
                     });
 

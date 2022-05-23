@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -55,17 +56,17 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Fix2176_Constructor_Should_create_valid_child_actor()
+        public async Task Fix2176_Constructor_Should_create_valid_child_actor()
         {
             var actor = Sys.ActorOf(Props.Create(() => new Actor1NonAsync(TestActor)), "actor1");
-            ExpectMsg("started");
+            await ExpectMsgAsync("started");
         }
 
         [Fact]
-        public void Fix2176_RunTask_Should_create_valid_child_actor()
+        public async Task Fix2176_RunTask_Should_create_valid_child_actor()
         {
             var actor = Sys.ActorOf(Props.Create(() => new Actor1(TestActor)), "actor1");
-            ExpectMsg("started");
+            await ExpectMsgAsync("started");
         }
     }
 }

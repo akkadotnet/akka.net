@@ -279,6 +279,7 @@ namespace Akka.Remote
         public bool logRemoteLifeCycleEvents { get; set; }
         public abstract Akka.Actor.Address LocalAddressForRemote(Akka.Actor.Address remote);
         public abstract System.Threading.Tasks.Task<bool> ManagementCommand(object cmd);
+        public abstract System.Threading.Tasks.Task<bool> ManagementCommand(object cmd, System.Threading.CancellationToken cancellationToken);
         public abstract void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid);
         public abstract void Send(object message, Akka.Actor.IActorRef sender, Akka.Remote.RemoteActorRef recipient);
         public abstract System.Threading.Tasks.Task Shutdown();

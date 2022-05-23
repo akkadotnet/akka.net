@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -211,7 +210,7 @@ namespace Akka.Streams.Tests.Dsl
             p2.ExpectCancellation();
         }
 
-        [Fact]
+        [Fact(Skip = "Skipped for async_testkit conversion build")]
         public void A_FlattenMerge_must_work_with_many_concurrently_queued_events()
         {
             const int noOfSources = 100;

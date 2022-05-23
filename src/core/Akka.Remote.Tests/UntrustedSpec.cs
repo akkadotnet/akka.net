@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -21,9 +22,6 @@ namespace Akka.Remote.Tests
         private readonly ActorSystem _client;
         private readonly Address _address;
         private readonly IActorRef _receptionist;
-        private readonly Lazy<IActorRef> _remoteDaemon;
-        private readonly Lazy<IActorRef> _target2;
-
 
         public UntrustedSpec(ITestOutputHelper output)
             : base(@"
@@ -48,45 +46,44 @@ namespace Akka.Remote.Tests
             _address = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
             _receptionist = Sys.ActorOf(Props.Create(() => new Receptionist(TestActor)), "receptionist");
 
-            _remoteDaemon = new Lazy<IActorRef>(() =>
-            {
-                var p = CreateTestProbe(_client);
-                _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements)
-                    .Tell(new IdentifyReq("/remote"), p.Ref);
-                return p.ExpectMsg<ActorIdentity>().Subject;
-            });
-
-            _target2 = new Lazy<IActorRef>(() =>
-            {
-                var p = CreateTestProbe(_client);
-                _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements)
-                    .Tell(new IdentifyReq("child2"), p.Ref);
-
-                var actorRef = p.ExpectMsg<ActorIdentity>().Subject;
-                return actorRef;
-            });
-
-
             EventFilter.Debug().Mute();
         }
 
-
-        protected override void AfterTermination()
+        private async Task<IActorRef> RemoteDaemon()
         {
-            Shutdown(_client);
+            var p = CreateTestProbe(_client);
+            _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements)
+                .Tell(new IdentifyReq("/remote"), p.Ref);
+            return (await p.ExpectMsgAsync<ActorIdentity>()).Subject;
+        }
+
+        private async Task<IActorRef> Target2()
+        {
+            var p = CreateTestProbe(_client);
+            _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements)
+                .Tell(new IdentifyReq("child2"), p.Ref);
+
+            return (await p.ExpectMsgAsync<ActorIdentity>()).Subject;
+        }
+
+
+        protected override async Task AfterAllAsync()
+        {
+            await base.AfterAllAsync();
+            await ShutdownAsync(_client);
         }
 
 
         [Fact]
-        public void Untrusted_mode_must_allow_actor_selection_to_configured_white_list()
+        public async Task Untrusted_mode_must_allow_actor_selection_to_configured_white_list()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements);
             sel.Tell("hello");
-            ExpectMsg("hello");
+            await ExpectMsgAsync("hello");
         }
 
         [Fact]
-        public void Untrusted_mode_must_discard_harmful_messages_to_slash_remote()
+        public async Task Untrusted_mode_must_discard_harmful_messages_to_slash_remote()
         {
             var logProbe = CreateTestProbe();
             // but instead install our own listener
@@ -94,77 +91,79 @@ namespace Akka.Remote.Tests
                 Sys.ActorOf(Props.Create(() => new DebugSniffer(logProbe)).WithDeploy(Deploy.Local), "debugSniffer"),
                 typeof (Debug));
 
-            _remoteDaemon.Value.Tell("hello");
-            logProbe.ExpectMsg<Debug>();
+            var remoteDaemon = await RemoteDaemon(); 
+            remoteDaemon.Tell("hello");
+            await logProbe.ExpectMsgAsync<Debug>();
         }
 
         [Fact]
-        public void Untrusted_mode_must_discard_harmful_messages_to_test_actor()
+        public async Task Untrusted_mode_must_discard_harmful_messages_to_test_actor()
         {
-            var target2 = _target2.Value;
+            var target2 = await Target2();
+            var remoteDaemon = await RemoteDaemon();
 
-            target2.Tell(new Terminated(_remoteDaemon.Value, true, false));
+            target2.Tell(new Terminated(remoteDaemon, true, false));
             target2.Tell(PoisonPill.Instance);
             _client.Stop(target2);
             target2.Tell("blech");
-            ExpectMsg("blech");
+            await ExpectMsgAsync("blech");
         }
 
         [Fact]
-        public void Untrusted_mode_must_discard_watch_messages()
+        public async Task Untrusted_mode_must_discard_watch_messages()
         {
-            var target2 = _target2.Value;
+            var target2 = await Target2();
             _client.ActorOf(Props.Create(() => new Target2Watch(target2, TestActor)).WithDeploy(Deploy.Local));
             _receptionist.Tell(new StopChild1("child2"));
-            ExpectMsg("child2 stopped");
+            await ExpectMsgAsync("child2 stopped");
             // no Terminated msg, since watch was discarded
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
-        public void Untrusted_mode_must_discard_actor_selection()
+        public async Task Untrusted_mode_must_discard_actor_selection()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/TestActor.Path.Elements);
             sel.Tell("hello");
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
-        public void Untrusted_mode_must_discard_actor_selection_to_child_of_matching_white_list()
+        public async Task Untrusted_mode_must_discard_actor_selection_to_child_of_matching_white_list()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements/"child1");
             sel.Tell("hello");
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
-        public void Untrusted_mode_must_discard_actor_selection_with_wildcard()
+        public async Task Untrusted_mode_must_discard_actor_selection_with_wildcard()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements/"*");
             sel.Tell("hello");
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
-        public void Untrusted_mode_must_discard_actor_selection_containing_harmful_message()
+        public async Task Untrusted_mode_must_discard_actor_selection_containing_harmful_message()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements);
             sel.Tell(PoisonPill.Instance);
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
 
         [Fact]
-        public void Untrusted_mode_must_discard_actor_selection_with_non_root_anchor()
+        public async Task Untrusted_mode_must_discard_actor_selection_with_non_root_anchor()
         {
             var p = CreateTestProbe(_client);
-            _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements).Tell(
-                new Identify(null), p.Ref);
-            var clientReceptionistRef = p.ExpectMsg<ActorIdentity>().Subject;
+            _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements)
+                .Tell(new Identify(null), p.Ref);
+            var clientReceptionistRef = (await p.ExpectMsgAsync<ActorIdentity>()).Subject;
 
             var sel = ActorSelection(clientReceptionistRef, _receptionist.Path.ToStringWithoutAddress());
             sel.Tell("hello");
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
 
@@ -204,14 +203,19 @@ namespace Akka.Remote.Tests
 
             protected override bool Receive(object message)
             {
-                return message.Match().With<IdentifyReq>(req =>
+                switch (message)
                 {
-                    var actorSelection = Context.ActorSelection(req.Path);
-                    actorSelection.Tell(new Identify(null), Sender);
-                })
-                    .With<StopChild1>(child => { Context.Stop(Context.Child(child.Name)); })
-                    .Default(o => { _testActor.Forward(o); })
-                    .WasHandled;
+                    case IdentifyReq req:
+                        var actorSelection = Context.ActorSelection(req.Path);
+                        actorSelection.Tell(new Identify(null), Sender);
+                        return true;
+                    case StopChild1 child:
+                        Context.Stop(Context.Child(child.Name));
+                        return true;
+                    default:
+                        _testActor.Forward(message);
+                        return true;
+                }
             }
         }
 
@@ -232,7 +236,7 @@ namespace Akka.Remote.Tests
 
             protected override void PostStop()
             {
-                _testActor.Tell(string.Format("{0} stopped", Self.Path.Name));
+                _testActor.Tell($"{Self.Path.Name} stopped");
                 base.PostStop();
             }
         }
@@ -265,13 +269,16 @@ namespace Akka.Remote.Tests
 
             protected override bool Receive(object message)
             {
-                return message.Match().With<Debug>(debug =>
+                if (message is Debug debug)
                 {
                     if (((string) debug.Message).Contains("dropping"))
                     {
                         _testProbe.Ref.Tell(debug);
                     }
-                }).WasHandled;
+                    return true;
+                }
+
+                return false;
             }
         }
 
