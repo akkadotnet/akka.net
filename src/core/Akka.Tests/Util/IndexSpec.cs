@@ -10,8 +10,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Util;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Tests.Util
 {
@@ -115,7 +117,7 @@ namespace Akka.Tests.Util
         }
 
         [Fact]
-        public void Index_must_be_accessed_in_parallel()
+        public async Task Index_must_be_accessed_in_parallel()
         {
             var index = new Index<int,int>();
 
@@ -162,7 +164,7 @@ namespace Akka.Tests.Util
 
             var tasks = Enumerable.Repeat(randomTask(), nrOfTasks).Select(Task.Run);
 
-            Task.WaitAll(tasks.ToArray(), GetTimeoutOrDefault(null));
+            (await Task.WhenAll(tasks.ToArray()).AwaitWithTimeout(GetTimeoutOrDefault(null))).Should().BeTrue();
         }
     }
 }

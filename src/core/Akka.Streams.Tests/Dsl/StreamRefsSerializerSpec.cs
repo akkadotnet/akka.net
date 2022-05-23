@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
@@ -169,11 +170,16 @@ namespace Akka.Streams.Tests
         private readonly TestProbe _probe;
         private readonly IActorRef _remoteActor;
 
-        protected override void BeforeTermination()
+        protected override async Task BeforeTerminationAsync()
         {
-            base.BeforeTermination();
-            RemoteSystem.Dispose();
+            await base.BeforeTerminationAsync();
             Materializer.Dispose();
+        }
+
+        protected override async Task AfterAllAsync()
+        {
+            await base.AfterAllAsync();
+            await ShutdownAsync(RemoteSystem);
         }
 
         [Fact]

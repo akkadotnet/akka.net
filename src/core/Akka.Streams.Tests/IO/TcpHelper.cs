@@ -8,11 +8,12 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.IO;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Reactive.Streams;
 using Xunit.Abstractions;
@@ -24,8 +25,7 @@ namespace Akka.Streams.Tests.IO
         protected TcpHelper(string config, ITestOutputHelper helper)
             : base(
                 ConfigurationFactory.ParseString(config)
-                    .WithFallback(
-                        ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")),
+                    .WithFallback(StreamTestDefaultMailbox.DefaultConfig),
                 helper)
         {
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(4, 4);
@@ -123,61 +123,69 @@ namespace Akka.Streams.Tests.IO
 
             protected override void OnReceive(object message)
             {
-                message.Match().With<ClientWrite>(w =>
+                switch (message)
                 {
-                    if (!_writePending)
-                    {
-                        _writePending = true;
-                        _connection.Tell(Tcp.Write.Create(w.Bytes, WriteAck.Instance));
-                    }
-                    else
-                        _queuedWrites.Enqueue(w.Bytes);
-                }).With<WriteAck>(() =>
-                {
-                    if (_queuedWrites.Count != 0)
-                    {
-                        var next = _queuedWrites.Dequeue();
-                        _connection.Tell(Tcp.Write.Create(next, WriteAck.Instance));
-                    }
-                    else
-                    {
-                        _writePending = false;
-                        if(_closeAfterWrite != null)
-                            _connection.Tell(_closeAfterWrite);
-                    }
-                }).With<ClientRead>(r =>
-                {
-                    _readTo = r.ReadTo;
-                    _toRead = r.Count;
-                    _connection.Tell(Tcp.ResumeReading.Instance);
-                }).With<Tcp.Received>(r =>
-                {
-                    _readBuffer += r.Data;
-                    if (_readBuffer.Count >= _toRead)
-                    {
-                        _readTo.Tell(new ReadResult(_readBuffer));
-                        _readBuffer = ByteString.Empty;
-                        _toRead = 0;
-                        _readTo = Context.System.DeadLetters;
-                    }
-                    else
+                    case ClientWrite w:
+                        if (!_writePending)
+                        {
+                            _writePending = true;
+                            _connection.Tell(Tcp.Write.Create(w.Bytes, WriteAck.Instance));
+                        }
+                        else
+                            _queuedWrites.Enqueue(w.Bytes);
+                        break;
+                    
+                    case WriteAck _:
+                        if (_queuedWrites.Count != 0)
+                        {
+                            var next = _queuedWrites.Dequeue();
+                            _connection.Tell(Tcp.Write.Create(next, WriteAck.Instance));
+                        }
+                        else
+                        {
+                            _writePending = false;
+                            if(_closeAfterWrite != null)
+                                _connection.Tell(_closeAfterWrite);
+                        }
+                        break;
+                    
+                    case ClientRead r:
+                        _readTo = r.ReadTo;
+                        _toRead = r.Count;
                         _connection.Tell(Tcp.ResumeReading.Instance);
-                }).With<PingClose>(p =>
-                {
-                    _readTo = p.Requester;
-                    _connection.Tell(Tcp.ResumeReading.Instance);
-                }).With<Tcp.ConnectionClosed>(c =>
-                {
-                    _readTo.Tell(c);
-                    if(!c.IsPeerClosed)
-                        Context.Stop(Self);
-                }).With<ClientClose>(c =>
-                {
-                    if (!_writePending)
-                        _connection.Tell(c.Cmd);
-                    else
-                        _closeAfterWrite = c.Cmd;
-                });
+                        break;
+                    
+                    case Tcp.Received r:
+                        _readBuffer += r.Data;
+                        if (_readBuffer.Count >= _toRead)
+                        {
+                            _readTo.Tell(new ReadResult(_readBuffer));
+                            _readBuffer = ByteString.Empty;
+                            _toRead = 0;
+                            _readTo = Context.System.DeadLetters;
+                        }
+                        else
+                            _connection.Tell(Tcp.ResumeReading.Instance);
+                        break;
+                    
+                    case PingClose p:
+                        _readTo = p.Requester;
+                        _connection.Tell(Tcp.ResumeReading.Instance);
+                        break;
+                    
+                    case Tcp.ConnectionClosed c:
+                        _readTo.Tell(c);
+                        if(!c.IsPeerClosed)
+                            Context.Stop(Self);
+                        break;
+                    
+                    case ClientClose c:
+                        if (!_writePending)
+                            _connection.Tell(c.Cmd);
+                        else
+                            _closeAfterWrite = c.Cmd;
+                        break;
+                }
             }
         }
 
@@ -201,45 +209,81 @@ namespace Akka.Streams.Tests.IO
 
             protected override void OnReceive(object message)
             {
-                message.Match().With<Tcp.Bound>(b =>
+                switch (message)
                 {
-                    _listener = Sender;
-                    _listener.Tell(new Tcp.ResumeAccepting(1));
-                    _probe.Tell(b);
-                }).With<Tcp.Connected>(() =>
-                {
-                    var handler = Context.ActorOf(TestClientProps(Sender));
-                    _listener.Tell(new Tcp.ResumeAccepting(1));
-                    _probe.Tell(handler);
-                }).With<ServerClose>(() =>
-                {
-                    _listener.Tell(Tcp.Unbind.Instance);
-                    Context.Stop(Self);
-                });
+                    case Tcp.Bound b:
+                        _listener = Sender;
+                        _listener.Tell(new Tcp.ResumeAccepting(1));
+                        _probe.Tell(b);
+                        break;
+                    
+                    case Tcp.Connected _:
+                        var handler = Context.ActorOf(TestClientProps(Sender));
+                        _listener.Tell(new Tcp.ResumeAccepting(1));
+                        _probe.Tell(handler);
+                        break;
+                    
+                    case ServerClose _:
+                        _listener.Tell(Tcp.Unbind.Instance);
+                        Context.Stop(Self);
+                        break;
+                }
             }
         }
 
         protected class Server
         {
             private readonly TestKitBase _testkit;
+            private TestProbe _serverProbe;
+            private IActorRef _serverRef;
+            private bool _initialized;
 
             public Server(TestKitBase testkit, EndPoint address = null)
             {
                 _testkit = testkit;
                 Address = address ?? TestUtils.TemporaryServerAddress();
+            }
 
-                ServerProbe = testkit.CreateTestProbe();
-                ServerRef = testkit.ActorOf(TestServerProps(Address, ServerProbe.Ref));
-                ServerProbe.ExpectMsg<Tcp.Bound>();
+            public async Task<Server> InitializeAsync()
+            {
+                _serverProbe = _testkit.CreateTestProbe();
+                _serverRef = _testkit.ActorOf(TestServerProps(Address, _serverProbe.Ref));
+                await _serverProbe.ExpectMsgAsync<Tcp.Bound>();
+                _initialized = true;
+                return this;
             }
 
             public EndPoint Address { get; }
 
-            public TestProbe ServerProbe { get; }
+            public TestProbe ServerProbe
+            {
+                get
+                {
+                    EnsureInitialized();
+                    return _serverProbe;
+                }
+            }
 
-            public IActorRef ServerRef { get; }
+            public IActorRef ServerRef
+            {
+                get
+                {
+                    EnsureInitialized();
+                    return _serverRef;
+                }
+            }
 
-            public ServerConnection WaitAccept() => new ServerConnection(_testkit, ServerProbe.ExpectMsg<IActorRef>());
+            private void EnsureInitialized()
+            {
+                if(!_initialized)
+                    throw new InvalidOperationException("Server not initialized, please call InitializeAsync");
+            }
+            
+            public async Task<ServerConnection> WaitAcceptAsync()
+            {
+                var actor = await ServerProbe.ExpectMsgAsync<IActorRef>();
+                return new ServerConnection(_testkit, actor);
+            }
 
             public void Close() => ServerRef.Tell(ServerClose.Instance);
         }
@@ -259,7 +303,7 @@ namespace Akka.Streams.Tests.IO
 
             public void Read(int count) => _connectionActor.Tell(new ClientRead(count, _connectionProbe.Ref));
 
-            public ByteString WaitRead() => _connectionProbe.ExpectMsg<ReadResult>().Bytes;
+            public async Task<ByteString> WaitReadAsync() => (await _connectionProbe.ExpectMsgAsync<ReadResult>()).Bytes;
 
             public void ConfirmedClose() => _connectionActor.Tell(new ClientClose(Tcp.ConfirmedClose.Instance));
 
@@ -267,77 +311,91 @@ namespace Akka.Streams.Tests.IO
 
             public void Abort() => _connectionActor.Tell(new ClientClose(Tcp.Abort.Instance));
 
-            public void ExpectClosed(Tcp.ConnectionClosed expected) => ExpectClosed(close => close == expected);
+            public async Task ExpectClosedAsync(
+                Tcp.ConnectionClosed expected,
+                CancellationToken cancellationToken = default) 
+                => await ExpectClosedAsync(close => close == expected, cancellationToken: cancellationToken);
 
-            public void ExpectClosed(Predicate<Tcp.ConnectionClosed> isMessage, TimeSpan? max = null)
+            public async Task ExpectClosedAsync(
+                Predicate<Tcp.ConnectionClosed> isMessage,
+                TimeSpan? max = null,
+                CancellationToken cancellationToken = default)
             {
-                max = max ?? TimeSpan.FromSeconds(3);
+                max ??= TimeSpan.FromSeconds(3);
 
                 _connectionActor.Tell(new PingClose(_connectionProbe.Ref));
-                _connectionProbe.FishForMessage((c) => c is Tcp.ConnectionClosed && isMessage((Tcp.ConnectionClosed)c), max);
+                await _connectionProbe.FishForMessageAsync(
+                    c => c is Tcp.ConnectionClosed closed && isMessage(closed), max, cancellationToken: cancellationToken);
             }
 
-            public void ExpectTerminated()
+            public async Task ExpectTerminatedAsync(CancellationToken cancellationToken = default)
             {
                 _connectionProbe.Watch(_connectionActor);
-                _connectionProbe.ExpectTerminated(_connectionActor);
+                await _connectionProbe.ExpectTerminatedAsync(_connectionActor, cancellationToken: cancellationToken);
+                _connectionProbe.Unwatch(_connectionActor);
             }
         }
 
         protected class TcpReadProbe
         {
+            private ISubscription _tcpReadSubscription;
+            
             public TcpReadProbe(TestKitBase testkit)
             {
                 SubscriberProbe = testkit.CreateManualSubscriberProbe<ByteString>();
-                TcpReadSubscription = new Lazy<ISubscription>(() => SubscriberProbe.ExpectSubscription());
             }
 
-            public Lazy<ISubscription> TcpReadSubscription { get; }
+            public async Task<ISubscription> TcpReadSubscription()
+            {
+                return _tcpReadSubscription ??= await SubscriberProbe.ExpectSubscriptionAsync();
+            }
 
             public TestSubscriber.ManualProbe<ByteString> SubscriberProbe { get; }
 
-            public ByteString Read(int count)
+            public async Task<ByteString> ReadAsync(int count)
             {
                 var result = ByteString.Empty;
 
                 while (result.Count < count)
                 {
-                    TcpReadSubscription.Value.Request(1);
-                    result += SubscriberProbe.ExpectNext();
+                    (await TcpReadSubscription()).Request(1);
+                    result += await SubscriberProbe.ExpectNextAsync();
                 }
 
                 return result;
             }
 
-            public void Close() => TcpReadSubscription.Value.Cancel();
+            public async Task CloseAsync() => (await TcpReadSubscription()).Cancel();
         }
 
         protected class TcpWriteProbe
         {
+            private StreamTestKit.PublisherProbeSubscription<ByteString> _tcpWriteSubscription;
             private long _demand;
 
             public TcpWriteProbe(TestKitBase testkit)
             {
                 PublisherProbe = testkit.CreateManualPublisherProbe<ByteString>();
-                TcpWriteSubscription =
-                    new Lazy<StreamTestKit.PublisherProbeSubscription<ByteString>>(
-                        () => PublisherProbe.ExpectSubscription());
             }
 
-            public Lazy<StreamTestKit.PublisherProbeSubscription<ByteString>> TcpWriteSubscription { get; }
+            public async Task<StreamTestKit.PublisherProbeSubscription<ByteString>> TcpWriteSubscription()
+            {
+                return _tcpWriteSubscription ??= await PublisherProbe.ExpectSubscriptionAsync();
+            }
 
             public TestPublisher.ManualProbe<ByteString> PublisherProbe { get; }
 
-            public void Write(ByteString bytes)
+            public async Task WriteAsync(ByteString bytes)
             {
+                var subscription = await TcpWriteSubscription();
                 if (_demand == 0)
-                    _demand += TcpWriteSubscription.Value.ExpectRequest();
+                    _demand += await subscription.ExpectRequestAsync();
 
-                TcpWriteSubscription.Value.SendNext(bytes);
+                subscription.SendNext(bytes);
                 _demand -= 1;
             }
 
-            public void Close() => TcpWriteSubscription.Value.SendComplete();
+            public async Task CloseAsync() => (await TcpWriteSubscription()).SendComplete();
         }
     }
 

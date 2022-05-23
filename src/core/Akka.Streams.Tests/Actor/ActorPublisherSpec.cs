@@ -17,7 +17,6 @@ using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -51,8 +50,7 @@ my-dispatcher1 {
 
         public ActorPublisherSpec(ITestOutputHelper output = null)
             : base(
-                Config.WithFallback(
-                    ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")),
+                Config.WithFallback(StreamTestDefaultMailbox.DefaultConfig),
                 output)
         {
             EventFilter.Exception<IllegalStateException>().Mute();

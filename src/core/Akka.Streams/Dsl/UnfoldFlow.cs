@@ -57,7 +57,8 @@ namespace Akka.Streams.Dsl
             }
         }
 
-        public void OnDownstreamFinish()
+        // TODO: Is this correct? check JVM please
+        public void OnDownstreamFinish(Exception cause)
         {
             // Do Nothing until `timeout` to try and intercept completion as downstream,
             // but cancel stream after timeout if inlet is not closed to prevent deadlock.

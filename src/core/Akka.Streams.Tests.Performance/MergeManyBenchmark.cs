@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using NBench;
 
 namespace Akka.Streams.Tests.Performance
@@ -30,8 +30,7 @@ namespace Akka.Streams.Tests.Performance
         [PerfSetup]
         public void Setup(BenchmarkContext context)
         {
-            _actorSystem = ActorSystem.Create("MergeManyBenchmark",
-                ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf"));
+            _actorSystem = ActorSystem.Create("MergeManyBenchmark", StreamTestDefaultMailbox.DefaultConfig);
             _actorSystem.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             _materializerSettings = ActorMaterializerSettings.Create(_actorSystem).WithDispatcher("akka.test.stream-dispatcher");
             _materializer = _actorSystem.Materializer(_materializerSettings);

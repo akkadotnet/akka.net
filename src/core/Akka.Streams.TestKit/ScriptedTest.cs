@@ -9,17 +9,18 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Internal;
 using Reactive.Streams;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.TestKit.Tests
+namespace Akka.Streams.TestKit
 {
     [Serializable]
     public class ScriptException : Exception
@@ -164,6 +165,12 @@ namespace Akka.Streams.TestKit.Tests
                 DebugLog($"Starting with remaining demand={_remainingDemand}");
             }
 
+            public new async Task<ScriptRunner<TIn, TOut, TMat>> InitializeAsync()
+            {
+                await base.InitializeAsync();
+                return this;
+            }
+
             public bool MayProvideInput => _currentScript.SomeInputsPending && (_pendingRequests > 0) && (_currentScript.PendingOutputs <= _maximumBuffer);
             public bool MayRequestMore => _remainingDemand > 0;
 
@@ -195,11 +202,16 @@ namespace Akka.Streams.TestKit.Tests
                 _outstandingDemand += demand;
             }
 
+            [Obsolete("Will be removed after async_testkit conversion is done. Use ShakeItAsync instead")]
             public bool ShakeIt()
+                => ShakeItAsync()
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+            
+            public async Task<bool> ShakeItAsync()
             {
                 var oneMilli = TimeSpan.FromMilliseconds(10);
                 var marker = new object();
-                var u = Upstream.ReceiveWhile(oneMilli, filter: msg =>
+                var u = await Upstream.ReceiveWhileAsync(oneMilli, filter: msg =>
                 {
                     if (msg is TestPublisher.RequestMore more)
                     {
@@ -209,36 +221,43 @@ namespace Akka.Streams.TestKit.Tests
                     }
                     DebugLog($"Operation received {msg}");
                     return null;
-                });
-                var d = Downstream.ReceiveWhile(oneMilli, filter: msg => msg.Match()
-                    .With<TestSubscriber.OnNext<TOut>>(next =>
+                }).ToListAsync();
+                var d = await Downstream.ReceiveWhileAsync(oneMilli, filter: msg =>
                     {
-                        DebugLog($"Operation produces [{next.Element}]");
-                        if (_outstandingDemand == 0) throw new Exception("operation produced while there was no demand");
-                        _outstandingDemand--;
-                        _currentScript = _currentScript.ConsumeOutput(next.Element);
+                        switch (msg)
+                        {
+                            case TestSubscriber.OnNext<TOut> next:
+                                DebugLog($"Operation produces [{next.Element}]");
+                                if (_outstandingDemand == 0)
+                                    throw new Exception("operation produced while there was no demand");
+                                _outstandingDemand--;
+                                _currentScript = _currentScript.ConsumeOutput(next.Element);
+                                return marker;
+                            case TestSubscriber.OnComplete _:
+                                DebugLog("Operation complete.");
+                                _currentScript = _currentScript.Complete();
+                                return marker;
+                            case TestSubscriber.OnError error:
+                                _currentScript = _currentScript.Error(error.Cause);
+                                return marker;
+                            default:
+                                return null;
+                        }
                     })
-                    .With<TestSubscriber.OnComplete>(complete =>
-                    {
-                        DebugLog("Operation complete.");
-                        _currentScript = _currentScript.Complete();
-                    })
-                    .With<TestSubscriber.OnError>(error =>
-                    {
-                        _currentScript = _currentScript.Error(error.Cause);
-                    })
-                    .WasHandled
-                    ? marker
-                    : null);
+                    .ToListAsync();
 
                 return u.Concat(d).Any(x => x == marker);
             }
 
+            [Obsolete("Will be removed after async_testkit conversion is done. Use RunAsync instead")]
             public void Run()
+                => RunAsync()
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+            
+            public async Task RunAsync()
             {
                 try
                 {
-
                     DebugLog($"Running {_currentScript}");
                     Request(GetNextDemand());
                     var idleRounds = 0;
@@ -249,14 +268,12 @@ namespace Akka.Streams.TestKit.Tests
                         if (_currentScript.Completed)
                             break;
 
-                        idleRounds = ShakeIt() ? 0 : idleRounds + 1;
+                        idleRounds = await ShakeItAsync() ? 0 : idleRounds + 1;
 
                         var tieBreak = ThreadLocalRandom.Current.Next(0, 1) == 0;
                         if (MayProvideInput && (!MayRequestMore || tieBreak))
                         {
-                            var next = _currentScript.ProvideInput();
-                            var input = next.Item1;
-                            var nextScript = next.Item2;
+                            var (input, nextScript) = _currentScript.ProvideInput();
                             DebugLog($"Test environment produces [{input}]");
                             _pendingRequests--;
                             _currentScript = nextScript;
@@ -303,11 +320,28 @@ namespace Akka.Streams.TestKit.Tests
         {
         }
 
-        protected void RunScript<TIn2, TOut2, TMat2>(Script<TIn2, TOut2> script, ActorMaterializerSettings settings,
+        [Obsolete("Will be removed after async_testkit conversion is done. Use RunScriptAsync instead")]
+        protected void RunScript<TIn2, TOut2, TMat2>(
+            Script<TIn2, TOut2> script, 
+            ActorMaterializerSettings settings,
             Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
-            int maximumOverrun = 3, int maximumRequest = 3, int maximumBuffer = 3)
+            int maximumOverrun = 3,
+            int maximumRequest = 3,
+            int maximumBuffer = 3)
+            => RunScriptAsync(script, settings, op, maximumOverrun, maximumRequest, maximumBuffer)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+        
+        protected async Task RunScriptAsync<TIn2, TOut2, TMat2>(
+            Script<TIn2, TOut2> script, 
+            ActorMaterializerSettings settings,
+            Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
+            int maximumOverrun = 3,
+            int maximumRequest = 3,
+            int maximumBuffer = 3)
         {
-            new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this).Run();
+            var runner = await new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this)
+                .InitializeAsync();
+            await runner.RunAsync();
         }
 
         protected static IPublisher<TOut> ToPublisher<TOut>(Source<TOut, NotUsed> source, IMaterializer materializer)

@@ -254,7 +254,7 @@ namespace Akka.Streams
 
                     SetHandler(killSwitch.Out2,
                         onPull: () => Pull(killSwitch.In2),
-                        onDownstreamFinish: () => Cancel(killSwitch.In2));
+                        onDownstreamFinish: cause => Cancel(killSwitch.In2, cause));
                 }
 
                 public override void OnPush() => Push(_killSwitch.Out1, Grab(_killSwitch.In1));
@@ -265,7 +265,7 @@ namespace Akka.Streams
 
                 public override void OnPull() => Pull(_killSwitch.In1);
 
-                public override void OnDownstreamFinish() => Cancel(_killSwitch.In1);
+                public override void OnDownstreamFinish(Exception cause) => Cancel(_killSwitch.In1, cause);
             }
 
             #endregion

@@ -20,7 +20,9 @@ using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.TestKit.Extensions;
 using FluentAssertions.Execution;
+using Akka.Tests.Util;
 
 namespace Akka.Tests.Actor
 {
@@ -63,7 +65,7 @@ namespace Akka.Tests.Actor
         /// }
         /// </summary>
         [Fact]
-        public void Logs_config_on_start_with_info_level()
+        public async Task Logs_config_on_start_with_info_level()
         {
             var config = ConfigurationFactory.ParseString("akka.log-config-on-start = on")
                 .WithFallback(DefaultConfig);
@@ -76,13 +78,13 @@ namespace Akka.Tests.Actor
 
             // Notice here we forcedly start actor system again to monitor how it processes
             var expected = "log-config-on-start : on";
-            eventFilter.Info(contains:expected).ExpectOne(() => system.Start());
+            await eventFilter.Info(contains:expected).ExpectOneAsync(() => system.Start());
 
-            system.Terminate();
+            await system.Terminate();
         }
 
         [Fact]
-        public void Does_not_log_config_on_start()
+        public async Task Does_not_log_config_on_start()
         {
             var config = ConfigurationFactory.ParseString("akka.log-config-on-start = off")
                 .WithFallback(DefaultConfig);
@@ -94,21 +96,21 @@ namespace Akka.Tests.Actor
             var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
-            eventFilter.Info().Expect(0, () => system.Start());
+            await eventFilter.Info().ExpectAsync(0, () => system.Start());
 
-            system.Terminate();
+            await system.Terminate();
         }
 
         [Fact]
-        public void Allow_valid_names()
+        public async Task Allow_valid_names()
         {
-            ActorSystem
+            await ActorSystem
                 .Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-")
                 .Terminate();
         }
 
         [Fact]
-        public void Log_dead_letters()
+        public async Task Log_dead_letters()
         {
             var sys = ActorSystem.Create("LogDeadLetters", ConfigurationFactory.ParseString("akka.loglevel=INFO")
                 .WithFallback(DefaultConfig));
@@ -118,7 +120,7 @@ namespace Akka.Tests.Actor
                 var a = sys.ActorOf(Props.Create<Terminater>());
 
                 var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(sys));
-                eventFilter.Info(contains: "not delivered").Expect(1, () =>
+                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, () =>
                 {
                     a.Tell("run");
                     a.Tell("boom");
@@ -128,25 +130,25 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Block_until_exit()
+        public async Task Block_until_exit()
         {
             var actorSystem = ActorSystem
                 .Create(Guid.NewGuid().ToString());
             var st = Stopwatch.StartNew();
             var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(_ => actorSystem.Terminate());
-            actorSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
+            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(2))).ShouldBeTrue();
             Assert.True(st.Elapsed.TotalSeconds >= .9);
         }
 
         [Fact]
-        public void Given_a_system_that_isnt_going_to_shutdown_When_waiting_for_system_shutdown_Then_it_times_out()
+        public async Task Given_a_system_that_isnt_going_to_shutdown_When_waiting_for_system_shutdown_Then_it_times_out()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
-            actorSystem.WhenTerminated.Wait(TimeSpan.FromMilliseconds(10)).ShouldBeFalse();
+            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromMilliseconds(10))).ShouldBeFalse();
         }
 
         [Fact]
-        public void Run_termination_callbacks_in_order()
+        public async Task Run_termination_callbacks_in_order()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
             var result = new List<int>();
@@ -167,7 +169,7 @@ namespace Akka.Tests.Actor
                 });
             }
 
-            actorSystem.Terminate();
+            await actorSystem.Terminate();
             latch.Ready();
 
             expected.Reverse();
@@ -176,7 +178,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void AwaitTermination_after_termination_callbacks()
+        public async Task AwaitTermination_after_termination_callbacks()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
             var callbackWasRun = false;
@@ -193,23 +195,23 @@ namespace Akka.Tests.Actor
                 actorSystem.Terminate();
             });
 
-            actorSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(5));
+            await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(5));
             Assert.True(callbackWasRun);
         }
 
         [Fact]
-        public void Throw_exception_when_register_callback_after_shutdown()
+        public async Task Throw_exception_when_register_callback_after_shutdown()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
 
-            actorSystem.Terminate().Wait(TimeSpan.FromSeconds(10));
+            await actorSystem.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(10));
             
             var ex = Assert.Throws<InvalidOperationException>(() => actorSystem.RegisterOnTermination(() => { }));
             Assert.Equal("ActorSystem already terminated.", ex.Message);
         }
 
         [Fact]
-        public void Reliably_create_waves_of_actors()
+        public async Task Reliably_create_waves_of_actors()
         {
             var timeout = Dilated(TimeSpan.FromSeconds(20));
             var waves = Task.WhenAll(
@@ -217,16 +219,16 @@ namespace Akka.Tests.Actor
                 Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000),
                 Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000));
 
-            waves.Wait(timeout.Duration() + TimeSpan.FromSeconds(5));
+            await waves.AwaitWithTimeout(timeout.Duration() + TimeSpan.FromSeconds(5));
 
             Assert.Equal(new[] { "done", "done", "done" }, waves.Result);
         }
 
         [Fact]
-        public void Find_actors_that_just_have_been_created()
+        public async Task Find_actors_that_just_have_been_created()
         {
             Sys.ActorOf(Props.Create(() => new FastActor(new TestLatch(), TestActor)).WithDispatcher("slow"));
-            Assert.Equal(typeof(LocalActorRef), ExpectMsg<Type>());
+            Assert.Equal(typeof(LocalActorRef), await ExpectMsgAsync<Type>());
         }
 
         [Fact()]
@@ -313,7 +315,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Allow_configuration_of_guardian_supervisor_strategy()
+        public async Task Allow_configuration_of_guardian_supervisor_strategy()
         {
             var config = ConfigurationFactory.ParseString("akka.actor.guardian-supervisor-strategy=\"Akka.Actor.StoppingSupervisorStrategy\"")
                 .WithFallback(DefaultConfig);
@@ -330,12 +332,12 @@ namespace Akka.Tests.Actor
 
             a.Tell("die");
 
-            var t = probe.ExpectTerminated(a);
+            var t = await probe.ExpectTerminatedAsync(a);
 
             Assert.True(t.ExistenceConfirmed);
             Assert.False(t.AddressTerminated);
 
-            system.Terminate();
+            await system.Terminate();
         }
 
         [Fact]

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -78,10 +79,10 @@ namespace Akka.Persistence.TCK.Query
             var pref = Setup("e");
 
             var src = queries.EventsByPersistenceId("e", 0, long.MaxValue);
-            var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
-                .Request(2)
+            var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
+            probe.Request(2)
                 .ExpectNext("e-1", "e-2")
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(100)) as TestSubscriber.Probe<object>;
+                .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             pref.Tell("e-4");
             ExpectMsg("e-4-done");
@@ -126,10 +127,10 @@ namespace Akka.Persistence.TCK.Query
             return Sys.ActorOf(Query.TestActor.Props(persistenceId));
         }
 
-        protected override void Dispose(bool disposing)
+        public override Task DisposeAsync()
         {
             Materializer.Dispose();
-            base.Dispose(disposing);
+            return base.DisposeAsync();
         }
     }
 }

@@ -104,8 +104,8 @@ namespace Akka.TestKit.Xunit
         /// This method is called when a test ends.
         /// 
         /// <remarks>
-        /// If you override this, then make sure you either call base.AfterTest() or
-        /// <see cref="TestKitBase.Shutdown(TimeSpan?,bool)">TestKitBase.Shutdown</see>
+        /// If you override this, then make sure you either call <c>base.AfterTest()</c> or
+        /// <c>TestKitBase.Shutdown</c>
         /// to shut down the system. Otherwise a memory leak will occur.
         /// </remarks>
         /// </summary>

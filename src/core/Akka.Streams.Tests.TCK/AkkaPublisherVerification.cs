@@ -12,7 +12,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
@@ -36,8 +35,7 @@ namespace Akka.Streams.Tests.TCK
                 new TestEnvironment(Timeouts.DefaultTimeoutMillis,
                     TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds(), writeLineDebug),
                 Timeouts.PublisherShutdownTimeoutMillis,
-                AkkaSpec.AkkaSpecConfig.WithFallback(
-                    ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")))
+                AkkaSpec.AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig))
         {
         }
 

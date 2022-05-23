@@ -15,29 +15,30 @@ using Akka.TestKit.TestActors;
 using Xunit;
 using Akka.Util.Internal;
 using FluentAssertions;
+using System.Threading.Tasks;
 
 namespace Akka.Tests.Actor
 {
     public class ActorRefIgnoreSpec : AkkaSpec, INoImplicitSender
     {
         [Fact]
-        public void IgnoreActorRef_should_ignore_all_incoming_messages()
+        public async Task IgnoreActorRef_should_ignore_all_incoming_messages()
         {
             var askMeRef = Sys.ActorOf(Props.Create(() => new AskMeActor()));
 
             var probe = CreateTestProbe("response-probe");
             askMeRef.Tell(new Request(probe.Ref));
-            probe.ExpectMsg(1);
+            await probe.ExpectMsgAsync(1);
 
             // this is more a compile-time proof
             // since the reply is ignored, we can't check that a message was sent to it
             askMeRef.Tell(new Request(Sys.IgnoreRef));
 
-            probe.ExpectNoMsg();
+            await probe.ExpectNoMsgAsync(default);
 
             // but we do check that the counter has increased when we used the ActorRef.ignore
             askMeRef.Tell(new Request(probe.Ref));
-            probe.ExpectMsg(3);
+            await probe.ExpectMsgAsync(3);
         }
 
         [Fact]
@@ -55,14 +56,14 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void IgnoreActorRef_should_be_watchable_from_another_actor_without_throwing_an_exception()
+        public async Task IgnoreActorRef_should_be_watchable_from_another_actor_without_throwing_an_exception()
         {
             var probe = CreateTestProbe("probe-response");
             var forwardMessageRef = Sys.ActorOf(Props.Create(() => new ForwardMessageWatchActor(probe)));
 
             // this proves that the actor started and is operational and 'watch' didn't impact it
             forwardMessageRef.Tell("abc");
-            probe.ExpectMsg("abc");
+            await probe.ExpectMsgAsync("abc");
         }
 
         [Fact]

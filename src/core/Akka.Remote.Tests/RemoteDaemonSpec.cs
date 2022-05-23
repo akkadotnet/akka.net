@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
@@ -59,7 +60,7 @@ akka {
         }
 
         [Fact]
-        public void Can_create_actor_using_remote_daemon_and_interact_with_child()
+        public async Task Can_create_actor_using_remote_daemon_and_interact_with_child()
         {
             var p = CreateTestProbe();
             Sys.EventStream.Subscribe(p.Ref, typeof(string));
@@ -82,7 +83,7 @@ akka {
             //pass a message to the child
             child.Tell("hello");
             //expect the child to forward the message to the eventstream
-            p.ExpectMsg("hello");
+            await p.ExpectMsgAsync("hello");
         }
     }
 }

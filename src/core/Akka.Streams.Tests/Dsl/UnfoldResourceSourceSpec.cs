@@ -9,13 +9,13 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;
@@ -308,9 +308,9 @@ namespace Akka.Streams.Tests.Dsl
             closedCounter.Current.Should().Be(1);
         }
 
-        protected override void AfterAll()
+        protected override async Task AfterAllAsync()
         {
-            base.AfterAll();
+            await base.AfterAllAsync();
             _manyLinesFile.Delete();
         }
     }

@@ -11,7 +11,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -70,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private ActorMaterializer Materializer { get; }
 
-        public ActorRefBackpressureSinkSpec(ITestOutputHelper output) : base(output, ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf"))
+        public ActorRefBackpressureSinkSpec(ITestOutputHelper output) : base(output, StreamTestDefaultMailbox.DefaultConfig)
         {
             Materializer = ActorMaterializer.Create(Sys);
         }

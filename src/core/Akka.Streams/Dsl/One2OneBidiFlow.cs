@@ -119,7 +119,7 @@ namespace Akka.Streams.Dsl
                     else
                         _pullSuppressed = true;
                 },
-                    onDownstreamFinish: () => Cancel(_inInlet));
+                    onDownstreamFinish: cause => Cancel(_inInlet, cause));
             }
 
             private void SetOutInletHandler()
@@ -152,7 +152,7 @@ namespace Akka.Streams.Dsl
 
             private void SetOutOutletHandler()
             {
-                SetHandler(_outOutlet, onPull: () => Pull(_outInlet), onDownstreamFinish: () => Cancel(_outInlet));
+                SetHandler(_outOutlet, onPull: () => Pull(_outInlet), onDownstreamFinish: cause => Cancel(_outInlet, cause));
             }
         }
 

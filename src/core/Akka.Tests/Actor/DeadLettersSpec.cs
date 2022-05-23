@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -16,11 +17,11 @@ namespace Akka.Tests
     public class DeadLettersSpec : AkkaSpec
     {
         [Fact]
-        public void Can_send_messages_to_dead_letters()
+        public async Task Can_send_messages_to_dead_letters()
         {
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
             Sys.DeadLetters.Tell("foobar");
-            ExpectMsg<DeadLetter>(deadLetter=>deadLetter.Message.Equals("foobar"));
+            await ExpectMsgAsync<DeadLetter>(deadLetter=>deadLetter.Message.Equals("foobar"));
         }
     }
 }

@@ -988,7 +988,7 @@ namespace Akka.Streams.Implementation
                     }));
 
                 subOutlet.SetHandler(new LambdaOutHandler(
-                    () =>
+                    onPull: () =>
                     {
                         if (firstElementPushed)
                             Pull(_stage.In);
@@ -1006,9 +1006,9 @@ namespace Akka.Streams.Implementation
                             }
                         }
                     },
-                    () =>
+                    onDownstreamFinish: cause =>
                     {
-                        if (!IsClosed(_stage.In)) Cancel(_stage.In);
+                        if (!IsClosed(_stage.In)) Cancel(_stage.In, cause);
                         MaybeCompleteStage();
                     }));
 

@@ -12,7 +12,6 @@ using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -173,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.Cancel();
 
-                ExpectMsgAllOf<object>(QueueClosed.Instance, "done");
+                ExpectMsgAllOf(new object[]{ QueueClosed.Instance, "done" });
             }, _materializer);
         }
 

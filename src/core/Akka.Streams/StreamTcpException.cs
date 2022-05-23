@@ -62,6 +62,12 @@ namespace Akka.Streams
             : base(message)
         {
         }
+        
+        public StreamDetachedException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+        
     }
 
     /// <summary>

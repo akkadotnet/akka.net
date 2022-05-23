@@ -8,14 +8,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Remote.Tests
 {
 
-    public class AccrualFailureDetectorSpec : AkkaSpec
+    public class AccrualFailureDetectorSpec
     {
         public static IEnumerable<(T, T)> Slide<T>(IEnumerable<T> values)
         {

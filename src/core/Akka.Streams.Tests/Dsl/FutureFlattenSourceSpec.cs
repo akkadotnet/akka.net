@@ -13,10 +13,12 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -24,22 +26,26 @@ namespace Akka.Streams.Tests.Dsl
     {
         private readonly IMaterializer _materializer;
 
-        private static readonly Source<int, string> underlying =
-            Source.From(new List<int>() { 1, 2, 3 }).MapMaterializedValue(_ => "foo");
+        private static readonly Source<int, string> Underlying =
+            Source.From(new List<int> { 1, 2, 3 }).MapMaterializedValue(_ => "foo");
 
-        public FutureFlattenSourceSpec() => _materializer = ActorMaterializer.Create(Sys);
+        public FutureFlattenSourceSpec(ITestOutputHelper helper): base(helper)
+        {
+            _materializer = ActorMaterializer.Create(Sys);
+        }
 
         [Fact]
-        public void TaskSource_must_emit_the_elements_of_the_already_successful_task_source()
+        public async Task TaskSource_must_emit_the_elements_of_the_already_successful_task_source()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var (sourceMatVal, sinkMatVal) = Source.FromTaskSource(Task.FromResult(underlying))
+                var (sourceMatVal, sinkMatVal) = Source.FromTaskSource(Task.FromResult(Underlying))
                     .ToMaterialized(Sink.Seq<int>(), Keep.Both)
                     .Run(_materializer);
 
-                sourceMatVal.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                sinkMatVal.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                // wait until the underlying task is completed
+                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
+                await sinkMatVal.ShouldCompleteWithin(3.Seconds());
 
                 // should complete as soon as inner source has been materialized
                 sourceMatVal.Result.Should().Be("foo");
@@ -48,30 +54,31 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void TaskSource_must_emit_no_elements_before_the_task_of_source_successful()
+        public async Task TaskSource_must_emit_no_elements_before_the_task_of_source_successful()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var c = this.CreateManualSubscriberProbe<int>();
                 var sourcePromise = new TaskCompletionSource<Source<int, string>>();
 
                 Source.FromTaskSource(sourcePromise.Task).RunWith(Sink.AsPublisher<int>(true), _materializer).Subscribe(c);
-                var sub = c.ExpectSubscription();
-                c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                
+                var sub = await c.ExpectSubscriptionAsync();
+                await c.AsyncBuilder().ExpectNoMsg(TimeSpan.FromMilliseconds(100)).ExecuteAsync();
                 sub.Request(3);
-                c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                sourcePromise.SetResult(underlying);
-                c.ExpectNext(1);
-                c.ExpectNext(2);
-                c.ExpectNext(3);
-                c.ExpectComplete();
+                await c.AsyncBuilder().ExpectNoMsg(TimeSpan.FromMilliseconds(100)).ExecuteAsync();
+                sourcePromise.SetResult(Underlying);
+                await c.AsyncBuilder()
+                    .ExpectNext(1, 2, 3)
+                    .ExpectComplete()
+                    .ExecuteAsync();
             }, _materializer);
         }
 
         [Fact]
-        public void TaskSource_must_emit_the_elements_of_the_task_source()
+        public async Task TaskSource_must_emit_the_elements_of_the_task_source()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var sourcePromise = new TaskCompletionSource<Source<int, string>>();
 
@@ -79,8 +86,12 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(Sink.Seq<int>(), Keep.Both)
                     .Run(_materializer);
 
-                sourcePromise.SetResult(underlying);
+                sourcePromise.SetResult(Underlying);
 
+                // wait until the underlying task is completed
+                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
+                await sinkMatVal.ShouldCompleteWithin(3.Seconds());
+                
                 // should complete as soon as inner source has been materialized
                 sourceMatVal.Result.Should().Be("foo");
                 sinkMatVal.Result.Should().BeEquivalentTo(ImmutableList.CreateRange(new List<int>() { 1, 2, 3 }));
@@ -88,9 +99,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void TaskSource_must_handle_downstream_cancelling_before_the_underlying_task_completes()
+        public async Task TaskSource_must_handle_downstream_cancelling_before_the_underlying_task_completes()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var sourcePromise = new TaskCompletionSource<Source<int, string>>();
                 var probe = this.CreateSubscriberProbe<int>();
@@ -100,15 +111,19 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(_materializer);
 
                 // wait for cancellation to occur
-                probe.EnsureSubscription();
-                probe.Request(1);
-                probe.Cancel();
-
-                // try to avoid a race between probe cancel and completing the promise
-                Thread.Sleep(100);
+                await probe.AsyncBuilder()
+                    .EnsureSubscription()
+                    .Request(1)
+                    .Cancel()
+                    .ExpectComplete()
+                    .ExecuteAsync();
 
                 // even though canceled the underlying matval should arrive
-                sourcePromise.SetResult(underlying);
+                sourcePromise.SetResult(Underlying);
+                
+                // wait until the underlying task is completed
+                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
+                
                 var failure = sourceMatVal.Exception.Flatten().InnerException;
                 failure.Should().BeAssignableTo<StreamDetachedException>();
                 failure.Message.Should().Be("Stream cancelled before Source Task completed");
@@ -116,9 +131,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void TaskSource_must_fail_if_the_underlying_task_is_failed()
+        public async Task TaskSource_must_fail_if_the_underlying_task_is_failed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var failure = new TestException("foo");
                 var underlying = Task.FromException<Source<int, string>>(failure);
@@ -128,7 +143,8 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(_materializer);
 
                 // wait until the underlying task is completed
-                Thread.Sleep(100);
+                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
+                await sinkMatVal.ShouldCompleteWithin(3.Seconds());
 
                 sourceMatVal.Exception.Flatten().InnerException.Should().Be(failure);
                 sinkMatVal.Exception.Flatten().InnerException.Should().Be(failure);
@@ -136,9 +152,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void TaskSource_must_fail_as_the_underlying_task_fails_after_outer_source_materialization()
+        public async Task TaskSource_must_fail_as_the_underlying_task_fails_after_outer_source_materialization()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var failure = new TestException("foo");
                 var sourcePromise = new TaskCompletionSource<Source<int, string>>();
@@ -153,10 +169,13 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(Sink.Seq<int>(), Keep.Both)
                     .Run(_materializer);
 
-                // we don't know that materialization completed yet (this is still a bit racy)
+                // we don't know that materialization completed yet (is this still a bit racy after async conversion?)
                 materializationLatch.Ready(RemainingOrDefault);                
                 sourcePromise.SetException(failure);
-                Thread.Sleep(100);
+                
+                // wait until the underlying tasks are completed
+                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
+                await sinkMatVal.ShouldCompleteWithin(3.Seconds());
 
                 sourceMatVal.Exception.Flatten().InnerException.Should().Be(failure);
                 sinkMatVal.Exception.Flatten().InnerException.Should().Be(failure);
@@ -164,9 +183,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void TaskSource_must_fail_as_the_underlying_task_fails_after_outer_source_materialization_with_no_demand()
+        public async Task TaskSource_must_fail_as_the_underlying_task_fails_after_outer_source_materialization_with_no_demand()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var failure = new TestException("foo");
                 var sourcePromise = new TaskCompletionSource<Source<int, string>>();
@@ -176,18 +195,20 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(testProbe))
                     .Run(_materializer);
 
-                testProbe.ExpectSubscription();
+                await testProbe.ExpectSubscriptionAsync();
                 sourcePromise.SetException(failure);
-                Thread.Sleep(100);
+                
+                // wait until the underlying tasks are completed
+                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
 
                 sourceMatVal.Exception.Flatten().InnerException.Should().Be(failure);
             }, _materializer);
         }
 
         [Fact]
-        public void TaskSource_must_handle_backpressure_when_the_task_completes()
+        public async Task TaskSource_must_handle_backpressure_when_the_task_completes()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = this.CreateSubscriberProbe<int>();
                 var publisher = this.CreatePublisherProbe<int>();
@@ -197,27 +218,27 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(subscriber))
                     .Run(_materializer);
 
-                subscriber.EnsureSubscription();
+                await subscriber.EnsureSubscriptionAsync();
                 sourcePromise.SetResult(Source.FromPublisher(publisher).MapMaterializedValue(_ => "woho"));
 
+                await matVal.ShouldCompleteWithin(3.Seconds());
                 // materialized value completes but still no demand
                 matVal.Result.Should().Be("woho");
 
                 // then demand and let an element through to see it works
-                subscriber.EnsureSubscription();
-                subscriber.Request(1);
-                publisher.ExpectRequest();
+                await subscriber.AsyncBuilder().Request(1).ExecuteAsync();
+                await publisher.ExpectRequestAsync();
                 publisher.SendNext(1);
-                subscriber.ExpectNext(1);
+                await subscriber.AsyncBuilder().ExpectNext(1).ExecuteAsync();
                 publisher.SendComplete();
-                subscriber.ExpectComplete();
+                await subscriber.AsyncBuilder().ExpectComplete().ExecuteAsync();
             }, _materializer);
         }
 
         [Fact]
-        public void TaskSource_must_carry_through_cancellation_to_later_materialized_source()
+        public async Task TaskSource_must_carry_through_cancellation_to_later_materialized_source()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var subscriber = this.CreateSubscriberProbe<int>();
                 var publisher = this.CreatePublisherProbe<int>();
@@ -227,29 +248,33 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(subscriber))
                     .Run(_materializer);
 
-                subscriber.EnsureSubscription();
+                await subscriber.EnsureSubscriptionAsync();
                 sourcePromise.SetResult(Source.FromPublisher(publisher).MapMaterializedValue(_ => "woho"));
 
+                await matVal.ShouldCompleteWithin(3.Seconds());
                 // materialized value completes but still no demand
                 matVal.Result.Should().Be("woho");
 
                 // then demand and let an element through to see it works
-                subscriber.EnsureSubscription();
-                subscriber.Cancel();
-                publisher.ExpectCancellation();
+                await subscriber.AsyncBuilder()
+                    .EnsureSubscription()
+                    .Cancel()
+                    .ExecuteAsync();
+                await publisher.ExpectCancellationAsync();
             }, _materializer);
         }
 
         [Fact]
-        public void TaskSource_must_fail_when_the_task_source_materialization_fails()
+        public async Task TaskSource_must_fail_when_the_task_source_materialization_fails()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var inner = Task.FromResult(Source.FromGraph(new FailingMatGraphStage()));
                 var (innerSourceMat, outerSinkMat) = Source.FromTaskSource(inner).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
 
                 // wait until the underlying tasks are completed
-                Thread.Sleep(100);
+                await outerSinkMat.ShouldCompleteWithin(3.Seconds());
+                await innerSourceMat.ShouldCompleteWithin(3.Seconds());
 
                 outerSinkMat.Exception.Flatten().InnerException.Should().Be(new TestException("INNER_FAILED"));
                 innerSourceMat.Exception.Flatten().InnerException.Should().Be(new TestException("INNER_FAILED"));
