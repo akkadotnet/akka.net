@@ -46,16 +46,18 @@ namespace Akka.Cluster.Tests
             _cluster = Cluster.Get(Sys);
         }
 
-        protected void AwaitUp()
+        protected async Task AwaitUpAsync()
         {
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async() =>
             {
-                AwaitCondition(() => ClusterView.IsSingletonCluster);
+                await AwaitConditionAsync(() => ClusterView.IsSingletonCluster);
                 ClusterView.Self.Address.ShouldBe(_selfAddress);
                 ClusterView.Members.Select(m => m.Address).ShouldBe(new Address[] { _selfAddress });
-                AwaitAssert(() => ClusterView.Status.ShouldBe(MemberStatus.Up));
+                await AwaitAssertAsync(() => ClusterView.Status.ShouldBe(MemberStatus.Up));
             });
         }
+
+
         /// <summary>
         /// The expected log info pattern to intercept after a <see cref="Cluster.Join(Address)"/>.
         /// </summary>
@@ -122,7 +124,7 @@ namespace Akka.Cluster.Tests
             _cluster.Settings.LogInfo.ShouldBeTrue();
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
             await JoinAsync("is the new leader");
-            AwaitUp();
+            await AwaitUpAsync();
             await DownAsync("is no longer leader");
         }
     }
@@ -134,11 +136,11 @@ namespace Akka.Cluster.Tests
         { }
 
         [Fact]
-        public void A_cluster_must_not_log_verbose_cluster_events_by_default()
+        public async Task A_cluster_must_not_log_verbose_cluster_events_by_default()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
             Intercept<TrueException>(() => Join(upLogMessage));
-            AwaitUp();
+            await AwaitUpAsync();
             Intercept<TrueException>(() => Down(downLogMessage));
         }
     }
@@ -156,7 +158,7 @@ namespace Akka.Cluster.Tests
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeTrue();
             await JoinAsync(upLogMessage);
-            AwaitUp();
+            await AwaitUpAsync();
             await DownAsync(downLogMessage);
         }
     }

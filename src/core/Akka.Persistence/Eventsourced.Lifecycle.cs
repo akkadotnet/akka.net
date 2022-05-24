@@ -133,7 +133,7 @@ namespace Akka.Persistence
                 case DeleteMessagesFailure failure:
                 {
                     if (Log.IsWarningEnabled)
-                        Log.Warning("Failed to DeleteMessages ToSequenceNr [{0}] for PersistenceId [{1}] due to: [{2}: {3}]", failure.ToSequenceNr, PersistenceId, failure.Cause, failure.Cause.Message);
+                        Log.Warning(failure.Cause, "Failed to DeleteMessages ToSequenceNr [{0}] for PersistenceId [{1}] due to: {2}", failure.ToSequenceNr, PersistenceId, failure.Cause.Message);
                     break;
                 }
             }

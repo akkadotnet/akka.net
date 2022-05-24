@@ -232,6 +232,12 @@ namespace Akka.Pattern
             return CurrentState.Invoke(body);
         }
 
+        public Task<T> WithCircuitBreaker<T, TState>(TState state,
+            Func<TState, Task<T>> body)
+        {
+            return CurrentState.InvokeState(state, body);
+        }
+
         /// <summary>
         /// Wraps invocation of asynchronous calls that need to be protected
         /// </summary>
@@ -241,6 +247,10 @@ namespace Akka.Pattern
         {
             return CurrentState.Invoke(body);
         }
+        public Task WithCircuitBreaker<TState>(TState state, Func<TState, Task> body)
+        {
+            return CurrentState.InvokeState(state, body);
+        }
 
         /// <summary>
         /// The failure will be recorded farther down.
@@ -248,7 +258,7 @@ namespace Akka.Pattern
         /// <param name="body">TBD</param>
         public void WithSyncCircuitBreaker(Action body)
         {
-            var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
+            var cbTask = WithCircuitBreaker(body,(b) => Task.Factory.StartNew(b));
             if (!cbTask.Wait(CallTimeout))
             {
                 //throw new TimeoutException( string.Format( "Execution did not complete within the time allotted {0} ms", CallTimeout.TotalMilliseconds ) );
@@ -275,7 +285,7 @@ namespace Akka.Pattern
         /// <returns><typeparamref name="T"/> or default(<typeparamref name="T"/>)</returns>
         public T WithSyncCircuitBreaker<T>(Func<T> body)
         {
-            var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
+            var cbTask = WithCircuitBreaker(body,(b) => Task.Factory.StartNew(b));
             return cbTask.Wait(CallTimeout) ? cbTask.Result : default(T);
         }
 

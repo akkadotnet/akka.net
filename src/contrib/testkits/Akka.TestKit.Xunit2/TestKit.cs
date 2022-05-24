@@ -23,6 +23,28 @@ namespace Akka.TestKit.Xunit2
     /// </summary>
     public class TestKit : TestKitBase, IAsyncLifetime
     {
+        private class PrefixedOutput : ITestOutputHelper
+        {
+            private readonly ITestOutputHelper output;
+            private readonly string prefix;
+
+            public PrefixedOutput(ITestOutputHelper output, string prefix)
+            {
+                this.output = output;
+                this.prefix = prefix;
+            }
+
+            public void WriteLine(string message)
+            {
+                output.WriteLine(prefix + message);
+            }
+
+            public void WriteLine(string format, params object[] args)
+            {
+                output.WriteLine(prefix + format, args);
+            }
+        }
+
         /// <summary>
         /// The provider used to write test output.
         /// </summary>
@@ -102,7 +124,7 @@ namespace Akka.TestKit.Xunit2
 
         /// <summary>
         /// This method is called when a test ends.
-        /// 
+        ///
         /// <remarks>
         /// If you override this, then make sure you either call base.AfterAllAsync()
         /// to shut down the system. Otherwise a memory leak will occur.
@@ -127,6 +149,16 @@ namespace Akka.TestKit.Xunit2
             }
         }
 
+        protected void InitializeLogger(ActorSystem system, string prefix)
+        {
+            if (Output != null)
+            {
+                var extSystem = (ExtendedActorSystem)system;
+                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(
+                    string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))), "log-test");
+                logger.Tell(new InitializeLogger(system.EventStream));
+            }
+        }
         public virtual Task InitializeAsync()
         {
             return Task.CompletedTask;

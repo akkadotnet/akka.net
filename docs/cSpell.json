@@ -105,7 +105,10 @@
         "titlecase",
         "Varghese",
 		"Vertech",
-		"DeadLetter"
+		"DeadLetter",
+		"Blocksharp",
+		"Akkatecture",
+		"SharpPulsar"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links

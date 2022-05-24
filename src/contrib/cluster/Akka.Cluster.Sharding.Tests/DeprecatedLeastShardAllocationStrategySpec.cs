@@ -5,22 +5,20 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2;
-using Xunit;
-using FluentAssertions;
-using System.Collections;
-using System;
-using static Akka.Cluster.ClusterEvent;
 using Akka.Util;
+using FluentAssertions;
+using Xunit;
+using Xunit.Abstractions;
+using static Akka.Cluster.ClusterEvent;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class DeprecatedLeastShardAllocationStrategySpec : TestKit.Xunit2.TestKit
+    public class DeprecatedLeastShardAllocationStrategySpec : AkkaSpec
     {
         internal class TestLeastShardAllocationStrategy : LeastShardAllocationStrategy
         {
@@ -50,7 +48,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly IActorRef regionB;
         private readonly IActorRef regionC;
 
-        public DeprecatedLeastShardAllocationStrategySpec()
+        public DeprecatedLeastShardAllocationStrategySpec(ITestOutputHelper helper) : base(helper)
         {
             memberA = NewUpMember("127.0.0.1");
             memberB = NewUpMember("127.0.0.2");
@@ -242,15 +240,15 @@ namespace Akka.Cluster.Sharding.Tests
             var fakeRegionD = NewFakeRegion("most", newVersionMember3);
 
             var shardsAndMembers = ImmutableList.Create(
-                new Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionB, newVersionMember1, ImmutableList<string>.Empty),
-                new Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionA, leavingMember, ImmutableList<string>.Empty),
-                new Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionD, newVersionMember3, ImmutableList.Create("ShardId2", "ShardId3")),
-                new Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeLocalRegion, oldMember, ImmutableList<string>.Empty),
-                new Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionC, newVersionMember2, ImmutableList.Create("ShardId1"))
+                new Sharding.Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionB, newVersionMember1, ImmutableList<string>.Empty),
+                new Sharding.Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionA, leavingMember, ImmutableList<string>.Empty),
+                new Sharding.Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionD, newVersionMember3, ImmutableList.Create("ShardId2", "ShardId3")),
+                new Sharding.Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeLocalRegion, oldMember, ImmutableList<string>.Empty),
+                new Sharding.Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionC, newVersionMember2, ImmutableList.Create("ShardId1"))
                 );
 
             var sortedRegions =
-                shardsAndMembers.Sort(Internal.AbstractLeastShardAllocationStrategy.ShardSuitabilityOrdering.Instance).Select(i => i.Region);
+                shardsAndMembers.Sort(Sharding.Internal.AbstractLeastShardAllocationStrategy.ShardSuitabilityOrdering.Instance).Select(i => i.Region);
 
             // only node b has the new version
             sortedRegions.Should().Equal(

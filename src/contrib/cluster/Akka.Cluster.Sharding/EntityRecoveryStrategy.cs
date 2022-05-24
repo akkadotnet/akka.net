@@ -38,33 +38,33 @@ namespace Akka.Cluster.Sharding
 
     internal class ConstantRateEntityRecoveryStrategy : EntityRecoveryStrategy
     {
-        private readonly ActorSystem actorSystem;
-        private readonly TimeSpan frequency;
-        private readonly int numberOfEntities;
+        private readonly ActorSystem _actorSystem;
+        private readonly TimeSpan _frequency;
+        private readonly int _numberOfEntities;
 
         public ConstantRateEntityRecoveryStrategy(ActorSystem actorSystem, TimeSpan frequency, int numberOfEntities)
         {
-            this.actorSystem = actorSystem;
-            this.frequency = frequency;
-            this.numberOfEntities = numberOfEntities;
+            _actorSystem = actorSystem;
+            _frequency = frequency;
+            _numberOfEntities = numberOfEntities;
         }
 
         public override IImmutableSet<Task<IImmutableSet<EntityId>>> RecoverEntities(IImmutableSet<EntityId> entities)
         {
-            var stamp = frequency;
+            var stamp = _frequency;
             var builder = ImmutableHashSet<Task<IImmutableSet<EntityId>>>.Empty.ToBuilder();
-            foreach (var bucket in entities.Grouped(numberOfEntities))
+            foreach (var bucket in entities.Grouped(_numberOfEntities))
             {
                 var scheduled = ScheduleEntities(stamp, bucket.ToImmutableHashSet());
                 builder.Add(scheduled);
-                stamp += frequency;
+                stamp += _frequency;
             }
             return builder.ToImmutable();
         }
 
         private Task<IImmutableSet<EntityId>> ScheduleEntities(TimeSpan interval, IImmutableSet<EntityId> entityIds)
         {
-            return After(interval, actorSystem.Scheduler, () => Task.FromResult(entityIds));
+            return After(interval, _actorSystem.Scheduler, () => Task.FromResult(entityIds));
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace Akka.Cluster.Sharding
 
     public static class EnumerableExtensions
     {
-        /// <summary> 
+        /// <summary>
         /// Partitions elements in fixed size
         /// Credits to http://stackoverflow.com/a/13731854/465132
         /// </summary>

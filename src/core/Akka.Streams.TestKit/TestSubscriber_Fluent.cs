@@ -188,6 +188,9 @@ namespace Akka.Streams.TestKit
                 return this;
             }
             
+            public async Task ExpectCompleteAsync(CancellationToken cancellationToken = default)
+                => await ExpectCompleteTask(TestProbe, null, cancellationToken);
+            
             /// <summary>
             /// Fluent DSL. Expect completion with a timeout.
             /// </summary>
@@ -275,6 +278,33 @@ namespace Akka.Streams.TestKit
                     .ConfigureAwait(false).GetAwaiter().GetResult();
                 return this;                
             }
+        }
+
+        public partial class Probe<T>
+        {
+            public Probe<T> Request(long n)
+            {
+                EnsureSubscription();
+                Subscription.Request(n);
+                return this;
+            }
+
+            public Probe<T> Cancel()
+            {
+                EnsureSubscription();
+                Subscription.Cancel();
+                return this;
+            }
+
+            public Probe<T> RequestNext(T element)
+            {
+                EnsureSubscription();
+                Subscription.Request(1);
+                ExpectNext(element);
+                return this;
+            }
+
+
         }
     }
 }

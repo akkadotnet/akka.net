@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Text.RegularExpressions;
+using System;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
@@ -16,28 +16,21 @@ namespace Akka.Cluster.Sharding.Tests
     {
         protected static Config PersistenceConfig()
         {
-            return ConfigurationFactory.ParseString($@"""
-                akka.actor {{
-                    serializers {{
-                        hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-                    }}
-                    serialization-bindings {{
-                        ""System.Object"" = hyperion
-                    }}
-                }}
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
+            return ConfigurationFactory.ParseString(@"
                 akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-
-                akka.persistence.journal.MemoryJournal {{
-                    class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
-                    plugin-dispatcher = ""akka.actor.default-dispatcher""
-                }}
-                akka.persistence.journal.memory-journal-shared {{
+                akka.persistence.journal.memory-journal-shared {
                     class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
                     plugin-dispatcher = ""akka.actor.default-dispatcher""
                     timeout = 5s
-                }}
-                """);
+                }
+
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.memory-snapshot-store-shared""
+                akka.persistence.memory-snapshot-store-shared {
+                    class = ""Akka.Cluster.Sharding.Tests.MemorySnapshotStoreShared, Akka.Cluster.Sharding.Tests.MultiNode""
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    timeout = 5s
+                }
+                ");
         }
 
         /// <summary>
@@ -48,44 +41,57 @@ namespace Akka.Cluster.Sharding.Tests
         /// <param name="additionalConfig">additionalConfig additional config</param>
         /// <param name="loglevel">loglevel defaults to INFO</param>
         protected MultiNodeClusterShardingConfig(
-            string mode = ClusterShardingSettings.StateStoreModeDData,
+            StateStoreMode mode = StateStoreMode.DData,
             bool rememberEntities = false,
+            RememberEntitiesStore rememberEntitiesStore = RememberEntitiesStore.DData,
             string additionalConfig = "",
             string loglevel = "INFO")
         {
             Mode = mode;
             RememberEntities = rememberEntities;
+            RememberEntitiesStore = rememberEntitiesStore;
             AdditionalConfig = additionalConfig;
             Loglevel = loglevel;
 
-            Config persistenceConfig = (mode == ClusterShardingSettings.StateStoreModeDData) ? ConfigurationFactory.Empty : PersistenceConfig();
+            Config persistenceConfig = (mode == StateStoreMode.DData && rememberEntitiesStore != RememberEntitiesStore.Eventsourced) ? ConfigurationFactory.Empty : PersistenceConfig();
 
-            Config common =
-                ConfigurationFactory
-                    .ParseString($@"""
-                        akka.actor.provider = ""cluster""
-                        akka.cluster.testkit.auto-down-unreachable-after = 0s
-                        akka.cluster.sharding.state-store-mode = ""{mode}""
-                        akka.cluster.sharding.remember-entities = {rememberEntities}
-                        akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
-                        akka.loglevel = {loglevel}
-                        akka.remote.log-remote-lifecycle-events = off
+            Common =
+                ConfigurationFactory.ParseString($@"
+                    akka.actor.provider = ""cluster""
+                    akka.cluster.auto-down-unreachable-after = 0s
+                    akka.cluster.sharding.state-store-mode = ""{mode}""
+                    akka.cluster.sharding.remember-entities = {rememberEntities.ToString().ToLowerInvariant()}
+                    akka.cluster.sharding.remember-entities-store = ""{rememberEntitiesStore}""
 
-                        akka.cluster.sharding {{
-                            updating-state-timeout = 2s
-                            waiting-for-state-timeout = 2s
+                    akka.cluster.sharding.verbose-debug-logging = on
+
+                    akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
+                    akka.loglevel = {loglevel}
+                    akka.remote.log-remote-lifecycle-events = off
+                    akka.test.single-expect-default = 5 s
+
+                    akka.actor {{
+                        serializers {{
+                            hyperion = ""Akka.Cluster.Sharding.Tests.MultiNode.HyperionSerializerWrapper, Akka.Cluster.Sharding.Tests.MultiNode""
                         }}
-                        """)
+                        serialization-bindings {{
+                            ""System.Object"" = hyperion
+                        }}
+                    }}
+                    ")
                     .WithFallback(Sharding.ClusterSharding.DefaultConfig())
+                    .WithFallback(DistributedData.DistributedData.DefaultConfig())
                     .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
                     .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
-            CommonConfig = (ConfigurationFactory.ParseString(additionalConfig).WithFallback(persistenceConfig).WithFallback(common));
+            CommonConfig = (ConfigurationFactory.ParseString(additionalConfig).WithFallback(persistenceConfig).WithFallback(Common));
         }
 
-        public string Mode { get; }
+        public StateStoreMode Mode { get; }
         public bool RememberEntities { get; }
+        public RememberEntitiesStore RememberEntitiesStore { get; }
         public string AdditionalConfig { get; }
         public string Loglevel { get; }
+        public Config Common { get; }
     }
 }

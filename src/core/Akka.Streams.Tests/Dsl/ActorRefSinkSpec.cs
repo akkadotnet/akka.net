@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
@@ -56,6 +57,17 @@ namespace Akka.Streams.Tests.Dsl
             ExpectMsg(2);
             Sys.Stop(fw);
             publisher.ExpectCancellation();
+        }
+
+        [Fact]
+        public void ActorRefSink_should_sends_error_message_if_upstream_fails()
+        {
+            var actorProbe = CreateTestProbe();
+            var probe = this.SourceProbe<string>().To(Sink.ActorRef<string>(actorProbe.Ref, "complete", _ => "failure"))
+                .Run(Materializer);
+
+            probe.SendError(new Exception("oh dear"));
+            actorProbe.ExpectMsg("failure");
         }
     }
 }

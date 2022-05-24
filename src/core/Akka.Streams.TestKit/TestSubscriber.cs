@@ -92,7 +92,7 @@ namespace Akka.Streams.TestKit
         {
             private readonly TestKitBase _testKit;
             internal readonly TestProbe TestProbe;
-            private volatile ISubscription _subscription;
+            private volatile ISubscription _subscription_DoNotUseDirectly;
 
             internal ManualProbe(TestKitBase testKit)
             {
@@ -103,8 +103,8 @@ namespace Akka.Streams.TestKit
             public ISubscription Subscription
             {
 #pragma warning disable CS0420
-                get => Volatile.Read(ref _subscription);
-                internal set => Volatile.Write(ref _subscription, value);
+                get => Volatile.Read(ref _subscription_DoNotUseDirectly);
+                protected set => Volatile.Write(ref _subscription_DoNotUseDirectly, value);
 #pragma warning restore CS0420
             }
 
@@ -188,6 +188,10 @@ namespace Akka.Streams.TestKit
                 => await ExpectNextTask(TestProbe, timeout, cancellationToken)
                     .ConfigureAwait(false);
 
+            public async Task ExpectNextAsync(T element, CancellationToken cancellationToken = default)
+                => await ExpectNextTask(probe: TestProbe, element: element, timeout: null, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+            
             /// <summary>
             /// Expect and return the next <paramref name="n"/> stream elements.
             /// </summary>
@@ -459,32 +463,27 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Ensure that the probe has received or will receive a subscription
             /// </summary>
-            public async Task<Probe<T>> EnsureSubscriptionAsync(CancellationToken cancellationToken = default)
-            {
-                await EnsureSubscriptionTask(this, cancellationToken);
-                return this;
-            }
+            public async Task EnsureSubscriptionAsync(CancellationToken cancellationToken = default)
+                => await EnsureSubscriptionTask(this, cancellationToken)
+                    .ConfigureAwait(false);
 
-            public Probe<T> Request(long n)
+            public async Task RequestAsync(long n)
             {
-                EnsureSubscription();
+                await EnsureSubscriptionAsync();
                 Subscription.Request(n);
-                return this;
             }
 
-            public Probe<T> RequestNext(T element)
+            public async Task RequestNextAsync(T element)
             {
-                EnsureSubscription();
+                await EnsureSubscriptionAsync();
                 Subscription.Request(1);
-                ExpectNext(element);
-                return this;
+                await ExpectNextAsync(element);
             }
 
-            public Probe<T> Cancel()
+            public async Task CancelAsync()
             {
-                EnsureSubscription();
+                await EnsureSubscriptionAsync();
                 Subscription.Cancel();
-                return this;
             }
 
             /// <summary>
@@ -498,6 +497,16 @@ namespace Akka.Streams.TestKit
             }
 
             /// <summary>
+            /// Request and expect a stream element.
+            /// </summary>
+            public async Task<T> RequestNextAsync()
+            {
+                await EnsureSubscriptionAsync();
+                Subscription.Request(1);
+                return await ExpectNextAsync();
+            }
+
+            /// <summary>
             /// Request and expect a stream element during the specified time or timeout.
             /// </summary>
             public T RequestNext(TimeSpan timeout)
@@ -506,6 +515,14 @@ namespace Akka.Streams.TestKit
                 Subscription.Request(1);
                 return ExpectNext(timeout);
             }
+            
+            public async Task<T> RequestNextAsync(TimeSpan timeout)
+            {
+                await EnsureSubscriptionAsync();
+                Subscription.Request(1);
+                return await ExpectNextAsync(timeout);
+            }
+            
         }
 
         public static ManualProbe<T> CreateManualSubscriberProbe<T>(this TestKitBase testKit)

@@ -6,6 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Event;
@@ -16,7 +19,8 @@ using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public abstract class MultiNodeClusterShardingSpec : MultiNodeClusterSpec
+    public abstract class MultiNodeClusterShardingSpec<TConfig> : MultiNodeClusterSpec
+        where TConfig : MultiNodeClusterShardingConfig
     {
         protected class EntityActor : ActorBase
         {
@@ -146,16 +150,19 @@ namespace Akka.Cluster.Sharding.Tests
             return null;
         };
 
-        private readonly MultiNodeClusterShardingConfig config;
+        protected readonly TConfig config;
 
-        private readonly Lazy<ClusterShardingSettings> settings;
+        protected readonly Lazy<ClusterShardingSettings> settings;
 
         private readonly Lazy<IShardAllocationStrategy> defaultShardAllocationStrategy;
 
-        protected MultiNodeClusterShardingSpec(MultiNodeClusterShardingConfig config, Type type)
+        protected MultiNodeClusterShardingSpec(TConfig config, Type type)
             : base(config, type)
         {
             this.config = config;
+            ClearStorage();
+            EnterBarrier("startup");
+
             settings = new Lazy<ClusterShardingSettings>(() =>
             {
                 return ClusterShardingSettings.Create(Sys).WithRememberEntities(config.RememberEntities);
@@ -169,9 +176,29 @@ namespace Akka.Cluster.Sharding.Tests
         protected override int InitialParticipantsValueFactory => Roles.Count;
 
 
-        protected bool IsDdataMode => config.Mode == ClusterShardingSettings.StateStoreModeDData;
+        protected bool IsDdataMode => config.Mode == StateStoreMode.DData;
 
-        protected bool PersistenceIsNeeded => config.Mode == ClusterShardingSettings.StateStoreModePersistence;
+        protected bool PersistenceIsNeeded => config.Mode == StateStoreMode.Persistence
+            || Sys.Settings.Config.GetString("akka.cluster.sharding.remember-entities-store").Equals(RememberEntitiesStore.Eventsourced.ToString(), StringComparison.InvariantCultureIgnoreCase);
+
+        private void ClearStorage()
+        {
+            var path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir");
+            try
+            {
+                if (!string.IsNullOrEmpty(path))
+                    Directory.Delete(path, true);
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        protected override void AfterTermination()
+        {
+            ClearStorage();
+            base.AfterTermination();
+        }
 
         /// <summary>
         /// Flexible cluster join pattern usage.
@@ -222,7 +249,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             return ClusterSharding.Get(sys).Start(
                 typeName,
-                entityProps ?? EchoActor.Props(this),
+                entityProps ?? SimpleEchoActor.Props(),
                 settings ?? this.settings.Value,
                 extractEntityId ?? IntExtractEntityId,
                 extractShardId ?? IntExtractShardId,
@@ -240,45 +267,60 @@ namespace Akka.Cluster.Sharding.Tests
             return ClusterSharding.Get(sys).StartProxy(typeName, role, extractEntityId, extractShardId);
         }
 
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
-        protected void StartPersistenceIfNeeded(RoleName startOn)
+        protected void SetStoreIfNeeded(ActorSystem sys, RoleName storeOn)
         {
             if (PersistenceIsNeeded)
-                StartPersistence(startOn);
+                SetStore(sys, storeOn);
+        }
+
+        protected void SetStore(ActorSystem sys, RoleName storeOn)
+        {
+            Persistence.Persistence.Instance.Apply(sys);
+
+            var journalProbe = CreateTestProbe(sys);
+            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.journal.inmem").Tell(new Identify(null), journalProbe.Ref);
+            var sharedjournalStore = journalProbe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
+            sharedjournalStore.Should().NotBeNull();
+            MemoryJournalShared.SetStore(sharedjournalStore, sys);
+
+            var snapshotProbe = CreateTestProbe(sys);
+            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.snapshot-store.inmem").Tell(new Identify(null), snapshotProbe.Ref);
+            var sharedSnapshotStore = snapshotProbe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
+            sharedSnapshotStore.Should().NotBeNull();
+            MemorySnapshotStoreShared.SetStore(sharedSnapshotStore, sys);
         }
 
         /// <summary>
         ///
         /// </summary>
         /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
-        protected void StartPersistence(RoleName startOn)
+        protected void StartPersistenceIfNeeded(RoleName startOn, params RoleName[] setStoreOn)
         {
-            Log.Info("Setting up setup shared journal.");
+            if (PersistenceIsNeeded)
+                StartPersistence(startOn, setStoreOn);
+        }
 
-            // start the Persistence extension
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
+        protected void StartPersistence(RoleName startOn, params RoleName[] setStoreOn)
+        {
+            Log.Info("Setting up setup shared journal & snapshot.");
+
             Persistence.Persistence.Instance.Apply(Sys);
             RunOn(() =>
             {
-                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
+                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.inmem");
+                Persistence.Persistence.Instance.Apply(Sys).SnapshotStoreFor("akka.persistence.snapshot-store.inmem");
             }, startOn);
+
             EnterBarrier("persistence-started");
 
-            Sys.ActorSelection(Node(startOn) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
-            var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-            sharedStore.Should().NotBeNull();
-
-            MemoryJournalShared.SetStore(sharedStore, Sys);
-
-            EnterBarrier("persistence-started-test");
-
-            //check persistence running
-            var probe = CreateTestProbe(Sys);
-            var journal = Persistence.Persistence.Instance.Get(Sys).JournalFor(null);
-            journal.Tell(new Persistence.ReplayMessages(0, 0, long.MaxValue, Guid.NewGuid().ToString(), probe.Ref));
-            probe.ExpectMsg<Persistence.RecoverySuccess>(TimeSpan.FromSeconds(10));
+            RunOn(() =>
+            {
+                SetStore(Sys, startOn);
+            }, setStoreOn);
 
             EnterBarrier($"after-{startOn.Name}");
         }

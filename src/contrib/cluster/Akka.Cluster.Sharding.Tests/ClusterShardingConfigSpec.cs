@@ -7,11 +7,12 @@
 
 using System;
 using Akka.Configuration;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingConfigSpec : Akka.TestKit.Xunit2.TestKit
+    public class ClusterShardingConfigSpec : AkkaSpec
     {
         public ClusterShardingConfigSpec() : base(GetConfig())
         {
@@ -43,7 +44,8 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.Equal(string.Empty, config.GetString("journal-plugin-id"));
             Assert.Equal(string.Empty, config.GetString("snapshot-plugin-id"));
             Assert.Equal("persistence", config.GetString("state-store-mode"));
-            Assert.Equal(TimeSpan.FromSeconds(5), config.GetTimeSpan("waiting-for-state-timeout"));
+            Assert.Equal("ddata", config.GetString("remember-entities-store"));
+            Assert.Equal(TimeSpan.FromSeconds(2), config.GetTimeSpan("waiting-for-state-timeout"));
             Assert.Equal(TimeSpan.FromSeconds(5), config.GetTimeSpan("updating-state-timeout"));
             Assert.Equal("akka.cluster.singleton", config.GetString("coordinator-singleton"));
             Assert.Equal(string.Empty, config.GetString("use-dispatcher"));

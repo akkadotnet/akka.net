@@ -345,11 +345,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     SetHandler(shape.Outlet1,
                         onPull: () => Pull(shape.Inlet1),
-                        onDownstreamFinish: () => Cancel(shape.Inlet1));
+                        onDownstreamFinish: cause => Cancel(shape.Inlet1, cause));
 
                     SetHandler(shape.Outlet2,
                         onPull: () => Pull(shape.Inlet2),
-                        onDownstreamFinish: () => Cancel(shape.Inlet2));
+                        onDownstreamFinish: cause => Cancel(shape.Inlet2, cause));
                 }
             }
 
@@ -394,11 +394,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     SetHandler(shape.Outlet1,
                         onPull: () => Pull(shape.Inlet2),
-                        onDownstreamFinish: () => Cancel(shape.Inlet2));
+                        onDownstreamFinish: cause => Cancel(shape.Inlet2, cause));
 
                     SetHandler(shape.Outlet2,
                         onPull: () => Pull(shape.Inlet1),
-                        onDownstreamFinish: () => Cancel(shape.Inlet1));
+                        onDownstreamFinish: cause => Cancel(shape.Inlet1, cause));
                 }
             }
 
