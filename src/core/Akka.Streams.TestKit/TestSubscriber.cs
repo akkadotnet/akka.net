@@ -212,6 +212,15 @@ namespace Akka.Streams.TestKit
                 => ExpectNextNTask(TestProbe, n, timeout, cancellationToken);
 
             /// <summary>
+            /// Assert that no message is received for the specified time.
+            /// </summary>
+            public async Task ExpectNoMsgAsync(TimeSpan remaining, CancellationToken cancellationToken = default)
+            {
+                await TestProbe.ExpectNoMsgAsync(remaining, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            
+            /// <summary>
             /// Expect and return the signalled System.Exception/>.
             /// </summary>
             public Exception ExpectError(CancellationToken cancellationToken = default)
