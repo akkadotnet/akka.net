@@ -319,17 +319,17 @@ namespace Akka.Streams.TestKit
             int maximumRequest = 3,
             int maximumBuffer = 3,
             AkkaSpec spec = null)
-            => RunScriptAsync(script, settings, op, maximumOverrun, maximumRequest, maximumBuffer, spec)
+            => RunScriptAsync(spec, script, settings, op, maximumOverrun, maximumRequest, maximumBuffer)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
         
         protected async Task RunScriptAsync<TIn2, TOut2, TMat2>(
+            AkkaSpec spec,
             Script<TIn2, TOut2> script, 
             ActorMaterializerSettings settings,
             Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
             int maximumOverrun = 3,
             int maximumRequest = 3,
-            int maximumBuffer = 3,
-            AkkaSpec spec = null)
+            int maximumBuffer = 3)
         {
             var runner = new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this);
             async Task Run()

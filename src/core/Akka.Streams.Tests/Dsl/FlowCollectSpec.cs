@@ -42,12 +42,11 @@ namespace Akka.Streams.Tests.Dsl
             
             foreach (var _ in RandomTestRange(Sys))
             {
-                await RunScriptAsync(script, Materializer.Settings,
+                await RunScriptAsync(this, script, Materializer.Settings,
                     // This is intentional, testing backward compatibility with old obsolete method
 #pragma warning disable CS0618
-                    flow => flow.Collect(x => x % 2 == 0 ? (x * x).ToString() : null), 
+                    flow => flow.Collect(x => x % 2 == 0 ? (x * x).ToString() : null)); 
 #pragma warning restore CS0618
-                    spec: this);
             }
         }
 
@@ -64,8 +63,8 @@ namespace Akka.Streams.Tests.Dsl
 
             foreach (var _ in RandomTestRange(Sys))
             {
-                await RunScriptAsync(script, Materializer.Settings,
-                    flow => flow.Collect(x => x % 2 == 0, x => (x * x).ToString()), spec: this);
+                await RunScriptAsync(this, script, Materializer.Settings,
+                    flow => flow.Collect(x => x % 2 == 0, x => (x * x).ToString()));
             }
         }
 
