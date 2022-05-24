@@ -3820,12 +3820,14 @@ namespace Akka.Streams.Implementation
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class VirtualProcessor<T> : Akka.Util.AtomicReference<object>, Reactive.Streams.IProcessor<T, T>, Reactive.Streams.IPublisher<T>, Reactive.Streams.ISubscriber<T>
     {
+        public const bool IsDebug = true;
         public VirtualProcessor() { }
         public void OnComplete() { }
         public void OnError(System.Exception cause) { }
         public void OnNext(T element) { }
         public void OnSubscribe(Reactive.Streams.ISubscription subscription) { }
         public void Subscribe(Reactive.Streams.ISubscriber<T> subscriber) { }
+        public override string ToString() { }
     }
 }
 namespace Akka.Streams.Implementation.Fusing
