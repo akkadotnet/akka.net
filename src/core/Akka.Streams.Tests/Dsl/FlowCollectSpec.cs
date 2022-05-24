@@ -29,49 +29,44 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
+        // No need to use AssertAllStagesStoppedAsync, it is encapsulated in RunScriptAsync
         [Fact]
         public async Task An_old_behaviour_Collect_must_collect()
         {
-            await this.AssertAllStagesStoppedAsync(async () =>
+            var script = Script.Create(RandomTestRange(Sys).Select(_ =>
             {
-                var script = Script.Create(RandomTestRange(Sys).Select(_ =>
-                {
-                    var x = Random.Next(0, 10000);
-                    return ((ICollection<int>)new[] { x },
-                        (x & 1) == 0 ? (ICollection<string>)new[] { (x * x).ToString() } : new string[] { });
-                }).ToArray());
-
-                foreach (var _ in RandomTestRange(Sys))
-                {
-                    await RunScriptAsync(script, Materializer.Settings,
-                        // This is intentional, testing backward compatibility with old obsolete method
+                var x = Random.Next(0, 10000);
+                return ((ICollection<int>)new[] { x },
+                    (x & 1) == 0 ? (ICollection<string>)new[] { (x * x).ToString() } : new string[] { });
+            }).ToArray());
+            
+            foreach (var _ in RandomTestRange(Sys))
+            {
+                await RunScriptAsync(script, Materializer.Settings,
+                    // This is intentional, testing backward compatibility with old obsolete method
 #pragma warning disable CS0618
-                        flow => flow.Collect(x => x % 2 == 0 ? (x * x).ToString() : null));
+                    flow => flow.Collect(x => x % 2 == 0 ? (x * x).ToString() : null), 
 #pragma warning restore CS0618
-                }
-            }, Materializer);
+                    spec: this);
+            }
         }
 
+        // No need to use AssertAllStagesStoppedAsync, it is encapsulated in RunScriptAsync
         [Fact]
         public async Task A_Collect_must_collect()
         {
-            await this.AssertAllStagesStoppedAsync(async () =>
+            var script = Script.Create(RandomTestRange(Sys).Select(_ =>
             {
-                var script = Script.Create(RandomTestRange(Sys).Select(_ =>
-                {
-                    var x = Random.Next(0, 10000);
-                    return ((ICollection<int>)new[] { x },
-                        (x & 1) == 0 ? (ICollection<string>)new[] { (x*x).ToString() } : new string[] {});
-                }).ToArray());
+                var x = Random.Next(0, 10000);
+                return ((ICollection<int>)new[] { x },
+                    (x & 1) == 0 ? (ICollection<string>)new[] { (x*x).ToString() } : new string[] {});
+            }).ToArray());
 
-                foreach (var _ in RandomTestRange(Sys))
-                {
-                    await RunScriptAsync(
-                        script,
-                        Materializer.Settings,
-                        flow => flow.Collect(x => x % 2 == 0, x => (x * x).ToString()));
-                }
-            }, Materializer);
+            foreach (var _ in RandomTestRange(Sys))
+            {
+                await RunScriptAsync(script, Materializer.Settings,
+                    flow => flow.Collect(x => x % 2 == 0, x => (x * x).ToString()), spec: this);
+            }
         }
 
         [Fact]
