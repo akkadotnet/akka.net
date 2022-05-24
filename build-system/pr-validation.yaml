@@ -75,7 +75,7 @@ jobs:
         displayName: Windows Build
         inputs:
           filename: build.cmd
-          arguments: buildRelease incremental targetBranch=feature/async_testkit # Run an incremental build
+          arguments: "buildRelease incremental" # Run an incremental build
         continueOnError: true
         condition: eq( variables['Agent.OS'], 'Windows_NT' )
       - task: CopyFiles@2
@@ -100,7 +100,7 @@ jobs:
       displayName: ".NET Framework Unit Tests (Windows)"
       vmImage: "windows-2019"
       scriptFileName: build.cmd
-      scriptArgs: runTests incremental targetBranch=feature/async_testkit
+      scriptArgs: runTests incremental
       outputDirectory: "TestResults"
       artifactName: "netfx_tests_windows-$(Build.BuildId)"
 
@@ -110,7 +110,7 @@ jobs:
       displayName: ".NET Core Unit Tests (Windows)"
       vmImage: "windows-2019"
       scriptFileName: build.cmd
-      scriptArgs: runTestsNetCore incremental targetBranch=feature/async_testkit
+      scriptArgs: runTestsNetCore incremental
       outputDirectory: "TestResults"
       artifactName: "net_core_tests_windows-$(Build.BuildId)"
 
@@ -120,21 +120,10 @@ jobs:
       displayName: ".NET Core Unit Tests (Linux)"
       vmImage: "ubuntu-18.04"
       scriptFileName: "./build.sh"
-      scriptArgs: runTestsNetCore incremental targetBranch=feature/async_testkit
+      scriptArgs: runTestsNetCore incremental
       outputDirectory: "TestResults"
       artifactName: "net_core_tests_linux-$(Build.BuildId)"
 
-#  - template: azure-pipeline.template.yaml
-#    parameters:
-#      name: "docfx_test"
-#      displayName: "DocFX warning check"
-#      vmImage: "windows-2019"
-#      scriptFileName: build.cmd
-#      scriptArgs: docfx
-#      outputDirectory: "TestResults"
-#      artifactName: "docfx_test-$(Build.BuildId)"
-#      run_if: eq(variables['Build.Reason'], 'PullRequest')
-      
   - template: azure-pipeline.template.yaml
     parameters:
       name: "docfx_test"
@@ -148,23 +137,23 @@ jobs:
       
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "net_5_tests_windows"
-      displayName: ".NET 5 Unit Tests (Windows)"
+      name: "net_6_tests_windows"
+      displayName: ".NET 6 Unit Tests (Windows)"
       vmImage: "windows-2019"
       scriptFileName: build.cmd
-      scriptArgs: runTestsNet incremental targetBranch=feature/async_testkit
+      scriptArgs: runTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_5_tests_windows-$(Build.BuildId)"
+      artifactName: "net_6_tests_windows-$(Build.BuildId)"
 
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "net_5_tests_linux"
-      displayName: ".NET 5 Unit Tests (Linux)"
+      name: "net_6_tests_linux"
+      displayName: ".NET 6 Unit Tests (Linux)"
       vmImage: "ubuntu-18.04"
       scriptFileName: "./build.sh"
-      scriptArgs: runTestsNet incremental targetBranch=feature/async_testkit
+      scriptArgs: runTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_5_tests_linux-$(Build.BuildId)"
+      artifactName: "net_6_tests_linux-$(Build.BuildId)"
 
   - template: azure-pipeline.mntr-template.yaml
     parameters:
@@ -172,7 +161,7 @@ jobs:
       displayName: ".NET Core Multi-Node Tests (Windows)"
       vmImage: "windows-2019"
       scriptFileName: "build.cmd"
-      scriptArgs: MultiNodeTestsNetCore incremental targetBranch=feature/async_testkit
+      scriptArgs: MultiNodeTestsNetCore incremental
       outputDirectory: "TestResults"
       artifactName: "net_core_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
@@ -180,15 +169,15 @@ jobs:
 
   - template: azure-pipeline.mntr-template.yaml
     parameters:
-      name: "net_5_mntr_windows"
-      displayName: ".NET 5 Multi-Node Tests (Windows)"
+      name: "net_6_mntr_windows"
+      displayName: ".NET 6 Multi-Node Tests (Windows)"
       vmImage: "windows-2019"
       scriptFileName: "build.cmd"
-      scriptArgs: MultiNodeTestsNet incremental targetBranch=feature/async_testkit
+      scriptArgs: MultiNodeTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_5_mntr_windows-$(Build.BuildId)"
+      artifactName: "net_6_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
-      mntrFailuresArtifactName: "net_5_mntr_FAILED_windows-$(Build.BuildId)"
+      mntrFailuresArtifactName: "net_6_mntr_FAILED_windows-$(Build.BuildId)"
 
   - template: azure-pipeline.template.yaml
     parameters:
@@ -196,6 +185,6 @@ jobs:
       displayName: "NuGet Pack"
       vmImage: "windows-2019"
       scriptFileName: build.cmd
-      scriptArgs: CreateNuget nugetprerelease=dev incremental targetBranch=feature/async_testkit
+      scriptArgs: CreateNuget nugetprerelease=dev incremental
       outputDirectory: "bin/nuget"
       artifactName: "nuget_pack-$(Build.BuildId)"
