@@ -8,9 +8,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
@@ -1490,21 +1492,27 @@ namespace Akka.Streams.Implementation
     /// little like this:
     /// 
     /// <![CDATA[
-    ///            +--------------+      (2)    +------------+
-    ///            |     null     | ----------> | Subscriber |
-    ///            +--------------+             +------------+
-    ///                   |                           |
-    ///               (1) |                           | (1)
-    ///                  \|/                         \|/
-    ///            +--------------+      (2)    +------------+ --\
-    ///            | Subscription | ----------> |    Both    |    | (4)
-    ///            +--------------+             +------------+ <-/
-    ///                   |                           |
-    ///               (3) |                           | (3)
-    ///                  \|/                         \|/
-    ///            +--------------+      (2)    +------------+ --\
-    ///            |   Publisher  | ----------> |   Inert    |    | (4, *)
-    ///            +--------------+             +------------+ <-/
+    ///            +--------+     (2)     +---------------+
+    ///            |  null  +------------>+   Subscriber  |
+    ///            +---+----+             +-----+---------+
+    ///                |                        |
+    ///             (1)|                        | (1)
+    ///                v                        v
+    ///            +---+----------+  (2)  +-----+---------+
+    ///            | Subscription +------>+  Establishing |
+    ///            +---+----------+       +-----+---------+
+    ///                |                        |
+    ///                |                        |  (4)
+    ///                |                        v
+    ///                |                  +-----+---------+ ---
+    ///                | (3)              |    Both       |    | (5)
+    ///                |                  +-----+---------+ <--
+    ///                |                        |
+    ///                |                        |
+    ///                v                        v
+    ///            +---+----------+  (2)  +-----+---------+ ---
+    ///            |  Publisher   +-----> |    Inert      |    | (5, *)
+    ///            +--------------+       +---------------+ <--
     /// ]]>
     /// The idea is to keep the major state in only one atomic reference. The actions
     /// that can happen are:
@@ -1512,7 +1520,8 @@ namespace Akka.Streams.Implementation
     ///  (1) onSubscribe
     ///  (2) subscribe
     ///  (3) onError / onComplete
-    ///  (4) onNext
+    ///  (4) establishing subscription completes
+    ///  (5) onNext
     ///      (*) Inert can be reached also by cancellation after which onNext is still fine
     ///          so we just silently ignore possible spec violations here
     /// 
@@ -1535,10 +1544,17 @@ namespace Akka.Streams.Implementation
     [InternalApi]
     public sealed class VirtualProcessor<T> : AtomicReference<object>, IProcessor<T, T>
     {
+        public const bool IsDebug = true;
         private const string NoDemand = "spec violation: OnNext was signaled from upstream without demand";
+        private readonly string _hashCode;
 
         #region internal classes
 
+        private interface IHasActualSubscriber
+        {
+            ISubscriber<T> Subscriber { get; }
+        } 
+        
         private sealed class Inert
         {
             public static readonly ISubscriber<T> Subscriber = new CancellingSubscriber<T>();
@@ -1550,7 +1566,7 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        private sealed class Both
+        private sealed class Both: IHasActualSubscriber
         {
             public Both(ISubscriber<T> subscriber)
             {
@@ -1561,8 +1577,46 @@ namespace Akka.Streams.Implementation
 
         }
 
+        private sealed class Establishing: IHasActualSubscriber
+        {
+            public Establishing(ISubscriber<T> subscriber, bool onCompleteBuffered = false, Exception onErrorBuffered = null)
+            {
+                Subscriber = subscriber;
+                OnCompleteBuffered = onCompleteBuffered;
+                OnErrorBuffered = onErrorBuffered;
+            }
+
+            public ISubscriber<T> Subscriber { get; }
+            public bool OnCompleteBuffered { get; }
+            public Exception OnErrorBuffered { get; }
+
+            public Establishing Copy(
+                ISubscriber<T> subscriber = null,
+                bool? onCompleteBuffered = null,
+                Exception onErrorBuffered = null)
+                => new Establishing(
+                    subscriber ?? Subscriber,
+                    onCompleteBuffered ?? OnCompleteBuffered,
+                    onErrorBuffered ?? OnErrorBuffered);
+        }
+        
         #endregion
 
+        public VirtualProcessor()
+        {
+            _hashCode = GetHashCode().ToString();
+            PrintDebug($"Created: {this}");
+        }
+
+        public override string ToString() => $"VirtualProcessor({_hashCode})";
+        
+        [Conditional("DEBUG")]
+        private static void PrintDebug(string msg)
+        {
+            if(IsDebug)
+                Console.WriteLine(msg);
+        }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -1570,55 +1624,54 @@ namespace Akka.Streams.Implementation
         /// <exception cref="Exception">TBD</exception>
         public void Subscribe(ISubscriber<T> subscriber)
         {
+            void Rec(ISubscriber<T> sub)
+            {
+                switch (Value)
+                {
+                    case null:
+                        PrintDebug($"VirtualProcessor#{_hashCode}(null).Subscribe.Rec({subscriber}) -> sub");
+                        if (!CompareAndSet(null, subscriber))
+                            Rec(sub);
+                        return;
+                
+                    case ISubscription subscription:
+                        PrintDebug($"VirtualProcessor#{_hashCode}({subscription}).Subscribe.Rec({subscriber}) -> Establishing(sub)");
+                        var establishing = new Establishing(sub);
+                        if(CompareAndSet(subscription, establishing))
+                            EstablishSubscription(establishing, subscription);
+                        else
+                            Rec(sub);
+                        return;
+                
+                    case IPublisher<T> publisher:
+                        PrintDebug($"VirtualProcessor#{_hashCode}({publisher}).Subscribe.Rec({subscriber}) -> Inert");
+                        if (CompareAndSet(publisher, Inert.Instance))
+                            publisher.Subscribe(sub);
+                        else
+                            Rec(sub);
+                        return;
+                
+                    case var other:
+                        PrintDebug($"VirtualProcessor#{_hashCode}({other}).Subscribe.Rec({subscriber}): RejectAdditionalSubscriber");
+                        ReactiveStreamsCompliance.RejectAdditionalSubscriber(sub, "VirtualProcessor");
+                        break;
+                }
+            }
+
             if (subscriber == null)
             {
-                var ex = ReactiveStreamsCompliance.SubscriberMustNotBeNullException;
                 try
                 {
-                    TrySubscribe(Inert.Subscriber);
+                    Rec(Inert.Subscriber);
                 }
                 finally
                 {
                     // must throw ArgumentNullEx, rule 2:13
-                    throw ex;
+                    throw ReactiveStreamsCompliance.SubscriberMustNotBeNullException;
                 }
             }
 
-            TrySubscribe(subscriber);
-        }
-
-        private void TrySubscribe(ISubscriber<T> subscriber)
-        {
-            if (Value == null)
-            {
-                if (!CompareAndSet(null, subscriber))
-                    TrySubscribe(subscriber);
-                return;
-            }
-
-            var subscription = Value as ISubscription;
-            if (subscription != null)
-            {
-                if (CompareAndSet(subscription, new Both(subscriber)))
-                    EstablishSubscription(subscriber, subscription);
-                else
-                    TrySubscribe(subscriber);
-
-                return;
-            }
-
-            var publisher = Value as IPublisher<T>;
-            if (publisher != null)
-            {
-                if (CompareAndSet(publisher, Inert.Instance))
-                    publisher.Subscribe(subscriber);
-                else
-                    TrySubscribe(subscriber);
-
-                return;
-            }
-
-            ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "VirtualProcessor");
+            Rec(subscriber);
         }
 
         /// <summary>
@@ -1628,12 +1681,54 @@ namespace Akka.Streams.Implementation
         /// <exception cref="Exception">TBD</exception>
         public void OnSubscribe(ISubscription subscription)
         {
+            void Rec(object obj)
+            {
+                while (true)
+                {
+                    switch (Value)
+                    {
+                        case null:
+                            PrintDebug($"VirtualProcessor#{_hashCode}({null}).OnSubscribe.Rec({obj}) -> {obj.GetType()}");
+                            if (!CompareAndSet(null, obj)) 
+                                continue;
+                            return;
+                        case ISubscriber<T> subscriber:
+                            switch (obj)
+                            {
+                                case ISubscription sub:
+                                    PrintDebug($"VirtualProcessor#{_hashCode}({subscriber}).OnSubscribe.Rec({obj}) -> Establishing");
+                                    var establishing = new Establishing(subscriber);
+                                    if (CompareAndSet(subscriber, establishing))
+                                        EstablishSubscription(establishing, sub);
+                                    else
+                                        continue;
+                                    return;
+
+                                case IPublisher<T> publisher:
+                                    PrintDebug($"VirtualProcessor#{_hashCode}({publisher}).OnSubscribe.Rec({obj}) -> Inert");
+                                    var inert = GetAndSet(Inert.Instance);
+                                    if (inert != Inert.Instance) publisher.Subscribe(subscriber);
+                                    return;
+
+                                case var other:
+                                    throw new IllegalStateException($"Unexpected state in VirtualProcessor: {other}");
+                            }
+
+                        case var state:
+                            PrintDebug($"VirtualProcessor#{_hashCode}({state}).OnSubscribe.Rec({obj}): Spec violation.");
+                            // spec violation
+                            ReactiveStreamsCompliance.TryCancel(subscription, new IllegalStateException($"Spec violation: VirtualProcessor in wrong state [{state.GetType()}]."));
+                            return;
+                    }
+                }
+            }
+            
             if (subscription == null)
             {
                 var ex = ReactiveStreamsCompliance.SubscriptionMustNotBeNullException;
                 try
                 {
-                    TryOnSubscribe(new ErrorPublisher<T>(ex, "failed-VirtualProcessor"), subscription);
+                    Rec(new ErrorPublisher<T>(ex, "failed-VirtualProcessor"));
                 }
                 finally
                 {
@@ -1641,60 +1736,62 @@ namespace Akka.Streams.Implementation
                     throw ex;
                 }
             }
-
-            TryOnSubscribe(subscription, subscription);
+            
+            Rec(subscription);
         }
 
-        private void TryOnSubscribe(object obj, ISubscription s)
-        {
-            while (true)
-            {
-                switch (Value)
-                {
-                    case null:
-                        if (!CompareAndSet(null, obj)) 
-                            continue;
-                        return;
-                    case ISubscriber<T> subscriber:
-                        switch (obj)
-                        {
-                            case ISubscription subscription:
-                                if (CompareAndSet(subscriber, new Both(subscriber)))
-                                    EstablishSubscription(subscriber, subscription);
-                                else
-                                    continue;
-                                return;
-                            case IPublisher<T> publisher:
-                                var inert = GetAndSet(Inert.Instance);
-                                if (inert != Inert.Instance) 
-                                    publisher.Subscribe(subscriber);
-                                return;
-                            case var other:
-                                throw new IllegalStateException($"Unexpected state in VirtualProcessor: {other.GetType()}");
-                        }
-                    case var state:
-                        // spec violation
-                        ReactiveStreamsCompliance.TryCancel(s, new IllegalStateException($"Spec violation: VirtualProcessor in wrong state [{state.GetType()}]."));
-                        return;
-                }
-            }
-        }
-
-        private void EstablishSubscription(ISubscriber<T> subscriber, ISubscription subscription)
+        private void EstablishSubscription(Establishing establishing, ISubscription subscription)
         {
             var wrapped = new WrappedSubscription(subscription, this);
             try
             {
-                subscriber.OnSubscribe(wrapped);
-                // Requests will be only allowed once onSubscribe has returned to avoid reentering on an onNext before
-                // onSubscribe completed
-                wrapped.UngateDemandAndRequestBuffered();
+                PrintDebug($"VirtualProcessor#{_hashCode}.EstablishSubscription({wrapped})");
+                establishing.Subscriber.OnSubscribe(wrapped);
+                
+                // while we were establishing some stuff could have happened
+                // most likely case, nobody changed it while we where establishing
+                PrintDebug($"VirtualProcessor#{_hashCode}.EstablishSubscription.Rec({establishing}) -> Both");
+                if (CompareAndSet(establishing, new Both(establishing.Subscriber)))
+                {
+                    // cas won - life is good
+                    // Requests will be only allowed once onSubscribe has returned to avoid reentering on an onNext before
+                    // onSubscribe completed
+                    wrapped.UngateDemandAndRequestBuffered();
+                }
+                else
+                {
+                    // changed by someone else
+                    switch (Value)
+                    {
+                        case Establishing est when est.OnErrorBuffered != null:
+                            // there was an onError while establishing
+                            PrintDebug($"VirtualProcessor#{_hashCode}.EstablishSubscription.Rec(Establishing(OnErrorBuffered)) -> Inert");
+                            ReactiveStreamsCompliance.TryOnError(est.Subscriber, est.OnErrorBuffered);
+                            Value = Inert.Instance;
+                            break;
+                        
+                        case Establishing est when est.OnCompleteBuffered:
+                            // there was on onComplete while we were establishing
+                            PrintDebug($"VirtualProcessor#{_hashCode}.EstablishSubscription.Rec(Establishing(OnCompleteBuffered)) -> Inert");
+                            ReactiveStreamsCompliance.TryOnComplete(est.Subscriber);
+                            Value = Inert.Instance;
+                            break;
+                        
+                        case Inert _:
+                            ReactiveStreamsCompliance.TryCancel(subscription, new IllegalStateException("VirtualProcessor was already subscribed to."));
+                            break;
+                        
+                        default:
+                            throw new IllegalStateException(
+                                $"Unexpected state while establishing: [{Value}], if this ever happens it is a bug.");
+                    }
+                }
             }
             catch (Exception ex)
             {
                 Value = Inert.Instance;
                 ReactiveStreamsCompliance.TryCancel(subscription, ex);
-                ReactiveStreamsCompliance.TryOnError(subscriber, ex);
+                ReactiveStreamsCompliance.TryOnError(establishing.Subscriber, ex);
             }
         }
 
@@ -1710,60 +1807,61 @@ namespace Akka.Streams.Implementation
             * but if `t` was `null` then the spec requires us to throw an NPE (which `ex`
             * will be in this case).
             */
-            var ex = cause ?? ReactiveStreamsCompliance.ExceptionMustNotBeNullException;
-
-            while (true)
+            void Rec(Exception ex)
             {
-                if (Value == null)
+                while (true)
                 {
-                    if (!CompareAndSet(null, new ErrorPublisher<T>(ex, "failed-VirtualProcessor")))
-                        continue;
-                    if (cause == null)
-                        throw ex;
-                    return;
-                }
-
-                var subscription = Value as ISubscription;
-                if (subscription != null)
-                {
-                    if (!CompareAndSet(subscription, new ErrorPublisher<T>(ex, "failed-VirtualProcessor")))
-                        continue;
-                    if (cause == null)
-                        throw ex;
-                    return;
-                }
-
-                var both = Value as Both;
-                if (both != null)
-                {
-                    Value = Inert.Instance;
-                    try
+                    switch (Value)
                     {
-                        ReactiveStreamsCompliance.TryOnError(both.Subscriber, ex);
+                        case null:
+                            PrintDebug($"VirtualProcessor#{_hashCode}(null).OnError({ex.Message}) -> ErrorPublisher");
+                            if (!CompareAndSet(null, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) 
+                                continue;
+                            return;
+
+                        case ISubscription s:
+                            PrintDebug($"VirtualProcessor#{_hashCode}({s}).OnError({ex.Message}) -> ErrorPublisher");
+                            if (!CompareAndSet(s, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) 
+                                continue;
+                            return;
+
+                        case Both both:
+                            PrintDebug($"VirtualProcessor#{_hashCode}(Both({both.Subscriber})).OnError({ex.Message}) -> ErrorPublisher");
+                            Value = Inert.Instance;
+                            ReactiveStreamsCompliance.TryOnError(both.Subscriber, ex);
+                            return;
+
+                        case ISubscriber<T> s:
+                            // spec violation
+                            PrintDebug($"VirtualProcessor#{_hashCode}({s}).OnError({ex.Message}) -> Inert: Spec violation.");
+                            var inert = GetAndSet(Inert.Instance);
+                            if (inert != Inert.Instance) new ErrorPublisher<T>(ex, "failed-VirtualProcessor").Subscribe(s);
+                            return;
+
+                        case Establishing { OnCompleteBuffered: false, OnErrorBuffered: null } est:
+                            PrintDebug($"VirtualProcessor#{_hashCode}({est}).OnError({ex.Message}) -> loop");
+                            if (!CompareAndSet(est, est.Copy(onErrorBuffered: ex))) 
+                                continue;
+                            return;
+
+                        case var other:
+                            // spec violation or cancellation race, but nothing we can do
+                            PrintDebug($"VirtualProcessor#{_hashCode}({other}).OnError({ex.Message}): Spec violation or cancellation race");
+                            return;
                     }
-                    finally
-                    {
-                        // must throw ArgumentNullEx, rule 2:13
-                        if (cause == null)
-                            throw ex;
-                    }
-
-                    return;
                 }
+            }
 
-                var subscriber = Value as ISubscriber<T>;
-                if (subscriber != null)
-                {
-                    // spec violation
-                    var inert = GetAndSet(Inert.Instance);
-                    if (inert != Inert.Instance)
-                        new ErrorPublisher<T>(ex, "failed-VirtualProcessor").Subscribe(subscriber);
-
-                    return;
-                }
-
-                // spec violation or cancellation race, but nothing we can do
-                return;
+            var ex = cause ?? ReactiveStreamsCompliance.ExceptionMustNotBeNullException;
+            try
+            {
+                Rec(ex);
+            }
+            finally
+            {
+                // must throw NPE, rule 2.13
+                if (cause == null)
+                    throw ex;
             }
         }
 
@@ -1774,42 +1872,39 @@ namespace Akka.Streams.Implementation
         {
             while (true)
             {
-                if (Value == null)
+                switch (Value)
                 {
-                    if (!CompareAndSet(null, EmptyPublisher<T>.Instance))
-                        continue;
-
-                    return;
+                    case null: 
+                        PrintDebug($"VirtualProcessor#{_hashCode}(null).OnComplete() -> EmptyPublisher");
+                        if(!CompareAndSet(null, EmptyPublisher<T>.Instance))
+                            continue;
+                        return;
+                    case ISubscription subscription:
+                        PrintDebug($"VirtualProcessor#{_hashCode}({subscription}).OnComplete() -> EmptyPublisher");
+                        if(!CompareAndSet(subscription, EmptyPublisher<T>.Instance))
+                            continue;
+                        return;
+                    case Both both:
+                        PrintDebug($"VirtualProcessor#{_hashCode}(Both({both.Subscriber})).OnComplete() -> Inert");
+                        Value = Inert.Instance;
+                        ReactiveStreamsCompliance.TryOnComplete(both.Subscriber);
+                        return;
+                    case ISubscriber<T> subscriber:
+                        // spec violation
+                        PrintDebug($"VirtualProcessor#{_hashCode}({subscriber}).OnComplete() -> Inert: Spec Violation");
+                        Value = Inert.Instance;
+                        EmptyPublisher<T>.Instance.Subscribe(subscriber);
+                        return;
+                    case Establishing { OnCompleteBuffered: false, OnErrorBuffered: null } est:
+                        PrintDebug($"VirtualProcessor#{_hashCode}({est}).OnComplete() -> Establishing(OnCompleteBuffered)");
+                        if(!est.OnCompleteBuffered && !CompareAndSet(est, est.Copy(onCompleteBuffered: true)))
+                            continue;
+                        return;
+                    case var other:
+                        // spec violation or cancellation race, but nothing we can do
+                        PrintDebug($"VirtualProcessor#{_hashCode}({other}).OnComplete(): Spec violation");
+                        return;
                 }
-
-                var subscription = Value as ISubscription;
-                if (subscription != null)
-                {
-                    if (!CompareAndSet(subscription, EmptyPublisher<T>.Instance))
-                        continue;
-
-                    return;
-                }
-
-                var both = Value as Both;
-                if (both != null)
-                {
-                    Value = Inert.Instance;
-                    ReactiveStreamsCompliance.TryOnComplete(both.Subscriber);
-                    return;
-                }
-
-                var subscriber = Value as ISubscriber<T>;
-                if (subscriber != null)
-                {
-                    // spec violation
-                    Value = Inert.Instance;
-                    EmptyPublisher<T>.Instance.Subscribe(subscriber);
-                    return;
-                }
-
-                // spec violation or cancellation race, but nothing we can do
-                return;
             }
         }
 
@@ -1824,91 +1919,106 @@ namespace Akka.Streams.Implementation
             if (element == null)
             {
                 var ex = ReactiveStreamsCompliance.ElementMustNotBeNullException;
+                PrintDebug($"VirtualProcessor#{_hashCode}.OnNext(null)");
 
-                while (true)
+                void Rec()
                 {
-                    if (Value == null || Value is ISubscription)
+                    while (true)
                     {
-                        if (!CompareAndSet(Value, new ErrorPublisher<T>(ex, "failed-VirtualProcessor")))
-                            continue;
-
-                        break;
-                    }
-
-                    var subscriber = Value as ISubscriber<T>;
-                    if (subscriber != null)
-                    {
-                        try
+                        switch (Value)
                         {
-                            subscriber.OnError(ex);
-                        }
-                        finally
-                        {
-                            Value = Inert.Instance;
-                        }
-                        break;
-                    }
+                            case null:
+                            case ISubscription _:
+                                if (!CompareAndSet(Value, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) continue;
+                                return;
 
-                    var both = Value as Both;
-                    if (both != null)
-                    {
-                        try
-                        {
-                            both.Subscriber.OnError(ex);
+                            case ISubscriber<T> subscriber:
+                                try
+                                {
+                                    subscriber.OnError(ex);
+                                }
+                                finally
+                                {
+                                    Value = Inert.Instance;
+                                }
+                                return;
+
+                            case Both both:
+                                try
+                                {
+                                    both.Subscriber.OnError(ex);
+                                }
+                                finally
+                                {
+                                    Value = Inert.Instance;
+                                }
+                                return;
+
+                            default:
+                                // spec violation or cancellation race, but nothing we can do
+                                return;
                         }
-                        finally
-                        {
-                            Value = Inert.Instance;
-                        }
-                    }
-
-                    // spec violation or cancellation race, but nothing we can do
-                    break;
-                }
-
-                // must throw ArgumentNullEx, rule 2:13
-                throw ex;
-            }
-
-            while (true)
-            {
-                var both = Value as Both;
-                if (both != null)
-                {
-                    try
-                    {
-                        both.Subscriber.OnNext(element);
-                        return;
-                    }
-                    catch (Exception e)
-                    {
-                        Value = Inert.Instance;
-                        throw new IllegalStateException(
-                            "Subscriber threw exception, this is in violation of rule 2:13", e);
                     }
                 }
 
-                var subscriber = Value as ISubscriber<T>;
-                if (subscriber != null)
+                try
                 {
-                    // spec violation
-                    var ex = new IllegalStateException(NoDemand);
-                    var inert = GetAndSet(Inert.Instance);
-                    if (inert != Inert.Instance)
-                        new ErrorPublisher<T>(ex, "failed-VirtualProcessor").Subscribe(subscriber);
+                    Rec();
+                }
+                finally
+                {
+                    // must throw ArgumentNullEx, rule 2:13
                     throw ex;
                 }
-
-                if (Value == Inert.Instance || Value is IPublisher<T>)
+            }
+            else
+            {
+                void Rec()
                 {
-                    // nothing to be done
-                    return;
+                    while (true)
+                    {
+                        switch (Value)
+                        {
+                            case IHasActualSubscriber h:
+                                var s = h.Subscriber;
+                                try
+                                {
+                                    PrintDebug($"VirtualProcessor#{_hashCode}({h.GetType()}({s})).OnNext({element}).Rec()");
+                                    s.OnNext(element);
+                                }
+                                catch (Exception e)
+                                {
+                                    PrintDebug($"VirtualProcessor#{_hashCode}({h.GetType()}({s})).OnNext({element}) threw {e.Message} -> Inert. Spec violation");
+                                    Value = Inert.Instance;
+                                    throw new IllegalStateException("Subscriber threw exception, this is in violation of rule 2:13", e);
+                                }
+                                return;
+
+                            case ISubscriber<T> subscriber:
+                                // spec violation
+                                PrintDebug($"VirtualProcessor#{_hashCode}({subscriber}).OnNext({element}).Rec() -> Inert: Spec violation");
+                                var ex = new IllegalStateException(NoDemand);
+                                var inert = GetAndSet(Inert.Instance);
+                                if (inert != Inert.Instance) new ErrorPublisher<T>(ex, "failed-VirtualProcessor").Subscribe(subscriber);
+                                throw ex;
+
+                            case Inert _:
+                            case IPublisher<T> _:
+                                // nothing to be done
+                                PrintDebug($"VirtualProcessor#{_hashCode}(Inert|Publisher).OnNext({element}).Rec(): noop");
+                                return;
+
+                            case var other:
+                                PrintDebug($"VirtualProcessor#{_hashCode}({other}).OnNext({element}).Rec() -> ErrorPublisher");
+                                var publisher = new ErrorPublisher<T>(new IllegalStateException(NoDemand), "failed-VirtualPublisher");
+                                if (!CompareAndSet(other, publisher))
+                                    continue;
+                                throw publisher.Cause;
+                        }
+                    }
                 }
 
-                var publisher = new ErrorPublisher<T>(new IllegalStateException(NoDemand), "failed-VirtualPublisher");
-                if (!CompareAndSet(Value, publisher))
-                    continue;
-                throw publisher.Cause;
+                Rec();
             }
         }
 
@@ -1952,18 +2062,23 @@ namespace Akka.Streams.Implementation
             {
                 if (n < 1)
                 {
+                    PrintDebug($"VirtualProcessor#{_processor._hashCode}.WrappedSubscription({_real}.Request({n})");
                     ReactiveStreamsCompliance.TryCancel(_real, new IllegalStateException($"Demand must not be < 1. Was: {n}"));
                     var value = _processor.GetAndSet(Inert.Instance);
-                    var both = value as Both;
-                    if (both != null)
-                        ReactiveStreamsCompliance.RejectDueToNonPositiveDemand(both.Subscriber);
-                    else if (value == Inert.Instance)
+                    switch (value)
                     {
-                        // another failure has won the race
-                    }
-                    else
-                    {
-                        // this cannot possibly happen, but signaling errors is impossible at this point
+                        case Both both:
+                            ReactiveStreamsCompliance.RejectDueToNonPositiveDemand(both.Subscriber);
+                            break;
+                        case Establishing est:
+                            ReactiveStreamsCompliance.RejectDueToNonPositiveDemand(est.Subscriber);
+                            break;
+                        case Inert _:
+                            // another failure has won the race
+                            break;
+                        default:
+                            // this cannot possibly happen, but signaling errors is impossible at this point
+                            break;
                     }
                 }
                 else
@@ -1979,11 +2094,17 @@ namespace Akka.Streams.Implementation
                         var current = Value;
                         if (current == PassThrough.Instance)
                         {
+                            PrintDebug($"VirtualProcessor#{_processor._hashCode}.WrappedSubscription({_real}.BufferDemand({n}) PassThrough");
                             _real.Request(n);
-                            break;
+                            return;
                         }
+
                         if (!CompareAndSet(current, new Buffering(current.Demand + n)))
+                        {
+                            PrintDebug($"VirtualProcessor#{_processor._hashCode}.WrappedSubscription({_real}.BufferDemand({n}) buffering");
                             continue;
+                        }
+
                         break;
                     }
                 }
@@ -1991,6 +2112,7 @@ namespace Akka.Streams.Implementation
 
             public void Cancel()
             {
+                PrintDebug($"VirtualProcessor#{_processor._hashCode}.WrappedSubscription({_real}.Cancel() -> Inert");
                 _processor.Value = Inert.Instance;
                 _real.Cancel();
             }
@@ -1998,6 +2120,7 @@ namespace Akka.Streams.Implementation
             public void UngateDemandAndRequestBuffered()
             {
                 // Ungate demand
+                PrintDebug($"VirtualProcessor#{_processor._hashCode}.WrappedSubscription({_real}.UngateDemandAndRequestBuffered()");
                 var requests = GetAndSet(PassThrough.Instance).Demand;
                 // And request buffered demand
                 if(requests > 0)
@@ -2091,6 +2214,8 @@ namespace Akka.Streams.Implementation
         /// <exception cref="IllegalStateException">TBD</exception>
         public void RegisterPublisher(IPublisher<T> publisher)
         {
+            if(VirtualProcessor<T>.IsDebug)
+                Console.WriteLine($"{this}.RegisterPublisher({publisher})");
             while (true)
             {
                 if (Value == null)
