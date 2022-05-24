@@ -1,6 +1,6 @@
 # Akka.NET
 
-![Akka.NET logo](docs/shfb/icons/AkkaNetLogo.Normal.png)
+![Akka.NET logo](https://github.com/akkadotnet/akka.net/blob/dev/docs/shfb/icons/AkkaNetLogo.Normal.png)
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/akkadotnet/akka.net?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) <br/>
 
@@ -8,7 +8,7 @@
 
 Akka.NET is a [.NET Foundation](https://dotnetfoundation.org/) project.
 
-![.NET Foundation Logo](docs/images/dotnetfoundationhorizontal.svg)
+![.NET Foundation Logo](https://github.com/akkadotnet/akka.net/blob/dev/docs/images/dotnetfoundationhorizontal.svg)
 
 ## Build Status
 
