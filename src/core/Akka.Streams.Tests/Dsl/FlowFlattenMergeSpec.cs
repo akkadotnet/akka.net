@@ -352,10 +352,7 @@ namespace Akka.Streams.Tests.Dsl
                     .MergeMany(4, x => Source.FromGraph(new FailingInnerMat(matFail)))
                     .RunWith(Sink.Ignore<string>(), Materializer);
 
-                var ex = await Awaiting(() => task.ShouldCompleteWithin(1.Seconds()))
-                    .Should().ThrowAsync<AggregateException>();
-
-                ex.And.InnerException.Should().BeEquivalentTo(matFail);
+                await task.ShouldThrowWithin(matFail, 1.Seconds());
             }, Materializer);
         }
 
