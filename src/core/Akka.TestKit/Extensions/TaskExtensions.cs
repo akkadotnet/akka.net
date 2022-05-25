@@ -91,6 +91,27 @@ namespace Akka.TestKit.Extensions
             }).Should().CompleteWithinAsync(timeout, because, becauseArgs);
         }
         
+        public static async Task ShouldThrowWithin<T>(
+            this Task task, T expected, TimeSpan timeout, string because = "", params object[] becauseArgs)
+            where T: Exception
+        {
+            (await Awaiting(async () =>
+            {
+                await task.ShouldCompleteWithin(timeout);
+            }).Should().ThrowAsync<T>()).And.Should().Be(expected);
+        }
+
+        public static async Task<T> ShouldThrowWithin<T>(
+            this Task task, TimeSpan timeout, string because = "", params object[] becauseArgs)
+            where T: Exception
+        {
+            var exception = await Awaiting(async () =>
+            {
+                await task.ShouldCompleteWithin(timeout);
+            }).Should().ThrowAsync<T>();
+            return (T) exception.And.Should().Subject;
+        }
+        
         /// <summary>
         /// Guard a <see cref="Task{T}"/> with a timeout and returns the <see cref="Task{T}.Result"/>.
         /// </summary>
