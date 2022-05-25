@@ -57,7 +57,7 @@ The first step in creating an effective multi-node test is to define the configu
 
 The declaration of the `RoleName` properties is what the MNTR uses to determine how many nodes will be participating in this test. In this example, the test will create exactly two test processes.
 
-The `CommonConfig` element of the [`MultiNodeConfig` implementation class](../../api/Akka.Remote.TestKit.MultiNodeConfig.html) is the common config that will be used throughout all of the nodes inside the multi-node test. So, for instance, if you want all of the nodes in your test to run [Akka.Cluster.Sharding](xref:cluster-sharding) you'd want to include those configuration elements inside the `CommonConfig` property.
+The `CommonConfig` element of the [`MultiNodeConfig` implementation class](xref:Akka.Remote.TestKit.MultiNodeConfig) is the common config that will be used throughout all of the nodes inside the multi-node test. So, for instance, if you want all of the nodes in your test to run [Akka.Cluster.Sharding](xref:cluster-sharding) you'd want to include those configuration elements inside the `CommonConfig` property.
 
 #### Configuring Individual Nodes Differently
 

@@ -92,7 +92,7 @@ namespace Akka.Actor
             return new ActorCell(system, self, props, dispatcher, supervisor);
         }
 
-        /// <inheritdoc/>
+        
         public override ICell Underlying
         {
             get { return _cell; }
@@ -104,49 +104,49 @@ namespace Akka.Actor
             get { return _cell; }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="IActorRefProvider"/>
         public override IActorRefProvider Provider
         {
             get { return _cell.SystemImpl.Provider; }
         }
 
-        /// <inheritdoc/>
+        
         public override IInternalActorRef Parent
         {
             get { return _cell.Parent; }
         }
 
-        /// <inheritdoc/>
+        
         public override IEnumerable<IActorRef> Children
         {
             get { return _cell.GetChildren(); }
         }
 
-        /// <inheritdoc/>
+        
         public override void Start()
         {
             _cell.Start();
         }
 
-        /// <inheritdoc/>
+        
         public override void Stop()
         {
             _cell.Stop();
         }
 
-        /// <inheritdoc/>
+       
         public override void Suspend()
         {
             _cell.Suspend();
         }
 
-        /// <inheritdoc/>
+        
         public override bool IsLocal
         {
             get { return true; }
         }
 
-        /// <inheritdoc/>
+        
         public override void SendSystemMessage(ISystemMessage message)
         {
             _cell.SendSystemMessage(message);
@@ -178,7 +178,7 @@ namespace Akka.Actor
         /// </summary>
         protected IInternalActorRef Supervisor => _supervisor;
 
-        /// <inheritdoc/>
+        
         public override bool IsTerminated => _cell.IsTerminated;
 
         /// <summary>
@@ -186,13 +186,13 @@ namespace Akka.Actor
         /// </summary>
         protected MailboxType MailboxType { get; }
 
-        /// <inheritdoc/>
+        
         public override void Resume(Exception causedByFailure = null)
         {
             _cell.Resume(causedByFailure);
         }
 
-        /// <inheritdoc/>
+        
         public override void Restart(Exception cause)
         {
             _cell.Restart(cause);
@@ -204,13 +204,13 @@ namespace Akka.Actor
             _cell.SendMessage(sender, message);
         }
 
-        /// <inheritdoc/>
+        
         public override IInternalActorRef GetSingleChild(string name)
         {
             return _cell.GetSingleChild(name);
         }
 
-        /// <inheritdoc/>
+        
         public override IActorRef GetChild(IReadOnlyList<string> name)
         {
             IActorRef current = this;

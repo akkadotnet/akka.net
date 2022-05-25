@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
@@ -35,7 +34,7 @@ namespace Akka.Cluster.Sharding.Internal
     [Serializable]
     internal class LeastShardAllocationStrategy : AbstractLeastShardAllocationStrategy
     {
-        private static readonly Task<IImmutableSet<ShardId>> emptyRebalanceResult = Task.FromResult<IImmutableSet<ShardId>>(ImmutableHashSet<ShardId>.Empty);
+        private static readonly Task<IImmutableSet<ShardId>> _emptyRebalanceResult = Task.FromResult<IImmutableSet<ShardId>>(ImmutableHashSet<ShardId>.Empty);
 
         private readonly int _absoluteLimit;
         private readonly double _relativeLimit;
@@ -96,7 +95,7 @@ namespace Akka.Cluster.Sharding.Internal
 
                 if (countBelowOptimal == 0)
                 {
-                    return emptyRebalanceResult;
+                    return _emptyRebalanceResult;
                 }
                 else
                 {
@@ -117,14 +116,14 @@ namespace Akka.Cluster.Sharding.Internal
             if (rebalanceInProgress.Count > 0)
             {
                 // one rebalance at a time
-                return emptyRebalanceResult;
+                return _emptyRebalanceResult;
             }
             else
             {
                 var sortedRegionEntries = RegionEntriesFor(currentShardAllocations).OrderBy(i => i, ShardSuitabilityOrdering.Instance).ToImmutableList();
                 if (!IsAGoodTimeToRebalance(sortedRegionEntries))
                 {
-                    return emptyRebalanceResult;
+                    return _emptyRebalanceResult;
                 }
                 else
                 {
@@ -132,7 +131,7 @@ namespace Akka.Cluster.Sharding.Internal
                     var numberOfRegions = sortedRegionEntries.Count;
                     if (numberOfRegions == 0 || numberOfShards == 0)
                     {
-                        return emptyRebalanceResult;
+                        return _emptyRebalanceResult;
                     }
                     else
                     {

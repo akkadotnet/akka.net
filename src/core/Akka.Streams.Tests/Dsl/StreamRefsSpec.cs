@@ -16,6 +16,7 @@ using FluentAssertions;
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
@@ -222,11 +223,16 @@ namespace Akka.Streams.Tests
         private readonly TestProbe _probe;
         private readonly IActorRef _remoteActor;
 
-        protected override void BeforeTermination()
+        protected override async Task BeforeTerminationAsync()
         {
-            base.BeforeTermination();
-            RemoteSystem.Dispose();
+            await base.BeforeTerminationAsync();
             Materializer.Dispose();
+        }
+
+        protected override async Task AfterAllAsync()
+        {
+            await base.AfterAllAsync();
+            await ShutdownAsync(RemoteSystem);
         }
 
         [Fact]

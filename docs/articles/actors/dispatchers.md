@@ -127,7 +127,7 @@ This is the configuration for the [*default-fork-join-dispatcher*](#built-in-dis
 ```hocon
 default-fork-join-dispatcher {
   type = ForkJoinDispatcher
-  throughput = 100
+  throughput = 30
   dedicated-thread-pool {
       thread-count = 3
       deadlock-timeout = 3s
@@ -227,7 +227,7 @@ This will enable the `ChannelExecutor` to run everywhere and all Akka.NET loads,
 The following configuration keys are available for any dispatcher configuration:
 
 * `type` - (Required) The type of dispatcher to be used: `Dispatcher`, `TaskDispatcher`, `PinnedDispatcher`, `ForkJoinDispatcher` or `SynchronizedDispatcher`.
-* `throughput` - (Required) The maximum # of messages processed each time the actor is activated. Most dispatchers default to `100`.
+* `throughput` - (Required) The maximum # of messages processed each time the actor is activated. Most dispatchers default to `30`.
 * `throughput-deadline-time` - The maximum amount of time to process messages when the actor is activated, or `0` for no limit. The default is `0`.
 
 > [!NOTE]

@@ -1,3 +1,5 @@
+- name: Akka
+  href: akka.md
 - name: Akka.Cluster
   href: akka.cluster.md
 - name: Akka.Remote

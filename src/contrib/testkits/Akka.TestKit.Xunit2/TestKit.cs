@@ -6,11 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Xunit2.Internals;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.TestKit.Xunit2
@@ -19,9 +21,29 @@ namespace Akka.TestKit.Xunit2
     /// This class represents an Akka.NET TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
     /// as its testing framework.
     /// </summary>
-    public class TestKit : TestKitBase , IDisposable
+    public class TestKit : TestKitBase, IAsyncLifetime
     {
-        private bool _isDisposed; //Automatically initialized to false;
+        private class PrefixedOutput : ITestOutputHelper
+        {
+            private readonly ITestOutputHelper output;
+            private readonly string prefix;
+
+            public PrefixedOutput(ITestOutputHelper output, string prefix)
+            {
+                this.output = output;
+                this.prefix = prefix;
+            }
+
+            public void WriteLine(string message)
+            {
+                output.WriteLine(prefix + message);
+            }
+
+            public void WriteLine(string format, params object[] args)
+            {
+                output.WriteLine(prefix + format, args);
+            }
+        }
 
         /// <summary>
         /// The provider used to write test output.
@@ -102,16 +124,15 @@ namespace Akka.TestKit.Xunit2
 
         /// <summary>
         /// This method is called when a test ends.
-        /// 
+        ///
         /// <remarks>
-        /// If you override this, then make sure you either call base.AfterTest() or
-        /// <see cref="TestKitBase.Shutdown(System.Nullable{System.TimeSpan},bool)">TestKitBase.Shutdown</see>
+        /// If you override this, then make sure you either call base.AfterAllAsync()
         /// to shut down the system. Otherwise a memory leak will occur.
         /// </remarks>
         /// </summary>
-        protected virtual void AfterAll()
+        protected virtual async Task AfterAllAsync()
         {
-            Shutdown();
+            await ShutdownAsync();
         }
 
         /// <summary>
@@ -128,42 +149,24 @@ namespace Akka.TestKit.Xunit2
             }
         }
 
-        /// <inheritdoc/>
-        public void Dispose()
+        protected void InitializeLogger(ActorSystem system, string prefix)
         {
-            Dispose(true);
-            //Take this object off the finalization queue and prevent finalization code for this object
-            //from executing a second time.
-            GC.SuppressFinalize(this);
+            if (Output != null)
+            {
+                var extSystem = (ExtendedActorSystem)system;
+                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(
+                    string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))), "log-test");
+                logger.Tell(new InitializeLogger(system.EventStream));
+            }
+        }
+        public virtual Task InitializeAsync()
+        {
+            return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        /// <param name="disposing">
-        /// if set to <c>true</c> the method has been called directly or indirectly by a  user's code.
-        /// Managed and unmanaged resources will be disposed.<br /> if set to <c>false</c> the method
-        /// has been called by the runtime from inside the finalizer and only unmanaged resources can
-        ///  be disposed.
-        /// </param>
-        protected virtual void Dispose(bool disposing)
+        public virtual async Task DisposeAsync()
         {
-            // If disposing equals false, the method has been called by the
-            // runtime from inside the finalizer and you should not reference
-            // other objects. Only unmanaged resources can be disposed.
-
-            try
-            {
-                //Make sure Dispose does not get called more than once, by checking the disposed field
-                if(!_isDisposed && disposing)
-                {
-                    AfterAll();
-                }
-                _isDisposed = true;
-            }
-            finally
-            {
-            }
+            await AfterAllAsync();
         }
     }
 }

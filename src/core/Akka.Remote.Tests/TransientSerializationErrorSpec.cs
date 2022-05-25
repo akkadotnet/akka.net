@@ -12,6 +12,7 @@ using Akka.TestKit;
 using Xunit;
 using Akka.Serialization;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 
 namespace Akka.Remote.Tests
 {
@@ -115,7 +116,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        internal class EchoActor : ActorBase
+        private class EchoActor : ActorBase
         {
             public static Props Props()
             {
@@ -129,16 +130,16 @@ namespace Akka.Remote.Tests
             }
         }
 
-        private readonly ActorSystem system2;
-        private readonly Address system2Address;
+        private readonly ActorSystem _system2;
+        private readonly Address _system2Address;
 
-        public AbstractTransientSerializationErrorSpec(Config config)
+        protected AbstractTransientSerializationErrorSpec(Config config)
             : base(config.WithFallback(ConfigurationFactory.ParseString(GetConfig())))
         {
             var port = ((ExtendedActorSystem)Sys).Provider.DefaultAddress.Port;
 
-            system2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            system2Address = ((ExtendedActorSystem)system2).Provider.DefaultAddress;
+            _system2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+            _system2Address = ((ExtendedActorSystem)_system2).Provider.DefaultAddress;
         }
 
         private static string GetConfig()
@@ -167,21 +168,22 @@ namespace Akka.Remote.Tests
             ";
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterAllAsync()
         {
-            Shutdown(system2);
+            await base.AfterAllAsync();
+            await ShutdownAsync(_system2);
         }
 
 
         [Fact]
-        public void The_transport_must_stay_alive_after_a_transient_exception_from_the_serializer()
+        public async Task The_transport_must_stay_alive_after_a_transient_exception_from_the_serializer()
         {
-            system2.ActorOf(EchoActor.Props(), "echo");
+            _system2.ActorOf(EchoActor.Props(), "echo");
 
-            var selection = Sys.ActorSelection(new RootActorPath(system2Address) / "user" / "echo");
+            var selection = Sys.ActorSelection(new RootActorPath(_system2Address) / "user" / "echo");
 
             selection.Tell("ping", this.TestActor);
-            ExpectMsg("ping");
+            await ExpectMsgAsync("ping");
 
             // none of these should tear down the connection
             selection.Tell(ManifestIllegal.Instance, this.TestActor);
@@ -193,7 +195,7 @@ namespace Akka.Remote.Tests
 
             // make sure we still have a connection
             selection.Tell("ping", this.TestActor);
-            ExpectMsg("ping");
+            await ExpectMsgAsync("ping");
         }
     }
 

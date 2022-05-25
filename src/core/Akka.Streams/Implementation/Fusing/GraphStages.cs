@@ -36,7 +36,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task> TerminationWatcher<T>()
+        internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Done>> TerminationWatcher<T>()
             => Implementation.Fusing.TerminationWatcher<T>.Instance;
 
         /// <summary>
@@ -289,7 +289,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    internal sealed class TerminationWatcher<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task>
+    internal sealed class TerminationWatcher<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Done>>
     {
         /// <summary>
         /// TBD
@@ -301,22 +301,23 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly TerminationWatcher<T> _stage;
-            private readonly TaskCompletionSource<NotUsed> _finishPromise;
+            private readonly TaskCompletionSource<Done> _finishPromise;
             private bool _completedSignalled;
 
-            public Logic(TerminationWatcher<T> stage, TaskCompletionSource<NotUsed> finishPromise) : base(stage.Shape)
+            public Logic(TerminationWatcher<T> stage, TaskCompletionSource<Done> finishPromise) : base(stage.Shape)
             {
                 _stage = stage;
                 _finishPromise = finishPromise;
 
-                SetHandler(stage._inlet, stage._outlet, this);
+                SetHandler(stage._inlet, this);
+                SetHandler(stage._outlet, this);
             }
 
             public override void OnPush() => Push(_stage._outlet, Grab(_stage._inlet));
 
             public override void OnUpstreamFinish()
             {
-                _finishPromise.TrySetResult(NotUsed.Instance);
+                _finishPromise.TrySetResult(Done.Instance);
                 _completedSignalled = true;
                 CompleteStage();
             }
@@ -330,11 +331,15 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull() => Pull(_stage._inlet);
 
-            public override void OnDownstreamFinish()
+            public override void OnDownstreamFinish(Exception cause)
             {
-                _finishPromise.TrySetResult(NotUsed.Instance);
+                if (cause is SubscriptionWithCancelException.NonFailureCancellation)
+                    _finishPromise.TrySetResult(Done.Instance);
+                else
+                    _finishPromise.TrySetException(cause);
+                
                 _completedSignalled = true;
-                CompleteStage();
+                CancelStage(cause);
             }
 
             public override void PostStop()
@@ -369,10 +374,10 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="inheritedAttributes">TBD</param>
         /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<Task> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Task<Done>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var finishPromise = new TaskCompletionSource<NotUsed>();
-            return new LogicAndMaterializedValue<Task>(new Logic(this, finishPromise), finishPromise.Task);
+            var finishPromise = new TaskCompletionSource<Done>();
+            return new LogicAndMaterializedValue<Task<Done>>(new Logic(this, finishPromise), finishPromise.Task);
         }
 
         /// <summary>
@@ -457,9 +462,9 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull() => Pull(_stage.In);
 
-            public override void OnDownstreamFinish()
+            public override void OnDownstreamFinish(Exception cause)
             {
-                CompleteStage();
+                InternalOnDownstreamFinish(cause);
                 _monitor.Value = FlowMonitor.Finished.Instance;
             }
 
@@ -843,16 +848,16 @@ namespace Akka.Streams.Implementation.Fusing
                 // initial handler (until task completes)
                 SetHandler(stage.Outlet, new LambdaOutHandler(
                     onPull: () => { },
-                    onDownstreamFinish: () =>
+                    onDownstreamFinish: cause =>
                     {
                         if (!_materialized.Task.IsCompleted)
                         {
                             // we used to try to materialize the "inner" source here just to get
                             // the materialized value, but that is not safe and may cause the graph shell
                             // to leak/stay alive after the stage completes
-                            _materialized.TrySetException(new StreamDetachedException("Stream cancelled before Source Task completed"));
+                            _materialized.TrySetException(new StreamDetachedException("Stream cancelled before Source Task completed", cause));
                         }
-                        OnDownstreamFinish();
+                        InternalOnDownstreamFinish(cause);
                     }));
             }
 

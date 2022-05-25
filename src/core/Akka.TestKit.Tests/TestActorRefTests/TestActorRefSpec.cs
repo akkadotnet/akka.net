@@ -11,21 +11,21 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.TestKit.Internal;
+using Akka.Util;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class TestActorRefSpec : AkkaSpec
     {
-        public static int Counter = 4;
-        public static readonly Thread Thread = Thread.CurrentThread;
-        public static Thread OtherThread;
-
+        private readonly AtomicCounter _counter = new AtomicCounter(4);
+        private readonly Thread _thread = Thread.CurrentThread;
+        private readonly AtomicReference<Thread> _otherThread = new AtomicReference<Thread>(null);
 
         public TestActorRefSpec()
             : base(GetConfig())
         {
-            OtherThread = null;
         }
         private TimeSpan DefaultTimeout { get { return Dilated(TestKitSettings.DefaultTimeout); } }
 
@@ -37,7 +37,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         private void AssertThread()
         {
-            Assert.True(OtherThread == null || OtherThread == Thread, "Thread");
+            Assert.True(_otherThread.Value == null || _otherThread.Value == _thread, "Thread");
         }
 
         [Fact]
@@ -79,22 +79,24 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_support_reply_via_sender()
         {
-            var serverRef = new TestActorRef<ReplyActor>(Sys, Props.Create<ReplyActor>());
-            var clientRef = new TestActorRef<SenderActor>(Sys, Props.Create(() => new SenderActor(serverRef)));
+            var serverRef = new TestActorRef<ReplyActor>(Sys, Props.Create(() => 
+                new ReplyActor(_thread, _otherThread)));
+            var clientRef = new TestActorRef<SenderActor>(Sys, Props.Create(() => 
+                new SenderActor(serverRef, _counter, _thread, _otherThread)));
 
-            Counter = 4;
+            _counter.GetAndSet(4);
             clientRef.Tell("complex");
             clientRef.Tell("simple");
             clientRef.Tell("simple");
             clientRef.Tell("simple");
-            Counter.ShouldBe(0);
+            _counter.Current.ShouldBe(0);
 
-            Counter = 4;
+            _counter.GetAndSet(4);
             clientRef.Tell("complex2");
             clientRef.Tell("simple");
             clientRef.Tell("simple");
             clientRef.Tell("simple");
-            Counter.ShouldBe(0);
+            _counter.Current.ShouldBe(0);
 
             AssertThread();
         }
@@ -103,7 +105,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         public void TestActorRef_must_stop_when_sent_a_PoisonPill()
         {
             //TODO: Should have this surrounding all code EventFilter[ActorKilledException]() intercept {            
-            var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>(), null, "will-be-killed");
+            var a = new TestActorRef<WorkerActor>(Sys, Props.Create(() => new WorkerActor(_thread, _otherThread)), null, "will-be-killed");
             Sys.ActorOf(Props.Create(() => new WatchAndForwardActor(a, TestActor)), "forwarder");
             a.Tell(PoisonPill.Instance);
             ExpectMsg<WrappedTerminated>(w => w.Terminated.ActorRef == a, TimeSpan.FromSeconds(10), string.Format("that the terminated actor was the one killed, i.e. {0}", a.Path));
@@ -116,18 +118,18 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         public void TestActorRef_must_restart_when_killed()
         {
             //TODO: Should have this surrounding all code EventFilter[ActorKilledException]() intercept {
-            Counter = 2;
-            var boss = new TestActorRef<BossActor>(Sys, Props.Create<BossActor>());
+            _counter.GetAndSet(2);
+            var boss = new TestActorRef<BossActor>(Sys, Props.Create(() => new BossActor(_counter, _thread, _otherThread)));
 
             boss.Tell("sendKill");
-            Assert.Equal(0, Counter);
+            Assert.Equal(0, _counter.Current);
             AssertThread();
         }
 
         [Fact]
         public void TestActorRef_must_support_futures()
         {
-            var worker = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>());
+            var worker = new TestActorRef<WorkerActor>(Sys, Props.Create(() => new WorkerActor(_thread, _otherThread)));
             var task = worker.Ask("work");
             Assert.True(task.IsCompleted, "Task should be completed");
             if(!task.Wait(DefaultTimeout)) XAssert.Fail("Timed out");    //Using a timeout to stop the test if there is something wrong with the code
@@ -137,7 +139,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_allow_access_to_internals()
         {
-            var actorRef = new TestActorRef<SaveStringActor>(Sys, Props.Create<SaveStringActor>());
+            var actorRef = new TestActorRef<SaveStringActor>(Sys, Props.Create(() => new SaveStringActor(_thread, _otherThread)));
             actorRef.Tell("Hejsan!");
             var actor = actorRef.UnderlyingActor;
             Assert.Equal("Hejsan!", actor.ReceivedString);
@@ -146,14 +148,14 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_set_ReceiveTimeout_to_None()
         {
-            var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>());
+            var a = new TestActorRef<WorkerActor>(Sys, Props.Create(() => new WorkerActor(_thread, _otherThread)));
             ((IInternalActor)a.UnderlyingActor).ActorContext.ReceiveTimeout.ShouldBe(null);
         }
 
         [Fact]
         public void TestActorRef_must_set_CallingThreadDispatcher()
         {
-            var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>());
+            var a = new TestActorRef<WorkerActor>(Sys, Props.Create(() => new WorkerActor(_thread, _otherThread)));
             var actorRef = (InternalTestActorRef)a.Ref;
             Assert.IsType<CallingThreadDispatcher>(actorRef.Cell.Dispatcher);
         }
@@ -161,7 +163,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_allow_override_of_dispatcher()
         {
-            var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>().WithDispatcher("test-dispatcher1"));
+            var a = new TestActorRef<WorkerActor>(Sys, Props.Create(() => new WorkerActor(_thread, _otherThread)).WithDispatcher("test-dispatcher1"));
             var actorRef = (InternalTestActorRef)a.Ref;
             Assert.IsType<PinnedDispatcher>(actorRef.Cell.Dispatcher);
         }
@@ -169,7 +171,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_proxy_receive_for_the_underlying_actor_without_sender()
         {
-            var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>());
+            var a = new TestActorRef<WorkerActor>(Sys, Props.Create(() => new WorkerActor(_thread, _otherThread)));
             a.Receive("work");
             var actorRef = (InternalTestActorRef)a.Ref;
             Assert.True(actorRef.IsTerminated);
@@ -178,7 +180,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_proxy_receive_for_the_underlying_actor_with_sender()
         {
-            var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>());
+            var a = new TestActorRef<WorkerActor>(Sys, Props.Create(() => new WorkerActor(_thread, _otherThread)));
             a.Receive("work", TestActor);   //This will stop the actor
             var actorRef = (InternalTestActorRef)a.Ref;
             Assert.True(actorRef.IsTerminated);
@@ -220,6 +222,9 @@ namespace Akka.TestKit.Tests.TestActorRefTests
                 ReceivedString = message as string;
                 return true;
             }
+
+            public SaveStringActor(Thread parentThread, AtomicReference<Thread> otherThread) : base(parentThread, otherThread)
+            { }
         }
     }
 }

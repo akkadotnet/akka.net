@@ -191,8 +191,7 @@ namespace Akka.Streams
         /// <returns>The newly created logging adapter.</returns>
         public abstract ILoggingAdapter MakeLogger(object logSource);
 
-        /// <inheritdoc/>
-        public void Dispose() => Shutdown();
+       public void Dispose() => Shutdown();
     }
 
     /// <summary>
@@ -699,8 +698,7 @@ namespace Akka.Streams
             Mode = mode;
             Timeout = timeout;
         }
-
-        /// <inheritdoc/>
+               
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(obj, null))
@@ -712,12 +710,11 @@ namespace Akka.Streams
 
             return false;
         }
-
-        /// <inheritdoc/>
+        
         public bool Equals(StreamSubscriptionTimeoutSettings other)
             => Mode == other.Mode && Timeout.Equals(other.Timeout);
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -726,7 +723,6 @@ namespace Akka.Streams
             }
         }
 
-        /// <inheritdoc/>
         public override string ToString() => $"StreamSubscriptionTimeoutSettings<{Mode}, {Timeout}>";
     }
 

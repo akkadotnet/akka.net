@@ -149,7 +149,7 @@ namespace Akka.Streams.Dsl
                 Pull(_delayFlow.Inlet);
             }
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {

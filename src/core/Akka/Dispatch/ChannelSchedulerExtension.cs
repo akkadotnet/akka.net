@@ -352,7 +352,7 @@ namespace Akka.Dispatch
         /// and to help execute queued works internaly. 
         /// It supports task-inlining only for task equal or above the own priority
         /// </summary>
-        sealed class PriorityTaskScheduler : TaskScheduler, IDisposable
+        internal sealed class PriorityTaskScheduler : TaskScheduler, IDisposable
         {
             readonly Channel<Task> _channel;
 

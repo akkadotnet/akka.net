@@ -176,7 +176,7 @@ For supporting remembered entities in an environment without disk storage but wi
 
 One complication that  `akka.cluster.sharding.remember-entities = true` introduces is that your sharded entity actors can no longer be terminated through the normal Akka.NET channels, i.e. `Context.Stop(Self)`, `PoisonPill.Instance`, and the like. This is because as part of the `remember-entities` contract - the sharding system is going to insist on keeping all remembered entities alive until explicitly told to stop.
 
-To terminate a remembered entity, the sharded entity actor needs to send a [`Passivate` command](xref:Akka.Cluster.Sharding.Passivate) _to its parent actor_ in order to signal to the sharding system that we no longer need to remember this particular entity.
+To terminate a remembered entity, the sharded entity actor needs to send a [`Passivate` command](xref:Akka.Cluster.Sharding.Passivate) *to its parent actor* in order to signal to the sharding system that we no longer need to remember this particular entity.
 
 ```csharp
 protected override bool ReceiveCommand(object message)
@@ -256,7 +256,7 @@ In the normal operation of an Akka.NET cluster, the sharding system automaticall
 
 However, in the event that an `ActorSystem` is aborted as a result of a process / hardware failure it's possible that when using `akka.cluster.sharding.state-store-mode=persistence` leftover sharding data can still be present inside the Akka.Persistence journal and snapshot store - which will prevent the Akka.Cluster.Sharding system from recovering and starting up correctly the next time it's launched.
 
-This is a _rare_, but not impossible occurrence. In the event that this happens you'll need to purge the old Akka.Cluster.Sharding data before restarting the sharding system. You can purge this data automatically by [using the Akka.Cluster.Sharding.RepairTool](https://github.com/petabridge/Akka.Cluster.Sharding.RepairTool) produced by [Petabridge](https://petabridge.com/).
+This is a *rare*, but not impossible occurrence. In the event that this happens you'll need to purge the old Akka.Cluster.Sharding data before restarting the sharding system. You can purge this data automatically by [using the Akka.Cluster.Sharding.RepairTool](https://github.com/petabridge/Akka.Cluster.Sharding.RepairTool) produced by [Petabridge](https://petabridge.com/).
 
 ## Tutorial
 

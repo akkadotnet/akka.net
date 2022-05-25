@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 namespace Akka.TestKit.Xunit.Internals
 {
     /// <summary>
-    /// This class represents an actor that logs output from tests using an <see cref="ITestOutputHelper"/> provider.
+    /// This class represents an actor that logs output from tests using an ITestOutputHelper provider.
     /// </summary>
     public class TestOutputLogger : ReceiveActor
     {

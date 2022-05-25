@@ -370,7 +370,6 @@ namespace Akka.Actor
             return Completed;
         }
 
-        /// <inheritdoc/>
         public void Dispose()
         {
             var stopped = Stop();
@@ -430,6 +429,13 @@ namespace Akka.Actor
             {
                 return $"[{_receiver}.Tell({_message}, {_sender})]";
             }
+
+            #if !NETSTANDARD
+            public void Execute()
+            {
+                Run();
+            }
+            #endif
         }
 
         private class SchedulerRegistration

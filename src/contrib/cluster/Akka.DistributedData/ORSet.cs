@@ -432,7 +432,7 @@ namespace Akka.DistributedData
             return new ORSet<T>(updated, VersionVector.PruningCleanup(removedNode));
         }
 
-        /// <inheritdoc/>
+        
         public bool Equals(ORSet<T> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -441,14 +441,14 @@ namespace Akka.DistributedData
             return VersionVector == other.VersionVector && ElementsMap.SequenceEqual(other.ElementsMap);
         }
 
-        /// <inheritdoc/>
+        
         public IEnumerator<T> GetEnumerator() => ElementsMap.Keys.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is ORSet<T> && Equals((ORSet<T>)obj);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -613,12 +613,12 @@ namespace Akka.DistributedData
 
             public IReplicatedData Merge(IReplicatedData other)
             {
-                if (other is AddDeltaOperation)
+                if (other is AddDeltaOperation thatAdd)
                 {
                     // merge AddDeltaOp into last AddDeltaOp in the group, if possible
                     var last = Operations[Operations.Length - 1];
-                    return last is AddDeltaOperation
-                        ? new DeltaGroup(Operations.SetItem(Operations.Length - 1, other.Merge(last)))
+                    return last is AddDeltaOperation thisAdd
+                        ? new DeltaGroup(Operations.SetItem(Operations.Length - 1, thisAdd.Merge(thatAdd)))
                         : new DeltaGroup(Operations.Add(other));
                 }
                 else if (other is DeltaGroup @group)

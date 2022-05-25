@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util;
 using FluentAssertions;
@@ -21,14 +22,6 @@ namespace Akka.Cluster.Sharding.Tests
         ClusterSharding clusterSharding;
         ClusterShardingSettings shardingSettings;
         private MessageExtractor messageExtractor = new MessageExtractor(10);
-
-        public ProxyShardingSpec() : base(GetConfig())
-        {
-            var role = "Shard";
-            clusterSharding = ClusterSharding.Get(Sys);
-            shardingSettings = ClusterShardingSettings.Create(Sys);
-            clusterSharding.StartProxy("myType", role, IdExtractor, ShardResolver);
-        }
 
         private class MessageExtractor : HashCodeMessageExtractor
         {
@@ -57,20 +50,29 @@ namespace Akka.Cluster.Sharding.Tests
             switch (message)
             {
                 case int i:
-                    return (i % 10).ToString();
+                    return i.ToString();
             }
             throw new NotSupportedException();
         }
 
 
-        public static Config GetConfig()
-        {
-            return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
-                                                     akka.remote.dot-netty.tcp.port = 0")
+        private static Config SpecConfig =>
+            ConfigurationFactory.ParseString(@"
+                akka.actor.provider = cluster
+                akka.remote.dot-netty.tcp.port = 0
+                akka.cluster.sharding.verbose-debug-logging = on
+                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
 
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(DistributedData.DistributedData.DefaultConfig())
                 .WithFallback(ClusterSingletonManager.DefaultConfig());
+
+        public ProxyShardingSpec() : base(SpecConfig)
+        {
+            var role = "Shard";
+            clusterSharding = ClusterSharding.Get(Sys);
+            shardingSettings = ClusterShardingSettings.Create(Sys);
+            clusterSharding.StartProxy("myType", role, IdExtractor, ShardResolver);
         }
 
         [Fact]
@@ -86,7 +88,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Fact]
         public void ProxyShardingSpec_Shard_region_should_be_found()
         {
-            var shardRegion = clusterSharding.Start("myType", EchoActor.Props(this), shardingSettings, messageExtractor);
+            var shardRegion = clusterSharding.Start("myType", SimpleEchoActor.Props(), shardingSettings, messageExtractor);
 
             shardRegion.Path.Should().NotBeNull();
             shardRegion.Path.ToString().Should().EndWith("myType");
@@ -95,7 +97,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Fact]
         public void ProxyShardingSpec_Shard_coordinator_should_be_found()
         {
-            var shardRegion = clusterSharding.Start("myType", EchoActor.Props(this), shardingSettings, messageExtractor);
+            var shardRegion = clusterSharding.Start("myType", SimpleEchoActor.Props(), shardingSettings, messageExtractor);
 
             IActorRef shardCoordinator = Sys.ActorSelection("akka://test/system/sharding/myTypeCoordinator")
                     .ResolveOne(TimeSpan.FromSeconds(5)).Result;

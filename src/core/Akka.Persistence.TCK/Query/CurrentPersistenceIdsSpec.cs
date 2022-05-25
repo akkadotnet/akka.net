@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -105,10 +106,10 @@ namespace Akka.Persistence.TCK.Query
             return pref;
         }
 
-        protected override void Dispose(bool disposing)
+        public override Task DisposeAsync()
         {
             Materializer.Dispose();
-            base.Dispose(disposing);
+            return base.DisposeAsync();
         }
     }
 }

@@ -4,6 +4,7 @@ title: Akka.NET Documentation
 tagline: A straightforward approach to building distributed, high-scale applications in .NET
 ---
 <!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable MD009 -->
 <style>
 .subtitle {
     font-size:20px;
@@ -14,6 +15,9 @@ tagline: A straightforward approach to building distributed, high-scale applicat
 img.main-logo{
     width: 192px;
 }
+img.pb-logo-full{
+    width:  200px;
+}
 h2:before{
     display: none;
 }
@@ -23,15 +27,22 @@ h2:before{
 }
 </style>
 
-<div class="jumbotron">
-    <div class="container">
+<div class="container">
+    <div class="jumbotron">   
       <img src="images/mainlogo.png" class="main-logo" />
       <h1 class="title">Try <strong>Akka.NET</strong> now!</h1>
       <h1 class="title"><small class="subtitle">Follow our tutorial and build your first Akka.NET application today.</small></h1>
       <div class="options">
-        <a class="btn btn-lg btn-primary" href="community/whats-new/akkadotnet-v1.4.md">What's new in Akka.NET v1.4.0?</a>
-        <a class="btn btn-lg btn-primary" href="articles/intro/getting-started/tutorial-overview.html">Get Started Now</a> <a class="btn btn-lg btn-primary" href="articles/intro/what-is-akka.md">Read the documentation</a>
+        <a class="btn btn-lg btn-primary" href="community/whats-new/akkadotnet-v1.5.md">Coming Soon: Akka.NET v1.5</a>
+        <a class="btn btn-lg btn-primary" href="articles/intro/getting-started/tutorial-overview.md">Get Started Now</a> <a class="btn btn-lg btn-primary" href="articles/intro/what-is-akka.md">Read the documentation</a>
       </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row text-center">
+        <h2>Professionally Maintained and Supported by <a href="https://petabridge.com/" title="Petabridge - the Akka.NET Company">Petabridge</a></h2>
+         <a href="https://petabridge.com/" title="Petabridge - the Akka.NET Company"><img class="pb-logo-full" src="images/logos/petabridge_logo_full.png" alt="Petabridge, the Akka.NET Company."></a>
     </div>
 </div>
 

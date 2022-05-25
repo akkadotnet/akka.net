@@ -22,12 +22,12 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Actor_should_not_loose_self_context_after_async_call()
+        public async Task Actor_should_not_loose_self_context_after_async_call()
         {
             var identity = ActorOfAsTestActorRef<MyActor>(Props.Create(() => new MyActor(TestActor)), TestActor);
             identity.Tell(NotUsed.Instance);
-            var selfBefore = ExpectMsg<IActorRef>();
-            var selfAfter = ExpectMsg<IActorRef>();
+            var selfBefore = await ExpectMsgAsync<IActorRef>();
+            var selfAfter = await ExpectMsgAsync<IActorRef>();
             selfAfter.Should().Be(selfBefore);
         }
 

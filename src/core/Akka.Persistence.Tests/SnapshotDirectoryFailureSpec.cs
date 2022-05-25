@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.IO;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Xunit;
 
@@ -66,10 +67,10 @@ namespace Akka.Persistence.Tests
             using (_file.Create()) {}
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterTerminationAsync()
         {
             _file.Delete();
-            base.AfterTermination();
+            await base.AfterTerminationAsync();
         }
 
         [Fact]

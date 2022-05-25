@@ -12,7 +12,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -305,7 +304,7 @@ namespace Akka.Streams.Tests.Dsl
                         onUpstreamFailure: FailStage);
 
 
-                    SetHandler(stage.Outlet, onPull: DoNothing, onDownstreamFinish: CompleteStage);
+                    SetHandler(stage.Outlet, onPull: DoNothing, onDownstreamFinish: cause => CompleteStage());
                 }
 
                 public override void PreStart() => ScheduleRepeatedly(TimerKey, TimeSpan.FromMilliseconds(100));

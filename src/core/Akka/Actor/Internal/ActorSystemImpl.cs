@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using System.Reflection;
+using System.Text;
 using Akka.Actor.Setup;
 using Akka.Serialization;
 using Akka.Util;
@@ -199,7 +201,7 @@ namespace Akka.Actor.Internal
         public override void Abort()
         {
             Aborting = true;
-            Terminate();
+            FinalTerminate(); // Skip CoordinatedShutdown check and aggressively shutdown the ActorSystem
         }
 
         /// <summary>Starts this system</summary>
@@ -525,20 +527,19 @@ namespace Akka.Actor.Internal
         {
             if(Settings.CoordinatedShutdownRunByActorSystemTerminate)
             {
-                CoordinatedShutdown.Get(this).Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
-            } else
-            {
-                FinalTerminate();
+                return CoordinatedShutdown.Get(this)
+                    .Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
             }
-            return WhenTerminated;
+            return FinalTerminate();
         }
 
-        internal override void FinalTerminate()
+        internal override Task FinalTerminate()
         {
             Log.Debug("System shutdown initiated");
             if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null)
                 Stop(_logDeadLetterListener);
             _provider.Guardian.Stop();
+            return WhenTerminated;
         }
 
         /// <summary>
@@ -568,6 +569,78 @@ namespace Akka.Actor.Internal
         public override string ToString()
         {
             return LookupRoot.Path.Root.Address.ToString();
+        }
+
+        public override string PrintTree()
+        {
+            string PrintNode(IActorRef node, string indent)
+            {
+                var sb = new StringBuilder();
+                if (node is ActorRefWithCell wc)
+                {
+                    const string space = " ";
+                    var cell = wc.Underlying;
+                    sb.Append(string.IsNullOrEmpty(indent) ? "-> " : indent.Remove(indent.Length-1) + "L-> ")
+                        .Append($"{node.Path.Name} {Logging.SimpleName(node)} ");
+                    
+                    if (cell is ActorCell real)
+                    {
+                        var realActor = real.Actor;
+                        sb.Append(realActor is null ? "null" : realActor.GetType().ToString())
+                            .Append($" status={real.Mailbox.CurrentStatus()}");
+                    }
+                    else
+                    {
+                        sb.Append(Logging.SimpleName(cell));
+                    }
+                    sb.Append(space);
+
+                    switch (cell.ChildrenContainer)
+                    {
+                        case TerminatingChildrenContainer t:
+                            var toDie = t.ToDie.ToList();
+                            toDie.Sort();
+                            var reason = t.Reason;
+                            sb.Append($"Terminating({reason})")
+                                .Append($"\n{indent}   |    toDie: ")
+                                .Append(string.Join($"\n{indent}   |           ", toDie));
+                            break;
+                        case TerminatedChildrenContainer x:
+                            sb.Append(x);
+                            break;
+                        case EmptyChildrenContainer x:
+                            sb.Append(x);
+                            break;
+                        case NormalChildrenContainer n:
+                            sb.Append($"{n.Children.Count} children");
+                            break;
+                        case var x:
+                            sb.Append(Logging.SimpleName(x));
+                            break;
+                    }
+
+                    if (cell.ChildrenContainer.Children.Count > 0)
+                    {
+                        sb.Append("\n");
+
+                        var children = cell.ChildrenContainer.Children.ToList();
+                        children.Sort();
+                        var childStrings = children.Select((t, i) => i == 0
+                            ? PrintNode(t, $"{indent}   |")
+                            : PrintNode(t, $"{indent}    "));
+
+                        sb.Append(string.Join("\n", childStrings));
+                    }
+                }
+                else
+                {
+                    sb.Append($"{indent}{node.Path.Name} {Logging.SimpleName(node)}");
+                }
+
+                return sb.ToString();
+            }
+
+            return PrintNode(LookupRoot, "");
         }
     }
 

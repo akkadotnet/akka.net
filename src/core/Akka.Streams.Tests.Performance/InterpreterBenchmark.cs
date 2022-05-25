@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.Performance
                     }
                     else
                         CompleteStage();
-                }, onDownstreamFinish: CompleteStage);
+                }, onDownstreamFinish: InternalOnDownstreamFinish);
                 Console.WriteLine("Handler Set");
             }
 

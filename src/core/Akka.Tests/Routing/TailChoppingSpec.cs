@@ -16,6 +16,7 @@ using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
+using System.Threading.Tasks;
 
 namespace Akka.Tests.Routing
 {
@@ -30,7 +31,7 @@ namespace Akka.Tests.Routing
             {
                 _sleepTime = sleepTime;
 
-                Receive<string>(command =>
+                ReceiveAsync<string>( async command =>
                 {
                     switch (command)
                     {
@@ -42,7 +43,7 @@ namespace Akka.Tests.Routing
                             break;
                         default:
                             _times++;
-                            Thread.Sleep(_sleepTime);
+                            await Task.Delay(_sleepTime);
                             Sender.Tell("ack");
                             break;
                     }
@@ -107,7 +108,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Tail_chopping_group_router_must_return_response_from_second_actor_after_inactivity_from_first_one()
+        public async Task Tail_chopping_group_router_must_return_response_from_second_actor_after_inactivity_from_first_one()
         {
             var actor1 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(1.Milliseconds())), "Actor1");
             var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(1.Milliseconds())), "Actor2");
@@ -117,7 +118,7 @@ namespace Akka.Tests.Routing
             var routedActor = Sys.ActorOf(new TailChoppingGroup(paths, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50)).Props());
 
             probe.Send(routedActor, "");
-            probe.ExpectMsg("ack");
+            await probe.ExpectMsgAsync("ack");
 
             var actorList = new List<IActorRef> { actor1, actor2 };
             OneOfShouldEqual(1, actorList)(x => (int)x.Ask("times").Result).Should().BeTrue();
@@ -125,8 +126,9 @@ namespace Akka.Tests.Routing
             routedActor.Tell(new Broadcast("stop"));
         }
 
-        [Fact(Skip = "Skip until fix from https://github.com/akkadotnet/akka.net/pull/3790 merged")]
-        public void Tail_chopping_group_router_must_throw_exception_if_no_result_will_arrive_within_the_given_time()
+        //[Fact(Skip = "Skip until fix from https://github.com/akkadotnet/akka.net/pull/3790 merged")]
+        [Fact]
+        public async Task Tail_chopping_group_router_must_throw_exception_if_no_result_will_arrive_within_the_given_time()
         {
             var actor1 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(1500.Milliseconds())), "Actor3");
             var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(1500.Milliseconds())), "Actor4");
@@ -136,7 +138,7 @@ namespace Akka.Tests.Routing
             var routedActor = Sys.ActorOf(new TailChoppingGroup(paths, TimeSpan.FromMilliseconds(300), TimeSpan.FromMilliseconds(50)).Props());
 
             probe.Send(routedActor, "");
-            var failure = probe.ExpectMsg<Status.Failure>();
+            var failure = await probe.ExpectMsgAsync<Status.Failure>();
             failure.Cause.Should().BeOfType<AskTimeoutException>();
 
             var actorList = new List<IActorRef> { actor1, actor2 };
@@ -146,7 +148,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Tail_chopping_group_router_must_reply_ASAP()
+        public async Task Tail_chopping_group_router_must_reply_ASAP()
         {
             var actor1 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(1000.Milliseconds())), "Actor5");
             var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(4000.Milliseconds())), "Actor6");
@@ -156,7 +158,7 @@ namespace Akka.Tests.Routing
             var routedActor = Sys.ActorOf(new TailChoppingGroup(paths, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(100)).Props());
 
             probe.Send(routedActor, "");
-            probe.ExpectMsg("ack", 2.Seconds());
+            await probe.ExpectMsgAsync("ack", 2.Seconds());
 
             routedActor.Tell(new Broadcast("stop"));
         }

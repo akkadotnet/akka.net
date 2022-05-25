@@ -20,6 +20,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
         public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
+            akka.persistence.query.journal.sql.refresh-interval = 1s
             akka.persistence.journal.sqlite {{
                 event-adapters {{
                   color-tagger  = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""
@@ -33,7 +34,6 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                 metadata-table-name = journal_metadata
                 auto-initialize = on
                 connection-string = ""Datasource=memdb-journal-batch-eventsbytag-{id}.db;Mode=Memory;Cache=Shared""
-                refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());

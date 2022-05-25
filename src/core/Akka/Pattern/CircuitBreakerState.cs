@@ -51,6 +51,17 @@ namespace Akka.Pattern
         public override Task<T> Invoke<T>(Func<Task<T>> body) => 
             Task.FromException<T>(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
 
+        public override Task
+            InvokeState<TState>(TState state, Func<TState, Task> body) =>
+            Task.FromException(
+                new OpenCircuitException(_breaker.LastCaughtException,
+                    RemainingDuration()));
+
+        public override Task<T> InvokeState<T, TState>(TState state,
+            Func<TState, Task<T>> body) => Task.FromException<T>(
+            new OpenCircuitException(_breaker.LastCaughtException,
+                RemainingDuration()));
+
         /// <summary>
         /// Fail-fast on any invocation
         /// </summary>
@@ -121,6 +132,14 @@ namespace Akka.Pattern
             _lock = new AtomicBoolean();
         }
 
+        private void CheckState()
+        {
+            if (!_lock.CompareAndSet(true, false))
+            {
+                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
+            }
+        }
+
         /// <summary>
         /// Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
         /// If the call succeeds, the breaker closes.
@@ -130,11 +149,14 @@ namespace Akka.Pattern
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public override async Task<T> Invoke<T>(Func<Task<T>> body)
         {
-            if (!_lock.CompareAndSet(true, false))
-            {
-                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
-            }
+            CheckState();
             return await CallThrough(body);
+        }
+        
+        public override async Task<T> InvokeState<T,TState>(TState state, Func<TState, Task<T>> body)
+        {
+            CheckState();
+            return await CallThrough(state,body);
         }
 
         /// <summary>
@@ -145,11 +167,15 @@ namespace Akka.Pattern
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public override async Task Invoke(Func<Task> body)
         {
-            if (!_lock.CompareAndSet(true, false))
-            {
-                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
-            }
+            CheckState();
             await CallThrough(body);
+        }
+
+        public override async Task InvokeState<TState>(TState state,
+            Func<TState, Task> body)
+        {
+            CheckState();
+            await CallThrough(state,body);
         }
 
         /// <summary>
@@ -216,6 +242,11 @@ namespace Akka.Pattern
             return CallThrough(body);
         }
 
+        public override Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body)
+        {
+            return CallThrough(state, body);
+        }
+
         /// <summary>
         /// Implementation of invoke, which simply attempts the call
         /// </summary>
@@ -224,6 +255,11 @@ namespace Akka.Pattern
         public override Task Invoke(Func<Task> body)
         {
             return CallThrough(body);
+        }
+
+        public override Task InvokeState<TState>(TState state, Func<TState, Task> body)
+        {
+            return CallThrough(state, body);
         }
 
         /// <summary>

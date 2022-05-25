@@ -6,249 +6,162 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using Akka.Actor;
-using Akka.Cluster.TestKit;
-using Akka.Configuration;
-using Akka.Remote.TestKit;
 using System.Collections.Immutable;
-using System.IO;
-using Akka.Util;
+using System.Linq;
+using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Remote.TestKit;
 using FluentAssertions;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public abstract class ClusterShardingGracefulShutdownSpecConfig : MultiNodeConfig
+    public class ClusterShardingGracefulShutdownSpecConfig : MultiNodeClusterShardingConfig
     {
-        public string Mode { get; }
         public RoleName First { get; }
         public RoleName Second { get; }
 
-        protected ClusterShardingGracefulShutdownSpecConfig(string mode)
+        public ClusterShardingGracefulShutdownSpecConfig(StateStoreMode mode)
+            : base(mode: mode, loglevel: "DEBUG", additionalConfig: @"
+            akka.cluster.roles = [""backend""]
+            akka.cluster.sharding {
+                coordinator-failure-backoff = 3s
+                shard-failure-backoff = 3s
+            }
+            # don't leak ddata state across runs
+            akka.cluster.sharding.distributed-data.durable.keys = []
+
+            # We set this high to allow pausing coordinated shutdown make sure the handoff completes 'immediately' and not
+            # relies on the member removal, which could make things take longer then necessary
+            akka.coordinated-shutdown.phases.cluster-sharding-shutdown-region.timeout = 60s
+            ")
         {
-            Mode = mode;
             First = Role("first");
             Second = Role("second");
-
-            CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString($@"
-                    akka.actor {{
-                        serializers {{
-                            hyperion = ""Akka.Cluster.Sharding.Tests.MultiNode.HyperionSerializerWrapper, Akka.Cluster.Sharding.Tests.MultiNode""
-                        }}
-                        serialization-bindings {{
-                            ""System.Object"" = hyperion
-                        }}
-                    }}
-                    akka.loglevel = INFO
-                    akka.actor.provider = cluster
-                    akka.remote.log-remote-lifecycle-events = off
-                    akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
-                    akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-                    akka.persistence.journal.MemoryJournal {{
-                        class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
-                        plugin-dispatcher = ""akka.actor.default-dispatcher""
-                    }}
-                    akka.persistence.journal.memory-journal-shared {{
-                        class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
-                        plugin-dispatcher = ""akka.actor.default-dispatcher""
-                        timeout = 5s
-                    }}
-                    akka.cluster.sharding.state-store-mode = ""{mode}""
-                    akka.cluster.sharding.distributed-data.durable.lmdb {{
-                      dir = ""target/ClusterShardingGracefulShutdownSpec/sharding-ddata""
-                      map-size = 10000000
-                    }}"))
-                .WithFallback(Sharding.ClusterSharding.DefaultConfig())
-                .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
-                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
+
     public class PersistentClusterShardingGracefulShutdownSpecConfig : ClusterShardingGracefulShutdownSpecConfig
     {
-        public PersistentClusterShardingGracefulShutdownSpecConfig() : base("persistence") { }
+        public PersistentClusterShardingGracefulShutdownSpecConfig()
+            : base(StateStoreMode.Persistence)
+        {
+        }
     }
+
     public class DDataClusterShardingGracefulShutdownSpecConfig : ClusterShardingGracefulShutdownSpecConfig
     {
-        public DDataClusterShardingGracefulShutdownSpecConfig() : base("ddata") { }
+        public DDataClusterShardingGracefulShutdownSpecConfig()
+            : base(StateStoreMode.DData)
+        {
+        }
     }
 
     public class PersistentClusterShardingGracefulShutdownSpec : ClusterShardingGracefulShutdownSpec
     {
-        public PersistentClusterShardingGracefulShutdownSpec() : this(new PersistentClusterShardingGracefulShutdownSpecConfig()) { }
-        protected PersistentClusterShardingGracefulShutdownSpec(PersistentClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(PersistentClusterShardingGracefulShutdownSpec)) { }
+        public PersistentClusterShardingGracefulShutdownSpec()
+            : base(new PersistentClusterShardingGracefulShutdownSpecConfig(), typeof(PersistentClusterShardingGracefulShutdownSpec))
+        {
+        }
     }
+
     public class DDataClusterShardingGracefulShutdownSpec : ClusterShardingGracefulShutdownSpec
     {
-        public DDataClusterShardingGracefulShutdownSpec() : this(new DDataClusterShardingGracefulShutdownSpecConfig()) { }
-        protected DDataClusterShardingGracefulShutdownSpec(DDataClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(DDataClusterShardingGracefulShutdownSpec)) { }
+        public DDataClusterShardingGracefulShutdownSpec()
+            : base(new DDataClusterShardingGracefulShutdownSpecConfig(), typeof(DDataClusterShardingGracefulShutdownSpec))
+        {
+        }
     }
-    public abstract class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
+
+    public abstract class ClusterShardingGracefulShutdownSpec : MultiNodeClusterShardingSpec<ClusterShardingGracefulShutdownSpecConfig>
     {
         #region setup
 
-        [Serializable]
-        internal sealed class StopEntity
-        {
-            public static readonly StopEntity Instance = new StopEntity();
-
-            private StopEntity()
-            {
-            }
-        }
-
-        internal class Entity : ReceiveActor
-        {
-            public Entity()
-            {
-                Receive<int>(id => Sender.Tell(id));
-                Receive<StopEntity>(_ => Context.Stop(Self));
-            }
-        }
-
-        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : Option<(string, object)>.None;
-
-        internal ExtractShardId extractShardId = message => message is int ? message.ToString() : null;
-
+        private const string TypeName = "Entity";
         private readonly Lazy<IActorRef> _region;
-
-        private readonly ClusterShardingGracefulShutdownSpecConfig _config;
-
-        private readonly List<FileInfo> _storageLocations;
 
         protected ClusterShardingGracefulShutdownSpec(ClusterShardingGracefulShutdownSpecConfig config, Type type)
             : base(config, type)
         {
-            _config = config;
-            _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
-            _storageLocations = new List<FileInfo>
-            {
-                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir", null))
-            };
-
-            IsDDataMode = config.Mode == "ddata";
-            DeleteStorageLocations();
-            EnterBarrier("startup");
-        }
-        protected bool IsDDataMode { get; }
-
-        protected override void AfterTermination()
-        {
-            base.AfterTermination();
-            DeleteStorageLocations();
+            _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion(TypeName));
         }
 
-        private void DeleteStorageLocations()
+        private void Join(RoleName from, RoleName to, string typeName)
         {
-            foreach (var fileInfo in _storageLocations)
-            {
-                if (fileInfo.Exists) fileInfo.Delete();
-            }
-        }
-
-        #endregion
-
-        private void Join(RoleName from, RoleName to)
-        {
+            base.Join(from, to);
             RunOn(() =>
             {
-                Cluster.Join(GetAddress(to));
-                StartSharding("Entity");
+                StartSharding(typeName);
             }, from);
-            EnterBarrier(from.Name + "-joined");
+            EnterBarrier($"{from}-started");
         }
 
         private IActorRef StartSharding(string typeName)
         {
-            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0);
-            return ClusterSharding.Get(Sys).Start(
-                typeName: typeName,
-                entityProps: Props.Create<Entity>(),
-                settings: ClusterShardingSettings.Create(Sys),
-                extractEntityId: extractEntityId,
-                extractShardId: extractShardId,
-                allocationStrategy: allocationStrategy,
-                handOffStopMessage: StopEntity.Instance);
+            return StartSharding(
+                Sys,
+                typeName,
+                entityProps: Props.Create(() => new ShardedEntity()),
+                extractEntityId: IntExtractEntityId,
+                extractShardId: IntExtractShardId,
+                allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0),
+                handOffStopMessage: ShardedEntity.Stop.Instance);
         }
+
+        #endregion
 
         [MultiNodeFact]
         public void ClusterShardingGracefulShutdownSpecs()
         {
-            if (!IsDDataMode)
-            {
-                ClusterSharding_should_setup_shared_journal();
-            }
-            ClusterSharding_should_start_some_shards_in_both_regions();
-            ClusterSharding_should_gracefully_shutdown_a_region();
-            ClusterSharding_should_gracefully_shutdown_empty_region();
+            Cluster_sharding_must_start_some_shards_in_both_regions();
+            Cluster_sharding_must_gracefully_shutdown_the_region_on_the_newest_node();
+            Cluster_sharding_must_gracefully_shutdown_empty_region();
         }
 
-        public void ClusterSharding_should_setup_shared_journal()
-        {
-            // start the Persistence extension
-            Persistence.Persistence.Instance.Apply(Sys);
-            RunOn(() =>
-            {
-                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
-            }, _config.First);
-            EnterBarrier("persistence-started");
-
-            RunOn(() =>
-            {
-                Sys.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
-                var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                sharedStore.Should().NotBeNull();
-
-                MemoryJournalShared.SetStore(sharedStore, Sys);
-            }, _config.First, _config.Second);
-            EnterBarrier("after-1");
-
-            RunOn(() =>
-            {
-                //check persistence running
-                var probe = CreateTestProbe();
-                var journal = Persistence.Persistence.Instance.Get(Sys).JournalFor(null);
-                journal.Tell(new Persistence.ReplayMessages(0, 0, long.MaxValue, Guid.NewGuid().ToString(), probe.Ref));
-                probe.ExpectMsg<Persistence.RecoverySuccess>(TimeSpan.FromSeconds(10));
-            }, _config.First, _config.Second);
-            EnterBarrier("after-1-test");
-        }
-
-        public void ClusterSharding_should_start_some_shards_in_both_regions()
+        private void Cluster_sharding_must_start_some_shards_in_both_regions()
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                Join(_config.First, _config.First);
-                Join(_config.Second, _config.First);
+                StartPersistenceIfNeeded(startOn: config.First, config.First, config.Second);
+
+                Join(config.First, config.First, TypeName); // oldest
+                Join(config.Second, config.First, TypeName);
 
                 AwaitAssert(() =>
                 {
                     var probe = CreateTestProbe();
-                    var regionAddresses = Enumerable.Range(1, 100)
-                        .Select(n =>
-                        {
-                            _region.Value.Tell(n, probe.Ref);
-                            probe.ExpectMsg(n, TimeSpan.FromSeconds(1));
-                            return probe.LastSender.Path.Address;
-                        })
-                        .ToImmutableHashSet();
+                    var regionAddresses = Enumerable.Range(1, 100).Select(n =>
+                    {
+                        _region.Value.Tell(n, probe.Ref);
+                        probe.ExpectMsg(n, TimeSpan.FromSeconds(1));
+                        return probe.LastSender.Path.Address;
+                    }).ToImmutableHashSet();
 
                     regionAddresses.Count.Should().Be(2);
                 });
                 EnterBarrier("after-2");
+
+                _region.Value.Tell(GetCurrentRegions.Instance);
+                ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(2);
             });
         }
 
-        public void ClusterSharding_should_gracefully_shutdown_a_region()
+        private void Cluster_sharding_must_gracefully_shutdown_the_region_on_the_newest_node()
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
                 RunOn(() =>
                 {
-                    _region.Value.Tell(GracefulShutdown.Instance);
-                }, _config.Second);
+                    // Make sure the 'cluster-sharding-shutdown-region' phase takes at least 40 seconds,
+                    // to validate region shutdown completion is propagated immediately and not postponed
+                    // until when the cluster member leaves
+                    CoordinatedShutdown.Get(Sys).AddTask("cluster-sharding-shutdown-region", "postpone-actual-stop", async () =>
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(40));
+                        return Done.Instance;
+                    });
+                    CoordinatedShutdown.Get(Sys).Run(CoordinatedShutdown.UnknownReason.Instance);
+                }, config.Second);
 
                 RunOn(() =>
                 {
@@ -262,20 +175,33 @@ namespace Akka.Cluster.Sharding.Tests
                             probe.LastSender.Path.Should().Be(_region.Value.Path / i.ToString() / i.ToString());
                         }
                     });
-                }, _config.First);
+                }, config.First);
                 EnterBarrier("handoff-completed");
+
+                // Check that the coordinator is correctly notified the region has stopped:
+                RunOn(() =>
+                {
+                    // the coordinator side should observe that the region has stopped
+                    AwaitAssert(() =>
+                    {
+                        _region.Value.Tell(GetCurrentRegions.Instance);
+                        ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(1);
+                    });
+                    // without having to wait for the member to be entirely removed (as that would cause unnecessary latency)
+                }, config.First);
+
 
                 RunOn(() =>
                 {
-                    var region = _region.Value;
-                    Watch(region);
-                    ExpectTerminated(region);
-                }, _config.Second);
+                    Watch(_region.Value);
+                    ExpectTerminated(_region.Value);
+                }, config.Second);
+
                 EnterBarrier("after-3");
             });
         }
 
-        public void ClusterSharding_should_gracefully_shutdown_empty_region()
+        private void Cluster_sharding_must_gracefully_shutdown_empty_region()
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
@@ -286,7 +212,7 @@ namespace Akka.Cluster.Sharding.Tests
                     Watch(regionEmpty);
                     regionEmpty.Tell(GracefulShutdown.Instance);
                     ExpectTerminated(regionEmpty, TimeSpan.FromSeconds(5));
-                }, _config.First);
+                }, config.First);
             });
         }
     }

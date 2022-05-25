@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;

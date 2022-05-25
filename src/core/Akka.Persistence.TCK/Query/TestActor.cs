@@ -64,6 +64,7 @@ namespace Akka.Persistence.TCK.Query
                         Stash.UnstashAll();
                         break;
                     case DeleteMessagesFailure failure:
+                        Log.Error(failure.Cause, "Failed to delete messages to sequence number [{0}].", failure.ToSequenceNr);
                         originalSender.Tell($"{failure.ToSequenceNr}-deleted-failed");
                         Become(OnCommand);
                         Stash.UnstashAll();

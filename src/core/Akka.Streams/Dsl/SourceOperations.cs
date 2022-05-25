@@ -1808,10 +1808,8 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="materializerFunction">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TOut, TMat2> WatchTermination<TOut, TMat, TMat2>(this Source<TOut, TMat> flow, Func<TMat, Task, TMat2> materializerFunction)
-        {
-            return (Source<TOut, TMat2>)InternalFlowOperations.WatchTermination(flow, materializerFunction);
-        }
+        public static Source<TOut, TMat2> WatchTermination<TOut, TMat, TMat2>(this Source<TOut, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) => 
+            (Source<TOut, TMat2>)InternalFlowOperations.WatchTermination(flow, materializerFunction);
 
         /// <summary>
         /// Materializes to <see cref="IFlowMonitor"/> that allows monitoring of the the current flow. All events are propagated
@@ -2277,10 +2275,9 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TOut">Type of produced events.</typeparam>
         /// <typeparam name="TMat">Type of materialized value.</typeparam>
         /// <returns></returns>
-        public static SourceWithContext<TCtx, TOut, TMat> AsSourceWithContext<TCtx, TOut, TMat>(
-            this Source<TOut, TMat> flow, Func<TOut, TCtx> fn) =>
-            new SourceWithContext<TCtx, TOut, TMat>(flow.Select(x => (x, fn(x))));
-
+        public static SourceWithContext<TOut, TCtx, TMat> AsSourceWithContext<TOut, TCtx, TMat>(this Source<TOut, TMat> flow, Func<TOut, TCtx> fn) =>
+            new SourceWithContext<TOut, TCtx, TMat>(flow.Select(x => (x, fn(x))));
+      
         /// <summary>
         /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated.
         /// 

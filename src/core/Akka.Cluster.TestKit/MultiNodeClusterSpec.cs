@@ -54,6 +54,11 @@ namespace Akka.Cluster.TestKit
                     publish-stats-interval              = 0 s # always, when it happens
                     failure-detector.heartbeat-interval = 500 ms
                     run-coordinated-shutdown-when-down = off
+
+                    sharding {
+                        retry-interval = 200ms
+                        waiting-for-state-timeout = 200ms
+                    }
                 }
                 akka.loglevel = INFO
                 akka.log-dead-letters = off
@@ -116,7 +121,7 @@ namespace Akka.Cluster.TestKit
             readonly Address _target;
 
             /// <summary>
-            /// 
+            ///
             /// </summary>
             /// <param name="testActor">A reference to a <see cref="TestActor"/> or <see cref="TestProbe"/>.</param>
             /// <param name="target">CAN BE NULL</param>
@@ -216,11 +221,11 @@ namespace Akka.Cluster.TestKit
                 foreach (var pattern in patterns)
                     EventFilter.Info(new Regex(pattern)).Mute();
 
-                MuteDeadLetters(sys, 
+                MuteDeadLetters(sys,
                     typeof(ClusterHeartbeatSender.Heartbeat),
                     typeof(ClusterHeartbeatSender.HeartbeatRsp),
                     typeof(GossipEnvelope),
-                    typeof(GossipStatus), 
+                    typeof(GossipStatus),
                     typeof(GossipStatus),
                     typeof(InternalClusterAction.ITick),
                     typeof(PoisonPill),
@@ -277,7 +282,7 @@ namespace Akka.Cluster.TestKit
         /// <summary>
         /// Initialize the cluster of the specified member nodes (<paramref name="roles"/>)
         /// and wait until all joined and <see cref="MemberStatus.Up"/>.
-        /// 
+        ///
         /// First node will be started first and others will join the first.
         /// </summary>
         public void AwaitClusterUp(params RoleName[] roles)
@@ -351,7 +356,7 @@ namespace Akka.Cluster.TestKit
         /// Assert that the cluster has elected the correct leader
         /// out of all nodes in the cluster. First
         /// member in the cluster ring is expected leader.
-        ///   
+        ///
         /// Note that this can only be used for a cluster with all members
         /// in Up status, i.e. use `awaitMembersUp` before using this method.
         /// The reason for that is that the cluster leader is preferably a
@@ -433,7 +438,7 @@ namespace Akka.Cluster.TestKit
                 _spec = spec;
             }
 
-            /// <inheritdoc/>
+            
             public int Compare(RoleName x, RoleName y)
             {
                 return Member.AddressOrdering.Compare(_spec.GetAddress(x), _spec.GetAddress(y));

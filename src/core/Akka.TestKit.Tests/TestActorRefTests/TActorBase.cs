@@ -7,17 +7,27 @@
 
 using System.Threading;
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
     // ReSharper disable once InconsistentNaming
     public abstract class TActorBase : ActorBase
     {
+        protected readonly Thread ParentThread;
+        protected readonly AtomicReference<Thread> OtherThread;
+
+        protected TActorBase(Thread parentThread, AtomicReference<Thread> otherThread)
+        {
+            ParentThread = parentThread;
+            OtherThread = otherThread;
+        }
+
         protected sealed override bool Receive(object message)
         {
             var currentThread = Thread.CurrentThread;
-            if(currentThread != TestActorRefSpec.Thread)
-                TestActorRefSpec.OtherThread = currentThread;
+            if (currentThread != ParentThread)
+                OtherThread.GetAndSet(currentThread);
             return ReceiveMessage(message);
         }
 

@@ -103,7 +103,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                 upstream.OnNext(0);
-                lastEvents().Should().BeEquivalentTo(new OnNext(0 + ChainLength), new Cancel(), new OnComplete());
+                lastEvents().Should().BeEquivalentTo(new OnNext(0 + ChainLength), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete());
 
                 tstamp.Stop();
                 var time = tstamp.Elapsed.TotalSeconds;
@@ -125,7 +125,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                 upstream.OnNext(0);
-                lastEvents().Should().BeEquivalentTo(new OnNext(0), new Cancel(), new OnComplete());
+                lastEvents().Should().BeEquivalentTo(new OnNext(0), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete());
             });
         }
 

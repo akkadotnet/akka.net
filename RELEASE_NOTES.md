@@ -1,5 +1,95 @@
-#### 1.4.33 January 19 2022 ####
-**Placeholder for nightlies**
+#### 1.5.0-beta1 April 20 2022 ####
+**Placeholder for first beta release of Akka.NET v1.5**
+
+#### 1.4.37 April 14 2022 ####
+Akka.NET v1.4.37 is a minor release that contains some minor bug fixes.
+
+* [Persistence.Query: Change AllEvents query failure log severity from Debug to Error](https://github.com/akkadotnet/akka.net/pull/5835)
+* [Coordination: Harden LeaseProvider instance Activator exception handling](https://github.com/akkadotnet/akka.net/pull/5838)
+* [Akka: Make ActorSystemImpl.Abort skip the CoordinatedShutdown check](https://github.com/akkadotnet/akka.net/pull/5839)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.37, click here](https://github.com/akkadotnet/akka.net/milestone/68?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 3       | 15   | 4    | Gregorius Soedharmo |
+| 1       | 2    | 2    | dependabot[bot]     |
+
+#### 1.4.36 April 4 2022 ####
+Akka.NET v1.4.36 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code.
+
+* [Akka: Bump Hyperion to 0.12.2](https://github.com/akkadotnet/akka.net/pull/5805)
+
+__Bug fixes__:
+* [Akka: Fix CoordinatedShutdown memory leak](https://github.com/akkadotnet/akka.net/pull/5816)
+* [Akka: Fix TcpConnection error handling and death pact de-registration](https://github.com/akkadotnet/akka.net/pull/5817)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.36, click here](https://github.com/akkadotnet/akka.net/milestone/67?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 274  | 33   | Gregorius Soedharmo |
+| 4       | 371  | 6    | Ebere Abanonu       |
+| 3       | 9    | 3    | Aaron Stannard      |
+| 1       | 34   | 38   | Ismael Hamed        |
+| 1       | 2    | 3    | Adrian Leonhard     |
+
+#### 1.4.35 March 18 2022 ####
+Akka.NET v1.4.35 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code.
+
+__Bug fixes__:
+* [Akka: Fixed IActorRef leak inside EventStream](https://github.com/akkadotnet/akka.net/pull/5720)
+* [Akka: Fixed ActorSystemSetup.And forgetting registered types](https://github.com/akkadotnet/akka.net/issues/5728)
+* [Akka.Persistence.Query.Sql: Fixed Query PersistenceIds query bug](https://github.com/akkadotnet/akka.net/pull/5715)
+* [Akka.Streams: Add MapMaterializedValue for SourceWithContext and FlowWithContext](https://github.com/akkadotnet/akka.net/pull/5711)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.35, click here](https://github.com/akkadotnet/akka.net/milestone/66?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 6       | 2178 | 174  | Aaron Stannard      |
+| 2       | 43   | 33   | Gregorius Soedharmo |
+| 1       | 71   | 19   | Ismael Hamed        |
+| 1       | 1    | 1    | dependabot[bot]     |
+
+#### 1.4.34 March 7 2022 ####
+Akka.NET v1.4.34 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code. 
+
+__Bug fixes__:
+* [Akka: Added support to pass a state object into CircuitBreaker to reduce allocations](https://github.com/akkadotnet/akka.net/pull/5650)
+* [Akka.DistributedData: ORSet merge operation performance improvement](https://github.com/akkadotnet/akka.net/pull/5686)
+* [Akka.Streams: FlowWithContext generic type parameters have been reordered to make them easier to read](https://github.com/akkadotnet/akka.net/pull/5648)
+
+__Improvements__:
+* [Akka: PipeTo can be configured to retain async threading context](https://github.com/akkadotnet/akka.net/pull/5684)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.34, click here](https://github.com/akkadotnet/akka.net/milestone/65?closed=1).
+
+| COMMITS | LOC+   | LOC-  | AUTHOR              |
+|---------|--------|-------|---------------------|
+| 12      | 1177   | 718   | Ebere Abanonu       |
+| 6       | 192    | 47    | Gregorius Soedharmo |
+| 3       | 255    | 167   | Ismael Hamed        |
+| 1       | 3      | 0     | Aaron Stannard      |
+| 1       | 126    | 10    | Drew                |
+
+#### 1.4.33 February 14 2022 ####
+Akka.NET v1.4.33 is a minor release that contains some bug fixes. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code. The most important bug fix is the actor Props memory leak when actors are cached inside Akka.Remote. 
+
+* [Akka: Fix memory leak bug within actor Props](https://github.com/akkadotnet/akka.net/pull/5556)
+* [Akka: Fix ChannelExecutor configuration backward compatibility bug](https://github.com/akkadotnet/akka.net/pull/5568)
+* [Akka.TestKit: Fix ExpectAsync detached Task bug](https://github.com/akkadotnet/akka.net/pull/5538)
+* [DistributedPubSub: Fix DeadLetter suppression for topics with no subscribers](https://github.com/akkadotnet/akka.net/pull/5561)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.33, click here](https://github.com/akkadotnet/akka.net/milestone/64?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 63 | 1264 | 1052 | Ebere Abanonu |
+| 9 | 221 | 27 | Brah McDude |
+| 8 | 2537 | 24 | Gregorius Soedharmo |
+| 2 | 4 | 1 | Aaron Stannard |
+| 1 | 2 | 2 | ignobilis |
 
 #### 1.4.32 January 19 2022 ####
 Akka.NET v1.4.32 is a minor release that contains some API improvements. Most of the changes have been aimed at improving our web documentation and code cleanup to modernize some of our code. One big improvement in this version release is the Hyperion serialization update. 

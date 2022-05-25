@@ -104,7 +104,11 @@
         "mergetool",
         "titlecase",
         "Varghese",
-		"Vertech"
+		"Vertech",
+		"DeadLetter",
+		"Blocksharp",
+		"Akkatecture",
+		"SharpPulsar"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links
