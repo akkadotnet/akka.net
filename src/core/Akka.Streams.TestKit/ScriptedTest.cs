@@ -202,11 +202,6 @@ namespace Akka.Streams.TestKit
                 _outstandingDemand += demand;
             }
 
-            [Obsolete("Will be removed after async_testkit conversion is done. Use ShakeItAsync instead")]
-            public bool ShakeIt()
-                => ShakeItAsync()
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
-            
             public async Task<bool> ShakeItAsync()
             {
                 var oneMilli = TimeSpan.FromMilliseconds(10);
@@ -249,11 +244,6 @@ namespace Akka.Streams.TestKit
                 return u.Concat(d).Any(x => x == marker);
             }
 
-            [Obsolete("Will be removed after async_testkit conversion is done. Use RunAsync instead")]
-            public void Run()
-                => RunAsync()
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
-            
             public async Task RunAsync()
             {
                 try
@@ -327,11 +317,13 @@ namespace Akka.Streams.TestKit
             Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
             int maximumOverrun = 3,
             int maximumRequest = 3,
-            int maximumBuffer = 3)
-            => RunScriptAsync(script, settings, op, maximumOverrun, maximumRequest, maximumBuffer)
+            int maximumBuffer = 3,
+            AkkaSpec spec = null)
+            => RunScriptAsync(spec, script, settings, op, maximumOverrun, maximumRequest, maximumBuffer)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
         
         protected async Task RunScriptAsync<TIn2, TOut2, TMat2>(
+            AkkaSpec spec,
             Script<TIn2, TOut2> script, 
             ActorMaterializerSettings settings,
             Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
@@ -339,9 +331,20 @@ namespace Akka.Streams.TestKit
             int maximumRequest = 3,
             int maximumBuffer = 3)
         {
-            var runner = await new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this)
-                .InitializeAsync();
-            await runner.RunAsync();
+            var runner = new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this);
+            async Task Run()
+            {
+                await runner.InitializeAsync();
+                await runner.RunAsync();
+            }
+            
+            if(spec != null)
+                await spec.AssertAllStagesStoppedAsync(async () =>
+                {
+                    await Run();
+                }, runner.Materializer);
+            else
+                await Run();
         }
 
         protected static IPublisher<TOut> ToPublisher<TOut>(Source<TOut, NotUsed> source, IMaterializer materializer)
