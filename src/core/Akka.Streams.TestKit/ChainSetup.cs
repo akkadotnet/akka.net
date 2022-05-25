@@ -54,11 +54,6 @@ namespace Akka.Streams.TestKit
         {
         }
 
-        [Obsolete("Will be removed after async_testkit conversion is complete. Use InitializeAsync instead")]
-        public ChainSetup<TIn, TOut, TMat> Initialize()
-            => InitializeAsync()
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-        
         public virtual async Task<ChainSetup<TIn, TOut, TMat>> InitializeAsync()
         {
             _upstream = System.CreateManualPublisherProbe<TIn>();
