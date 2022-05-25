@@ -292,8 +292,6 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
                     .Run(Materializer);
 
-                /*
-                 // Original code
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
@@ -303,21 +301,6 @@ namespace Akka.Streams.Tests.Dsl
                 firstElement.SetResult(1);
                 (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                */
-                
-                var f1 = source.RunWith(this.SinkProbe<int>(), Materializer);
-                var f2 = source.RunWith(this.SinkProbe<int>(), Materializer);
-
-                // Ensure subscription of Sinks.
-                await Task.WhenAll(
-                        f1.EnsureSubscriptionAsync(), 
-                        f2.EnsureSubscriptionAsync())
-                    .ShouldCompleteWithin(3.Seconds());
-                
-                firstElement.SetResult(1);
-                (await f1.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                (await f2.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                
             }, Materializer);
         }
 
@@ -333,8 +316,6 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
                     .Run(Materializer);
 
-                /*
-                 // Original code
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.Take(10).RunWith(Sink.Seq<int>(), Materializer);
 
@@ -344,21 +325,6 @@ namespace Akka.Streams.Tests.Dsl
                 firstElement.SetResult(1);
                 (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
                 (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                */
-                
-                var f1 = source.RunWith(this.SinkProbe<int>(), Materializer);
-                var f2 = source.Take(10).RunWith(this.SinkProbe<int>(), Materializer);
-                
-                // Ensure subscription of Sinks.
-                await Task.WhenAll(
-                        f1.EnsureSubscriptionAsync(), 
-                        f2.EnsureSubscriptionAsync())
-                    .ShouldCompleteWithin(3.Seconds());
-                
-                firstElement.SetResult(1);
-                (await f1.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 20));
-                (await f2.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                
             }, Materializer);
         }
 
@@ -387,8 +353,6 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
                     .Run(Materializer);
 
-                /*
-                // Original code
                 var f1 = source.Throttle(1, TimeSpan.FromMilliseconds(10), 3, ThrottleMode.Shaping)
                     .RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
@@ -399,22 +363,6 @@ namespace Akka.Streams.Tests.Dsl
                 firstElement.SetResult(1);
                 (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                */
-                
-                var f1 = source.Throttle(1, TimeSpan.FromMilliseconds(10), 3, ThrottleMode.Shaping)
-                    .RunWith(this.SinkProbe<int>(), Materializer);
-                var f2 = source.RunWith(this.SinkProbe<int>(), Materializer);
-
-                // Ensure subscription of Sinks.
-                await Task.WhenAll(
-                        f1.EnsureSubscriptionAsync(), 
-                        f2.EnsureSubscriptionAsync())
-                    .ShouldCompleteWithin(3.Seconds());
-                
-                firstElement.SetResult(1);
-                (await f1.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                (await f2.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                
             }, Materializer);
         }
 
@@ -431,8 +379,6 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
                     .Run(Materializer);
 
-                /*
-                // Original code
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
@@ -442,21 +388,6 @@ namespace Akka.Streams.Tests.Dsl
                 firstElement.SetResult(1);
                 (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                */
-                
-                var f1 = source.RunWith(this.SinkProbe<int>(), Materializer);
-                var f2 = source.RunWith(this.SinkProbe<int>(), Materializer);
-
-                // Ensure subscription of Sinks.
-                await Task.WhenAll(
-                        f1.EnsureSubscriptionAsync(), 
-                        f2.EnsureSubscriptionAsync())
-                    .ShouldCompleteWithin(3.Seconds());
-                
-                firstElement.SetResult(1);
-                (await f1.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                (await f2.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                
             }, Materializer);
         }
 
@@ -472,8 +403,6 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(BroadcastHub.Sink<int>(1), Keep.Both)
                     .Run(Materializer);
 
-                /*
-                // Original code
                 var f1 = source
                     .Throttle(1, TimeSpan.FromMilliseconds(10), 1, ThrottleMode.Shaping)
                     .RunWith(Sink.Seq<int>(), Materializer);
@@ -488,25 +417,6 @@ namespace Akka.Streams.Tests.Dsl
                 firstElement.SetResult(1);
                 (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
                 (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
-                */
-                
-                var f1 = source
-                    .Throttle(1, TimeSpan.FromMilliseconds(10), 1, ThrottleMode.Shaping)
-                    .RunWith(this.SinkProbe<int>(), Materializer);
-                // Second cannot be overwhelmed since the first one throttles the overall rate, and second allows a higher rate
-                var f2 = source
-                    .Throttle(10, TimeSpan.FromMilliseconds(10), 8, ThrottleMode.Shaping)
-                    .RunWith(this.SinkProbe<int>(), Materializer);
-
-                // Ensure subscription of Sinks.
-                await Task.WhenAll(
-                        f1.EnsureSubscriptionAsync(), 
-                        f2.EnsureSubscriptionAsync())
-                    .ShouldCompleteWithin(3.Seconds());
-                
-                firstElement.SetResult(1);
-                (await f1.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 20));
-                (await f2.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 20));
             }, Materializer);
         }
 
@@ -522,8 +432,6 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(BroadcastHub.Sink<int>(1), Keep.Both)
                     .Run(Materializer);
 
-                /*
-                // Original code
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
@@ -533,21 +441,6 @@ namespace Akka.Streams.Tests.Dsl
                 firstElement.SetResult(1);
                 (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                */
-                
-                var f1 = source.RunWith(this.SinkProbe<int>(), Materializer);
-                var f2 = source.RunWith(this.SinkProbe<int>(), Materializer);
-
-                // Ensure subscription of Sinks.
-                await Task.WhenAll(
-                        f1.EnsureSubscriptionAsync(), 
-                        f2.EnsureSubscriptionAsync())
-                    .ShouldCompleteWithin(3.Seconds());
-                
-                firstElement.SetResult(1);
-                (await f1.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                (await f2.ToStrictAsync(3.Seconds()).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                
             }, Materializer);
         }
 
@@ -573,7 +466,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Request(1)
                     .ExpectNextAsync();
 
-                foreach (var i in Enumerable.Range(first, 10))
+                foreach (var i in Enumerable.Range(first + 1, 9))
                 {
                     await downstream.AsyncBuilder()
                         .Request(1)
@@ -908,12 +801,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                /*
                 var (firstElement, source) = Source.Maybe<int>().ConcatMaterialized(Source.From(Enumerable.Range(1, 19)), Keep.Left)
                     .ToMaterialized(PartitionHub.Sink<int>((size, e) => e % size, 2, 1), Keep.Both)
                     .Run(Materializer);
 
-                // Original code
                 var f1 = source.Throttle(1, TimeSpan.FromMilliseconds(10), 1, ThrottleMode.Shaping)
                     .RunWith(Sink.Seq<int>(), Materializer);
 
@@ -934,30 +825,6 @@ namespace Akka.Streams.Tests.Dsl
 
                 (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(expectationF1);
                 (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 19).Where(v => v % 2 != 0));
-                */
-                
-                var (firstElement, source) = Source.Maybe<int?>().ConcatMaterialized(Source.From(Enumerable.Range(1, 19).Select(i => (int?)i)), Keep.Left)
-                    .ToMaterialized(PartitionHub.Sink<int?>((size, e) => (e ?? 0) % size, 2, 1), Keep.Both)
-                    .Run(Materializer);
-
-                var f1 = source.Throttle(1, TimeSpan.FromMilliseconds(10), 1, ThrottleMode.Shaping)
-                    .RunWith(this.SinkProbe<int?>(), Materializer);
-
-                // Second cannot be overwhelmed since the first one throttles the overall rate, and second allows a higher rate
-                var f2 = source.Throttle(10, TimeSpan.FromMilliseconds(10), 8, ThrottleMode.Enforcing)
-                    .RunWith(this.SinkProbe<int?>(), Materializer);
-
-                await f1.ExpectSubscriptionAsync();
-                await f2.ExpectSubscriptionAsync();
-                
-                firstElement.SetResult(0);
-
-                var expectationF1 = Enumerable.Range(0, 18).Where(v => v % 2 == 0).ToList();
-
-                var result1 = await f1.ToStrictAsync(3.Seconds()).ToListAsync();
-                result1.Should().BeEquivalentTo(expectationF1);
-                var result2 = await f2.ToStrictAsync(3.Seconds()).ToListAsync();
-                result2.Should().BeEquivalentTo(Enumerable.Range(1, 19).Where(v => v % 2 != 0));
             }, Materializer);
         }
 
