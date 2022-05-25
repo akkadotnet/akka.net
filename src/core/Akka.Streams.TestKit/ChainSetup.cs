@@ -80,6 +80,7 @@ namespace Akka.Streams.TestKit
 
         public ActorMaterializerSettings Settings { get; }
 
+        public ActorMaterializer Materializer => _materializer;
         public TestPublisher.ManualProbe<TIn> Upstream
         {
             get
