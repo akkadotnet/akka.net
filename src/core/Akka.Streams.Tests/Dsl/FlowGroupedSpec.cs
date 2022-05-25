@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
@@ -19,6 +20,7 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class FlowGroupedSpec : ScriptedTest
     {
+        
         private ActorMaterializerSettings Settings { get; }
 
         public FlowGroupedSpec(ITestOutputHelper output = null) : base(output)
@@ -26,29 +28,37 @@ namespace Akka.Streams.Tests.Dsl
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
         }
 
-        private static readonly Random Random = new Random();
-        private static ICollection<int> RandomSeq(int n) => Enumerable.Range(1, n).Select(_ => Random.Next()).ToList();
+        private readonly Random _random = new Random(12345);
+        private ICollection<int> RandomSeq(int n) => Enumerable.Range(1, n).Select(_ => _random.Next()).ToList();
 
-        private static (ICollection<int>, ICollection<IEnumerable<int>>) RandomTest(int n)
+        private (ICollection<int>, ICollection<IEnumerable<int>>) RandomTest(int n)
         {
             var s = RandomSeq(n);
             return (s, new[] {s});
         }
 
+        // No need to use AssertAllStagesStoppedAsync, it is encapsulated in RunScriptAsync
         [Fact]
-        public void A_Grouped_must_group_evenly()
+        public async Task A_Grouped_must_group_evenly()
         {
-            var testLength = Random.Next(1, 16);
+            var testLength = _random.Next(1, 16);
             var script = Script.Create(RandomTestRange(Sys).Select(_ => RandomTest(testLength)).ToArray());
-            RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.Grouped(testLength)));
+            foreach (var _ in RandomTestRange(Sys))
+            {
+                await RunScriptAsync(this, script, Settings, flow => flow.Grouped(testLength));
+            }
         }
 
+        // No need to use AssertAllStagesStoppedAsync, it is encapsulated in RunScriptAsync
         [Fact]
-        public void A_Grouped_must_group_with_rest()
+        public async Task A_Grouped_must_group_with_rest()
         {
-            var testLength = Random.Next(1, 16);
+            var testLength = _random.Next(1, 16);
             var script = Script.Create(RandomTestRange(Sys).Select(_ => RandomTest(testLength)).Concat(RandomTest(1)).ToArray());
-            RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.Grouped(testLength)));
+            foreach (var _ in RandomTestRange(Sys))
+            {
+                await RunScriptAsync(this, script, Settings, flow => flow.Grouped(testLength));
+            }
         }
     }
 }
