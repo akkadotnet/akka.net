@@ -26,24 +26,15 @@ namespace Akka.Streams.TestKit
             => AssertAllStagesStoppedAsync(spec, () =>
                 {
                     block();
-                    return NotUsed.Instance;
+                    return Task.CompletedTask;
                 }, materializer)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
 
-        public static T AssertAllStagesStopped<T>(this AkkaSpec spec, Func<T> block, IMaterializer materializer)
-            => AssertAllStagesStoppedAsync(spec, () => Task.FromResult(block()), materializer)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-
-        public static async Task<T> AssertAllStagesStoppedAsync<T>(this AkkaSpec spec, Func<T> block,
-            IMaterializer materializer)
-            => await AssertAllStagesStoppedAsync(spec, () => Task.FromResult(block()), materializer)
-                .ConfigureAwait(false);
-        
-        public static async Task<T> AssertAllStagesStoppedAsync<T>(this AkkaSpec spec, Func<Task<T>> block, IMaterializer materializer)
+        public static async Task AssertAllStagesStoppedAsync(this AkkaSpec spec, Func<Task> block, IMaterializer materializer)
         {
-            var result = await block();
+            await block();
             if (!(materializer is ActorMaterializerImpl impl))
-                return result;
+                return;
 
             var probe = spec.CreateTestProbe(impl.System);
             probe.Send(impl.Supervisor, StreamSupervisor.StopChildren.Instance);
@@ -59,17 +50,21 @@ namespace Akka.Streams.TestKit
                         impl.Supervisor.Tell(StreamSupervisor.GetChildren.Instance, probe.Ref);
                         children = (await probe.ExpectMsgAsync<StreamSupervisor.Children>()).Refs;
                         if (children.Count != 0)
-                            throw new Exception($"expected no StreamSupervisor children, but got {children.Aggregate("", (s, @ref) => s + @ref + ", ")}");
+                        {
+                            children.ForEach(c=>c.Tell(StreamSupervisor.PrintDebugDump.Instance));
+                            await Task.Delay(100);
+                            throw new Exception(
+                                $"expected no StreamSupervisor children, but got {children.Aggregate("", (s, @ref) => s + @ref + ", ")}");
+                        }
                     });
                 }
                 catch 
                 {
                     children.ForEach(c=>c.Tell(StreamSupervisor.PrintDebugDump.Instance));
+                    await Task.Delay(100);
                     throw;
                 }
             });
-
-            return result;
         }
 
         public static void AssertDispatcher(IActorRef @ref, string dispatcher)
