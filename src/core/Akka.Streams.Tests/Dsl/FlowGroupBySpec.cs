@@ -235,12 +235,10 @@ namespace Akka.Streams.Tests.Dsl
                 downstreamSubscription.Request(100);
                 upstreamSubscription.SendNext(1);
                 var subStream = (await subscriber.ExpectNextAsync()).Item2;
-                var (_, probe) = await StreamPuppet(subStream.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                var (sub, probe) = await StreamPuppet(subStream.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
-                await probe.AsyncBuilder()
-                    .Request(1)
-                    .ExpectNext(1)
-                    .ExecuteAsync();
+                sub.Request(1);
+                await probe.ExpectNextAsync(1);
 
                 var ex = new TestException("test");
                 upstreamSubscription.SendError(ex);
@@ -271,12 +269,10 @@ namespace Akka.Streams.Tests.Dsl
                 upstreamSubscription.SendNext(1);
 
                 var (_, subStream) = await subscriber.ExpectNextAsync();
-                var (_, probe) = await StreamPuppet(subStream.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                var (sub, probe) = await StreamPuppet(subStream.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
-                await probe.AsyncBuilder()
-                    .Request(1)
-                    .ExpectNext(1)
-                    .ExecuteAsync();
+                sub.Request(1);
+                await probe.ExpectNextAsync(1);
 
                 upstreamSubscription.SendNext(2);
                 (await subscriber.ExpectErrorAsync()).Should().Be(ex);
@@ -306,24 +302,20 @@ namespace Akka.Streams.Tests.Dsl
 
                 upstreamSubscription.SendNext(1);
 
-                var subStream = (await subscriber.ExpectNextAsync()).Item2;
-                var (_, probe1) = await StreamPuppet(subStream.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                var (_, subStream) = await subscriber.ExpectNextAsync();
+                var (sub1, probe1) = await StreamPuppet(subStream.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
-                await probe1.AsyncBuilder()
-                    .Request(10)
-                    .ExpectNext(1)
-                    .ExecuteAsync();
+                sub1.Request(10);
+                await probe1.ExpectNextAsync(1);
 
                 upstreamSubscription.SendNext(2);
                 upstreamSubscription.SendNext(4);
 
                 var (_, subStream2) = (await subscriber.ExpectNextAsync());
-                var (_, probe2) =await StreamPuppet(subStream2.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                var (sub2, probe2) = await StreamPuppet(subStream2.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
                 
-                await probe2.AsyncBuilder()
-                    .Request(10)
-                    .ExpectNext(4)
-                    .ExecuteAsync();
+                sub2.Request(10);
+                await probe2.ExpectNextAsync(4);
 
                 upstreamSubscription.SendNext(3);
                 await probe1.ExpectNextAsync(3);
@@ -372,16 +364,14 @@ namespace Akka.Streams.Tests.Dsl
                 await down.RequestAsync(2);
                 await up.SendNextAsync(1);
                 var first = await down.ExpectNextAsync();
-                var (_, probe) = await StreamPuppet(first.Item2.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                var (sub, probe) = await StreamPuppet(first.Item2.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
-                await probe.AsyncBuilder()
-                    .Request(1)
-                    .ExpectNext(1)
-                    .ExecuteAsync();
+                sub.Request(1);
+                await probe.ExpectNextAsync(1);
 
                 await up.SendNextAsync(2);
                 var ex = await down.ExpectErrorAsync();
-                ex.Message.Should().Contain("too many subStreams");
+                ex.Message.Should().Contain("too many substreams");
                 (await probe.ExpectErrorAsync()).Should().Be(ex);
             }, Materializer);
         }
@@ -656,7 +646,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Skipped for async_testkit conversion build")]
+        [Fact]
         public async Task GroupBy_must_work_with_random_demand()
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(1, 1);
@@ -728,7 +718,7 @@ namespace Akka.Streams.Tests.Dsl
             }, materializer);
         }
 
-        private async Task<(ISubscription subscription, TestSubscriber.ManualProbe<int> probe)> StreamPuppet(IPublisher<int> p, TestKitBase kit)
+        private static async Task<(ISubscription subscription, TestSubscriber.ManualProbe<int> probe)> StreamPuppet(IPublisher<int> p, TestKitBase kit)
         {
             var probe = kit.CreateManualSubscriberProbe<int>();
             p.Subscribe(probe);
