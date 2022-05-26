@@ -89,13 +89,13 @@ There are few properties that one can use in their `OutputTemplate` for logger c
 
 * `ActorPath` - contains the current actor's path.
 * `LogSource` - also contains `ActorPath`, however it can also have other values such as:
-    - `<TypeName> (<ActorSystemName>)`
-    - `<string> (<ActorSystemName>)`
+  * `<TypeName> (<ActorSystemName>)`
+  * `<string> (<ActorSystemName>)`
 * `Thread` - thread id on which given log action was executed.
 
 ### Example OutputTemplate
 
-```
+```console
 [{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] [{ActorPath}] [{SourceContext}] {Message}{NewLine}{Exception}
 ```
 
