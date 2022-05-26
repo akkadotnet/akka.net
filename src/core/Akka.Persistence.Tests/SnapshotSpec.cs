@@ -212,7 +212,7 @@ namespace Akka.Persistence.Tests
             pref.Tell(TakeSnapshot.Instance);
             pref.Tell("e");
             pref.Tell("f");
-            ExpectMsgAllOf(1L, 2L, 4L);
+            ExpectMsgAllOf(new []{ 1L, 2L, 4L });
         }
 
         [Fact]

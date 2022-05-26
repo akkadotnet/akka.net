@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
@@ -36,8 +36,7 @@ namespace Akka.Streams.Tests.TCK
         protected AkkaSubscriberBlackboxVerification(TestEnvironment environment) : base(environment)
         {
             System = ActorSystem.Create(GetType().Name,
-                AkkaSpec.AkkaSpecConfig.WithFallback(
-                    ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")));
+                AkkaSpec.AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig));
             System.EventStream.Publish(new Mute(new ErrorFilter(typeof(Exception), new ContainsString("Test exception"))));
             Materializer = ActorMaterializer.Create(System, ActorMaterializerSettings.Create(System));
         }

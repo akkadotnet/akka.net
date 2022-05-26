@@ -55,7 +55,7 @@ namespace Akka.Streams.Implementation.Fusing
                         else Push(_outlet, element);
                     }
                 },
-                onDownstreamFinish: CompleteStage);
+                onDownstreamFinish: InternalOnDownstreamFinish);
             }
 
             /// <summary>

@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Sdk;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.TestKit
@@ -51,10 +52,50 @@ namespace Akka.TestKit
         /// <param name="other">TBD</param>
         public static void ShouldBe<T>(this IEnumerable<T> self, IEnumerable<T> other)
         {
-            var expected = string.Join(",", other.Select(i => string.Format("'{0}'", i)));
-            var actual = string.Join(",", self.Select(i => string.Format("'{0}'", i)));
+            var otherList = other.ToList();
+            var selfList = self.ToList();
+            var expected = string.Join(",", otherList.Select(i => $"'{i}'"));
+            var actual = string.Join(",", selfList.Select(i => $"'{i}'"));
 
-            Assert.True(self.SequenceEqual(other), "Expected " + expected + " got " + actual);
+            Assert.True(selfList.SequenceEqual(otherList), "Expected " + expected + " got " + actual);
+        }
+
+        public static async Task ShouldBeAsync<T>(this IAsyncEnumerable<T> self, IEnumerable<T> other)
+        {
+            if (self is null)
+                throw new ArgumentNullException(nameof(self));
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+            
+            var l1 = new List<string>();
+            var l2 = new List<string>();
+            var index = 0;
+
+            await using var e1 = self.GetAsyncEnumerator();
+            using var e2 = other.GetEnumerator();
+            
+            var comparer = EqualityComparer<T>.Default;
+            while (await e1.MoveNextAsync())
+            {
+                l1.Add($"'{e1.Current}'");
+                if (!e2.MoveNext())
+                    throw new AssertActualExpectedException(
+                        l2, l1, $"Input has more elements than expected, differ at index {index}");
+                
+                l2.Add($"'{e2.Current}'");
+                if(!comparer.Equals(e1.Current, e2.Current))
+                    throw new AssertActualExpectedException(
+                        l2, l1, $"Input is not equal to expected, differ at index {index}");
+                
+                index++;
+            }
+
+            if (e2.MoveNext())
+            {
+                l2.Add($"'{e2.Current}'");
+                throw new AssertActualExpectedException(
+                    l2, l1, $"Input has less elements than expected, differ at index {index}");
+            }
         }
 
         /// <summary>
@@ -67,6 +108,18 @@ namespace Akka.TestKit
         public static void ShouldBe<T>(this T self, T expected, string message = null)
         {
             Assert.Equal(expected, self);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="self">TBD</param>
+        /// <param name="expected">TBD</param>
+        /// <param name="message">TBD</param>
+        public static async Task ShouldBeAsync<T>(this ValueTask<T> self, T expected, string message = null)
+        {
+            Assert.Equal(expected, await self);
         }
 
         /// <summary>
@@ -199,6 +252,15 @@ namespace Akka.TestKit
             ShouldBe(actual, expected);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="actual">TBD</param>
+        /// <param name="expected">TBD</param>
+        public static async Task ShouldOnlyContainInOrderAsync<T>(this IAsyncEnumerable<T> actual, params T[] expected)
+            => await ShouldBeAsync(actual, expected).ConfigureAwait(false);
+        
         /// <summary>
         /// TBD
         /// </summary>

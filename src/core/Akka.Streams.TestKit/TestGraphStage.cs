@@ -126,10 +126,10 @@ namespace Akka.Streams.TestKit
             {
                 _probe.Ref.Tell(GraphStageMessages.Pull.Instance);
                 outHandler.OnPull();
-            }, onDownstreamFinish: () =>
+            }, onDownstreamFinish: cause =>
             {
                 _probe.Ref.Tell(GraphStageMessages.DownstreamFinish.Instance);
-                outHandler.OnDownstreamFinish();
+                outHandler.OnDownstreamFinish(cause);
             });
 
             return logicAndMaterialized;

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -86,7 +87,7 @@ namespace Akka.Tests.Dispatch
         [Fact]
         public void Dispatchers_must_complain_about_missing_Config()
         {
-            Intercept<ConfigurationException>(() => Lookup("myapp.other-dispatcher"));
+            Assert.Throws<ConfigurationException>(() => Lookup("myapp.other-dispatcher"));
         }
 
         [Fact]
@@ -100,7 +101,7 @@ namespace Akka.Tests.Dispatch
         [Fact]
         public void Dispatchers_must_throw_ConfigurationException_if_type_doesnt_exist()
         {
-            Intercept<ConfigurationException>(() =>
+            Assert.Throws<ConfigurationException>(() =>
             {
                 From(ConfigurationFactory.ParseString(@"
                     id = invalid-dispatcher  
@@ -118,58 +119,58 @@ namespace Akka.Tests.Dispatch
         }
 
         [Fact]
-        public void Dispatchers_must_be_used_when_configured_in_explicit_deployments()
+        public async Task Dispatchers_must_be_used_when_configured_in_explicit_deployments()
         {
             var actor = Sys.ActorOf(Props.Create<DispatcherNameEcho>().WithDispatcher("myapp.mydispatcher"));
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async() =>
             {
                 actor.Tell("what's in a name?");
                 var expected = "myapp.mydispatcher";
-                var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
+                var actual = await ExpectMsgAsync<string>(TimeSpan.FromMilliseconds(50));
                 actual.ShouldBe(expected);
             });
         }
 
         [Fact]
-        public void Dispatchers_must_be_used_in_deployment_configuration()
+        public async Task Dispatchers_must_be_used_in_deployment_configuration()
         {
             var actor = Sys.ActorOf(Props.Create<DispatcherNameEcho>(), "echo1");
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async() =>
             {
                 actor.Tell("what's in a name?");
                 var expected = "myapp.mydispatcher";
-                var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
+                var actual = await ExpectMsgAsync<string>(TimeSpan.FromMilliseconds(50));
                 actual.ShouldBe(expected);
             });
         }
 
         [Fact]
-        public void Dispatchers_must_be_used_in_deployment_configuration_and_trumps_code()
+        public async Task Dispatchers_must_be_used_in_deployment_configuration_and_trumps_code()
         {
             var actor = Sys.ActorOf(Props.Create<DispatcherNameEcho>().WithDispatcher("my-pinned-dispatcher"), "echo2");
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async() =>
             {
                 actor.Tell("what's in a name?");
                 var expected = "myapp.my-fork-join-dispatcher";
-                var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(200));
+                var actual = await ExpectMsgAsync<string>(TimeSpan.FromMilliseconds(200));
                 actual.ShouldBe(expected);
             });
         }
 
         [Fact]
-        public void Dispatchers_must_use_pool_dispatcher_router_of_deployment_config()
+        public async Task Dispatchers_must_use_pool_dispatcher_router_of_deployment_config()
         {
             var pool = Sys.ActorOf(Props.Create<DispatcherNameEcho>().WithRouter(FromConfig.Instance), "pool1");
 
-            AwaitAssert(() => {
+            await AwaitAssertAsync(async() => {
                 pool.Tell(new Identify(null));
-                var routee = ExpectMsg<ActorIdentity>().Subject;
+                var routee = (await ExpectMsgAsync<ActorIdentity>()).Subject;
                 routee.Tell("what's the name?");
                 var expected = "akka.actor.deployment./pool1.pool-dispatcher";
-                var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
+                var actual = await ExpectMsgAsync<string>(TimeSpan.FromMilliseconds(50));
                 actual.ShouldBe(expected);
             });
         }

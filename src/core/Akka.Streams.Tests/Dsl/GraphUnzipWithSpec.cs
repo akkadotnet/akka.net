@@ -8,9 +8,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Reactive.Streams;
@@ -173,6 +174,57 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
+        [Fact]
+        public void UnzipWith_must_propagate_last_downstream_cancellation_cause_once_all_downstream_have_cancelled()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var probe = CreateTestProbe();
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
+                {
+                    var source = Source
+                        .Maybe<int>()
+                        .WatchTermination(Keep.Right)
+                        .MapMaterializedValue(t =>
+                        {
+                            // side effecting our way out of this
+                            probe.Ref.Tell(t, Nobody.Instance);
+                            return NotUsed.Instance;
+                        });
+
+                    var unzip = b.Add(new UnzipWith<int, int, string>(i => (1 / i, $"1 / {i}")));
+
+                    b.From(source).To(unzip.In);
+                
+                    Flow<T, T, NotUsed> KillSwitchFlow<T>()
+                        => Flow.Create<T, NotUsed>()
+                            .ViaMaterialized(KillSwitches.Single<T>(), Keep.Right)
+                            .MapMaterializedValue(killSwitch =>
+                            {
+                                probe.Ref.Tell(killSwitch);
+                                return NotUsed.Instance;
+                            });
+
+                    b.From(unzip.Out0).Via(KillSwitchFlow<int>()).To(Sink.Ignore<int>());
+                    b.From(unzip.Out1).Via(KillSwitchFlow<string>()).To(Sink.Ignore<string>());
+
+                    return ClosedShape.Instance;
+                })).Run(Materializer);
+
+                var termination = probe.ExpectMsg<Task<Done>>();
+                var killSwitch1 = probe.ExpectMsg<UniqueKillSwitch>();
+                var killSwitch2 = probe.ExpectMsg<UniqueKillSwitch>();
+                var boom = new TestException("Boom");
+                killSwitch1.Abort(boom);
+                killSwitch2.Abort(boom);
+                termination.ContinueWith(t =>
+                {
+                    t.Exception.Should().NotBeNull();
+                    t.Exception.InnerException.Should().Be(boom);
+                });
+            }, Materializer);
+        }
+        
         [Fact]
         public void UnzipWith_must_unzipWith_expanded_Person_unapply_3_outputs()
         {

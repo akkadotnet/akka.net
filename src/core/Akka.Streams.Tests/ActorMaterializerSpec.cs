@@ -7,12 +7,15 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,15 +38,15 @@ namespace Akka.Streams.Tests
         }
 
         [Fact]
-        public void ActorMaterializer_should_properly_shut_down_actors_associated_with_it()
+        public async Task ActorMaterializer_should_properly_shut_down_actors_associated_with_it()
         {
             var m = Sys.Materializer();
             var f = Source.Maybe<int>().RunAggregate(0, (x, y) => x + y, m);
 
             m.Shutdown();
 
-            Action action = () => f.Wait(TimeSpan.FromSeconds(3));
-            action.Should().Throw<AbruptTerminationException>();
+            Func<Task> task = () => f.ShouldCompleteWithin(3.Seconds());
+            await task.Should().ThrowAsync<AbruptTerminationException>();
         }
 
         [Fact]
@@ -57,17 +60,17 @@ namespace Akka.Streams.Tests
         }
 
         [Fact]
-        public void ActorMaterializer_should_shut_down_supervisor_actor_it_encapsulates()
+        public async Task ActorMaterializer_should_shut_down_supervisor_actor_it_encapsulates()
         {
-            var m = Sys.Materializer() as ActorMaterializerImpl;
+            var m = (ActorMaterializerImpl) Sys.Materializer();
             Source.From(Enumerable.Empty<object>()).To(Sink.Ignore<object>()).Run(m);
 
             m.Supervisor.Tell(StreamSupervisor.GetChildren.Instance);
-            ExpectMsg<StreamSupervisor.Children>();
+            await ExpectMsgAsync<StreamSupervisor.Children>();
             m.Shutdown();
 
             m.Supervisor.Tell(StreamSupervisor.GetChildren.Instance);
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]

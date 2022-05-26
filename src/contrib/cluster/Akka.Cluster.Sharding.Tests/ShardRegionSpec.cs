@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -93,9 +94,13 @@ namespace Akka.Cluster.Sharding.Tests
             region2 = StartShard(sysB);
         }
 
-        protected override void BeforeTermination()
+        protected override async Task AfterAllAsync()
         {
-            Shutdown(sysB);
+            if(sysA != null)
+                await ShutdownAsync(sysA);
+            if(sysB != null)
+                await ShutdownAsync(sysB);
+            await base.AfterAllAsync();
         }
 
         private IActorRef StartShard(ActorSystem sys)

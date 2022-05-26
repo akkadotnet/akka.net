@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using Akka.IO;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Reactive.Streams;
 

@@ -137,23 +137,23 @@ jobs:
       
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "net_5_tests_windows"
-      displayName: ".NET 5 Unit Tests (Windows)"
+      name: "net_6_tests_windows"
+      displayName: ".NET 6 Unit Tests (Windows)"
       vmImage: "windows-2019"
       scriptFileName: build.cmd
       scriptArgs: runTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_5_tests_windows-$(Build.BuildId)"
+      artifactName: "net_6_tests_windows-$(Build.BuildId)"
 
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "net_5_tests_linux"
-      displayName: ".NET 5 Unit Tests (Linux)"
+      name: "net_6_tests_linux"
+      displayName: ".NET 6 Unit Tests (Linux)"
       vmImage: "ubuntu-18.04"
       scriptFileName: "./build.sh"
       scriptArgs: runTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_5_tests_linux-$(Build.BuildId)"
+      artifactName: "net_6_tests_linux-$(Build.BuildId)"
 
   - template: azure-pipeline.mntr-template.yaml
     parameters:
@@ -169,15 +169,15 @@ jobs:
 
   - template: azure-pipeline.mntr-template.yaml
     parameters:
-      name: "net_5_mntr_windows"
-      displayName: ".NET 5 Multi-Node Tests (Windows)"
+      name: "net_6_mntr_windows"
+      displayName: ".NET 6 Multi-Node Tests (Windows)"
       vmImage: "windows-2019"
       scriptFileName: "build.cmd"
       scriptArgs: MultiNodeTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_5_mntr_windows-$(Build.BuildId)"
+      artifactName: "net_6_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
-      mntrFailuresArtifactName: "net_5_mntr_FAILED_windows-$(Build.BuildId)"
+      mntrFailuresArtifactName: "net_6_mntr_FAILED_windows-$(Build.BuildId)"
 
   - template: azure-pipeline.template.yaml
     parameters:

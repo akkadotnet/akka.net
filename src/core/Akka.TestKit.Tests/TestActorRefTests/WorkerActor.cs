@@ -5,12 +5,18 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class WorkerActor : TActorBase
     {
+        public WorkerActor(Thread parentThread, AtomicReference<Thread> otherThread) : base(parentThread, otherThread)
+        {
+        }
+        
         protected override bool ReceiveMessage(object message)
         {
             if((message as string) == "work")

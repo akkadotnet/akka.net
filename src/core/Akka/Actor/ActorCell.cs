@@ -104,7 +104,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        protected ActorBase Actor { get { return _actor; } }
+        internal ActorBase Actor { get { return _actor; } }
         /// <summary>
         /// TBD
         /// </summary>
@@ -189,7 +189,7 @@ namespace Akka.Actor
              * Create the mailbox and enqueue the Create() message to ensure that
              * this is processed before anything else.
              */
-            var mailbox = Dispatcher.CreateMailbox(this, mailboxType);
+            var mailbox = MessageDispatcher.CreateMailbox(this, mailboxType);
 
             Create createMessage;
             /*
