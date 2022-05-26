@@ -88,14 +88,14 @@ namespace Akka.Cluster.Sharding
                     switch (evt)
                     {
                         case ShardRegionRegistered _:
-                            State = State.Updated(evt);
+                            State = State.Updated(evt, true);
                             return true;
                         case ShardRegionProxyRegistered _:
-                            State = State.Updated(evt);
+                            State = State.Updated(evt, true);
                             return true;
                         case ShardRegionTerminated regionTerminated:
                             if (State.Regions.ContainsKey(regionTerminated.Region))
-                                State = State.Updated(evt);
+                                State = State.Updated(evt, true);
                             else
                                 //Log.Debug(
                                 //  "{0}: ShardRegionTerminated, but region {1} was not registered. This inconsistency is due to that " +
@@ -107,13 +107,13 @@ namespace Akka.Cluster.Sharding
                             return true;
                         case ShardRegionProxyTerminated proxyTerminated:
                             if (State.RegionProxies.Contains(proxyTerminated.RegionProxy))
-                                State = State.Updated(evt);
+                                State = State.Updated(evt, true);
                             return true;
                         case ShardHomeAllocated _:
-                            State = State.Updated(evt);
+                            State = State.Updated(evt, true);
                             return true;
                         case ShardHomeDeallocated _:
-                            State = State.Updated(evt);
+                            State = State.Updated(evt, true);
                             return true;
                         case ShardCoordinatorInitialized _:
                             // not used here
