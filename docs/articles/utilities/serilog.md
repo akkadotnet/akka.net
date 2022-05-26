@@ -87,14 +87,11 @@ var logger = new LoggerConfiguration()
 
 There are few properties that one can use in their `OutputTemplate` for logger configuration:
 
-- `ActorPath`
-  - Contains actor's path
-- `LogSource`
-  - Should contain `ActorPath`, however it can also have other values such as:
+* `ActorPath` - contains the current actor's path.
+* `LogSource` - also contains `ActorPath`, however it can also have other values such as:
     - `<TypeName> (<ActorSystemName>)`
     - `<string> (<ActorSystemName>)`
-- `Thread`
-  - Contains thread id on which given log action was executed.
+* `Thread` - thread id on which given log action was executed.
 
 ### Example OutputTemplate
 
