@@ -30,9 +30,9 @@ namespace Akka.Tests.Dispatch
         {
             var config = ConfigurationFactory.ParseString(@"
 executor = channel-executor
-channel-executor.priority = high");
+channel-executor.priority = normal");
             var configurator = new ChannelExecutorConfigurator(config, Sys.Dispatchers.Prerequisites);
-            configurator.Priority.Should().Be(TaskSchedulerPriority.High);
+            configurator.Priority.Should().Be(TaskSchedulerPriority.Normal);
         }
 
         [Fact]
@@ -59,7 +59,7 @@ akka.actor.default-dispatcher = {
             dispatcher.Configurator.Config.GetString("executor").Should().Be("channel-executor");
             
             var configurator = new ChannelExecutorConfigurator(dispatcher.Configurator.Config, Sys.Dispatchers.Prerequisites);
-            configurator.Priority.Should().Be(TaskSchedulerPriority.Normal);
+            configurator.Priority.Should().Be(TaskSchedulerPriority.High);
 
             await sys.Terminate();
         }
