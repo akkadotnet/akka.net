@@ -45,20 +45,18 @@ namespace Akka.Cluster
     public sealed class NoDowning : IDowningProvider
     {
         private readonly ActorSystem _system;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        public NoDowning(ActorSystem system)
+        private readonly Cluster _cluster;
+        
+        public NoDowning(ActorSystem system, Cluster cluster)
         {
             _system = system;
+            _cluster = cluster;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public TimeSpan DownRemovalMargin => Cluster.Get(_system).Settings.DownRemovalMargin;
+        public TimeSpan DownRemovalMargin => _cluster.Settings.DownRemovalMargin;
 
         /// <summary>
         /// TBD
