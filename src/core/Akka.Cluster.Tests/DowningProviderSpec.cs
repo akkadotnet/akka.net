@@ -16,9 +16,9 @@ using Xunit;
 
 namespace Akka.Cluster.Tests
 {
-    class FailingDowningProvider : IDowningProvider
+    internal class FailingDowningProvider : IDowningProvider
     {
-        public FailingDowningProvider(ActorSystem system)
+        public FailingDowningProvider(ActorSystem system, Cluster cluster)
         {
         }
 
@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tests
     class DummyDowningProvider : IDowningProvider
     {
         public readonly AtomicBoolean ActorPropsAccessed = new AtomicBoolean(false);
-        public DummyDowningProvider(ActorSystem system)
+        public DummyDowningProvider(ActorSystem system, Cluster cluster)
         {
         }
 

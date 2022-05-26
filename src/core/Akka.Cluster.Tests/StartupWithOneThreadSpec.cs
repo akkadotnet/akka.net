@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.Configuration;
@@ -14,6 +15,7 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests
 {
@@ -25,12 +27,13 @@ namespace Akka.Cluster.Tests
             akka.actor.default-dispatcher.dedicated-thread-pool.thread-count = 1
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.remote.dot-netty.tcp.port = 0
+            akka.cluster.downing-provider-class = ""Akka.Cluster.SBR.SplitBrainResolverProvider, Akka.Cluster""
+            akka.cluster.split-brain-resolver.active-strategy = keep-majority
         ");
 
         private long _startTime;
 
-        public StartupWithOneThreadSpec() : base(Configuration)
-        {
+        public StartupWithOneThreadSpec(ITestOutputHelper output) : base(Configuration, output) {
             _startTime = MonotonicClock.GetTicks();
         }
 
@@ -53,7 +56,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void A_cluster_must_startup_with_one_dispatcher_thread()
+        public async Task A_cluster_must_startup_with_one_dispatcher_thread()
         {
             // This test failed before fixing https://github.com/akkadotnet/akka.net/issues/1959 when adding a sleep before the
             // Await of GetClusterCoreRef in the Cluster extension constructor.
@@ -75,6 +78,11 @@ namespace Akka.Cluster.Tests
             ExpectMsg("hello");
             ExpectMsg("hello");
             ExpectMsg("hello");
+            
+            // perform a self-join
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds((3)));
+            var selfAddress = cluster.SelfAddress;
+            await cluster.JoinSeedNodesAsync(new[] { selfAddress }, cts.Token);
         }
     }
 }
