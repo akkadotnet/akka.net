@@ -21,11 +21,13 @@ namespace Akka.Cluster.SBR
     {
         private readonly SplitBrainResolverSettings _settings;
         private readonly ActorSystem _system;
+        private readonly Cluster _cluster;
 
-        public SplitBrainResolverProvider(ActorSystem system)
+        public SplitBrainResolverProvider(ActorSystem system, Cluster cluster)
         {
             _system = system;
             _settings = new SplitBrainResolverSettings(system.Settings.Config);
+            _cluster = cluster;
         }
 
         public TimeSpan DownRemovalMargin
@@ -77,7 +79,7 @@ namespace Akka.Cluster.SBR
                         throw new InvalidOperationException();
                 }
 
-                return SplitBrainResolver.Props2(_settings.DowningStableAfter, strategy);
+                return SplitBrainResolver.Props2(_settings.DowningStableAfter, strategy, _cluster);
             }
         }
     }
