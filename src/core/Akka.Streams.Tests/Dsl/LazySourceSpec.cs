@@ -8,10 +8,11 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
@@ -111,6 +112,40 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
+        [Fact]
+        public void A_lazy_source_must_propagate_downstream_cancellation_cause_when_inner_source_has_been_materialized()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var probe = CreateTestProbe();
+                var (doneF, killSwitch) = Source.Lazily(() =>
+                    {
+                        return Source
+                            .Maybe<int>()
+                            .WatchTermination(Keep.Right)
+                            .MapMaterializedValue(done =>
+                            {
+                                probe.Ref.Tell(Done.Instance, Nobody.Instance);
+                                return done;
+                            });
+                    })
+                    .MapMaterializedValue(t => t.Unwrap())
+                    .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
+                    .To(Sink.Ignore<int>())
+                    .Run(Materializer);
+
+                var boom = new TestException("boom");
+                probe.ExpectMsg<Done>();
+                killSwitch.Abort(boom);
+                doneF.ContinueWith(t =>
+                {
+                    t.Exception.Should().NotBeNull();
+                    t.Exception.InnerException.Should().NotBeNull();
+                    t.Exception.InnerException.Should().Be(boom);
+                });
+            }, Materializer);
+        }
+        
         [Fact]
         public void A_lazy_source_must_fail_stage_when_upstream_fails()
         {

@@ -35,6 +35,7 @@ namespace Akka.Dispatch
             /// TBD
             /// </summary>
             public const int Open = 0; // _status is not initialized in AbstractMailbox, so default must be zero!
+
             /// <summary>
             /// TBD
             /// </summary>
@@ -51,18 +52,22 @@ namespace Akka.Dispatch
             /// TBD
             /// </summary>
             public const int ShouldScheduleMask = 3;
+
             /// <summary>
             /// TBD
             /// </summary>
             public const int ShouldNotProcessMask = ~2;
+
             /// <summary>
             /// TBD
             /// </summary>
             public const int SuspendMask = ~3;
+
             /// <summary>
             /// TBD
             /// </summary>
             public const int SuspendUnit = 4;
+
             /// <summary>
             /// TBD
             /// </summary>
@@ -201,31 +206,46 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal int CurrentStatus() { return Volatile.Read(ref _statusDotNotCallMeDirectly); }
+        internal int CurrentStatus()
+        {
+            return Volatile.Read(ref _statusDotNotCallMeDirectly);
+        }
 
         /// <summary>
         /// TBD
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal bool ShouldProcessMessage() { return (CurrentStatus() & MailboxStatus.ShouldNotProcessMask) == 0; }
+        internal bool ShouldProcessMessage()
+        {
+            return (CurrentStatus() & MailboxStatus.ShouldNotProcessMask) == 0;
+        }
 
         /// <summary>
         /// Returns the number of times this mailbox is currently suspended.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal int SuspendCount() { return CurrentStatus() / MailboxStatus.SuspendUnit; }
+        internal int SuspendCount()
+        {
+            return CurrentStatus() / MailboxStatus.SuspendUnit;
+        }
 
         /// <summary>
         /// Returns <c>true</c> if the mailbox is currently suspended from processing. <c>false</c> otherwise.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal bool IsSuspended() { return (CurrentStatus() & MailboxStatus.SuspendMask) != 0; }
+        internal bool IsSuspended()
+        {
+            return (CurrentStatus() & MailboxStatus.SuspendMask) != 0;
+        }
 
         /// <summary>
         /// Returns <c>true</c> if the mailbox is closed. <c>false</c> otherwise.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal bool IsClosed() { return (CurrentStatus() == MailboxStatus.Closed); }
+        internal bool IsClosed()
+        {
+            return (CurrentStatus() == MailboxStatus.Closed);
+        }
 
         /// <summary>
         /// Returns <c>true</c> if the mailbox is scheduled for execution on a <see cref="Dispatcher"/>. <c>false</c> otherwise.
@@ -307,6 +327,7 @@ namespace Akka.Dispatch
                 SetStatus(MailboxStatus.Closed);
                 return false;
             }
+
             return UpdateStatus(status, MailboxStatus.Closed) || BecomeClosed();
         }
 
@@ -362,7 +383,8 @@ namespace Akka.Dispatch
             finally
             {
                 SetAsIdle(); // Volatile write, needed here
-                Dispatcher.RegisterForExecution(this, false, false); // schedule to run again if there are more messages, possibly
+                Dispatcher.RegisterForExecution(this, false,
+                    false); // schedule to run again if there are more messages, possibly
             }
         }
 
@@ -382,11 +404,13 @@ namespace Akka.Dispatch
                 // not going to bother catching ThreadAbortExceptions here, since they'll get rethrown anyway
                 Actor.Invoke(next);
                 ProcessAllSystemMessages();
-                if (left > 0 && (Dispatcher.ThroughputDeadlineTime.HasValue == false || (MonotonicClock.GetTicks() - deadlineTicks) < 0))
+                if (left > 0 && (Dispatcher.ThroughputDeadlineTime.HasValue == false ||
+                                 (MonotonicClock.GetTicks() - deadlineTicks) < 0))
                 {
                     left = left - 1;
                     continue;
                 }
+
                 break;
             }
         }
@@ -407,7 +431,8 @@ namespace Akka.Dispatch
                 var msg = messageList.Head;
                 messageList = messageList.Tail;
                 msg.Unlink();
-                DebugPrint("{0} processing system message {1} with {2}", Actor.Self, msg, string.Join(",", Actor.GetChildren()));
+                DebugPrint("{0} processing system message {1} with {2}", Actor.Self, msg,
+                    string.Join(",", Actor.GetChildren()));
                 // we know here that SystemInvoke ensures that only "fatal" exceptions get rethrown
                 Actor.SystemInvoke(msg);
 
@@ -432,7 +457,8 @@ namespace Akka.Dispatch
                 }
                 catch (Exception ex)
                 {
-                    Actor.System.EventStream.Publish(new Error(ex, GetType().FullName, GetType(), $"error while enqueuing {msg} to deadletters: {ex.Message}"));
+                    Actor.System.EventStream.Publish(new Error(ex, GetType().FullName, GetType(),
+                        $"error while enqueuing {msg} to deadletters: {ex.Message}"));
                 }
             }
 
@@ -532,9 +558,16 @@ namespace Akka.Dispatch
         public static void DebugPrint(string message, params object[] args)
         {
             var formattedMessage = args.Length == 0 ? message : string.Format(message, args);
-            Console.WriteLine("[MAILBOX][{0}][Thread {1:0000}] {2}", DateTime.Now.ToString("o"), Thread.CurrentThread.ManagedThreadId, formattedMessage);
+            Console.WriteLine("[MAILBOX][{0}][Thread {1:0000}] {2}", DateTime.Now.ToString("o"),
+                Thread.CurrentThread.ManagedThreadId, formattedMessage);
         }
 
+#if !NETSTANDARD
+        public void Execute()
+        {
+            Run();
+        }
+#endif
     }
 
     /// <summary>
@@ -587,7 +620,9 @@ namespace Akka.Dispatch
     /// Compliment to <see cref="IRequiresMessageQueue{T}"/>
     /// </summary>
     /// <typeparam name="TQueue">The type of <see cref="IMessageQueue"/> produced by this class.</typeparam>
-    public interface IProducesMessageQueue<TQueue> where TQueue : IMessageQueue { }
+    public interface IProducesMessageQueue<TQueue> where TQueue : IMessageQueue
+    {
+    }
 
     /// <summary>
     /// UnboundedMailbox is the default <see cref="MailboxType"/> used by Akka.NET Actors
@@ -642,8 +677,11 @@ namespace Akka.Dispatch
             Capacity = config.GetInt("mailbox-capacity", 0);
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
-            if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
-            if (PushTimeout.TotalSeconds < 0) throw new ArgumentException("The push time-out for BoundedMailbox cannot be be negative", nameof(config));
+            if (Capacity < 0)
+                throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
+            if (PushTimeout.TotalSeconds < 0)
+                throw new ArgumentException("The push time-out for BoundedMailbox cannot be be negative",
+                    nameof(config));
         }
 
         /// <inheritdoc cref="MailboxType"/>
@@ -699,7 +737,8 @@ namespace Akka.Dispatch
     /// The value returned by the <see cref="PriorityGenerator"/> method will be used to order the message in the mailbox.
     /// Lower values will be delivered first. Messages ordered by the same number will remain in delivery order.
     /// </summary>
-    public abstract class UnboundedStablePriorityMailbox : MailboxType, IProducesMessageQueue<UnboundedStablePriorityMessageQueue>
+    public abstract class UnboundedStablePriorityMailbox : MailboxType,
+        IProducesMessageQueue<UnboundedStablePriorityMessageQueue>
     {
         /// <summary>
         /// Function responsible for generating the priority value of a message based on its type and content.
@@ -777,8 +816,10 @@ namespace Akka.Dispatch
             Capacity = config.GetInt("mailbox-capacity", 0);
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
-            if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
-            if (PushTimeout.TotalSeconds < 0) throw new ArgumentException("The push time-out for BoundedMailbox cannot be null", nameof(config));
+            if (Capacity < 0)
+                throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
+            if (PushTimeout.TotalSeconds < 0)
+                throw new ArgumentException("The push time-out for BoundedMailbox cannot be null", nameof(config));
         }
 
         /// <inheritdoc cref="MailboxType"/>
@@ -787,6 +828,4 @@ namespace Akka.Dispatch
             return new BoundedDequeMessageQueue(Capacity, PushTimeout);
         }
     }
-
 }
-

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using FluentAssertions;
@@ -18,100 +19,100 @@ namespace Akka.Tests.Actor
     public class FSMTransitionSpec : AkkaSpec
     {
         [Fact]
-        public void FSMTransitionNotifier_must_not_trigger_onTransition_for_stay()
+        public async Task FSMTransitionNotifier_must_not_trigger_onTransition_for_stay()
         {
             var fsm = Sys.ActorOf(Props.Create(() => new SendAnyTransitionFSM(TestActor)));
-            ExpectMsg((0, 0)); // caused by initialize(), OK.
+            await ExpectMsgAsync((0, 0)); // caused by initialize(), OK.
             fsm.Tell("stay"); // no transition event
-            ExpectNoMsg(500.Milliseconds());
+            await ExpectNoMsgAsync(500.Milliseconds());
             fsm.Tell("goto"); // goto(current state)
-            ExpectMsg((0, 0));
+            await ExpectMsgAsync((0, 0));
         }
 
         [Fact]
-        public void FSMTransitionNotifier_must_notify_listeners()
+        public async Task FSMTransitionNotifier_must_notify_listeners()
         {
             var fsm = Sys.ActorOf(Props.Create(() => new MyFSM(TestActor)));
 
-            Within(1.Seconds(), () =>
+            await WithinAsync(1.Seconds(), async() =>
             {
                 fsm.Tell(new SubscribeTransitionCallBack(TestActor));
-                ExpectMsg(new CurrentState<int>(fsm, 0));
+                await ExpectMsgAsync(new CurrentState<int>(fsm, 0));
                 fsm.Tell("tick");
-                ExpectMsg(new Transition<int>(fsm, 0, 1));
+                await ExpectMsgAsync(new Transition<int>(fsm, 0, 1));
                 fsm.Tell("tick");
-                ExpectMsg(new Transition<int>(fsm, 1, 0));
+                await ExpectMsgAsync(new Transition<int>(fsm, 1, 0));
             });
         }
 
         [Fact]
-        public void FSMTransitionNotifier_must_not_fail_when_listener_goes_away()
+        public async Task FSMTransitionNotifier_must_not_fail_when_listener_goes_away()
         {
             var forward = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)));
             var fsm = Sys.ActorOf(Props.Create(() => new MyFSM(TestActor)));
 
-            Within(1.Seconds(), () =>
+            await WithinAsync(1.Seconds(), async() =>
             {
                 fsm.Tell(new SubscribeTransitionCallBack(forward));
-                ExpectMsg(new CurrentState<int>(fsm, 0));
-                forward.GracefulStop(5.Seconds()).Wait();
+                await ExpectMsgAsync(new CurrentState<int>(fsm, 0));
+                await forward.GracefulStop(5.Seconds());
                 fsm.Tell("tick");
-                ExpectNoMsg(200.Milliseconds());
+                await ExpectNoMsgAsync(200.Milliseconds());
             });
         }
 
         [Fact]
-        public void FSM_must_make_previous_and_next_state_data_available_in_OnTransition()
+        public async Task FSM_must_make_previous_and_next_state_data_available_in_OnTransition()
         {
             var fsm = Sys.ActorOf(Props.Create(() => new OtherFSM(TestActor)));
 
-            Within(1.Seconds(), () =>
+            await WithinAsync(1.Seconds(), async() =>
             {
                 fsm.Tell("tick");
-                ExpectMsg((0, 1));
+                await ExpectMsgAsync((0, 1));
             });
         }
 
         [Fact]
-        public void FSM_must_trigger_transition_event_when_goto_the_same_state()
+        public async Task FSM_must_trigger_transition_event_when_goto_the_same_state()
         {
             var forward = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)));
             var fsm = Sys.ActorOf(Props.Create(() => new OtherFSM(TestActor)));
 
-            Within(1.Seconds(), () =>
+            await WithinAsync(1.Seconds(), async() =>
             {
                 fsm.Tell(new SubscribeTransitionCallBack(forward));
-                ExpectMsg(new CurrentState<int>(fsm, 0));
+                await ExpectMsgAsync(new CurrentState<int>(fsm, 0));
                 fsm.Tell("tick");
-                ExpectMsg((0, 1));
-                ExpectMsg(new Transition<int>(fsm, 0, 1));
+                await ExpectMsgAsync((0, 1));
+                await ExpectMsgAsync(new Transition<int>(fsm, 0, 1));
                 fsm.Tell("tick");
-                ExpectMsg((1, 1));
-                ExpectMsg(new Transition<int>(fsm, 1, 1));
+                await ExpectMsgAsync((1, 1));
+                await ExpectMsgAsync(new Transition<int>(fsm, 1, 1));
             });
         }
 
         [Fact]
-        public void FSM_must_not_trigger_transition_event_on_stay()
+        public async Task FSM_must_not_trigger_transition_event_on_stay()
         {
             var forward = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)));
             var fsm = Sys.ActorOf(Props.Create(() => new OtherFSM(TestActor)));
 
             fsm.Tell(new SubscribeTransitionCallBack(forward));
-            ExpectMsg(new CurrentState<int>(fsm, 0));
+            await ExpectMsgAsync(new CurrentState<int>(fsm, 0));
             fsm.Tell("stay");
-            ExpectNoMsg(500.Milliseconds());
+            await ExpectNoMsgAsync(500.Milliseconds());
         }
 
         [Fact]
-        public void FSM_must_not_leak_memory_in_nextState()
+        public async Task FSM_must_not_leak_memory_in_nextState()
         {
             var fsmref = Sys.ActorOf<LeakyFSM>();
 
             fsmref.Tell("switch");
-            ExpectMsg((0, 1));
+            await ExpectMsgAsync((0, 1));
             fsmref.Tell("test");
-            ExpectMsg("ok");
+            await ExpectMsgAsync("ok");
         }
 
         #region Test actors

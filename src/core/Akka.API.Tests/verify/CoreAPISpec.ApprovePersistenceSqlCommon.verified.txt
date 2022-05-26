@@ -1,0 +1,443 @@
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+[assembly: System.Runtime.InteropServices.GuidAttribute("e438d2c3-1075-4b01-bb84-e9efd3a36691")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+namespace Akka.Persistence.Sql.Common.Journal
+{
+    public abstract class AbstractQueryExecutor : Akka.Persistence.Sql.Common.Journal.IJournalQueryExecutor
+    {
+        protected const int IsDeletedIndex = 3;
+        protected static readonly string LongTypeName;
+        protected const int ManifestIndex = 4;
+        protected const int OrderingIndex = 7;
+        protected const int PayloadIndex = 5;
+        protected const int PersistenceIdIndex = 0;
+        protected const int SequenceNrIndex = 1;
+        protected Akka.Serialization.Serialization Serialization;
+        protected const int SerializerIdIndex = 6;
+        protected const int TimestampIndex = 2;
+        protected Akka.Persistence.Sql.Common.Journal.ITimestampProvider TimestampProvider;
+        protected AbstractQueryExecutor(Akka.Persistence.Sql.Common.Journal.QueryConfiguration configuration, Akka.Serialization.Serialization serialization, Akka.Persistence.Sql.Common.Journal.ITimestampProvider timestampProvider) { }
+        protected virtual string AllEventsSql { get; }
+        protected virtual string AllPersistenceIdsSql { get; }
+        protected virtual string ByPersistenceIdSql { get; }
+        protected virtual string ByTagSql { get; }
+        public Akka.Persistence.Sql.Common.Journal.QueryConfiguration Configuration { get; }
+        protected abstract string CreateEventsJournalSql { get; }
+        protected abstract string CreateMetaTableSql { get; }
+        protected virtual string DeleteBatchSql { get; }
+        protected virtual string HighestOrderingSql { get; }
+        protected virtual string HighestSequenceNrSql { get; }
+        protected virtual string HighestTagOrderingSql { get; }
+        protected virtual string InsertEventSql { get; }
+        [System.ObsoleteAttribute()]
+        protected string QueryEventsSql { get; }
+        protected virtual string UpdateSequenceNrSql { get; }
+        protected void AddParameter(System.Data.Common.DbCommand command, string parameterName, System.Data.DbType parameterType, object value) { }
+        protected abstract System.Data.Common.DbCommand CreateCommand(System.Data.Common.DbConnection connection);
+        public virtual System.Threading.Tasks.Task CreateTablesAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken) { }
+        public virtual System.Threading.Tasks.Task DeleteBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long toSequenceNr) { }
+        protected System.Data.Common.DbCommand GetCommand(System.Data.Common.DbConnection connection, string sql) { }
+        public virtual System.Threading.Tasks.Task InsertBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, Akka.Persistence.Sql.Common.Journal.WriteJournalBatch write) { }
+        protected virtual void PreAddParameterToCommand(System.Data.Common.DbCommand command, System.Data.Common.DbParameter param) { }
+        protected virtual Akka.Persistence.IPersistentRepresentation ReadEvent(System.Data.Common.DbDataReader reader) { }
+        public virtual System.Threading.Tasks.Task<long> SelectAllEventsAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, long fromOffset, long toOffset, long max, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedEvent> callback) { }
+        public virtual System.Threading.Tasks.Task<System.Collections.Immutable.ImmutableArray<string>> SelectAllPersistenceIdsAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, long offset) { }
+        public virtual System.Threading.Tasks.Task SelectByPersistenceIdAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> callback) { }
+        public virtual System.Threading.Tasks.Task<long> SelectByTagAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedTaggedMessage> callback) { }
+        public virtual System.Threading.Tasks.Task<long> SelectHighestSequenceNrAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId) { }
+        public virtual System.Threading.Tasks.Task<long> SelectHighestSequenceNrAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken) { }
+        protected virtual void WriteEvent(System.Data.Common.DbCommand command, Akka.Persistence.IPersistentRepresentation e, System.Collections.Immutable.IImmutableSet<string> tags) { }
+    }
+    public sealed class AllPersistenceIds
+    {
+        public readonly System.Collections.Immutable.ImmutableArray<string> Ids;
+        public AllPersistenceIds(System.Collections.Immutable.ImmutableArray<string> ids) { }
+    }
+    public abstract class BatchingSqlJournalSetup
+    {
+        protected BatchingSqlJournalSetup(Akka.Configuration.Config config, Akka.Persistence.Sql.Common.Journal.QueryConfiguration namingConventions) { }
+        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, System.TimeSpan connectionTimeout, System.Data.IsolationLevel isolationLevel, Akka.Persistence.Sql.Common.Journal.CircuitBreakerSettings circuitBreakerSettings, Akka.Persistence.Sql.Common.Journal.ReplayFilterSettings replayFilterSettings, Akka.Persistence.Sql.Common.Journal.QueryConfiguration namingConventions, string defaultSerializer) { }
+        public bool AutoInitialize { get; }
+        public Akka.Persistence.Sql.Common.Journal.CircuitBreakerSettings CircuitBreakerSettings { get; }
+        public string ConnectionString { get; }
+        public System.TimeSpan ConnectionTimeout { get; }
+        public string DefaultSerializer { get; }
+        public System.Data.IsolationLevel IsolationLevel { get; }
+        public int MaxBatchSize { get; }
+        public int MaxBufferSize { get; }
+        public int MaxConcurrentOperations { get; }
+        public Akka.Persistence.Sql.Common.Journal.QueryConfiguration NamingConventions { get; }
+        public Akka.Persistence.Sql.Common.Journal.ReplayFilterSettings ReplayFilterSettings { get; }
+        public string TimestampProviderTypeName { get; }
+    }
+    public abstract class BatchingSqlJournal<TConnection, TCommand> : Akka.Persistence.Journal.WriteJournalBase
+        where TConnection : System.Data.Common.DbConnection
+        where TCommand : System.Data.Common.DbCommand
+    {
+        protected readonly bool CanPublish;
+        protected const int IsDeletedIndex = 3;
+        protected readonly Akka.Event.ILoggingAdapter Log;
+        protected const int ManifestIndex = 4;
+        protected const int OrderingIndex = 7;
+        protected const int PayloadIndex = 5;
+        protected const int PersistenceIdIndex = 0;
+        protected const int SequenceNrIndex = 1;
+        protected const int SerializerIdIndex = 6;
+        protected const int TimestampIndex = 2;
+        protected BatchingSqlJournal(Akka.Persistence.Sql.Common.Journal.BatchingSqlJournalSetup setup) { }
+        protected virtual string AllEventsSql { get; }
+        protected virtual string AllPersistenceIdsSql { get; }
+        protected virtual string ByPersistenceIdSql { get; }
+        protected virtual string ByTagSql { get; }
+        protected virtual string DeleteBatchSql { get; }
+        protected bool HasNewEventsSubscribers { get; }
+        protected bool HasPersistenceIdSubscribers { get; }
+        protected bool HasTagSubscribers { get; }
+        protected virtual string HighestOrderingSql { get; }
+        protected virtual string HighestSequenceNrSql { get; }
+        protected abstract System.Collections.Immutable.ImmutableDictionary<string, string> Initializers { get; }
+        protected virtual string InsertEventSql { get; }
+        protected Akka.Persistence.Sql.Common.Journal.BatchingSqlJournalSetup Setup { get; }
+        protected Akka.Persistence.Sql.Common.Journal.ITimestampProvider TimestampProvider { get; }
+        protected virtual string UpdateSequenceNrSql { get; }
+        protected void AddParameter(TCommand command, string paramName, System.Data.DbType dbType, object value) { }
+        protected void BatchRequest(Akka.Persistence.IJournalRequest message) { }
+        protected abstract TConnection CreateConnection(string connectionString);
+        protected virtual System.Threading.Tasks.Task HandleDeleteMessagesTo(Akka.Persistence.DeleteMessagesTo req, TCommand command) { }
+        protected virtual System.Threading.Tasks.Task HandleReplayAllMessages(Akka.Persistence.Sql.Common.Journal.ReplayAllEvents req, TCommand command) { }
+        protected virtual System.Threading.Tasks.Task HandleReplayMessages(Akka.Persistence.ReplayMessages req, TCommand command, Akka.Actor.IActorContext context) { }
+        protected virtual System.Threading.Tasks.Task HandleReplayTaggedMessages(Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages req, TCommand command) { }
+        protected virtual System.Threading.Tasks.Task HandleSelectCurrentPersistenceIds(Akka.Persistence.Sql.Common.Journal.SelectCurrentPersistenceIds message, TCommand command) { }
+        protected virtual void OnBufferOverflow(Akka.Persistence.IJournalMessage request) { }
+        protected virtual void PreAddParameterToCommand(TCommand command, System.Data.Common.DbParameter param) { }
+        protected override void PreStart() { }
+        protected virtual Akka.Persistence.IPersistentRepresentation ReadEvent(System.Data.Common.DbDataReader reader) { }
+        protected virtual System.Threading.Tasks.Task<long> ReadHighestSequenceNr(string persistenceId, TCommand command) { }
+        protected virtual System.Threading.Tasks.Task<long> ReadHighestSequenceNr(TCommand command) { }
+        protected virtual bool Receive(object message) { }
+        protected virtual void WriteEvent(TCommand command, Akka.Persistence.IPersistentRepresentation persistent, string tags = "") { }
+    }
+    public sealed class CircuitBreakerSettings
+    {
+        public CircuitBreakerSettings(Akka.Configuration.Config config) { }
+        public CircuitBreakerSettings(int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
+        public System.TimeSpan CallTimeout { get; }
+        public int MaxFailures { get; }
+        public System.TimeSpan ResetTimeout { get; }
+    }
+    public sealed class CurrentPersistenceIds : Akka.Event.IDeadLetterSuppression
+    {
+        public readonly System.Collections.Generic.IEnumerable<string> AllPersistenceIds;
+        public readonly long HighestOrderingNumber;
+        public CurrentPersistenceIds(System.Collections.Generic.IEnumerable<string> allPersistenceIds, long highestOrderingNumber) { }
+    }
+    public sealed class DefaultTimestampProvider : Akka.Persistence.Sql.Common.Journal.ITimestampProvider
+    {
+        public DefaultTimestampProvider() { }
+        public long GenerateTimestamp(Akka.Persistence.IPersistentRepresentation message) { }
+    }
+    public sealed class EventAppended : Akka.Event.IDeadLetterSuppression
+    {
+        public readonly string PersistenceId;
+        public EventAppended(string persistenceId) { }
+    }
+    public struct EventId
+    {
+        public readonly long Id;
+        public readonly string PersistenceId;
+        public readonly long SequenceNr;
+        public EventId(long id, long sequenceNr, string persistenceId) { }
+    }
+    public sealed class EventReplayFailure
+    {
+        public EventReplayFailure(System.Exception cause) { }
+        public System.Exception Cause { get; }
+        public bool Equals(Akka.Persistence.Sql.Common.Journal.EventReplayFailure other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class EventReplaySuccess
+    {
+        public EventReplaySuccess(long highestSequenceNr) { }
+        public long HighestSequenceNr { get; }
+        public bool Equals(Akka.Persistence.Sql.Common.Journal.EventReplaySuccess other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public interface IJournalQueryExecutor
+    {
+        Akka.Persistence.Sql.Common.Journal.QueryConfiguration Configuration { get; }
+        System.Threading.Tasks.Task CreateTablesAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task DeleteBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long toSequenceNr);
+        System.Threading.Tasks.Task InsertBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, Akka.Persistence.Sql.Common.Journal.WriteJournalBatch write);
+        System.Threading.Tasks.Task<long> SelectAllEventsAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, long fromOffset, long toOffset, long max, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedEvent> callback);
+        System.Threading.Tasks.Task<System.Collections.Immutable.ImmutableArray<string>> SelectAllPersistenceIdsAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, long offset);
+        System.Threading.Tasks.Task SelectByPersistenceIdAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> callback);
+        System.Threading.Tasks.Task<long> SelectByTagAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedTaggedMessage> callback);
+        System.Threading.Tasks.Task<long> SelectHighestSequenceNrAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId);
+        System.Threading.Tasks.Task<long> SelectHighestSequenceNrAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface ISubscriptionCommand { }
+    public interface ITimestampProvider
+    {
+        long GenerateTimestamp(Akka.Persistence.IPersistentRepresentation message);
+    }
+    public class JournalBufferOverflowException : Akka.Actor.AkkaException
+    {
+        public static readonly Akka.Persistence.Sql.Common.Journal.JournalBufferOverflowException Instance;
+        public JournalBufferOverflowException() { }
+        protected JournalBufferOverflowException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public sealed class JournalEntry
+    {
+        public readonly bool IsDeleted;
+        public readonly string Manifest;
+        public readonly object Payload;
+        public readonly string PersistenceId;
+        public readonly long SequenceNr;
+        public readonly System.DateTime Timestamp;
+        public JournalEntry(string persistenceId, long sequenceNr, bool isDeleted, string manifest, System.DateTime timestamp, object payload) { }
+    }
+    public sealed class NewEventAppended : Akka.Event.IDeadLetterSuppression
+    {
+        public static Akka.Persistence.Sql.Common.Journal.NewEventAppended Instance;
+    }
+    public class QueryConfiguration
+    {
+        public readonly string IsDeletedColumnName;
+        public readonly string JournalEventsTableName;
+        public readonly string ManifestColumnName;
+        public readonly string MetaTableName;
+        public readonly string OrderingColumnName;
+        public readonly string PayloadColumnName;
+        public readonly string PersistenceIdColumnName;
+        public readonly string SchemaName;
+        public readonly string SequenceNrColumnName;
+        public readonly string SerializerIdColumnName;
+        public readonly string TagsColumnName;
+        public readonly System.TimeSpan Timeout;
+        public readonly string TimestampColumnName;
+        public QueryConfiguration(string schemaName, string journalEventsTableName, string metaTableName, string persistenceIdColumnName, string sequenceNrColumnName, string payloadColumnName, string manifestColumnName, string timestampColumnName, string isDeletedColumnName, string tagsColumnName, string orderingColumnName, string serializerIdColumnName, System.TimeSpan timeout, string defaultSerializer, bool useSequentialAccess) { }
+        public string DefaultSerializer { get; }
+        public string FullJournalTableName { get; }
+        public string FullMetaTableName { get; }
+        public bool UseSequentialAccess { get; }
+    }
+    public sealed class ReplayAllEvents : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    {
+        public readonly long FromOffset;
+        public readonly long Max;
+        public readonly Akka.Actor.IActorRef ReplyTo;
+        public readonly long ToOffset;
+        public ReplayAllEvents(long fromOffset, long toOffset, long max, Akka.Actor.IActorRef replyTo) { }
+    }
+    public sealed class ReplayFilterSettings
+    {
+        public readonly bool IsDebug;
+        public readonly int MaxOldWriters;
+        public readonly Akka.Persistence.Journal.ReplayFilterMode Mode;
+        public readonly int WindowSize;
+        public ReplayFilterSettings(Akka.Configuration.Config config) { }
+        public ReplayFilterSettings(Akka.Persistence.Journal.ReplayFilterMode mode, int windowSize, int maxOldWriters, bool isDebug) { }
+        public bool IsEnabled { get; }
+    }
+    public sealed class ReplayTaggedMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    {
+        public readonly long FromOffset;
+        public readonly long Max;
+        public readonly Akka.Actor.IActorRef ReplyTo;
+        public readonly string Tag;
+        public readonly long ToOffset;
+        public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, Akka.Actor.IActorRef replyTo) { }
+    }
+    public sealed class ReplayedEvent : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+    {
+        public readonly long Offset;
+        public readonly Akka.Persistence.IPersistentRepresentation Persistent;
+        public ReplayedEvent(Akka.Persistence.IPersistentRepresentation persistent, long offset) { }
+    }
+    public sealed class ReplayedTaggedMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+    {
+        public readonly long Offset;
+        public readonly Akka.Persistence.IPersistentRepresentation Persistent;
+        public readonly string Tag;
+        public ReplayedTaggedMessage(Akka.Persistence.IPersistentRepresentation persistent, string tag, long offset) { }
+    }
+    public sealed class SelectCurrentPersistenceIds : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    {
+        public SelectCurrentPersistenceIds(long offset, Akka.Actor.IActorRef replyTo) { }
+        public long Offset { get; }
+        public Akka.Actor.IActorRef ReplyTo { get; }
+    }
+    public abstract class SqlJournal : Akka.Persistence.Journal.AsyncWriteJournal, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    {
+        protected SqlJournal(Akka.Configuration.Config journalConfig) { }
+        protected bool HasNewEventSubscribers { get; }
+        protected bool HasPersistenceIdSubscribers { get; }
+        protected bool HasTagSubscribers { get; }
+        protected abstract string JournalConfigPath { get; }
+        protected Akka.Event.ILoggingAdapter Log { get; }
+        public abstract Akka.Persistence.Sql.Common.Journal.IJournalQueryExecutor QueryExecutor { get; }
+        public Akka.Actor.IStash Stash { get; set; }
+        public void AddNewEventsSubscriber(Akka.Actor.IActorRef subscriber) { }
+        public void AddPersistenceIdSubscriber(Akka.Actor.IActorRef subscriber, string persistenceId) { }
+        public void AddTagSubscriber(Akka.Actor.IActorRef subscriber, string tag) { }
+        protected abstract System.Data.Common.DbConnection CreateDbConnection(string connectionString);
+        public System.Data.Common.DbConnection CreateDbConnection() { }
+        protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr) { }
+        protected virtual string GetConnectionString() { }
+        protected Akka.Persistence.Sql.Common.Journal.ITimestampProvider GetTimestampProvider(string typeName) { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr) { }
+        protected override bool ReceivePluginInternal(object message) { }
+        public void RemoveSubscriber(Akka.Actor.IActorRef subscriber) { }
+        protected virtual System.Threading.Tasks.Task<long> ReplayAllEventsAsync(Akka.Persistence.Sql.Common.Journal.ReplayAllEvents replay) { }
+        public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
+        protected virtual System.Threading.Tasks.Task<long> ReplayTaggedMessagesAsync(Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages replay) { }
+        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
+                "Ids",
+                "LastOrdering"})]
+        protected virtual System.Threading.Tasks.Task<System.ValueTuple<System.Collections.Generic.IEnumerable<string>, long>> SelectAllPersistenceIdsAsync(long offset) { }
+        protected bool WaitingForInitialization(object message) { }
+        protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages) { }
+    }
+    public sealed class SubscribeNewEvents : Akka.Persistence.Sql.Common.Journal.ISubscriptionCommand
+    {
+        public static Akka.Persistence.Sql.Common.Journal.SubscribeNewEvents Instance;
+    }
+    public sealed class SubscribePersistenceId : Akka.Persistence.Sql.Common.Journal.ISubscriptionCommand
+    {
+        public readonly string PersistenceId;
+        public SubscribePersistenceId(string persistenceId) { }
+    }
+    public sealed class SubscribeTag : Akka.Persistence.Sql.Common.Journal.ISubscriptionCommand
+    {
+        public readonly string Tag;
+        public SubscribeTag(string tag) { }
+    }
+    public sealed class TaggedEventAppended : Akka.Event.IDeadLetterSuppression
+    {
+        public readonly string Tag;
+        public TaggedEventAppended(string tag) { }
+    }
+    public class static TimestampProviderProvider
+    {
+        public static Akka.Persistence.Sql.Common.Journal.ITimestampProvider GetTimestampProvider(string typeName, Akka.Actor.IActorContext context) { }
+    }
+    public sealed class WriteJournalBatch
+    {
+        public readonly System.Collections.Generic.IDictionary<Akka.Persistence.IPersistentRepresentation, System.Collections.Immutable.IImmutableSet<string>> EntryTags;
+        public WriteJournalBatch(System.Collections.Generic.IDictionary<Akka.Persistence.IPersistentRepresentation, System.Collections.Immutable.IImmutableSet<string>> entryTags) { }
+    }
+}
+namespace Akka.Persistence.Sql.Common
+{
+    public class JournalSettings
+    {
+        public JournalSettings(Akka.Configuration.Config config) { }
+        public bool AutoInitialize { get; }
+        public string ConnectionString { get; }
+        public string ConnectionStringName { get; }
+        public System.TimeSpan ConnectionTimeout { get; }
+        public string JournalTableName { get; }
+        public string MetaTableName { get; }
+        public string SchemaName { get; }
+        public string TimestampProvider { get; set; }
+    }
+    public class SnapshotStoreSettings
+    {
+        public SnapshotStoreSettings(Akka.Configuration.Config config) { }
+        public bool AutoInitialize { get; }
+        public string ConnectionString { get; }
+        public string ConnectionStringName { get; }
+        public System.TimeSpan ConnectionTimeout { get; }
+        public string DefaultSerializer { get; }
+        public string FullTableName { get; }
+        public string SchemaName { get; }
+        public string TableName { get; }
+    }
+}
+namespace Akka.Persistence.Sql.Common.Snapshot
+{
+    public abstract class AbstractQueryExecutor : Akka.Persistence.Sql.Common.Snapshot.ISnapshotQueryExecutor
+    {
+        protected Akka.Serialization.Serialization Serialization;
+        protected AbstractQueryExecutor(Akka.Persistence.Sql.Common.Snapshot.QueryConfiguration configuration, Akka.Serialization.Serialization serialization) { }
+        public Akka.Persistence.Sql.Common.Snapshot.QueryConfiguration Configuration { get; }
+        protected abstract string CreateSnapshotTableSql { get; }
+        protected virtual string DeleteSnapshotRangeSql { get; }
+        protected virtual string DeleteSnapshotSql { get; }
+        protected virtual string InsertSnapshotSql { get; }
+        protected virtual string SelectSnapshotSql { get; }
+        protected void AddParameter(System.Data.Common.DbCommand command, string parameterName, System.Data.DbType parameterType, object value) { }
+        protected abstract System.Data.Common.DbCommand CreateCommand(System.Data.Common.DbConnection connection);
+        public virtual System.Threading.Tasks.Task CreateTableAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken) { }
+        public virtual System.Threading.Tasks.Task DeleteAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long sequenceNr, System.Nullable<System.DateTime> timestamp) { }
+        public virtual System.Threading.Tasks.Task DeleteBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long maxSequenceNr, System.DateTime maxTimestamp) { }
+        protected System.Data.Common.DbCommand GetCommand(System.Data.Common.DbConnection connection, string sql) { }
+        protected object GetSnapshot(System.Data.Common.DbDataReader reader) { }
+        public virtual System.Threading.Tasks.Task InsertAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, object snapshot, Akka.Persistence.SnapshotMetadata metadata) { }
+        protected virtual void PreAddParameterToCommand(System.Data.Common.DbCommand command, System.Data.Common.DbParameter param) { }
+        protected virtual Akka.Persistence.SelectedSnapshot ReadSnapshot(System.Data.Common.DbDataReader reader) { }
+        public virtual System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> SelectSnapshotAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long maxSequenceNr, System.DateTime maxTimestamp) { }
+        protected virtual void SetManifestParameters(object snapshot, System.Data.Common.DbCommand command) { }
+        protected virtual void SetPayloadParameter(object snapshot, System.Data.Common.DbCommand command) { }
+        protected virtual void SetPersistenceIdParameter(string persistenceId, System.Data.Common.DbCommand command) { }
+        protected virtual void SetSequenceNrParameter(long sequenceNr, System.Data.Common.DbCommand command) { }
+        protected virtual void SetTimestampParameter(System.DateTime timestamp, System.Data.Common.DbCommand command) { }
+    }
+    public interface ISnapshotQueryExecutor
+    {
+        Akka.Persistence.Sql.Common.Snapshot.QueryConfiguration Configuration { get; }
+        System.Threading.Tasks.Task CreateTableAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task DeleteAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long sequenceNr, System.Nullable<System.DateTime> timestamp);
+        System.Threading.Tasks.Task DeleteBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long maxSequenceNr, System.DateTime maxTimestamp);
+        System.Threading.Tasks.Task InsertAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, object snapshot, Akka.Persistence.SnapshotMetadata metadata);
+        System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> SelectSnapshotAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long maxSequenceNr, System.DateTime maxTimestamp);
+    }
+    public class QueryConfiguration
+    {
+        public readonly string DefaultSerializer;
+        public readonly string ManifestColumnName;
+        public readonly string PayloadColumnName;
+        public readonly string PersistenceIdColumnName;
+        public readonly string SchemaName;
+        public readonly string SequenceNrColumnName;
+        public readonly string SerializerIdColumnName;
+        public readonly string SnapshotTableName;
+        public readonly System.TimeSpan Timeout;
+        public readonly string TimestampColumnName;
+        public QueryConfiguration(string schemaName, string snapshotTableName, string persistenceIdColumnName, string sequenceNrColumnName, string payloadColumnName, string manifestColumnName, string timestampColumnName, string serializerIdColumnName, System.TimeSpan timeout, string defaultSerializer, bool useSequentialAccess) { }
+        public string FullSnapshotTableName { get; }
+        public bool UseSequentialAccess { get; }
+    }
+    public class SnapshotEntry
+    {
+        public readonly string Manifest;
+        public readonly object Payload;
+        public readonly string PersistenceId;
+        public readonly long SequenceNr;
+        public readonly System.DateTime Timestamp;
+        public SnapshotEntry(string persistenceId, long sequenceNr, System.DateTime timestamp, string manifest, object payload) { }
+    }
+    public abstract class SqlSnapshotStore : Akka.Persistence.Snapshot.SnapshotStore, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    {
+        protected SqlSnapshotStore(Akka.Configuration.Config config) { }
+        protected Akka.Event.ILoggingAdapter Log { get; }
+        public abstract Akka.Persistence.Sql.Common.Snapshot.ISnapshotQueryExecutor QueryExecutor { get; }
+        public Akka.Actor.IStash Stash { get; set; }
+        protected abstract System.Data.Common.DbConnection CreateDbConnection(string connectionString);
+        public System.Data.Common.DbConnection CreateDbConnection() { }
+        protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata) { }
+        protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected virtual string GetConnectionString() { }
+        protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        protected override System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
+    }
+}

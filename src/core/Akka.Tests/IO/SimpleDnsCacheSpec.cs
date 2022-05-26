@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.IO;
 using Akka.TestKit;
 using Xunit;
@@ -31,11 +32,12 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public void Cache_should_not_reply_with_expired_but_not_yet_swept_out_entries()
+        public async Task Cache_should_not_reply_with_expired_but_not_yet_swept_out_entries()
         {
             var localClock = new AtomicReference<long>(0);
             var cache = new SimpleDnsCacheTestDouble(localClock);
-            var cacheEntry = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntryAsync("127.0.0.1").Result.AddressList);
+            var hostEntry = await System.Net.Dns.GetHostEntryAsync("127.0.0.1");
+            var cacheEntry = Dns.Resolved.Create("test.local", hostEntry.AddressList);
             cache.Put(cacheEntry, 5000);
 
             cache.Cached("test.local").ShouldBe(cacheEntry);
@@ -47,11 +49,12 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public void Cache_should_sweep_out_expired_entries_on_cleanup()
+        public async Task Cache_should_sweep_out_expired_entries_on_cleanup()
         {
             var localClock = new AtomicReference<long>(0);
             var cache = new SimpleDnsCacheTestDouble(localClock);
-            var cacheEntry = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntryAsync("127.0.0.1").Result.AddressList);
+            var hostEntry = await System.Net.Dns.GetHostEntryAsync("127.0.0.1");
+            var cacheEntry = Dns.Resolved.Create("test.local", hostEntry.AddressList);
             cache.Put(cacheEntry, 5000);
 
             cache.Cached("test.local").ShouldBe(cacheEntry);
@@ -68,12 +71,13 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public void Cache_should_be_updated_with_the_latest_resolved()
+        public async Task Cache_should_be_updated_with_the_latest_resolved()
         {
             var localClock = new AtomicReference<long>(0);
             var cache = new SimpleDnsCacheTestDouble(localClock);
-            var cacheEntryOne = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntryAsync("127.0.0.1").Result.AddressList);
-            var cacheEntryTwo = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntryAsync("127.0.0.1").Result.AddressList);
+            var hostEntry = await System.Net.Dns.GetHostEntryAsync("127.0.0.1");
+            var cacheEntryOne = Dns.Resolved.Create("test.local", hostEntry.AddressList);
+            var cacheEntryTwo = Dns.Resolved.Create("test.local", hostEntry.AddressList);
             long ttl = 500;
             cache.Put(cacheEntryOne, ttl);
             cache.Cached("test.local").ShouldBe(cacheEntryOne);

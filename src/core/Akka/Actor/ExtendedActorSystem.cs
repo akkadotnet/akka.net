@@ -71,6 +71,8 @@ namespace Akka.Actor
         /// </summary>
         public abstract void Abort();
 
+        public abstract string PrintTree();
+
         //TODO: Missing threadFactory, dynamicAccess, printTree
         //  /**
         //  * A ThreadFactory that can be used if the transport needs to create any Threads

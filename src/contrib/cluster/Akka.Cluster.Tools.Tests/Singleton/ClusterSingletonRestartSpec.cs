@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -128,12 +129,13 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterAllAsync()
         {
-            Shutdown(_sys1);
-            Shutdown(_sys2);
+            await base.AfterAllAsync();
+            await ShutdownAsync(_sys1);
+            await ShutdownAsync(_sys2);
             if(_sys3 != null)
-                Shutdown(_sys3);
+                await ShutdownAsync(_sys3);
         }
 
         /// <summary>

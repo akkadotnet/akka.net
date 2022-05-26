@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 
 namespace Akka.TestKit.Internal
@@ -30,6 +31,7 @@ namespace Akka.TestKit.Internal
         /// Copies all the items from the <see cref="ITestActorQueue{T}"/> instance into a new <see cref="List{T}"/>
         /// </summary>
         /// <returns>TBD</returns>
+        [Obsolete("This method will be removed in the future")]
         List<T> ToList();
 
         /// <summary>

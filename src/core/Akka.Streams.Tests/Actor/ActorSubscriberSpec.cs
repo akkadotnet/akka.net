@@ -13,7 +13,7 @@ using Akka.Configuration;
 using Akka.Routing;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -27,8 +27,7 @@ namespace Akka.Streams.Tests.Actor
     {
         public ActorSubscriberSpec(ITestOutputHelper helper)
             : base(
-                AkkaSpecConfig.WithFallback(
-                    ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")),
+                AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig),
                 helper)
         {
 

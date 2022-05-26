@@ -21,13 +21,13 @@ namespace Akka.Persistence.TestKit.Tests
     /// </summary>
     public class Bug4762FixSpec : PersistenceTestKit
     {
-        class WriteMessage
+        private class WriteMessage
         { }
 
-        class TestEvent
+        private class TestEvent
         { }
 
-        class TestActor2 : UntypedPersistentActor
+        private class TestActor2 : UntypedPersistentActor
         {
             private readonly IActorRef _probe;
             private readonly ILoggingAdapter _log;
@@ -68,7 +68,7 @@ namespace Akka.Persistence.TestKit.Tests
         public async Task TestJournal_PersistAll_should_only_count_each_event_exceptions_once()
         {
             var probe = CreateTestProbe();
-            await WithJournalWrite(write => write.Pass(), () =>
+            await WithJournalWrite(write => write.Pass(), async () =>
             {
                 var actor = ActorOf(() => new TestActor2(probe));
                 Watch(actor);
@@ -76,10 +76,10 @@ namespace Akka.Persistence.TestKit.Tests
                 var command = new WriteMessage();
                 actor.Tell(command, actor);
 
-                probe.ExpectMsg<RecoveryCompleted>();
-                probe.ExpectMsg<Done>();
-                probe.ExpectMsg<Done>();
-                probe.ExpectNoMsg(3000);
+                await probe.ExpectMsgAsync<RecoveryCompleted>();
+                await probe.ExpectMsgAsync<Done>();
+                await probe.ExpectMsgAsync<Done>();
+                await probe.ExpectNoMsgAsync(3000);
             });
         }
     }

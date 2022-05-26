@@ -13,8 +13,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Dsl;
-using Akka.Streams.IO;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,7 +38,7 @@ namespace Akka.Streams.Tests
             var serverPipeConnectionTask = serverPipe.WaitForConnectionAsync();
 
             var clientPipe = new NamedPipeClientStream(".", "unique-pipe-name", PipeDirection.In, PipeOptions.Asynchronous);
-            clientPipe.Connect();
+            await clientPipe.ConnectAsync();
 
             await serverPipeConnectionTask;
             var cnt = 0;
@@ -51,11 +53,11 @@ namespace Akka.Streams.Tests
             var readFromStreamTask = StreamConverters.FromInputStream(() => clientPipe, 1)
                 .RunForeach(bs => result.Add(bs.ToString(Encoding.ASCII)), Materializer);
 
-            await Task.WhenAll(writeToStreamTask, readFromStreamTask);
+            await Task.WhenAll(writeToStreamTask, readFromStreamTask).ShouldCompleteWithin(3.Seconds());
 
             var expected = Enumerable.Range(0, 100)
                 .SelectMany(i => i == 10 ? Array.Empty<string>() : i.ToString().Select(c => c.ToString()));
-            expected.SequenceEqual(result).ShouldBeTrue();
+            expected.Should().BeEquivalentTo(result, options => options.WithStrictOrdering());
         }
     }
 }

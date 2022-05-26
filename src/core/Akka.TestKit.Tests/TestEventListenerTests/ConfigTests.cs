@@ -8,7 +8,7 @@
 using System.Linq;
 using Xunit;
 
-namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
+namespace Akka.TestKit.Tests.TestEventListenerTests
 {
     public class ConfigTests : TestKit.Xunit2.TestKit
     {

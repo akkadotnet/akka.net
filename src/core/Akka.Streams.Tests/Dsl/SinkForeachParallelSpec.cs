@@ -10,7 +10,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -18,6 +17,7 @@ using Xunit;
 using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Threading;
+using Akka.Streams.TestKit;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
                     latch[n].Ready(TimeSpan.FromSeconds(5));
                 }), Materializer);
 
-                probe.ExpectMsgAllOf(1, 2, 3, 4);
+                probe.ExpectMsgAllOf(new []{ 1, 2, 3, 4 });
                 probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
                 p.IsCompleted.Should().BeFalse();
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
                 }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)), Materializer);
 
                 latch.CountDown();
-                probe.ExpectMsgAllOf(1, 2, 4, 5);
+                probe.ExpectMsgAllOf(new []{ 1, 2, 4, 5 });
 
                 p.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
             }, Materializer);
@@ -138,7 +138,7 @@ namespace Akka.Streams.Tests.Dsl
                 // make sure the stream is up and running, otherwise the latch is maybe ready before the third message arrives
                 Thread.Sleep(500);
                 latch.CountDown();
-                probe.ExpectMsgAllOf(1, 2);
+                probe.ExpectMsgAllOf(new []{ 1, 2 });
 
                 var ex = p.Invoking(t => t.Wait(TimeSpan.FromSeconds(1))).Should().Throw<AggregateException>().Which;
                 ex.Flatten().InnerException.Should().BeOfType<TestException>();

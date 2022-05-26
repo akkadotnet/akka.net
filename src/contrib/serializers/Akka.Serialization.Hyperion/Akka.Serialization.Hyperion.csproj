@@ -1,27 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\common.props" />
-  <PropertyGroup>
-    <AssemblyTitle>Akka.Serialization.Hyperion</AssemblyTitle>
-    <Description>Hyperion serializer for Akka.NET</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
-    <PackageTags>$(AkkaPackageTags);hyperion;serializer;serialize</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="reference.conf" />
-    <PackageReference Include="Hyperion" Version="$(HyperionVersion)" />
-    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <PackageReference Include="System.Reflection" Version="4.3.0" />
-    <PackageReference Include="System.Runtime" Version="4.3.1" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
+    <Import Project="..\..\..\common.props"/>
+    <PropertyGroup>
+        <AssemblyTitle>Akka.Serialization.Hyperion</AssemblyTitle>
+        <Description>Hyperion serializer for Akka.NET</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags);hyperion;serializer;serialize</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="reference.conf"/>
+        <PackageReference Include="Hyperion" Version="$(HyperionVersion)"/>
+        <ProjectReference Include="..\..\..\core\Akka\Akka.csproj"/>
+    </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
+        <PackageReference Include="System.Reflection" Version="4.3.0"/>
+        <PackageReference Include="System.Runtime" Version="4.3.1"/>
+    </ItemGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
 </Project>

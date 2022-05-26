@@ -85,7 +85,7 @@ namespace Akka.Cluster.Metrics.Collectors
             
             try
             {
-                TimeSpan measureStartTime;
+                TimeSpan measureStartTime = TimeSpan.Zero;
                 TimeSpan measureEndTime;
                 ImmutableDictionary<int, TimeSpan> currentCpuTimings;
                 
