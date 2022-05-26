@@ -131,8 +131,9 @@ public class MyActor : ReceiveActor, ILogReceive
 // send a MyActor instance a string message
 myActor.Tell("hello");
 ```
-In your log, expect to see a line such as: 
+
+In your log, expect to see a line such as:
 
 `[DEBUG]... received handled message hello from akka://test/deadLetters`
 
-This logging can be toggled by configuring `akka.actor.debug.receive`. 
+This logging can be toggled by configuring `akka.actor.debug.receive`.
