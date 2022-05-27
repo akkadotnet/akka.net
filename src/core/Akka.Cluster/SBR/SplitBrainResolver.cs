@@ -27,22 +27,22 @@ namespace Akka.Cluster.SBR
     {
         private Cluster _cluster;
 
-        public SplitBrainResolver(TimeSpan stableAfter, DowningStrategy strategy)
+        public SplitBrainResolver(TimeSpan stableAfter, DowningStrategy strategy, Cluster cluster)
             : base(stableAfter, strategy)
         {
+            _cluster = cluster;
         }
 
         public override UniqueAddress SelfUniqueAddress => _cluster.SelfUniqueAddress;
 
-        public static Props Props2(TimeSpan stableAfter, DowningStrategy strategy)
+        public static Props Props2(TimeSpan stableAfter, DowningStrategy strategy, Cluster cluster)
         {
-            return Props.Create(() => new SplitBrainResolver(stableAfter, strategy));
+            return Props.Create(() => new SplitBrainResolver(stableAfter, strategy, cluster));
         }
 
         // re-subscribe when restart
         protected override void PreStart()
         {
-            _cluster = Cluster.Get(Context.System);
             _cluster.Subscribe(Self, InitialStateAsEvents, typeof(IClusterDomainEvent));
 
             base.PreStart();
