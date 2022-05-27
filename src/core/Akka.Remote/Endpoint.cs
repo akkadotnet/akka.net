@@ -1953,21 +1953,9 @@ namespace Akka.Remote
                                     ackAndMessage.MessageOption.SerializedMessage,
                                     ackAndMessage.MessageOption.SenderOptional);
                             }
-                            catch (SerializationException e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
-                            catch (ArgumentException e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
-                            catch (InvalidCastException e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
                             catch (Exception e)
                             {
-                                throw;
+                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
                             }
                         }
                     }
