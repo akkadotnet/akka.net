@@ -105,7 +105,7 @@ namespace DocsExamples.Streams
                 });
             }
 
-            private Sink<string, Task> LogsSinksFor(string id) =>
+            private Sink<string, Task<Done>> LogsSinksFor(string id) =>
                 Sink.ForEach<string>(Console.WriteLine);
         }
         #endregion

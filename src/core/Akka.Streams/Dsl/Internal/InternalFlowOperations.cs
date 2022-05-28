@@ -1325,17 +1325,17 @@ namespace Akka.Streams.Dsl.Internal
             this IFlow<T, TMat> flow,
             int maxSubstreams,
             Func<T, TKey> groupingFunc,
-            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc,
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc,
             bool allowClosedSubstreamRecreation)
         {
             var merge = new GroupByMergeBack<T, TMat, TKey>(flow, maxSubstreams, groupingFunc, allowClosedSubstreamRecreation);
 
-            Func<Sink<T, TMat>, TClosed> finish = s =>
+            TClosed finish(Sink<T, TMat> s)
             {
                 return toFunc(
                     flow.Via(new Fusing.GroupBy<T, TKey>(maxSubstreams, groupingFunc, allowClosedSubstreamRecreation)),
                     Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
-            };
+            }
 
             return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
         }
@@ -1349,7 +1349,7 @@ namespace Akka.Streams.Dsl.Internal
         /// infinite number of keys this can cause memory issues. Elements belonging to those keys are drained directly 
         /// and not send to the substream.
         /// </para>
-        /// See also <seealso cref="GroupBy{T, TMat, TKey, TClosed}(IFlow{T, TMat}, int, Func{T, TKey}, Func{IFlow{Source{T, NotUsed}, TMat}, Sink{Source{T, NotUsed}, Task}, TClosed}, bool)"/>
+        /// See also <seealso cref="GroupBy{T, TMat, TKey, TClosed}(IFlow{T, TMat}, int, Func{T, TKey}, Func{IFlow{Source{T, NotUsed}, TMat}, Sink{Source{T, NotUsed}, Task{Done}}, TClosed}, bool)"/>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="TMat"></typeparam>
@@ -1364,7 +1364,7 @@ namespace Akka.Streams.Dsl.Internal
             this IFlow<T, TMat> flow,
             int maxSubstreams,
             Func<T, TKey> groupingFunc,
-            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc) => GroupBy(flow, maxSubstreams, groupingFunc, toFunc, allowClosedSubstreamRecreation: false);
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc) => GroupBy(flow, maxSubstreams, groupingFunc, toFunc, allowClosedSubstreamRecreation: false);
 
         /// <summary>
         /// TBD
@@ -1472,15 +1472,15 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static SubFlow<T, TMat, TClosed> SplitWhen<T, TMat, TClosed>(this IFlow<T, TMat> flow,
             SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
-            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc)
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc)
         {
             var merge = new SplitWhenMergeBack<T, TMat>(flow, predicate, substreamCancelStrategy);
 
-            Func<Sink<T, TMat>, TClosed> finish = s =>
+            TClosed finish(Sink<T, TMat> s)
             {
                 return toFunc(flow.Via(Fusing.Split.When(predicate, substreamCancelStrategy)),
                     Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
-            };
+            }
 
             return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
         }
@@ -1577,15 +1577,15 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static SubFlow<T, TMat, TClosed> SplitAfter<T, TMat, TClosed>(this IFlow<T, TMat> flow,
             SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
-            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc)
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc)
         {
             var merge = new SplitAfterMergeBack<T, TMat>(flow, predicate, substreamCancelStrategy);
 
-            Func<Sink<T, TMat>, TClosed> finish = s =>
+            TClosed finish(Sink<T, TMat> s)
             {
                 return toFunc(flow.Via(Fusing.Split.After(predicate, substreamCancelStrategy)),
                     Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
-            };
+            }
 
             return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
         }
