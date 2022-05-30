@@ -20,6 +20,28 @@ namespace Akka.Cluster.Sharding.Tests
 {
     using ShardId = System.String;
 
+    public class ClusterShardingGenerator
+    {
+        public const string ShardRegionName = "myRegion";
+        
+        public static Arbitrary<IActorRef> ShardRegionRefGenerator(bool proxy = false)
+        {
+            var gen1 = ClusterGenerators.AddressGenerator().Generator; // node addresses
+            var gen3 = Arb.Default.Int64().Generator; // IActorRef UIDs
+
+
+            Func<Address, long, IActorRef> combiner = (node, actorUid) =>
+            {
+                var path = (new RootActorPath(node) / "system" / "sharding" / (proxy ? ShardRegionName + "-proxy" : ShardRegionName) )
+                    .WithUid(actorUid);
+                return new EmptyLocalActorRef(null, path, null);
+            };
+            var producer = FsharpDelegateHelper.Create(combiner);
+
+            return Arb.From(Gen.Map2(producer, gen1, gen3));
+        }
+    }
+
     internal sealed class StateHolder
     {
         /// <summary>
@@ -34,8 +56,6 @@ namespace Akka.Cluster.Sharding.Tests
     /// </summary>
     internal sealed record TestState
     {
-        public const string ShardRegionName = "myRegion";
-
         /// <summary>
         /// Stack of recently executed commands
         /// </summary>
@@ -72,37 +92,32 @@ namespace Akka.Cluster.Sharding.Tests
         public IImmutableSet<ShardId> UnallocatedShards { get; init; }
 
         public bool RememberEntities { get; init; }
-
-        public static Arbitrary<IActorRef> ShardRegionRefGenerator(int shardCount)
-        {
-            var gen1 = ClusterGenerators.AddressGenerator().Generator; // node addresses
-            var gen2 = Gen.Choose(0, shardCount); // shardIds
-            var gen3 = Arb.Default.Int64().Generator; // IActorRef UIDs
-
-
-            Func<Address, int, long, IActorRef> combiner = (node, shardId, actorUid) =>
-            {
-                var path = (new RootActorPath(node) / "system" / "sharding" / ShardRegionName / shardId.ToString())
-                    .WithUid(actorUid);
-                return new EmptyLocalActorRef(null, path, null);
-            };
-            var producer = FsharpDelegateHelper.Create(combiner);
-
-            return Arb.From(Gen.Map3(producer, gen1, gen2, gen3));
-        }
     }
 
     internal class StateModel : Machine<StateHolder, TestState>
     {
+        public StateModel()
+        {
+            var gen0 = Gen.Choose(0, 100); // shardCount
+            var gen1 = ClusterShardingGenerator.ShardRegionRefGenerator().Generator.ArrayOf(10); //shardRegions
+            var gen2 = ClusterShardingGenerator.ShardRegionRefGenerator(true).Generator.ArrayOf(10); // shardRegionProxies
+
+            Func<int, IActorRef[], IActorRef[], Setup<StateHolder, TestState>> combinedFunc = (i, refs, arg3) =>
+                new ClusterStateSetup(i, refs, arg3);
+
+            var fsharpFunc = FsharpDelegateHelper.Create(combinedFunc);
+
+            var composedGenerator = Gen.Map3(fsharpFunc, gen0, gen1, gen2);
+
+            Setup = Arb.From(composedGenerator);
+        }
+        
         public override Gen<Operation<StateHolder, TestState>> Next(TestState obj0)
         {
             throw new System.NotImplementedException();
         }
 
-        public override Arbitrary<Setup<StateHolder, TestState>> Setup =>
-            // compiler ceremony
-            Arb.From(Gen.Choose(0, 100)
-                .Select(x => (Setup<StateHolder, TestState>)new ClusterStateSetup(x)));
+        public override Arbitrary<Setup<StateHolder, TestState>> Setup { get; }
 
         #region Setup Classes
 
@@ -112,12 +127,18 @@ namespace Akka.Cluster.Sharding.Tests
         // ReSharper disable once ClassNeverInstantiated.Local
         private class ClusterStateSetup : Setup<StateHolder, TestState>
         {
-            public ClusterStateSetup(int shardCount)
+            public ClusterStateSetup(int shardCount, IActorRef[] regions, IActorRef[] proxies)
             {
                 ShardCount = shardCount;
+                Regions = regions;
+                Proxies = proxies;
             }
 
             public int ShardCount { get; }
+            
+            public IActorRef[] Regions { get; }
+            
+            public IActorRef[] Proxies { get; }
 
             public override StateHolder Actual()
             {
