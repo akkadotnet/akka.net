@@ -134,7 +134,7 @@ namespace Akka.Cluster.Sharding.Tests
     {
         public StateModel()
         {
-            var gen0 = Gen.Choose(0, 100); // shardCount
+            var gen0 = Gen.Choose(10, 100); // shardCount
             var gen1 = ClusterShardingGenerator.ShardRegionRefGenerator().Generator.ArrayOf(100); //shardRegions
             var gen2 = ClusterShardingGenerator.ShardRegionRefGenerator(true).Generator
                 .ArrayOf(100); // shardRegionProxies
@@ -223,15 +223,15 @@ namespace Akka.Cluster.Sharding.Tests
 
                 return actual.State.Regions.Keys.ToImmutableHashSet().SetEquals(model.Regions.Keys)
                     .Label(
-                        $"Both ShardRegions should contain same set of members. Instead found members not included in both sequences: [{string.Join(",", exceptRegions)}]")
+                        $"Both ShardRegions should contain same set of members. Instead found members not included in both sequences: [{string.Join(",", exceptRegions)}]. Model: [{string.Join(",", model.Regions.Select(c => (c.Key, string.Join(",", c.Value))))}], Actual: [{string.Join(",", actual.State.Regions.Select(c => (c.Key, string.Join(",", c.Value))))}]")
                     .And(actual.State.Shards.Keys.ToImmutableHashSet().SetEquals(model.Shards.Keys)
                         .Label(
-                            $"Both Shards should contain same set of members. Instead found members not included in both sequences: [{string.Join(",", exceptShards)}]"))
+                            $"Both Shards should contain same set of members. Instead found members not included in both sequences: [{string.Join(",", exceptShards)}]. Model: [{string.Join(",", model.Shards)}], Actual: [{string.Join(",", actual.State.Shards)}]"))
                     .And(actual.State.RegionProxies.SetEquals(model.RegionProxies).Label(
-                        $"Both ShardProxies should contain same set of members. Instead found members not included in both sequences: [{string.Join(",", exceptProxies)}]"))
+                        $"Both ShardProxies should contain same set of members. Instead found members not included in both sequences: [{string.Join(",", exceptProxies)}]. Model: [{string.Join(",", model.RegionProxies)}], Actual: [{string.Join(",", actual.State.RegionProxies)}]"))
                     .And(actual.State.UnallocatedShards.SetEquals(model.UnallocatedShards)
                         .Label(
-                            $"Both UnallocatedShards should contain same set of members. Instead found members not included in both sequences: [{string.Join(",", exceptUnallocatedShards)}]"));
+                            $"Both UnallocatedShards should contain same set of members. Instead found members not included in both sequences: [{string.Join(",", exceptUnallocatedShards)}]. Model: [{string.Join(",", model.UnallocatedShards)}], Actual: [{string.Join(",", actual.State.UnallocatedShards)}]"));
             }
 
             public Property CheckShardRegionSpecificStates(StateHolder actual, TestState model, IActorRef shardRegion)
@@ -611,7 +611,7 @@ namespace Akka.Cluster.Sharding.Tests
                     obj0.Regions.TryGetValue(region, out var regionShards))
                 {
                     var newUnallocatedShards = obj0.RememberEntities
-                        ? obj0.UnallocatedShards.Remove(ShardId)
+                        ? obj0.UnallocatedShards.Add(ShardId)
                         : obj0.UnallocatedShards;
 
                     return obj0 with
