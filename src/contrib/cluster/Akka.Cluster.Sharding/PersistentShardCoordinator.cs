@@ -1364,9 +1364,10 @@ namespace Akka.Cluster.Sharding
                         case ShardHomeAllocated homeAllocated:
                             // if we already have identical ShardHomeAllocated data, skip processing it
                             // addresses https://github.com/akkadotnet/akka.net/issues/5604
-                            if(!(CurrentState.Shards.TryGetValue(homeAllocated.Shard, out var currentShardRegion) 
-                               && Equals(homeAllocated.Region, currentShardRegion)))
-                                CurrentState = CurrentState.Updated(evt);
+                            if (CurrentState.Shards.TryGetValue(homeAllocated.Shard, out var currentShardRegion)
+                                && Equals(homeAllocated.Region, currentShardRegion))
+                                return true;
+                            CurrentState = CurrentState.Updated(evt);
                             return true;
                         case ShardHomeDeallocated _:
                             CurrentState = CurrentState.Updated(evt);
