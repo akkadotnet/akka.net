@@ -594,7 +594,7 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class ShardCoordinatorStateModelTests
     {
-        public static ShardCoordinatorStateModelTests()
+        static ShardCoordinatorStateModelTests()
         {
             // register the custom generators to make testing easier
             Arb.Register<ClusterGenerators>();
