@@ -35,5 +35,13 @@ namespace Akka.Tests.Shared.Internals.Helpers
                 value1 => { return Create<T2, T3, TResult>((value2, value3) => func(value1, value2, value3)); };
             return FSharpFunc<T1, FSharpFunc<T2, FSharpFunc<T3, TResult>>>.FromConverter(conv);
         }
+        
+        public static FSharpFunc<T1, FSharpFunc<T2, FSharpFunc<T3, FSharpFunc<T4, TResult>>>> Create<T1, T2, T3, T4, TResult>(
+            Func<T1, T2, T3, T4, TResult> func)
+        {
+            Converter<T1, FSharpFunc<T2, FSharpFunc<T3, FSharpFunc<T4, TResult>>>> conv =
+                value1 => { return Create<T2, T3, T4, TResult>((value2, value3, value4) => func(value1, value2, value3, value4)); };
+            return FSharpFunc<T1, FSharpFunc<T2, FSharpFunc<T3, FSharpFunc<T4, TResult>>>>.FromConverter(conv);
+        }
     }
 }

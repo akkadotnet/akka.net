@@ -9,11 +9,13 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Tests;
 using Akka.Tests.Shared.Internals.Helpers;
 using FsCheck;
 using FsCheck.Experimental;
+using Enum = Google.Protobuf.WellKnownTypes.Enum;
 
 
 namespace Akka.Cluster.Sharding.Tests
@@ -23,7 +25,7 @@ namespace Akka.Cluster.Sharding.Tests
     public class ClusterShardingGenerator
     {
         public const string ShardRegionName = "myRegion";
-        
+
         public static Arbitrary<IActorRef> ShardRegionRefGenerator(bool proxy = false)
         {
             var gen1 = ClusterGenerators.AddressGenerator().Generator; // node addresses
@@ -32,7 +34,8 @@ namespace Akka.Cluster.Sharding.Tests
 
             Func<Address, long, IActorRef> combiner = (node, actorUid) =>
             {
-                var path = (new RootActorPath(node) / "system" / "sharding" / (proxy ? ShardRegionName + "-proxy" : ShardRegionName) )
+                var path = (new RootActorPath(node) / "system" / "sharding" /
+                            (proxy ? ShardRegionName + "-proxy" : ShardRegionName))
                     .WithUid(actorUid);
                 return new EmptyLocalActorRef(null, path, null);
             };
@@ -57,12 +60,18 @@ namespace Akka.Cluster.Sharding.Tests
     /// <param name="Command">Current command being processed.</param>
     /// <param name="Success">True if processed successfully, false if throwing.</param>
     internal record CommandHistoryItem(PersistentShardCoordinator.IDomainEvent Command, bool Success);
-    
+
     /// <summary>
     /// Immutable model mirroring the <see cref="PersistentShardCoordinator.State"/> object.
     /// </summary>
     internal sealed record TestState
     {
+        public TestState(ImmutableArray<string> allPossibleShards, bool rememberEntities)
+        {
+            AllPossibleShards = allPossibleShards;
+            RememberEntities = rememberEntities;
+        }
+
         /// <summary>
         /// Stack of recently executed commands
         /// </summary>
@@ -72,7 +81,12 @@ namespace Akka.Cluster.Sharding.Tests
         /// All shard regions participating in the test.
         /// </summary>
         public ImmutableHashSet<IActorRef> AvailableShardRegions { get; init; }
-        
+
+        /// <summary>
+        /// The set of all possible shards
+        /// </summary>
+        public ImmutableArray<ShardId> AllPossibleShards { get; }
+
         /// <summary>
         /// All shard region proxies participating in the test.
         /// </summary>
@@ -98,7 +112,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         public IImmutableSet<ShardId> UnallocatedShards { get; init; }
 
-        public bool RememberEntities { get; init; }
+        public bool RememberEntities { get; }
     }
 
     internal class StateModel : Machine<StateHolder, TestState>
@@ -107,21 +121,24 @@ namespace Akka.Cluster.Sharding.Tests
         {
             var gen0 = Gen.Choose(0, 100); // shardCount
             var gen1 = ClusterShardingGenerator.ShardRegionRefGenerator().Generator.ArrayOf(10); //shardRegions
-            var gen2 = ClusterShardingGenerator.ShardRegionRefGenerator(true).Generator.ArrayOf(10); // shardRegionProxies
+            var gen2 = ClusterShardingGenerator.ShardRegionRefGenerator(true).Generator
+                .ArrayOf(10); // shardRegionProxies
+            var gen3 = Gen.Choose(0, 10).Select(c => c % 2 == 0);
 
-            Func<int, IActorRef[], IActorRef[], Setup<StateHolder, TestState>> combinedFunc = (i, refs, arg3) =>
-                new ClusterStateSetup(i, refs, arg3);
+            Func<int, IActorRef[], IActorRef[], bool, Setup<StateHolder, TestState>> combinedFunc =
+                (i, refs, arg3, re) =>
+                    new ClusterStateSetup(i, refs, arg3, re);
 
             var fsharpFunc = FsharpDelegateHelper.Create(combinedFunc);
 
-            var composedGenerator = Gen.Map3(fsharpFunc, gen0, gen1, gen2);
+            var composedGenerator = Gen.Map4(fsharpFunc, gen0, gen1, gen2, gen3);
 
             Setup = Arb.From(composedGenerator);
         }
-        
+
         public override Gen<Operation<StateHolder, TestState>> Next(TestState obj0)
         {
-            throw new System.NotImplementedException();
+            return Gen.OneOf(RegisterShardRegion.CreateGen(obj0));
         }
 
         public override Arbitrary<Setup<StateHolder, TestState>> Setup { get; }
@@ -134,18 +151,21 @@ namespace Akka.Cluster.Sharding.Tests
         // ReSharper disable once ClassNeverInstantiated.Local
         private class ClusterStateSetup : Setup<StateHolder, TestState>
         {
-            public ClusterStateSetup(int shardCount, IActorRef[] regions, IActorRef[] proxies)
+            public ClusterStateSetup(int shardCount, IActorRef[] regions, IActorRef[] proxies, bool rememberEntities)
             {
                 ShardCount = shardCount;
                 Regions = regions;
                 Proxies = proxies;
+                RememberEntities = rememberEntities;
             }
 
             public int ShardCount { get; }
-            
+
             public IActorRef[] Regions { get; }
-            
+
             public IActorRef[] Proxies { get; }
+
+            public bool RememberEntities { get; }
 
             public override StateHolder Actual()
             {
@@ -154,12 +174,17 @@ namespace Akka.Cluster.Sharding.Tests
 
             public override TestState Model()
             {
-                return new TestState();
+                return new TestState(Enumerable.Range(0, ShardCount).Select(i => i.ToString()).ToImmutableArray(),
+                    RememberEntities)
+                {
+                    AvailableShardRegions = Regions.ToImmutableHashSet(),
+                    AvailableShardRegionProxies = Proxies.ToImmutableHashSet()
+                };
             }
         }
 
         #endregion
-        
+
         #region Operation Classes
 
         public abstract class ShardOperationBase : Operation<StateHolder, TestState>
@@ -203,7 +228,8 @@ namespace Akka.Cluster.Sharding.Tests
                         $"Both ShardRegions should contain shards, but found members not included in both sequences: [{string.Join(",", regionDiff)}]");
             }
 
-            public Property CheckShardSpecificStates(StateHolder actual, TestState model, ShardId shard, bool unallocated = false)
+            public Property CheckShardSpecificStates(StateHolder actual, TestState model, ShardId shard,
+                bool unallocated = false)
             {
                 Property CheckContains()
                 {
@@ -226,10 +252,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             public Property ShouldThrowException(StateHolder actual, string errMsgContains)
             {
-                Action throwable = () =>
-                {
-                    actual.State = actual.State.Updated(Event);
-                };
+                Action throwable = () => { actual.State = actual.State.Updated(Event); };
 
                 Exception trapped = null;
 
@@ -249,6 +272,12 @@ namespace Akka.Cluster.Sharding.Tests
 
         public class RegisterShardRegion : ShardOperationBase
         {
+            public static Gen<Operation<StateHolder, TestState>> CreateGen(TestState model)
+            {
+                return Gen.Elements(model.AvailableShardRegions.ToArray())
+                    .Select(a => (Operation<StateHolder, TestState>)new RegisterShardRegion(a));
+            }
+
             public RegisterShardRegion(IActorRef shardRegion)
             {
                 ShardRegion = shardRegion;
@@ -256,7 +285,8 @@ namespace Akka.Cluster.Sharding.Tests
 
             public IActorRef ShardRegion { get; }
 
-            public override PersistentShardCoordinator.IDomainEvent Event =>  new PersistentShardCoordinator.ShardRegionRegistered(ShardRegion);
+            public override PersistentShardCoordinator.IDomainEvent Event =>
+                new PersistentShardCoordinator.ShardRegionRegistered(ShardRegion);
 
             public override Property Check(StateHolder actual, TestState model)
             {
@@ -274,16 +304,25 @@ namespace Akka.Cluster.Sharding.Tests
 
             public override TestState Run(TestState obj0)
             {
-
                 // don't want to wipe out our ShardRegion here if this event was unexpected
                 if (obj0.Regions.ContainsKey(ShardRegion))
-                    return obj0 with { Commands = obj0.Commands.Push(new CommandHistoryItem(Event, false))};
-                return obj0 with { Regions = obj0.Regions.Add(ShardRegion, ImmutableList<string>.Empty), Commands = obj0.Commands.Push(new CommandHistoryItem(Event, true)) };
+                    return obj0 with { Commands = obj0.Commands.Push(new CommandHistoryItem(Event, false)) };
+                return obj0 with
+                {
+                    Regions = obj0.Regions.Add(ShardRegion, ImmutableList<string>.Empty),
+                    Commands = obj0.Commands.Push(new CommandHistoryItem(Event, true))
+                };
             }
         }
 
         public class ShardRegionProxyRegistered : ShardOperationBase
         {
+            public static Gen<Operation<StateHolder, TestState>> CreateGen(TestState model)
+            {
+                return Gen.Elements(model.AvailableShardRegionProxies.ToArray()).Select(a =>
+                    (Operation<StateHolder, TestState>)new ShardRegionProxyRegistered(a));
+            }
+
             public ShardRegionProxyRegistered(IActorRef shardRegionProxy)
             {
                 ShardRegionProxy = shardRegionProxy;
@@ -294,9 +333,10 @@ namespace Akka.Cluster.Sharding.Tests
                 // check for whether we should expect an exception
                 if (!model.Commands.Peek().Success)
                 {
-                    return ShouldThrowException(actual, "already registered").And(CheckCommonShardStates(actual, model));
+                    return ShouldThrowException(actual, "already registered")
+                        .And(CheckCommonShardStates(actual, model));
                 }
-                
+
                 actual.State = actual.State.Updated(Event);
                 return CheckCommonShardStates(actual, model);
             }
@@ -306,9 +346,13 @@ namespace Akka.Cluster.Sharding.Tests
                 // don't want to wipe out our ShardRegion here if this event was unexpected
                 if (obj0.RegionProxies.Contains(ShardRegionProxy))
                     return obj0 with { Commands = obj0.Commands.Push(new CommandHistoryItem(Event, false)) };
-                return obj0 with { RegionProxies = obj0.RegionProxies.Add(ShardRegionProxy), Commands = obj0.Commands.Push(new CommandHistoryItem(Event, true)) };
+                return obj0 with
+                {
+                    RegionProxies = obj0.RegionProxies.Add(ShardRegionProxy),
+                    Commands = obj0.Commands.Push(new CommandHistoryItem(Event, true))
+                };
             }
-            
+
             public IActorRef ShardRegionProxy { get; }
 
             public override PersistentShardCoordinator.IDomainEvent Event =>
@@ -317,13 +361,20 @@ namespace Akka.Cluster.Sharding.Tests
 
         public sealed class ShardRegionTerminated : ShardOperationBase
         {
+            public static Gen<Operation<StateHolder, TestState>> CreateGen(TestState model)
+            {
+                // could be a valid shardRegion, could be one that isn't
+                return Gen.Elements(model.AvailableShardRegions.ToArray()).Select(a =>
+                    (Operation<StateHolder, TestState>)new ShardRegionTerminated(a));
+            }
+
             public ShardRegionTerminated(IActorRef shardRegion)
             {
                 ShardRegion = shardRegion;
             }
 
             public IActorRef ShardRegion { get; }
-            
+
             public override Property Check(StateHolder actual, TestState model)
             {
                 // check for whether we should expect an exception
@@ -345,7 +396,7 @@ namespace Akka.Cluster.Sharding.Tests
                     // can't re-use terminated actors
                     AvailableShardRegions = obj0.AvailableShardRegions.Remove(ShardRegion)
                 };
-                
+
                 if (ob1.Regions.TryGetValue(ShardRegion, out var shards))
                 {
                     var unallocatedShards =
@@ -353,7 +404,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     return ob1 with
                     {
-                        UnallocatedShards = unallocatedShards, 
+                        UnallocatedShards = unallocatedShards,
                         Regions = ob1.Regions.Remove(ShardRegion),
                         Shards = ob1.Shards.RemoveRange(shards),
                         Commands = ob1.Commands.Push(new CommandHistoryItem(Event, true))
@@ -370,21 +421,29 @@ namespace Akka.Cluster.Sharding.Tests
 
         public sealed class ShardRegionProxyTerminated : ShardOperationBase
         {
+            public static Gen<Operation<StateHolder, TestState>> CreateGen(TestState model)
+            {
+                // could be a valid shardRegionProxy, could be one that isn't
+                return Gen.Elements(model.AvailableShardRegionProxies.ToArray()).Select(a =>
+                    (Operation<StateHolder, TestState>)new ShardRegionProxyTerminated(a));
+            }
+
             public ShardRegionProxyTerminated(IActorRef shardRegionProxy)
             {
                 ShardRegionProxy = shardRegionProxy;
             }
 
             public IActorRef ShardRegionProxy { get; }
-            
+
             public override Property Check(StateHolder actual, TestState model)
             {
                 // check for whether we should expect an exception
                 if (!model.Commands.Peek().Success)
                 {
-                    return ShouldThrowException(actual, "Terminated region proxy").And(CheckCommonShardStates(actual, model));
+                    return ShouldThrowException(actual, "Terminated region proxy")
+                        .And(CheckCommonShardStates(actual, model));
                 }
-                
+
                 actual.State = actual.State.Updated(Event);
                 return CheckCommonShardStates(actual, model);
             }
@@ -392,7 +451,7 @@ namespace Akka.Cluster.Sharding.Tests
             public override TestState Run(TestState obj0)
             {
                 var success = obj0.RegionProxies.Contains(ShardRegionProxy);
-                
+
                 var ob1 = obj0 with
                 {
                     Commands = obj0.Commands.Push(new CommandHistoryItem(Event, success)),
@@ -410,6 +469,13 @@ namespace Akka.Cluster.Sharding.Tests
 
         public sealed class ShardHomeAllocated : ShardOperationBase
         {
+            public static Gen<Operation<StateHolder, TestState>> CreateGen(TestState model)
+            {
+                // could be a valid shardRegionProxy, could be one that isn't
+                return Gen.Elements(model.)
+                    .Select(a => (Operation<StateHolder, TestState>)new ShardRegionProxyTerminated(a));
+            }
+
             public ShardHomeAllocated(string shardId, IActorRef shardRegion)
             {
                 ShardId = shardId;
@@ -417,9 +483,9 @@ namespace Akka.Cluster.Sharding.Tests
             }
 
             public ShardId ShardId { get; }
-            
-            public IActorRef ShardRegion {get;}
-            
+
+            public IActorRef ShardRegion { get; }
+
             public override Property Check(StateHolder actual, TestState model)
             {
                 // check for whether we should expect an exception
@@ -428,9 +494,10 @@ namespace Akka.Cluster.Sharding.Tests
                     return ShouldThrowException(actual, "").And(CheckCommonShardStates(actual, model))
                         .And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
                 }
-                
+
                 actual.State = actual.State.Updated(Event);
-                return CheckCommonShardStates(actual, model).And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
+                return CheckCommonShardStates(actual, model)
+                    .And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
             }
 
             public override TestState Run(TestState obj0)
@@ -448,7 +515,7 @@ namespace Akka.Cluster.Sharding.Tests
                         Commands = obj0.Commands.Push(new CommandHistoryItem(Event, true)),
                     };
                 }
-                
+
                 // we have an illegal state that is going to throw
                 return obj0 with { Commands = obj0.Commands.Push(new CommandHistoryItem(Event, false)) };
             }
@@ -465,7 +532,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
 
             public ShardId ShardId { get; }
-            
+
             public override Property Check(StateHolder actual, TestState model)
             {
                 // check for whether we should expect an exception
@@ -474,9 +541,10 @@ namespace Akka.Cluster.Sharding.Tests
                     return ShouldThrowException(actual, "").And(CheckCommonShardStates(actual, model))
                         .And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
                 }
-                
+
                 actual.State = actual.State.Updated(Event);
-                return CheckCommonShardStates(actual, model).And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
+                return CheckCommonShardStates(actual, model)
+                    .And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
             }
 
             public override TestState Run(TestState obj0)
