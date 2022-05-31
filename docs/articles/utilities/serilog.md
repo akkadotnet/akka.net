@@ -83,6 +83,22 @@ var logger = new LoggerConfiguration()
     .CreateLogger();
 ```
 
+## Formatting OutputTemplate
+
+There are few properties that one can use in their `OutputTemplate` for logger configuration:
+
+* `ActorPath` - contains the current actor's path.
+* `LogSource` - also contains `ActorPath`, however it can also have other values such as:
+  * `<TypeName> (<ActorSystemName>)`
+  * `<string> (<ActorSystemName>)`
+* `Thread` - thread id on which given log action was executed.
+
+### Example OutputTemplate
+
+```console
+[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] [{ActorPath}] [{SourceContext}] {Message}{NewLine}{Exception}
+```
+
 ## HOCON Configuration
 
 In order to be able to change log level without the need to recompile, we need to employ some sort of application configuration.  To use Serilog via HOCON configuration, add the following to the __App.config__ of the project.
