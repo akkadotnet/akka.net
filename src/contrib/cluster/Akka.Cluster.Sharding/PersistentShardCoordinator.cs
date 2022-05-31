@@ -47,8 +47,9 @@ namespace Akka.Cluster.Sharding
             /// TBD
             /// </summary>
             public readonly IImmutableSet<IActorRef> RegionProxies;
+            
             /// <summary>
-            /// TBD
+            /// Only used when <see cref="RememberEntities"/> is enabled.
             /// </summary>
             public readonly IImmutableSet<ShardId> UnallocatedShards;
 

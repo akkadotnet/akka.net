@@ -52,6 +52,13 @@ namespace Akka.Cluster.Sharding.Tests
     }
 
     /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <param name="Command">Current command being processed.</param>
+    /// <param name="Success">True if processed successfully, false if throwing.</param>
+    internal record CommandHistoryItem(PersistentShardCoordinator.IDomainEvent Command, bool Success);
+    
+    /// <summary>
     /// Immutable model mirroring the <see cref="PersistentShardCoordinator.State"/> object.
     /// </summary>
     internal sealed record TestState
@@ -59,7 +66,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// <summary>
         /// Stack of recently executed commands
         /// </summary>
-        public ImmutableStack<PersistentShardCoordinator.IDomainEvent> Commands { get; init; }
+        public ImmutableStack<CommandHistoryItem> Commands { get; init; }
 
         /// <summary>
         /// All shard regions participating in the test.
@@ -254,9 +261,75 @@ namespace Akka.Cluster.Sharding.Tests
             public override Property Check(StateHolder actual, TestState model)
             {
                 // check for whether we should expect an exception
-                if (!actual.State.Regions.ContainsKey(ShardRegion))
+                if (!model.Commands.Peek().Success)
                 {
-                    return ShouldThrowException(actual, "").And(CheckCommonShardStates(actual, model))
+                    return ShouldThrowException(actual, "already registered").And(CheckCommonShardStates(actual, model))
+                        .And(CheckShardRegionSpecificStates(actual, model, ShardRegion));
+                }
+
+                actual.State = actual.State.Updated(Event);
+                return CheckCommonShardStates(actual, model)
+                    .And(CheckShardRegionSpecificStates(actual, model, ShardRegion));
+            }
+
+            public override TestState Run(TestState obj0)
+            {
+
+                // don't want to wipe out our ShardRegion here if this event was unexpected
+                if (obj0.Regions.ContainsKey(ShardRegion))
+                    return obj0 with { Commands = obj0.Commands.Push(new CommandHistoryItem(Event, false))};
+                return obj0 with { Regions = obj0.Regions.Add(ShardRegion, ImmutableList<string>.Empty), Commands = obj0.Commands.Push(new CommandHistoryItem(Event, true)) };
+            }
+        }
+
+        public class ShardRegionProxyRegistered : ShardOperationBase
+        {
+            public ShardRegionProxyRegistered(IActorRef shardRegionProxy)
+            {
+                ShardRegionProxy = shardRegionProxy;
+            }
+
+            public override Property Check(StateHolder actual, TestState model)
+            {
+                // check for whether we should expect an exception
+                if (!model.Commands.Peek().Success)
+                {
+                    return ShouldThrowException(actual, "already registered").And(CheckCommonShardStates(actual, model));
+                }
+                
+                actual.State = actual.State.Updated(Event);
+                return CheckCommonShardStates(actual, model);
+            }
+
+            public override TestState Run(TestState obj0)
+            {
+                // don't want to wipe out our ShardRegion here if this event was unexpected
+                if (obj0.RegionProxies.Contains(ShardRegionProxy))
+                    return obj0 with { Commands = obj0.Commands.Push(new CommandHistoryItem(Event, false)) };
+                return obj0 with { RegionProxies = obj0.RegionProxies.Add(ShardRegionProxy), Commands = obj0.Commands.Push(new CommandHistoryItem(Event, true)) };
+            }
+            
+            public IActorRef ShardRegionProxy { get; }
+
+            public override PersistentShardCoordinator.IDomainEvent Event =>
+                new PersistentShardCoordinator.ShardRegionProxyRegistered(ShardRegionProxy);
+        }
+
+        public sealed class ShardRegionTerminated : ShardOperationBase
+        {
+            public ShardRegionTerminated(IActorRef shardRegion)
+            {
+                ShardRegion = shardRegion;
+            }
+
+            public IActorRef ShardRegion { get; }
+            
+            public override Property Check(StateHolder actual, TestState model)
+            {
+                // check for whether we should expect an exception
+                if (!model.Commands.Peek().Success)
+                {
+                    return ShouldThrowException(actual, "Terminated region").And(CheckCommonShardStates(actual, model))
                         .And(CheckShardRegionSpecificStates(actual, model, ShardRegion));
                 }
 
@@ -269,31 +342,166 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 var ob1 = obj0 with
                 {
-                    Commands = obj0.Commands.Push(Event),
+                    // can't re-use terminated actors
+                    AvailableShardRegions = obj0.AvailableShardRegions.Remove(ShardRegion)
                 };
+                
+                if (ob1.Regions.TryGetValue(ShardRegion, out var shards))
+                {
+                    var unallocatedShards =
+                        ob1.RememberEntities ? ob1.UnallocatedShards.Union(shards) : ob1.UnallocatedShards;
 
-                // don't want to wipe out our ShardRegion here if this event was unexpected
-                if (ob1.Regions.ContainsKey(ShardRegion))
-                    return ob1;
-                return ob1 with { Regions = ob1.Regions.Add(ShardRegion, ImmutableList<string>.Empty) };
+                    return ob1 with
+                    {
+                        UnallocatedShards = unallocatedShards, 
+                        Regions = ob1.Regions.Remove(ShardRegion),
+                        Shards = ob1.Shards.RemoveRange(shards),
+                        Commands = ob1.Commands.Push(new CommandHistoryItem(Event, true))
+                    };
+                }
+
+                // ShardRegion not found - actual should throw an exception
+                return ob1 with { Commands = ob1.Commands.Push(new CommandHistoryItem(Event, false)) };
             }
+
+            public override PersistentShardCoordinator.IDomainEvent Event =>
+                new PersistentShardCoordinator.ShardRegionTerminated(ShardRegion);
         }
 
-        public class ShardRegionProxyRegistered : ShardOperationBase
+        public sealed class ShardRegionProxyTerminated : ShardOperationBase
         {
-            public override Property Check(StateHolder obj0, TestState obj1)
+            public ShardRegionProxyTerminated(IActorRef shardRegionProxy)
             {
-                throw new NotImplementedException();
+                ShardRegionProxy = shardRegionProxy;
+            }
+
+            public IActorRef ShardRegionProxy { get; }
+            
+            public override Property Check(StateHolder actual, TestState model)
+            {
+                // check for whether we should expect an exception
+                if (!model.Commands.Peek().Success)
+                {
+                    return ShouldThrowException(actual, "Terminated region proxy").And(CheckCommonShardStates(actual, model));
+                }
+                
+                actual.State = actual.State.Updated(Event);
+                return CheckCommonShardStates(actual, model);
             }
 
             public override TestState Run(TestState obj0)
             {
-                throw new NotImplementedException();
-            }
-            
-            public IActorRef ShardRegionProxy { get; }
+                var success = obj0.RegionProxies.Contains(ShardRegionProxy);
+                
+                var ob1 = obj0 with
+                {
+                    Commands = obj0.Commands.Push(new CommandHistoryItem(Event, success)),
+                    // can't re-use terminated actors
+                    AvailableShardRegionProxies = obj0.AvailableShardRegionProxies.Remove(ShardRegionProxy),
+                    RegionProxies = obj0.RegionProxies.Remove(ShardRegionProxy)
+                };
 
-            public override PersistentShardCoordinator.IDomainEvent Event { get; }
+                return ob1;
+            }
+
+            public override PersistentShardCoordinator.IDomainEvent Event =>
+                new PersistentShardCoordinator.ShardRegionProxyTerminated(ShardRegionProxy);
+        }
+
+        public sealed class ShardHomeAllocated : ShardOperationBase
+        {
+            public ShardHomeAllocated(string shardId, IActorRef shardRegion)
+            {
+                ShardId = shardId;
+                ShardRegion = shardRegion;
+            }
+
+            public ShardId ShardId { get; }
+            
+            public IActorRef ShardRegion {get;}
+            
+            public override Property Check(StateHolder actual, TestState model)
+            {
+                // check for whether we should expect an exception
+                if (!model.Commands.Peek().Success)
+                {
+                    return ShouldThrowException(actual, "").And(CheckCommonShardStates(actual, model))
+                        .And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
+                }
+                
+                actual.State = actual.State.Updated(Event);
+                return CheckCommonShardStates(actual, model).And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
+            }
+
+            public override TestState Run(TestState obj0)
+            {
+                if (obj0.Regions.TryGetValue(ShardRegion, out var currentShards) && !obj0.Shards.ContainsKey(ShardId))
+                {
+                    var unallocatedShards = obj0.RememberEntities
+                        ? obj0.UnallocatedShards.Remove(ShardId)
+                        : obj0.UnallocatedShards;
+                    return obj0 with
+                    {
+                        Shards = obj0.Shards.SetItem(ShardId, ShardRegion),
+                        Regions = obj0.Regions.SetItem(ShardRegion, currentShards.Add(ShardId)),
+                        UnallocatedShards = unallocatedShards,
+                        Commands = obj0.Commands.Push(new CommandHistoryItem(Event, true)),
+                    };
+                }
+                
+                // we have an illegal state that is going to throw
+                return obj0 with { Commands = obj0.Commands.Push(new CommandHistoryItem(Event, false)) };
+            }
+
+            public override PersistentShardCoordinator.IDomainEvent Event =>
+                new PersistentShardCoordinator.ShardHomeAllocated(ShardId, ShardRegion);
+        }
+
+        public sealed class ShardHomeDeallocated : ShardOperationBase
+        {
+            public ShardHomeDeallocated(string shardId)
+            {
+                ShardId = shardId;
+            }
+
+            public ShardId ShardId { get; }
+            
+            public override Property Check(StateHolder actual, TestState model)
+            {
+                // check for whether we should expect an exception
+                if (!model.Commands.Peek().Success)
+                {
+                    return ShouldThrowException(actual, "").And(CheckCommonShardStates(actual, model))
+                        .And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
+                }
+                
+                actual.State = actual.State.Updated(Event);
+                return CheckCommonShardStates(actual, model).And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
+            }
+
+            public override TestState Run(TestState obj0)
+            {
+                if (obj0.Shards.TryGetValue(ShardId, out var region) &&
+                    obj0.Regions.TryGetValue(region, out var regionShards))
+                {
+                    var newUnallocatedShards = obj0.RememberEntities
+                        ? obj0.UnallocatedShards.Remove(ShardId)
+                        : obj0.UnallocatedShards;
+
+                    return obj0 with
+                    {
+                        Commands = obj0.Commands.Push(new CommandHistoryItem(Event, true)),
+                        Shards = obj0.Shards.Remove(ShardId),
+                        Regions = obj0.Regions.SetItem(region, regionShards.Remove(ShardId)),
+                        UnallocatedShards = newUnallocatedShards
+                    };
+                }
+
+                return obj0 with { Commands = obj0.Commands.Push(new CommandHistoryItem(Event, false)) };
+            }
+
+            public override PersistentShardCoordinator.IDomainEvent Event =>
+                new PersistentShardCoordinator.ShardHomeDeallocated(ShardId);
         }
 
         #endregion
