@@ -135,9 +135,9 @@ namespace Akka.Cluster.Sharding.Tests
         public StateModel()
         {
             var gen0 = Gen.Choose(0, 100); // shardCount
-            var gen1 = ClusterShardingGenerator.ShardRegionRefGenerator().Generator.ArrayOf(10); //shardRegions
+            var gen1 = ClusterShardingGenerator.ShardRegionRefGenerator().Generator.ArrayOf(100); //shardRegions
             var gen2 = ClusterShardingGenerator.ShardRegionRefGenerator(true).Generator
-                .ArrayOf(10); // shardRegionProxies
+                .ArrayOf(100); // shardRegionProxies
             var gen3 = Gen.Choose(0, 10).Select(c => c % 2 == 0);
 
             Func<int, IActorRef[], IActorRef[], bool, Setup<StateHolder, TestState>> combinedFunc =
@@ -185,7 +185,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             public override StateHolder Actual()
             {
-                return new StateHolder() { State = PersistentShardCoordinator.State.Empty };
+                return new StateHolder() { State = PersistentShardCoordinator.State.Empty.WithRememberEntities(RememberEntities) };
             }
 
             public override TestState Model()
@@ -274,16 +274,17 @@ namespace Akka.Cluster.Sharding.Tests
                         .Label(
                             $"Shard [{shard}] should present ([{shouldContainShard}]) in Shards collection, but found in state: {actual.State.Shards.ContainsKey(shard)} && model {model.Shards.ContainsKey(shard)}");
 
-                    if (model.RememberEntities)
+                    if (model.RememberEntities && !shouldContainShard)
                     {
-                        return prop1.And(actual.State.UnallocatedShards.Contains(shard) && model.UnallocatedShards.Contains(shard)) = !shouldContainShard)
+                        return prop1.And(actual.State.UnallocatedShards.Contains(shard) && model.UnallocatedShards.Contains(shard))
                             .Label(
-                                $"Shard [{shard}] should be unallocated, but found in state: {model.UnallocatedShards.Contains(shard)} && model {model.UnallocatedShards.Contains(shard)}"));)
+                                $"Shard [{shard}] should be unallocated, but found in state: {model.UnallocatedShards.Contains(shard)} && model {model.UnallocatedShards.Contains(shard)}");
                     }
 
+                    return prop1;
                 }
 
-                if (unallocated)
+                if (!shouldContainShard)
                     return CheckContains();
 
                 return CheckContains().And(actual.State.Shards[shard].Equals(model.Shards[shard])
@@ -435,7 +436,7 @@ namespace Akka.Cluster.Sharding.Tests
                 var ob1 = obj0 with
                 {
                     // can't re-use terminated actors
-                    AvailableShardRegions = obj0.AvailableShardRegions.Remove(ShardRegion)
+                   // AvailableShardRegions = obj0.AvailableShardRegions.Remove(ShardRegion)
                 };
 
                 if (ob1.Regions.TryGetValue(ShardRegion, out var shards))
@@ -497,7 +498,7 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     Commands = obj0.Commands.Push(new CommandHistoryItem(Event, success)),
                     // can't re-use terminated actors
-                    AvailableShardRegionProxies = obj0.AvailableShardRegionProxies.Remove(ShardRegionProxy),
+                    //AvailableShardRegionProxies = obj0.AvailableShardRegionProxies.Remove(ShardRegionProxy),
                     RegionProxies = obj0.RegionProxies.Remove(ShardRegionProxy)
                 };
 
@@ -540,12 +541,12 @@ namespace Akka.Cluster.Sharding.Tests
                 if (!model.Commands.Peek().Success)
                 {
                     return ShouldThrowException(actual, "").And(CheckCommonShardStates(actual, model))
-                        .And(CheckShardSpecificStates(actual, model, ShardId, true));
+                        .And(CheckShardSpecificStates(actual, model, ShardId, model.Shards.ContainsKey(ShardId)));
                 }
 
                 actual.State = actual.State.Updated(Event);
                 return CheckCommonShardStates(actual, model)
-                    .And(CheckShardSpecificStates(actual, model, ShardId));
+                    .And(CheckShardSpecificStates(actual, model, ShardId, model.Shards.ContainsKey(ShardId)));
             }
 
             public override TestState Run(TestState obj0)
@@ -596,12 +597,12 @@ namespace Akka.Cluster.Sharding.Tests
                 if (!model.Commands.Peek().Success)
                 {
                     return ShouldThrowException(actual, "").And(CheckCommonShardStates(actual, model))
-                        .And(CheckShardSpecificStates(actual, model, ShardId));
+                        .And(CheckShardSpecificStates(actual, model, ShardId, model.Shards.ContainsKey(ShardId)));
                 }
 
                 actual.State = actual.State.Updated(Event);
                 return CheckCommonShardStates(actual, model)
-                    .And(CheckShardSpecificStates(actual, model, ShardId));
+                    .And(CheckShardSpecificStates(actual, model, ShardId, model.Shards.ContainsKey(ShardId)));
             }
 
             public override TestState Run(TestState obj0)
