@@ -10,6 +10,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 using Akka.Actor;
 using Akka.Cluster.Tests;
 using Akka.Tests.Shared.Internals.Helpers;
@@ -75,7 +76,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// <summary>
         /// Stack of recently executed commands
         /// </summary>
-        public ImmutableStack<CommandHistoryItem> Commands { get; init; }
+        public ImmutableStack<CommandHistoryItem> Commands { get; init; } = ImmutableStack<CommandHistoryItem>.Empty;
 
         /// <summary>
         /// All shard regions participating in the test.
@@ -90,29 +91,43 @@ namespace Akka.Cluster.Sharding.Tests
         /// <summary>
         /// All shard region proxies participating in the test.
         /// </summary>
-        public ImmutableHashSet<IActorRef> AvailableShardRegionProxies { get; init; }
+        public ImmutableHashSet<IActorRef> AvailableShardRegionProxies { get; init; } = ImmutableHashSet<IActorRef>.Empty;
 
         /// <summary>
         /// Region for each shard.
         /// </summary>
-        public IImmutableDictionary<ShardId, IActorRef> Shards { get; init; }
+        public IImmutableDictionary<ShardId, IActorRef> Shards { get; init; } = ImmutableDictionary<string, IActorRef>.Empty;
 
         /// <summary>
         /// Shards for each region.
         /// </summary>
-        public IImmutableDictionary<IActorRef, IImmutableList<ShardId>> Regions { get; init; }
+        public IImmutableDictionary<IActorRef, IImmutableList<ShardId>> Regions { get; init; } = ImmutableDictionary<IActorRef, IImmutableList<string>>.Empty;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IImmutableSet<IActorRef> RegionProxies { get; init; }
+        public IImmutableSet<IActorRef> RegionProxies { get; init; } = ImmutableHashSet<IActorRef>.Empty;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IImmutableSet<ShardId> UnallocatedShards { get; init; }
+        public IImmutableSet<ShardId> UnallocatedShards { get; init; } = ImmutableHashSet<string>.Empty;
 
         public bool RememberEntities { get; }
+
+        private bool PrintMembers(StringBuilder builder)
+        {
+            builder.AppendLine($"TestState: RememberEntities {RememberEntities}");
+            builder.AppendLine("Operations:");
+            foreach (var c in Commands.Reverse())
+            {
+                builder.AppendFormat($"\tE: {c.Command}").AppendLine()
+                    .AppendFormat($"\t\tSuccess: {c.Success}")
+                    .AppendLine();
+            }
+
+            return true;
+        }
     }
 
     internal class StateModel : Machine<StateHolder, TestState>
@@ -221,6 +236,16 @@ namespace Akka.Cluster.Sharding.Tests
 
             public Property CheckShardRegionSpecificStates(StateHolder actual, TestState model, IActorRef shardRegion)
             {
+                var actualContains = actual.State.Regions.ContainsKey(shardRegion);
+                var modelContains = model.Regions.ContainsKey(shardRegion);
+                if (!actualContains || !modelContains)
+                {
+                    var containLanguage = modelContains ? "contain" : "not contain";
+                   // one of the two collections doesn't contain the ShardRegion, so we can't continue comparison
+                   return (actualContains == modelContains).Label(
+                       $"Expected state to {containLanguage} ShardRegion [{shardRegion}], but found that state contains [{shardRegion}] is [{actualContains}]");
+                }
+                
                 var regionDiff = actual.State.Regions[shardRegion].ToImmutableHashSet()
                     .SymmetricExcept(model.Regions[shardRegion]);
 
@@ -230,17 +255,32 @@ namespace Akka.Cluster.Sharding.Tests
             }
 
             public Property CheckShardSpecificStates(StateHolder actual, TestState model, ShardId shard,
-                bool unallocated = false)
+                bool shouldContainShard)
             {
+                var actualContains = actual.State.Shards.ContainsKey(shard);
+                var modelContains = model.Shards.ContainsKey(shard);
+                if (!actualContains || !modelContains)
+                {
+                    var containLanguage = modelContains ? "contain" : "not contain";
+                    // one of the two collections doesn't contain the ShardRegion, so we can't continue comparison
+                    return (actualContains == modelContains).Label(
+                        $"Expected state to {containLanguage} ShardId [{shard}], but found that state contains [{shard}] is [{actualContains}]");
+                }
+                
                 Property CheckContains()
                 {
-                    return ((actual.State.Shards.ContainsKey(shard) || model.Shards.ContainsKey(shard)) == !unallocated)
+                    var prop1 = ((actual.State.Shards.ContainsKey(shard) || model.Shards.ContainsKey(shard)) ==
+                                 shouldContainShard)
                         .Label(
-                            $"Shard [{shard}] should not be present in Shards collection (because, unallocated), but found in state: {actual.State.Shards.ContainsKey(shard)} && model {model.Shards.ContainsKey(shard)}")
-                        .And(((actual.State.UnallocatedShards.Contains(shard) &&
-                               model.UnallocatedShards.Contains(shard)) == unallocated)
+                            $"Shard [{shard}] should present ([{shouldContainShard}]) in Shards collection, but found in state: {actual.State.Shards.ContainsKey(shard)} && model {model.Shards.ContainsKey(shard)}");
+
+                    if (model.RememberEntities)
+                    {
+                        return prop1.And(actual.State.UnallocatedShards.Contains(shard) && model.UnallocatedShards.Contains(shard)) = !shouldContainShard)
                             .Label(
-                                $"Shard [{shard}] should be unallocated, but found in state: {model.UnallocatedShards.Contains(shard)} && model {model.UnallocatedShards.Contains(shard)}"));
+                                $"Shard [{shard}] should be unallocated, but found in state: {model.UnallocatedShards.Contains(shard)} && model {model.UnallocatedShards.Contains(shard)}"));)
+                    }
+
                 }
 
                 if (unallocated)
@@ -500,12 +540,12 @@ namespace Akka.Cluster.Sharding.Tests
                 if (!model.Commands.Peek().Success)
                 {
                     return ShouldThrowException(actual, "").And(CheckCommonShardStates(actual, model))
-                        .And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
+                        .And(CheckShardSpecificStates(actual, model, ShardId, true));
                 }
 
                 actual.State = actual.State.Updated(Event);
                 return CheckCommonShardStates(actual, model)
-                    .And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
+                    .And(CheckShardSpecificStates(actual, model, ShardId));
             }
 
             public override TestState Run(TestState obj0)
@@ -556,12 +596,12 @@ namespace Akka.Cluster.Sharding.Tests
                 if (!model.Commands.Peek().Success)
                 {
                     return ShouldThrowException(actual, "").And(CheckCommonShardStates(actual, model))
-                        .And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
+                        .And(CheckShardSpecificStates(actual, model, ShardId));
                 }
 
                 actual.State = actual.State.Updated(Event);
                 return CheckCommonShardStates(actual, model)
-                    .And(CheckShardSpecificStates(actual, model, ShardId, !model.RememberEntities));
+                    .And(CheckShardSpecificStates(actual, model, ShardId));
             }
 
             public override TestState Run(TestState obj0)
@@ -598,7 +638,6 @@ namespace Akka.Cluster.Sharding.Tests
         {
             // register the custom generators to make testing easier
             Arb.Register<ClusterGenerators>();
-            Arb.Register<ClusterShardingGenerator>();
         }
         
         [Property]
