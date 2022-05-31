@@ -15,7 +15,7 @@ using Akka.Cluster.Tests;
 using Akka.Tests.Shared.Internals.Helpers;
 using FsCheck;
 using FsCheck.Experimental;
-using Enum = Google.Protobuf.WellKnownTypes.Enum;
+using FsCheck.Xunit;
 
 
 namespace Akka.Cluster.Sharding.Tests
@@ -138,7 +138,8 @@ namespace Akka.Cluster.Sharding.Tests
 
         public override Gen<Operation<StateHolder, TestState>> Next(TestState obj0)
         {
-            return Gen.OneOf(RegisterShardRegion.CreateGen(obj0));
+            return Gen.OneOf(RegisterShardRegion.CreateGen(obj0), ShardRegionProxyRegistered.CreateGen(obj0), ShardHomeAllocated.CreateGen(obj0),
+                ShardRegionTerminated.CreateGen(obj0), ShardRegionProxyTerminated.CreateGen(obj0), ShardHomeDeallocated.CreateGen(obj0));
         }
 
         public override Arbitrary<Setup<StateHolder, TestState>> Setup { get; }
@@ -471,9 +472,16 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public static Gen<Operation<StateHolder, TestState>> CreateGen(TestState model)
             {
+                var gen0 = Gen.Elements(model.AllPossibleShards.ToArray());
+                var gen1 = Gen.Elements(model.AvailableShardRegions.ToArray());
+
+                Func<ShardId, IActorRef, ShardHomeAllocated> combiner = (s, @ref) => new ShardHomeAllocated(s, @ref);
+
+                var fsharpFunc = FsharpDelegateHelper.Create(combiner);
+
                 // could be a valid shardRegionProxy, could be one that isn't
-                return Gen.Elements(model.)
-                    .Select(a => (Operation<StateHolder, TestState>)new ShardRegionProxyTerminated(a));
+                return Gen.Map2(fsharpFunc, gen0, gen1)
+                    .Select(a => (Operation<StateHolder, TestState>)a);
             }
 
             public ShardHomeAllocated(string shardId, IActorRef shardRegion)
@@ -526,6 +534,15 @@ namespace Akka.Cluster.Sharding.Tests
 
         public sealed class ShardHomeDeallocated : ShardOperationBase
         {
+            public static Gen<Operation<StateHolder, TestState>> CreateGen(TestState model)
+            {
+                var gen0 = Gen.Elements(model.AllPossibleShards.ToArray());
+                
+                // could be a valid shardRegionProxy, could be one that isn't
+                return gen0
+                    .Select(a => (Operation<StateHolder, TestState>)new ShardHomeDeallocated(a));
+            }
+            
             public ShardHomeDeallocated(string shardId)
             {
                 ShardId = shardId;
@@ -577,6 +594,18 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class ShardCoordinatorStateModelTests
     {
+        public static ShardCoordinatorStateModelTests()
+        {
+            // register the custom generators to make testing easier
+            Arb.Register<ClusterGenerators>();
+            Arb.Register<ClusterShardingGenerator>();
+        }
+        
+        [Property]
+        public Property ShardCoordinatorStateMustObeyModel()
+        {
+            return new StateModel().ToProperty();
+        }
     }
 }
 
