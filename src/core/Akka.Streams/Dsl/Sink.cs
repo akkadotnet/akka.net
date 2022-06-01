@@ -313,6 +313,13 @@ namespace Akka.Streams.Dsl
                 return NotUsed.Instance;
             }).ToMaterialized(Ignore<NotUsed>(), Keep.Right).Named("foreachSink");
 
+        public static Sink<TIn, Task> ForEachAsync<TIn>(int parallelism, Func<TIn, Task> action) => Flow.Create<TIn>()
+            .SelectAsync(parallelism, async input =>
+            {
+                await action(input);
+                return NotUsed.Instance;
+            }).ToMaterialized(Ignore<NotUsed>(), Keep.Right).Named("foreachSink");
+
         /// <summary>
         /// Combine several sinks with fan-out strategy like <see cref="Broadcast{TIn}"/> or <see cref="Balance{TIn}"/> and returns <see cref="Sink{TIn,TMat}"/>.
         /// </summary>
