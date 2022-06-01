@@ -1,3 +1,17 @@
+#### 1.4.39 June 1 2022 ####
+Akka.NET v1.4.39 is a minor release that contains some very important bug fixes for Akka.Remote and Akka.Cluster users.
+
+* [Akka.Cluster: Error in `SplitBrainResolver.PreStart` when using `ChannelTaskScheduler` for internal-dispatcher](https://github.com/akkadotnet/akka.net/issues/5962)
+* [Akka.Cluster.Sharding: make PersistentShardCoordinator a tolerant reader](https://github.com/akkadotnet/akka.net/issues/5604) - Akka.Persistence-backed sharding is more lenient when recovering state.
+* [Akka.Remote: Trap all `Exception`s thrown while trying to dispatch messages in `Akka.Remote.EndpointReader`](https://github.com/akkadotnet/akka.net/pull/5971) - any kind of exception thrown during deserialization can no longer force a disassociation to occur in Akka.Remote.
+
+If you want to see the [full set of changes made in Akka.NET v1.4.39, click here](https://github.com/akkadotnet/akka.net/milestone/70).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 204 | 99 | Aaron Stannard |
+| 1 | 1 | 13 | Gregorius Soedharmo |
+
 #### 1.4.38 May 6 2022 ####
 Akka.NET v1.4.38 is a minor release that contains some minor bug fixes.
 
