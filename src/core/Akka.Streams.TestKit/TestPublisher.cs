@@ -205,41 +205,9 @@ namespace Akka.Streams.TestKit
                 TimeSpan max,
                 Func<TOther> execute,
                 CancellationToken cancellationToken = default)
-                => WithinAsync(min, max, execute, cancellationToken)
+                => WithinAsync(min, max, () => Task.FromResult(execute()), cancellationToken)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
 
-            /// <summary>
-            /// Execute code block while bounding its execution time between <paramref name="min"/> and
-            /// <paramref name="max"/>. <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> blocks may be nested. 
-            /// All methods in this class which take maximum wait times are available in a version which implicitly uses
-            /// the remaining time governed by the innermost enclosing <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> block.
-            /// 
-            /// <para />
-            /// 
-            /// Note that the timeout is scaled using <see cref="TestKitBase.Dilated"/>, which uses the
-            /// configuration entry "akka.test.timefactor", while the min Duration is not.
-            /// 
-            /// <![CDATA[
-            /// var ret = probe.Within(Timespan.FromMilliseconds(50), () =>
-            /// {
-            ///     test.Tell("ping");
-            ///     return ExpectMsg<string>();
-            /// });
-            /// ]]>
-            /// </summary>
-            /// <param name="min"></param>
-            /// <param name="max"></param>
-            /// <param name="execute"></param>
-            /// <param name="cancellationToken"></param>
-            /// <returns></returns>
-            public async Task<TOther> WithinAsync<TOther>(
-                TimeSpan min,
-                TimeSpan max,
-                Func<TOther> execute,
-                CancellationToken cancellationToken = default)
-                => await Probe.WithinAsync(min, max, execute, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
-            
             /// <summary>
             /// Execute code block while bounding its execution time between <paramref name="min"/> and
             /// <paramref name="max"/>. <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> blocks may be nested. 
@@ -276,15 +244,8 @@ namespace Akka.Streams.TestKit
             /// Sane as calling Within(TimeSpan.Zero, max, function, cancellationToken).
             /// </summary>
             public TOther Within<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default)
-                => WithinAsync(max, execute, cancellationToken)
+                => WithinAsync(max, () => Task.FromResult(execute()), cancellationToken)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
-            
-            /// <summary>
-            /// Sane as calling WithinAsync(TimeSpan.Zero, max, function, cancellationToken).
-            /// </summary>
-            public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) 
-                => await Probe.WithinAsync(max, execute, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
             
             /// <summary>
             /// Sane as calling WithinAsync(TimeSpan.Zero, max, function, cancellationToken).

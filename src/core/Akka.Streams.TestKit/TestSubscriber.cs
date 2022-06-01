@@ -403,7 +403,7 @@ namespace Akka.Streams.TestKit
             public TOther Within<TOther>(TimeSpan min, TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) => 
                 TestProbe.Within(min, max, execute, cancellationToken: cancellationToken);
 
-            public async Task<TOther> WithinAsync<TOther>(TimeSpan min, TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) => 
+            public async Task<TOther> WithinAsync<TOther>(TimeSpan min, TimeSpan max, Func<Task<TOther>> execute, CancellationToken cancellationToken = default) => 
                 await TestProbe.WithinAsync(min, max, execute, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
 
@@ -414,9 +414,9 @@ namespace Akka.Streams.TestKit
                 TestProbe.Within(max, execute, cancellationToken: cancellationToken);
 
             /// <summary>
-            /// Sane as calling Within(TimeSpan.Zero, max, function).
+            /// Sane as calling WithinAsync(TimeSpan.Zero, max, function).
             /// </summary>
-            public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) => 
+            public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<Task<TOther>> execute, CancellationToken cancellationToken = default) => 
                 await TestProbe.WithinAsync(max, execute, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
 

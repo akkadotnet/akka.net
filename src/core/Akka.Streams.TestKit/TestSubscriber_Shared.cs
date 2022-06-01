@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit;
 using Reactive.Streams;
+using Xunit.Sdk;
 
 namespace Akka.Streams.TestKit
 {
@@ -198,9 +199,22 @@ namespace Akka.Streams.TestKit
                 TimeSpan? timeout = null,
                 [EnumeratorCancellation] CancellationToken cancellationToken = default)
             {
+                var collected = new List<T>();
                 for (var i = 0; i < n; i++)
                 {
-                    var next = await probe.ExpectMsgAsync<OnNext<T>>(timeout, cancellationToken: cancellationToken);
+                    OnNext<T> next;
+                    try
+                    {
+                        next = await probe.ExpectMsgAsync<OnNext<T>>(timeout, cancellationToken: cancellationToken);
+                        collected.Add(next.Element);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception(
+                            $"[ExpectNextN] expected {n} next elements but received {collected.Count} elements " +
+                            $"before an exception occured. Received: [{string.Join(",", collected.ToString())}]", 
+                            ex);
+                    }
                     yield return next.Element;
                 }
             }
