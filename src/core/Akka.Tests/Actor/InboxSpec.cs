@@ -127,12 +127,13 @@ namespace Akka.Tests.Actor
             await WithinAsync(TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(6), () =>
             {
                 Assert.Throws<TimeoutException>(() => _inbox.Receive());
-                return true;
+                return Task.CompletedTask;
             });
 
             await WithinAsync(TimeSpan.FromSeconds(1), () =>
             {
                 Assert.Throws<TimeoutException>(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
+                return Task.CompletedTask;
             });
         }
 

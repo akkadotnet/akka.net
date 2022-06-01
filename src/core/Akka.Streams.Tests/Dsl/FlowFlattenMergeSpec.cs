@@ -33,14 +33,14 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys);
         }
 
-        private Source<int, NotUsed> Src10(int i) => Source.From(Enumerable.Range(i, 10));
+        private static Source<int, NotUsed> Src10(int i) => Source.From(Enumerable.Range(i, 10));
 
-        private Source<int, NotUsed> Blocked => Source.FromTask(new TaskCompletionSource<int>().Task);
+        private static Source<int, NotUsed> Blocked => Source.FromTask(new TaskCompletionSource<int>().Task);
 
-        private Sink<int, Task<IEnumerable<int>>> ToSeq
+        private static Sink<int, Task<IEnumerable<int>>> ToSeq
             => Flow.Create<int>().Grouped(1000).ToMaterialized(Sink.First<IEnumerable<int>>(), Keep.Right);
 
-        private Sink<int, Task<ImmutableHashSet<int>>> ToSet =>
+        private static Sink<int, Task<ImmutableHashSet<int>>> ToSet =>
                 Flow.Create<int>()
                     .Grouped(1000)
                     .Select(x => x.ToImmutableHashSet())
@@ -271,10 +271,15 @@ namespace Akka.Streams.Tests.Dsl
                 await p.EnsureSubscriptionAsync();
                 await p.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
-                var elems = p.Within(TimeSpan.FromSeconds(1), () =>
+                var elems = await p.WithinAsync(TimeSpan.FromSeconds(1), async () =>
+                {
+                    var list = new List<int>();
+                    foreach (var _ in Enumerable.Range(0, noOfSources * 10))
                     {
-                        return Enumerable.Range(1, noOfSources * 10).Select(_ => p.RequestNext()).ToArray();
-                    });
+                        list.Add(await p.RequestNextAsync());
+                    }
+                    return list;
+                });
                 await p.ExpectCompleteAsync();
                 elems.Should().BeEquivalentTo(Enumerable.Range(0, noOfSources * 10));
             }, Materializer);
