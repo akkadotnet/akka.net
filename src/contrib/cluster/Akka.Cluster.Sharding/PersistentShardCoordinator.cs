@@ -47,8 +47,9 @@ namespace Akka.Cluster.Sharding
             /// TBD
             /// </summary>
             public readonly IImmutableSet<IActorRef> RegionProxies;
+            
             /// <summary>
-            /// TBD
+            /// Only used when <see cref="RememberEntities"/> is enabled.
             /// </summary>
             public readonly IImmutableSet<ShardId> UnallocatedShards;
 
@@ -109,7 +110,7 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <summary>
-            /// Feed an event into the ShardCoordinator state.
+            /// TBD
             /// </summary>
             /// <param name="e">The event to process.</param>
             /// <exception cref="ArgumentException">Thrown if an event is illegal in the current state.</exception>
