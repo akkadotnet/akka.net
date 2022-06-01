@@ -112,9 +112,9 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            /// <param name="e">TBD</param>
-            /// <exception cref="ArgumentException">TBD</exception>
-            /// <returns>TBD</returns>
+            /// <param name="e">The event to process.</param>
+            /// <exception cref="ArgumentException">Thrown if an event is illegal in the current state.</exception>
+            /// <returns>An update copy of this state.</returns>
             public State Updated(IDomainEvent e)
             {
                 switch (e)
@@ -1362,7 +1362,12 @@ namespace Akka.Cluster.Sharding
                             if (CurrentState.RegionProxies.Contains(proxyTerminated.RegionProxy))
                                 CurrentState = CurrentState.Updated(evt);
                             return true;
-                        case ShardHomeAllocated _:
+                        case ShardHomeAllocated homeAllocated:
+                            // if we already have identical ShardHomeAllocated data, skip processing it
+                            // addresses https://github.com/akkadotnet/akka.net/issues/5604
+                            if (CurrentState.Shards.TryGetValue(homeAllocated.Shard, out var currentShardRegion)
+                                && Equals(homeAllocated.Region, currentShardRegion))
+                                return true;
                             CurrentState = CurrentState.Updated(evt);
                             return true;
                         case ShardHomeDeallocated _:
