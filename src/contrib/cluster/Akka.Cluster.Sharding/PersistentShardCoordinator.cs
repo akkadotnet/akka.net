@@ -109,7 +109,12 @@ namespace Akka.Cluster.Sharding
                             if (State.RegionProxies.Contains(proxyTerminated.RegionProxy))
                                 State = State.Updated(evt);
                             return true;
-                        case ShardHomeAllocated _:
+                        case ShardHomeAllocated homeAllocated:
+                            // if we already have identical ShardHomeAllocated data, skip processing it
+                            // addresses https://github.com/akkadotnet/akka.net/issues/5604
+                            if (State.Shards.TryGetValue(homeAllocated.Shard, out var currentShardRegion)
+                                && Equals(homeAllocated.Region, currentShardRegion))
+                                return true;
                             State = State.Updated(evt);
                             return true;
                         case ShardHomeDeallocated _:
