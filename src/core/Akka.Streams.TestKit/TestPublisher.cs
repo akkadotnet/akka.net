@@ -210,9 +210,9 @@ namespace Akka.Streams.TestKit
 
             /// <summary>
             /// Execute code block while bounding its execution time between <paramref name="min"/> and
-            /// <paramref name="max"/>. <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> blocks may be nested. 
+            /// <paramref name="max"/>. <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{Task{TOther}},CancellationToken)"/> blocks may be nested. 
             /// All methods in this class which take maximum wait times are available in a version which implicitly uses
-            /// the remaining time governed by the innermost enclosing <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> block.
+            /// the remaining time governed by the innermost enclosing <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{Task{TOther}},CancellationToken)"/> block.
             /// 
             /// <para />
             /// 
