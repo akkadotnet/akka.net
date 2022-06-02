@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit;
 using Reactive.Streams;
+using Xunit.Sdk;
 using static Akka.Streams.TestKit.TestSubscriber;
 
 namespace Akka.Streams.TestKit
@@ -389,6 +390,32 @@ namespace Akka.Streams.TestKit
                 probe.Subscription.Request(1);
             });
             return ExpectNext(element);
+        }
+
+        /// <summary>
+        /// Fluent async DSL.
+        /// Request and expect a stream element.
+        /// </summary>
+        public SubscriberFluentBuilder<T> RequestNextN(params T[] elements)
+        {
+            if (!(Probe is Probe<T> probe))
+            {
+                throw new InvalidOperationException("RequestNextN() can only be used on a TestSubscriber.Probe<T> instance");
+            }
+            _tasks.Add(async ct =>
+            {
+                await Probe<T>.EnsureSubscriptionTask(probe, ct);
+                probe.Subscription.Request(elements.Length);
+                for (var i = 0; i < elements.Length; ++i)
+                {
+                    var next = await probe.ExpectNextAsync(ct);
+                    if (Comparer<T>.Default.Compare(elements[i], next) != 0)
+                    {
+                        throw new CollectionException(elements, elements.Length, i + 1, i);
+                    }
+                }
+            });
+            return this;
         }
 
         /// <summary>

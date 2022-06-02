@@ -6,6 +6,7 @@
 // //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -212,11 +213,22 @@ namespace Akka.Streams.TestKit
                     {
                         throw new Exception(
                             $"[ExpectNextN] expected {n} next elements but received {collected.Count} elements " +
-                            $"before an exception occured. Received: [{string.Join(",", collected.ToString())}]", 
+                            $"before an exception occured. Received: {Stringify(collected)}", 
                             ex);
                     }
                     yield return next.Element;
                 }
+            }
+
+            private static string Stringify(object obj)
+            {
+                if (obj is IEnumerable enumerable)
+                {
+                    var list = (from object o in enumerable select Stringify(o)).ToList();
+                    return $"[{string.Join(", ", list)}]";
+                }
+
+                return obj.ToString();
             }
             
             internal static async Task<Exception> ExpectErrorTask(
