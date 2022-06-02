@@ -222,13 +222,18 @@ namespace Akka.Streams.TestKit
 
             private static string Stringify(object obj)
             {
-                if (obj is IEnumerable enumerable)
+                switch (obj)
                 {
-                    var list = (from object o in enumerable select Stringify(o)).ToList();
-                    return $"[{string.Join(", ", list)}]";
+                    case null:
+                        return "null";
+                    case string str:
+                        return str;
+                    case IEnumerable enumerable:
+                        var list = (from object o in enumerable select Stringify(o)).ToList();
+                        return $"[{string.Join(", ", list)}]";
+                    default:
+                        return obj.ToString();
                 }
-
-                return obj.ToString();
             }
             
             internal static async Task<Exception> ExpectErrorTask(
