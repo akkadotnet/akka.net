@@ -36,7 +36,7 @@ namespace DocsExamples.Streams
 
             #region merge-hub
             // A simple consumer that will print to the console for now
-            Sink<string, Task> consumer = Sink.ForEach<string>(WriteLine);
+            Sink<string, Task<Done>> consumer = Sink.ForEach<string>(WriteLine);
 
             // Attach a MergeHub Source to the consumer. This will materialize to a
             // corresponding Sink.

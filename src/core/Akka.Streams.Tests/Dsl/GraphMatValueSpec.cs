@@ -208,7 +208,7 @@ namespace Akka.Streams.Tests.Dsl
             });
             var r = RunnableGraph.FromGraph(GraphDsl.Create(Sink.Ignore<int>(), (b, sink) =>
             {
-                var source = Source.From(Enumerable.Range(1, 10)).MapMaterializedValue(_ => Task.FromResult(0));
+                var source = Source.From(Enumerable.Range(1, 10)).MapMaterializedValue(_ => Task.FromResult(Done.Instance));
                 b.Add(g);
                 b.From(source).To(sink);
                 return ClosedShape.Instance;
