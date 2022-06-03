@@ -258,14 +258,14 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var (sink, task) = MergeHub.Source<int>(16).Take(10).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
 
-                await EventFilter.Error(contains: "Upstream producer failed with exception").ExpectOneAsync(() =>
+                await EventFilter.Error(contains: "Upstream producer failed with exception").ExpectOneAsync(async () =>
                 {
                     Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
                     Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
+                    var result = await task.ShouldCompleteWithin(3.Seconds());
+                    result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 });
 
-                var result = await task.ShouldCompleteWithin(3.Seconds());
-                result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
