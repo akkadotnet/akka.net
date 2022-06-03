@@ -182,13 +182,15 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var (sink, task) = MergeHub.Source<int>(1).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
+                var (sink, probe) = MergeHub.Source<int>(1).Take(20000)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
 
                 Source.From(Enumerable.Range(1, 10000)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
 
-                var result = await task.ShouldCompleteWithin(3.Seconds());
+                await probe.RequestAsync(int.MaxValue);
+                var result = await probe.ExpectNextNAsync(20000, 3.Seconds()).ToListAsync();
                 result.OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
             }, Materializer);
         }
