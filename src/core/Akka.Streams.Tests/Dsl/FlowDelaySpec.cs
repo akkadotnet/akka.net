@@ -7,7 +7,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
@@ -96,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_deliver_elements_with_delay_for_slow_stream()
         {
@@ -114,38 +116,47 @@ namespace Akka.Streams.Tests.Dsl
                 
                 cSub.Request(100);
                 pSub.SendNext(1);
-                await c.AsyncBuilder()
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                    .ExpectNext(1)
-                    .ExecuteAsync();
+                var elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(1))
+                    .ShouldCompleteWithin(1.Seconds());
+                elapsed.Should().BeGreaterThan(200);
                 
                 pSub.SendNext(2);
-                await c.AsyncBuilder()
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                    .ExpectNext(2)
-                    .ExecuteAsync();
+                elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(2))
+                    .ShouldCompleteWithin(1.Seconds());
+                elapsed.Should().BeGreaterThan(200);
                 
                 pSub.SendComplete();
                 await c.ExpectCompleteAsync();
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static async Task<long> MeasureExecutionTime(Func<Task> task)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            await task();
+            stopwatch.Stop();
+            return stopwatch.ElapsedMilliseconds;
+        }
+
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_drop_tail_for_internal_buffer_if_it_is_full_in_DropTail_mode()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var task = Source.From(Enumerable.Range(1, 20))
+                var probe = Source.From(Enumerable.Range(1, 20))
                     .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.DropTail)
                     .WithAttributes(Attributes.CreateInputBuffer(16, 16))
-                    .Grouped(100)
-                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+                    .RunWith(this.SinkProbe<int>(), Materializer);
 
-                await task.ShouldCompleteWithin(1800.Milliseconds());
+                await Task.Delay(1.Seconds());
+                await probe.ExpectSubscriptionAsync();
+                await probe.RequestAsync(20);
+                var result = await probe.ExpectNextNAsync(16).ToListAsync();
                 var expected = Enumerable.Range(1, 15).ToList();
                 expected.Add(20);
-                task.Result.Should().BeEquivalentTo(expected);
+                result.Should().BeEquivalentTo(expected);
             }, Materializer);
         }
 
