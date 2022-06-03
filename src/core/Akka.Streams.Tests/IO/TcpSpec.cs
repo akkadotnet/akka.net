@@ -546,7 +546,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             (await serverConnection.WaitReadAsync()).Should().BeEquivalentTo(testData);
         }
         
-        private Sink<Tcp.IncomingConnection, Task> EchoHandler() =>
+        private Sink<Tcp.IncomingConnection, Task<Done>> EchoHandler() =>
             Sink.ForEach<Tcp.IncomingConnection>(c => c.Flow.Join(Flow.Create<ByteString>()).Run(Materializer));
 
         [Fact]

@@ -86,8 +86,8 @@ namespace Akka.Streams.Tests.Dsl
                 var completed = RunnableGraph.FromGraph(GraphDsl.Create(Sink.Ignore<(int, string)>(), (b, sink) =>
                 {
                     var zip = b.Add(new Zip<int, string>());
-                    var source1 = Source.FromPublisher(upstream1).MapMaterializedValue<Task>(_ => null);
-                    var source2 = Source.FromPublisher(upstream2).MapMaterializedValue<Task>(_ => null);
+                    var source1 = Source.FromPublisher(upstream1).MapMaterializedValue(_ => Task.FromResult(Done.Instance));
+                    var source2 = Source.FromPublisher(upstream2).MapMaterializedValue(_ => Task.FromResult(Done.Instance));
 
                     b.From(source1).To(zip.In0);
                     b.From(source2).To(zip.In1);

@@ -295,7 +295,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Sink<TIn, Task> Ignore<TIn>() => FromGraph(new IgnoreSink<TIn>());
+        public static Sink<TIn, Task<Done>> Ignore<TIn>() => FromGraph(new IgnoreSink<TIn>());
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will invoke the given <paramref name="action"/> for each received element. 
@@ -306,7 +306,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TIn">TBD</typeparam>
         /// <param name="action">TBD</param>
         /// <returns>TBD</returns>
-        public static Sink<TIn, Task> ForEach<TIn>(Action<TIn> action) => Flow.Create<TIn>()
+        public static Sink<TIn, Task<Done>> ForEach<TIn>(Action<TIn> action) => Flow.Create<TIn>()
             .Select(input =>
             {
                 action(input);
@@ -323,7 +323,7 @@ namespace Akka.Streams.Dsl
         /// <param name="parallelism">Number of parallel execution allowed</param>
         /// <param name="action">Async function delegate to be executed on all elements</param>
         /// <returns>TBD</returns>
-        public static Sink<TIn, Task> ForEachAsync<TIn>(int parallelism, Func<TIn, Task> action) => Flow.Create<TIn>()
+        public static Sink<TIn, Task<Done>> ForEachAsync<TIn>(int parallelism, Func<TIn, Task> action) => Flow.Create<TIn>()
             .SelectAsync(parallelism, async input =>
             {
                 await action(input);
@@ -374,7 +374,7 @@ namespace Akka.Streams.Dsl
         /// <param name="parallelism">TBD</param>
         /// <param name="action">TBD</param>
         /// <returns>TBD</returns>
-        public static Sink<TIn, Task> ForEachParallel<TIn>(int parallelism, Action<TIn> action) => Flow.Create<TIn>()
+        public static Sink<TIn, Task<Done>> ForEachParallel<TIn>(int parallelism, Action<TIn> action) => Flow.Create<TIn>()
             .SelectAsyncUnordered(parallelism, input => Task.Run(() =>
             {
                 action(input);
