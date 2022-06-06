@@ -28,6 +28,7 @@ namespace Akka.Streams.Tests.Dsl
     [Collection(nameof(FlowDelaySpec))] // timing sensitive since it involves hard delays
     public class FlowDelaySpec : AkkaSpec
     {
+        private const long Epsilon = 100;
         private ActorMaterializer Materializer { get; }
 
         public FlowDelaySpec(ITestOutputHelper helper) : base("{akka.loglevel = INFO}", helper)
@@ -49,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
                 var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(Enumerable.Range(1, 10)))
                     .ShouldCompleteWithin(3.Seconds());
                 Log.Info("Expected execution time: 1000 ms, actual: {0} ms", elapsed);
-                elapsed.Should().BeGreaterThan(1000);
+                elapsed.Should().BeGreaterThan(1000 - Epsilon);
             }, Materializer);
         }
 
@@ -68,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
                 var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(Enumerable.Range(1, 10), 5.Seconds()))
                     .ShouldCompleteWithin(5.Seconds());
                 Log.Info("Expected execution time: 2000 ms, actual: {0} ms", elapsed);
-                elapsed.Should().BeGreaterThan(2000);
+                elapsed.Should().BeGreaterThan(2000 - Epsilon);
                 await probe.ExpectCompleteAsync();
             }, Materializer);
         }
@@ -96,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
                 elapsed = await MeasureExecutionTime(() => probe.ExpectNextAsync(3)) // buffered element
                     .ShouldCompleteWithin(1.Seconds());
                 Log.Info("Expected execution time: instant, actual: {0} ms", elapsed);
-                elapsed.Should().BeLessThan(300);
+                elapsed.Should().BeLessThan(300 + Epsilon);
                 await probe.ExpectCompleteAsync();
             }, Materializer);
         }
@@ -124,13 +125,13 @@ namespace Akka.Streams.Tests.Dsl
                 var elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(1))
                     .ShouldCompleteWithin(1.Seconds());
                 Log.Info("Expected execution time: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed);
-                elapsed.Should().BeGreaterThan(200);
+                elapsed.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
                 
                 pSub.SendNext(2);
                 elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(2))
                     .ShouldCompleteWithin(1.Seconds());
                 Log.Info("Expected execution time: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed);
-                elapsed.Should().BeGreaterThan(200);
+                elapsed.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
                 
                 pSub.SendComplete();
                 await c.ExpectCompleteAsync();
@@ -226,9 +227,9 @@ namespace Akka.Streams.Tests.Dsl
                 Log.Info("Expected execution time 2: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed2);
                 Log.Info("Expected execution time 3: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed3);
 
-                elapsed1.Should().BeGreaterThan(expectedMilliseconds);
-                elapsed2.Should().BeGreaterThan(expectedMilliseconds);
-                elapsed3.Should().BeGreaterThan(expectedMilliseconds);
+                elapsed1.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
+                elapsed2.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
+                elapsed3.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
             }, Materializer);
         }
 
@@ -275,7 +276,7 @@ namespace Akka.Streams.Tests.Dsl
                 var elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(1))
                     .ShouldCompleteWithin(1.Seconds());
                 Log.Info("Expected execution time: instant, actual: {0} ms", elapsed);
-                elapsed.Should().BeLessThan(100);
+                elapsed.Should().BeLessThan(Epsilon);
                 
                 // fail will terminate despite of non empty internal buffer
                 pSub.SendError(new Exception());
@@ -299,7 +300,7 @@ namespace Akka.Streams.Tests.Dsl
                 var elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>())
                     .ShouldCompleteWithin(5.Seconds());
                 Log.Info("Expected execution time: 2500 ms, actual: {0} ms", elapsed);
-                elapsed.Should().BeGreaterThan(2500);
+                elapsed.Should().BeGreaterThan(2500 - Epsilon);
 
                 // With a buffer large enough to hold all arriving elements, delays don't add up 
                 // task is intentionally not awaited
@@ -312,7 +313,7 @@ namespace Akka.Streams.Tests.Dsl
                 elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>())
                     .ShouldCompleteWithin(5.Seconds());
                 Log.Info("Expected execution time: 1000 ms, actual: {0} ms", elapsed);
-                elapsed.Should().BeLessThan(2500);
+                elapsed.Should().BeLessThan(1000 + Epsilon);
 
                 // Delays that are already present are preserved when buffer is large enough 
                 // task is intentionally not awaited
@@ -326,7 +327,7 @@ namespace Akka.Streams.Tests.Dsl
                 elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>())
                     .ShouldCompleteWithin(5.Seconds());
                 Log.Info("Expected execution time: 1000 ms, actual: {0} ms", elapsed);
-                elapsed.Should().BeGreaterThan(1000);
+                elapsed.Should().BeGreaterThan(1000 - Epsilon);
             }, Materializer);
         }
 
