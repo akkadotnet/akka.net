@@ -62,7 +62,7 @@ For example, let's configure an `ActorSystem` with HOCON:
 ```csharp
 var config = ConfigurationFactory.ParseString(@"
 akka.remote.dot-netty.tcp {
-    transport-class = ""Akka.Remote.Transport.DotNetty.DotNettyTransport, Akka.Remote""
+    transport-class = ""Akka.Remote.Transport.DotNetty.TcpTransport, Akka.Remote""
     transport-protocol = tcp
     port = 8091
     hostname = ""127.0.0.1""
@@ -124,7 +124,7 @@ Here's an example of using HOCON inside `App.config`:
             # here we're configuring the Akka.Remote module
             remote {
               dot-netty.tcp {
-                  transport-class = "Akka.Remote.Transport.DotNetty.DotNettyTransport, Akka.Remote"
+                  transport-class = "Akka.Remote.Transport.DotNetty.TcpTransport, Akka.Remote"
                   #applied-adapters = []
                   transport-protocol = tcp
                   port = 8091
