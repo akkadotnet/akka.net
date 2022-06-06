@@ -1943,10 +1943,8 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="materializerFunction">TBD</param>
         /// <returns>TBD</returns>
-        public static Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Flow<TIn, TOut, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) where TIn : TOut
-        {
-            return (Flow<TIn, TOut, TMat2>)InternalFlowOperations.WatchTermination(flow, materializerFunction);
-        }
+        public static Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Flow<TIn, TOut, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) => 
+            (Flow<TIn, TOut, TMat2>)InternalFlowOperations.WatchTermination(flow, materializerFunction);
 
         /// <summary>
         /// Materializes to <see cref="IFlowMonitor"/> that allows monitoring of the the current flow. All events are propagated
