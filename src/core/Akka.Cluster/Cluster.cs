@@ -266,8 +266,9 @@ namespace Akka.Cluster
         {
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             
+            var timeout = Settings.RetryUnsuccessfulJoinAfter ?? TimeSpan.FromSeconds(10);
             var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
+            timeoutCts.CancelAfter(timeout);
             timeoutCts.Token.Register(() =>
             {
                 timeoutCts.Dispose();
