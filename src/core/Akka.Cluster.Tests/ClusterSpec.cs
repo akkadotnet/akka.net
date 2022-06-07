@@ -32,7 +32,7 @@ namespace Akka.Cluster.Tests
          * because the JVM test suite relies on side-effects from one test to another, whereas all of our tests are fully isolated.
          */
 
-        const string Config = @"    
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"    
             akka.loglevel = DEBUG
             akka.cluster {
               auto-down-unreachable-after = 0s
@@ -46,7 +46,7 @@ namespace Akka.Cluster.Tests
             akka.coordinated-shutdown.terminate-actor-system = off
             akka.coordinated-shutdown.run-by-actor-system-terminate = off
             akka.remote.log-remote-lifecycle-events = off
-            akka.remote.dot-netty.tcp.port = 0";
+            akka.remote.dot-netty.tcp.port = 0");
 
         public IActorRef Self { get { return TestActor; } }
 
@@ -320,7 +320,7 @@ namespace Akka.Cluster.Tests
         [Fact]
         public async Task A_cluster_must_be_able_to_JoinAsync()
         {
-            var timeout = TimeSpan.FromSeconds(10);
+            var timeout = TimeSpan.FromSeconds(15);
 
             try
             {
@@ -352,22 +352,28 @@ namespace Akka.Cluster.Tests
         [Fact]
         public async Task A_cluster_JoinAsync_must_fail_if_could_not_connect_to_cluster()
         {
-            var timeout = TimeSpan.FromSeconds(10);
+            var config = ConfigurationFactory.ParseString("akka.actor.serialize-messages = off")
+                .WithFallback(Config);
+            var sys = ActorSystem.Create(nameof(ClusterSpec), config);
+            InitializeLogger(sys);
+            var cluster = Cluster.Get(sys);
+            var selfAddress = sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
+            
             try
             {
                 await Awaiting(async () =>
                     {
-                        var nonExisting = Address.Parse($"akka.tcp://{_selfAddress.System}@127.0.0.1:9999/");
-                        var task = _cluster.JoinAsync(nonExisting);
+                        var nonExisting = Address.Parse($"akka.tcp://{selfAddress.System}@127.0.0.1:9999/");
+                        var task = cluster.JoinAsync(nonExisting);
                         LeaderActions();
                         await task;
                     })
                     .Should().ThrowAsync<ClusterJoinFailedException>()
-                    .ShouldCompleteWithin(timeout);
+                    .ShouldCompleteWithin(15.Seconds());
             }
             finally
             {
-                _cluster.Shutdown();
+                await ShutdownAsync(sys);
             }
         }
 
@@ -406,22 +412,28 @@ namespace Akka.Cluster.Tests
         [Fact]
         public async Task A_cluster_JoinSeedNodesAsync_must_fail_if_could_not_connect_to_cluster()
         {
-            var timeout = TimeSpan.FromSeconds(10);
+            var config = ConfigurationFactory.ParseString("akka.actor.serialize-messages = off")
+                .WithFallback(Config);
+            var sys = ActorSystem.Create(nameof(ClusterSpec), config);
+            InitializeLogger(sys);
+            var cluster = Cluster.Get(sys);
+            var selfAddress = sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
+            
             try
             {
                 await Awaiting(async () =>
                     {
-                        var nonExisting = Address.Parse($"akka.tcp://{_selfAddress.System}@127.0.0.1:9999/");
-                        var task = _cluster.JoinSeedNodesAsync(new[] { nonExisting });
+                        var nonExisting = Address.Parse($"akka.tcp://{selfAddress.System}@127.0.0.1:9999/");
+                        var task = cluster.JoinSeedNodesAsync(new[] { nonExisting });
                         LeaderActions();
                         await task;
                     })
                     .Should().ThrowAsync<ClusterJoinFailedException>()
-                    .ShouldCompleteWithin(timeout);
+                    .ShouldCompleteWithin(15.Seconds());
             }
             finally
             {
-                _cluster.Shutdown();
+                await ShutdownAsync(sys);
             }
         }
 
