@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -263,12 +262,25 @@ namespace Akka.Cluster
         /// <param name="address">The address of the node we want to join.</param>
         /// <param name="token">An optional cancellation token used to cancel returned task before it completes.</param>
         /// <returns>Task which completes, once current cluster node reaches <see cref="MemberStatus.Up"/> state.</returns>
-        public Task JoinAsync(Address address, CancellationToken token = default(CancellationToken))
+        public Task JoinAsync(Address address, CancellationToken token = default)
         {
-            var completion = new TaskCompletionSource<NotUsed>();
-            this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
-            this.RegisterOnMemberRemoved(() => completion.TrySetException(
-                new ClusterJoinFailedException($"Node has not managed to join the cluster using provided address: {address}")));
+            var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
+            
+            var timeout = Settings.RetryUnsuccessfulJoinAfter ?? TimeSpan.FromSeconds(10);
+            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeoutCts.CancelAfter(timeout);
+            timeoutCts.Token.Register(() =>
+            {
+                timeoutCts.Dispose();
+                completion.TrySetException(new ClusterJoinFailedException(
+                    $"Node has not managed to join the cluster using provided address: {address}"));
+            });
+            
+            RegisterOnMemberUp(() =>
+            {
+                timeoutCts.Dispose();
+                completion.TrySetResult(NotUsed.Instance);
+            });
 
             Join(address);
 
@@ -323,10 +335,22 @@ namespace Akka.Cluster
         /// <param name="token">TBD</param>
         public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default(CancellationToken))
         {
-            var completion = new TaskCompletionSource<NotUsed>();
-            this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
-            this.RegisterOnMemberRemoved(() => completion.TrySetException(
-                new ClusterJoinFailedException($"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", seedNodes)}.")));
+            var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
+            
+            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
+            timeoutCts.Token.Register(() =>
+            {
+                timeoutCts.Dispose();
+                completion.TrySetException(new ClusterJoinFailedException(
+                    $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", seedNodes)}."));
+            });
+            
+            RegisterOnMemberUp(() =>
+            {
+                timeoutCts.Dispose();
+                completion.TrySetResult(NotUsed.Instance);
+            });
 
             JoinSeedNodes(seedNodes);
 
