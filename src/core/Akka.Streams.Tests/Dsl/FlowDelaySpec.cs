@@ -47,8 +47,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
                 await probe.RequestAsync(10);
-                var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(Enumerable.Range(1, 10)))
-                    .ShouldCompleteWithin(3.Seconds());
+                var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(Enumerable.Range(1, 10), 3.Seconds()));
                 Log.Info("Expected execution time: 1000 ms, actual: {0} ms", elapsed);
                 elapsed.Should().BeGreaterThan(1000 - Epsilon);
             }, Materializer);
@@ -66,8 +65,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
                 await probe.RequestAsync(10);
-                var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(Enumerable.Range(1, 10), 5.Seconds()))
-                    .ShouldCompleteWithin(5.Seconds());
+                var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(Enumerable.Range(1, 10), 5.Seconds()));
                 Log.Info("Expected execution time: 2000 ms, actual: {0} ms", elapsed);
                 elapsed.Should().BeGreaterThan(2000 - Epsilon);
                 await probe.ExpectCompleteAsync();
@@ -87,15 +85,13 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<int>(), Materializer);
                 
                 await probe.RequestAsync(2);
-                var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(new[] { 1, 2 }))
-                    .ShouldCompleteWithin(1.Seconds());
+                var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(new[] { 1, 2 }, 1.Seconds()));
                 Log.Info("Expected execution time: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed);
                 elapsed.Should().BeGreaterThan(200);
                 await probe.ExpectNoMsgAsync(200.Milliseconds());
                 
                 await probe.RequestAsync(1);
-                elapsed = await MeasureExecutionTime(() => probe.ExpectNextAsync(3)) // buffered element
-                    .ShouldCompleteWithin(1.Seconds());
+                elapsed = await MeasureExecutionTime(() => probe.ExpectNextAsync(3, 1.Seconds())); // buffered element
                 Log.Info("Expected execution time: instant, actual: {0} ms", elapsed);
                 elapsed.Should().BeLessThan(300 + Epsilon);
                 await probe.ExpectCompleteAsync();
@@ -122,14 +118,12 @@ namespace Akka.Streams.Tests.Dsl
                 
                 cSub.Request(100);
                 pSub.SendNext(1);
-                var elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(1))
-                    .ShouldCompleteWithin(1.Seconds());
+                var elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(1, 1.Seconds()));
                 Log.Info("Expected execution time: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed);
                 elapsed.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
                 
                 pSub.SendNext(2);
-                elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(2))
-                    .ShouldCompleteWithin(1.Seconds());
+                elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(2, 1.Seconds()));
                 Log.Info("Expected execution time: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed);
                 elapsed.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
                 
@@ -216,12 +210,9 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
                 await probe.RequestAsync(5);
-                var elapsed1 = await MeasureExecutionTime(() => probe.ExpectNextAsync(1))
-                    .ShouldCompleteWithin(1.Seconds());
-                var elapsed2 = await MeasureExecutionTime(() => probe.ExpectNextAsync(2))
-                    .ShouldCompleteWithin(1.Seconds());
-                var elapsed3 = await MeasureExecutionTime(() => probe.ExpectNextAsync(3))
-                    .ShouldCompleteWithin(1.Seconds());
+                var elapsed1 = await MeasureExecutionTime(() => probe.ExpectNextAsync(1, 1.Seconds()));
+                var elapsed2 = await MeasureExecutionTime(() => probe.ExpectNextAsync(2, 1.Seconds()));
+                var elapsed3 = await MeasureExecutionTime(() => probe.ExpectNextAsync(3, 1.Seconds()));
                 
                 Log.Info("Expected execution time 1: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed1);
                 Log.Info("Expected execution time 2: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed2);
@@ -273,8 +264,7 @@ namespace Akka.Streams.Tests.Dsl
                 await c.ExpectNoMsgAsync(300.Milliseconds());
                 pSub.SendNext(17);
                 
-                var elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(1))
-                    .ShouldCompleteWithin(1.Seconds());
+                var elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(1, 1.Seconds()));
                 Log.Info("Expected execution time: instant, actual: {0} ms", elapsed);
                 elapsed.Should().BeLessThan(Epsilon);
                 
@@ -297,8 +287,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Ignore<int>(), Materializer)
                     .PipeTo(TestActor, success: () => Done.Instance);
 
-                var elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>())
-                    .ShouldCompleteWithin(5.Seconds());
+                var elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>(5.Seconds()));
                 Log.Info("Expected execution time: 2500 ms, actual: {0} ms", elapsed);
                 elapsed.Should().BeGreaterThan(2500 - Epsilon);
 
@@ -310,8 +299,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Ignore<int>(), Materializer)
                     .PipeTo(TestActor, success: () => Done.Instance);
 
-                elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>())
-                    .ShouldCompleteWithin(5.Seconds());
+                elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>(5.Seconds()));
                 Log.Info("Expected execution time: 1000 ms, actual: {0} ms", elapsed);
                 elapsed.Should().BeLessThan(1000 + Epsilon);
 
@@ -324,8 +312,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Ignore<NotUsed>(), Materializer)
                     .PipeTo(TestActor, success: () => Done.Instance);
 
-                elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>())
-                    .ShouldCompleteWithin(5.Seconds());
+                elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>(5.Seconds()));
                 Log.Info("Expected execution time: 1000 ms, actual: {0} ms", elapsed);
                 elapsed.Should().BeGreaterThan(1000 - Epsilon);
             }, Materializer);
