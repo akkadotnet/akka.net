@@ -120,7 +120,6 @@ Please create an issue in our GitHub at [https://github.com/akkadotnet/akka.net]
 
 This typically means that one of the optional serializers built on top of Akka.Cluster is not registered on this node, but this node is still receiving messages from other nodes who are using it. [`DistributedPubSub`](xref:distributed-publish-subscribe) is the most likely culprit when this occurs.
 
-
 To fix this issue, either use [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) or manually register the serializers in your HOCON when you start your `ActorSystem`:
 
 ```csharp
