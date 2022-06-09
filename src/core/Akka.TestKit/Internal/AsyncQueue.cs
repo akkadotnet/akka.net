@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -176,90 +177,51 @@ namespace Akka.TestKit.Internal
         
         private class QueueCollection : IPeekableProducerConsumerCollection<T>
         {
-            private readonly Queue<T> _queue = new Queue<T>();
+            private readonly ConcurrentQueue<T> _queue = new ConcurrentQueue<T>();
 
             public int Count { 
                 get
                 {
-                    lock (SyncRoot)
-                    {
-                        return _queue.Count;
-                    }
+                    return _queue.Count;
                 }
             }
 
             public bool TryAdd(T item)
             {
-                lock (SyncRoot)
-                {
-                    _queue.Enqueue(item);
-                    return true;
-                }
+                _queue.Enqueue(item);
+                return true;
             }
 
             public bool TryTake(out T item)
             {
-                lock(SyncRoot)
-                {
-                    if(_queue.Count == 0)
-                    {
-                        item = null;
-                        return false;
-                    }
-
-                    item = _queue.Dequeue();
-                    return true;
-                }
+                return _queue.TryDequeue(out item);
             }
 
             public bool TryPeek(out T item)
             {
-                lock(SyncRoot)
-                {
-                    if(_queue.Count == 0)
-                    {
-                        item = null;
-                        return false;
-                    }
-
-                    item = _queue.Peek();
-                    return true;
-                }
+                return _queue.TryPeek(out item);
             }
 
             public void CopyTo(T[] array, int index)
             {
-                lock(SyncRoot)
-                {
-                    _queue.CopyTo(array, index);
-                }
+                _queue.CopyTo(array, index);
             }
 
 
             public void CopyTo(Array array, int index)
             {
-                lock(SyncRoot)
-                {
-                    ((ICollection)_queue).CopyTo(array, index);
-                }
+                ((ICollection)_queue).CopyTo(array, index);
             }
 
             public T[] ToArray()
             {
-                lock(SyncRoot)
-                {
-                    return _queue.ToArray();
-                }
+                return _queue.ToArray();
             }
 
 
             public IEnumerator<T> GetEnumerator()
             {
-                lock(SyncRoot)
-                {
-                    //We must create a copy
-                    return new List<T>(_queue).GetEnumerator();
-                }
+                return new List<T>(_queue).GetEnumerator();
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -267,9 +229,10 @@ namespace Akka.TestKit.Internal
                 return GetEnumerator();
             }
 
-            public object SyncRoot { get; } = new object();
 
             public bool IsSynchronized => true;
+
+            public object SyncRoot => new object();
         }        
     }
     
