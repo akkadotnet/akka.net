@@ -15,7 +15,7 @@ Even during hostile network conditions Akka.Cluster should not break apart into 
 
 When multiple clusters form after or during a network partition, or none form, it's for at least one of the following reasons:
 
-1. **Inconsistent [Split Brain Resolver](xref:split-brain-resolver) configuration** - check to make sure that the configuration is _indentical_ on all nodes. If it's not, then two different cluster leaders on either side of a network partition can both decide that they're the leader and down each other. This can result in multiple networks forming.
+1. **Inconsistent [Split Brain Resolver](xref:split-brain-resolver) configuration** - check to make sure that the configuration is _identical_ on all nodes. If it's not, then two different cluster leaders on either side of a network partition can both decide that they're the leader and down each other. This can result in multiple networks forming.
 2. **Inconsistent `akka.cluster.seed-node` configurations** - if you're using a static seed node strategy, all seeds should be listed in identical order on all nodes _including the seed nodes_ themselves. Otherwise, when nodes restart they are each going to join per whatever their local configuration says - and if those values vary across the cluster you'll get different behavior. Another way to fix this issue is to use [Akka.Discovery](xref:akka-discovery) and [Akka.Cluster.Bootstrap](https://github.com/akkadotnet/Akka.Management) to automatically discover seed nodes; this will eliminate the issue by dynamically discovering the same consistent set of nodes each and every time via the Akka.Discovery mechanism.
 3. **Indirectly connected nodes** - this is [a limitation of classic Akka.Remote](https://github.com/akkadotnet/akka.net/issues/4757) up until Akka.NET v1.5. Once nodes start becoming `Quarantined` in Akka.Remote they can no longer receive Akka.Cluster commands, such as `Down` and `Leave`. As a result, these nodes are unreachable but also can't be downed externally via the SBR if the cluster leader has quarantined the indirectly connected node or has been quarantined by it. The fix for this if the issue doesn't eventually resolve itself is to use [Petabridge.Cmd's `cluster down` command](https://cmd.petabridge.com/articles/commands/cluster-commands.html#cluster-down) directly on the effected node and force it to exit or to terminate the process. You an also enable `akka.cluster.split-brain-resolver.down-all-when-unstable = on` to force a cluster-wide reboot if this issue is severe.
 
@@ -75,7 +75,7 @@ akka.cluster.failure-detector {
 }
 ```
 
-Akka.Cluster's failure detector implements a [phi accrual strategy](https://medium.com/@arpitbhayani/phi-%CF%86-accrual-failure-detection-79c21ce53a7a), which means the amount of heartbeat latency it will tolerate is adaptive - determined by samples collected over the lifespan of an association between two `ActorSystem`s. However, once the system being monitored fails to respond to multiple heartbeat pings within an acceptable timeframe then the node sending the pings will mark the node that's supposed to respond to the pings as "unreachable."
+Akka.Cluster's failure detector implements a [phi accrual strategy](https://medium.com/@arpitbhayani/phi-%CF%86-accrual-failure-detection-79c21ce53a7a), which means the amount of heartbeat latency it will tolerate is adaptive - determined by samples collected over the lifespan of an association between two `ActorSystem`s. However, once the system being monitored fails to respond to multiple heartbeat pings within an acceptable time frame then the node sending the pings will mark the node that's supposed to respond to the pings as "unreachable."
 
 > ![IMPORTANT]
 > All nodes in an Akka.NET cluster are monitored for reachability by up to 9 other nodes by default. It only takes 1 of those 9 nodes to mark a node as "unreachable."
@@ -87,7 +87,7 @@ So why would a node no longer send heartbeat pings back over the network?
 1. **Crashed or terminated process** - the process or hardware hosting the `ActorSystem` is gone and the node is really down for good, in which case the unreachable node needs to be `Down`ed by the [Split Brain Resolver](xref:split-brain-resolver) and removed from the cluster.
 2. **Pegged CPU, constrained bandwidth, or saturated work queue** - the process is alive, but unable to respond due to resource constraints. These resource constraints might be relieved in short order though, so a node that is temporarily unreachable might become reachable again in short order.
 3. **Suspended or paused processes** - a process might be throttled by the Kubernetes control plane, a hypervisor, the OS, or possibly paused due to a runtime issue like garbage collection. These processes might become reachable again if they aren't paused for too long.
-4. **Network distruptions** - if a virtual or physical network device malfunctions, causing TCP connections to drop, that will cause effected nodes to automatically mark each other as unreachable until they're able to re-establish connectivity again.
+4. **Network disruptions** - if a virtual or physical network device malfunctions, causing TCP connections to drop, that will cause effected nodes to automatically mark each other as unreachable until they're able to re-establish connectivity again.
 
 ### Decreasing Frequency of Unreachable Nodes
 
