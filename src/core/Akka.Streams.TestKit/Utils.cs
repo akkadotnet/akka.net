@@ -8,12 +8,15 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Implementation;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.TestKit
 {
@@ -22,32 +25,52 @@ namespace Akka.Streams.TestKit
         public static Config UnboundedMailboxConfig { get; } =
             ConfigurationFactory.ParseString(@"akka.actor.default-mailbox.mailbox-type = ""Akka.Dispatch.UnboundedMailbox, Akka""");
 
-        public static void AssertAllStagesStopped(this AkkaSpec spec, Action block, IMaterializer materializer)
+        public static void AssertAllStagesStopped(
+            this AkkaSpec spec,
+            Action block,
+            IMaterializer materializer,
+            TimeSpan? timeout = null,
+            CancellationToken cancellationToken = default)
             => AssertAllStagesStoppedAsync(spec, () =>
                 {
                     block();
                     return NotUsed.Instance;
-                }, materializer)
+                }, materializer, timeout, cancellationToken)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
 
-        public static T AssertAllStagesStopped<T>(this AkkaSpec spec, Func<T> block, IMaterializer materializer)
-            => AssertAllStagesStoppedAsync(spec, () => Task.FromResult(block()), materializer)
+        public static T AssertAllStagesStopped<T>(
+            this AkkaSpec spec,
+            Func<T> block,
+            IMaterializer materializer,
+            TimeSpan? timeout = null,
+            CancellationToken cancellationToken = default)
+            => AssertAllStagesStoppedAsync(spec, async () => block(), materializer, timeout, cancellationToken)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
 
-        public static async Task<T> AssertAllStagesStoppedAsync<T>(this AkkaSpec spec, Func<T> block,
-            IMaterializer materializer)
-            => await AssertAllStagesStoppedAsync(spec, () => Task.FromResult(block()), materializer)
+        public static async Task<T> AssertAllStagesStoppedAsync<T>(
+            this AkkaSpec spec,
+            Func<T> block,
+            IMaterializer materializer,
+            TimeSpan? timeout = null,
+            CancellationToken cancellationToken = default)
+            => await AssertAllStagesStoppedAsync(spec, () => Task.FromResult(block()), materializer, timeout, cancellationToken)
                 .ConfigureAwait(false);
         
-        public static async Task<T> AssertAllStagesStoppedAsync<T>(this AkkaSpec spec, Func<Task<T>> block, IMaterializer materializer)
+        public static async Task<T> AssertAllStagesStoppedAsync<T>(
+            this AkkaSpec spec,
+            Func<Task<T>> block, 
+            IMaterializer materializer,
+            TimeSpan? timeout = null,
+            CancellationToken cancellationToken = default)
         {
-            var result = await block();
+            timeout ??= 20.Seconds();
+            var result = await block().ShouldCompleteWithin(timeout.Value);
             if (!(materializer is ActorMaterializerImpl impl))
                 return result;
 
             var probe = spec.CreateTestProbe(impl.System);
             probe.Send(impl.Supervisor, StreamSupervisor.StopChildren.Instance);
-            await probe.ExpectMsgAsync<StreamSupervisor.StoppedChildren>();
+            await probe.ExpectMsgAsync<StreamSupervisor.StoppedChildren>(cancellationToken: cancellationToken);
 
             await probe.WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
@@ -57,17 +80,17 @@ namespace Akka.Streams.TestKit
                     await probe.AwaitAssertAsync(async () =>
                     {
                         impl.Supervisor.Tell(StreamSupervisor.GetChildren.Instance, probe.Ref);
-                        children = (await probe.ExpectMsgAsync<StreamSupervisor.Children>()).Refs;
+                        children = (await probe.ExpectMsgAsync<StreamSupervisor.Children>(cancellationToken: cancellationToken)).Refs;
                         if (children.Count != 0)
                             throw new Exception($"expected no StreamSupervisor children, but got {children.Aggregate("", (s, @ref) => s + @ref + ", ")}");
-                    });
+                    }, cancellationToken: cancellationToken);
                 }
                 catch 
                 {
                     children.ForEach(c=>c.Tell(StreamSupervisor.PrintDebugDump.Instance));
                     throw;
                 }
-            });
+            }, cancellationToken: cancellationToken);
 
             return result;
         }
