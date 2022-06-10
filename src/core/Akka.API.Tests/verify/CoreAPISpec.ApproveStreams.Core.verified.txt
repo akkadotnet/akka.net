@@ -2116,6 +2116,10 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T3, TMat> ZipWith<T1, T2, T3, TMat>(this Akka.Streams.Dsl.Source<T1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<T2>, TMat> other, System.Func<T1, T2, T3> combine) { }
         public static Akka.Streams.Dsl.Source<System.ValueTuple<TOut1, long>, TMat> ZipWithIndex<TOut1, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow) { }
     }
+    public class static SourceWithContext
+    {
+        public static Akka.Streams.Dsl.SourceWithContext<TOut, TCtxOut, TMat> FromTuples<TOut, TCtxOut, TMat>(Akka.Streams.Dsl.Source<System.ValueTuple<TOut, TCtxOut>, TMat> source) { }
+    }
     public class static SourceWithContextOperations
     {
         public static Akka.Streams.Dsl.SourceWithContext<TOut2, TCtx, TMat> Collect<TOut, TCtx, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> flow, System.Func<TOut, TOut2> fn)
