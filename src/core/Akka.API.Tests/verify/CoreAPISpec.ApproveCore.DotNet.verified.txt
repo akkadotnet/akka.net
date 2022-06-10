@@ -3647,12 +3647,11 @@ namespace Akka.IO
         }
         public class ResumeReading : Akka.IO.Tcp.Command
         {
-            public static Akka.IO.Tcp.ResumeReading Instance;
+            public static readonly Akka.IO.Tcp.ResumeReading Instance;
         }
         public class ResumeWriting : Akka.IO.Tcp.Command
         {
             public static readonly Akka.IO.Tcp.ResumeWriting Instance;
-            public ResumeWriting() { }
         }
         public abstract class SimpleWriteCommand : Akka.IO.Tcp.WriteCommand
         {
@@ -3663,7 +3662,7 @@ namespace Akka.IO
         }
         public class SuspendReading : Akka.IO.Tcp.Command
         {
-            public static Akka.IO.Tcp.SuspendReading Instance;
+            public static readonly Akka.IO.Tcp.SuspendReading Instance;
         }
         public class Unbind : Akka.IO.Tcp.Command
         {
@@ -3671,8 +3670,7 @@ namespace Akka.IO
         }
         public class Unbound : Akka.IO.Tcp.Event
         {
-            public static Akka.IO.Tcp.Unbound Instance;
-            public Unbound() { }
+            public static readonly Akka.IO.Tcp.Unbound Instance;
         }
         public class Write : Akka.IO.Tcp.SimpleWriteCommand
         {
@@ -3693,8 +3691,7 @@ namespace Akka.IO
         }
         public class WritingResumed : Akka.IO.Tcp.Event
         {
-            public static Akka.IO.Tcp.WritingResumed Instance;
-            public WritingResumed() { }
+            public static readonly Akka.IO.Tcp.WritingResumed Instance;
         }
     }
     public sealed class TcpExt : Akka.IO.IOExtension
