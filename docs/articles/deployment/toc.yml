@@ -8,3 +8,5 @@
   href: headless-service.md
 - name: Azure Cloud Service (Deprecated)
   href: azure-cloud-service.md
+- name: Troubleshooting Akka.Cluster
+  href: akkacluster-troubleshooting.md
