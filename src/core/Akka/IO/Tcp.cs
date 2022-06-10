@@ -667,6 +667,10 @@ namespace Akka.IO
             /// TBD
             /// </summary>
             public static readonly ResumeWriting Instance = new ResumeWriting();
+
+            private ResumeWriting()
+            {
+            }
         }
 
         /// <summary>
@@ -679,7 +683,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static SuspendReading Instance = new SuspendReading();
+            public static readonly SuspendReading Instance = new SuspendReading();
 
             private SuspendReading()
             {
@@ -695,7 +699,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static ResumeReading Instance = new ResumeReading();
+            public static readonly ResumeReading Instance = new ResumeReading();
 
             private ResumeReading()
             {
@@ -830,7 +834,11 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static WritingResumed Instance = new WritingResumed();
+            public static readonly WritingResumed Instance = new WritingResumed();
+
+            private WritingResumed()
+            {
+            }
         }
 
         /// <summary>
@@ -867,7 +875,11 @@ namespace Akka.IO
             /// <summary>
             /// Singleton instance
             /// </summary>
-            public static Unbound Instance = new Unbound();
+            public static readonly Unbound Instance = new Unbound();
+
+            private Unbound()
+            {
+            }
         }
 
         /// <summary>

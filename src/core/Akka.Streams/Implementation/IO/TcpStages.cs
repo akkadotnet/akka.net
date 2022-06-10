@@ -126,55 +126,55 @@ namespace Akka.Streams.Implementation.IO
             {
                 var sender = args.Item1;
                 var msg = args.Item2;
-                if (msg is Tcp.Bound)
+                switch (msg)
                 {
-                    var bound = (Tcp.Bound)msg;
-                    _listener = sender;
-                    StageActor.Watch(_listener);
+                    case Tcp.Bound bound:
+                        _listener = sender;
+                        StageActor.Watch(_listener);
 
-                    if (IsAvailable(_stage._out))
-                        _listener.Tell(new Tcp.ResumeAccepting(1), StageActor.Ref);
+                        if (IsAvailable(_stage._out))
+                            _listener.Tell(new Tcp.ResumeAccepting(1), StageActor.Ref);
 
-                    var thisStage = StageActor.Ref;
-                    var binding = new StreamTcp.ServerBinding(bound.LocalAddress, () =>
-                    {
-                        // To allow unbind() to be invoked multiple times with minimal chance of dead letters, we check if
-                        // it's already unbound before sending the message.
-                        if (!_unbindPromise.Task.IsCompleted)
+                        var thisStage = StageActor.Ref;
+                        var binding = new StreamTcp.ServerBinding(bound.LocalAddress, () =>
                         {
-                            // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
-                            thisStage.Tell(Tcp.Unbind.Instance, thisStage);
-                        }
-                        return _unbindPromise.Task;
-                    });
+                            // To allow unbind() to be invoked multiple times with minimal chance of dead letters, we check if
+                            // it's already unbound before sending the message.
+                            if (!_unbindPromise.Task.IsCompleted)
+                            {
+                                // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
+                                thisStage.Tell(Tcp.Unbind.Instance, thisStage);
+                            }
+                            return _unbindPromise.Task;
+                        });
 
-                    _bindingPromise.NonBlockingTrySetResult(binding);
-                }
-                else if (msg is Tcp.CommandFailed)
-                {
-                    var ex = BindFailedException.Instance;
-                    _bindingPromise.NonBlockingTrySetException(ex);
-                    _unbindPromise.TrySetResult(NotUsed.Instance);
-                    FailStage(ex);
-                }
-                else if (msg is Tcp.Connected)
-                {
-                    var connected = (Tcp.Connected)msg;
-                    Push(_stage._out, ConnectionFor(connected, sender));
-                }
-                else if (msg is Tcp.Unbind)
-                {
-                    if (!IsClosed(_stage._out) && !ReferenceEquals(_listener, null))
-                        TryUnbind();
-                }
-                else if (msg is Tcp.Unbound)
-                {
-                    UnbindCompleted();
-                }
-                else if (msg is Terminated)
-                {
-                    if (_unbindStarted) UnbindCompleted();
-                    else FailStage(new IllegalStateException("IO Listener actor terminated unexpectedly"));
+                        _bindingPromise.NonBlockingTrySetResult(binding);
+                        break;
+                    
+                    case Tcp.CommandFailed _:
+                        var ex = BindFailedException.Instance;
+                        _bindingPromise.NonBlockingTrySetException(ex);
+                        _unbindPromise.TrySetResult(NotUsed.Instance);
+                        FailStage(ex);
+                        break;
+                    
+                    case Tcp.Connected connected:
+                        Push(_stage._out, ConnectionFor(connected, sender));
+                        break;
+                    
+                    case Tcp.Unbind _:
+                        if (!(_unbindStarted || IsClosed(_stage._out) || ReferenceEquals(_listener, null)))
+                            TryUnbind();
+                        break;
+                    
+                    case Tcp.Unbound _:
+                    case Terminated _ when _unbindStarted:
+                        UnbindCompleted();
+                        break;
+                    
+                    case Terminated _:
+                        FailStage(new IllegalStateException("IO Listener actor terminated unexpectedly"));
+                        break;
                 }
             }
 
