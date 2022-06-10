@@ -75,6 +75,19 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void SourceWithContext_must_get_created_from_a_source_of_tuple2()
+        {
+            var msg = new Message("a", 1L);
+
+            SourceWithContext.FromTuples(Source.From(new[] { (msg, msg.Offset) }))
+                .AsSource()
+                .RunWith(this.SinkProbe<(Message, long)>(), Materializer)
+                .Request(1)
+                .ExpectNext((msg, 1L))
+                .ExpectComplete();
+        }
+
+        [Fact]
         public void SourceWithContext_must_be_able_to_get_turned_back_into_a_normal_source()
         {
             var msg = new Message("a", 1);
