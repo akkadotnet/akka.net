@@ -272,6 +272,14 @@ namespace Akka.Streams.TestKit
                 => await ExpectSubscriptionAndErrorTask(this, signalDemand, cancellationToken)
                     .ConfigureAwait(false);
 
+            public async Task ExpectSubscriptionAndCompleteAsync(
+                bool signalDemand = true,
+                CancellationToken cancellationToken = default)
+            {
+                await ExpectSubscriptionAndCompleteTask(this, signalDemand, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            
             /// <summary>
             /// Expect given next element or error signal, returning whichever was signaled.
             /// </summary>
