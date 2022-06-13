@@ -66,7 +66,7 @@ namespace Akka.Persistence.TCK.Query
             probe.Cancel();
         }
 
-        [Fact(Skip = "Skipped for async_testkit conversion build")]
+        [Fact]
         public virtual void ReadJournal_live_query_EventsByTag_should_find_events_from_offset_exclusive()
         {
             var queries = ReadJournal as IEventsByTagQuery;
