@@ -207,17 +207,12 @@ namespace Akka.Cluster.Sharding.Tests
             var err = ExpectMsg<Error>();
             err.Cause.Should().BeOfType<ActorInitializationException>();
 
-            await Task.Delay(100);
-            persistentShard.Tell(Shard.GetCurrentShardState.Instance);
-            var state = ExpectMsg<Shard.CurrentShardState>();
-            state.EntityIds.Count.Should().Be(0);
-
             // entity should be restarted when it received this message
             persistentShard.Tell(new ShardSpec.EntityEnvelope(1, "Restarted"));
             ExpectMsg("ack Restarted");
             
             persistentShard.Tell(Shard.GetCurrentShardState.Instance);
-            state = ExpectMsg<Shard.CurrentShardState>();
+            var state = ExpectMsg<Shard.CurrentShardState>();
             state.EntityIds.Count.Should().Be(1);
             state.EntityIds.First().Should().Be("1");
         }
