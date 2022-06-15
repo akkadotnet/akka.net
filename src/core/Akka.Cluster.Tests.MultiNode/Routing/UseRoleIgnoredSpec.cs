@@ -13,11 +13,11 @@ using Akka.Cluster.Routing;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Routing;
 using FluentAssertions;
 using FluentAssertions.Extensions;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode.Routing
 {
