@@ -164,6 +164,96 @@ namespace Akka.Cluster.Sharding
             LeastShardAllocationAbsoluteLimit = leastShardAllocationAbsoluteLimit;
             LeastShardAllocationRelativeLimit = leastShardAllocationRelativeLimit;
         }
+
+        public TuningParameters WithCoordinatorFailureBackoff(TimeSpan coordinatorFailureBackoff) 
+            => Copy(coordinatorFailureBackoff: coordinatorFailureBackoff); 
+        public TuningParameters WithRetryInterval(TimeSpan retryInterval) 
+            => Copy(retryInterval: retryInterval); 
+        public TuningParameters WithBufferSize(int bufferSize) 
+            => Copy(bufferSize: bufferSize); 
+        public TuningParameters WithHandOffTimeout(TimeSpan handOffTimeout) 
+            => Copy(handOffTimeout: handOffTimeout); 
+        public TuningParameters WithShardStartTimeout(TimeSpan shardStartTimeout)
+            => Copy(shardStartTimeout: shardStartTimeout); 
+        public TuningParameters WithShardFailureBackoff(TimeSpan shardFailureBackoff) 
+            => Copy(shardFailureBackoff: shardFailureBackoff); 
+        public TuningParameters WithEntityRestartBackoff(TimeSpan entityRestartBackoff) 
+            => Copy(entityRestartBackoff: entityRestartBackoff); 
+        public TuningParameters WithRebalanceInterval(TimeSpan rebalanceInterval) 
+            => Copy(rebalanceInterval: rebalanceInterval); 
+        public TuningParameters WithSnapshotAfter(int snapshotAfter) 
+            => Copy(snapshotAfter: snapshotAfter); 
+        public TuningParameters WithKeepNrOfBatches(int keepNrOfBatches) 
+            => Copy(keepNrOfBatches: keepNrOfBatches); 
+        public TuningParameters WithLeastShardAllocationRebalanceThreshold(int leastShardAllocationRebalanceThreshold)
+            => Copy(leastShardAllocationRebalanceThreshold: leastShardAllocationRebalanceThreshold); 
+        public TuningParameters WithLeastShardAllocationMaxSimultaneousRebalance(int leastShardAllocationMaxSimultaneousRebalance) 
+            => Copy(leastShardAllocationMaxSimultaneousRebalance: leastShardAllocationMaxSimultaneousRebalance); 
+        public TuningParameters WithWaitingForStateTimeout(TimeSpan waitingForStateTimeout) 
+            => Copy(waitingForStateTimeout: waitingForStateTimeout); 
+        public TuningParameters WithUpdatingStateTimeout(TimeSpan updatingStateTimeout) 
+            => Copy(updatingStateTimeout: updatingStateTimeout); 
+        public TuningParameters WithEntityRecoveryStrategy(string entityRecoveryStrategy)
+            => Copy(entityRecoveryStrategy: entityRecoveryStrategy); 
+        public TuningParameters WithEntityRecoveryConstantRateStrategyFrequency(TimeSpan entityRecoveryConstantRateStrategyFrequency) 
+            => Copy(entityRecoveryConstantRateStrategyFrequency: entityRecoveryConstantRateStrategyFrequency); 
+        public TuningParameters WithEntityRecoveryConstantRateStrategyNumberOfEntities(int entityRecoveryConstantRateStrategyNumberOfEntities) 
+            => Copy(entityRecoveryConstantRateStrategyNumberOfEntities: entityRecoveryConstantRateStrategyNumberOfEntities); 
+        public TuningParameters WithCoordinatorStateWriteMajorityPlus(int coordinatorStateWriteMajorityPlus) 
+            => Copy(coordinatorStateWriteMajorityPlus: coordinatorStateWriteMajorityPlus); 
+        public TuningParameters WithCoordinatorStateReadMajorityPlus(int coordinatorStateReadMajorityPlus) 
+            => Copy(coordinatorStateReadMajorityPlus: coordinatorStateReadMajorityPlus); 
+        public TuningParameters WithLeastShardAllocationAbsoluteLimit(int leastShardAllocationAbsoluteLimit) 
+            => Copy(leastShardAllocationAbsoluteLimit: leastShardAllocationAbsoluteLimit); 
+        public TuningParameters WithLeastShardAllocationRelativeLimit(double leastShardAllocationRelativeLimit) 
+            => Copy(leastShardAllocationRelativeLimit: leastShardAllocationRelativeLimit); 
+        
+        private TuningParameters Copy(
+            TimeSpan? coordinatorFailureBackoff = null,
+            TimeSpan? retryInterval = null,
+            int? bufferSize = null,
+            TimeSpan? handOffTimeout = null,
+            TimeSpan? shardStartTimeout = null,
+            TimeSpan? shardFailureBackoff = null,
+            TimeSpan? entityRestartBackoff = null,
+            TimeSpan? rebalanceInterval = null,
+            int? snapshotAfter = null,
+            int? keepNrOfBatches = null,
+            int? leastShardAllocationRebalanceThreshold = null,
+            int? leastShardAllocationMaxSimultaneousRebalance = null,
+            TimeSpan? waitingForStateTimeout = null,
+            TimeSpan? updatingStateTimeout = null,
+            string entityRecoveryStrategy = null,
+            TimeSpan? entityRecoveryConstantRateStrategyFrequency = null,
+            int? entityRecoveryConstantRateStrategyNumberOfEntities = null,
+            int? coordinatorStateWriteMajorityPlus = null,
+            int? coordinatorStateReadMajorityPlus = null,
+            int? leastShardAllocationAbsoluteLimit = null,
+            double? leastShardAllocationRelativeLimit = null)
+            => new TuningParameters(
+                coordinatorFailureBackoff: coordinatorFailureBackoff ?? CoordinatorFailureBackoff,
+                retryInterval: retryInterval ?? RetryInterval,
+                bufferSize: bufferSize ?? BufferSize,
+                handOffTimeout: handOffTimeout ?? HandOffTimeout,
+                shardStartTimeout: shardStartTimeout ?? ShardStartTimeout,
+                shardFailureBackoff: shardFailureBackoff ?? ShardFailureBackoff,
+                entityRestartBackoff: entityRestartBackoff ?? EntityRestartBackoff,
+                rebalanceInterval: rebalanceInterval ?? RebalanceInterval,
+                snapshotAfter: snapshotAfter ?? SnapshotAfter,
+                keepNrOfBatches: keepNrOfBatches ?? KeepNrOfBatches,
+                leastShardAllocationRebalanceThreshold: leastShardAllocationRebalanceThreshold ?? LeastShardAllocationRebalanceThreshold,
+                leastShardAllocationMaxSimultaneousRebalance: leastShardAllocationMaxSimultaneousRebalance ?? LeastShardAllocationMaxSimultaneousRebalance,
+                waitingForStateTimeout: waitingForStateTimeout ?? WaitingForStateTimeout,
+                updatingStateTimeout: updatingStateTimeout ?? UpdatingStateTimeout,
+                entityRecoveryStrategy: entityRecoveryStrategy ?? EntityRecoveryStrategy,
+                entityRecoveryConstantRateStrategyFrequency: entityRecoveryConstantRateStrategyFrequency ?? EntityRecoveryConstantRateStrategyFrequency,
+                entityRecoveryConstantRateStrategyNumberOfEntities:
+                entityRecoveryConstantRateStrategyNumberOfEntities ?? EntityRecoveryConstantRateStrategyNumberOfEntities,
+                coordinatorStateWriteMajorityPlus: coordinatorStateWriteMajorityPlus ?? CoordinatorStateWriteMajorityPlus,
+                coordinatorStateReadMajorityPlus: coordinatorStateReadMajorityPlus ?? CoordinatorStateReadMajorityPlus,
+                leastShardAllocationAbsoluteLimit: leastShardAllocationAbsoluteLimit ?? LeastShardAllocationAbsoluteLimit,
+                leastShardAllocationRelativeLimit: leastShardAllocationRelativeLimit ?? LeastShardAllocationRelativeLimit
+            );
     }
 
     public enum StateStoreMode
