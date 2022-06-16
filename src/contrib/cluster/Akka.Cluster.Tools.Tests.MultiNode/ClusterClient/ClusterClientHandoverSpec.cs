@@ -16,10 +16,10 @@ using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 {

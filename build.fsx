@@ -464,77 +464,6 @@ Target "CreateNuget" (fun _ ->
         projects |> Seq.iter (runSingleProject)
 )
 
-Target "PublishMntr" (fun _ ->
-    if not skipBuild.Value then
-        let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
-
-        // Windows .NET 4.5.2
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Restore
-                (fun p ->
-                    { p with
-                        Project = project
-                        AdditionalArgs = ["-r win10-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
-        )
-
-        // Windows .NET 4.5.2
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Publish
-                (fun p ->
-                    { p with
-                        Project = project
-                        Configuration = configuration
-                        Runtime = "win10-x64"
-                        Framework = testNetFrameworkVersion
-                        VersionSuffix = versionSuffix }))
-
-        // Windows .NET 5
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Publish
-                (fun p ->
-                    { p with
-                        Project = project
-                        Configuration = configuration
-                        Runtime = "win10-x64"
-                        Framework = testNetVersion
-                        VersionSuffix = versionSuffix }))
-
-        // Windows .NET Core
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Publish
-                (fun p ->
-                    { p with
-                        Project = project
-                        Configuration = configuration
-                        Runtime = "win10-x64"
-                        Framework = testNetCoreVersion
-                        VersionSuffix = versionSuffix }))
-)
-
-Target "CreateMntrNuget" (fun _ ->
-    if not skipBuild.Value then
-        // uses the template file to create a temporary .nuspec file with the correct version
-        CopyFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec.template"
-        let commonPropsVersionPrefix = XMLRead true "./src/common.props" "" "" "//Project/PropertyGroup/VersionPrefix" |> Seq.head
-        let versionReplacement = List.ofSeq [ "@version@", commonPropsVersionPrefix + (if (not (versionSuffix = "")) then ("-" + versionSuffix) else "") ]
-        TemplateHelper.processTemplates versionReplacement [ "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" ]
-
-        let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
-
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Pack
-                (fun p ->
-                    { p with
-                        Project = project
-                        Configuration = configuration
-                        AdditionalArgs = ["--include-symbols"]
-                        VersionSuffix = versionSuffix
-                        OutputPath = "\"" + outputNuGet + "\"" } )
-        )
-
-        DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
-)
-
 Target "PublishNuget" (fun _ ->
     let nugetExe = FullName @"./tools/nuget.exe"
     let rec publishPackage url apiKey trialsLeft packageFile =
@@ -716,7 +645,7 @@ Target "RunTestsNetCoreFull" DoNothing
 
 // build dependencies
 "Clean" ==> "AssemblyInfo" ==> "Build"
-"Build" ==> "PublishMntr" ==> "BuildRelease"
+"Build" ==> "BuildRelease"
 "ComputeIncrementalChanges" ==> "Build" // compute incremental changes
 
 // tests dependencies
@@ -729,7 +658,7 @@ Target "RunTestsNetCoreFull" DoNothing
 "BuildRelease" ==> "MultiNodeTestsNet"
 
 // nuget dependencies
-"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
+"BuildRelease" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
 "BuildRelease" ==> "Docfx"
