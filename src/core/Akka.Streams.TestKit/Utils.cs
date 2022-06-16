@@ -31,7 +31,7 @@ namespace Akka.Streams.TestKit
             IMaterializer materializer,
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
-            => AssertAllStagesStoppedAsync(spec, () =>
+            => AssertAllStagesStoppedAsync(spec, async () =>
                 {
                     block();
                     return NotUsed.Instance;
@@ -47,13 +47,17 @@ namespace Akka.Streams.TestKit
             => AssertAllStagesStoppedAsync(spec, async () => block(), materializer, timeout, cancellationToken)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
 
-        public static async Task<T> AssertAllStagesStoppedAsync<T>(
+        public static async Task AssertAllStagesStoppedAsync(
             this AkkaSpec spec,
-            Func<T> block,
+            Func<Task> block,
             IMaterializer materializer,
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
-            => await AssertAllStagesStoppedAsync(spec, () => Task.FromResult(block()), materializer, timeout, cancellationToken)
+            => await AssertAllStagesStoppedAsync(spec, async () =>
+                {
+                    await block();
+                    return NotUsed.Instance;
+                }, materializer, timeout, cancellationToken)
                 .ConfigureAwait(false);
         
         public static async Task<T> AssertAllStagesStoppedAsync<T>(

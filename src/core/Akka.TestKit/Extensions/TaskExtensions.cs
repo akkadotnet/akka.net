@@ -25,6 +25,7 @@ namespace Akka.TestKit.Extensions
                             ExceptionDispatchInfo.Capture(flattened.InnerExceptions[0]).Throw();
                         else
                             ExceptionDispatchInfo.Capture(returnedTask.Exception).Throw();
+                        return false;
                     }
                     
                     return parentTask.IsCompleted;
