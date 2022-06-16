@@ -22,10 +22,10 @@ using Akka.Remote.TestKit;
 using Akka.Routing;
 using FluentAssertions;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using FluentAssertions.Extensions;
 using Address = Akka.Actor.Address;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Metrics.Tests.MultiNode
 {

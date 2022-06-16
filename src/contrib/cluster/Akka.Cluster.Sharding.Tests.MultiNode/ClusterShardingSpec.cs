@@ -13,6 +13,7 @@ using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.DistributedData;
+using Akka.MultiNode.TestAdapter;
 using Akka.Pattern;
 using Akka.Persistence;
 using Akka.Remote.TestKit;
@@ -22,7 +23,6 @@ using Akka.TestKit.TestEvent;
 using Akka.Util;
 using FluentAssertions;
 using static Akka.Cluster.Sharding.ShardCoordinator;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Sharding.Tests
 {

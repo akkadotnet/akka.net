@@ -17,6 +17,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
@@ -28,7 +29,6 @@ using Akka.Util;
 using FluentAssertions;
 using Google.Protobuf.WellKnownTypes;
 using Environment = System.Environment;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {
