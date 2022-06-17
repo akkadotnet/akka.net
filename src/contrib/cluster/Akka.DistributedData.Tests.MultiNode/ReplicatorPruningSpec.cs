@@ -10,11 +10,11 @@ using Akka.Actor;
 using Akka.Cluster;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.DistributedData.Tests.MultiNode
 {

@@ -11,7 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Remote.TestKit;
 using Akka.Configuration;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
+using Akka.MultiNode.TestAdapter;
 
 namespace Akka.Remote.Tests.MultiNode
 {
