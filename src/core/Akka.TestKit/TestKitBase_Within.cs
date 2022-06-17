@@ -38,10 +38,10 @@ namespace Akka.TestKit
             WithinAsync(
                     min: TimeSpan.Zero,
                     max: max,
-                    function: () =>
+                    function: async () =>
                     {
                         action();
-                        return Task.FromResult((object)null);
+                        return NotUsed.Instance;
                     },
                     hint: null,
                     epsilonValue: epsilonValue,
@@ -65,7 +65,7 @@ namespace Akka.TestKit
                 function: async () =>
                 {
                     await actionAsync().ConfigureAwait(false);
-                    return Task.FromResult((object)null);
+                    return NotUsed.Instance;
                 },
                 hint: null,
                 epsilonValue: epsilonValue,
@@ -97,10 +97,10 @@ namespace Akka.TestKit
             WithinAsync(
                     min: min, 
                     max: max, 
-                    function: () =>
+                    function: async () =>
                     {
                         action();
-                        return Task.FromResult((object)null);
+                        return NotUsed.Instance;
                     }, 
                     hint: hint, 
                     epsilonValue: epsilonValue, 
@@ -156,7 +156,7 @@ namespace Akka.TestKit
             return WithinAsync(
                     min: TimeSpan.Zero,
                     max: max,
-                    function: () => Task.FromResult(function()),
+                    function: async () => function(),
                     hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
@@ -218,7 +218,7 @@ namespace Akka.TestKit
             return WithinAsync(
                     min: min,
                     max: max,
-                    function: () => Task.FromResult(function()),
+                    function: async () => function(),
                     hint: hint,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)

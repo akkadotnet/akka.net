@@ -166,7 +166,7 @@ namespace Akka.Remote.Tests.Transport
 
             reader.Tell(TestAssociate(33), TestActor);
 
-            await AwaitConditionAsync(() => collaborators.FailureDetector.IsMonitoring, DefaultTimeout);
+            await AwaitConditionAsync(async () => collaborators.FailureDetector.IsMonitoring, DefaultTimeout);
 
             var wrappedHandle = await ExpectMsgOfAsync(DefaultTimeout, "expected InboundAssociation", o =>
             {
@@ -183,7 +183,7 @@ namespace Akka.Remote.Tests.Transport
             Assert.True(collaborators.FailureDetector.IsMonitoring);
 
             // Heartbeat was sent in response to Associate
-            await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
+            await AwaitConditionAsync(async () => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
 
             reader.Tell(_testPayload, TestActor);
             await ExpectMsgAsync<InboundPayload>(inbound =>
@@ -211,7 +211,7 @@ namespace Akka.Remote.Tests.Transport
             //this associate will now be ignored
             reader.Tell(TestAssociate(33), TestActor);
 
-            await AwaitConditionAsync(() =>
+            await AwaitConditionAsync(async () =>
             {
                 var snapshots = collaborators.Registry.LogSnapshot();
                 return snapshots.Any(x => x is DisassociateAttempt);
@@ -234,12 +234,12 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(async () => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
             
-            await AwaitConditionAsync(() => collaborators.FailureDetector.IsMonitoring, DefaultTimeout);
+            await AwaitConditionAsync(async () => collaborators.FailureDetector.IsMonitoring, DefaultTimeout);
 
             //keeps sending heartbeats
-            await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
+            await AwaitConditionAsync(async () => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
 
             Assert.False(statusPromise.Task.IsCompleted);
 
@@ -275,7 +275,7 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(async () => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
 
             reader.Tell(TestAssociate(33), TestActor);
 
@@ -323,7 +323,7 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(async () => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
 
             reader.Tell(TestAssociate(33), TestActor);
 
@@ -371,7 +371,7 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(async () => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
 
             stateActor.Tell(TestAssociate(33), TestActor);
 
@@ -391,7 +391,7 @@ namespace Akka.Remote.Tests.Transport
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
             //wait for one heartbeat
-            await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
+            await AwaitConditionAsync(async () => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
 
             collaborators.FailureDetector.SetAvailable(false);
 
@@ -422,7 +422,7 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(async () => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
 
             stateActor.Tell(TestAssociate(33), TestActor);
 

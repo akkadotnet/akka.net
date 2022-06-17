@@ -143,10 +143,10 @@ namespace Akka.Cluster.Sharding.Tests
             err.Cause.Should().BeOfType<ActorInitializationException>();
 
             // Need to wait for the internal state to reset, else everything we sent will go to dead letter
-            await AwaitConditionAsync(() =>
+            await AwaitConditionAsync(async () =>
             {
                 persistentShard.Tell(Shard.GetCurrentShardState.Instance);
-                var failedState = ExpectMsg<Shard.CurrentShardState>();
+                var failedState = await ExpectMsgAsync<Shard.CurrentShardState>();
                 return failedState.EntityIds.Count == 0;
             });
 

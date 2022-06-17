@@ -94,7 +94,7 @@ namespace Akka.Remote.Tests.Transport
             (await transportA.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
             (await transportB.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
-            await AwaitConditionAsync(() => registry.TransportsReady(_addressATest, _addressBTest));
+            await AwaitConditionAsync(async () => registry.TransportsReady(_addressATest, _addressBTest));
 
             // task is not awaited deliberately
             var task = transportA.Associate(_addressB);
@@ -107,7 +107,7 @@ namespace Akka.Remote.Tests.Transport
             });
 
             Assert.Contains(registry.LogSnapshot().OfType<AssociateAttempt>(), x => x.LocalAddress == _addressATest && x.RemoteAddress == _addressBTest);
-            await AwaitConditionAsync(() => registry.ExistsAssociation(_addressATest, _addressBTest));
+            await AwaitConditionAsync(async () => registry.ExistsAssociation(_addressATest, _addressBTest));
         }
 
         [Fact]
@@ -117,7 +117,7 @@ namespace Akka.Remote.Tests.Transport
             var transportA = NewTransportA(registry);
 
             (await transportA.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
-            await AwaitConditionAsync(() => registry.TransportsReady(_addressATest));
+            await AwaitConditionAsync(async () => registry.TransportsReady(_addressATest));
 
             // Transport throws InvalidAssociationException when trying to associate with non-existing system
             await Assert.ThrowsAsync<InvalidAssociationException>(async () =>
@@ -135,7 +135,7 @@ namespace Akka.Remote.Tests.Transport
             (await transportA.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
             (await transportB.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
-            await AwaitConditionAsync(() => registry.TransportsReady(_addressATest, _addressBTest));
+            await AwaitConditionAsync(async () => registry.TransportsReady(_addressATest, _addressBTest));
 
             var associate = transportA.Associate(_addressB);
             var handleB = await ExpectMsgOfAsync(DefaultTimeout, "Expect InboundAssociation from A", o =>
@@ -155,7 +155,7 @@ namespace Akka.Remote.Tests.Transport
             var payload = ByteString.CopyFromUtf8("PDU");
             var pdu = _withAkkaProtocol ? new AkkaPduProtobuffCodec(Sys).ConstructPayload(payload) : payload;
             
-            await AwaitConditionAsync(() => registry.ExistsAssociation(_addressATest, _addressBTest));
+            await AwaitConditionAsync(async () => registry.ExistsAssociation(_addressATest, _addressBTest));
 
             handleA.Write(payload);
             await ExpectMsgOfAsync(DefaultTimeout, "Expect InboundPayload from A", o =>
@@ -179,7 +179,7 @@ namespace Akka.Remote.Tests.Transport
             (await transportA.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
             (await transportB.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
-            await AwaitConditionAsync(() => registry.TransportsReady(_addressATest, _addressBTest));
+            await AwaitConditionAsync(async () => registry.TransportsReady(_addressATest, _addressBTest));
 
             var associate = transportA.Associate(_addressB);
             var handleB = await ExpectMsgOfAsync(DefaultTimeout, "Expect InboundAssociation from A", o =>
@@ -196,15 +196,15 @@ namespace Akka.Remote.Tests.Transport
             handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
             handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
-            await AwaitConditionAsync(() => registry.ExistsAssociation(_addressATest, _addressBTest));
+            await AwaitConditionAsync(async () => registry.ExistsAssociation(_addressATest, _addressBTest));
 
             handleA.Disassociate("Disassociation test", Log);
 
             await ExpectMsgOfAsync(DefaultTimeout, "Should receive Disassociated", o => o as Disassociated);
 
-            await AwaitConditionAsync(() => !registry.ExistsAssociation(_addressATest, _addressBTest));
+            await AwaitConditionAsync(async () => !registry.ExistsAssociation(_addressATest, _addressBTest));
 
-            await AwaitConditionAsync(() =>
+            await AwaitConditionAsync(async () =>
                 registry.LogSnapshot().OfType<DisassociateAttempt>().Any(x => x.Requestor == _addressATest && x.Remote == _addressBTest)
             );
         }
