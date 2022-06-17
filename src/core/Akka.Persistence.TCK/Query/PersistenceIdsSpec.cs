@@ -18,6 +18,7 @@ using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
@@ -86,15 +87,15 @@ namespace Akka.Persistence.TCK.Query
             });
 
             Setup("j", 1);
-            probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(5).ExpectNextUnordered(expected[0], expected[1]));
+            probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(2).ExpectNextUnordered(expected[0], expected[1]));
             
             Setup("a1", 1);
             Thread.Sleep(TimeSpan.FromSeconds(2));
-            probe.ExpectNext(TimeSpan.FromSeconds(10));
+            probe.RequestNext(10.Seconds());
 
             Thread.Sleep(TimeSpan.FromSeconds(2));
             Setup("a2", 1);
-            probe.ExpectNext(TimeSpan.FromSeconds(10));
+            probe.RequestNext(10.Seconds());;
         }
 
         [Fact]
