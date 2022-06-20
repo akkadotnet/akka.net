@@ -80,7 +80,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 
             // assert
             await EventFilter.DeadLetter<object>().ExpectAsync(1,
-                () => { mediator.Tell(new Publish("pub-sub", $"hit")); });
+                async () => { mediator.Tell(new Publish("pub-sub", "hit")); });
         }
     }
 

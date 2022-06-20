@@ -202,7 +202,7 @@ namespace Akka.Tests
         public async Task Log_failures_in_PostStop()
         {
             var a = Sys.ActorOf<EmptyActor>();
-            await EventFilter.Exception<Exception>(message: "hurrah").ExpectOneAsync(() =>
+            await EventFilter.Exception<Exception>(message: "hurrah").ExpectOneAsync(async () =>
                 {
                     a.Tell(PoisonPill.Instance);
                 });            
@@ -266,7 +266,7 @@ namespace Akka.Tests
             a.Tell("hello");
             await ExpectMsgAsync(43);
 
-            await EventFilter.Exception<Exception>("buh").ExpectOneAsync(() => a.Tell("fail"));
+            await EventFilter.Exception<Exception>("buh").ExpectOneAsync(async () => a.Tell("fail"));
             a.Tell("hello");
             await ExpectMsgAsync(42);
         }

@@ -37,7 +37,7 @@ namespace Akka.TestKit.Tests.TestFSMRefTests
 
             fsm.SetStateTimeout(100.Milliseconds());
             await WithinAsync(80.Milliseconds(), 500.Milliseconds(), async () =>
-                await AwaitConditionAsync(() => fsm.StateName == 2 && fsm.StateData == "timeout")
+                await AwaitConditionAsync(async () => fsm.StateName == 2 && fsm.StateData == "timeout")
             );
         }
 

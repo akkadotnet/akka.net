@@ -307,7 +307,7 @@ namespace Akka.Tests.Routing
             supervisor.Tell(new RoundRobinPool(3).Props(Props.Create(() => new RestartActor(TestActor))));
 
             var router = await ExpectMsgAsync<IActorRef>();
-            await EventFilter.Exception<ArgumentException>("die").ExpectOneAsync(() =>
+            await EventFilter.Exception<ArgumentException>("die").ExpectOneAsync(async () =>
             {
                 router.Tell("die");
             });

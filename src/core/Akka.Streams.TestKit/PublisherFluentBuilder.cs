@@ -87,50 +87,9 @@ namespace Akka.Streams.TestKit
 
         /// <summary>
         /// Execute the async chain and then execute the code block while bounding its execution time between <paramref name="min"/> and
-        /// <paramref name="max"/>. <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> blocks may be nested. 
+        /// <paramref name="max"/>. <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{Task{TOther}},CancellationToken)"/> blocks may be nested. 
         /// All methods in this class which take maximum wait times are available in a version which implicitly uses
-        /// the remaining time governed by the innermost enclosing <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> block.
-        /// 
-        /// <para />
-        /// 
-        /// Note that the timeout is scaled using <see cref="TestKitBase.Dilated"/>, which uses the
-        /// configuration entry "akka.test.timefactor", while the min Duration is not.
-        /// 
-        /// <![CDATA[
-        /// var ret = await probe.AsyncBuilder().Within(Timespan.FromMilliseconds(50), Timespan.FromSeconds(3), () =>
-        /// {
-        ///     test.Tell("ping");
-        ///     return ExpectMsg<string>();
-        /// });
-        /// ]]>
-        /// 
-        /// <![CDATA[
-        /// await probe.AsyncBuilder().Within(Timespan.FromMilliseconds(50), Timespan.FromSeconds(3), async () =>
-        /// {
-        ///     test.Tell("ping");
-        ///     await ExpectMsgAsync<string>("expected");
-        /// });
-        /// 
-        /// NOTE: This method will execute the async chain
-        /// ]]>
-        /// </summary>
-        public async Task<TOther> WithinAsync<TOther>(
-            TimeSpan min,
-            TimeSpan max,
-            Func<TOther> function,
-            CancellationToken cancellationToken = default)
-        {
-            await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-            return await Probe.WithinAsync(min, max, function, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Execute the async chain and then execute the code block while bounding its execution time between <paramref name="min"/> and
-        /// <paramref name="max"/>. <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> blocks may be nested. 
-        /// All methods in this class which take maximum wait times are available in a version which implicitly uses
-        /// the remaining time governed by the innermost enclosing <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{TOther},CancellationToken)"/> block.
+        /// the remaining time governed by the innermost enclosing <see cref="WithinAsync{TOther}(TimeSpan,TimeSpan,Func{Task{TOther}},CancellationToken)"/> block.
         /// 
         /// <para />
         /// 
@@ -156,19 +115,6 @@ namespace Akka.Streams.TestKit
             await ExecuteAsync(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
             return await Probe.WithinAsync(min, max, function, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Sane as calling WithinAsync(TimeSpan.Zero, max, function, cancellationToken).
-        /// 
-        /// NOTE: This method will execute the async chain
-        /// </summary>
-        public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default)
-        {
-            await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-            return await Probe.WithinAsync(max, execute, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
         }
 
