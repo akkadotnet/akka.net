@@ -45,14 +45,8 @@ namespace Akka.TestKit.Internal
         /// <param name="cancellationToken"></param>
         public void ExpectOne(Action action, CancellationToken cancellationToken = default)
         {
-            ExpectOneAsync(action, cancellationToken)
-                .WaitAndUnwrapException();
-        }
-
-        public async Task ExpectOneAsync(Func<Task> actionAsync, CancellationToken cancellationToken = default)
-        {
-            await InternalExpectAsync(actionAsync, _actorSystem, 1, null, cancellationToken)
-                .ConfigureAwait(false);
+            ExpectOneAsync(async () => action(), cancellationToken)
+                .WaitAndUnwrapException(cancellationToken);
         }
 
         /// <summary>
@@ -60,10 +54,10 @@ namespace Akka.TestKit.Internal
         /// </summary>
         /// <param name="action"></param>
         /// <param name="cancellationToken"></param>
-        public async Task ExpectOneAsync(Action action, CancellationToken cancellationToken = default)
+        public async Task ExpectOneAsync(Func<Task> action, CancellationToken cancellationToken = default)
         {
             await InternalExpectAsync(
-                    action: action,
+                    actionAsync: action,
                     actorSystem: _actorSystem,
                     expectedCount: 1,
                     timeout: null,
@@ -82,8 +76,8 @@ namespace Akka.TestKit.Internal
             Action action,
             CancellationToken cancellationToken = default)
         {
-            ExpectOneAsync(timeout, action, cancellationToken)
-                .WaitAndUnwrapException();
+            ExpectOneAsync(timeout, async () => action(), cancellationToken)
+                .WaitAndUnwrapException(cancellationToken);
         }
         
         /// <summary>
@@ -92,11 +86,11 @@ namespace Akka.TestKit.Internal
         /// <returns></returns>
         public async Task ExpectOneAsync(
             TimeSpan timeout,
-            Action action,
+            Func<Task> action,
             CancellationToken cancellationToken = default)
         {
             await InternalExpectAsync(
-                    action: action,
+                    actionAsync: action,
                     actorSystem: _actorSystem,
                     expectedCount: 1,
                     timeout: timeout,
@@ -115,8 +109,8 @@ namespace Akka.TestKit.Internal
             Action action,
             CancellationToken cancellationToken = default)
         {
-            ExpectAsync(expectedCount, action, cancellationToken)
-                .WaitAndUnwrapException();
+            ExpectAsync(expectedCount, async () => action(), cancellationToken)
+                .WaitAndUnwrapException(cancellationToken);
         }
 
         /// <summary>
@@ -153,23 +147,6 @@ namespace Akka.TestKit.Internal
         }
 
         /// <summary>
-        /// Async version of <see cref="Expect(int,System.Action,CancellationToken)"/>
-        /// </summary>
-        public async Task ExpectAsync(
-            int expectedCount,
-            Action action,
-            CancellationToken cancellationToken = default)
-        {
-            await InternalExpectAsync(
-                    action: action,
-                    actorSystem: _actorSystem,
-                    expectedCount: expectedCount,
-                    timeout: null,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-        }
-
-        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="expectedCount">TBD</param>
@@ -182,8 +159,8 @@ namespace Akka.TestKit.Internal
             Action action,
             CancellationToken cancellationToken = default)
         {
-            ExpectAsync(expectedCount, timeout, action, cancellationToken)
-                .WaitAndUnwrapException(); 
+            ExpectAsync(expectedCount, timeout, async () => action(), cancellationToken)
+                .WaitAndUnwrapException(cancellationToken); 
         }
         
         /// <summary>
@@ -192,11 +169,11 @@ namespace Akka.TestKit.Internal
         public async Task ExpectAsync(
             int expectedCount,
             TimeSpan timeout,
-            Action action,
+            Func<Task> action,
             CancellationToken cancellationToken = default)
         {
             await InternalExpectAsync(
-                    action: action,
+                    actionAsync: action,
                     actorSystem: _actorSystem,
                     expectedCount: expectedCount,
                     timeout: timeout,
@@ -213,15 +190,15 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         public T ExpectOne<T>(Func<T> func, CancellationToken cancellationToken = default)
         {
-            return ExpectOneAsync(func, cancellationToken)
-                .WaitAndUnwrapException();
+            return ExpectOneAsync(async () => func(), cancellationToken)
+                .WaitAndUnwrapException(cancellationToken);
         }
         
         /// <summary>
         /// Async version of ExpectOne
         /// </summary>
         public async Task<T> ExpectOneAsync<T>(
-            Func<T> func,
+            Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
             return await InterceptAsync(
@@ -246,7 +223,7 @@ namespace Akka.TestKit.Internal
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
-            return ExpectOneAsync(timeout, func, cancellationToken)
+            return ExpectOneAsync(timeout, async () => func(), cancellationToken)
                 .WaitAndUnwrapException();
         }
         
@@ -255,7 +232,7 @@ namespace Akka.TestKit.Internal
         /// </summary>
         public async Task<T> ExpectOneAsync<T>(
             TimeSpan timeout,
-            Func<T> func,
+            Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
             return await InterceptAsync(
@@ -281,7 +258,7 @@ namespace Akka.TestKit.Internal
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
-            return ExpectAsync(expectedCount, func, cancellationToken)
+            return ExpectAsync(expectedCount, async () => func(), cancellationToken)
                 .WaitAndUnwrapException();
         }
 
@@ -290,7 +267,7 @@ namespace Akka.TestKit.Internal
         /// </summary>
         public async Task<T> ExpectAsync<T>(
             int expectedCount, 
-            Func<T> func,
+            Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
             return await InterceptAsync(
@@ -318,7 +295,7 @@ namespace Akka.TestKit.Internal
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
-            return ExpectAsync(expectedCount, timeout, func, cancellationToken)
+            return ExpectAsync(expectedCount, timeout, async () => func(), cancellationToken)
                 .WaitAndUnwrapException();
         }
         
@@ -329,7 +306,7 @@ namespace Akka.TestKit.Internal
         public async Task<T> ExpectAsync<T>(
             int expectedCount,
             TimeSpan timeout,
-            Func<T> func,
+            Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
             return await InterceptAsync(
@@ -351,14 +328,14 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         public T Mute<T>(Func<T> func, CancellationToken cancellationToken = default)
         {
-            return MuteAsync(func, cancellationToken)
+            return MuteAsync(async () => func(), cancellationToken)
                 .WaitAndUnwrapException();
         }
         
         /// <summary>
         /// Async version of Mute
         /// </summary>
-        public async Task<T> MuteAsync<T>(Func<T> func, CancellationToken cancellationToken = default)
+        public async Task<T> MuteAsync<T>(Func<Task<T>> func, CancellationToken cancellationToken = default)
         {
             return await InterceptAsync(
                     func: func,
@@ -377,20 +354,20 @@ namespace Akka.TestKit.Internal
         /// <param name="cancellationToken"></param>
         public void Mute(Action action, CancellationToken cancellationToken = default)
         {
-            MuteAsync(action, cancellationToken)
-                .WaitAndUnwrapException();
+            MuteAsync(async () => action(), cancellationToken)
+                .WaitAndUnwrapException(cancellationToken);
         }
         
         /// <summary>
         /// Async version of Mute
         /// </summary>
-        public async Task MuteAsync(Action action, CancellationToken cancellationToken = default)
+        public async Task MuteAsync(Func<Task> action, CancellationToken cancellationToken = default)
         {
             await InterceptAsync<object>(
-                    func:async () =>
+                    func: async () =>
                     {
-                        action();
-                        return null;
+                        await action();
+                        return NotUsed.Instance;
                     }, 
                     system: _actorSystem, 
                     timeout: null,
@@ -441,7 +418,7 @@ namespace Akka.TestKit.Internal
             CancellationToken cancellationToken = default)
         {
             return InterceptAsync(
-                    func: func,
+                    func: async () => func(),
                     system: system,
                     timeout: timeout,
                     expectedOccurrences: expectedOccurrences,
@@ -450,27 +427,6 @@ namespace Akka.TestKit.Internal
                 .WaitAndUnwrapException();
         }
 
-        /// <summary>
-        /// Async version of <see cref="Intercept{T}"/>
-        /// </summary>
-        protected async Task<T> InterceptAsync<T>(
-            Func<T> func,
-            ActorSystem system, 
-            TimeSpan? timeout,
-            int? expectedOccurrences,
-            MatchedEventHandler matchedEventHandler = null,
-            CancellationToken cancellationToken = default)
-        {
-            return await InterceptAsync(
-                    func: () => Task.FromResult(func()), 
-                    system: system,
-                    timeout: timeout,
-                    expectedOccurrences: expectedOccurrences,
-                    matchedEventHandler: matchedEventHandler,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-        }
-        
         /// <summary>
         /// Async version of <see cref="Intercept{T}"/>
         /// </summary>
@@ -570,13 +526,13 @@ namespace Akka.TestKit.Internal
                 var expected = expectedOccurrences.GetValueOrDefault();
                 if (expected > 0)
                 {
-                    await _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount >= expected, timeout, cancellationToken: cancellationToken);
+                    await _testkit.AwaitConditionNoThrowAsync(async () => matchedEventHandler.ReceivedCount >= expected, timeout, cancellationToken: cancellationToken);
                     return matchedEventHandler.ReceivedCount == expected;
                 }
                 else
                 {
                     // if expecting no events to arrive - assert that given condition will never match
-                    var foundEvent = await _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount > 0, timeout, cancellationToken: cancellationToken);
+                    var foundEvent = await _testkit.AwaitConditionNoThrowAsync(async () => matchedEventHandler.ReceivedCount > 0, timeout, cancellationToken: cancellationToken);
                     return foundEvent == false;
                 }
             }
@@ -600,31 +556,15 @@ namespace Akka.TestKit.Internal
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
         {
-            await InterceptAsync<object>(
+            await InterceptAsync(
                     async () =>
                     {
-                        await actionAsync(); 
-                        return Task.FromResult<object>(null);
+                        await actionAsync();
+                        return NotUsed.Instance;
                     }, actorSystem, timeout, expectedCount, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
         }
         
-        private async Task InternalExpectAsync(
-            Action action,
-            ActorSystem actorSystem,
-            int expectedCount,
-            TimeSpan? timeout = null,
-            CancellationToken cancellationToken = default)
-        {
-            await InterceptAsync<object>(
-                    () =>
-                    {
-                        action(); 
-                        return Task.FromResult<object>(null);
-                    }, actorSystem, timeout, expectedCount, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-        }
-
         /// <summary>
         /// TBD
         /// </summary>

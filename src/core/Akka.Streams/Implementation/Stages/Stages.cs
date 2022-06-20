@@ -70,6 +70,14 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
+        public static readonly Attributes GroupedWithin = Attributes.CreateName("groupedWithin");
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly Attributes GroupedWeightedWithin = Attributes.CreateName("groupedWeightedWithin");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Attributes Limit = Attributes.CreateName("limit");
         /// <summary>
         /// TBD

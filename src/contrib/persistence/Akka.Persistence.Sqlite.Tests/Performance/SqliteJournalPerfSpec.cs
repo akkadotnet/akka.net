@@ -12,6 +12,8 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Performance
 {
+    // Skip performance test. Commented out for now, we'll add a specific environment variable controlled skipable fact later
+    /*
     public class SqliteJournalPerfSpec : JournalPerfSpec
     {
         private static AtomicCounter counter = new AtomicCounter(0);
@@ -40,4 +42,5 @@ namespace Akka.Persistence.Sqlite.Tests.Performance
                 }");
         }
     }
+    */
 }

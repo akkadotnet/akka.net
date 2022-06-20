@@ -840,6 +840,58 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Chunk up this stream into groups of elements received within a time window,
+        /// or limited by the weight of the elements, whatever happens first.
+        /// Empty groups will not be emitted if no elements are received from upstream.
+        /// The last group before end-of-stream will contain the buffered elements
+        /// since the previously emitted group.
+        /// <para>
+        /// <paramref name="maxWeight" /> must be positive, and <paramref name="interval"/> must be greater than 0 seconds, 
+        /// otherwise ArgumentException is thrown.
+        /// </para>
+        /// <para>Emits when the configured time elapses since the last group has been emitted or weight limit reached</para>
+        /// <para>Backpressures when downstream backpressures, and buffered group(+ pending element) weighs more than `maxWeight`</para>
+        /// <para>Completes when upstream completes(emits last group)</para>
+        /// <para>Cancels when downstream completes</para>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="maxWeight">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="costFn">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this Source<TOut, TMat> flow, long maxWeight, TimeSpan interval, Func<TOut, long> costFn) =>
+            (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.GroupedWeightedWithin(flow, maxWeight, int.MaxValue, interval, costFn);
+
+        /// <summary>
+        /// Chunk up this stream into groups of elements received within a time window,
+        /// or limited by the weight and number of the elements, whatever happens first.
+        /// Empty groups will not be emitted if no elements are received from upstream.
+        /// The last group before end-of-stream will contain the buffered elements
+        /// since the previously emitted group.
+        /// <para>
+        /// <paramref name="maxWeight"/> must be positive, <paramref name="maxNumber"/> must be positive, and <paramref name="interval"/> must be greater than 0 seconds, 
+        /// otherwise <see cref="ArgumentException"/>  is thrown.
+        /// </para>
+        /// <para>Emits when the configured time elapses since the last group has been emitted or weight limit reached</para>
+        /// <para>Backpressures when downstream backpressures, and buffered group(+ pending element) weighs more than `maxWeight` or has more than `maxNumber` elements</para>
+        /// <para>Completes when upstream completes(emits last group)</para>
+        /// <para>Cancels when downstream completes</para>
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="maxWeight">TBD</param>
+        /// <param name="maxNumber">TBD</param>
+        /// <param name="costFn">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this Source<TOut, TMat> flow, long maxWeight, int maxNumber, TimeSpan interval, Func<TOut, long> costFn) =>
+            (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.GroupedWeightedWithin(flow, maxWeight, maxNumber, interval, costFn);
+
+        /// <summary>
         /// Shifts elements emission in time by a specified amount. It allows to store elements
         /// in internal buffer while waiting for next element to be emitted. Depending on the defined
         /// <see cref="DelayOverflowStrategy"/> it might drop elements or backpressure the upstream if

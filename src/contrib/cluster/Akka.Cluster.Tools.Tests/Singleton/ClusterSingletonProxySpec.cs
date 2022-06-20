@@ -53,7 +53,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             
             // have to wait for cluster singleton to be ready, otherwise message will be rejected
             await AwaitConditionAsync(
-                () => Cluster.Get(testSystem.Sys).State.Members.Count(m => m.Status == MemberStatus.Up) == 2,
+                async () => Cluster.Get(testSystem.Sys).State.Members.Count(m => m.Status == MemberStatus.Up) == 2,
                 TimeSpan.FromSeconds(30));
 
             try

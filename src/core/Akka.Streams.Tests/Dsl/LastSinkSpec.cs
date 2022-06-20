@@ -46,13 +46,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                (await Awaiting(() => 
-                            Source.Failed<int>(new Exception("ex"))
-                                .RunWith(Sink.Last<int>(), Materializer))
-                    .Should().ThrowAsync<AggregateException>()
-                    .ShouldCompleteWithin(1.Seconds()))
-                    .WithInnerException<Exception>()
-                    .WithMessage("ex");
+                (await Source.Failed<int>(new Exception("ex")).RunWith(Sink.Last<int>(), Materializer)
+                    .ShouldThrowWithin<Exception>(1.Seconds())).Message.Should().Be("ex");
             }, Materializer);
         }
 
@@ -61,13 +56,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                (await Awaiting(() => 
-                            Source.Empty<int>()
-                                .RunWith(Sink.Last<int>(), Materializer))
-                    .Should().ThrowAsync<AggregateException>()
-                    .ShouldCompleteWithin(1.Seconds()))
-                    .WithInnerException<NoSuchElementException>()
-                    .WithMessage("Last of empty stream");
+                (await Source.Empty<int>().RunWith(Sink.Last<int>(), Materializer)
+                    .ShouldThrowWithin<NoSuchElementException>(1.Seconds()))
+                    .Message.Should().Be("Last of empty stream");
             }, Materializer);
         }
 
@@ -88,13 +79,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                (await Awaiting(async () => 
-                    Source.Failed<int>(new Exception("ex"))
-                        .RunWith(Sink.LastOrDefault<int>(), Materializer))
-                    .Should().ThrowAsync<AggregateException>()
-                    .ShouldCompleteWithin(1.Seconds()))
-                    .WithInnerException<Exception>()
-                    .WithMessage("ex");
+                (await Source.Failed<int>(new Exception("ex")).RunWith(Sink.LastOrDefault<int>(), Materializer)
+                    .ShouldThrowWithin<Exception>(1.Seconds())).Message.Should().Be("ex");
             }, Materializer);
         }
 

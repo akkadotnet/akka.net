@@ -125,7 +125,7 @@ namespace Akka.Tests.Actor
 
             var bserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
 
-            await AwaitConditionAsync(() =>
+            await AwaitConditionAsync(async () =>
             {
                 var bref = (IActorRef) bserializer.FromBinary(binary, typeof (IActorRef));
                 try
@@ -145,7 +145,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task An_ActorRef_should_restart_when_Killed()
         {
-            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(() =>
+            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async () =>
             {
                 var latch = CreateTestLatch(2);
                 var boss = ActorOf(a =>
@@ -304,7 +304,7 @@ namespace Akka.Tests.Actor
         {          
             var actor = ActorOfAsTestActorRef<NonPublicActor>(Props.Create<NonPublicActor>(SupervisorStrategy.StoppingStrategy));
             // actors with a null sender should always write to deadletters
-            await EventFilter.DeadLetter<object>().ExpectOneAsync(() => actor.Tell(new object(), null));
+            await EventFilter.DeadLetter<object>().ExpectOneAsync(async () => actor.Tell(new object(), null));
 
             // will throw an exception if there's a bug
             await ExpectNoMsgAsync(default);

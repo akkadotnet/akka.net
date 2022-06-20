@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit;
 using Reactive.Streams;
+using Xunit.Sdk;
 using static Akka.Streams.TestKit.TestSubscriber;
 
 namespace Akka.Streams.TestKit
@@ -241,44 +242,6 @@ namespace Akka.Streams.TestKit
         /// configuration entry "akka.test.timefactor", while the min Duration is not.
         /// 
         /// <![CDATA[
-        /// var ret = await probe.AsyncBuilder().WithinAsync(Timespan.FromMilliseconds(50), Timespan.FromSeconds(3), () =>
-        /// {
-        ///     test.Tell("ping");
-        ///     return ExpectMsg<string>();
-        /// });
-        /// ]]>
-        ///
-        /// <![CDATA[
-        /// await probe.AsyncBuilder().WithinAsync(Timespan.FromMilliseconds(50), Timespan.FromSeconds(3), async () =>
-        /// {
-        ///     test.Tell("ping");
-        ///     await ExpectMsgAsync<string>("expected");
-        /// });
-        /// ]]>
-        /// 
-        /// NOTE: This method will execute the async chain
-        /// </summary>
-        public async Task<TOther> WithinAsync<TOther>(
-            TimeSpan min,
-            TimeSpan max,
-            Func<TOther> function,
-            string? hint = null,
-            TimeSpan? epsilonValue = null, 
-            CancellationToken cancellationToken = default)
-        {
-            await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-            return await Probe.TestProbe.WithinAsync(min, max, function, hint, epsilonValue, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        
-        /// <summary>
-        /// Execute the async chain and then execute the code block while bounding its execution time between <paramref name="min"/> and <paramref name="max"/>.
-        /// <para />
-        /// Note that the timeout is scaled using <see cref="TestKitBase.Dilated"/>, which uses the
-        /// configuration entry "akka.test.timefactor", while the min Duration is not.
-        /// 
-        /// <![CDATA[
         /// var ret = await probe.AsyncBuilder().WithinAsync(Timespan.FromMilliseconds(50), Timespan.FromSeconds(3), async () =>
         /// {
         ///     test.Tell("ping");
@@ -299,34 +262,6 @@ namespace Akka.Streams.TestKit
             await ExecuteAsync(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
             return await Probe.TestProbe.WithinAsync(min, max, asyncFunction, hint, epsilonValue, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        
-        /// <summary>
-        /// Execute the async chain and then execute code block while bounding its execution time with a <paramref name="max"/> timeout.
-        /// 
-        /// <![CDATA[
-        /// var ret = await probe.AsyncBuilder().WithinAsync(Timespan.FromSeconds(3), () =>
-        /// {
-        ///     test.Tell("ping");
-        ///     return ExpectMsg<string>();
-        /// });
-        /// ]]>
-        ///
-        /// <![CDATA[
-        /// await probe.AsyncBuilder().WithinAsync(Timespan.FromSeconds(3), async () =>
-        /// {
-        ///     test.Tell("ping");
-        ///     await ExpectMsgAsync<string>("expected");
-        /// });
-        /// ]]>
-        /// 
-        /// NOTE: This method will execute the async chain
-        /// </summary>
-        public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default)
-        {
-            await ExecuteAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-            return await Probe.TestProbe.WithinAsync(max, execute, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
         }
         
@@ -455,6 +390,32 @@ namespace Akka.Streams.TestKit
                 probe.Subscription.Request(1);
             });
             return ExpectNext(element);
+        }
+
+        /// <summary>
+        /// Fluent async DSL.
+        /// Request and expect a stream element.
+        /// </summary>
+        public SubscriberFluentBuilder<T> RequestNextN(params T[] elements)
+        {
+            if (!(Probe is Probe<T> probe))
+            {
+                throw new InvalidOperationException("RequestNextN() can only be used on a TestSubscriber.Probe<T> instance");
+            }
+            _tasks.Add(async ct =>
+            {
+                await Probe<T>.EnsureSubscriptionTask(probe, ct);
+                probe.Subscription.Request(elements.Length);
+                for (var i = 0; i < elements.Length; ++i)
+                {
+                    var next = await probe.ExpectNextAsync(ct);
+                    if (Comparer<T>.Default.Compare(elements[i], next) != 0)
+                    {
+                        throw new CollectionException(elements, elements.Length, i + 1, i);
+                    }
+                }
+            });
+            return this;
         }
 
         /// <summary>

@@ -42,7 +42,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task Should_be_able_to_filter_dead_letters()
         {
             var eventFilter = CreateTestingEventFilter();
-            await eventFilter.DeadLetter().ExpectOneAsync(() =>
+            await eventFilter.DeadLetter().ExpectOneAsync(async () =>
             {
                 _deadActor.Tell("whatever");
             });

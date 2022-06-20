@@ -237,13 +237,13 @@ namespace Akka.Tests.IO
                 var actors = await x.EstablishNewClientConnectionAsync();
 
                 // Error message should contain invalid message type
-                await EventFilter.Error(contains: nameof(Tcp.Close)).ExpectOneAsync(() =>
+                await EventFilter.Error(contains: nameof(Tcp.Close)).ExpectOneAsync(async () =>
                 {
                     // Sending `Tcp.Close` to TcpManager instead of outgoing connection
                     Sys.Tcp().Tell(Tcp.Close.Instance, actors.ClientHandler);
                 });
                 // Should also contain ref to documentation
-                await EventFilter.Error(contains: "https://getakka.net/articles/networking/io.html").ExpectOneAsync(() =>
+                await EventFilter.Error(contains: "https://getakka.net/articles/networking/io.html").ExpectOneAsync(async () =>
                 {
                     // Sending `Tcp.Close` to TcpManager instead of outgoing connection
                     Sys.Tcp().Tell(Tcp.Close.Instance, actors.ClientHandler);
@@ -260,7 +260,7 @@ namespace Akka.Tests.IO
 
                 var msg = ByteString.FromString("msg"); // 3 bytes
 
-                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOneAsync(() =>
+                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOneAsync(async () =>
                 {
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(msg));
                     actors.ClientConnection.Tell(new Tcp.Register(actors.ClientHandler));
@@ -285,7 +285,7 @@ namespace Akka.Tests.IO
                 var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
 
                 // We do not want message about receiving Write to be logged, if the write was actually discarded
-                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectAsync(0, () =>
+                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectAsync(0, async () =>
                 {
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData));
                 });
@@ -500,7 +500,7 @@ namespace Akka.Tests.IO
                 var connectionActor = connectCommander.LastSender;
                 connectCommander.Send(connectionActor, PoisonPill.Instance);
 
-                await AwaitConditionNoThrowAsync(() =>
+                await AwaitConditionNoThrowAsync(async () =>
                 {
                     try
                     {
@@ -597,12 +597,6 @@ namespace Akka.Tests.IO
 
             public IPEndPoint Endpoint { get { return _endpoint; } }
 
-            public async Task RunAsync(Action<TestSetup> action)
-            {
-                if (_shouldBindServer) await BindServer();
-                action(this);
-            }
-            
             public async Task RunAsync(Func<TestSetup, Task> asyncAction)
             {
                 if (_shouldBindServer) await BindServer();

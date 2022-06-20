@@ -124,7 +124,7 @@ namespace Akka.Tests.Actor.Dispatch
 
             Sys.Stop(actor);
             await ExpectTerminatedAsync(actor);
-            await AwaitConditionAsync(() => !thread.IsAlive); // wait for thread to terminate
+            await AwaitConditionAsync(async () => !thread.IsAlive); // wait for thread to terminate
         }
     }
 }

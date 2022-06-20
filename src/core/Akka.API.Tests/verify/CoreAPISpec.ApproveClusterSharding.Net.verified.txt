@@ -309,6 +309,27 @@ namespace Akka.Cluster.Sharding
                     int coordinatorStateReadMajorityPlus, 
                     int leastShardAllocationAbsoluteLimit, 
                     double leastShardAllocationRelativeLimit) { }
+        public Akka.Cluster.Sharding.TuningParameters WithBufferSize(int bufferSize) { }
+        public Akka.Cluster.Sharding.TuningParameters WithCoordinatorFailureBackoff(System.TimeSpan coordinatorFailureBackoff) { }
+        public Akka.Cluster.Sharding.TuningParameters WithCoordinatorStateReadMajorityPlus(int coordinatorStateReadMajorityPlus) { }
+        public Akka.Cluster.Sharding.TuningParameters WithCoordinatorStateWriteMajorityPlus(int coordinatorStateWriteMajorityPlus) { }
+        public Akka.Cluster.Sharding.TuningParameters WithEntityRecoveryConstantRateStrategyFrequency(System.TimeSpan entityRecoveryConstantRateStrategyFrequency) { }
+        public Akka.Cluster.Sharding.TuningParameters WithEntityRecoveryConstantRateStrategyNumberOfEntities(int entityRecoveryConstantRateStrategyNumberOfEntities) { }
+        public Akka.Cluster.Sharding.TuningParameters WithEntityRecoveryStrategy(string entityRecoveryStrategy) { }
+        public Akka.Cluster.Sharding.TuningParameters WithEntityRestartBackoff(System.TimeSpan entityRestartBackoff) { }
+        public Akka.Cluster.Sharding.TuningParameters WithHandOffTimeout(System.TimeSpan handOffTimeout) { }
+        public Akka.Cluster.Sharding.TuningParameters WithKeepNrOfBatches(int keepNrOfBatches) { }
+        public Akka.Cluster.Sharding.TuningParameters WithLeastShardAllocationAbsoluteLimit(int leastShardAllocationAbsoluteLimit) { }
+        public Akka.Cluster.Sharding.TuningParameters WithLeastShardAllocationMaxSimultaneousRebalance(int leastShardAllocationMaxSimultaneousRebalance) { }
+        public Akka.Cluster.Sharding.TuningParameters WithLeastShardAllocationRebalanceThreshold(int leastShardAllocationRebalanceThreshold) { }
+        public Akka.Cluster.Sharding.TuningParameters WithLeastShardAllocationRelativeLimit(double leastShardAllocationRelativeLimit) { }
+        public Akka.Cluster.Sharding.TuningParameters WithRebalanceInterval(System.TimeSpan rebalanceInterval) { }
+        public Akka.Cluster.Sharding.TuningParameters WithRetryInterval(System.TimeSpan retryInterval) { }
+        public Akka.Cluster.Sharding.TuningParameters WithShardFailureBackoff(System.TimeSpan shardFailureBackoff) { }
+        public Akka.Cluster.Sharding.TuningParameters WithShardStartTimeout(System.TimeSpan shardStartTimeout) { }
+        public Akka.Cluster.Sharding.TuningParameters WithSnapshotAfter(int snapshotAfter) { }
+        public Akka.Cluster.Sharding.TuningParameters WithUpdatingStateTimeout(System.TimeSpan updatingStateTimeout) { }
+        public Akka.Cluster.Sharding.TuningParameters WithWaitingForStateTimeout(System.TimeSpan waitingForStateTimeout) { }
     }
 }
 namespace Akka.Cluster.Sharding.External

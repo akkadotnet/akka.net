@@ -11,9 +11,12 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.TestKit.TestActors;
 using Akka.Tests.TestUtils;
 using Akka.Util.Internal;
+using FluentAssertions.Extensions;
+using Nito.AsyncEx;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -22,10 +25,10 @@ namespace Akka.Tests.Actor
     {
         private class CountDownActor : ReceiveActor
         {
-            private readonly CountdownEvent _restartsCountdown;
+            private readonly AsyncCountdownEvent _restartsCountdown;
             private readonly SupervisorStrategy _supervisorStrategy;
 
-            public CountDownActor(CountdownEvent restartsCountdown, SupervisorStrategy supervisorStrategy)
+            public CountDownActor(AsyncCountdownEvent restartsCountdown, SupervisorStrategy supervisorStrategy)
             {
                 _restartsCountdown = restartsCountdown;
                 _supervisorStrategy = supervisorStrategy;
@@ -114,7 +117,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task A_supervisor_hierarchy_must_Restart_Manager_And_Workers_In_AllForOne()
         {
-            var countDown = new CountdownEvent(4);
+            var countDown = new AsyncCountdownEvent(4);
             SupervisorStrategy strategy = new OneForOneStrategy(_ => Directive.Restart);
             var boss = ActorOf(Props.Create(() => new Supervisor(strategy)), "boss");
 
@@ -127,14 +130,14 @@ namespace Akka.Tests.Actor
             var worker2 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker2"), TestKitSettings.DefaultTimeout);
             var worker3 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker3"), TestKitSettings.DefaultTimeout);
 
-            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(() =>
+            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async () =>
             {
                 worker1.Tell(Kill.Instance);
                 // manager + all workers should be restarted by only killing a worker
                 // manager doesn't trap exits, so boss will restart manager
 
-                countDown.Wait(TimeSpan.FromSeconds(5)).ShouldBe(true);
-
+                await countDown.WaitAsync().ShouldCompleteWithin(5.Seconds());
+                //countDown.Wait(TimeSpan.FromSeconds(5)).ShouldBe(true);
             });
 
         }
@@ -142,8 +145,8 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task A_supervisor_must_send_notifications_to_supervisor_when_permanent_failure()
         {
-            var countDownMessages = new CountdownEvent(1);
-            var countDownMax = new CountdownEvent(1);
+            var countDownMessages = new AsyncCountdownEvent(1);
+            var countDownMax = new AsyncCountdownEvent(1);
             var boss = ActorOf((cfg, ctx) =>
             {
                 var crasher = ctx.ActorOf(Props.Create(() => new CountDownActor(countDownMessages, SupervisorStrategy.DefaultStrategy)), "crasher");
@@ -163,13 +166,13 @@ namespace Akka.Tests.Actor
             //We then send another "killCrasher", which again will send Kill to crasher. It crashes,
             //decider says it should be restarted but since we specified maximum 1 restart/5seconds it will be 
             //permanently stopped. Boss, which watches crasher, receives Terminated, and counts down countDownMax
-            await EventFilter.Exception<ActorKilledException>().ExpectAsync(2, () =>
+            await EventFilter.Exception<ActorKilledException>().ExpectAsync(2, async () =>
             {
                 boss.Tell("killCrasher");
                 boss.Tell("killCrasher");
             });
-            countDownMessages.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
-            countDownMax.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
+            await countDownMessages.WaitAsync().ShouldCompleteWithin(2.Seconds());
+            await countDownMax.WaitAsync().ShouldCompleteWithin(2.Seconds());
         }
 
         private async Task Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<T>() 
@@ -191,7 +194,7 @@ namespace Akka.Tests.Actor
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");
             await ExpectMsgAsync("pong");
-            await EventFilter.Warning("expected").ExpectOneAsync(() => //expected exception is thrown by the boss when it crashes
+            await EventFilter.Warning("expected").ExpectOneAsync(async () => //expected exception is thrown by the boss when it crashes
             {
                 middle.Tell("fail");    //Throws an exception, and then it's resumed
             });
@@ -245,7 +248,7 @@ namespace Akka.Tests.Actor
             {
                 //Let boss crash, this means any child under boss should be suspended, so we wait for worker to become suspended.                
                 boss.Tell("fail");
-                await AwaitConditionAsync(() => ((LocalActorRef)worker).Cell.Mailbox.IsSuspended());
+                await AwaitConditionAsync(async () => ((LocalActorRef)worker).Cell.Mailbox.IsSuspended());
 
                 //At this time slowresumer is currently handling the failure, in supervisestrategy, waiting for latch to be opened
                 //We verify that no message is handled by worker, by sending it a ping
