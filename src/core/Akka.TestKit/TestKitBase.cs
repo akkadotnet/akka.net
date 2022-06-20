@@ -456,7 +456,7 @@ namespace Akka.TestKit
         public TimeSpan RemainingOrDilated(TimeSpan? duration)
         {
             if(!duration.HasValue) return RemainingOrDefault;
-            if(duration.IsInfinite()) throw new ArgumentException("max duration cannot be infinite");
+            if(duration < TimeSpan.Zero) throw new ArgumentException("Must be positive TimeSpan", nameof(duration));
             return Dilated(duration.Value);
         }
 
@@ -469,10 +469,9 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public TimeSpan Dilated(TimeSpan duration)
         {
-            if(duration.IsPositiveFinite())
-                return new TimeSpan((long)(duration.Ticks * _testState.TestKitSettings.TestTimeFactor));
-            //Else: 0 or infinite (negative)
-            return duration;
+            if (duration < TimeSpan.Zero)
+                throw new ArgumentException("Must not be negative", nameof(duration));
+            return new TimeSpan((long)(duration.Ticks * _testState.TestKitSettings.TestTimeFactor));
         }
 
 
