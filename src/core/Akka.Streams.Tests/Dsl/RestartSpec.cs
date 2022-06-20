@@ -31,8 +31,8 @@ namespace Akka.Streams.Tests.Dsl
 
         private readonly TimeSpan _shortMinBackoff = TimeSpan.FromMilliseconds(10);
         private readonly TimeSpan _shortMaxBackoff = TimeSpan.FromMilliseconds(20);
-        private readonly TimeSpan _minBackoff = TimeSpan.FromSeconds(1);
-        private readonly TimeSpan _maxBackoff = TimeSpan.FromSeconds(3);
+        private readonly TimeSpan _minBackoff;
+        private readonly TimeSpan _maxBackoff;
 
         private readonly RestartSettings _shortRestartSettings;
         private readonly RestartSettings _restartSettings;
@@ -41,6 +41,9 @@ namespace Akka.Streams.Tests.Dsl
             : base("{}", output)
         {
             Materializer = Sys.Materializer();
+
+            _minBackoff = Dilated(TimeSpan.FromSeconds(1));
+            _maxBackoff = Dilated(TimeSpan.FromSeconds(3));
 
             _shortRestartSettings = RestartSettings.Create(_shortMinBackoff, _shortMaxBackoff, 0);
             _restartSettings = RestartSettings.Create(_minBackoff, _maxBackoff, 0);
@@ -63,7 +66,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, _shortRestartSettings).RunWith(this.SinkProbe<string>(), Materializer);
 
                 await probe.AsyncBuilder()
-                    .ExpectNextN(Enumerable.Repeat("a", 5))
+                    .RequestNextN("a", "a", "a", "a", "a")
                     .ExecuteAsync();
 
                 created.Current.Should().Be(1);
@@ -85,7 +88,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, _shortRestartSettings).RunWith(this.SinkProbe<string>(), Materializer);
 
                 await probe.AsyncBuilder()
-                    .ExpectNext("a", "b", "a", "b", "a")
+                    .RequestNextN("a", "b", "a", "b", "a")
                     .ExecuteAsync();
 
                 created.Current.Should().Be(3);
@@ -113,7 +116,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, _shortRestartSettings).RunWith(this.SinkProbe<string>(), Materializer);
 
                 await probe.AsyncBuilder()
-                    .ExpectNext("a", "b", "a", "b", "a")
+                    .RequestNextN("a", "b", "a", "b", "a")
                     .ExecuteAsync();
 
                 created.Current.Should().Be(3);
@@ -136,7 +139,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<string>(), Materializer);
 
                 await probe.AsyncBuilder()
-                    .ExpectNext("a", "b")
+                    .RequestNextN("a", "b")
                     .ExecuteAsync();
 
                 // There should be a delay of at least _minBackoff before we receive the element after restart
@@ -169,9 +172,9 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<string>(), Materializer);
 
                 await probe.AsyncBuilder()
-                    .ExpectNext("a", "b")
+                    .RequestNextN("a", "b")
                     // There should be _minBackoff delay
-                    .ExpectNext("a", "b")
+                    .RequestNextN("a", "b")
                     .Request(1)
                     .ExecuteAsync();
                 // The probe should now be backing off again with with increased backoff
@@ -181,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
                 await Task.Delay(_minBackoff + TimeSpan.FromTicks(_minBackoff.Ticks * 2) + _minBackoff + TimeSpan.FromMilliseconds(500));
 
                 await probe.AsyncBuilder()
-                    .ExpectNext("a", "b")
+                    .RequestNextN("a", "b")
                     .ExecuteAsync();
 
                 // We should have reset, so the restart delay should be back, ie we should receive the
@@ -272,9 +275,9 @@ namespace Akka.Streams.Tests.Dsl
                 }, _shortRestartSettings).RunWith(this.SinkProbe<string>(), Materializer);
 
                 await probe.AsyncBuilder()
-                    .ExpectNext("a", "b")
+                    .RequestNextN("a", "b")
                     // will fail, and will restart
-                    .ExpectNext("a", "b", "c")
+                    .RequestNextN("a", "b", "c")
                     .ExecuteAsync();
 
                 created.Current.Should().Be(2);
@@ -302,7 +305,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, _shortRestartSettings).RunWith(this.SinkProbe<string>(), Materializer);
 
                 await probe.AsyncBuilder()
-                    .ExpectNext("a", "b", "a", "b", "a")
+                    .RequestNextN("a", "b", "a", "b", "a")
                     .ExecuteAsync();
 
                 created.Current.Should().Be(3);
@@ -327,7 +330,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<string>(), Materializer);
 
                 await probe.AsyncBuilder()
-                    .ExpectNext("a", "a")
+                    .RequestNextN("a", "a")
                     .ExpectComplete()
                     .ExecuteAsync();
 
@@ -387,7 +390,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<string>(), Materializer);
 
                 await probe.AsyncBuilder()
-                    .ExpectNext("a", "a")
+                    .RequestNextN("a", "a")
                     .ExecuteAsync();
 
                 await Task.Delay(_shortMinBackoff + TimeSpan.FromTicks(_shortMinBackoff.Ticks * 2) + _shortMinBackoff); // if using shortMinBackoff as deadline cause reset
@@ -823,7 +826,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 await sink.AsyncBuilder()
                     //6 is never received since RestartFlow's do not retry 
-                    .ExpectNextN(new[] { 1, 2, 3, 4, 5, 7, 8, 9, 10 }, 3.Seconds())
+                    .RequestNextN(1, 2, 3, 4, 5, 7, 8, 9, 10)
                     .ExecuteAsync();
                     
                 await source.SendCompleteAsync();
@@ -1108,8 +1111,7 @@ namespace Akka.Streams.Tests.Dsl
                 await flowInProbe.RequestNextAsync("c");
                 await flowOutProbe.SendNextAsync("d");
                 await sink.RequestNextAsync("d");
-                await sink.RequestAsync(1);
-                await sink.ExpectCompleteAsync();
+                
                 created.Current.Should().Be(2);
             }, Materializer);
         }

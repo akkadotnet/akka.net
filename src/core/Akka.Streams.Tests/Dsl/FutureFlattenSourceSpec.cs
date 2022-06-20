@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
@@ -19,6 +18,7 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -115,18 +115,17 @@ namespace Akka.Streams.Tests.Dsl
                     .EnsureSubscription()
                     .Request(1)
                     .Cancel()
-                    .ExpectComplete()
                     .ExecuteAsync();
 
+                // try to avoid a race between probe cancel and completing the promise
+                await Task.Delay(100);
+                
                 // even though canceled the underlying matval should arrive
                 sourcePromise.SetResult(Underlying);
                 
                 // wait until the underlying task is completed
-                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
-                
-                var failure = sourceMatVal.Exception.Flatten().InnerException;
-                failure.Should().BeAssignableTo<StreamDetachedException>();
-                failure.Message.Should().Be("Stream cancelled before Source Task completed");
+                var ex = await sourceMatVal.ShouldThrowWithin<StreamDetachedException>(3.Seconds());
+                ex.Message.Should().Be("Stream cancelled before Source Task completed");
             }, _materializer);
         }
 
@@ -143,11 +142,8 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(_materializer);
 
                 // wait until the underlying task is completed
-                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
-                await sinkMatVal.ShouldCompleteWithin(3.Seconds());
-
-                sourceMatVal.Exception.Flatten().InnerException.Should().Be(failure);
-                sinkMatVal.Exception.Flatten().InnerException.Should().Be(failure);
+                await sourceMatVal.ShouldThrowWithin(failure, 3.Seconds());
+                await sinkMatVal.ShouldThrowWithin(failure, 3.Seconds());
             }, _materializer);
         }
 
@@ -174,11 +170,8 @@ namespace Akka.Streams.Tests.Dsl
                 sourcePromise.SetException(failure);
                 
                 // wait until the underlying tasks are completed
-                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
-                await sinkMatVal.ShouldCompleteWithin(3.Seconds());
-
-                sourceMatVal.Exception.Flatten().InnerException.Should().Be(failure);
-                sinkMatVal.Exception.Flatten().InnerException.Should().Be(failure);
+                await sourceMatVal.ShouldThrowWithin(failure, 3.Seconds());
+                await sinkMatVal.ShouldThrowWithin(failure, 3.Seconds());
             }, _materializer);
         }
 
@@ -199,9 +192,7 @@ namespace Akka.Streams.Tests.Dsl
                 sourcePromise.SetException(failure);
                 
                 // wait until the underlying tasks are completed
-                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
-
-                sourceMatVal.Exception.Flatten().InnerException.Should().Be(failure);
+                await sourceMatVal.ShouldThrowWithin(failure, 3.Seconds());
             }, _materializer);
         }
 
@@ -273,22 +264,21 @@ namespace Akka.Streams.Tests.Dsl
                 var (innerSourceMat, outerSinkMat) = Source.FromTaskSource(inner).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
 
                 // wait until the underlying tasks are completed
-                await outerSinkMat.ShouldCompleteWithin(3.Seconds());
-                await innerSourceMat.ShouldCompleteWithin(3.Seconds());
-
-                outerSinkMat.Exception.Flatten().InnerException.Should().Be(new TestException("INNER_FAILED"));
-                innerSourceMat.Exception.Flatten().InnerException.Should().Be(new TestException("INNER_FAILED"));
+                await outerSinkMat.ShouldThrowWithin(FailingMatGraphStage.Exception, 3.Seconds());
+                await innerSourceMat.ShouldThrowWithin(FailingMatGraphStage.Exception, 3.Seconds());
             }, _materializer);
         }
 
         private class FailingMatGraphStage : GraphStageWithMaterializedValue<SourceShape<int>, string>
         {
+            public static readonly TestException Exception = new TestException("INNER_FAILED");
+            
             private readonly Outlet<int> _out = new Outlet<int>("whatever");
 
             public override SourceShape<int> Shape => new SourceShape<int>(_out);
 
             public override ILogicAndMaterializedValue<string> CreateLogicAndMaterializedValue(Attributes inheritedAttributes) => 
-                throw new TestException("INNER_FAILED");
+                throw Exception;
         }
     }
 }

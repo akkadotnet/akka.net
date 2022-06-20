@@ -301,7 +301,7 @@ namespace Akka.Streams.Dsl
         /// A <see cref="Sink{TIn,TMat}"/> that will invoke the given <paramref name="action"/> for each received element. 
         /// The sink is materialized into a <see cref="Task"/> will be completed with success when reaching the
         /// normal end of the stream, or completed with a failure if there is a failure signaled in
-        /// the stream..
+        /// the stream.
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <param name="action">TBD</param>
@@ -310,6 +310,23 @@ namespace Akka.Streams.Dsl
             .Select(input =>
             {
                 action(input);
+                return NotUsed.Instance;
+            }).ToMaterialized(Ignore<NotUsed>(), Keep.Right).Named("foreachSink");
+
+        /// <summary>
+        /// A <see cref="Sink{TIn,TMat}"/> that will invoke the given async <paramref name="action"/> for each received element. 
+        /// The sink is materialized into a <see cref="Task"/> will be completed with success when reaching the
+        /// normal end of the stream, or completed with a failure if there is a failure signaled in
+        /// the stream.
+        /// </summary>
+        /// <typeparam name="TIn">Input element type</typeparam>
+        /// <param name="parallelism">Number of parallel execution allowed</param>
+        /// <param name="action">Async function delegate to be executed on all elements</param>
+        /// <returns>TBD</returns>
+        public static Sink<TIn, Task<Done>> ForEachAsync<TIn>(int parallelism, Func<TIn, Task> action) => Flow.Create<TIn>()
+            .SelectAsync(parallelism, async input =>
+            {
+                await action(input);
                 return NotUsed.Instance;
             }).ToMaterialized(Ignore<NotUsed>(), Keep.Right).Named("foreachSink");
 
