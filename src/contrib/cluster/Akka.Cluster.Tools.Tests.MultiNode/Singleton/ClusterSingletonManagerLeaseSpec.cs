@@ -14,11 +14,11 @@ using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Coordination.Tests;
 using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {
