@@ -1371,6 +1371,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int maxSubstreams, System.Func<TOut, TKey> groupingFunc, bool allowClosedSubstreamRecreation) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int maxSubstreams, System.Func<TOut, TKey> groupingFunc) { }
         public static Akka.Streams.Dsl.Flow<TIn, System.Collections.Generic.IEnumerable<TOut>, TMat> Grouped<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int n) { }
+        public static Akka.Streams.Dsl.Flow<TIn, System.Collections.Generic.IEnumerable<TOut>, TMat> GroupedWeightedWithin<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long maxWeight, int maxNumber, System.TimeSpan interval, System.Func<TOut, long> costFn) { }
         public static Akka.Streams.Dsl.Flow<TIn, System.Collections.Generic.IEnumerable<TOut>, TMat> GroupedWithin<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int n, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> IdleTimeout<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> InitialDelay<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.TimeSpan delay) { }
@@ -2048,6 +2049,8 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Expand<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, System.Collections.Generic.IEnumerator<TOut2>> extrapolate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int maxSubstreams, System.Func<TOut, TKey> groupingFunc) { }
         public static Akka.Streams.Dsl.Source<System.Collections.Generic.IEnumerable<TOut>, TMat> Grouped<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int n) { }
+        public static Akka.Streams.Dsl.Source<System.Collections.Generic.IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long maxWeight, System.TimeSpan interval, System.Func<TOut, long> costFn) { }
+        public static Akka.Streams.Dsl.Source<System.Collections.Generic.IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long maxWeight, int maxNumber, System.TimeSpan interval, System.Func<TOut, long> costFn) { }
         public static Akka.Streams.Dsl.Source<System.Collections.Generic.IEnumerable<TOut>, TMat> GroupedWithin<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int n, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> IdleTimeout<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> InitialDelay<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.TimeSpan delay) { }
@@ -2234,6 +2237,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat3, TClosed> DivertToMaterialized<TOut, TMat, TMat2, TMat3, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> that, System.Func<TOut, bool> when, System.Func<TMat, TMat2, TMat3> materializerFunction) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Expand<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, System.Func<TOut1, System.Collections.Generic.IEnumerator<TOut2>> extrapolate) { }
         public static Akka.Streams.Dsl.SubFlow<System.Collections.Generic.IEnumerable<TOut>, TMat, TClosed> Grouped<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, int n) { }
+        public static Akka.Streams.Dsl.SubFlow<System.Collections.Generic.IEnumerable<TOut>, TMat, TClosed> GroupedWeightedWithin<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, long maxWeight, int maxNumber, System.TimeSpan interval, System.Func<TOut, long> costFn) { }
         public static Akka.Streams.Dsl.SubFlow<System.Collections.Generic.IEnumerable<TOut>, TMat, TClosed> GroupedWithin<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, int n, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> IdleTimeout<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> InitialDelay<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.TimeSpan delay) { }
@@ -4180,9 +4184,9 @@ namespace Akka.Streams.Implementation.Fusing
         public static Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T> Identity<T>() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class GroupedWithin<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, System.Collections.Generic.IEnumerable<T>>>
+    public sealed class GroupedWeightedWithin<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, System.Collections.Generic.IEnumerable<T>>>
     {
-        public GroupedWithin(int count, System.TimeSpan timeout) { }
+        public GroupedWeightedWithin(long maxWeight, int maxNumber, System.Func<T, long> costFn, System.TimeSpan interval) { }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         public override Akka.Streams.FlowShape<T, System.Collections.Generic.IEnumerable<T>> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
@@ -4544,6 +4548,8 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Akka.Streams.Attributes Fused;
         public static readonly Akka.Streams.Attributes GroupBy;
         public static readonly Akka.Streams.Attributes Grouped;
+        public static readonly Akka.Streams.Attributes GroupedWeightedWithin;
+        public static readonly Akka.Streams.Attributes GroupedWithin;
         public static readonly Akka.Streams.Attributes IODispatcher;
         public static readonly Akka.Streams.Attributes IdentityOp;
         public static readonly Akka.Streams.Attributes Idle;

@@ -878,9 +878,9 @@ namespace Akka.Streams.Dsl.Internal
         /// <paramref name="n"/> must be positive, and <paramref name="timeout"/> must be greater than 0 seconds, otherwise
         /// <see cref="ArgumentException"/> is thrown.
         /// <para>
-        /// Emits when the configured time elapses since the last group has been emitted
+        /// Emits when the configured time elapses since the last group has been emitted or `n` elements is buffered
         /// </para>
-        /// Backpressures when the configured time elapses since the last group has been emitted
+        /// Backpressures when downstream backpressures, and there are `n+1` buffered elements
         /// <para>
         /// Completes when upstream completes (emits last group)
         /// </para>
@@ -893,14 +893,63 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="timeout">TBD</param>
         /// <exception cref="ArgumentException">Thrown if <paramref name="n"/> is less than or equal zero or <paramref name="timeout"/> is <see cref="TimeSpan.Zero"/>.</exception>
         /// <returns>TBD</returns>
-        public static IFlow<IEnumerable<T>, TMat> GroupedWithin<T, TMat>(this IFlow<T, TMat> flow, int n,
-            TimeSpan timeout)
-        {
-            if (n <= 0) throw new ArgumentException("n must be > 0", nameof(n));
-            if (timeout == TimeSpan.Zero) throw new ArgumentException("Timeout must be non-zero", nameof(timeout));
+        public static IFlow<IEnumerable<T>, TMat> GroupedWithin<T, TMat>(this IFlow<T, TMat> flow, int n, TimeSpan timeout) => 
+            flow.Via(new Fusing.GroupedWeightedWithin<T>(long.MaxValue, n, _ => 0L, timeout)
+                .WithAttributes(DefaultAttributes.GroupedWithin));
 
-            return flow.Via(new Fusing.GroupedWithin<T>(n, timeout));
-        }
+        /// <summary>
+        /// Chunk up this stream into groups of elements received within a time window,
+        /// or limited by the weight of the elements, whatever happens first.
+        /// Empty groups will not be emitted if no elements are received from upstream.
+        /// The last group before end-of-stream will contain the buffered elements
+        /// since the previously emitted group.
+        /// <para>
+        /// <paramref name="maxWeight" /> must be positive, and <paramref name="interval"/> must be greater than 0 seconds, 
+        /// otherwise ArgumentException is thrown.
+        /// </para>
+        /// <para>Emits when the configured time elapses since the last group has been emitted or weight limit reached</para>
+        /// <para>Backpressures when downstream backpressures, and buffered group(+ pending element) weighs more than `maxWeight`</para>
+        /// <para>Completes when upstream completes(emits last group)</para>
+        /// <para>Cancels when downstream completes</para>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="maxWeight">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="costFn">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this IFlow<TOut, TMat> flow, long maxWeight, TimeSpan interval, Func<TOut, long> costFn) =>
+            flow.Via(new Fusing.GroupedWeightedWithin<TOut>(maxWeight, int.MaxValue, costFn, interval));
+
+        /// <summary>
+        /// Chunk up this stream into groups of elements received within a time window,
+        /// or limited by the weight of the elements, whatever happens first.
+        /// Empty groups will not be emitted if no elements are received from upstream.
+        /// The last group before end-of-stream will contain the buffered elements
+        /// since the previously emitted group.
+        /// <para>
+        /// <paramref name="maxWeight" /> must be positive, <paramref name="maxNumber"/> must be positive, and <paramref name="interval"/> must be greater than 0 seconds, 
+        /// otherwise ArgumentException is thrown.
+        /// </para>
+        /// <para>Emits when the configured time elapses since the last group has been emitted or weight limit reached</para>
+        /// <para>
+        /// Backpressures when downstream backpressures, and buffered group(+ pending element) weighs more than `maxWeight` 
+        /// or has more than `maxNumber` elements
+        /// </para>
+        /// <para>Completes when upstream completes(emits last group)</para>
+        /// <para>Cancels when downstream completes</para>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="maxWeight">TBD</param>
+        /// <param name="maxNumber">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="costFn">TBD</param>
+        /// <returns>TBD</returns>        
+        public static IFlow<IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this IFlow<TOut, TMat> flow, long maxWeight, int maxNumber, TimeSpan interval, Func<TOut, long> costFn) =>
+            flow.Via(new Fusing.GroupedWeightedWithin<TOut>(maxWeight, maxNumber, costFn, interval));
 
         /// <summary>
         /// Shifts elements emission in time by a specified amount. It allows to store elements
