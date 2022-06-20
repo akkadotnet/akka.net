@@ -521,7 +521,7 @@ namespace Akka.Remote.Tests
                     (new ActorAssociationEventListener(remoteTransportProbe)));
 
                 // Hijack associations through the test transport
-                await AwaitConditionAsync(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
+                await AwaitConditionAsync(async () => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
                 var testTransport = registry.TransportFor(rawLocalAddress).Value.Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
@@ -601,7 +601,7 @@ namespace Akka.Remote.Tests
                     (new ActorAssociationEventListener(remoteTransportProbe)));
 
                 // Hijack associations through the test transport
-                await AwaitConditionAsync(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
+                await AwaitConditionAsync(async () => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
                 var testTransport = registry.TransportFor(rawLocalAddress).Value.Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 

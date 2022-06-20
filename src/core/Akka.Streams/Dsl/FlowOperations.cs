@@ -922,10 +922,35 @@ namespace Akka.Streams.Dsl
         /// <param name="timeout">TBD</param>
         /// <exception cref="ArgumentException">Thrown if <paramref name="n"/> is less than or equal zero or <paramref name="timeout"/> is <see cref="TimeSpan.Zero"/>.</exception>
         /// <returns>TBD</returns>
-        public static Flow<TIn, IEnumerable<TOut>, TMat> GroupedWithin<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int n, TimeSpan timeout)
-        {
-            return (Flow<TIn, IEnumerable<TOut>, TMat>)InternalFlowOperations.GroupedWithin(flow, n, timeout);
-        }
+        public static Flow<TIn, IEnumerable<TOut>, TMat> GroupedWithin<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int n, TimeSpan timeout) =>
+            (Flow<TIn, IEnumerable<TOut>, TMat>)InternalFlowOperations.GroupedWithin(flow, n, timeout);
+
+        /// <summary>
+        /// Chunk up this stream into groups of elements received within a time window,
+        /// or limited by the weight and number of the elements, whatever happens first.
+        /// Empty groups will not be emitted if no elements are received from upstream.
+        /// The last group before end-of-stream will contain the buffered elements
+        /// since the previously emitted group.
+        /// <para>
+        /// <paramref name="maxWeight"/> must be positive, <paramref name="maxNumber"/> must be positive, and <paramref name="interval"/> must be greater than 0 seconds, 
+        /// otherwise <see cref="ArgumentException"/>  is thrown.
+        /// </para>
+        /// <para>Emits when the configured time elapses since the last group has been emitted or weight limit reached</para>
+        /// <para>Backpressures when downstream backpressures, and buffered group(+ pending element) weighs more than `maxWeight` or has more than `maxNumber` elements</para>
+        /// <para>Completes when upstream completes(emits last group)</para>
+        /// <para>Cancels when downstream completes</para>
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="maxWeight">TBD</param>
+        /// <param name="maxNumber">TBD</param>
+        /// <param name="costFn">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <returns>TBD</returns>
+        public static Flow<TIn, IEnumerable<TOut>, TMat> GroupedWeightedWithin<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long maxWeight, int maxNumber, TimeSpan interval, Func<TOut, long> costFn) =>
+            (Flow<TIn, IEnumerable<TOut>, TMat>)InternalFlowOperations.GroupedWeightedWithin(flow, maxWeight, maxNumber, interval, costFn);
 
         /// <summary>
         /// Shifts elements emission in time by a specified amount. It allows to store elements
@@ -1366,7 +1391,7 @@ namespace Akka.Streams.Dsl
         /// <param name="groupingFunc">Computes the key for each element</param>
         /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
         /// <returns>TBD</returns>
-        public static SubFlow<TOut, TMat, Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Flow<TIn, TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc, bool allowClosedSubstreamRecreation) => 
+        public static SubFlow<TOut, TMat, Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Flow<TIn, TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc, bool allowClosedSubstreamRecreation) =>
             flow.GroupBy(maxSubstreams, groupingFunc, (f, s) => ((Flow<TIn, Source<TOut, NotUsed>, TMat>)f).To(s), allowClosedSubstreamRecreation);
 
         /// <summary>
@@ -1587,7 +1612,7 @@ namespace Akka.Streams.Dsl
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.MergeMany(flow, breadth, flatten);
         }
-        
+
         /// <summary>
         /// Combine the elements of current flow into a stream of tuples consisting
         /// of all elements paired with their index. Indices start at 0.
@@ -1858,7 +1883,7 @@ namespace Akka.Streams.Dsl
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.AlsoTo(flow, that);
         }
-        
+
         /// <summary>
         /// <para>
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, as a wire tap, meaning that elements that pass
@@ -1870,7 +1895,7 @@ namespace Akka.Streams.Dsl
         /// <para>Completes when upstream completes</para>
         /// <para>Cancels when downstream cancels</para>
         /// </summary>
-        public static Flow<TIn, TOut, TMat> WireTap<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that) => 
+        public static Flow<TIn, TOut, TMat> WireTap<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that) =>
             (Flow<TIn, TOut, TMat>)InternalFlowOperations.WireTap(flow, that);
 
         /// <summary>
@@ -1924,7 +1949,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="that">TBD</param>
         /// <param name="when">TBD</param>
-        public static Flow<TIn, TOut, TMat> DivertTo<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when) => 
+        public static Flow<TIn, TOut, TMat> DivertTo<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when) =>
             (Flow<TIn, TOut, TMat>)InternalFlowOperations.DivertTo(flow, that, when);
 
         ///<summary>
@@ -1943,7 +1968,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="materializerFunction">TBD</param>
         /// <returns>TBD</returns>
-        public static Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Flow<TIn, TOut, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) => 
+        public static Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Flow<TIn, TOut, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) =>
             (Flow<TIn, TOut, TMat2>)InternalFlowOperations.WatchTermination(flow, materializerFunction);
 
         /// <summary>
@@ -2399,7 +2424,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Flow<T, T, TMat3> OrElseMaterialized<T, TMat, TMat2, TMat3>(this Flow<T, T, TMat> flow, IGraph<SourceShape<T>, TMat2> secondary, Func<TMat, TMat2, TMat3> materializedFunction)
             => (Flow<T, T, TMat3>)InternalFlowOperations.OrElseMaterialized(flow, secondary, materializedFunction);
-        
+
         /// <summary>
         /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated.
         /// 
@@ -2411,7 +2436,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Flow<T, T, TMat> Watch<T, TMat>(this Flow<T, T, TMat> flow, IActorRef actorRef) =>
             (Flow<T, T, TMat>)InternalFlowOperations.Watch(flow, actorRef);
-        
+
         /// <summary>
         /// Turns a Flow into a FlowWithContext which manages a context per element along a stream.
         /// </summary>

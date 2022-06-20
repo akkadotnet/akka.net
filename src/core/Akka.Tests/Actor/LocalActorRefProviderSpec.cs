@@ -64,7 +64,7 @@ namespace Akka.Tests.Actor
         public async Task An_ActorRefFactory_must_only_create_one_instance_of_an_actor_from_within_the_same_message_invocation()
         {
             var supervisor = Sys.ActorOf(Props.Create<ActorWithDuplicateChild>());
-            await EventFilter.Exception<InvalidActorNameException>(message: "Actor name \"duplicate\" is not unique!").ExpectOneAsync(() =>
+            await EventFilter.Exception<InvalidActorNameException>(message: "Actor name \"duplicate\" is not unique!").ExpectOneAsync(async () =>
                 {
                     supervisor.Tell("");
                 });

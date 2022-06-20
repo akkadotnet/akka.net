@@ -10,11 +10,11 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using static Akka.Remote.Tests.MultiNode.RemoteNodeDeathWatchMultiNetSpec;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Remote.Tests.MultiNode
 {

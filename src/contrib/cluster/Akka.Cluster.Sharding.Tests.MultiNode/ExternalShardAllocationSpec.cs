@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Sharding.External;
 using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util;
