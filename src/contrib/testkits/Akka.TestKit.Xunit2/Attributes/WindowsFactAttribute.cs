@@ -34,7 +34,10 @@ namespace Akka.TestKit.Xunit2.Attributes
                 if (_skip != null)
                     return _skip;
                 
-                var notWindows = Environment.OSVersion.Platform is PlatformID.Other or PlatformID.Unix;
+                var platform = Environment.OSVersion.Platform;
+                var notWindows = platform == PlatformID.MacOSX 
+                                 || platform == PlatformID.Unix 
+                                 || platform == PlatformID.Xbox;
                 return notWindows ? SkipUnix ?? "Skipped under Unix platforms" : null;
             }
             set => _skip = value;
