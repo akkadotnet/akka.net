@@ -11,7 +11,9 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
@@ -50,26 +52,13 @@ namespace Akka.Cluster.Tests
         {
             await WithinAsync(TimeSpan.FromSeconds(10), async() =>
             {
-                await AwaitConditionAsync(() => ClusterView.IsSingletonCluster);
+                await AwaitConditionAsync(async () => ClusterView.IsSingletonCluster);
                 ClusterView.Self.Address.ShouldBe(_selfAddress);
                 ClusterView.Members.Select(m => m.Address).ShouldBe(new Address[] { _selfAddress });
                 await AwaitAssertAsync(() => ClusterView.Status.ShouldBe(MemberStatus.Up));
             });
         }
 
-
-        /// <summary>
-        /// The expected log info pattern to intercept after a <see cref="Cluster.Join(Address)"/>.
-        /// </summary>
-        protected void Join(string expected)
-        {
-            Within(TimeSpan.FromSeconds(10), () =>
-            {
-                EventFilter
-                    .Info(contains: expected)
-                    .ExpectOne(() => _cluster.Join(_selfAddress));
-            });
-        }
         /// <summary>
         /// The expected log info pattern to intercept after a <see cref="Cluster.Join(Address)"/>.
         /// </summary>
@@ -79,21 +68,7 @@ namespace Akka.Cluster.Tests
             {
                 await EventFilter
                     .Info(contains: expected)
-                    .ExpectOneAsync(TimeSpan.FromMinutes(1), () => _cluster.Join(_selfAddress));
-            });
-        }
-
-        /// <summary>
-        /// The expected log info pattern to intercept after a <see cref="Cluster.Down(Address)"/>.
-        /// </summary>
-        /// <param name="expected"></param>
-        protected void Down(string expected)
-        {
-            Within(TimeSpan.FromSeconds(10), () =>
-            {
-                EventFilter
-                .Info(contains: expected)
-                .ExpectOne(() => _cluster.Down(_selfAddress));
+                    .ExpectOneAsync(async () => _cluster.Join(_selfAddress));
             });
         }
 
@@ -107,7 +82,7 @@ namespace Akka.Cluster.Tests
             {
                 await EventFilter
                 .Info(contains: expected)
-                .ExpectOneAsync(() => _cluster.Down(_selfAddress));
+                .ExpectOneAsync(async () => _cluster.Down(_selfAddress));
             });
         }
     }
@@ -139,9 +114,9 @@ namespace Akka.Cluster.Tests
         public async Task A_cluster_must_not_log_verbose_cluster_events_by_default()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            Intercept<TrueException>(() => Join(upLogMessage));
+            await JoinAsync(upLogMessage).ShouldThrowWithin<TrueException>(10.Seconds());
             await AwaitUpAsync();
-            Intercept<TrueException>(() => Down(downLogMessage));
+            await DownAsync(downLogMessage).ShouldThrowWithin<TrueException>(10.Seconds());
         }
     }
 

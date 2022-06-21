@@ -193,6 +193,15 @@ namespace Akka.Streams.TestKit
                     .ConfigureAwait(false);
             
             /// <summary>
+            /// Expect a stream element.
+            /// </summary>
+            public async Task ExpectNextAsync(T element, TimeSpan timeout, CancellationToken cancellationToken = default)
+            {
+                await ExpectNextTask(TestProbe, element, timeout, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            
+            /// <summary>
             /// Expect and return the next <paramref name="n"/> stream elements.
             /// </summary>
             public IEnumerable<T> ExpectNextN(
@@ -211,6 +220,15 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken = default)
                 => ExpectNextNTask(TestProbe, n, timeout, cancellationToken);
 
+            /// <summary>
+            /// Expect the given elements to be signalled in order.
+            /// </summary>
+            public async Task ExpectNextNAsync(IEnumerable<T> all, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+            {
+                await ExpectNextNTask(TestProbe, all, timeout, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            
             /// <summary>
             /// Assert that no message is received for the specified time.
             /// </summary>
@@ -411,7 +429,7 @@ namespace Akka.Streams.TestKit
             public TOther Within<TOther>(TimeSpan min, TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) => 
                 TestProbe.Within(min, max, execute, cancellationToken: cancellationToken);
 
-            public async Task<TOther> WithinAsync<TOther>(TimeSpan min, TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) => 
+            public async Task<TOther> WithinAsync<TOther>(TimeSpan min, TimeSpan max, Func<Task<TOther>> execute, CancellationToken cancellationToken = default) => 
                 await TestProbe.WithinAsync(min, max, execute, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
 
@@ -422,9 +440,9 @@ namespace Akka.Streams.TestKit
                 TestProbe.Within(max, execute, cancellationToken: cancellationToken);
 
             /// <summary>
-            /// Sane as calling Within(TimeSpan.Zero, max, function).
+            /// Sane as calling WithinAsync(TimeSpan.Zero, max, function).
             /// </summary>
-            public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default) => 
+            public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<Task<TOther>> execute, CancellationToken cancellationToken = default) => 
                 await TestProbe.WithinAsync(max, execute, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
 

@@ -189,7 +189,7 @@ namespace Akka.Tests.Actor
         {
             // we'll send 3 int messages to stash by the actor and then stop it,
             // all stashed messages should then be unstashed back and sent to dead letters
-            await EventFilter.DeadLetter<int>().ExpectAsync(3, () =>
+            await EventFilter.DeadLetter<int>().ExpectAsync(3, async () =>
             {
                 var actor = ActorOf<StashingActor>();
                 // send some messages to stash

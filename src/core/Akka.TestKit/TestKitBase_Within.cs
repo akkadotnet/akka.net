@@ -38,38 +38,15 @@ namespace Akka.TestKit
             WithinAsync(
                     min: TimeSpan.Zero,
                     max: max,
-                    function: () =>
+                    function: async () =>
                     {
                         action();
-                        return Task.FromResult((object)null);
+                        return NotUsed.Instance;
                     },
                     hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
-        }
-        
-        /// <summary>
-        /// Async version of <see cref="Within(TimeSpan, Action, TimeSpan?, CancellationToken)"/>
-        /// </summary>
-        public async Task WithinAsync(
-            TimeSpan max,
-            Action action,
-            TimeSpan? epsilonValue = null,
-            CancellationToken cancellationToken = default)
-        {
-            await WithinAsync(
-                    min: TimeSpan.Zero,
-                    max: max,
-                    function: () =>
-                    {
-                        action();
-                        return Task.FromResult((object)null);
-                    },
-                    hint: null,
-                    epsilonValue: epsilonValue,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
         }
         
         /// <summary>
@@ -88,7 +65,7 @@ namespace Akka.TestKit
                 function: async () =>
                 {
                     await actionAsync().ConfigureAwait(false);
-                    return Task.FromResult((object)null);
+                    return NotUsed.Instance;
                 },
                 hint: null,
                 epsilonValue: epsilonValue,
@@ -120,10 +97,10 @@ namespace Akka.TestKit
             WithinAsync(
                     min: min, 
                     max: max, 
-                    function: () =>
+                    function: async () =>
                     {
                         action();
-                        return Task.FromResult((object)null);
+                        return NotUsed.Instance;
                     }, 
                     hint: hint, 
                     epsilonValue: epsilonValue, 
@@ -131,31 +108,6 @@ namespace Akka.TestKit
                 .ConfigureAwait(false).GetAwaiter().GetResult();
         }
         
-        /// <summary>
-        /// Async version of <see cref="Within(TimeSpan, TimeSpan, Action, string, TimeSpan?, CancellationToken)"/>
-        /// </summary>
-        public async Task WithinAsync(
-            TimeSpan min,
-            TimeSpan max,
-            Action action,
-            string hint = null,
-            TimeSpan? epsilonValue = null,
-            CancellationToken cancellationToken = default)
-        {
-            await WithinAsync(
-                    min: min,
-                    max: max,
-                    function: () =>
-                    {
-                        action();
-                        return Task.FromResult((object)null);
-                    }, 
-                    hint: hint,
-                    epsilonValue: epsilonValue, 
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-        }
-
         /// <summary>
         /// Async version of <see cref="Within(TimeSpan, TimeSpan, Action, string, TimeSpan?, CancellationToken)"/>
         /// that takes a <see cref="Func{Task}"/> instead of an <see cref="Action"/>
@@ -204,40 +156,11 @@ namespace Akka.TestKit
             return WithinAsync(
                     min: TimeSpan.Zero,
                     max: max,
-                    function: () => Task.FromResult(function()),
+                    function: async () => function(),
                     hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
-        }
-
-        /// <summary>
-        /// Execute code block while bounding its execution time between 0 seconds and <paramref name="max"/>.
-        /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
-        /// are available in a version which implicitly uses the remaining time governed by 
-        /// the innermost enclosing `within` block.</para>
-        /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="max">TBD</param>
-        /// <param name="function">TBD</param>
-        /// <param name="epsilonValue">TBD</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
-        public async Task<T> WithinAsync<T>(
-            TimeSpan max,
-            Func<T> function,
-            TimeSpan? epsilonValue = null,
-            CancellationToken cancellationToken = default)
-        {
-            return await WithinAsync(
-                    min: TimeSpan.Zero,
-                    max: max,
-                    function: function, 
-                    hint: null,
-                    epsilonValue: epsilonValue,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -295,34 +218,13 @@ namespace Akka.TestKit
             return WithinAsync(
                     min: min,
                     max: max,
-                    function: () => Task.FromResult(function()),
+                    function: async () => function(),
                     hint: hint,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
                 .WaitAndUnwrapException();
         }
 
-        /// <summary>
-        /// Async version of <see cref="Within{T}(TimeSpan, TimeSpan, Func{T}, string, TimeSpan?, CancellationToken)"/>
-        /// </summary>
-        public async Task<T> WithinAsync<T>(
-            TimeSpan min,
-            TimeSpan max,
-            Func<T> function,
-            string hint = null,
-            TimeSpan? epsilonValue = null,
-            CancellationToken cancellationToken = default)
-        {
-            return await WithinAsync(
-                    min: min,
-                    max: max,
-                    function: () => Task.FromResult(function()),
-                    hint: hint,
-                    epsilonValue: epsilonValue,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-        }
-        
         /// <summary>
         /// Execute code block while bounding its execution time between <paramref name="min"/> and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 

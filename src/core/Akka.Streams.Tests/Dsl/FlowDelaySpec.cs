@@ -7,7 +7,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
@@ -26,30 +28,32 @@ namespace Akka.Streams.Tests.Dsl
     [Collection(nameof(FlowDelaySpec))] // timing sensitive since it involves hard delays
     public class FlowDelaySpec : AkkaSpec
     {
+        private const long Epsilon = 100;
         private ActorMaterializer Materializer { get; }
 
-        public FlowDelaySpec(ITestOutputHelper helper) : base(helper)
+        public FlowDelaySpec(ITestOutputHelper helper) : base("{akka.loglevel = INFO}", helper)
         {
             Materializer = ActorMaterializer.Create(Sys);
         }
 
-        // Was marked as racy before async testkit
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_deliver_elements_with_some_time_shift()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var task =
-                    Source.From(Enumerable.Range(1, 10))
-                        .Delay(TimeSpan.FromSeconds(1))
-                        .Grouped(100)
-                        .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                await task.ShouldCompleteWithin(1200.Milliseconds());
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                var probe = Source.From(Enumerable.Range(1, 10))
+                    .Delay(TimeSpan.FromSeconds(1))
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+
+                await probe.RequestAsync(10);
+                var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(Enumerable.Range(1, 10), 3.Seconds()));
+                Log.Info("Expected execution time: 1000 ms, actual: {0} ms", elapsed);
+                elapsed.Should().BeGreaterThan(1000 - Epsilon);
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_add_delay_to_initialDelay_if_exists_upstream()
         {
@@ -60,53 +64,53 @@ namespace Akka.Streams.Tests.Dsl
                     .Delay(TimeSpan.FromSeconds(1))
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
-                await probe.AsyncBuilder()
-                    .Request(10)
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(1800))
-                    .ExpectNext(1, TimeSpan.FromMilliseconds(600))
-                    .ExpectNextN(Enumerable.Range(2, 9))
-                    .ExpectComplete()
-                    .ExecuteAsync();
+                await probe.RequestAsync(10);
+                var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(Enumerable.Range(1, 10), 5.Seconds()));
+                Log.Info("Expected execution time: 2000 ms, actual: {0} ms", elapsed);
+                elapsed.Should().BeGreaterThan(2000 - Epsilon);
+                await probe.ExpectCompleteAsync();
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_deliver_element_after_time_passed_from_actual_receiving_element()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
+                const int expectedMilliseconds = 300;
+                
                 var probe = Source.From(Enumerable.Range(1, 3))
-                    .Delay(TimeSpan.FromMilliseconds(300))
+                    .Delay(TimeSpan.FromMilliseconds(expectedMilliseconds))
                     .RunWith(this.SinkProbe<int>(), Materializer);
-            
-                await probe.AsyncBuilder()
-                    .Request(2)
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200)) //delay
-                    .ExpectNext(1, TimeSpan.FromMilliseconds(200)) //delayed element
-                    .ExpectNext(2, TimeSpan.FromMilliseconds(100)) //buffered element
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                    .ExecuteAsync();
-            
-                await probe.AsyncBuilder()
-                    .Request(1)
-                    .ExpectNext(3) //buffered element
-                    .ExpectComplete()
-                    .ExecuteAsync();
+                
+                await probe.RequestAsync(2);
+                var elapsed = await MeasureExecutionTime(() => probe.ExpectNextNAsync(new[] { 1, 2 }, 1.Seconds()));
+                Log.Info("Expected execution time: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed);
+                elapsed.Should().BeGreaterThan(200);
+                await probe.ExpectNoMsgAsync(200.Milliseconds());
+                
+                await probe.RequestAsync(1);
+                elapsed = await MeasureExecutionTime(() => probe.ExpectNextAsync(3, 1.Seconds())); // buffered element
+                Log.Info("Expected execution time: instant, actual: {0} ms", elapsed);
+                elapsed.Should().BeLessThan(300 + Epsilon);
+                await probe.ExpectCompleteAsync();
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_deliver_elements_with_delay_for_slow_stream()
         {
+            const int expectedMilliseconds = 300;
+            
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var c = this.CreateManualSubscriberProbe<int>();
                 var p = this.CreateManualPublisherProbe<int>();
 
                 Source.FromPublisher(p)
-                    .Delay(TimeSpan.FromMilliseconds(300))
+                    .Delay(TimeSpan.FromMilliseconds(expectedMilliseconds))
                     .To(Sink.FromSubscriber(c))
                     .Run(Materializer);
                 var cSub = await c.ExpectSubscriptionAsync();
@@ -114,93 +118,109 @@ namespace Akka.Streams.Tests.Dsl
                 
                 cSub.Request(100);
                 pSub.SendNext(1);
-                await c.AsyncBuilder()
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                    .ExpectNext(1)
-                    .ExecuteAsync();
+                var elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(1, 1.Seconds()));
+                Log.Info("Expected execution time: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed);
+                elapsed.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
                 
                 pSub.SendNext(2);
-                await c.AsyncBuilder()
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                    .ExpectNext(2)
-                    .ExecuteAsync();
+                elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(2, 1.Seconds()));
+                Log.Info("Expected execution time: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed);
+                elapsed.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
                 
                 pSub.SendComplete();
                 await c.ExpectCompleteAsync();
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static async Task<long> MeasureExecutionTime(Func<Task> task)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            await task();
+            stopwatch.Stop();
+            return stopwatch.ElapsedMilliseconds;
+        }
+
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_drop_tail_for_internal_buffer_if_it_is_full_in_DropTail_mode()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var task = Source.From(Enumerable.Range(1, 20))
+                var probe = Source.From(Enumerable.Range(1, 20))
                     .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.DropTail)
                     .WithAttributes(Attributes.CreateInputBuffer(16, 16))
-                    .Grouped(100)
-                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+                    .RunWith(this.SinkProbe<int>(), Materializer);
 
-                await task.ShouldCompleteWithin(1800.Milliseconds());
+                await Task.Delay(1.Seconds());
+                await probe.RequestAsync(20);
+                var result = await probe.ExpectNextNAsync(16).ToListAsync();
                 var expected = Enumerable.Range(1, 15).ToList();
                 expected.Add(20);
-                task.Result.Should().BeEquivalentTo(expected);
+                result.Should().BeEquivalentTo(expected);
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_drop_head_for_internal_buffer_if_it_is_full_in_DropHead_mode()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var task = Source.From(Enumerable.Range(1, 20))
+                var probe = Source.From(Enumerable.Range(1, 20))
                     .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.DropHead)
                     .WithAttributes(Attributes.CreateInputBuffer(16, 16))
-                    .Grouped(100)
-                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+                    .RunWith(this.SinkProbe<int>(), Materializer);
 
-                await task.ShouldCompleteWithin(1800.Milliseconds());
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(5, 16));
+                await Task.Delay(1.Seconds());
+                await probe.RequestAsync(20);
+                var result = await probe.ExpectNextNAsync(16).ToListAsync();
+                result.Should().BeEquivalentTo(Enumerable.Range(5, 16));
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_clear_all_for_internal_buffer_if_it_is_full_in_DropBuffer_mode()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var task = Source.From(Enumerable.Range(1, 20))
+                var probe = Source.From(Enumerable.Range(1, 20))
                     .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.DropBuffer)
                     .WithAttributes(Attributes.CreateInputBuffer(16, 16))
-                    .Grouped(100)
-                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+                    .RunWith(this.SinkProbe<int>(), Materializer);
 
-                await task.ShouldCompleteWithin(1200.Milliseconds());
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(17, 4));
+                await probe.RequestAsync(20);
+                var result = await probe.ExpectNextNAsync(4).ToListAsync();
+                result.Should().BeEquivalentTo(Enumerable.Range(17, 4));
             }, Materializer);
         }
 
-        [Fact(Skip = "Extremely flaky because of the interleaved ExpectNext and ExpectNoMsg with a very tight timing requirement. .Net timer implementation is not consistent enough to maintain accurate timing under heavy CPU load.")]
+        // Was marked as extremely racy before async testkit, test rewritten
+        [Fact]
         public async Task A_Delay_must_pass_elements_with_delay_through_normally_in_backpressured_mode()
         {
+            const int expectedMilliseconds = 300;
+            
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                await Source.From(Enumerable.Range(1, 3))
-                    .Delay(TimeSpan.FromMilliseconds(300), DelayOverflowStrategy.Backpressure)
+                var probe = Source.From(Enumerable.Range(1, 3))
+                    .Delay(TimeSpan.FromMilliseconds(expectedMilliseconds), DelayOverflowStrategy.Backpressure)
                     .WithAttributes(Attributes.CreateInputBuffer(1, 1))
-                    .RunWith(this.SinkProbe<int>(), Materializer)
-                    .AsyncBuilder()
-                    .Request(5)
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                    .ExpectNext(1, TimeSpan.FromMilliseconds(200))
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                    .ExpectNext(2, TimeSpan.FromMilliseconds(200))
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                    .ExpectNext(3, TimeSpan.FromMilliseconds(200))
-                    .ExecuteAsync();
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+
+                await probe.RequestAsync(5);
+                var elapsed1 = await MeasureExecutionTime(() => probe.ExpectNextAsync(1, 1.Seconds()));
+                var elapsed2 = await MeasureExecutionTime(() => probe.ExpectNextAsync(2, 1.Seconds()));
+                var elapsed3 = await MeasureExecutionTime(() => probe.ExpectNextAsync(3, 1.Seconds()));
+                
+                Log.Info("Expected execution time 1: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed1);
+                Log.Info("Expected execution time 2: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed2);
+                Log.Info("Expected execution time 3: {0} ms, actual: {1} ms", expectedMilliseconds, elapsed3);
+
+                elapsed1.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
+                elapsed2.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
+                elapsed3.Should().BeGreaterThan(expectedMilliseconds - Epsilon);
             }, Materializer);
         }
 
@@ -222,7 +242,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_emit_early_when_buffer_is_full_and_in_EmitEarly_mode()
         {
@@ -241,20 +261,19 @@ namespace Akka.Streams.Tests.Dsl
                 cSub.Request(20);
 
                 Enumerable.Range(1, 16).ForEach(i => pSub.SendNext(i));
-                
-                await c.AsyncBuilder()
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(300))
-                    .ExecuteAsync();
+                await c.ExpectNoMsgAsync(300.Milliseconds());
                 pSub.SendNext(17);
-                await c.AsyncBuilder()
-                    .ExpectNext(1, TimeSpan.FromMilliseconds(100))
-                    .ExecuteAsync();
+                
+                var elapsed = await MeasureExecutionTime(() => c.ExpectNextAsync(1, 1.Seconds()));
+                Log.Info("Expected execution time: instant, actual: {0} ms", elapsed);
+                elapsed.Should().BeLessThan(Epsilon);
+                
                 // fail will terminate despite of non empty internal buffer
                 pSub.SendError(new Exception());
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
+        // Was marked as racy before async testkit, test rewritten
         [Fact]
         public async Task A_Delay_must_properly_delay_according_to_buffer_size()
         {
@@ -268,9 +287,9 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Ignore<int>(), Materializer)
                     .PipeTo(TestActor, success: () => Done.Instance);
 
-                await ExpectNoMsgAsync(TimeSpan.FromSeconds(2));
-                await ExpectMsgAsync<Done>();
-                task.IsCompleted.Should().BeTrue();
+                var elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>(5.Seconds()));
+                Log.Info("Expected execution time: 2500 ms, actual: {0} ms", elapsed);
+                elapsed.Should().BeGreaterThan(2500 - Epsilon);
 
                 // With a buffer large enough to hold all arriving elements, delays don't add up 
                 // task is intentionally not awaited
@@ -280,8 +299,9 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Ignore<int>(), Materializer)
                     .PipeTo(TestActor, success: () => Done.Instance);
 
-                await ExpectMsgAsync<Done>();
-                task.IsCompleted.Should().BeTrue();
+                elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>(5.Seconds()));
+                Log.Info("Expected execution time: 1000 ms, actual: {0} ms", elapsed);
+                elapsed.Should().BeLessThan(1000 + Epsilon);
 
                 // Delays that are already present are preserved when buffer is large enough 
                 // task is intentionally not awaited
@@ -292,9 +312,9 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Ignore<NotUsed>(), Materializer)
                     .PipeTo(TestActor, success: () => Done.Instance);
 
-                await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(900));
-                await ExpectMsgAsync<Done>();
-                task.IsCompleted.Should().BeTrue();
+                elapsed = await MeasureExecutionTime(async () => await ExpectMsgAsync<Done>(5.Seconds()));
+                Log.Info("Expected execution time: 1000 ms, actual: {0} ms", elapsed);
+                elapsed.Should().BeGreaterThan(1000 - Epsilon);
             }, Materializer);
         }
 
