@@ -731,7 +731,8 @@ namespace Akka.Streams.Tests.Dsl
                     var snk = Flow.Create<string>()
                         .TakeWhile(s => s != "cancel")
                         .To(Sink.ForEach<string>(c => flowInSource.SendNext(c))
-                            .MapMaterializedValue(task => task.ContinueWith(
+                            .MapMaterializedValue(task => 
+                                task.ShouldCompleteWithin(10.Seconds()).ContinueWith(
                                 t1 =>
                                 {
                                     if (t1.IsFaulted || t1.IsCanceled)
@@ -747,7 +748,7 @@ namespace Akka.Streams.Tests.Dsl
                         return c;
                     }).WatchTermination((s1, task) =>
                     {
-                        task.ContinueWith(_ =>
+                        task.ShouldCompleteWithin(10.Seconds()).ContinueWith(_ =>
                         {
                             flowInSource.SendNext("out complete");
                             return NotUsed.Instance;

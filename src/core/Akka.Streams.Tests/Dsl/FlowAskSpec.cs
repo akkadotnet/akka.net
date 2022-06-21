@@ -253,9 +253,8 @@ namespace Akka.Streams.Tests.Dsl
                 .Ask<Reply>(failsOn, _timeout, 4)
                 .RunWith(Sink.FromSubscriber(c), _materializer);
 
-            c.ExpectSubscription().Request(10);
-            var error = c.ExpectError().As<AggregateException>();
-            error.Flatten().InnerException.Message.Should().Be("Booming for 1!");
+            var error = (AggregateException) c.ExpectSubscriptionAndError();
+            error.InnerException.Message.Should().Be("Booming for 1!");
         }, _materializer);
 
         [Fact]
