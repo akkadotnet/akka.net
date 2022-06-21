@@ -17,6 +17,9 @@ jobs:
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     pool:
       vmImage: ${{ parameters.vmImage }}
+    variables:
+      COMPlus_ThreadPool_UsePortableThreadPool: 0
+    
     steps:
       - task: UseDotNet@2
         displayName: 'Use .NET 6 SDK 6.0.100'
