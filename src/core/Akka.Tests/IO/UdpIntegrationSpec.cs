@@ -262,9 +262,9 @@ namespace Akka.Tests.IO
                 for (int i = 0; i < batchSize; i++) 
                     sender.Tell(Udp.Send.Create(data, serverLocalEndpoint));
 
-                var msgs = await serverProbe.ReceiveNAsync(batchSize, default).ToListAsync();
-                var receives = msgs.Cast<Udp.Received>();
-                receives.Sum(r => r.Data.Count).Should().Be(data.Count * batchSize);
+                var msgs = await serverProbe.ReceiveNAsync(batchSize, 10.Seconds())
+                    .Cast<Udp.Received>().ToListAsync();
+                msgs.Sum(r => r.Data.Count).Should().Be(data.Count * batchSize);
             }
             
             // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected

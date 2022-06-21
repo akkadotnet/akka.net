@@ -150,7 +150,8 @@ namespace Akka.Cluster.Sharding.Tests
             probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
 
             var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
-            return settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
+            var time = settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
+            return time < TimeSpan.Zero ? TimeSpan.Zero : time;
         }
     }
 
@@ -197,7 +198,7 @@ namespace Akka.Cluster.Sharding.Tests
             var probe = CreateTestProbe();
             var region = Start(probe);
             var time = await TimeUntilPassivate(region, probe);
-            probe.ExpectNoMsg(time);
+            await probe.ExpectNoMsgAsync(time);
         }
     }
 }
