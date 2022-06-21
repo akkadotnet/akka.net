@@ -16,6 +16,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Tests.Shared.Internals;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -36,8 +37,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys);
         }
 
-        // Was marked as racy before async testkit, test rewritten
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task A_Delay_must_deliver_elements_with_some_time_shift()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -53,8 +53,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit, test rewritten
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task A_Delay_must_add_delay_to_initialDelay_if_exists_upstream()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -72,8 +71,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit, test rewritten
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task A_Delay_must_deliver_element_after_time_passed_from_actual_receiving_element()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -98,8 +96,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit, test rewritten
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task A_Delay_must_deliver_elements_with_delay_for_slow_stream()
         {
             const int expectedMilliseconds = 300;
@@ -141,8 +138,7 @@ namespace Akka.Streams.Tests.Dsl
             return stopwatch.ElapsedMilliseconds;
         }
 
-        // Was marked as racy before async testkit, test rewritten
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task A_Delay_must_drop_tail_for_internal_buffer_if_it_is_full_in_DropTail_mode()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -161,8 +157,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit, test rewritten
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task A_Delay_must_drop_head_for_internal_buffer_if_it_is_full_in_DropHead_mode()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -179,8 +174,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit, test rewritten
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task A_Delay_must_clear_all_for_internal_buffer_if_it_is_full_in_DropBuffer_mode()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -196,8 +190,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as extremely racy before async testkit, test rewritten
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task A_Delay_must_pass_elements_with_delay_through_normally_in_backpressured_mode()
         {
             const int expectedMilliseconds = 300;
@@ -242,8 +235,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit, test rewritten
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task A_Delay_must_emit_early_when_buffer_is_full_and_in_EmitEarly_mode()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -273,8 +265,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit, test rewritten
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task A_Delay_must_properly_delay_according_to_buffer_size()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
