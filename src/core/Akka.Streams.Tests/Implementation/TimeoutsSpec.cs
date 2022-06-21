@@ -406,7 +406,7 @@ namespace Akka.Streams.Tests.Implementation
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task IdleTimeoutBidi_must_be_able_to_signal_timeout_once_no_traffic_on_either_sides()
         {
             await this.AssertAllStagesStoppedAsync(async () =>

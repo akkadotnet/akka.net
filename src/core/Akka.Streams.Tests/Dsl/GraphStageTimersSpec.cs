@@ -13,6 +13,7 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -44,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
             return channel;
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task GraphStage_timer_support_must_receive_single_shot_timer()
         {
             var driver = SetupIsolatedStage();
@@ -57,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
             driver.StopStage();
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void GraphStage_timer_support_must_resubmit_single_shot_timer()
         {
             var driver = SetupIsolatedStage();

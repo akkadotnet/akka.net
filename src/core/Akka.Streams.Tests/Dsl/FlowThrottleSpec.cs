@@ -13,6 +13,7 @@ using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -108,7 +109,7 @@ namespace Akka.Streams.Tests.Dsl
             t.Result.Should().Be(2);
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
         {
             this.AssertAllStagesStopped(() =>
@@ -172,7 +173,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void Throttle_for_single_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
         {
             this.AssertAllStagesStopped(() =>
@@ -193,7 +194,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void Throttle_for_single_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
         {
             this.AssertAllStagesStopped(() =>
@@ -235,7 +236,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void Throttle_for_single_cost_elements_must_burst_some_elements_if_have_enough_time()
         {
             this.AssertAllStagesStopped(() =>
@@ -328,7 +329,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy, see https://github.com/akkadotnet/akka.net/pull/4424#issuecomment-632284459")]
+        [LocalFact(SkipLocal = "Racy, see https://github.com/akkadotnet/akka.net/pull/4424#issuecomment-632284459")]
         public void Throttle_for_various_cost_elements_must_emit_elements_according_to_cost()
         {
             this.AssertAllStagesStopped(() =>
@@ -388,7 +389,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void Throttle_for_various_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
         {
             this.AssertAllStagesStopped(() =>
@@ -437,7 +438,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void Throttle_for_various_cost_elements_must_burst_some_elements_if_have_enough_time()
         {
             this.AssertAllStagesStopped(() =>

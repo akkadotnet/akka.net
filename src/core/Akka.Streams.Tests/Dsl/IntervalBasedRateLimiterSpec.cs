@@ -10,6 +10,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Xunit;
 
@@ -19,7 +20,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         private readonly Source<int, NotUsed> _infiniteSource = Source.From(Enumerable.Range(1, int.MaxValue - 1));
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void IntervalBasedRateLimiter_should_limit_rate_of_messages_when_frequency_is_low_1_element_per_500ms()
         {
             TestCase(source: _infiniteSource,
@@ -28,7 +29,7 @@ namespace Akka.Streams.Tests.Dsl
                 minInterval: TimeSpan.FromMilliseconds(500));
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void IntervalBasedRateLimiter_should_limit_rate_of_messages_when_frequency_is_medium_10_elements_per_100ms()
         {
             TestCase(source: _infiniteSource,
@@ -37,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
                 minInterval: TimeSpan.FromMilliseconds(100));
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void IntervalBasedRateLimiter_should_limit_rate_of_messages_when_frequency_is_moderate_20_elements_per_100ms()
         {
             TestCase(source: _infiniteSource,
@@ -46,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
                 minInterval: TimeSpan.FromMilliseconds(100));
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void IntervalBasedRateLimiter_should_limit_rate_of_messages_when_frequency_is_moderate_200_elements_per_1000ms()
         {
             TestCase(source: _infiniteSource,
@@ -55,7 +56,7 @@ namespace Akka.Streams.Tests.Dsl
                 minInterval: TimeSpan.FromMilliseconds(1000));
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void IntervalBasedRateLimiter_should_limit_rate_of_messages_when_frequency_is_high_200_elements_per_100ms()
         {
             TestCase(source: _infiniteSource,
@@ -64,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
                 minInterval: TimeSpan.FromMilliseconds(100));
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void IntervalBasedRateLimiter_should_limit_rate_of_messages_when_frequency_is_high_2_000_elements_per_1000ms()
         {
             TestCase(source: _infiniteSource,

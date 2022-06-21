@@ -271,15 +271,11 @@ namespace Akka.Streams.Tests.Dsl
                 await p.EnsureSubscriptionAsync();
                 await p.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
-                var elems = await p.WithinAsync(TimeSpan.FromSeconds(1), async () =>
+                var elems = new List<int>();
+                foreach (var _ in Enumerable.Range(0, noOfSources * 10))
                 {
-                    var list = new List<int>();
-                    foreach (var _ in Enumerable.Range(0, noOfSources * 10))
-                    {
-                        list.Add(await p.RequestNextAsync());
-                    }
-                    return list;
-                });
+                    elems.Add(await p.RequestNextAsync());
+                }
                 await p.ExpectCompleteAsync();
                 elems.Should().BeEquivalentTo(Enumerable.Range(0, noOfSources * 10));
             }, Materializer);

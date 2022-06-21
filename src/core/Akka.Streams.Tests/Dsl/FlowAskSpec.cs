@@ -15,6 +15,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -242,7 +243,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Should().BeOfType<AskTimeoutException>();
         }, _materializer);
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void Flow_with_ask_must_signal_ask_failure() => this.AssertAllStagesStopped(() =>
         {
             var failsOn = ReplierFailOn(1);
