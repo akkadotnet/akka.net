@@ -16,8 +16,8 @@ namespace Akka.TestKit.Xunit2.Attributes
     /// "XUNIT_SKIP_LOCAL_FACT" exists and is set to the string "true"
     /// </para>
     /// <para>
-    /// Note that the original <see cref="FactAttribute.Skip"/> property takes precedence over this attribute,
-    /// any unit tests with <see cref="LocalFactAttribute"/> with its <see cref="FactAttribute.Skip"/> property
+    /// Note that the original <see cref="Skip"/> property takes precedence over this attribute,
+    /// any unit tests with <see cref="LocalFactAttribute"/> with its <see cref="Skip"/> property
     /// set will always be skipped, regardless of the environment variable content.
     /// </para>
     /// </summary>
@@ -27,7 +27,9 @@ namespace Akka.TestKit.Xunit2.Attributes
 
         private string _skip;
 
-        /// <inheritdoc cref="FactAttribute.Skip"/>
+        /// <summary>
+        /// Marks the test so that it will not be run, and gets or sets the skip reason
+        /// </summary>
         public override string Skip
         {
             get
@@ -55,8 +57,8 @@ namespace Akka.TestKit.Xunit2.Attributes
     /// "XUNIT_SKIP_LOCAL_THEORY" exists and is set to the string "true"
     /// </para>
     /// <para>
-    /// Note that the original <see cref="TheoryAttribute.Skip"/> property takes precedence over this attribute,
-    /// any unit tests with <see cref="LocalTheoryAttribute"/> with its <see cref="TheoryAttribute.Skip"/> property
+    /// Note that the original <see cref="Skip"/> property takes precedence over this attribute,
+    /// any unit tests with <see cref="LocalTheoryAttribute"/> with its <see cref="Skip"/> property
     /// set will always be skipped, regardless of the environment variable content.
     /// </para>
     /// </summary>
@@ -68,7 +70,9 @@ namespace Akka.TestKit.Xunit2.Attributes
 
         private string _skip;
 
-        /// <inheritdoc cref="TheoryAttribute.Skip"/>
+        /// <summary>
+        /// Marks the test so that it will not be run, and gets or sets the skip reason
+        /// </summary>
         public override string Skip
         {
             get
@@ -85,7 +89,7 @@ namespace Akka.TestKit.Xunit2.Attributes
         
         /// <summary>
         /// The reason why this unit test is being skipped by the <see cref="LocalTheoryAttribute"/>.
-        /// Note that the original <see cref="TheoryAttribute.Skip"/> property takes precedence over this message. 
+        /// Note that the original <see cref="Skip"/> property takes precedence over this message. 
         /// </summary>
         public string SkipLocal { get; set; }
 
