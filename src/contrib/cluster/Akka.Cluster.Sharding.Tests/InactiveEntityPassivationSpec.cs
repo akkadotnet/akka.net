@@ -151,7 +151,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
             var time = settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
-            return time < TimeSpan.Zero ? TimeSpan.Zero : time;
+            return time < smallTolerance ? smallTolerance : time;
         }
     }
 
