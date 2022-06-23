@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\..\common.props"/>
+    <Import Project="..\..\..\common.props" />
 
     <PropertyGroup>
         <AssemblyTitle>Akka.TestKit.Xunit2</AssemblyTitle>
@@ -10,8 +10,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj"/>
-        <PackageReference Include="xunit" Version="$(XunitVersion)"/>
+        <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj" />
+        <PackageReference Include="xunit" Version="$(XunitVersion)" />
     </ItemGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

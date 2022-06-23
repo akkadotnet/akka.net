@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Util.RuntimeDetector;
@@ -140,7 +141,7 @@ namespace Akka.Remote.Tests.Transport
             }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
 
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in Azure AzDo CI/CD")]
         public async Task Secure_transport_should_be_possible_between_systems_using_thumbprint()
         {
             // skip this test due to linux/mono certificate issues

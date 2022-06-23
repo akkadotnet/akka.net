@@ -14,6 +14,7 @@ using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
@@ -147,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
             }, _materializer);
         }
 
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task TaskSource_must_fail_as_the_underlying_task_fails_after_outer_source_materialization()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -165,7 +166,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(Sink.Seq<int>(), Keep.Both)
                     .Run(_materializer);
 
-                // we don't know that materialization completed yet (is this still a bit racy after async conversion?)
+                // we don't know that materialization completed yet
                 materializationLatch.Ready(RemainingOrDefault);                
                 sourcePromise.SetException(failure);
                 

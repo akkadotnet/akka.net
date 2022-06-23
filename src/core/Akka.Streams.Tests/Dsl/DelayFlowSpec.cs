@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Xunit;
 
@@ -26,7 +27,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectComplete();
         }
 
-        [Fact(Skip = "Racy - timing is rather sensitive on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy - timing is rather sensitive on Azure DevOps")]
         public void DelayFlow_should_work_with_fixed_delay()
         {
             var fixedDelay = TimeSpan.FromSeconds(1);
@@ -63,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectComplete();
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void DelayFlow_should_work_with_linear_increasing_delay()
         {
             var elems = Enumerable.Range(1, 10);

@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Xunit;
 // ReSharper disable InvokeAsExtensionMethod
@@ -88,7 +89,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy. See https://github.com/akkadotnet/akka.net/pull/4424#issuecomment-632284459")]
+        [LocalFact(SkipLocal = "Racy. See https://github.com/akkadotnet/akka.net/pull/4424#issuecomment-632284459")]
         public void A_Flow_based_on_a_tick_publisher_must_be_usable_with_zip_for_a_simple_form_of_rate_limiting()
         {
             this.AssertAllStagesStopped(() =>

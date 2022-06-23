@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using Xunit;
 
 namespace Akka.Persistence.Tests
@@ -646,7 +647,7 @@ namespace Akka.Persistence.Tests
             resCarr.Except(c).Any().ShouldBeFalse();
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void PersistentReceive_must_limit_the_number_of_messages_redelivered_at_once()
         {
             var probe = CreateTestProbe();

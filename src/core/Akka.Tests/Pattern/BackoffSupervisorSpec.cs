@@ -14,6 +14,7 @@ using Akka.Actor;
 using Akka.Pattern;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
@@ -91,7 +92,7 @@ namespace Akka.Tests.Pattern
         private IActorRef Create(BackoffOptions options) => Sys.ActorOf(BackoffSupervisor.Props(options));
         #endregion
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task BackoffSupervisor_must_start_child_again_when_it_stops_when_using_Backoff_OnStop()
         {
             var supervisor = Create(OnStopOptions());
@@ -346,7 +347,7 @@ namespace Akka.Tests.Pattern
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnStop()
         {
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 2));
@@ -396,7 +397,7 @@ namespace Akka.Tests.Pattern
             await ExpectTerminatedAsync(supervisor);
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnFailure()
         {
             await EventFilter.Exception<TestException>().ExpectAsync(3, async() =>

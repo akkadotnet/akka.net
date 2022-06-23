@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -122,7 +123,7 @@ namespace Akka.Persistence.Tests
         {
         }
 
-        [Fact(Skip = "Racy on AzureDevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void AtLeastOnceDelivery_should_not_send_when_actor_crashes()
         {
             var testProbe = CreateTestProbe();

@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Extensions;
@@ -19,7 +20,8 @@ namespace Akka.Tests.Actor.Scheduler
     // ReSharper disable once InconsistentNaming
     public class DefaultScheduler_TellScheduler_Schedule_Tests : AkkaSpec
     {
-        [Theory(Skip = "Tests that messages are sent with the specified interval, however due to inaccuracy of Task.Delay this often fails. Run this manually if you've made changes to DedicatedThreadScheduler")]
+        [LocalTheory(SkipLocal = "Tests that messages are sent with the specified interval, however due to inaccuracy " +
+                                 "of Task.Delay this often fails. Run this especially if you've made changes to DedicatedThreadScheduler")]
         [InlineData(10, 1000)]
         public async Task ScheduleTellRepeatedly_in_milliseconds_Tests(int initialDelay, int interval)
         {

@@ -18,6 +18,7 @@ using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Streams.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -31,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        [Fact(Skip = "Racy due to timing on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy due to timing on Azure DevOps")]
         public void A_ForeachParallel_must_produce_elements_in_the_order_they_are_ready()
         {
             this.AssertAllStagesStopped(() =>
@@ -63,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy - timing is rather sensitive on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy - timing is rather sensitive on Azure DevOps")]
         public void A_ForeachParallel_must_not_run_more_functions_in_parallel_then_specified()
         {
             this.AssertAllStagesStopped(() =>

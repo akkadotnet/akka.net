@@ -10,6 +10,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
@@ -101,7 +102,7 @@ namespace Akka.Cluster.Tests
             }
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void Downing_provider_should_stop_the_cluster_if_the_downing_provider_throws_exception_in_props()
         {
             var config = ConfigurationFactory.ParseString(
