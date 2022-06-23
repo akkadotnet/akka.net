@@ -16,7 +16,10 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -72,7 +75,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_AggregateAsync_must_work_when_using_Flow_AggregateAsync()
         {
             var flowTimeout = TimeSpan.FromMilliseconds(FlowDelayInMs*Input.Count()) + TimeSpan.FromSeconds(3);
@@ -250,33 +253,27 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_resume_after_multiple_failures()
+        public async Task A_AggregateAsync_must_resume_after_multiple_failures()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var tasks = new []
                 {
-                    FailedTask("failure1"),
-                    FailedTask("failure2"),
-                    FailedTask("failure3"),
-                    FailedTask("failure4"),
-                    FailedTask("failure5"),
+                    Task.FromException<string>(new Exception("failure1")),
+                    Task.FromException<string>(new Exception("failure2")),
+                    Task.FromException<string>(new Exception("failure3")),
+                    Task.FromException<string>(new Exception("failure4")),
+                    Task.FromException<string>(new Exception("failure5")),
                     Task.FromResult("happy!")
                 };
 
-                Source.From(tasks)
+                var result = await Source.From(tasks)
                     .AggregateAsync(string.Empty, (_, t) => t)
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                    .RunWith(Sink.First<string>(), Materializer)
-                    .AwaitResult().Should().Be("happy!");
+                    .RunWith(Sink.First<string>(), Materializer).ShouldCompleteWithin(3.Seconds());
+                    
+                result.Should().Be("happy!");
             }, Materializer);
-        }
-
-        private Task<string> FailedTask(string message)
-        {
-            var completion = new TaskCompletionSource<string>();
-            completion.SetException(new Exception(message));
-            return completion.Task;
         }
 
         [Fact]

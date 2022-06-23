@@ -12,6 +12,7 @@ using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions.Execution;
 using Xunit;
 using Xunit.Abstractions;
@@ -53,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void An_ObservableSink_must_allow_the_same_observer_to_be_subscribed_only_once()
         {
             this.AssertAllStagesStopped(() =>
@@ -76,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void An_ObservableSink_must_propagate_events_to_all_observers()
         {
             this.AssertAllStagesStopped(() =>
@@ -102,7 +103,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void An_ObservableSink_must_propagate_error_to_all_observers()
         {
             this.AssertAllStagesStopped(() =>

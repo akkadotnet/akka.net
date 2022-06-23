@@ -14,6 +14,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -67,7 +68,7 @@ namespace Akka.Streams.Tests.Dsl
             eventualActual.AwaitResult().ShouldBe(expectedSum);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_ScanAsync_must_work_with_slow_tasks()
         {
             var delay = TimeSpan.FromMilliseconds(500);

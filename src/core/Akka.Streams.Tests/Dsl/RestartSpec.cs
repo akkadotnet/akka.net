@@ -16,6 +16,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Tests.Shared.Internals;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -314,9 +315,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Flaky test, ExpectComplete times out with the default 3 seconds value under heavy load.
-        // Fail rate was 1:500
-        [Fact]
+        [LocalFact(SkipLocal = "Flaky test, ExpectComplete times out with the default 3 seconds value under heavy load")]
         public async Task A_restart_with_backoff_source_should_not_restart_the_source_when_maxRestarts_is_reached()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -731,7 +730,8 @@ namespace Akka.Streams.Tests.Dsl
                     var snk = Flow.Create<string>()
                         .TakeWhile(s => s != "cancel")
                         .To(Sink.ForEach<string>(c => flowInSource.SendNext(c))
-                            .MapMaterializedValue(task => task.ContinueWith(
+                            .MapMaterializedValue(task => 
+                                task.ShouldCompleteWithin(10.Seconds()).ContinueWith(
                                 t1 =>
                                 {
                                     if (t1.IsFaulted || t1.IsCanceled)
@@ -747,7 +747,7 @@ namespace Akka.Streams.Tests.Dsl
                         return c;
                     }).WatchTermination((s1, task) =>
                     {
-                        task.ContinueWith(_ =>
+                        task.ShouldCompleteWithin(10.Seconds()).ContinueWith(_ =>
                         {
                             flowInSource.SendNext("out complete");
                             return NotUsed.Instance;

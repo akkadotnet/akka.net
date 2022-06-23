@@ -17,6 +17,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -37,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys);
         }
 
-        [Fact(Skip ="Racy in Linux")]
+        [WindowsFact(Skip ="Racy in Linux")]
         public void A_Flow_with_SelectAsyncUnordered_must_produce_task_elements_in_the_order_they_are_ready()
         {
             this.AssertAllStagesStopped(() =>
@@ -70,7 +71,7 @@ namespace Akka.Streams.Tests.Dsl
             
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_requested_elements()
         {
             var probe = CreateTestProbe();
@@ -109,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
             c.ExpectComplete();
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_Flow_with_SelectAsyncUnordered_must_signal_task_failure()
         {
             this.AssertAllStagesStopped(() =>
@@ -327,7 +328,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy on AzureDevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_configured()
         {
             this.AssertAllStagesStopped(() =>
