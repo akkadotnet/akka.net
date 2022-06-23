@@ -13,6 +13,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
@@ -167,8 +168,7 @@ namespace Akka.Streams.Tests.Implementation
             }, Materializer);
         }
 
-        // Was marked as racy before async testkit
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task IdleTimeout_must_fail_if_time_between_elements_is_too_large()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -373,8 +373,7 @@ namespace Akka.Streams.Tests.Implementation
             }, Materializer);
         }
 
-        // Was marked as racy before async TestKit
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task IdleTimeoutBidi_must_not_signal_error_if_traffic_is_one_way()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -407,7 +406,7 @@ namespace Akka.Streams.Tests.Implementation
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task IdleTimeoutBidi_must_be_able_to_signal_timeout_once_no_traffic_on_either_sides()
         {
             await this.AssertAllStagesStoppedAsync(async () =>

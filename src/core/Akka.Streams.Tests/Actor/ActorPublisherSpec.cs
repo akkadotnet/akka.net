@@ -19,6 +19,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -422,7 +423,7 @@ my-dispatcher1 {
             }, materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task ActorPublisher_should_be_able_to_define_a_subscription_timeout_after_which_it_should_shut_down()
         {
             var materializer = Sys.Materializer();

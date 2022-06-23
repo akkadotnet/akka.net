@@ -11,6 +11,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -38,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void GroupBy_and_SplitWhen_must_timeout_and_cancel_substream_publisher_when_no_one_subscribes_to_them_after_some_time()
         {
             this.AssertAllStagesStopped(() =>
@@ -118,7 +119,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void GroupBy_and_SplitWhen_must_not_timeout_and_cancel_substream_publisher_when_they_have_been_subscribed_to()
         {
             var subscriber = this.CreateManualSubscriberProbe<(int, Source<int, NotUsed>)>();

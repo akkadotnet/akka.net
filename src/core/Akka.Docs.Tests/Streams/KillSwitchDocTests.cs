@@ -66,7 +66,7 @@ namespace DocsExamples.Streams
             var error = new Exception("boom");
             killSwitch.Abort(error);
 
-            last.ContinueWith(t => { /* Ignore exception */ }).Wait(1.Seconds());
+            AwaitCondition(() => last.IsFaulted);
             last.Exception.GetBaseException().Should().Be(error);
             #endregion
         }
@@ -111,10 +111,10 @@ namespace DocsExamples.Streams
             var error = new Exception("boom");
             sharedKillSwitch.Abort(error);
 
-            last1.ContinueWith(t => { /* Ignore exception */ }).Wait(1.Seconds());
+            AwaitCondition(() => last1.IsFaulted);
             last1.Exception.GetBaseException().Should().Be(error);
 
-            last2.ContinueWith(t => { /* Ignore exception */ }).Wait(1.Seconds());
+            AwaitCondition(() => last2.IsFaulted);
             last2.Exception.GetBaseException().Should().Be(error);
             #endregion
         }
