@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
@@ -97,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_Balance_must_support_waiting_for_demand_from_all_non_cancelled_downstream_subscriptions()
         {
             this.AssertAllStagesStopped(() =>

@@ -25,6 +25,7 @@ using Nito.AsyncEx;
 using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
 using Akka.Remote.Serialization;
 using Akka.TestKit.Extensions;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions.Extensions;
 
 namespace Akka.Remote.Tests
@@ -183,8 +184,7 @@ namespace Akka.Remote.Tests
             Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
         }
         
-        // Previously racy test
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task Ask_does_not_deadlock()
         {
             // see https://github.com/akkadotnet/akka.net/issues/2546
@@ -247,8 +247,7 @@ namespace Akka.Remote.Tests
             await ExpectMsgAsync(76);
         }
 
-        // Previously racy test
-        [Fact]
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task Remoting_must_lookup_actors_across_node_boundaries()
         {
             Action<IActorDsl> act = dsl =>

@@ -14,6 +14,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
@@ -328,7 +329,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void SplitWhen_must_fail_substream_if_materialized_twice()
         {
             this.AssertAllStagesStopped(() =>

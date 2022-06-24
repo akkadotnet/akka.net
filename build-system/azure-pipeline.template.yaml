@@ -17,6 +17,11 @@ jobs:
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     pool:
       vmImage: ${{ parameters.vmImage }}
+    variables:
+      - name: xunit.skip.local.fact
+        value: true
+      - name: xunit.skip.local.theory
+        value: true
     steps:
       - task: UseDotNet@2
         displayName: 'Use .NET 6 SDK 6.0.100'

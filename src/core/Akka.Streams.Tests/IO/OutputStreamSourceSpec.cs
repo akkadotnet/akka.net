@@ -20,6 +20,7 @@ using Akka.Streams.Implementation.IO;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -93,7 +94,7 @@ namespace Akka.Streams.Tests.IO
                     var f = outputStream.FlushAsync();
 
                     await ExpectTimeout(f, Timeout);
-                    await probe.ExpectNoMsgAsync(TimeSpan.MinValue);
+                    await probe.ExpectNoMsgAsync(TimeSpan.Zero);
 
                     s.Request(1);
                     await f.ShouldCompleteWithin(Timeout);
@@ -154,7 +155,7 @@ namespace Akka.Streams.Tests.IO
                     var f = outputStream.WriteAsync(_bytesArray, 0, _byteString.Count);
 
                     await ExpectTimeout(f, Timeout);
-                    await probe.ExpectNoMsgAsync(TimeSpan.MinValue);
+                    await probe.ExpectNoMsgAsync(TimeSpan.Zero);
 
                     s.Request(17);
                     await f.ShouldCompleteWithin(Timeout);
@@ -293,7 +294,7 @@ namespace Akka.Streams.Tests.IO
             }, _materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task OutputStreamSource_must_correctly_complete_the_stage_after_close()
         {
             // actually this was a race, so it only happened in at least one of 20 runs

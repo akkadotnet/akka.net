@@ -9,6 +9,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Internal;
+using FluentAssertions.Extensions;
 using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit
@@ -230,7 +231,16 @@ namespace Akka.TestKit
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
         /// are available in a version which implicitly uses the remaining time governed by 
         /// the innermost enclosing `within` block.</para>
-        /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
+        /// <remarks>
+        /// <para>
+        /// Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor".
+        /// </para>
+        /// <para>
+        /// Note that due to how asynchronous Task is executed in managed code, there is no way to stop a running Task.
+        /// If this assertion fails in any way, the <paramref name="function"/> Task might still be running in the
+        /// background and might not be stopped/disposed until the unit test is over.
+        /// </para>
+        /// </remarks>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="min">TBD</param>
@@ -249,7 +259,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             min.EnsureIsPositiveFinite("min");
-            min.EnsureIsPositiveFinite("max");
+            max.EnsureIsPositiveFinite("max");
             max = Dilated(max);
             var start = Now;
             var rem = _testState.End.HasValue ? _testState.End.Value - start : Timeout.InfiniteTimeSpan;
@@ -261,14 +271,32 @@ namespace Akka.TestKit
             var prevEnd = _testState.End;
             _testState.End = start + maxDiff;
 
-            T ret;
-            try
+            T ret = default;
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
             {
-                ret = await function();
-            }
-            finally
-            {
-                _testState.End = prevEnd;
+                try
+                {
+                    var executionTask = function();
+                    // Limit the execution time block to the maximum allowed execution time.
+                    // 200 milliseconds is added because Task.Delay() timer is not precise and can return prematurely.
+                    var resultTask = await Task.WhenAny(executionTask, Task.Delay(max + 200.Milliseconds(), cts.Token));
+
+                    if (resultTask == executionTask)
+                    {
+                        ret = executionTask.Result;
+                    }
+                    else
+                    {
+                        // Just throw if the calling code cancels the cancellation token
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+                }
+                finally
+                {
+                    // Make sure we stop the delay task
+                    cts.Cancel();
+                    _testState.End = prevEnd;
+                }
             }
 
             var elapsed = Now - start;
