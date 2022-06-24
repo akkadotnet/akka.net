@@ -515,7 +515,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var closePromise = new TaskCompletionSource<string>();
-                Source.UnfoldResourceAsync(
+                var probe = Source.UnfoldResourceAsync(
                         () => Task.FromResult(closePromise),
                         _ => Task.FromResult(new Option<string>("whatever")),
                         tcs =>
@@ -523,8 +523,10 @@ namespace Akka.Streams.Tests.Dsl
                             tcs.SetResult("Closed");
                             return Task.FromResult(Done.Instance);
                         })
-                    .RunWith(Sink.Cancelled<string>(), Materializer);
+                    .RunWith(this.SinkProbe<string>(), Materializer);
 
+                await probe.CancelAsync();
+                
                 var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
                 r.Should().Be("Closed");
             }, Materializer);
