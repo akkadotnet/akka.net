@@ -514,18 +514,19 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var closeProbe = CreateTestProbe();
+                var closePromise = new TaskCompletionSource<string>();
                 Source.UnfoldResourceAsync(
-                        () => Task.FromResult(closeProbe),
+                        () => Task.FromResult(closePromise),
                         _ => Task.FromResult(new Option<string>("whatever")),
-                        probe =>
+                        tcs =>
                         {
-                            probe.Tell("Closed");
+                            tcs.SetResult("Closed");
                             return Task.FromResult(Done.Instance);
                         })
                     .RunWith(Sink.Cancelled<string>(), Materializer);
 
-                await closeProbe.ExpectMsgAsync("Closed");
+                var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
+                r.Should().Be("Closed");
             }, Materializer);
         }
 
@@ -534,13 +535,13 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var closeProbe = CreateTestProbe();
+                var closePromise = new TaskCompletionSource<string>();
                 Source.UnfoldResourceAsync(
                         () => Task.FromResult(new[] { "a", "b", "c" }.GetEnumerator()),
                         m => Task.FromResult(m.MoveNext() && m.Current != null ? (string)m.Current : Option<string>.None),
                         _ =>
                         {
-                            closeProbe.Tell("Closed");
+                            closePromise.SetResult("Closed");
                             return Task.FromResult(Done.Instance);
                         })
                     .Select(m =>
@@ -550,7 +551,8 @@ namespace Akka.Streams.Tests.Dsl
                     })
                     .RunWith(Sink.Cancelled<string>(), Materializer);
 
-                await closeProbe.ExpectMsgAsync("Closed"); // will timeout if bug is still here
+                var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
+                r.Should().Be("Closed");
             }, Materializer);
         }
 
@@ -559,15 +561,15 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var closeProbe = CreateTestProbe();
+                var closePromise = new TaskCompletionSource<string>();
                 var probe = this.CreateSubscriberProbe<Task>();
 
                 Source.UnfoldResourceAsync(
-                        () => Task.FromResult(Task.CompletedTask),
+                        () => Task.FromResult(closePromise),
                         _ => Task.FromException<Option<Task>>(new TestException("read failed")),
-                        _ =>
+                        tcs =>
                         {
-                            closeProbe.Ref.Tell("closed");
+                            tcs.TrySetResult("Closed");
                             return Task.FromResult(Done.Instance);
                         })
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
@@ -575,7 +577,9 @@ namespace Akka.Streams.Tests.Dsl
                 await probe.EnsureSubscriptionAsync();
                 await probe.RequestAsync(1L);
                 await probe.ExpectErrorAsync();
-                await closeProbe.ExpectMsgAsync("closed");
+
+                var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
+                r.Should().Be("Closed");
             }, Materializer);
         }
 
@@ -584,15 +588,17 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var closeProbe = CreateTestProbe();
+                var closePromise = new TaskCompletionSource<string>();
                 var probe = this.CreateSubscriberProbe<Task>();
 
-                Source.UnfoldResourceAsync<Task, Task>(
-                        () => Task.FromResult(Task.CompletedTask),
-                        _ => throw new TestException("read failed"),
-                        _ =>
+                Task<Option<Task>> Fail(TaskCompletionSource<string> _) => throw new TestException("read failed");
+
+                Source.UnfoldResourceAsync(
+                        () => Task.FromResult(closePromise),
+                        Fail,
+                        tcs =>
                         {
-                            closeProbe.Ref.Tell("closed");
+                            tcs.SetResult("Closed");
                             return Task.FromResult(Done.Instance);
                         })
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
@@ -600,7 +606,9 @@ namespace Akka.Streams.Tests.Dsl
                 await probe.EnsureSubscriptionAsync();
                 await probe.RequestAsync(1L);
                 await probe.ExpectErrorAsync();
-                await closeProbe.ExpectMsgAsync("closed");
+
+                var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
+                r.Should().Be("Closed");
             }, Materializer);
         }
     }
