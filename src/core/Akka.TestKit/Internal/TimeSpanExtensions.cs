@@ -130,7 +130,7 @@ namespace Akka.TestKit.Internal
         public static void EnsureIsPositiveFinite(this TimeSpan timeSpan, string parameterName)
         {
             if(!IsPositiveFinite(timeSpan))
-                throw new ArgumentException($"The timespan must be greater than zero. Actual value: {timeSpan}", nameof(parameterName));
+                throw new ArgumentException($"The timespan must be greater than zero. Actual value: {timeSpan}", parameterName);
         }
 
         /// <summary>

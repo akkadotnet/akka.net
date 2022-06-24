@@ -267,7 +267,7 @@ namespace Akka.TestKit
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
-                ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will wait indefinitely.");
+                Log.Warning("Trying to receive message from TestActor queue with infinite timeout! Will wait indefinitely!");
                 take = await _testState.Queue.TryTakeAsync(-1, cancellationToken)
                     .ConfigureAwait(false);
             }
@@ -398,7 +398,7 @@ namespace Akka.TestKit
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
-                ConditionalLog(shouldLog, "Trying to peek message from TestActor queue. Will wait indefinitely.");
+                Log.Warning("Trying to peek message from TestActor queue with infinite timeout! Will wait indefinitely!");
                 peek = await _testState.Queue.TryPeekAsync(-1, cancellationToken)
                     .ConfigureAwait(false);
             }
