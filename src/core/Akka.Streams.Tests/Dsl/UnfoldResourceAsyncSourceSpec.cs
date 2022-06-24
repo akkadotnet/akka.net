@@ -485,24 +485,28 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_UnfoldResourceAsyncSource_must_close_resource_when_stream_is_abruptly_terminated()
         {
-            var closeProbe = CreateTestProbe();
+            var closePromise = new TaskCompletionSource<string>();
             var materializer = ActorMaterializer.Create(Sys);
             var p = Source.UnfoldResourceAsync(
-                    () => Task.FromResult(closeProbe),
+                    () => Task.FromResult(closePromise),
                     // a slow trickle of elements that never ends
                     _ => FutureTimeoutSupport.After(TimeSpan.FromMilliseconds(100), Sys.Scheduler, () => Task.FromResult(new Option<string>("element"))),
-                    probe =>
+                    tcs =>
                     {
-                        probe.Tell("Closed");
+                        tcs.SetResult("Closed");
                         return Task.FromResult(Done.Instance);
                     })
                 .RunWith(Sink.AsPublisher<string>(false), materializer);
 
             var c = this.CreateManualSubscriberProbe<string>();
             p.Subscribe(c);
+            await c.ExpectSubscriptionAsync();
+            
             materializer.Shutdown();
             materializer.IsShutdown.Should().BeTrue();
-            await closeProbe.ExpectMsgAsync("Closed");
+            
+            var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
+            r.Should().Be("Closed");
         }
 
         [Fact]
