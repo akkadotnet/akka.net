@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var result = await Source.From(Enumerable.Range(1,42)).Select(x=>x)
                     .RunWith(Sink.Last<int>(), Materializer)
-                    .ShouldCompleteWithin(1.Seconds());
+                    .ShouldCompleteWithin(3.Seconds());
                 result.Should().Be(42);
             }, Materializer);
         }

@@ -277,6 +277,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     elems.Add(await p.RequestNextAsync());
                 }
+                
                 await p.ExpectCompleteAsync();
                 elems.Should().BeEquivalentTo(Enumerable.Range(0, noOfSources * 10));
             }, Materializer);

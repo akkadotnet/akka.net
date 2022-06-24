@@ -413,9 +413,15 @@ namespace Akka.TestKit
         {
             get
             {
-                // ReSharper disable once PossibleInvalidOperationException
-                if (_testState.End.IsPositiveFinite()) return _testState.End.Value - Now;
-                throw new InvalidOperationException(@"Remaining may not be called outside of ""within""");
+                if(_testState.End is null)
+                    throw new InvalidOperationException(@"Remaining may not be called outside of ""within""");
+                
+                if (_testState.End < TimeSpan.Zero)
+                    throw new InvalidOperationException($"End can not be negative, was: {_testState.End}");
+
+                // Make sure that the returned value is a positive TimeSpan
+                var remaining = _testState.End.Value - Now;
+                return remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
             }
         }
 
@@ -429,10 +435,12 @@ namespace Akka.TestKit
         protected TimeSpan RemainingOr(TimeSpan duration)
         {
             if (!_testState.End.HasValue) return duration;
-            if (_testState.End.IsInfinite())
-                throw new ArgumentException("end cannot be infinite");
-            return _testState.End.Value - Now;
+            if (_testState.End < TimeSpan.Zero)
+                throw new InvalidOperationException($"End can not be negative, was: {_testState.End}");
 
+            // Make sure that the returned value is a positive TimeSpan
+            var remaining = _testState.End.Value - Now;
+            return remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
         }
 
         /// <summary>
@@ -448,7 +456,7 @@ namespace Akka.TestKit
         public TimeSpan RemainingOrDilated(TimeSpan? duration)
         {
             if(!duration.HasValue) return RemainingOrDefault;
-            if(duration.IsInfinite()) throw new ArgumentException("max duration cannot be infinite");
+            if(duration < TimeSpan.Zero) throw new ArgumentException("Must be positive TimeSpan", nameof(duration));
             return Dilated(duration.Value);
         }
 
@@ -461,10 +469,9 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public TimeSpan Dilated(TimeSpan duration)
         {
-            if(duration.IsPositiveFinite())
-                return new TimeSpan((long)(duration.Ticks * _testState.TestKitSettings.TestTimeFactor));
-            //Else: 0 or infinite (negative)
-            return duration;
+            if (duration < TimeSpan.Zero)
+                throw new ArgumentException("Must not be negative", nameof(duration));
+            return new TimeSpan((long)(duration.Ticks * _testState.TestKitSettings.TestTimeFactor));
         }
 
 

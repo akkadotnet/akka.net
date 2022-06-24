@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.IO
                     var f = outputStream.FlushAsync();
 
                     await ExpectTimeout(f, Timeout);
-                    await probe.ExpectNoMsgAsync(TimeSpan.MinValue);
+                    await probe.ExpectNoMsgAsync(TimeSpan.Zero);
 
                     s.Request(1);
                     await f.ShouldCompleteWithin(Timeout);
@@ -155,7 +155,7 @@ namespace Akka.Streams.Tests.IO
                     var f = outputStream.WriteAsync(_bytesArray, 0, _byteString.Count);
 
                     await ExpectTimeout(f, Timeout);
-                    await probe.ExpectNoMsgAsync(TimeSpan.MinValue);
+                    await probe.ExpectNoMsgAsync(TimeSpan.Zero);
 
                     s.Request(17);
                     await f.ShouldCompleteWithin(Timeout);
