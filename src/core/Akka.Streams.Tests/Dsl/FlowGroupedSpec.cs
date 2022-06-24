@@ -45,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
             var script = Script.Create(RandomTestRange(Sys).Select(_ => RandomTest(testLength)).ToArray());
             foreach (var _ in RandomTestRange(Sys))
             {
-                await RunScriptAsync(this, script, Settings, flow => flow.Grouped(testLength));
+                await RunScriptAsync(script, Settings, flow => flow.Grouped(testLength));
             }
         }
 
@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
             var script = Script.Create(RandomTestRange(Sys).Select(_ => RandomTest(testLength)).Concat(RandomTest(1)).ToArray());
             foreach (var _ in RandomTestRange(Sys))
             {
-                await RunScriptAsync(this, script, Settings, flow => flow.Grouped(testLength));
+                await RunScriptAsync(script, Settings, flow => flow.Grouped(testLength));
             }
         }
     }
