@@ -15,8 +15,10 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Util;
 using Akka.Util.Internal;
+using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit.Abstractions;
 
@@ -317,19 +319,18 @@ namespace Akka.Streams.TestKit
             Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
             int maximumOverrun = 3,
             int maximumRequest = 3,
-            int maximumBuffer = 3,
-            AkkaSpec spec = null)
-            => RunScriptAsync(spec, script, settings, op, maximumOverrun, maximumRequest, maximumBuffer)
+            int maximumBuffer = 3)
+            => RunScriptAsync(script, settings, op, maximumOverrun, maximumRequest, maximumBuffer)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
         
         protected async Task RunScriptAsync<TIn2, TOut2, TMat2>(
-            AkkaSpec spec,
             Script<TIn2, TOut2> script, 
             ActorMaterializerSettings settings,
             Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
             int maximumOverrun = 3,
             int maximumRequest = 3,
-            int maximumBuffer = 3)
+            int maximumBuffer = 3,
+            bool assertStagesStopped = true)
         {
             var runner = new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this);
             async Task Run()
@@ -337,14 +338,19 @@ namespace Akka.Streams.TestKit
                 await runner.InitializeAsync();
                 await runner.RunAsync();
             }
-            
-            if(spec != null)
-                await spec.AssertAllStagesStoppedAsync(async () =>
+
+            if (assertStagesStopped)
+            {
+                await this.AssertAllStagesStoppedAsync(async () =>
                 {
                     await Run();
                 }, runner.Materializer);
+            }
             else
-                await Run();
+            {
+                // guard against deadlocks, assuming that a test would not take more than 30 seconds.
+                await Run().ShouldCompleteWithin(30.Seconds()); 
+            }
         }
 
         protected static IPublisher<TOut> ToPublisher<TOut>(Source<TOut, NotUsed> source, IMaterializer materializer)
