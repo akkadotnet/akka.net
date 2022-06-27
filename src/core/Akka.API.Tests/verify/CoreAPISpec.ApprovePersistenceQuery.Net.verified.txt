@@ -67,6 +67,7 @@ namespace Akka.Persistence.Query
         public abstract int CompareTo(Akka.Persistence.Query.Offset other);
         public static Akka.Persistence.Query.Offset NoOffset() { }
         public static Akka.Persistence.Query.Offset Sequence(long value) { }
+        public static Akka.Persistence.Query.Offset TimeBasedUuid(System.Guid value) { }
     }
     public sealed class PersistenceQuery : Akka.Actor.IExtension
     {
@@ -92,6 +93,15 @@ namespace Akka.Persistence.Query
         public Sequence(long value) { }
         public long Value { get; }
         public int CompareTo(Akka.Persistence.Query.Sequence other) { }
+        public override int CompareTo(Akka.Persistence.Query.Offset other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+    public sealed class TimeBasedUuid : Akka.Persistence.Query.Offset, System.IComparable<Akka.Persistence.Query.TimeBasedUuid>
+    {
+        public TimeBasedUuid(System.Guid value) { }
+        public System.Guid Value { get; }
+        public int CompareTo(Akka.Persistence.Query.TimeBasedUuid other) { }
         public override int CompareTo(Akka.Persistence.Query.Offset other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
