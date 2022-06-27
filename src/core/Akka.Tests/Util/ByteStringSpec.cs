@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using System.Text;
 using Akka.IO;
@@ -188,5 +187,27 @@ namespace Akka.Tests.Util
             Assert.Equal(expectedLeft, actualLeft);
             Assert.Equal(expectedRight, actualRight);
         }
+
+#if !NETFRAMEWORK
+        [Fact(DisplayName = "A sliced byte string using Range must return the correct string for ToString")]
+        public void A_sliced_ByteString_using_Range_must_return_correct_string_for_ToString()
+        {
+            const string expected = "ABCDEF";
+            Encoding encoding = Encoding.ASCII;
+
+            int halfExpected = expected.Length / 2;
+
+            string expectedLeft = expected.Substring(startIndex: 0, length: halfExpected);
+            string expectedRight = expected.Substring(startIndex: halfExpected, length: halfExpected);
+
+            ByteString data = ByteString.FromString(expected, encoding);
+
+            string actualLeft = data[..halfExpected].ToString(encoding);
+            string actualRight = data[halfExpected..].ToString(encoding);
+
+            Assert.Equal(expectedLeft, actualLeft);
+            Assert.Equal(expectedRight, actualRight);
+        }
+#endif
     }
 }
