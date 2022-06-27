@@ -3309,8 +3309,16 @@ namespace Akka.IO
         public static Akka.IO.ByteString CopyFrom(byte[] array) { }
         public static Akka.IO.ByteString CopyFrom(System.ArraySegment<byte> buffer) { }
         public static Akka.IO.ByteString CopyFrom(byte[] array, int offset, int count) { }
+        public static Akka.IO.ByteString CopyFrom(System.Memory<byte> memory) { }
+        public static Akka.IO.ByteString CopyFrom(System.Memory<byte> memory, int offset, int count) { }
+        public static Akka.IO.ByteString CopyFrom(System.Span<byte> span) { }
+        public static Akka.IO.ByteString CopyFrom(System.Span<byte> span, int offset, int count) { }
         public static Akka.IO.ByteString CopyFrom(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buffers) { }
         public int CopyTo(byte[] buffer, int index, int count) { }
+        public int CopyTo(ref System.Memory<byte> buffer) { }
+        public int CopyTo(ref System.Memory<byte> buffer, int index, int count) { }
+        public int CopyTo(ref System.Span<byte> buffer) { }
+        public int CopyTo(ref System.Span<byte> buffer, int index, int count) { }
         public override bool Equals(object obj) { }
         public bool Equals(Akka.IO.ByteString other) { }
         public static Akka.IO.ByteString FromBytes(byte[] array) { }
