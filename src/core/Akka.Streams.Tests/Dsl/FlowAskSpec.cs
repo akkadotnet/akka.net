@@ -243,14 +243,14 @@ namespace Akka.Streams.Tests.Dsl
                 .Should().BeOfType<AskTimeoutException>();
         }, _materializer);
 
-        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        [Fact]
         public void Flow_with_ask_must_signal_ask_failure() => this.AssertAllStagesStopped(() =>
         {
             var failsOn = ReplierFailOn(1);
             var c = this.CreateManualSubscriberProbe<Reply>();
 
             var p = Source.From(Enumerable.Range(1, 5))
-                .Ask<Reply>(failsOn, _timeout, 4)
+                .Ask<Reply>(failsOn, _timeout, 1)
                 .RunWith(Sink.FromSubscriber(c), _materializer);
 
             var error = (AggregateException) c.ExpectSubscriptionAndError();

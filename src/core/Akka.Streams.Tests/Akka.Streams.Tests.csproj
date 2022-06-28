@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
-  <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests</AssemblyName>
@@ -33,6 +32,12 @@
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Extensions" Version="4.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="xunit.runner.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
