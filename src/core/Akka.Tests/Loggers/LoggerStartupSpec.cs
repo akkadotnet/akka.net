@@ -10,34 +10,71 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Loggers
 {
     public class LoggerStartupSpec : TestKit.Xunit2.TestKit
     {
-        private const int LoggerResponseDelayMs = 10_000;
-        
-        [Fact]
-        public async Task Logger_async_start_configuration_helps_to_ignore_hanging_loggers()
-        {
-            var loggerAsyncStartDisabledConfig = ConfigurationFactory.ParseString($"akka.logger-async-start = false");
-            var loggerAsyncStartEnabledConfig = ConfigurationFactory.ParseString($"akka.logger-async-start = true");
-            
-            var slowLoggerConfig = ConfigurationFactory.ParseString($"akka.loggers = [\"{typeof(SlowLoggerActor).FullName}, {typeof(SlowLoggerActor).Assembly.GetName().Name}\"]");
+        private const int LoggerResponseDelayMs = 1_000;
 
-            // Without logger async start, ActorSystem creation will hang
-            this.Invoking(_ => ActorSystem.Create("handing", slowLoggerConfig.WithFallback(loggerAsyncStartDisabledConfig))).Should()
-                .Throw<Exception>("System can not start - logger timed out");
-            
-            // With logger async start, ActorSystem is created without issues
-             // Created without timeouts
-            var system = ActorSystem.Create("working", slowLoggerConfig.WithFallback(loggerAsyncStartEnabledConfig));
+        public LoggerStartupSpec(ITestOutputHelper helper) : base(nameof(LoggerStartupSpec), helper)
+        {
+            XUnitOutLogger.Helper = helper;
         }
         
+        [Fact]
+        public void ActorSystem_should_start_with_loggers_timing_out()
+        {
+            var slowLoggerConfig = ConfigurationFactory.ParseString($@"
+akka.stdout-logger-class = ""{typeof(XUnitOutLogger).FullName}, {typeof(XUnitOutLogger).Assembly.GetName().Name}""
+akka.loggers = [""{typeof(SlowLoggerActor).FullName}, {typeof(SlowLoggerActor).Assembly.GetName().Name}""]
+akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
+            
+            var loggerAsyncStartDisabledConfig = ConfigurationFactory.ParseString("akka.logger-async-start = false")
+                .WithFallback(slowLoggerConfig);
+            var loggerAsyncStartEnabledConfig = ConfigurationFactory.ParseString("akka.logger-async-start = true")
+                .WithFallback(slowLoggerConfig);
+
+            ActorSystem sys1 = null;
+            ActorSystem sys2 = null;
+            try
+            {
+                this.Invoking(_ => sys1 = ActorSystem.Create("handing", loggerAsyncStartDisabledConfig)).Should()
+                    .NotThrow("System should not fail to start when a logger timed out when logger is created synchronously");
+
+                // Logger actor should die
+                var probe1 = CreateTestProbe(sys1);
+                SlowLoggerActor.Probe = probe1;
+                Logging.GetLogger(sys1, this).Error("TEST");
+                probe1.ExpectNoMsg(1.Seconds());
+
+                this.Invoking(_ => sys2 = ActorSystem.Create("working", loggerAsyncStartEnabledConfig)).Should()
+                    .NotThrow("System should not fail to start when a logger timed out when logger is created asynchronously (setting should be ignored internally)");
+
+                // Logger actor should die
+                var probe2 = CreateTestProbe(sys2);
+                SlowLoggerActor.Probe = probe2;
+                Logging.GetLogger(sys2, this).Error("TEST");
+                probe2.ExpectNoMsg(1.Seconds());
+            }
+            finally
+            {
+                if(sys1 != null)
+                    Shutdown(sys1);
+                if(sys2 != null)
+                    Shutdown(sys2);
+            }
+        }
+
         public class SlowLoggerActor : ReceiveActor
         {
+            public static TestProbe Probe;
+            
             public SlowLoggerActor()
             {
                 ReceiveAsync<InitializeLogger>(async _ =>
@@ -46,10 +83,20 @@ namespace Akka.Tests.Loggers
                     await Task.Delay(LoggerResponseDelayMs);
                     Sender.Tell(new LoggerInitialized());
                 });
+                Receive<LogEvent>(log =>
+                {
+                    Probe.Tell(log.Message);
+                });
             }
+        }
 
-            private void Log(LogLevel level, string str)
+        public class XUnitOutLogger : MinimalLogger
+        {
+            public static ITestOutputHelper Helper;
+            
+            protected override void Log(object message)
             {
+                Helper.WriteLine(message.ToString());
             }
         }
     }
