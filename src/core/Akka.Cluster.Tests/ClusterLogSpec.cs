@@ -68,7 +68,7 @@ namespace Akka.Cluster.Tests
             {
                 await EventFilter
                     .Info(contains: expected)
-                    .ExpectOneAsync(async () => _cluster.Join(_selfAddress));
+                    .ExpectOneAsync(async () => await _cluster.JoinAsync(_selfAddress));
             });
         }
 
