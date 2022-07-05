@@ -243,6 +243,9 @@ namespace Akka.Cluster
             ClusterCore.Tell(new ClusterUserAction.JoinTo(FillLocal(address)));
         }
 
+        // This object holds the current asynchronous join state
+        private AsyncJoinState _asyncJoinState;
+        
         /// <summary>
         /// Try to asynchronously join this cluster node specified by <paramref name="address"/>.
         /// A <see cref="Join"/> command is sent to the node to join. Returned task will be completed
@@ -264,27 +267,24 @@ namespace Akka.Cluster
         /// <returns>Task which completes, once current cluster node reaches <see cref="MemberStatus.Up"/> state.</returns>
         public Task JoinAsync(Address address, CancellationToken token = default)
         {
-            var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
-            
-            var timeout = Settings.RetryUnsuccessfulJoinAfter ?? TimeSpan.FromSeconds(10);
-            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(timeout);
-            timeoutCts.Token.Register(() =>
+            if (_asyncJoinState != null)
             {
-                timeoutCts.Dispose();
-                completion.TrySetException(new ClusterJoinFailedException(
-                    $"Node has not managed to join the cluster using provided address: {address}"));
-            });
+                _log.Error("Another async cluster join is already in progress");
+                return _asyncJoinState.Task;
+            }
             
-            RegisterOnMemberUp(() =>
-            {
-                timeoutCts.Dispose();
-                completion.TrySetResult(NotUsed.Instance);
-            });
+            _asyncJoinState = new AsyncJoinState(
+                cluster: this, 
+                failException: new ClusterJoinFailedException(
+                    $"Node has not managed to join the cluster using provided address: {address}"), 
+                onComplete: () => _asyncJoinState = null,
+                token: token);
 
+            // Guard against possibility that _asyncJoinState got nullified immediately
+            var task = _asyncJoinState.Task;
             Join(address);
 
-            return completion.Task.WithCancellation(token);
+            return task;
         }
 
         private Address FillLocal(Address address)
@@ -333,28 +333,27 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="seedNodes">TBD</param>
         /// <param name="token">TBD</param>
-        public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default(CancellationToken))
+        public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default)
         {
-            var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
-            
-            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
-            timeoutCts.Token.Register(() =>
+            if (_asyncJoinState != null)
             {
-                timeoutCts.Dispose();
-                completion.TrySetException(new ClusterJoinFailedException(
-                    $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", seedNodes)}."));
-            });
+                _log.Error("Another async cluster join is already in progress");
+                return _asyncJoinState.Task;
+            }
             
-            RegisterOnMemberUp(() =>
-            {
-                timeoutCts.Dispose();
-                completion.TrySetResult(NotUsed.Instance);
-            });
+            var nodes = seedNodes.ToList();
+            _asyncJoinState = new AsyncJoinState(
+                cluster: this, 
+                failException: new ClusterJoinFailedException(
+                    $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", nodes)}."), 
+                onComplete: () => _asyncJoinState = null,
+                token: token);
 
-            JoinSeedNodes(seedNodes);
+            // Guard against possibility that _asyncJoinState got nullified immediately
+            var task = _asyncJoinState.Task;
+            JoinSeedNodes(nodes);
 
-            return completion.Task.WithCancellation(token);
+            return task;
         }
 
         /// <summary>
