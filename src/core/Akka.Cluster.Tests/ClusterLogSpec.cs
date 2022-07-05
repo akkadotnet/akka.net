@@ -90,7 +90,7 @@ namespace Akka.Cluster.Tests
                         tcs.TrySetResult(true);
                     });
                     _cluster.Down(_selfAddress);
-                    await tcs.Task.ShouldCompleteWithin(RemainingOrDefault);
+                    await tcs.Task.ShouldCompleteWithin(Remaining);
                 });
             });
         }
