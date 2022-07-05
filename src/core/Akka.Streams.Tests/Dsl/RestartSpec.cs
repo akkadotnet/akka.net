@@ -144,7 +144,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExecuteAsync();
 
                 // There should be a delay of at least _minBackoff before we receive the element after restart
-                var deadline = (_minBackoff - TimeSpan.FromMilliseconds(1)).FromNow();
+                var deadline = (_minBackoff - TimeSpan.FromMilliseconds(100)).FromNow();
 
                 await probe.AsyncBuilder()
                     .Request(1)
