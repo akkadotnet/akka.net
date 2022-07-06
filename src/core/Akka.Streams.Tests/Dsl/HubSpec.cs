@@ -191,7 +191,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
 
                 await probe.RequestAsync(int.MaxValue);
-                var result = await probe.ExpectNextNAsync(20000, 3.Seconds()).ToListAsync();
+                var result = await probe.ExpectNextNAsync(20000, 300.Seconds()).ToListAsync();
                 result.OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
             }, Materializer);
         }
