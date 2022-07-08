@@ -3789,7 +3789,7 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
                     _currentIterator = new IterableAdapter<TOut>(_plainConcat(Grab(_stage._in)).GetAsyncEnumerator());
-                    PushPull();
+                    PushPull().Wait();
                 }
                 catch (Exception ex)
                 {
@@ -3816,11 +3816,11 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnUpstreamFinish()
             {
-                if (!HasNext)
+                if (!HasNext().Result)
                     CompleteStage();
             }
 
-            public override void OnPull() => PushPull();
+            public override void OnPull() => PushPull().Wait();
 
             private void RestartState()
             {
@@ -3828,14 +3828,21 @@ namespace Akka.Streams.Implementation.Fusing
                 _currentIterator = null;
             }
 
-            private bool HasNext => _currentIterator != null && _currentIterator.HasNext();
+            private async Task<bool> HasNext()
+            { 
+                if(_currentIterator == null)
+                    return false;   
+                
+               return await _currentIterator.HasNextAsync();
+            }
 
-            private void PushPull()
+
+            private async Task PushPull()
             {
-                if (HasNext)
+                if (await HasNext())
                 {
                     Push(_stage._out, _currentIterator.Next());
-                    if (!HasNext && IsClosed(_stage._in))
+                    if (!await HasNext() && IsClosed(_stage._in))
                         CompleteStage();
                 }
                 else if (!IsClosed(_stage._in))

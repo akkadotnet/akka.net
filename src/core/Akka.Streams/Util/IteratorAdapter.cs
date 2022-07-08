@@ -151,7 +151,7 @@ namespace Akka.Streams.Util
         /// <returns>TBD</returns>
         public T Next()
         {
-            if (!HasNext())
+            if (!HasNextAsync().Result)
                 throw new InvalidOperationException();
             if (_exception != null)
                 throw new AggregateException(_exception);
