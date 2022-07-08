@@ -3763,6 +3763,133 @@ namespace Akka.Streams.Implementation.Fusing
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
     [InternalApi]
+    public sealed class StatefulSelectManyAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    {
+        #region internal classes
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly StatefulSelectManyAsync<TIn, TOut> _stage;
+            private IterableAdapter<TOut> _currentIterator;
+            private readonly Decider _decider;
+            private Func<TIn, IAsyncEnumerable<TOut>> _plainConcat;
+
+            public Logic(StatefulSelectManyAsync<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            {
+                _stage = stage;
+                _decider = inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
+                _plainConcat = stage._concatFactory();
+
+                SetHandler(stage._in, this);
+                SetHandler(stage._out, this);
+            }
+
+            public override void OnPush()
+            {
+                try
+                {
+                    _currentIterator = new IterableAdapter<TOut>(_plainConcat(Grab(_stage._in)).GetAsyncEnumerator());
+                    PushPull();
+                }
+                catch (Exception ex)
+                {
+                    var directive = _decider(ex);
+                    switch (directive)
+                    {
+                        case Directive.Stop:
+                            FailStage(ex);
+                            break;
+                        case Directive.Resume:
+                            if (!HasBeenPulled(_stage._in))
+                                Pull(_stage._in);
+                            break;
+                        case Directive.Restart:
+                            RestartState();
+                            if (!HasBeenPulled(_stage._in))
+                                Pull(_stage._in);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (!HasNext)
+                    CompleteStage();
+            }
+
+            public override void OnPull() => PushPull();
+
+            private void RestartState()
+            {
+                _plainConcat = _stage._concatFactory();
+                _currentIterator = null;
+            }
+
+            private bool HasNext => _currentIterator != null && _currentIterator.HasNext();
+
+            private void PushPull()
+            {
+                if (HasNext)
+                {
+                    Push(_stage._out, _currentIterator.Next());
+                    if (!HasNext && IsClosed(_stage._in))
+                        CompleteStage();
+                }
+                else if (!IsClosed(_stage._in))
+                    Pull(_stage._in);
+                else
+                    CompleteStage();
+            }
+        }
+
+        #endregion
+
+        private readonly Func<Func<TIn, IAsyncEnumerable<TOut>>> _concatFactory;
+
+        private readonly Inlet<TIn> _in = new Inlet<TIn>("StatefulSelectMany.in");
+        private readonly Outlet<TOut> _out = new Outlet<TOut>("StatefulSelectMany.out");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="concatFactory">TBD</param>
+        public StatefulSelectManyAsync(Func<Func<TIn, IAsyncEnumerable<TOut>>> concatFactory)
+        {
+            _concatFactory = concatFactory;
+
+            Shape = new FlowShape<TIn, TOut>(_in, _out);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.StatefulSelectMany;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override FlowShape<TIn, TOut> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+
+        /// <summary>
+        /// Returns a <see cref="string" /> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="string" /> that represents this instance.
+        /// </returns>
+        public override string ToString() => "StatefulSelectMany";
+    }
+
+    [InternalApi]
     public sealed class StatefulSelectMany<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes

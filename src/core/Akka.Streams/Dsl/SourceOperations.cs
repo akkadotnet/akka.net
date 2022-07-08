@@ -202,6 +202,11 @@ namespace Akka.Streams.Dsl
             return (Source<TOut2, TMat>)InternalFlowOperations.SelectMany(flow, mapConcater);
         }
 
+        public static Source<TOut2, TMat> SelectMany<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, IAsyncEnumerable<TOut2>> mapConcater)
+        {
+            return (Source<TOut2, TMat>)InternalFlowOperations.SelectMany(flow, mapConcater);
+        }
+
         /// <summary>
         /// Transform each input element into an Enumerable of output elements that is
         /// then flattened into the output stream. The transformation is meant to be stateful,

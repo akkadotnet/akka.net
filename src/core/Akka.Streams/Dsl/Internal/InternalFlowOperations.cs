@@ -258,7 +258,11 @@ namespace Akka.Streams.Dsl.Internal
         {
             return StatefulSelectMany(flow, () => mapConcater);
         }
-
+        public static IFlow<TOut, TMat> SelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+           Func<TIn, IAsyncEnumerable<TOut>> mapConcater)
+        {
+            return StatefulSelectMany(flow, () => mapConcater);
+        }
         /// <summary>
         /// Transform each input element into an Enumerable of output elements that is
         /// then flattened into the output stream. The transformation is meant to be stateful,
@@ -296,7 +300,11 @@ namespace Akka.Streams.Dsl.Internal
         {
             return flow.Via(new Fusing.StatefulSelectMany<TIn, TOut>(mapConcaterFactory));
         }
-
+        public static IFlow<TOut, TMat> StatefulSelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+            Func<Func<TIn, IAsyncEnumerable<TOut>>> mapConcaterFactory)
+        {
+            return flow.Via(new Fusing.StatefulSelectManyAsync<TIn, TOut>(mapConcaterFactory));
+        }
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task{TOut}"/> and the

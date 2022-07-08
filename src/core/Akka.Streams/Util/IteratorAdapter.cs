@@ -7,6 +7,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Akka.Streams.Util
 {
@@ -23,6 +27,7 @@ namespace Akka.Streams.Util
         /// </summary>
         /// <returns>TBD</returns>
         bool HasNext();
+        Task<bool> HasNextAsync();
         /// <summary>
         /// TBD
         /// </summary>
@@ -48,7 +53,6 @@ namespace Akka.Streams.Util
         {
             _enumerator = enumerator;
         }
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -60,6 +64,73 @@ namespace Akka.Streams.Util
                 try
                 {
                     _hasNext = _enumerator.MoveNext();
+                    _exception = null;
+                }
+                catch (Exception e)
+                {
+                    // capture exception and throw it when Next() is called
+                    _exception = e;
+                    _hasNext = true;
+                }
+            }
+
+            return _hasNext.Value;
+        }
+        public Task<bool> HasNextAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <returns>TBD</returns>
+        public T Next()
+        {
+            if (!HasNext())
+                throw new InvalidOperationException();
+            if (_exception != null)
+                throw new AggregateException(_exception);
+
+            _hasNext = null;
+            _exception = null;
+
+            return _enumerator.Current;
+        }
+    }
+    internal class IterableAdapter<T> : IIterator<T>
+    {
+        private readonly IAsyncEnumerator<T> _enumerable;
+        private bool? _hasNext;
+        private Exception _exception;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="enumerable">TBD</param>
+        public IterableAdapter(IAsyncEnumerator<T> enumerable)
+        {
+            _enumerable = enumerable;
+        }
+
+        public bool HasNext()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public async Task<bool> HasNextAsync()
+        {
+            if (_hasNext == null)
+            {               
+                try
+                {
+                    _hasNext = await  _enumerable.MoveNextAsync();
                     _exception = null;
                 }
                 catch (Exception e)
@@ -88,7 +159,7 @@ namespace Akka.Streams.Util
             _hasNext = null;
             _exception = null;
 
-            return _enumerator.Current;
+            return _enumerable.Current;
         }
     }
 }
