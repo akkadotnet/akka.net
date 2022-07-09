@@ -87,7 +87,7 @@ namespace Akka.Remote.Transport.DotNetty
                 serverSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("server-socket-worker-pool")),
                 clientSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("client-socket-worker-pool")),
                 maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size", null)) ?? 128000,
-                ssl: config.HasPath("ssl") ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
+                ssl: config.GetBoolean("enable-ssl", false) ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
                 dnsUseIpv6: config.GetBoolean("dns-use-ipv6", false),
                 tcpReuseAddr: ResolveTcpReuseAddrOption(config.GetString("tcp-reuse-addr", "off-for-windows")),
                 tcpKeepAlive: config.GetBoolean("tcp-keepalive", true),
