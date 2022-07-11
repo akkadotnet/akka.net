@@ -250,6 +250,8 @@ namespace Akka.Remote.Tests.Transport
 
             var realException = GetInnerMostException<CryptographicException>(aggregateException);
             Assert.NotNull(realException);
+            // TODO: this error message is not correct, but wanted to keep this assertion here in case someone else
+            // wants to fix it in the future.
             //Assert.Equal("The specified network password is not correct.", realException.Message);
         }
 
