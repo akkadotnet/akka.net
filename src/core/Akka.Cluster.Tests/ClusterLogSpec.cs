@@ -68,7 +68,15 @@ namespace Akka.Cluster.Tests
             {
                 await EventFilter
                     .Info(contains: expected)
-                    .ExpectOneAsync(async () => await _cluster.JoinAsync(_selfAddress).ShouldCompleteWithin(Remaining));
+                    .ExpectOneAsync(async () => {
+                        var tcs = new TaskCompletionSource<bool>();
+                         _cluster.RegisterOnMemberUp(() =>
+                            {
+                                tcs.TrySetResult(true);
+                            });
+                        _cluster.Join(_selfAddress);
+                        await tcs.Task.ShouldCompleteWithin(Remaining);   
+                    });
             });
         }
 
