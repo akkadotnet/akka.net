@@ -442,7 +442,7 @@ namespace Akka.TestKit.Internal
                 ? TestKitExtension.For(system).TestEventFilterLeeway
                 : _testkit.TestKitSettings.TestEventFilterLeeway;
 
-            var timeoutValue = timeout.HasValue ? _testkit.Dilated(timeout.Value) : leeway;
+            var timeoutValue = timeout.HasValue ? _testkit.Dilated(timeout.Value) : _testkit.RemainingOrDefault + leeway;
             matchedEventHandler ??= new MatchedEventHandler();
             system.EventStream.Publish(new Mute(_filters));
             try
