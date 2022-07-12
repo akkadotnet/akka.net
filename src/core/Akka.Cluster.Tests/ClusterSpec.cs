@@ -512,7 +512,7 @@ namespace Akka.Cluster.Tests
                 await probe.ExpectMsgAsync<ClusterEvent.MemberLeft>();
                 // MemberExited might not be published before MemberRemoved
                 var removed = (ClusterEvent.MemberRemoved)await probe.FishForMessageAsync(m => m is ClusterEvent.MemberRemoved);
-                removed.PreviousStatus.Should().BeEquivalentTo(MemberStatus.Exiting);
+                new [] {MemberStatus.Exiting, MemberStatus.Leaving}.Should().Contain(removed.PreviousStatus);
             }
             finally
             {
