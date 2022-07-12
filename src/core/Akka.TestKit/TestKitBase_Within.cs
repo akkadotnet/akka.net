@@ -283,7 +283,7 @@ namespace Akka.TestKit
 
                     if (resultTask == executionTask)
                     {
-                        ret = executionTask.Result;
+                        ret = executionTask.GetAwaiter().GetResult();
                     }
                     else
                     {

@@ -455,9 +455,9 @@ namespace Akka.TestKit
         /// <exception cref="ArgumentException">Thrown if <paramref name="duration"/> is infinite</exception>
         public TimeSpan RemainingOrDilated(TimeSpan? duration)
         {
-            if(!duration.HasValue) return RemainingOrDefault;
-            if(duration < TimeSpan.Zero) throw new ArgumentException("Must be positive TimeSpan", nameof(duration));
-            return Dilated(duration.Value);
+            if(duration == null) return RemainingOrDefault;
+            if(duration <= TimeSpan.Zero) throw new ArgumentException("Must be positive TimeSpan", nameof(duration));
+            return RemainingOr(Dilated(duration.Value));
         }
 
 
