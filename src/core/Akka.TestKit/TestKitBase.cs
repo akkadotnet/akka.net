@@ -425,6 +425,8 @@ namespace Akka.TestKit
             }
         }
 
+        public bool IsInsideWithin => _testState.End != null;
+
         ///<summary>
         /// If inside a `within` block obtain time remaining for execution of the innermost enclosing `within`
         /// block; otherwise returns the given duration.

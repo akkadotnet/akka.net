@@ -442,7 +442,23 @@ namespace Akka.TestKit.Internal
                 ? TestKitExtension.For(system).TestEventFilterLeeway
                 : _testkit.TestKitSettings.TestEventFilterLeeway;
 
-            var timeoutValue = timeout.HasValue ? _testkit.Dilated(timeout.Value) : _testkit.RemainingOrDilated(leeway);
+            TimeSpan timeoutValue;
+            if (timeout.HasValue)
+            {
+                timeoutValue = _testkit.Dilated(timeout.Value);
+            }
+            else
+            {
+                timeoutValue = _testkit.RemainingOrDilated(leeway);
+                // If we expected 0 occurence and we're inside a Within block, timeout need to be slightly less else Within will throw
+                if (_testkit.IsInsideWithin && expectedOccurrences == 0)
+                {
+                    timeoutValue -= TimeSpan.FromMilliseconds(200);
+                    if(timeoutValue < TimeSpan.Zero)
+                        timeoutValue = TimeSpan.Zero;
+                }
+            }
+            
             matchedEventHandler ??= new MatchedEventHandler();
             system.EventStream.Publish(new Mute(_filters));
             try
