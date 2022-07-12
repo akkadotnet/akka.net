@@ -31,7 +31,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
                     var task = EventFilter.Info(start: "test message")
                         .ExpectOneAsync(() => Task.CompletedTask);
 
-                    // This should NOT throw, the 100ms EventFilter leeway SHOULD be replaced with WithinAsync Remaining
+                    // This should NOT throw, the 50ms EventFilter leeway SHOULD be replaced with WithinAsync Remaining
                     await Task.Delay(200.Milliseconds());
                     Sys.Log.Info("test message");
                     await task.ShouldCompleteWithin(3.Seconds());
@@ -49,7 +49,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
                     var task = EventFilter.Info(start: "test message")
                         .ExpectAsync(2, () => Task.CompletedTask);
 
-                    // This should NOT throw, the 100ms EventFilter leeway SHOULD be replaced with WithinAsync Remaining
+                    // This should NOT throw, the 50ms EventFilter leeway SHOULD be replaced with WithinAsync Remaining
                     await Task.Delay(200.Milliseconds());
                     Sys.Log.Info("test message");
                     Sys.Log.Info("test message");
