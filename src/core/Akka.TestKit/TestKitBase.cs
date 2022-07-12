@@ -458,7 +458,7 @@ namespace Akka.TestKit
         public TimeSpan RemainingOrDilated(TimeSpan? duration)
         {
             if(duration == null) return RemainingOrDefault;
-            if(duration <= TimeSpan.Zero) throw new ArgumentException("Must be positive TimeSpan", nameof(duration));
+            if(duration < TimeSpan.Zero) throw new ArgumentException("Must be positive or zero TimeSpan", nameof(duration));
             return RemainingOr(Dilated(duration.Value));
         }
 
