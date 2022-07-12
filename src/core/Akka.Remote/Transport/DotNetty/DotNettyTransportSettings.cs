@@ -76,9 +76,11 @@ namespace Akka.Remote.Transport.DotNetty
 
             var batchWriterSettings = new BatchWriterSettings(config.GetConfig("batching"));
 
+            var enableSsl = config.GetBoolean("enable-ssl", false);
+
             return new DotNettyTransportSettings(
                 transportMode: transportMode == "tcp" ? TransportMode.Tcp : TransportMode.Udp,
-                enableSsl: config.GetBoolean("enable-ssl", false),
+                enableSsl: enableSsl,
                 connectTimeout: config.GetTimeSpan("connection-timeout", TimeSpan.FromSeconds(15)),
                 hostname: host,
                 publicHostname: !string.IsNullOrEmpty(publicHost) ? publicHost : host,
@@ -87,7 +89,7 @@ namespace Akka.Remote.Transport.DotNetty
                 serverSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("server-socket-worker-pool")),
                 clientSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("client-socket-worker-pool")),
                 maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size", null)) ?? 128000,
-                ssl: config.HasPath("ssl") && config.GetBoolean("enable-ssl", false) ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
+                ssl: config.HasPath("ssl") && enableSsl ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
                 dnsUseIpv6: config.GetBoolean("dns-use-ipv6", false),
                 tcpReuseAddr: ResolveTcpReuseAddrOption(config.GetString("tcp-reuse-addr", "off-for-windows")),
                 tcpKeepAlive: config.GetBoolean("tcp-keepalive", true),
