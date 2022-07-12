@@ -68,7 +68,15 @@ namespace Akka.Cluster.Tests
             {
                 await EventFilter
                     .Info(contains: expected)
-                    .ExpectOneAsync(async () => _cluster.Join(_selfAddress));
+                    .ExpectOneAsync(async () => {
+                        var tcs = new TaskCompletionSource<bool>();
+                         _cluster.RegisterOnMemberUp(() =>
+                            {
+                                tcs.TrySetResult(true);
+                            });
+                        _cluster.Join(_selfAddress);
+                        await tcs.Task.ShouldCompleteWithin(Remaining);   
+                    });
             });
         }
 
@@ -82,7 +90,16 @@ namespace Akka.Cluster.Tests
             {
                 await EventFilter
                 .Info(contains: expected)
-                .ExpectOneAsync(async () => _cluster.Down(_selfAddress));
+                .ExpectOneAsync(async () =>
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    _cluster.RegisterOnMemberRemoved(() =>
+                    {
+                        tcs.TrySetResult(true);
+                    });
+                    _cluster.Down(_selfAddress);
+                    await tcs.Task.ShouldCompleteWithin(Remaining);
+                });
             });
         }
     }
