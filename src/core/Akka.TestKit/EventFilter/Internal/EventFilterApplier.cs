@@ -453,7 +453,7 @@ namespace Akka.TestKit.Internal
                 // If we expected 0 occurence and we're inside a Within block, timeout need to be slightly less else Within will throw
                 if (_testkit.IsInsideWithin && expectedOccurrences == 0)
                 {
-                    timeoutValue -= TimeSpan.FromMilliseconds(200);
+                    timeoutValue -= _testkit.Dilated(TimeSpan.FromMilliseconds(200));
                     if(timeoutValue < TimeSpan.Zero)
                         timeoutValue = TimeSpan.Zero;
                 }
