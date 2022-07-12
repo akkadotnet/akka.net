@@ -64,7 +64,7 @@ namespace Akka.Cluster.Tests
         /// </summary>
         protected async Task JoinAsync(string expected)
         {
-            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+            await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
                 await EventFilter
                     .Info(contains: expected)
@@ -78,7 +78,7 @@ namespace Akka.Cluster.Tests
         /// <param name="expected"></param>
         protected async Task DownAsync(string expected)
         {
-            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+            await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
                 await EventFilter
                 .Info(contains: expected)
@@ -114,9 +114,9 @@ namespace Akka.Cluster.Tests
         public async Task A_cluster_must_not_log_verbose_cluster_events_by_default()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            await JoinAsync(upLogMessage).ShouldThrowWithin<TrueException>(10.Seconds());
+            await JoinAsync(upLogMessage).ShouldThrowWithin<TrueException>(6.Seconds());
             await AwaitUpAsync();
-            await DownAsync(downLogMessage).ShouldThrowWithin<TrueException>(10.Seconds());
+            await DownAsync(downLogMessage).ShouldThrowWithin<TrueException>(6.Seconds());
         }
     }
 
