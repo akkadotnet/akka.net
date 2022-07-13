@@ -64,20 +64,17 @@ namespace Akka.Cluster.Tests
         /// </summary>
         protected async Task JoinAsync(string expected)
         {
-            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
-            {
-                await EventFilter
-                    .Info(contains: expected)
-                    .ExpectOneAsync(async () => {
-                        var tcs = new TaskCompletionSource<bool>();
-                         _cluster.RegisterOnMemberUp(() =>
-                            {
-                                tcs.TrySetResult(true);
-                            });
-                        _cluster.Join(_selfAddress);
-                        await tcs.Task.ShouldCompleteWithin(Remaining);   
+            await EventFilter
+                .Info(contains: expected)
+                .ExpectOneAsync(10.Seconds(), async () => {
+                    var tcs = new TaskCompletionSource<bool>();
+                    _cluster.RegisterOnMemberUp(() =>
+                    {
+                        tcs.TrySetResult(true);
                     });
-            });
+                    _cluster.Join(_selfAddress);
+                    await tcs.Task.ShouldCompleteWithin(10.Seconds());
+                });
         }
 
         /// <summary>
@@ -86,11 +83,9 @@ namespace Akka.Cluster.Tests
         /// <param name="expected"></param>
         protected async Task DownAsync(string expected)
         {
-            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
-            {
-                await EventFilter
+            await EventFilter
                 .Info(contains: expected)
-                .ExpectOneAsync(async () =>
+                .ExpectOneAsync(10.Seconds(), async () =>
                 {
                     var tcs = new TaskCompletionSource<bool>();
                     _cluster.RegisterOnMemberRemoved(() =>
@@ -98,9 +93,8 @@ namespace Akka.Cluster.Tests
                         tcs.TrySetResult(true);
                     });
                     _cluster.Down(_selfAddress);
-                    await tcs.Task.ShouldCompleteWithin(Remaining);
+                    await tcs.Task.ShouldCompleteWithin(10.Seconds());
                 });
-            });
         }
     }
 
