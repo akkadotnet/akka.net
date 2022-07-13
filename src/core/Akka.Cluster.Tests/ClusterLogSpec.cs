@@ -125,9 +125,9 @@ namespace Akka.Cluster.Tests
         public async Task A_cluster_must_not_log_verbose_cluster_events_by_default()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            await JoinAsync(upLogMessage).ShouldThrowWithin<TrueException>(10.Seconds());
+            await JoinAsync(upLogMessage).ShouldThrowWithin<TrueException>(11.Seconds());
             await AwaitUpAsync();
-            await DownAsync(downLogMessage).ShouldThrowWithin<TrueException>(10.Seconds());
+            await DownAsync(downLogMessage).ShouldThrowWithin<TrueException>(11.Seconds());
         }
     }
 
