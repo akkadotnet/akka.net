@@ -525,6 +525,9 @@ namespace Akka.Streams.Dsl
         public static Source<T, NotUsed> From<T>(IEnumerable<T> enumerable)
             => Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
 
+        public static Source<T, NotUsed> From<T>(IAsyncEnumerable<T> enumerable)
+            => Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
+
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> with one element.
         /// Every connected <see cref="Sink{TIn,TMat}"/> of this stream will see an individual stream consisting of one element.

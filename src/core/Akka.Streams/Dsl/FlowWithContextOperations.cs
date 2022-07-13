@@ -142,7 +142,21 @@ namespace Akka.Streams.Dsl
             });
             return flow.Via(Flow.FromGraph(stage));
         }
-
+        /*public static FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> StatefulSelectConcat<TIn, TCtx, TOut, TOut2, TMat>(
+            this FlowWithContext<TIn, TCtx, TOut, TCtx, TMat> flow, Func<Func<TOut, IAsyncEnumerable<TOut2>>> fn)
+        {
+            var stage = new StatefulSelectManyAsync<(TOut, TCtx), (TOut2, TCtx)>(() =>
+            {
+                var fun = fn();
+                return itemWithContext =>
+                {
+                    var items = fun(itemWithContext.Item1);
+                    return items.Select(i => (i, itemWithContext.Item2));
+                };
+            });
+            return flow.Via(Flow.FromGraph(stage));
+        }
+       */
         /// <summary>
         /// Apply the given function to each context element (leaving the data elements unchanged).
         /// </summary>
