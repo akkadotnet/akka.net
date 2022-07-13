@@ -231,9 +231,8 @@ namespace Akka.Remote.Tests.Transport
             });
 
             var realException = GetInnerMostException<ArgumentNullException>(aggregateException);
-            var x = realException.Message;
             Assert.NotNull(realException);
-            Assert.Equal("Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)\r\nParameter name: certificatePath", realException.Message);
+            Assert.Equal("Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`) (Parameter 'certificatePath')", realException.Message);
         }
 
         [Fact]
