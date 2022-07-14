@@ -323,22 +323,26 @@ namespace Akka.Cluster.Tests
         {
             var timeout = TimeSpan.FromSeconds(10);
             var probe = CreateTestProbe("error_probe");
-            Sys.EventStream.Subscribe(probe, typeof(Error));
+            Sys.EventStream.Subscribe(probe, typeof(Debug));
             try
             {
-                var task1 = _cluster.JoinAsync(_selfAddress);
+                var task = _cluster.JoinAsync(_selfAddress);
                 
-                var task2 = _cluster.JoinAsync(_selfAddress);
-                var error = await probe.ExpectMsgAsync<Error>();
-                error.Message.Should().Be("Another async cluster join is already in progress");
-                task2.Should().Be(task1);
+                await EventFilter.Debug("Another async cluster join is already in progress")
+                    .ExpectOneAsync(async () =>
+                    {
+                        var repeatTask = _cluster.JoinAsync(_selfAddress);
+                        repeatTask.Should().Be(task);
+                    });
                 
-                var task3 = _cluster.JoinAsync(_selfAddress);
-                error = await probe.ExpectMsgAsync<Error>();
-                error.Message.Should().Be("Another async cluster join is already in progress");
-                task3.Should().Be(task1);
+                await EventFilter.Debug("Another async cluster join is already in progress")
+                    .ExpectOneAsync(async () =>
+                    {
+                        var repeatTask = _cluster.JoinAsync(_selfAddress);
+                        repeatTask.Should().Be(task);
+                    });
 
-                await task1.ShouldCompleteWithin(timeout);
+                await task.ShouldCompleteWithin(timeout);
                 LeaderActions();
                 // Member should already be up
                 _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, typeof(ClusterEvent.IMemberEvent));
@@ -452,22 +456,26 @@ namespace Akka.Cluster.Tests
             var timeout = TimeSpan.FromSeconds(10);
             var seed = new[] { _selfAddress };
             var probe = CreateTestProbe("error_probe");
-            Sys.EventStream.Subscribe(probe, typeof(Error));
+            Sys.EventStream.Subscribe(probe, typeof(Debug));
             try
             {
-                var task1 = _cluster.JoinSeedNodesAsync(seed);
+                var task = _cluster.JoinSeedNodesAsync(seed);
                 
-                var task2 = _cluster.JoinSeedNodesAsync(seed);
-                var error = await probe.ExpectMsgAsync<Error>();
-                error.Message.Should().Be("Another async cluster join is already in progress");
-                task2.Should().Be(task1);
+                await EventFilter.Debug("Another async cluster join is already in progress")
+                    .ExpectOneAsync(async () =>
+                    {
+                        var repeatTask = _cluster.JoinAsync(_selfAddress);
+                        repeatTask.Should().Be(task);
+                    });
                 
-                var task3 = _cluster.JoinSeedNodesAsync(seed);
-                error = await probe.ExpectMsgAsync<Error>();
-                error.Message.Should().Be("Another async cluster join is already in progress");
-                task3.Should().Be(task1);
+                await EventFilter.Debug("Another async cluster join is already in progress")
+                    .ExpectOneAsync(async () =>
+                    {
+                        var repeatTask = _cluster.JoinAsync(_selfAddress);
+                        repeatTask.Should().Be(task);
+                    });
 
-                await task1.ShouldCompleteWithin(timeout);
+                await task.ShouldCompleteWithin(timeout);
                 
                 LeaderActions();
                 // Member should already be up
