@@ -30,7 +30,9 @@ namespace Akka.Streams.Tests.Dsl
     {
         private ActorMaterializer Materializer { get; }
 
-        public AsyncEnumerableSpec(ITestOutputHelper helper) : base(helper)
+        public AsyncEnumerableSpec(ITestOutputHelper helper) : base(
+                AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig),
+                helper)
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
             Materializer = ActorMaterializer.Create(Sys, settings);
