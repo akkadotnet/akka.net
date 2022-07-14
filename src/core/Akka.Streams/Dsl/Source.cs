@@ -525,8 +525,21 @@ namespace Akka.Streams.Dsl
         public static Source<T, NotUsed> From<T>(IEnumerable<T> enumerable)
             => Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
 
-        public static Source<T, NotUsed> AsyncEnumerableAsRun<T>(IAsyncEnumerable<T> enumerable)
-            => FromGraph(new AsyncEnumerable<T>(enumerable)).WithAttributes(DefaultAttributes.EnumerableSource);
+
+        /// <summary>
+        /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IAsyncEnumerable{T}"/>.
+        /// Example usage: Source.From(Enumerable.Range(1, 10))
+        /// 
+        /// Starts a new <see cref="Source{TOut,TMat}"/> from the given <see cref="IAsyncEnumerable{T}"/>. This is like starting from an
+        /// Enumerator, but every Subscriber directly attached to the Publisher of this
+        /// stream will see an individual flow of elements (always starting from the
+        /// beginning) regardless of when they subscribed.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name=" asyncEnumerable">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<T, NotUsed> From<T>(IAsyncEnumerable<T> asyncEnumerable)
+            => FromGraph(new AsyncEnumerable<T>(asyncEnumerable)).WithAttributes(DefaultAttributes.EnumerableSource);
 
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> with one element.

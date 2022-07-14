@@ -26,6 +26,7 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Tests.Dsl
 {
+#if NETCOREAPP
     public class AsyncEnumerableSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
@@ -38,8 +39,9 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-#if NETCOREAPP
-        [Fact] public async Task RunAsAsyncEnumerable_Uses_CancellationToken()
+
+        [Fact] 
+        public async Task RunAsAsyncEnumerable_Uses_CancellationToken()
         {
             var input = Enumerable.Range(1, 6).ToList();
 
@@ -154,9 +156,6 @@ namespace Akka.Streams.Tests.Dsl
             await Assert.ThrowsAsync<IllegalStateException>(ShouldThrow);
         }
         
-
-#else
-#endif
         [Fact]
         public async Task AsyncEnumerableSource_must_allow_multiple_IAsyncEnumerable()
         {
@@ -165,7 +164,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 // creating actor with default supervision, because stream supervisor default strategy is to 
                 var actorRef = Sys.ActorOf(ManualSubscriber.Props(TestActor));
-                Source.AsyncEnumerableAsRun(RangeAsync(1, 7))
+                Source.From(RangeAsync(1, 7))
                     .RunWith(Sink.FromSubscriber(new ActorSubscriberImpl<int>(actorRef)), materializer);
                 actorRef.Tell("ready");
                 (await ExpectMsgAsync<OnNext>()).Element.Should().Be(1);
@@ -189,7 +188,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void AsyncEnumerableSource_Must_Complete_Immediately_With_No_elements_When_An_Empty_IAsyncEnumerable_Is_Passed_In()
         {
-            var p = Source.AsyncEnumerableAsRun(AsyncEnumerable.Empty<int>()).RunWith(Sink.AsPublisher<int>(false), Sys.Materializer());
+            var p = Source.From(AsyncEnumerable.Empty<int>()).RunWith(Sink.AsPublisher<int>(false), Sys.Materializer());
             var c = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c);
             c.ExpectSubscriptionAndComplete();
@@ -199,7 +198,7 @@ namespace Akka.Streams.Tests.Dsl
         public void AsyncEnumerableSource_Select()
         {
             var materializer = Sys.Materializer();
-            var p = Source.AsyncEnumerableAsRun(RangeAsync(1, 100))
+            var p = Source.From(RangeAsync(1, 100))
                     .Select(message =>
                     {
                         return message;
@@ -208,7 +207,7 @@ namespace Akka.Streams.Tests.Dsl
         }
         static async IAsyncEnumerable<int> RangeAsync(int start, int count)
         {
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
             {
                 await Task.Delay(i);
                 yield return start + i;
@@ -216,4 +215,7 @@ namespace Akka.Streams.Tests.Dsl
         }
         
     }
+    
+#else
+#endif
 }
