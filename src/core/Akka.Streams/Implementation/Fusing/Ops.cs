@@ -3761,6 +3761,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    /// 
+    //https://github.com/Horusiath/Akka.Persistence.Pulsar/blob/master/Akka.Persistence.Pulsar/AsyncEnumerableSource.cs
     [InternalApi]
     public sealed class AsyncEnumerable<T> : GraphStage<SourceShape<T>>
     {
