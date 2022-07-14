@@ -164,7 +164,7 @@ namespace Akka.Remote.Tests.Transport
 
 
         [Fact]
-        public async Task Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
+        public void Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
@@ -173,7 +173,7 @@ namespace Akka.Remote.Tests.Transport
 
             var probe = CreateTestProbe();
 
-            await AwaitAssertAsync(async () =>
+            AwaitAssert(() =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
                 probe.ExpectMsg("hello", TimeSpan.FromSeconds(3));
@@ -181,7 +181,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact(Skip = "Racy in Azure AzDo CI/CD")]
-        public async Task Secure_transport_should_be_possible_between_systems_using_thumbprint()
+        public void Secure_transport_should_be_possible_between_systems_using_thumbprint()
         {
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
@@ -191,9 +191,9 @@ namespace Akka.Remote.Tests.Transport
 
                 var probe = CreateTestProbe();
 
-                await WithinAsync(TimeSpan.FromSeconds(12), async () =>
+                Within(TimeSpan.FromSeconds(12), () =>
                 {
-                    await AwaitAssertAsync(() =>
+                    AwaitAssert(() =>
                     {
                         Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
                         probe.ExpectMsg("hello", TimeSpan.FromMilliseconds(100));
@@ -220,12 +220,12 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public async Task If_EnableSsl_configuration_is_true_but_not_valid_certificate_is_provided_than_ArgumentNullException_should_be_thrown()
+        public void If_EnableSsl_configuration_is_true_but_not_valid_certificate_is_provided_than_ArgumentNullException_should_be_thrown()
         {
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
 
-            var aggregateException = await Assert.ThrowsAsync<AggregateException>(async () =>
+            var aggregateException = Assert.Throws<AggregateException>( () =>
             {
                 Setup(true, null, Password);
             });
@@ -236,12 +236,12 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public async Task If_EnableSsl_configuration_is_true_but_not_valid_certificate_password_is_provided_than_WindowsCryptographicException_should_be_thrown()
+        public void If_EnableSsl_configuration_is_true_but_not_valid_certificate_password_is_provided_than_WindowsCryptographicException_should_be_thrown()
         {
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
 
-            var aggregateException = await Assert.ThrowsAsync<AggregateException>(async () =>
+            var aggregateException = Assert.Throws<AggregateException>(() =>
             {
                 Setup(true, ValidCertPath, null);
             });
