@@ -143,6 +143,17 @@ namespace Akka.Cluster
 
             system.RegisterOnTermination(Shutdown);
 
+            // Async join support
+            RegisterOnMemberUp(() =>
+            {
+                lock (_asyncJoinLock)
+                {
+                    _isUp.GetAndSet(true);
+                    // If there is an async join operation in progress, complete it.
+                    _asyncJoinTaskSource?.Complete();
+                }
+            });
+            
             LogInfo("Started up successfully");
         }
 
@@ -243,9 +254,6 @@ namespace Akka.Cluster
             ClusterCore.Tell(new ClusterUserAction.JoinTo(FillLocal(address)));
         }
 
-        // This object holds the current asynchronous join state
-        private AsyncJoinState _asyncJoinState;
-        
         /// <summary>
         /// Try to asynchronously join this cluster node specified by <paramref name="address"/>.
         /// A <see cref="Join"/> command is sent to the node to join. Returned task will be completed
@@ -267,24 +275,27 @@ namespace Akka.Cluster
         /// <returns>Task which completes, once current cluster node reaches <see cref="MemberStatus.Up"/> state.</returns>
         public Task JoinAsync(Address address, CancellationToken token = default)
         {
-            if (_asyncJoinState != null)
+            if (_isUp || _isTerminated)
+                return Task.CompletedTask;
+                    
+            lock (_asyncJoinLock)
             {
-                _log.Error("Another async cluster join is already in progress");
-                return _asyncJoinState.Task;
-            }
+                if (_asyncJoinTaskSource != null && !_asyncJoinTaskSource.IsCompleted)
+                {
+                    if(_log.IsDebugEnabled)
+                        _log.Debug("Another async cluster join is already in progress");
+                    return _asyncJoinTaskSource.Task;
+                }
             
-            _asyncJoinState = new AsyncJoinState(
-                cluster: this, 
-                failException: new ClusterJoinFailedException(
-                    $"Node has not managed to join the cluster using provided address: {address}"), 
-                onComplete: () => _asyncJoinState = null,
-                token: token);
+                _asyncJoinTaskSource = new TimeoutTaskCompletionSource(
+                    timeout: Settings.SeedNodeTimeout, 
+                    failException: new ClusterJoinFailedException(
+                        $"Node has not managed to join the cluster using provided address: {address}"), 
+                    token: token);
 
-            // Guard against possibility that _asyncJoinState got nullified immediately
-            var task = _asyncJoinState.Task;
-            Join(address);
-
-            return task;
+                Join(address);
+                return _asyncJoinTaskSource.Task;
+            }
         }
 
         private Address FillLocal(Address address)
@@ -335,25 +346,28 @@ namespace Akka.Cluster
         /// <param name="token">TBD</param>
         public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default)
         {
-            if (_asyncJoinState != null)
+            if (_isUp || _isTerminated)
+                return Task.CompletedTask;
+                
+            lock (_asyncJoinLock)
             {
-                _log.Error("Another async cluster join is already in progress");
-                return _asyncJoinState.Task;
-            }
+                if (_asyncJoinTaskSource != null && !_asyncJoinTaskSource.IsCompleted)
+                {
+                    if(_log.IsDebugEnabled)
+                        _log.Debug("Another async cluster join is already in progress");
+                    return _asyncJoinTaskSource.Task;
+                }
             
-            var nodes = seedNodes.ToList();
-            _asyncJoinState = new AsyncJoinState(
-                cluster: this, 
-                failException: new ClusterJoinFailedException(
-                    $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", nodes)}."), 
-                onComplete: () => _asyncJoinState = null,
-                token: token);
+                var nodes = seedNodes.ToList();
+                _asyncJoinTaskSource = new TimeoutTaskCompletionSource(
+                    timeout: Settings.SeedNodeTimeout, 
+                    failException: new ClusterJoinFailedException(
+                        $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", nodes)}."), 
+                    token: token);
 
-            // Guard against possibility that _asyncJoinState got nullified immediately
-            var task = _asyncJoinState.Task;
-            JoinSeedNodes(nodes);
-
-            return task;
+                JoinSeedNodes(nodes);
+                return _asyncJoinTaskSource.Task;
+            }
         }
 
         /// <summary>
@@ -420,7 +434,11 @@ namespace Akka.Cluster
                 return leaveTask;
 
             // Subscribe to MemberRemoved events
-            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() => tcs.TrySetResult(null)));
+            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() =>
+            {
+                _isUp.GetAndSet(false);
+                tcs.TrySetResult(null);
+            }));
 
             // Send leave message
             ClusterCore.Tell(new ClusterUserAction.Leave(SelfAddress));
@@ -450,7 +468,10 @@ namespace Akka.Cluster
         /// <param name="callback">The callback that is run whenever the current member achieves a status of <see cref="MemberStatus.Up"/></param>
         public void RegisterOnMemberUp(Action callback)
         {
-            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberUpListener(callback));
+            if (IsUp)
+                callback();
+            else
+                _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberUpListener(callback));
         }
 
         /// <summary>
@@ -524,6 +545,11 @@ namespace Akka.Cluster
         public bool IsTerminated { get { return _isTerminated.Value; } }
 
         /// <summary>
+        /// Determine whether the cluster is in the UP state.
+        /// </summary>
+        public bool IsUp => _isUp.Value;
+        
+        /// <summary>
         /// The underlying <see cref="ActorSystem"/> supported by this plugin.
         /// </summary>
         public ExtendedActorSystem System { get; }
@@ -532,6 +558,15 @@ namespace Akka.Cluster
         private readonly ILoggingAdapter _log;
         private readonly ClusterReadView _readView;
 
+        #region Async join state housekeeping variables
+
+        // These fields holds the current asynchronous join state
+        private TimeoutTaskCompletionSource _asyncJoinTaskSource;
+        private readonly object _asyncJoinLock = new object();
+        private readonly AtomicBoolean _isUp = new AtomicBoolean();
+
+        #endregion
+        
         /// <summary>
         /// TBD
         /// </summary>
