@@ -553,7 +553,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Determine whether the cluster is in the UP state.
         /// </summary>
-        public bool IsUp => _isUp.Value;
+        public bool IsUp => _isUp.Value && ! _isTerminated.Value;
         
         /// <summary>
         /// The underlying <see cref="ActorSystem"/> supported by this plugin.
