@@ -1985,6 +1985,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.Actor.IActorRef> ActorPublisher<T>(Akka.Actor.Props props) { }
         public static Akka.Streams.Dsl.Source<T, Akka.Actor.IActorRef> ActorRef<T>(int bufferSize, Akka.Streams.OverflowStrategy overflowStrategy) { }
         public static Akka.Streams.Dsl.Source<T, Reactive.Streams.ISubscriber<T>> AsSubscriber<T>() { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> AsyncEnumerableAsRun<T>(System.Collections.Generic.IAsyncEnumerable<T> enumerable) { }
         public static Akka.Streams.Dsl.Source<TOut2, Akka.NotUsed> Combine<T, TOut2>(Akka.Streams.Dsl.Source<T, Akka.NotUsed> first, Akka.Streams.Dsl.Source<T, Akka.NotUsed> second, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, params Akka.Streams.Dsl.Source<, >[] rest) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(Akka.Streams.Dsl.Source<T, TMat1> first, Akka.Streams.Dsl.Source<T, TMat2> second, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, System.Func<TMat1, TMat2, TMatOut> combineMaterializers) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Cycle<T>(System.Func<System.Collections.Generic.IEnumerator<T>> enumeratorFactory) { }
@@ -3979,6 +3980,15 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         public Akka.Streams.Outlet<TOut> Out { get; }
         public override Akka.Streams.FlowShape<TIn, TOut> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+        public override string ToString() { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class AsyncEnumerable<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<T>>
+    {
+        public AsyncEnumerable(System.Collections.Generic.IAsyncEnumerable<T> asyncEnumerable) { }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public override Akka.Streams.SourceShape<T> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
