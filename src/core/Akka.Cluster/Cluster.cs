@@ -275,7 +275,10 @@ namespace Akka.Cluster
         /// <returns>Task which completes, once current cluster node reaches <see cref="MemberStatus.Up"/> state.</returns>
         public Task JoinAsync(Address address, CancellationToken token = default)
         {
-            if (_isUp || _isTerminated)
+            if (_isTerminated)
+                throw new ClusterJoinFailedException("Cluster has already been terminated");
+            
+            if (_isUp)
                 return Task.CompletedTask;
                     
             lock (_asyncJoinLock)
@@ -346,7 +349,10 @@ namespace Akka.Cluster
         /// <param name="token">TBD</param>
         public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default)
         {
-            if (_isUp || _isTerminated)
+            if (_isTerminated)
+                throw new ClusterJoinFailedException("Cluster has already been terminated");
+            
+            if (_isUp)
                 return Task.CompletedTask;
                 
             lock (_asyncJoinLock)
