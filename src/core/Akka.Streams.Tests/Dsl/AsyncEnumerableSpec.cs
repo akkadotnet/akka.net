@@ -26,19 +26,20 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Tests.Dsl
 {
-#if NETCOREAPP
     public class AsyncEnumerableSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
-
+        private ITestOutputHelper _helper;
         public AsyncEnumerableSpec(ITestOutputHelper helper) : base(
                 AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig),
                 helper)
         {
+            _helper = helper;
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
+        #if NETCOREAPP
 
         [Fact] 
         public async Task RunAsAsyncEnumerable_Uses_CancellationToken()
@@ -155,56 +156,32 @@ namespace Akka.Streams.Tests.Dsl
             
             await Assert.ThrowsAsync<IllegalStateException>(ShouldThrow);
         }
-        
-        [Fact]
-        public async Task AsyncEnumerableSource_must_allow_multiple_IAsyncEnumerable()
-        {
-            var materializer = Sys.Materializer();
-            await this.AssertAllStagesStoppedAsync(async () =>
-            {
-                // creating actor with default supervision, because stream supervisor default strategy is to 
-                var actorRef = Sys.ActorOf(ManualSubscriber.Props(TestActor));
-                Source.From(RangeAsync(1, 7))
-                    .RunWith(Sink.FromSubscriber(new ActorSubscriberImpl<int>(actorRef)), materializer);
-                actorRef.Tell("ready");
-                (await ExpectMsgAsync<OnNext>()).Element.Should().Be(1);
-                (await ExpectMsgAsync<OnNext>()).Element.Should().Be(2);
-                await ExpectNoMsgAsync(200);
-                actorRef.Tell("boom");
-                actorRef.Tell("ready");
-                actorRef.Tell("ready");
-                actorRef.Tell("boom");
-                await foreach (var n in RangeAsync(3, 4))
-                {
-                    (await ExpectMsgAsync<OnNext>()).Element.Should().Be(n);
-                }
-                await ExpectNoMsgAsync(200);
-                actorRef.Tell("ready");
-                (await ExpectMsgAsync<OnNext>()).Element.Should().Be(7);
-                await ExpectMsgAsync<OnComplete>();
-            }, materializer);
-        }
-        
+        #else
+        #endif
+
         [Fact]
         public void AsyncEnumerableSource_Must_Complete_Immediately_With_No_elements_When_An_Empty_IAsyncEnumerable_Is_Passed_In()
         {
-            var p = Source.From(AsyncEnumerable.Empty<int>()).RunWith(Sink.AsPublisher<int>(false), Sys.Materializer());
-            var c = this.CreateManualSubscriberProbe<int>();
-            p.Subscribe(c);
-            c.ExpectSubscriptionAndComplete();
+            Func<IAsyncEnumerable<int>> range = () =>
+            {
+                return RangeAsync(1, 100);
+            };
+            var subscriber = this.CreateManualSubscriberProbe<int>();
+
+            Source.From(range)
+                .RunWith(Sink.FromSubscriber(subscriber), Materializer);
+
+            var subscription = subscriber.ExpectSubscription();
+            subscription.Request(100);
+            for (int i = 1; i <= 20; i++)
+            {
+                var next = subscriber.ExpectNext(i);
+                _helper.WriteLine(i.ToString());
+            }
+
+            //subscriber.ExpectComplete();
         }
 
-        [Fact]
-        public void AsyncEnumerableSource_Select()
-        {
-            var materializer = Sys.Materializer();
-            var p = Source.From(RangeAsync(1, 100))
-                    .Select(message =>
-                    {
-                        return message;
-                    });
-            ///////////
-        }
         static async IAsyncEnumerable<int> RangeAsync(int start, int count)
         {
             for (var i = 0; i < count; i++)
@@ -215,7 +192,4 @@ namespace Akka.Streams.Tests.Dsl
         }
         
     }
-    
-#else
-#endif
 }

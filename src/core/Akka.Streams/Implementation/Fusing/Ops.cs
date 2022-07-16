@@ -3847,22 +3847,23 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
         private readonly Outlet<T> _outlet = new Outlet<T>("EnumerableSource.out");
-        private readonly IAsyncEnumerable<T> _asyncEnumerable;
+        private readonly Func<IAsyncEnumerable<T>> _factory;
 
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="asyncEnumerable">TBD</param>
-        public AsyncEnumerable(IAsyncEnumerable<T> asyncEnumerable)
+        /// <param name="factory">TBD</param>
+        public AsyncEnumerable(Func<IAsyncEnumerable<T>>  factory)
         {
             //TODO: when to dispose async enumerable? Should this be a part of ownership of current stage, or should it
             // be a responsibility of the caller?
-            _asyncEnumerable = asyncEnumerable;
+            //_asyncEnumerable = asyncEnumerable;
+            _factory = factory;
             Shape = new SourceShape<T>(_outlet);
         }
 
         public override SourceShape<T> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, _asyncEnumerable.GetAsyncEnumerator());
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, _factory().GetAsyncEnumerator());
 
         /// <summary>
         /// TBD
