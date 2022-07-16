@@ -1991,7 +1991,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Empty<T>() { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Failed<T>(System.Exception cause) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> From<T>(System.Collections.Generic.IEnumerable<T> enumerable) { }
-        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> From<T>(System.Collections.Generic.IAsyncEnumerable<T> asyncEnumerable) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> From<T>(System.Func<System.Collections.Generic.IAsyncEnumerable<T>> asyncEnumerable) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEnumerator<T>(System.Func<System.Collections.Generic.IEnumerator<T>> enumeratorFactory) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEvent<TDelegate, T>(System.Func<System.Action<T>, TDelegate> conversion, System.Action<TDelegate> addHandler, System.Action<TDelegate> removeHandler, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEvent<T>(System.Action<System.EventHandler<T>> addHandler, System.Action<System.EventHandler<T>> removeHandler, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
@@ -3998,7 +3998,7 @@ namespace Akka.Streams.Implementation.Fusing
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class AsyncEnumerable<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<T>>
     {
-        public AsyncEnumerable(System.Collections.Generic.IAsyncEnumerable<T> asyncEnumerable) { }
+        public AsyncEnumerable(System.Func<System.Collections.Generic.IAsyncEnumerable<T>> factory) { }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         public override Akka.Streams.SourceShape<T> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
