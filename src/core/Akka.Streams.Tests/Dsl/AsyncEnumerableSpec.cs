@@ -31,9 +31,10 @@ namespace Akka.Streams.Tests.Dsl
     {
         private ActorMaterializer Materializer { get; }
         private ITestOutputHelper _helper;
+
         public AsyncEnumerableSpec(ITestOutputHelper helper) : base(
-                AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig),
-                helper)
+            AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig),
+            helper)
         {
             _helper = helper;
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
@@ -41,14 +42,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
 
-        [Fact] 
+        [Fact]
         public async Task RunAsAsyncEnumerable_Uses_CancellationToken()
         {
             var input = Enumerable.Range(1, 6).ToList();
 
             var cts = new CancellationTokenSource();
             var token = cts.Token;
-            
+
             var asyncEnumerable = Source.From(input).RunAsAsyncEnumerable(Materializer);
             var output = input.ToArray();
             bool caught = false;
@@ -63,10 +64,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 caught = true;
             }
-            
+
             caught.ShouldBeTrue();
         }
-        
+
         [Fact]
         public async Task RunAsAsyncEnumerable_must_return_an_IAsyncEnumerableT_from_a_Source()
         {
@@ -78,7 +79,8 @@ namespace Akka.Streams.Tests.Dsl
                 (output[0] == a).ShouldBeTrue("Did not get elements in order!");
                 output = output.Skip(1).ToArray();
             }
-            output.Length.ShouldBe(0,"Did not receive all elements!");
+
+            output.Length.ShouldBe(0, "Did not receive all elements!");
         }
 
         [Fact]
@@ -92,15 +94,17 @@ namespace Akka.Streams.Tests.Dsl
                 (output[0] == a).ShouldBeTrue("Did not get elements in order!");
                 output = output.Skip(1).ToArray();
             }
-            output.Length.ShouldBe(0,"Did not receive all elements!");
-            
+
+            output.Length.ShouldBe(0, "Did not receive all elements!");
+
             output = input.ToArray();
             await foreach (var a in asyncEnumerable)
             {
                 (output[0] == a).ShouldBeTrue("Did not get elements in order!");
                 output = output.Skip(1).ToArray();
             }
-            output.Length.ShouldBe(0,"Did not receive all elements in second enumeration!!");
+
+            output.Length.ShouldBe(0, "Did not receive all elements in second enumeration!!");
         }
 
 
@@ -110,8 +114,8 @@ namespace Akka.Streams.Tests.Dsl
             var materializer = ActorMaterializer.Create(Sys);
             var probe = this.CreatePublisherProbe<int>();
             var task = Source.FromPublisher(probe).RunAsAsyncEnumerable(materializer);
-            
-            var a = Task.Run( async () =>
+
+            var a = Task.Run(async () =>
             {
                 await foreach (var notused in task)
                 {
@@ -127,17 +131,18 @@ namespace Akka.Streams.Tests.Dsl
             {
                 await a;
             }
-            catch (StreamDetachedException e) 
-            { 
-                thrown = true; 
-            } 
+            catch (StreamDetachedException e)
+            {
+                thrown = true;
+            }
             catch (AbruptTerminationException e)
             {
                 thrown = true;
             }
+
             thrown.ShouldBeTrue();
         }
-        
+
         [Fact]
         public async Task RunAsAsyncEnumerable_Throws_if_materializer_gone_before_Enumeration()
         {
@@ -150,20 +155,17 @@ namespace Akka.Streams.Tests.Dsl
             {
                 await foreach (var a in task)
                 {
-                    
                 }
             }
-            
+
             await Assert.ThrowsAsync<IllegalStateException>(ShouldThrow);
         }
 
-    [Fact]
-        public void AsyncEnumerableSource_Must_Complete_Immediately_With_No_elements_When_An_Empty_IAsyncEnumerable_Is_Passed_In()
+        [Fact]
+        public void
+            AsyncEnumerableSource_Must_Complete_Immediately_With_No_elements_When_An_Empty_IAsyncEnumerable_Is_Passed_In()
         {
-            Func<IAsyncEnumerable<int>> range = () =>
-            {
-                return RangeAsync(1, 100);
-            };
+            Func<IAsyncEnumerable<int>> range = () => { return RangeAsync(0, 0); };
             var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.From(range)
@@ -171,26 +173,18 @@ namespace Akka.Streams.Tests.Dsl
 
             var subscription = subscriber.ExpectSubscription();
             subscription.Request(100);
-            for (int i = 1; i <= 20; i++)
-            {
-                var next = subscriber.ExpectNext(i);
-                _helper.WriteLine(i.ToString());
-            }
-
-            //subscriber.ExpectComplete();
+            subscriber.ExpectComplete();
         }
 
-        static async IAsyncEnumerable<int> RangeAsync(int start, int count)
+        private static async IAsyncEnumerable<int> RangeAsync(int start, int count)
         {
             for (var i = 0; i < count; i++)
             {
-                await Task.Delay(i);
+                await Task.CompletedTask;
                 yield return start + i;
             }
         }
-        
     }
 #else
 #endif
-
 }
