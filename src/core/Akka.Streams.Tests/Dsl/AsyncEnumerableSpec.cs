@@ -10,19 +10,16 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Pattern;
-using Akka.Routing;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
-using Nito.AsyncEx.Synchronous;
 using Xunit;
 using Xunit.Abstractions;
 using System.Collections.Generic;
-using Akka.Actor;
-using Akka.Streams.Actors;
-using Akka.Streams.Tests.Actor;
-using Reactive.Streams;
+using System.Runtime.CompilerServices;
+using Akka.Util;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -186,21 +183,96 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.FromSubscriber(subscriber), Materializer);
 
             var subscription = await subscriber.ExpectSubscriptionAsync();
-            subscription.Request(100);
+            subscription.Request(101);
 
             await subscriber.ExpectNextNAsync(Enumerable.Range(0, 100));
             
             await subscriber.ExpectCompleteAsync();
         }
 
-        private static async IAsyncEnumerable<int> RangeAsync(int start, int count)
+        [Fact]
+        public async Task AsyncEnumerableSource_Must_Process_Source_That_Immediately_Throws()
         {
-            for (var i = 0; i < count; i++)
+            IAsyncEnumerable<int> Range() => ThrowingRangeAsync(0, 100, 50);
+            var subscriber = this.CreateManualSubscriberProbe<int>();
+
+            Source.From(Range)
+                .RunWith(Sink.FromSubscriber(subscriber), Materializer);
+
+            var subscription = await subscriber.ExpectSubscriptionAsync();
+            subscription.Request(101);
+
+            await subscriber.ExpectNextNAsync(Enumerable.Range(0, 50));
+
+            var exception = await subscriber.ExpectErrorAsync();
+            
+            // Exception should be automatically unrolled, this SHOULD NOT be AggregateException
+            exception.Should().BeOfType<TestException>();
+            exception.Message.Should().Be("BOOM!");
+        }
+
+        [Fact]
+        public async Task AsyncEnumerableSource_Must_Cancel_Running_Source_If_Downstream_Completes()
+        {
+            var latch = new AtomicBoolean();
+            IAsyncEnumerable<int> Range() => ProbeableRangeAsync(0, 100, latch);
+            var subscriber = this.CreateManualSubscriberProbe<int>();
+
+            var probe = Source.From(Range)
+                .RunWith(Sink.FromSubscriber(subscriber), Materializer);
+
+            var subscription = await subscriber.ExpectSubscriptionAsync();
+            subscription.Request(50);
+            await subscriber.ExpectNextNAsync(Enumerable.Range(0, 50));
+            subscription.Cancel();
+
+            await WithinAsync(3.Seconds(), async () => latch.Value);
+            latch.Value.Should().BeTrue();
+        }
+
+        private static async IAsyncEnumerable<int> RangeAsync(int start, int count, 
+            [EnumeratorCancellation] CancellationToken token = default)
+        {
+            foreach (var i in Enumerable.Range(start, count))
             {
-                await Task.CompletedTask;
-                yield return start + i;
+                await Task.Delay(10, token);
+                if(token.IsCancellationRequested)
+                    yield break;
+                yield return i;
             }
         }
+        
+        private static async IAsyncEnumerable<int> ThrowingRangeAsync(int start, int count, int throwAt,
+            [EnumeratorCancellation] CancellationToken token = default)
+        {
+            foreach (var i in Enumerable.Range(start, count))
+            {
+                if(token.IsCancellationRequested)
+                    yield break;
+
+                if (i == throwAt)
+                    throw new TestException("BOOM!");
+                
+                yield return i;
+            }
+        }
+        
+        private static async IAsyncEnumerable<int> ProbeableRangeAsync(int start, int count, AtomicBoolean latch,
+            [EnumeratorCancellation] CancellationToken token = default)
+        {
+            token.Register(() =>
+            {
+                latch.GetAndSet(true);
+            });
+            foreach (var i in Enumerable.Range(start, count))
+            {
+                if(token.IsCancellationRequested)
+                    yield break;
+
+                yield return i;
+            }
+        }
+        
     }
 #else
 #endif

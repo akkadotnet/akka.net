@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Event;
@@ -3775,10 +3776,12 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly Action<T> _onSuccess;
             private readonly Action<Exception> _onFailure;
             private readonly Action _onComplete;
+            private readonly CancellationTokenSource _completionCts;
 
-            public Logic(SourceShape<T> shape, IAsyncEnumerator<T> enumerator) : base(shape)
+            public Logic(SourceShape<T> shape, IAsyncEnumerable<T> enumerable) : base(shape)
             {
-                _enumerator = enumerator;
+                _completionCts = new CancellationTokenSource();
+                _enumerator = enumerable.GetAsyncEnumerator(_completionCts.Token);
                 _outlet = shape.Outlet;
                 _onSuccess = GetAsyncCallback<T>(OnSuccess);
                 _onFailure = GetAsyncCallback<Exception>(OnFailure);
@@ -3812,17 +3815,33 @@ namespace Akka.Streams.Implementation.Fusing
                         // if result is false, it means enumerator was closed. Complete stage in that case.
                         CompleteStage();
                     }
+                } 
+                else if (vtask.IsCompleted) // IsCompleted covers Faulted, Cancelled, and RanToCompletion async state
+                {
+                    // vtask will always contains an exception because we know we're not successful and always throws
+                    try
+                    {
+                        // This does not block because we know that the task already completed
+                        // Using GetAwaiter().GetResult() to automatically unwraps AggregateException inner exception
+                        vtask.GetAwaiter().GetResult();
+                    }
+                    catch (Exception ex)
+                    {
+                        FailStage(ex);
+                        return;
+                    }
+
+                    throw new InvalidOperationException("Should never reach this code");
                 }
                 else
                 {
                     async Task ProcessTask()
                     {
-                                               
                         // Since this Action is used as task continuation, we cannot safely call corresponding
                         // OnSuccess/OnFailure/OnComplete methods directly. We need to do that via async callbacks.
                         try
                         {
-                            var completed = await vtask;
+                            var completed = await vtask.ConfigureAwait(false);
                             if (completed)
                                 _onSuccess(_enumerator.Current);
                             else
@@ -3842,36 +3861,9 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnDownstreamFinish(Exception cause)
             {
-                var vtask = _enumerator.DisposeAsync();
-                if (vtask.IsCompletedSuccessfully)
-                {
-                    CompleteStage(); // if dispose completed immediately, complete stage directly
-                }
-                else
-                {
-                    // for async disposals use async callback
-                    async Task ProcessDisposal()
-                    {
-                        try
-                        {
-                            await vtask;
-                        }
-                        catch (Exception ex)
-                        {
-                            // might as well log the failure while shutting down
-                            Log.Error(ex, "Encountered error while disposing {0}", _enumerator.GetType());
-                        }
-                        finally
-                        {
-                            _onComplete();
-                        }
-                    }
-
-#pragma warning disable CS4014
-                    ProcessDisposal();
-#pragma warning restore CS4014
-
-                }
+                _completionCts.Cancel();
+                _completionCts.Dispose();
+                CompleteStage();
                 base.OnDownstreamFinish(cause);
             }
 
@@ -3888,7 +3880,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         public override SourceShape<T> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, _factory().GetAsyncEnumerator());
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, _factory());
 
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.EnumerableSource;
 
