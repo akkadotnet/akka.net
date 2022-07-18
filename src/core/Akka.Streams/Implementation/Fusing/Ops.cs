@@ -3760,7 +3760,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of IAsyncEnumerable.</typeparam>
     /// 
     //https://github.com/Horusiath/Akka.Persistence.Pulsar/blob/master/Akka.Persistence.Pulsar/AsyncEnumerableSource.cs
     [InternalApi]
@@ -3849,15 +3849,8 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Outlet<T> _outlet = new Outlet<T>("EnumerableSource.out");
         private readonly Func<IAsyncEnumerable<T>> _factory;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="factory">TBD</param>
         public AsyncEnumerable(Func<IAsyncEnumerable<T>>  factory)
         {
-            //TODO: when to dispose async enumerable? Should this be a part of ownership of current stage, or should it
-            // be a responsibility of the caller?
-            //_asyncEnumerable = asyncEnumerable;
             _factory = factory;
             Shape = new SourceShape<T>(_outlet);
         }
@@ -3865,9 +3858,6 @@ namespace Akka.Streams.Implementation.Fusing
         public override SourceShape<T> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, _factory().GetAsyncEnumerator());
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.EnumerableSource;
 
         /// <summary>
