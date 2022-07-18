@@ -126,7 +126,7 @@ namespace Akka.Streams.Tests.Dsl
             //we want to send messages so we aren't just waiting forever.
             probe.SendNext(1);
             probe.SendNext(2);
-            bool thrown = false;
+            var thrown = false;
             try
             {
                 await a;
@@ -162,18 +162,35 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void
+        public async Task
             AsyncEnumerableSource_Must_Complete_Immediately_With_No_elements_When_An_Empty_IAsyncEnumerable_Is_Passed_In()
         {
-            Func<IAsyncEnumerable<int>> range = () => { return RangeAsync(0, 0); };
+            IAsyncEnumerable<int> Range() => RangeAsync(0, 0);
             var subscriber = this.CreateManualSubscriberProbe<int>();
 
-            Source.From(range)
+            Source.From(Range)
                 .RunWith(Sink.FromSubscriber(subscriber), Materializer);
 
-            var subscription = subscriber.ExpectSubscription();
+            var subscription = await subscriber.ExpectSubscriptionAsync();
             subscription.Request(100);
-            subscriber.ExpectComplete();
+            await subscriber.ExpectCompleteAsync();
+        }
+
+        [Fact]
+        public async Task AsyncEnumerableSource_Must_Process_All_Elements()
+        {
+            IAsyncEnumerable<int> Range() => RangeAsync(0, 100);
+            var subscriber = this.CreateManualSubscriberProbe<int>();
+
+            Source.From(Range)
+                .RunWith(Sink.FromSubscriber(subscriber), Materializer);
+
+            var subscription = await subscriber.ExpectSubscriptionAsync();
+            subscription.Request(100);
+
+            await subscriber.ExpectNextNAsync(Enumerable.Range(0, 100));
+            
+            await subscriber.ExpectCompleteAsync();
         }
 
         private static async IAsyncEnumerable<int> RangeAsync(int start, int count)
