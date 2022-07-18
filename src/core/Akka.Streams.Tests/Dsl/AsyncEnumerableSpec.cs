@@ -26,6 +26,7 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Tests.Dsl
 {
+#if NETCOREAPP
     public class AsyncEnumerableSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
@@ -39,7 +40,6 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        #if NETCOREAPP
 
         [Fact] 
         public async Task RunAsAsyncEnumerable_Uses_CancellationToken()
@@ -156,10 +156,8 @@ namespace Akka.Streams.Tests.Dsl
             
             await Assert.ThrowsAsync<IllegalStateException>(ShouldThrow);
         }
-        #else
-        #endif
 
-        [Fact]
+    [Fact]
         public void AsyncEnumerableSource_Must_Complete_Immediately_With_No_elements_When_An_Empty_IAsyncEnumerable_Is_Passed_In()
         {
             Func<IAsyncEnumerable<int>> range = () =>
@@ -192,4 +190,7 @@ namespace Akka.Streams.Tests.Dsl
         }
         
     }
+#else
+#endif
+
 }
