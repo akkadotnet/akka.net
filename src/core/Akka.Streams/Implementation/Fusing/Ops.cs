@@ -3771,17 +3771,18 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : OutGraphStageLogic
         {
-            private readonly IAsyncEnumerator<T> _enumerator;
+            private readonly IAsyncEnumerable<T> _enumerable;
             private readonly Outlet<T> _outlet;
             private readonly Action<T> _onSuccess;
             private readonly Action<Exception> _onFailure;
             private readonly Action _onComplete;
-            private readonly CancellationTokenSource _completionCts;
+            
+            private CancellationTokenSource _completionCts;
+            private IAsyncEnumerator<T> _enumerator;
 
             public Logic(SourceShape<T> shape, IAsyncEnumerable<T> enumerable) : base(shape)
             {
-                _completionCts = new CancellationTokenSource();
-                _enumerator = enumerable.GetAsyncEnumerator(_completionCts.Token);
+                _enumerable = enumerable;
                 _outlet = shape.Outlet;
                 _onSuccess = GetAsyncCallback<T>(OnSuccess);
                 _onFailure = GetAsyncCallback<Exception>(OnFailure);
@@ -3797,6 +3798,13 @@ namespace Akka.Streams.Implementation.Fusing
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private void OnSuccess(T element) => Push(_outlet, element);
+
+            public override void PreStart()
+            {
+                base.PreStart();
+                _completionCts = new CancellationTokenSource();
+                _enumerator = _enumerable.GetAsyncEnumerator(_completionCts.Token);
+            }
 
             public override void OnPull()
             {
