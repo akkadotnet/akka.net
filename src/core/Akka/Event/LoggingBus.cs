@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
+using Akka.Dispatch.SysMsg;
 
 namespace Akka.Event
 {
@@ -178,7 +179,7 @@ namespace Akka.Event
             {
                 Publish(new Warning(loggingBusName, GetType(),
                      string.Format("Logger {0} [{2}] did not respond within {1} to InitializeLogger(bus)", loggerName, timeout, loggerType.FullName)));
-                logger.Tell(PoisonPill.Instance);
+                logger.Tell(new Stop());
                 return;
             }
                 
