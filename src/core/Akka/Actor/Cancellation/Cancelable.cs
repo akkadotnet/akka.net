@@ -218,11 +218,9 @@ namespace Akka.Actor
                     }
                     finally
                     {
-                        // base.dispose(disposing);
-                    }
-                    IsDisposed = true;
+                        IsDisposed = true;
+                    }                    
                 }
-                //Clean up unmanaged resources
             }
         }
     }
