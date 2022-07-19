@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Event;
@@ -3770,29 +3771,22 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : OutGraphStageLogic
         {
-            private readonly IAsyncEnumerator<T> _enumerator;
+            private readonly IAsyncEnumerable<T> _enumerable;
             private readonly Outlet<T> _outlet;
             private readonly Action<T> _onSuccess;
             private readonly Action<Exception> _onFailure;
             private readonly Action _onComplete;
-            private readonly Action<Task<bool>> _handleContinuation;
+            
+            private CancellationTokenSource _completionCts;
+            private IAsyncEnumerator<T> _enumerator;
 
-            public Logic(SourceShape<T> shape, IAsyncEnumerator<T> enumerator) : base(shape)
+            public Logic(SourceShape<T> shape, IAsyncEnumerable<T> enumerable) : base(shape)
             {
-                _enumerator = enumerator;
+                _enumerable = enumerable;
                 _outlet = shape.Outlet;
                 _onSuccess = GetAsyncCallback<T>(OnSuccess);
                 _onFailure = GetAsyncCallback<Exception>(OnFailure);
                 _onComplete = GetAsyncCallback(OnComplete);
-                _handleContinuation = task =>
-                {
-                    // Since this Action is used as task continuation, we cannot safely call corresponding
-                    // OnSuccess/OnFailure/OnComplete methods directly. We need to do that via async callbacks.
-                    if (task.IsFaulted) _onFailure(task.Exception);
-                    else if (task.IsCanceled) _onFailure(new TaskCanceledException(task));
-                    else if (task.Result) _onSuccess(enumerator.Current);
-                    else _onComplete();
-                };
 
                 SetHandler(_outlet, this);
             }
@@ -3805,12 +3799,19 @@ namespace Akka.Streams.Implementation.Fusing
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private void OnSuccess(T element) => Push(_outlet, element);
 
+            public override void PreStart()
+            {
+                base.PreStart();
+                _completionCts = new CancellationTokenSource();
+                _enumerator = _enumerable.GetAsyncEnumerator(_completionCts.Token);
+            }
+
             public override void OnPull()
             {
                 var vtask = _enumerator.MoveNextAsync();
                 if (vtask.IsCompletedSuccessfully)
                 {
-                    // When MoveNextAsync returned immediatelly, we don't need to await.
+                    // When MoveNextAsync returned immediately, we don't need to await.
                     // We can use fast path instead.
                     if (vtask.Result)
                     {
@@ -3822,25 +3823,68 @@ namespace Akka.Streams.Implementation.Fusing
                         // if result is false, it means enumerator was closed. Complete stage in that case.
                         CompleteStage();
                     }
+                } 
+                else if (vtask.IsCompleted) // IsCompleted covers Faulted, Cancelled, and RanToCompletion async state
+                {
+                    // vtask will always contains an exception because we know we're not successful and always throws
+                    try
+                    {
+                        // This does not block because we know that the task already completed
+                        // Using GetAwaiter().GetResult() to automatically unwraps AggregateException inner exception
+                        vtask.GetAwaiter().GetResult();
+                    }
+                    catch (Exception ex)
+                    {
+                        FailStage(ex);
+                        return;
+                    }
+
+                    throw new InvalidOperationException("Should never reach this code");
                 }
                 else
                 {
-                    vtask.AsTask().ContinueWith(_handleContinuation);
+                    async Task ProcessTask()
+                    {
+                        // Since this Action is used as task continuation, we cannot safely call corresponding
+                        // OnSuccess/OnFailure/OnComplete methods directly. We need to do that via async callbacks.
+                        try
+                        {
+                            var completed = await vtask.ConfigureAwait(false);
+                            if (completed)
+                                _onSuccess(_enumerator.Current);
+                            else
+                                _onComplete();
+                        }
+                        catch (Exception ex)
+                        {
+                            _onFailure(ex);
+                        }
+                    }
+
+#pragma warning disable CS4014
+                    ProcessTask();
+#pragma warning restore CS4014
                 }
             }
+
             public override void OnDownstreamFinish(Exception cause)
             {
-                var vtask = _enumerator.DisposeAsync();
-                if (vtask.IsCompletedSuccessfully)
+                _completionCts.Cancel();
+                _completionCts.Dispose();
+
+                try
                 {
-                    CompleteStage(); // if dispose completed immediately, complete stage directly
+                    _enumerator.DisposeAsync().GetAwaiter().GetResult();
                 }
-                else
+                catch (Exception ex)
                 {
-                    // for async disposals use async callback
-                    vtask.GetAwaiter().OnCompleted(_onComplete);
+                    Log.Warning(ex, "Failed to dispose IAsyncEnumerator asynchronously");
                 }
-                base.OnDownstreamFinish(cause);
+                finally
+                {
+                    CompleteStage();
+                    base.OnDownstreamFinish(cause);
+                }
             }
 
         }
@@ -3856,7 +3900,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         public override SourceShape<T> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, _factory().GetAsyncEnumerator());
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, _factory());
 
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.EnumerableSource;
 
