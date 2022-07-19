@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Event;
@@ -3756,7 +3758,160 @@ namespace Akka.Streams.Implementation.Fusing
         /// </returns>
         public override string ToString() => "RecoverWith";
     }
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="T">The type of IAsyncEnumerable.</typeparam>
+    /// 
+    //https://github.com/Horusiath/Akka.Persistence.Pulsar/blob/master/Akka.Persistence.Pulsar/AsyncEnumerableSource.cs
+    [InternalApi]
+    public sealed class AsyncEnumerable<T> : GraphStage<SourceShape<T>>
+    {
+        #region internal classes
 
+        private sealed class Logic : OutGraphStageLogic
+        {
+            private readonly IAsyncEnumerable<T> _enumerable;
+            private readonly Outlet<T> _outlet;
+            private readonly Action<T> _onSuccess;
+            private readonly Action<Exception> _onFailure;
+            private readonly Action _onComplete;
+            
+            private CancellationTokenSource _completionCts;
+            private IAsyncEnumerator<T> _enumerator;
+
+            public Logic(SourceShape<T> shape, IAsyncEnumerable<T> enumerable) : base(shape)
+            {
+                _enumerable = enumerable;
+                _outlet = shape.Outlet;
+                _onSuccess = GetAsyncCallback<T>(OnSuccess);
+                _onFailure = GetAsyncCallback<Exception>(OnFailure);
+                _onComplete = GetAsyncCallback(OnComplete);
+
+                SetHandler(_outlet, this);
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void OnComplete() => CompleteStage();
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void OnFailure(Exception exception) => FailStage(exception);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void OnSuccess(T element) => Push(_outlet, element);
+
+            public override void PreStart()
+            {
+                base.PreStart();
+                _completionCts = new CancellationTokenSource();
+                _enumerator = _enumerable.GetAsyncEnumerator(_completionCts.Token);
+            }
+
+            public override void OnPull()
+            {
+                var vtask = _enumerator.MoveNextAsync();
+                if (vtask.IsCompletedSuccessfully)
+                {
+                    // When MoveNextAsync returned immediately, we don't need to await.
+                    // We can use fast path instead.
+                    if (vtask.Result)
+                    {
+                        // if result is true, it means we got an element. Push it downstream.
+                        Push(_outlet, _enumerator.Current);
+                    }
+                    else
+                    {
+                        // if result is false, it means enumerator was closed. Complete stage in that case.
+                        CompleteStage();
+                    }
+                } 
+                else if (vtask.IsCompleted) // IsCompleted covers Faulted, Cancelled, and RanToCompletion async state
+                {
+                    // vtask will always contains an exception because we know we're not successful and always throws
+                    try
+                    {
+                        // This does not block because we know that the task already completed
+                        // Using GetAwaiter().GetResult() to automatically unwraps AggregateException inner exception
+                        vtask.GetAwaiter().GetResult();
+                    }
+                    catch (Exception ex)
+                    {
+                        FailStage(ex);
+                        return;
+                    }
+
+                    throw new InvalidOperationException("Should never reach this code");
+                }
+                else
+                {
+                    async Task ProcessTask()
+                    {
+                        // Since this Action is used as task continuation, we cannot safely call corresponding
+                        // OnSuccess/OnFailure/OnComplete methods directly. We need to do that via async callbacks.
+                        try
+                        {
+                            var completed = await vtask.ConfigureAwait(false);
+                            if (completed)
+                                _onSuccess(_enumerator.Current);
+                            else
+                                _onComplete();
+                        }
+                        catch (Exception ex)
+                        {
+                            _onFailure(ex);
+                        }
+                    }
+
+#pragma warning disable CS4014
+                    ProcessTask();
+#pragma warning restore CS4014
+                }
+            }
+
+            public override void OnDownstreamFinish(Exception cause)
+            {
+                _completionCts.Cancel();
+                _completionCts.Dispose();
+
+                try
+                {
+                    _enumerator.DisposeAsync().GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Failed to dispose IAsyncEnumerator asynchronously");
+                }
+                finally
+                {
+                    CompleteStage();
+                    base.OnDownstreamFinish(cause);
+                }
+            }
+
+        }
+
+        #endregion
+        private readonly Outlet<T> _outlet = new Outlet<T>("EnumerableSource.out");
+        private readonly Func<IAsyncEnumerable<T>> _factory;
+
+        public AsyncEnumerable(Func<IAsyncEnumerable<T>>  factory)
+        {
+            _factory = factory;
+            Shape = new SourceShape<T>(_outlet);
+        }
+
+        public override SourceShape<T> Shape { get; }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, _factory());
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.EnumerableSource;
+
+        /// <summary>
+        /// Returns a <see cref="string" /> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="string" /> that represents this instance.
+        /// </returns>
+        public override string ToString() => "EnumerableSource";
+    }
     /// <summary>
     /// INTERNAL API
     /// </summary>
