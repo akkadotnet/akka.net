@@ -212,11 +212,18 @@ namespace Akka.Actor
                 if(!IsDisposed)
                 {
                     //Clean up managed resources
-                    _source?.Dispose();
+                    try
+                    {
+                        _source?.Dispose();
+                    }
+                    finally
+                    {
+                        // base.dispose(disposing);
+                    }
+                    IsDisposed = true;
                 }
                 //Clean up unmanaged resources
             }
-            IsDisposed = true;
         }
     }
 }
