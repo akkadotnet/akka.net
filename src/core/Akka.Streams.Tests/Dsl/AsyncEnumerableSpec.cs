@@ -21,6 +21,7 @@ using Xunit.Abstractions;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Streams.Actors;
+using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Tests.Actor;
 using Reactive.Streams;
 
@@ -32,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         private ActorMaterializer Materializer { get; }
         private ITestOutputHelper _helper;
         public AsyncEnumerableSpec(ITestOutputHelper helper) : base(
-                AkkaSpecConfig.WithFallback(DefaultConfig),
+                AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig),
                 helper)
         {
             _helper = helper;

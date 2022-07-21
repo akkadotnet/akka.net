@@ -24,6 +24,8 @@ namespace Akka.Streams.TestKit.Tests
     [InternalApi]
     public sealed class StreamTestDefaultMailbox : MailboxType, IProducesMessageQueue<UnboundedMessageQueue>
     {
+        public static Config DefaultConfig =>
+            ConfigurationFactory.FromResource<StreamTestDefaultMailbox>("Akka.Streams.TestKit.Tests.reference.conf");
 
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
         {
