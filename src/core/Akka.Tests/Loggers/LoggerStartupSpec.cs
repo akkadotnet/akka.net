@@ -9,10 +9,10 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
-using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,14 +27,18 @@ namespace Akka.Tests.Loggers
             XUnitOutLogger.Helper = helper;
         }
         
-        [Theory]
+        [Theory(DisplayName = "ActorSystem should start with loggers timing out")]
         [InlineData(false)]
         [InlineData(true)]
-        public void ActorSystem_should_start_with_loggers_timing_out(bool useAsync)
+        public async Task ActorSystem_should_start_with_loggers_timing_out(bool useAsync)
         {
             var slowLoggerConfig = ConfigurationFactory.ParseString($@"
+akka.loglevel = DEBUG
 akka.stdout-logger-class = ""{typeof(XUnitOutLogger).FullName}, {typeof(XUnitOutLogger).Assembly.GetName().Name}""
-akka.loggers = [""{typeof(SlowLoggerActor).FullName}, {typeof(SlowLoggerActor).Assembly.GetName().Name}""]
+akka.loggers = [
+    ""Akka.Event.DefaultLogger"",
+    ""{typeof(SlowLoggerActor).FullName}, {typeof(SlowLoggerActor).Assembly.GetName().Name}""
+]
 akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
 
             var config = ConfigurationFactory.ParseString($"akka.logger-async-start = {(useAsync ? "true" : "false")}")
@@ -44,13 +48,25 @@ akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
             try
             {
                 this.Invoking(_ => sys = ActorSystem.Create("test", config)).Should()
-                    .NotThrow("System should not fail to start when a logger timed out when logger is created synchronously");
-
-                // Logger actor should die
+                    .NotThrow("System should not fail to start when a logger timed out");
                 var probe = CreateTestProbe(sys);
                 SlowLoggerActor.Probe = probe;
-                Logging.GetLogger(sys, this).Error("TEST");
-                probe.ExpectNoMsg(200.Milliseconds());
+                var logProbe = CreateTestProbe(sys);
+                sys.EventStream.Subscribe(logProbe, typeof(LogEvent));
+
+                // Logger actor should eventually initialize
+                await AwaitAssertAsync(() =>
+                {
+                    var dbg = logProbe.ExpectMsg<Debug>();
+                    dbg.Message.ToString().Should().Contain(nameof(SlowLoggerActor)).And.Contain("started");
+                });
+                
+                var logger = Logging.GetLogger(sys, this);
+                logger.Error("TEST");
+                await AwaitAssertAsync(() =>
+                {
+                    probe.ExpectMsg<string>().Should().Be("TEST");
+                });
             }
             finally
             {
@@ -59,23 +75,130 @@ akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
             }
         }
 
-        public class SlowLoggerActor : ReceiveActor
+        [Theory(DisplayName = "ActorSystem should start with loggers throwing exceptions")]
+        [InlineData("ctor")]
+        [InlineData("PreStart")]
+        [InlineData("Receive")]
+        public void ActorSystem_should_start_with_logger_exception(string when)
+        {
+            var config = ConfigurationFactory.ParseString($@"
+akka.loglevel = DEBUG
+akka.stdout-logger-class = ""{typeof(XUnitOutLogger).FullName}, {typeof(XUnitOutLogger).Assembly.GetName().Name}""
+akka.loggers = [
+    ""Akka.Event.DefaultLogger"",
+    ""{typeof(ThrowingLogger).FullName}, {typeof(ThrowingLogger).Assembly.GetName().Name}""
+]
+akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
+
+            ThrowingLogger.ThrowWhen = when;
+            ActorSystem sys = null;
+            try
+            {
+                this.Invoking(_ => sys = ActorSystem.Create("test", config)).Should()
+                    .NotThrow("System should not fail to start when a logger throws an exception");
+            }
+            finally
+            {
+                if(sys != null)
+                    Shutdown(sys);
+            }
+        }
+
+        private class TestException: Exception
+        {
+            public TestException(string message) : base(message)
+            { }
+        }
+        
+        private class ThrowingLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
+        {
+            public static string ThrowWhen = "Receive";
+
+            public ThrowingLogger()
+            {
+                if(ThrowWhen == "ctor")
+                    throw new TestException(".ctor BOOM!");
+            }
+
+            protected override void PreStart()
+            {
+                base.PreStart();
+                if(ThrowWhen == "PreStart")
+                    throw new TestException("PreStart BOOM!");
+            }
+
+            protected override bool Receive(object message)
+            {
+                if(message is InitializeLogger)
+                {
+                    if(ThrowWhen == "Receive")
+                        throw new TestException("Receive BOOM!");
+                
+                    Sender.Tell(new LoggerInitialized());
+                    return true;
+                }
+
+                return false;
+            }
+        }
+        
+        private class SlowLoggerActor : ActorBase, IWithUnboundedStash, IRequiresMessageQueue<ILoggerMessageQueueSemantics> 
         {
             public static TestProbe Probe;
             
             public SlowLoggerActor()
             {
-                ReceiveAsync<InitializeLogger>(async _ =>
-                {
-                    // Ooops... Logger is responding too slow
-                    await Task.Delay(LoggerResponseDelayMs);
-                    Sender.Tell(new LoggerInitialized());
-                });
-                Receive<LogEvent>(log =>
-                {
-                    Probe.Tell(log.Message);
-                });
+                Become(Starting);
             }
+
+            private bool Starting(object message)
+            {
+                switch (message)
+                {
+                    case InitializeLogger _:
+                        var sender = Sender;
+                        Task.Delay(LoggerResponseDelayMs).PipeTo(Self, sender, success: () => Done.Instance);
+                        Become(Initializing);
+                        return true;
+                    default:
+                        Stash.Stash();
+                        return true;
+                }
+            }
+
+            private bool Initializing(object message)
+            {
+                switch (message)
+                {
+                    case Done _:
+                        Sender.Tell(new LoggerInitialized());
+                        Become(Initialized);
+                        Stash.UnstashAll();
+                        return true;
+                    default:
+                        Stash.Stash();
+                        return true;
+                }
+            }
+
+            private bool Initialized(object message)
+            {
+                switch (message)
+                {
+                    case LogEvent evt:
+                        Probe.Tell(evt.Message.ToString());
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            protected override bool Receive(object message)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IStash Stash { get; set; }
         }
 
         public class XUnitOutLogger : MinimalLogger

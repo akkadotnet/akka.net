@@ -9,13 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
-using Akka.Dispatch.SysMsg;
 
 namespace Akka.Event
 {
@@ -24,10 +22,29 @@ namespace Akka.Event
     /// </summary>
     public class LoggingBus : ActorEventBus<object, Type>
     {
+        private sealed class LoggerStartInfo
+        {
+            private readonly string _name;
+            
+            public LoggerStartInfo(string loggerName, Type loggerType, IActorRef actorRef)
+            {
+                _name = $"{loggerName} [{loggerType.FullName}]";
+                ActorRef = actorRef;
+            }
+
+            public IActorRef ActorRef { get; }
+            
+            public override string ToString() => _name;
+        }
+        
         private static readonly LogLevel[] AllLogLevels = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
 
         private static int _loggerId;
         private readonly List<IActorRef> _loggers = new List<IActorRef>();
+        
+        // Async load support
+        private readonly Dictionary<Task, LoggerStartInfo> _startupState = new Dictionary<Task, LoggerStartInfo>();
+        private readonly CancellationTokenSource _shutdownCts = new CancellationTokenSource();
 
         /// <summary>
         /// The minimum log level that this bus will subscribe to, any <see cref="LogEvent">LogEvents</see> with a log level below will not be subscribed to.
@@ -89,17 +106,19 @@ namespace Akka.Event
         internal void StartDefaultLoggers(ActorSystemImpl system)
         {
             var logName = SimpleName(this) + "(" + system.Name + ")";
-            var logLevel = Logging.LogLevelFor(system.Settings.LogLevel);
             var loggerTypes = system.Settings.Loggers;
             var timeout = system.Settings.LoggerStartTimeout;
             var shouldRemoveStandardOutLogger = true;
+
+            LogLevel = Logging.LogLevelFor(system.Settings.LogLevel);
 
             foreach (var strLoggerType in loggerTypes)
             {
                 var loggerType = Type.GetType(strLoggerType);
                 if (loggerType == null)
                 {
-                    throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
+                    Publish(new Error(null, logName, GetType(), $@"Logger specified in config cannot be found: ""{strLoggerType}"""));
+                    continue;
                 }
 
                 if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
@@ -108,17 +127,22 @@ namespace Akka.Event
                     continue;
                 }
 
-                try
-                {
-                    AddLogger(system, loggerType, logLevel, logName, timeout);
-                }
-                catch (Exception ex)
-                {
-                    throw new ConfigurationException($"Logger [{strLoggerType}] specified in config cannot be loaded: {ex}", ex);
-                }
+                AddLogger(system, loggerType, logName);
             }
 
-            LogLevel = logLevel;
+            if (!Task.WaitAll(_startupState.Keys.ToArray(), timeout))
+            {
+                foreach (var kvp in _startupState)
+                {
+                    if (!kvp.Key.IsCompleted)
+                    {
+                        Publish(new Warning(logName, GetType(),
+                            $"Logger {kvp.Value} did not respond within {timeout} to InitializeLogger(bus), " +
+                            $"{nameof(LoggingBus)} will try and wait until it is ready. Since it start up is delayed, " +
+                            "this logger may not capture all startup events correctly."));
+                    }
+                }
+            }
 
             if (system.Settings.DebugUnhandledMessage)
             {
@@ -149,48 +173,68 @@ namespace Akka.Event
                 Publish(new Debug(SimpleName(this), GetType(), $"Shutting down: {Logging.SimpleName(system.Settings.StdoutLogger)} started"));
             }
 
+            // Cancel all pending logger initialization tasks
+            _shutdownCts.Cancel(false);
+            _shutdownCts.Dispose();
+            
+            // Stop all currently running loggers
             foreach (var logger in _loggers)
             {
-                if (!(logger is MinimalLogger))
-                {
-                    Unsubscribe(logger);
-                    if (logger is IInternalActorRef internalActorRef)
-                    {
-                        internalActorRef.Stop();
-                    }
-                }
+                RemoveLogger(logger);
             }
 
             Publish(new Debug(SimpleName(this), GetType(), "All default loggers stopped"));
         }
 
-        private void AddLogger(ActorSystemImpl system, Type loggerType, LogLevel logLevel, string loggingBusName, TimeSpan timeout)
+        private void RemoveLogger(IActorRef logger)
+        {
+            if (!(logger is MinimalLogger))
+            {
+                Unsubscribe(logger);
+                if (logger is IInternalActorRef internalActorRef)
+                {
+                    internalActorRef.Stop();
+                }
+            }
+        }
+
+        private void AddLogger(ActorSystemImpl system, Type loggerType, string loggingBusName)
         {
             var loggerName = CreateLoggerName(loggerType);
             var logger = system.SystemActorOf(Props.Create(loggerType).WithDispatcher(system.Settings.LoggersDispatcher), loggerName);
-            var askTask = logger.Ask(new InitializeLogger(this), timeout);
-
-            object response = null;
-            try
-            {
-                response = askTask.ConfigureAwait(false).GetAwaiter().GetResult();
-            }
-            catch (Exception ex) when (ex is TaskCanceledException || ex is AskTimeoutException)
-            {
-                Publish(new Warning(loggingBusName, GetType(),
-                     string.Format("Logger {0} [{2}] did not respond within {1} to InitializeLogger(bus)", loggerName, timeout, loggerType.FullName)));
-                logger.Tell(new Stop());
-                return;
-            }
-                
-            if (!(response is LoggerInitialized))
-                throw new LoggerInitializationException($"Logger {loggerName} [{loggerType.FullName}] did not respond with LoggerInitialized, sent instead {response}");
+            var askTask = logger.Ask(new InitializeLogger(this), Timeout.InfiniteTimeSpan, _shutdownCts.Token);
             
+            _startupState[askTask] = new LoggerStartInfo(loggerName, loggerType, logger);
+            askTask.ContinueWith(t =>
+                {
+                    var info = _startupState[t];
+                    _startupState.Remove(t);
+                    
+                    // _shutdownCts was cancelled while this logger is still loading
+                    if (t.IsCanceled)
+                    {
+                        Publish(new Warning(loggingBusName, GetType(),
+                            $"Logger {info} startup have been cancelled because of system shutdown. Stopping logger."));
+                        RemoveLogger(info.ActorRef);
+                        return;
+                    }
+                    
+                    // Task ran to completion successfully
+                    var response = t.Result;
+                    if (!(response is LoggerInitialized))
+                    {
+                        // Malformed logger, logger did not send a proper ack.
+                        Publish(new Error(null, loggingBusName, GetType(),
+                            $"Logger {info} did not respond with {nameof(LoggerInitialized)}, sent instead {response.GetType()}. Stopping logger."));
+                        RemoveLogger(info.ActorRef);
+                        return;
+                    }
 
-            _loggers.Add(logger);
-            SubscribeLogLevelAndAbove(logLevel, logger);
-            Publish(new Debug(loggingBusName, GetType(), $"Logger {loggerName} [{loggerType.Name}] started"));
-            
+                    // Logger initialized successfully
+                    _loggers.Add(info.ActorRef);
+                    SubscribeLogLevelAndAbove(LogLevel, info.ActorRef);
+                    Publish(new Debug(loggingBusName, GetType(), $"Logger {info} started"));
+                });
         }
 
         private string CreateLoggerName(Type actorClass)
@@ -227,7 +271,7 @@ namespace Akka.Event
             foreach (var logger in _loggers)
             {
                 //subscribe to given log level and above
-                SubscribeLogLevelAndAbove(logLevel, logger);
+                SubscribeLogLevelAndAbove(LogLevel, logger);
 
                 //unsubscribe to all levels below log level
                 foreach (var level in AllLogLevels.Where(l => l < logLevel))
