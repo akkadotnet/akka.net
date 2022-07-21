@@ -10,6 +10,7 @@ If you want to see the [full set of changes made in Akka.NET v1.4.39, click here
 | 2       | 147  | 4    | Gregorius Soedharmo |
 | 1       | 669  | 3    | Aaron Stannard      |
 | 1       | 123  | 26   | Ebere Abanonu       |
+| 1       | 101  | 3    | aminchenkov         |
 
 #### 1.4.39 June 1 2022 ####
 Akka.NET v1.4.39 is a minor release that contains some very important bug fixes for Akka.Remote and Akka.Cluster users.
