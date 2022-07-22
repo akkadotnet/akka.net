@@ -143,16 +143,6 @@ namespace Akka.Cluster
 
             system.RegisterOnTermination(Shutdown);
 
-            // Async join support
-            RegisterOnMemberUp(() =>
-            {
-                lock (_asyncJoinLock)
-                {
-                    // If there is an async join operation in progress, complete it.
-                    _asyncJoinTaskSource?.Complete();
-                }
-            });
-            
             LogInfo("Started up successfully");
         }
 
@@ -280,24 +270,14 @@ namespace Akka.Cluster
             if (IsUp)
                 return Task.CompletedTask;
                     
-            lock (_asyncJoinLock)
-            {
-                if (_asyncJoinTaskSource != null && !_asyncJoinTaskSource.IsCompleted)
-                {
-                    if(_log.IsDebugEnabled)
-                        _log.Debug("Another async cluster join is already in progress");
-                    return _asyncJoinTaskSource.Task;
-                }
-            
-                _asyncJoinTaskSource = new TimeoutTaskCompletionSource(
-                    timeout: Settings.SeedNodeTimeout, 
-                    failException: new ClusterJoinFailedException(
-                        $"Node has not managed to join the cluster using provided address: {address}"), 
-                    token: token);
-
-                Join(address);
-                return _asyncJoinTaskSource.Task;
-            }
+            var tcs = new TimeoutTaskCompletionSource(
+                timeout: Settings.SeedNodeTimeout, 
+                failException: new ClusterJoinFailedException(
+                    $"Node has not managed to join the cluster using provided address: {address}"), 
+                token: token);
+            RegisterOnMemberUp(() => tcs.Complete());
+            Join(address);
+            return tcs.Task;
         }
 
         private Address FillLocal(Address address)
@@ -354,25 +334,15 @@ namespace Akka.Cluster
             if (IsUp)
                 return Task.CompletedTask;
                 
-            lock (_asyncJoinLock)
-            {
-                if (_asyncJoinTaskSource != null && !_asyncJoinTaskSource.IsCompleted)
-                {
-                    if(_log.IsDebugEnabled)
-                        _log.Debug("Another async cluster join is already in progress");
-                    return _asyncJoinTaskSource.Task;
-                }
-            
-                var nodes = seedNodes.ToList();
-                _asyncJoinTaskSource = new TimeoutTaskCompletionSource(
-                    timeout: Settings.SeedNodeTimeout, 
-                    failException: new ClusterJoinFailedException(
-                        $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", nodes)}."), 
-                    token: token);
-
-                JoinSeedNodes(nodes);
-                return _asyncJoinTaskSource.Task;
-            }
+            var nodes = seedNodes.ToList();
+            var tcs = new TimeoutTaskCompletionSource(
+                timeout: Settings.SeedNodeTimeout, 
+                failException: new ClusterJoinFailedException(
+                    $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", nodes)}."), 
+                token: token);
+            RegisterOnMemberUp(() => tcs.Complete());
+            JoinSeedNodes(nodes);
+            return tcs.Task;
         }
 
         /// <summary>
@@ -562,14 +532,6 @@ namespace Akka.Cluster
         private readonly ILoggingAdapter _log;
         private readonly ClusterReadView _readView;
 
-        #region Async join state housekeeping variables
-
-        // These fields holds the current asynchronous join state
-        private TimeoutTaskCompletionSource _asyncJoinTaskSource;
-        private readonly object _asyncJoinLock = new object();
-
-        #endregion
-        
         /// <summary>
         /// TBD
         /// </summary>
