@@ -148,7 +148,6 @@ namespace Akka.Cluster
             {
                 lock (_asyncJoinLock)
                 {
-                    _isUp.GetAndSet(true);
                     // If there is an async join operation in progress, complete it.
                     _asyncJoinTaskSource?.Complete();
                 }
@@ -278,7 +277,7 @@ namespace Akka.Cluster
             if (_isTerminated)
                 throw new ClusterJoinFailedException("Cluster has already been terminated");
             
-            if (_isUp)
+            if (IsUp)
                 return Task.CompletedTask;
                     
             lock (_asyncJoinLock)
@@ -352,7 +351,7 @@ namespace Akka.Cluster
             if (_isTerminated)
                 throw new ClusterJoinFailedException("Cluster has already been terminated");
             
-            if (_isUp)
+            if (IsUp)
                 return Task.CompletedTask;
                 
             lock (_asyncJoinLock)
@@ -442,7 +441,6 @@ namespace Akka.Cluster
             // Subscribe to MemberRemoved events
             _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() =>
             {
-                _isUp.GetAndSet(false);
                 tcs.TrySetResult(null);
             }));
 
@@ -553,7 +551,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Determine whether the cluster is in the UP state.
         /// </summary>
-        public bool IsUp => _isUp.Value && ! _isTerminated.Value;
+        public bool IsUp => SelfMember.Status == MemberStatus.Up || SelfMember.Status == MemberStatus.WeaklyUp;
         
         /// <summary>
         /// The underlying <see cref="ActorSystem"/> supported by this plugin.
@@ -569,7 +567,6 @@ namespace Akka.Cluster
         // These fields holds the current asynchronous join state
         private TimeoutTaskCompletionSource _asyncJoinTaskSource;
         private readonly object _asyncJoinLock = new object();
-        private readonly AtomicBoolean _isUp = new AtomicBoolean();
 
         #endregion
         
