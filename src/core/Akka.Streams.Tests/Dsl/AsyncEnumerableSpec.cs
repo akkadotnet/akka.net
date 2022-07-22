@@ -18,6 +18,12 @@ using FluentAssertions;
 using Nito.AsyncEx.Synchronous;
 using Xunit;
 using Xunit.Abstractions;
+using System.Collections.Generic;
+using Akka.Actor;
+using Akka.Streams.Actors;
+using Akka.Streams.TestKit.Tests;
+using Akka.Streams.Tests.Actor;
+using Reactive.Streams;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -25,14 +31,19 @@ namespace Akka.Streams.Tests.Dsl
     public class AsyncEnumerableSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
-
-        public AsyncEnumerableSpec(ITestOutputHelper helper) : base(helper)
+        private ITestOutputHelper _helper;
+        public AsyncEnumerableSpec(ITestOutputHelper helper) : base(
+                AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig),
+                helper)
         {
+            _helper = helper;
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        [Fact] public async Task RunAsAsyncEnumerable_Uses_CancellationToken()
+
+        [Fact] 
+        public async Task RunAsAsyncEnumerable_Uses_CancellationToken()
         {
             var input = Enumerable.Range(1, 6).ToList();
 
@@ -146,10 +157,41 @@ namespace Akka.Streams.Tests.Dsl
             
             await Assert.ThrowsAsync<IllegalStateException>(ShouldThrow);
         }
-        
+
+    [Fact]
+        public void AsyncEnumerableSource_Must_Complete_Immediately_With_No_elements_When_An_Empty_IAsyncEnumerable_Is_Passed_In()
+        {
+            Func<IAsyncEnumerable<int>> range = () =>
+            {
+                return RangeAsync(1, 100);
+            };
+            var subscriber = this.CreateManualSubscriberProbe<int>();
+
+            Source.From(range)
+                .RunWith(Sink.FromSubscriber(subscriber), Materializer);
+
+            var subscription = subscriber.ExpectSubscription();
+            subscription.Request(100);
+            for (int i = 1; i <= 20; i++)
+            {
+                var next = subscriber.ExpectNext(i);
+                _helper.WriteLine(i.ToString());
+            }
+
+            //subscriber.ExpectComplete();
+        }
+
+        static async IAsyncEnumerable<int> RangeAsync(int start, int count)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                await Task.Delay(i);
+                yield return start + i;
+            }
+        }
         
     }
-
 #else
 #endif
+
 }
