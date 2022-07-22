@@ -117,8 +117,7 @@ namespace Akka.Event
                 var loggerType = Type.GetType(strLoggerType);
                 if (loggerType == null)
                 {
-                    Publish(new Error(null, logName, GetType(), $@"Logger specified in config cannot be found: ""{strLoggerType}"""));
-                    continue;
+                    throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
                 }
 
                 if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
