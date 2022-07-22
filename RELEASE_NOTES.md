@@ -2,15 +2,16 @@
 Akka.NET v1.4.40 is a minor release that contains a bug fix for DotNetty SSL support.
 
 * [Akka.Remote: SSL Configuration Fails even EnbleSsl property is set to false](https://github.com/akkadotnet/akka.net/issues/6043)
+* [Akka.Streams: Add IAsyncEnumerable Source](https://github.com/akkadotnet/akka.net/issues/6047)
 
 If you want to see the [full set of changes made in Akka.NET v1.4.39, click here](https://github.com/akkadotnet/akka.net/milestone/71).
 
-| COMMITS | LOC+ | LOC- | AUTHOR              |
-|---------|------|------|---------------------|
-| 2       | 147  | 4    | Gregorius Soedharmo |
-| 1       | 669  | 3    | Aaron Stannard      |
-| 1       | 123  | 26   | Ebere Abanonu       |
-| 1       | 101  | 3    | aminchenkov         |
+| COMMITS | LOC+  | LOC- | AUTHOR              |
+|---------|-------|------|---------------------|
+| 8       | 544   | 64   | Gregorius Soedharmo |
+| 1       | 669   | 3    | Aaron Stannard      |
+| 1       | 123   | 26   | Ebere Abanonu       |
+| 1       | 101   | 3    | aminchenkov         |
 
 #### 1.4.39 June 1 2022 ####
 Akka.NET v1.4.39 is a minor release that contains some very important bug fixes for Akka.Remote and Akka.Cluster users.
