@@ -103,6 +103,30 @@ akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
                     Shutdown(sys);
             }
         }
+        
+        [Fact(DisplayName = "ActorSystem should throw and fail to start on invalid logger FQCN entry")]
+        public void ActorSystem_should_fail_on_invalid_logger()
+        {
+            var config = ConfigurationFactory.ParseString($@"
+akka.loglevel = DEBUG
+akka.stdout-logger-class = ""{typeof(XUnitOutLogger).FullName}, {typeof(XUnitOutLogger).Assembly.GetName().Name}""
+akka.loggers = [
+    ""Akka.Event.InvalidLogger, NonExistantAssembly""
+]
+akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
+
+            ActorSystem sys = null;
+            try
+            {
+                this.Invoking(_ => sys = ActorSystem.Create("test", config)).Should()
+                    .ThrowExactly<ConfigurationException>("System should fail to start with invalid logger FQCN");
+            }
+            finally
+            {
+                if(sys != null)
+                    Shutdown(sys);
+            }
+        }
 
         private class TestException: Exception
         {

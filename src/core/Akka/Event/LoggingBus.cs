@@ -43,7 +43,6 @@ namespace Akka.Event
         private readonly List<IActorRef> _loggers = new List<IActorRef>();
         
         // Async load support
-        private readonly Dictionary<Task, LoggerStartInfo> _startupState = new Dictionary<Task, LoggerStartInfo>();
         private readonly CancellationTokenSource _shutdownCts = new CancellationTokenSource();
 
         /// <summary>
@@ -112,6 +111,7 @@ namespace Akka.Event
 
             LogLevel = Logging.LogLevelFor(system.Settings.LogLevel);
 
+            var taskInfos = new Dictionary<Task, string>();
             foreach (var strLoggerType in loggerTypes)
             {
                 var loggerType = Type.GetType(strLoggerType);
@@ -126,12 +126,13 @@ namespace Akka.Event
                     continue;
                 }
 
-                AddLogger(system, loggerType, logName);
+                var (task, name) = AddLogger(system, loggerType, logName);
+                taskInfos[task] = name;
             }
 
-            if (!Task.WaitAll(_startupState.Keys.ToArray(), timeout))
+            if (!Task.WaitAll(taskInfos.Keys.ToArray(), timeout))
             {
-                foreach (var kvp in _startupState)
+                foreach (var kvp in taskInfos)
                 {
                     if (!kvp.Key.IsCompleted)
                     {
@@ -197,24 +198,21 @@ namespace Akka.Event
             }
         }
 
-        private void AddLogger(ActorSystemImpl system, Type loggerType, string loggingBusName)
+        private (Task task, string name) AddLogger(ActorSystemImpl system, Type loggerType, string loggingBusName)
         {
             var loggerName = CreateLoggerName(loggerType);
+            var fullLoggerName = $"{loggerName} [{loggerType.FullName}]";
             var logger = system.SystemActorOf(Props.Create(loggerType).WithDispatcher(system.Settings.LoggersDispatcher), loggerName);
             var askTask = logger.Ask(new InitializeLogger(this), Timeout.InfiniteTimeSpan, _shutdownCts.Token);
             
-            _startupState[askTask] = new LoggerStartInfo(loggerName, loggerType, logger);
             askTask.ContinueWith(t =>
                 {
-                    var info = _startupState[t];
-                    _startupState.Remove(t);
-                    
                     // _shutdownCts was cancelled while this logger is still loading
                     if (t.IsCanceled)
                     {
                         Publish(new Warning(loggingBusName, GetType(),
-                            $"Logger {info} startup have been cancelled because of system shutdown. Stopping logger."));
-                        RemoveLogger(info.ActorRef);
+                            $"Logger {fullLoggerName} startup have been cancelled because of system shutdown. Stopping logger."));
+                        RemoveLogger(logger);
                         return;
                     }
                     
@@ -224,16 +222,17 @@ namespace Akka.Event
                     {
                         // Malformed logger, logger did not send a proper ack.
                         Publish(new Error(null, loggingBusName, GetType(),
-                            $"Logger {info} did not respond with {nameof(LoggerInitialized)}, sent instead {response.GetType()}. Stopping logger."));
-                        RemoveLogger(info.ActorRef);
+                            $"Logger {fullLoggerName} did not respond with {nameof(LoggerInitialized)}, sent instead {response.GetType()}. Stopping logger."));
+                        RemoveLogger(logger);
                         return;
                     }
 
                     // Logger initialized successfully
-                    _loggers.Add(info.ActorRef);
-                    SubscribeLogLevelAndAbove(LogLevel, info.ActorRef);
-                    Publish(new Debug(loggingBusName, GetType(), $"Logger {info} started"));
+                    _loggers.Add(logger);
+                    SubscribeLogLevelAndAbove(LogLevel, logger);
+                    Publish(new Debug(loggingBusName, GetType(), $"Logger {fullLoggerName} started"));
                 });
+            return (askTask, fullLoggerName);
         }
 
         private string CreateLoggerName(Type actorClass)
