@@ -319,46 +319,6 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public async Task Should_be_able_to_invoke_JoinAsync_multiple_times()
-        {
-            var timeout = TimeSpan.FromSeconds(10);
-            var probe = CreateTestProbe("error_probe");
-            Sys.EventStream.Subscribe(probe, typeof(Debug));
-            try
-            {
-                var task = _cluster.JoinAsync(_selfAddress);
-                
-                await EventFilter.Debug("Another async cluster join is already in progress")
-                    .ExpectOneAsync(async () =>
-                    {
-                        var repeatTask = _cluster.JoinAsync(_selfAddress);
-                        repeatTask.Should().Be(task);
-                    });
-                
-                await EventFilter.Debug("Another async cluster join is already in progress")
-                    .ExpectOneAsync(async () =>
-                    {
-                        var repeatTask = _cluster.JoinAsync(_selfAddress);
-                        repeatTask.Should().Be(task);
-                    });
-
-                await task.ShouldCompleteWithin(timeout);
-                LeaderActions();
-                // Member should already be up
-                _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, typeof(ClusterEvent.IMemberEvent));
-                await ExpectMsgAsync<ClusterEvent.MemberUp>();
-
-                // join second time - response should be immediate success
-                await _cluster.JoinSeedNodesAsync(new[] { _selfAddress }).ShouldCompleteWithin(100.Milliseconds());
-            }
-            finally
-            {
-                _cluster.Shutdown();
-            }
-        }
-
-        
-        [Fact]
         public async Task A_cluster_must_be_able_to_JoinAsync()
         {
             var timeout = TimeSpan.FromSeconds(15);
@@ -450,47 +410,6 @@ namespace Akka.Cluster.Tests
                 .ShouldCompleteWithin(timeout);
         }
 
-        [Fact]
-        public async Task Should_be_able_to_invoke_JoinSeedNodesAsync_multiple_times()
-        {
-            var timeout = TimeSpan.FromSeconds(10);
-            var seed = new[] { _selfAddress };
-            var probe = CreateTestProbe("error_probe");
-            Sys.EventStream.Subscribe(probe, typeof(Debug));
-            try
-            {
-                var task = _cluster.JoinSeedNodesAsync(seed);
-                
-                await EventFilter.Debug("Another async cluster join is already in progress")
-                    .ExpectOneAsync(async () =>
-                    {
-                        var repeatTask = _cluster.JoinAsync(_selfAddress);
-                        repeatTask.Should().Be(task);
-                    });
-                
-                await EventFilter.Debug("Another async cluster join is already in progress")
-                    .ExpectOneAsync(async () =>
-                    {
-                        var repeatTask = _cluster.JoinAsync(_selfAddress);
-                        repeatTask.Should().Be(task);
-                    });
-
-                await task.ShouldCompleteWithin(timeout);
-                
-                LeaderActions();
-                // Member should already be up
-                _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, typeof(ClusterEvent.IMemberEvent));
-                await ExpectMsgAsync<ClusterEvent.MemberUp>();
-
-                // join second time - response should be immediate success
-                await _cluster.JoinSeedNodesAsync(new[] { _selfAddress }).ShouldCompleteWithin(100.Milliseconds());
-            }
-            finally
-            {
-                _cluster.Shutdown();
-            }
-        }
-        
         [Fact]
         public async Task A_cluster_JoinSeedNodesAsync_must_fail_if_could_not_connect_to_cluster()
         {
