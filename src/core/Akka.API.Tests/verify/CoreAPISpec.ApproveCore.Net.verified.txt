@@ -492,6 +492,7 @@ namespace Akka.Actor
         public Cancelable(Akka.Actor.IScheduler scheduler) { }
         public Cancelable(Akka.Actor.IActionScheduler scheduler) { }
         public bool IsCancellationRequested { get; }
+        public bool IsDisposed { get; }
         public System.Threading.CancellationToken Token { get; }
         public void Cancel() { }
         public void Cancel(bool throwOnFirstException) { }
@@ -500,6 +501,8 @@ namespace Akka.Actor
         public static Akka.Actor.ICancelable CreateCanceled() { }
         public static Akka.Actor.ICancelable CreateLinkedCancelable(Akka.Actor.IScheduler scheduler, params Akka.Actor.ICancelable[] cancelables) { }
         public static Akka.Actor.ICancelable CreateLinkedCancelable(Akka.Actor.IActionScheduler scheduler, params Akka.Actor.ICancelable[] cancelables) { }
+        public static Akka.Actor.ICancelable CreateLinkedCancelable(Akka.Actor.IScheduler scheduler, params System.Threading.CancellationToken[] cancellationTokens) { }
+        public static Akka.Actor.ICancelable CreateLinkedCancelable(Akka.Actor.IActionScheduler scheduler, params System.Threading.CancellationToken[] cancellationTokens) { }
         public void Dispose() { }
         protected virtual void Dispose(bool disposing) { }
     }
