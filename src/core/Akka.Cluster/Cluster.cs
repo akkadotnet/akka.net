@@ -264,11 +264,16 @@ namespace Akka.Cluster
         /// <returns>Task which completes, once current cluster node reaches <see cref="MemberStatus.Up"/> state.</returns>
         public Task JoinAsync(Address address, CancellationToken token = default)
         {
+            if (_isTerminated)
+                throw new ClusterJoinFailedException("Cluster has already been terminated");
+            
+            if (IsUp)
+                return Task.CompletedTask;
+
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             
-            var timeout = Settings.RetryUnsuccessfulJoinAfter ?? TimeSpan.FromSeconds(10);
             var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(timeout);
+            timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
             timeoutCts.Token.Register(() =>
             {
                 timeoutCts.Dispose();
@@ -281,10 +286,10 @@ namespace Akka.Cluster
                 timeoutCts.Dispose();
                 completion.TrySetResult(NotUsed.Instance);
             });
-
+            
             Join(address);
 
-            return completion.Task.WithCancellation(token);
+            return completion.Task;
         }
 
         private Address FillLocal(Address address)
@@ -333,9 +338,16 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="seedNodes">TBD</param>
         /// <param name="token">TBD</param>
-        public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default(CancellationToken))
+        public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default)
         {
+            if (_isTerminated)
+                throw new ClusterJoinFailedException("Cluster has already been terminated");
+            
+            if (IsUp)
+                return Task.CompletedTask;
+            
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var nodes = seedNodes.ToList();
             
             var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
             timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
@@ -343,7 +355,7 @@ namespace Akka.Cluster
             {
                 timeoutCts.Dispose();
                 completion.TrySetException(new ClusterJoinFailedException(
-                    $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", seedNodes)}."));
+                    $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", nodes)}."));
             });
             
             RegisterOnMemberUp(() =>
@@ -351,10 +363,10 @@ namespace Akka.Cluster
                 timeoutCts.Dispose();
                 completion.TrySetResult(NotUsed.Instance);
             });
+            
+            JoinSeedNodes(nodes);
 
-            JoinSeedNodes(seedNodes);
-
-            return completion.Task.WithCancellation(token);
+            return completion.Task;
         }
 
         /// <summary>
@@ -421,7 +433,10 @@ namespace Akka.Cluster
                 return leaveTask;
 
             // Subscribe to MemberRemoved events
-            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() => tcs.TrySetResult(null)));
+            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() =>
+            {
+                tcs.TrySetResult(null);
+            }));
 
             // Send leave message
             ClusterCore.Tell(new ClusterUserAction.Leave(SelfAddress));
@@ -451,7 +466,10 @@ namespace Akka.Cluster
         /// <param name="callback">The callback that is run whenever the current member achieves a status of <see cref="MemberStatus.Up"/></param>
         public void RegisterOnMemberUp(Action callback)
         {
-            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberUpListener(callback));
+            if (IsUp)
+                callback();
+            else
+                _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberUpListener(callback));
         }
 
         /// <summary>
@@ -524,6 +542,11 @@ namespace Akka.Cluster
         /// </summary>
         public bool IsTerminated { get { return _isTerminated.Value; } }
 
+        /// <summary>
+        /// Determine whether the cluster is in the UP state.
+        /// </summary>
+        public bool IsUp => SelfMember.Status == MemberStatus.Up || SelfMember.Status == MemberStatus.WeaklyUp;
+        
         /// <summary>
         /// The underlying <see cref="ActorSystem"/> supported by this plugin.
         /// </summary>
