@@ -15,7 +15,16 @@ namespace Tutorials.Tutorial4
 {
     public static class DeviceGroupQueryInProgress
     {
+        
+        
+
         #region query-outline
+        public sealed class CollectionTimeout
+        {
+            public static CollectionTimeout Instance { get; } = new CollectionTimeout();
+            private CollectionTimeout() { }
+        }    
+            
         public class DeviceGroupQuery : UntypedActor
         {
             private ICancelable queryTimeoutTimer;
