@@ -43,9 +43,10 @@ namespace Akka.Cluster.Sharding
         {
             base.PreStart();
 
-            Context.System.Log.Debug("Starting Sharded Daemon Process KeepAlivePinger for [{0}], with ping interval [{1}]");
-            Timers.StartPeriodicTimer("tick", Tick.Instance, Settings.KeepAliveInterval);
             TriggerStartAll();
+            Context.System.Log.Debug("Starting Sharded Daemon Process KeepAlivePinger for [{0}], with ping interval [{1}]", 
+                Name, Settings.KeepAliveInterval);
+            Timers.StartPeriodicTimer("tick", Tick.Instance, Settings.KeepAliveInterval);
         }
 
         protected override void OnReceive(object message)
@@ -175,7 +176,8 @@ namespace Akka.Cluster.Sharding
                 TimeSpan.Zero, // passivation disabled
                 StateStoreMode.DData,
                 shardingBaseSettings.TuningParameters,
-                shardingBaseSettings.CoordinatorSingletonSettings);
+                shardingBaseSettings.CoordinatorSingletonSettings, 
+                shardingBaseSettings.LeaseSettings);
 
             if (string.IsNullOrEmpty(shardingSettings.Role) || Cluster.Get(_system).SelfRoles.Contains(shardingSettings.Role))
             {
