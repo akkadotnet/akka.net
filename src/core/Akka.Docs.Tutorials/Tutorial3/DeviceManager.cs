@@ -72,7 +72,7 @@ namespace Tutorials.Tutorial3
                 }
             }
 
-            public static Props Props(string groupId) => Akka.Actor.Props.Create<DeviceManager>();
+            public static Props Props() => Akka.Actor.Props.Create<DeviceManager>();
         }
     }
     #endregion
