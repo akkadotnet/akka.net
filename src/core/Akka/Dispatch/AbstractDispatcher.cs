@@ -329,6 +329,8 @@ channel-executor.priority = normal");
                 case null:
                 case "":
                 case "default-executor":
+                case "channel-executor":
+                    return new ChannelExecutorConfigurator(Config, Prerequisites);
                 case "thread-pool-executor":
                     return new ThreadPoolExecutorServiceFactory(Config, Prerequisites);
                 case "fork-join-executor":
@@ -337,8 +339,6 @@ channel-executor.priority = normal");
                     return new CurrentSynchronizationContextExecutorServiceFactory(Config, Prerequisites);
                 case "task-executor":
                     return new DefaultTaskSchedulerExecutorConfigurator(Config, Prerequisites);
-                case "channel-executor":
-                    return new ChannelExecutorConfigurator(Config, Prerequisites);
                 default:
                     Type executorConfiguratorType = Type.GetType(executor);
                     if (executorConfiguratorType == null)
