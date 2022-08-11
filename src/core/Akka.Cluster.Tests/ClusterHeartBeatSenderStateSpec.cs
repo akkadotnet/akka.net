@@ -17,12 +17,28 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests
 {
-    public class ClusterHeartBeatSenderStateSpec : ClusterSpecBase
+    public class ClusterHeartBeatSenderStateSpec : ClusterHeartBeatSenderStateBase
     {
-        public ClusterHeartBeatSenderStateSpec()
+        public ClusterHeartBeatSenderStateSpec(ITestOutputHelper output) : base(output, false)
+        {
+        }
+    }
+    
+    public class ClusterHeartBeatSenderStateLegacySpec : ClusterHeartBeatSenderStateBase
+    {
+        public ClusterHeartBeatSenderStateLegacySpec(ITestOutputHelper output) : base(output, true)
+        {
+        }
+    }
+    
+    public abstract class ClusterHeartBeatSenderStateBase : ClusterSpecBase
+    {
+        protected ClusterHeartBeatSenderStateBase(ITestOutputHelper output, bool useLegacyMessage)
+            : base(output, useLegacyMessage)
         {
             _emptyState = EmptyState(aa);
         }

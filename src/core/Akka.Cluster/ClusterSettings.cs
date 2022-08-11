@@ -118,6 +118,7 @@ namespace Akka.Cluster
 
             WeaklyUpAfter = GetWeaklyUpDuration();
 
+            UseLegacyHeartbeatMessage = clusterConfig.GetBoolean("use-legacy-heartbeat-message", true);
         }
 
         /// <summary>
@@ -300,6 +301,8 @@ namespace Akka.Cluster
         /// The leader will move <see cref="MemberStatus.WeaklyUp"/> members to <see cref="MemberStatus.Up"/> status once convergence has been reached.
         /// </summary>
         public TimeSpan WeaklyUpAfter { get; }
+        
+        public bool UseLegacyHeartbeatMessage { get; }
     }
 }
 
