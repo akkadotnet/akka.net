@@ -116,7 +116,7 @@ namespace Tutorials.Tutorial3
                 probe.AwaitAssert(() =>
                 {
                     groupActor.Tell(new RequestDeviceList(requestId: 1), probe.Ref);
-                    probe.ExpectMsg<ReplyDeviceList>(s => s.RequestId == 1 && s.Ids.Contains("device2"));
+                    probe.ExpectMsg<ReplyDeviceList>(s => s.RequestId == 1 && s.Ids.Contains("device2") && !s.Ids.Contains("device1"));
                 });
             }
             #endregion
