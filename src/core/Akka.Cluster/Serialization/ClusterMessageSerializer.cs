@@ -155,38 +155,37 @@ namespace Akka.Cluster.Serialization
         // </MsgRead>
 
         public override string Manifest(object o)
+            => Manifest(o.GetType());
+        
+        public override string Manifest(Type type)
         {
-            switch (o)
-            {
-                case InternalClusterAction.Join _:
-                    return JoinManifest;
-                case InternalClusterAction.Welcome _:
-                    return WelcomeManifest;
-                case ClusterUserAction.Leave _:
-                    return LeaveManifest;
-                case ClusterUserAction.Down _:
-                    return DownManifest;
-                case InternalClusterAction.InitJoin _:
-                    return InitJoinManifest;
-                case InternalClusterAction.InitJoinAck _:
-                    return InitJoinAckManifest;
-                case InternalClusterAction.InitJoinNack _:
-                    return InitJoinNackManifest;
-                case ClusterHeartbeatSender.Heartbeat _:
-                    return UseLegacyHeartbeatMessage ? HeartBeatManifestPre1419 : HeartBeatManifest;
-                case ClusterHeartbeatSender.HeartbeatRsp _:
-                    return UseLegacyHeartbeatMessage ? HeartBeatRspManifestPre1419 : HeartBeatRspManifest;
-                case InternalClusterAction.ExitingConfirmed _:
-                    return ExitingConfirmedManifest;
-                case GossipStatus _:
-                    return GossipStatusManifest;
-                case GossipEnvelope _:
-                    return GossipEnvelopeManifest;
-                case ClusterRouterPool _:
-                    return ClusterRouterPoolManifest;
-                default:
-                    throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{GetType()}]");
-            }
+            if(type == typeof(InternalClusterAction.Join))
+                return JoinManifest;
+            if(type == typeof(InternalClusterAction.Welcome))
+                return WelcomeManifest;
+            if(type == typeof(ClusterUserAction.Leave))
+                return LeaveManifest;
+            if(type == typeof(ClusterUserAction.Down))
+                return DownManifest;
+            if(type == typeof(InternalClusterAction.InitJoin))
+                return InitJoinManifest;
+            if(type == typeof(InternalClusterAction.InitJoinAck))
+                return InitJoinAckManifest;
+            if(type == typeof(InternalClusterAction.InitJoinNack))
+                return InitJoinNackManifest;
+            if(type == typeof(ClusterHeartbeatSender.Heartbeat))
+                return UseLegacyHeartbeatMessage ? HeartBeatManifestPre1419 : HeartBeatManifest;
+            if(type == typeof(ClusterHeartbeatSender.HeartbeatRsp))
+                return UseLegacyHeartbeatMessage ? HeartBeatRspManifestPre1419 : HeartBeatRspManifest;
+            if(type == typeof(InternalClusterAction.ExitingConfirmed))
+                return ExitingConfirmedManifest;
+            if(type == typeof(GossipStatus))
+                return GossipStatusManifest;
+            if(type == typeof(GossipEnvelope))
+                return GossipEnvelopeManifest;
+            if(type == typeof(ClusterRouterPool))
+                return ClusterRouterPoolManifest;
+            throw new ArgumentException($"Can't serialize object of ty [{type}] in [{GetType()}]");
         }
 
         //

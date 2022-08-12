@@ -16,13 +16,30 @@ using Xunit;
 using FluentAssertions;
 using Akka.Util;
 using Google.Protobuf;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests.Serialization
 {
-    public class ClusterMessageSerializerSpec : AkkaSpec
+    public class ClusterMessageSerializerSpec: ClusterMessageSerializerBase
     {
-        public ClusterMessageSerializerSpec()
-            : base(@"akka.actor.provider = cluster")
+        public ClusterMessageSerializerSpec(ITestOutputHelper output) : base(output, false)
+        {
+        }
+    }
+    
+    public class ClusterMessageSerializerLegacySpec: ClusterMessageSerializerBase
+    {
+        public ClusterMessageSerializerLegacySpec(ITestOutputHelper output) : base(output, true)
+        {
+        }
+    }
+    
+    public abstract class ClusterMessageSerializerBase : AkkaSpec
+    {
+        public ClusterMessageSerializerBase(ITestOutputHelper output, bool useLegacyHeartbeat)
+            : base($@"
+akka.actor.provider = cluster
+akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "false")}", output)
         {
         }
 
@@ -41,40 +58,12 @@ namespace Akka.Cluster.Tests.Serialization
         }
 
         [Fact]
-        public void Can_serialize_Hearbeatv1419_later()
-        {
-            var hb = new Akka.Cluster.Serialization.Proto.Msg.Heartbeat()
-            {
-                From = Akka.Cluster.Serialization.ClusterMessageSerializer.AddressToProto(a1.Address),
-                CreationTime = 2,
-                SequenceNr = 1
-            }.ToByteArray();
-
-            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerForType(typeof(ClusterHeartbeatSender.Heartbeat));
-            serializer.FromBinary(hb, Akka.Cluster.Serialization.ClusterMessageSerializer.HeartBeatManifest);
-        }
-
-        [Fact]
         public void Can_serialize_HeartbeatRsp()
         {
             var address = new Address("akka.tcp", "system", "some.host.org", 4711);
             var uniqueAddress = new UniqueAddress(address, 17);
             var message = new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress, -1, -1);
             AssertEqual(message);
-        }
-
-        [Fact]
-        public void Can_serialize_HearbeatRspv1419_later()
-        {
-            var hb = new Akka.Cluster.Serialization.Proto.Msg.HeartBeatResponse()
-            {
-                From = Akka.Cluster.Serialization.ClusterMessageSerializer.UniqueAddressToProto(a1.UniqueAddress),
-                CreationTime = 2,
-                SequenceNr = 1
-            }.ToByteArray();
-
-            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerForType(typeof(ClusterHeartbeatSender.Heartbeat));
-            serializer.FromBinary(hb, Akka.Cluster.Serialization.ClusterMessageSerializer.HeartBeatRspManifest);
         }
 
         [Fact]
