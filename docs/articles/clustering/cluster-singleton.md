@@ -4,6 +4,8 @@ title: Cluster Singleton
 ---
 # Cluster Singleton
 
+## Introduction
+
 For some use cases it is convenient and sometimes also mandatory to ensure that you have exactly one actor of a certain type running somewhere in the cluster.
 
 Some examples:
@@ -15,15 +17,21 @@ Some examples:
 
 Using a singleton should not be the first design choice. It has several drawbacks, such as single-point of bottleneck. Single-point of failure is also a relevant concern, but for some cases this feature takes care of that by making sure that another singleton instance will eventually be started.
 
+### Singleton Manager
+
 The cluster singleton pattern is implemented by `Akka.Cluster.Tools.Singleton.ClusterSingletonManager`. It manages one singleton actor instance among all cluster nodes or a group of nodes tagged with a specific role. `ClusterSingletonManager` is an actor that is supposed to be started on all nodes, or all nodes with specified role, in the cluster. The actual singleton actor is started by the `ClusterSingletonManager` on the oldest node by creating a child actor from supplied Props. `ClusterSingletonManager` makes sure that at most one singleton instance is running at any point in time.
 
 The singleton actor is always running on the oldest member with specified role. The oldest member is determined by `Akka.Cluster.Member#IsOlderThan`. This can change when removing that member from the cluster. Be aware that there is a short time period when there is no active singleton during the hand-over process.
 
 The cluster failure detector will notice when oldest node becomes unreachable due to things like CLR crash, hard shut down, or network failure. Then a new oldest node will take over and a new singleton actor is created. For these failure scenarios there will not be a graceful hand-over, but more than one active singletons is prevented by all reasonable means. Some corner cases are eventually resolved by configurable timeouts.
 
+### Singleton Proxy
+
 You can access the singleton actor by using the provided `Akka.Cluster.Tools.Singleton.ClusterSingletonProxy`, which will route all messages to the current instance of the singleton. The proxy will keep track of the oldest node in the cluster and resolve the singleton's `IActorRef` by explicitly sending the singleton's `ActorSelection` the `Akka.Actor.Identify` message and waiting for it to reply. This is performed periodically if the singleton doesn't reply within a certain (configurable) time. Given the implementation, there might be periods of time during which the `IActorRef` is unavailable, e.g., when a node leaves the cluster. In these cases, the proxy will buffer the messages sent to the singleton and then deliver them when the singleton is finally available. If the buffer is full the `ClusterSingletonProxy` will drop old messages when new messages are sent via the proxy. The size of the buffer is configurable and it can be disabled by using a buffer size of 0.
 
 It's worth noting that messages can always be lost because of the distributed nature of these actors. As always, additional logic should be implemented in the singleton (acknowledgement) and in the client (retry) actors to ensure at-least-once message delivery.
+
+The singleton instance will not run on members with status `WeaklyUp`.
 
 ## Potential Problems to Be Aware Of
 
@@ -34,6 +42,65 @@ This pattern may seem to be very tempting to use at first, but it has several dr
 * in the case of a network partition appearing in a Cluster that is using Automatic Downing, it may happen that the isolated clusters each decide to spin up their own singleton, meaning that there might be multiple singletons running in the system, yet the Clusters have no way of finding out about them (because of the partition).
 
 Especially the last point is something you should be aware of — in general when using the Cluster Singleton pattern you should take care of downing nodes yourself and not rely on the timing based auto-down feature.
+
+## An Example (Simplified API)
+
+Any `Actor` can be run as a singleton. E.g. a basic counter:
+
+```csharp
+public class Counter : UntypedActor
+{
+    public sealed class Increment
+    {
+        public static Increment Instance => new Increment();
+        private Increment() { }
+    }
+
+    public sealed class GetValue
+    {
+        public IActorRef ReplyTo { get; }
+        public GetValue(IActorRef replyTo) => ReplyTo = replyTo;
+    }
+
+    public sealed class GoodByeCounter
+    {
+        public static GoodByeCounter Instance => new GoodByeCounter();
+        private GoodByeCounter() { }
+    }
+
+    private int _value;
+    
+    public static Props Props => Props.Create<Counter>();
+
+    protected override void OnReceive(object message)
+    {
+        switch (message)
+        {
+            case Increment _:
+                _value++;
+                break;
+            case GetValue msg:
+                msg.ReplyTo.Tell(_value);
+                break;
+            case GoodByeCounter _:
+                Context.Stop(Self);
+                break;
+            default:
+                base.Unhandled(message);
+                break;
+        }
+    }
+}
+```
+
+Then on every node in the cluster, or every node with a given role, use the `ClusterSingleton` extension to spawn the singleton:
+
+```csharp
+var singleton = ClusterSingleton.Get(system);
+// start if needed and provide a proxy to a named singleton
+var proxy = singleton.Init(SingletonActor.Create(Counter.Props, "GlobalCounter"));
+proxy.Tell(Counter.Increment);
+```
 
 ## An Example
 
