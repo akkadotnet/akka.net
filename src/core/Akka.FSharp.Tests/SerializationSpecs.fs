@@ -38,7 +38,7 @@ type SerializationSpecs(output:ITestOutputHelper) as this =
 
     
     /// Verifies serialization similar to how we do it for C# specs
-    member this.VerifySerialization msg =
+    member this.VerifySerialization (msg:obj) =
         let serializer = this.Sys.Serialization.FindSerializerFor msg
         let t = msg.GetType()
         let bytes = this.Sys.Serialization.Serialize msg
