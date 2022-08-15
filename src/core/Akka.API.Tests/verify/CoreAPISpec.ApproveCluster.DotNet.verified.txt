@@ -455,7 +455,6 @@ namespace Akka.Cluster.Serialization
         public ClusterMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object o) { }
-        public override string Manifest(System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }
 }

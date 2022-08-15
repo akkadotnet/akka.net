@@ -4849,7 +4849,6 @@ namespace Akka.Serialization
         public virtual object FromBinary(byte[] bytes, System.Type type) { }
         public abstract object FromBinary(byte[] bytes, string manifest);
         public abstract string Manifest(object o);
-        public virtual string Manifest(System.Type type) { }
     }
 }
 namespace Akka.Util
