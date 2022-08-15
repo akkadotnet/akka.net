@@ -137,7 +137,7 @@ namespace Akka.Serialization
         /// <returns>The object contained in the array</returns>
         public sealed override object FromBinary(byte[] bytes, Type type)
         {
-            var manifest = Manifest(type);
+            var manifest = type.TypeQualifiedName();
             return FromBinary(bytes, manifest);
         }
 
@@ -168,15 +168,6 @@ namespace Akka.Serialization
         /// <param name="o">The object for which the manifest is needed.</param>
         /// <returns>The manifest needed for the deserialization of the specified <paramref name="o"/>.</returns>
         public abstract string Manifest(object o);
-
-        /// <summary>
-        /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(byte[],System.Type)"/> method.
-        /// </summary>
-        /// <param name="type">The <see cref="Type"/> for which the manifest is needed.</param>
-        /// <returns>The manifest needed for the deserialization of the specified <paramref name="type"/>.</returns>
-        public virtual string Manifest(Type type)
-            // TODO: this will be a problem with other SerializerWithStringManifest implementation
-            => type.TypeQualifiedName(); 
     }
 
     /// <summary>
