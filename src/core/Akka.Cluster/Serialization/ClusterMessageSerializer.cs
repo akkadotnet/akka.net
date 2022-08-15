@@ -173,9 +173,9 @@ namespace Akka.Cluster.Serialization
                 case InternalClusterAction.InitJoinNack _:
                     return InitJoinNackManifest;
                 case ClusterHeartbeatSender.Heartbeat _:
-                    return HeartBeatManifestPre1419;
+                    return UseLegacyHeartbeatMessage ? HeartBeatManifestPre1419 : HeartBeatManifest;
                 case ClusterHeartbeatSender.HeartbeatRsp _:
-                    return HeartBeatRspManifestPre1419;
+                    return UseLegacyHeartbeatMessage ? HeartBeatRspManifestPre1419 : HeartBeatRspManifest;
                 case InternalClusterAction.ExitingConfirmed _:
                     return ExitingConfirmedManifest;
                 case GossipStatus _:
