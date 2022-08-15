@@ -24,6 +24,20 @@ namespace Akka.Cluster.Tools.Singleton
         /// <inheritdoc/>
         public int Compare(Member x, Member y)
         {
+            if (x is null && y is null)
+                return 0;
+
+            if (y is null)
+                return _ascending ? 1 : -1;
+
+            if (x is null)
+                return _ascending ? -1 : 1;
+
+            // prefer nodes with the highest app version, even if they're younger
+            var appVersionDiff = x.AppVersion.CompareTo(y.AppVersion);
+            if (appVersionDiff != 0)
+                return _ascending ? appVersionDiff : appVersionDiff * -1;
+            
             if (x.Equals(y)) return 0;
             return x.IsOlderThan(y)
                 ? (_ascending ? 1 : -1)
