@@ -15,6 +15,7 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using Akka.Util;
+using Akka.Util.Internal;
 using Google.Protobuf;
 using Xunit.Abstractions;
 
@@ -209,10 +210,12 @@ akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "fal
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            var serialized = serializer.ToBinary(message);
+            var serializer = (SerializerWithStringManifest) Sys.Serialization.FindSerializerFor(message);
             serializer.Should().BeOfType<ClusterMessageSerializer>();
-            return serializer.FromBinary<T>(serialized);
+            
+            var serialized = serializer.ToBinary(message);
+            var manifest = serializer.Manifest(message);
+            return (T) serializer.FromBinary(serialized, manifest);
         }
 
         private void AssertEqual<T>(T message)
