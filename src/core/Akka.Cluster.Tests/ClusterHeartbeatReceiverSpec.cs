@@ -15,12 +15,29 @@ using static Akka.Cluster.ClusterHeartbeatSender;
 
 namespace Akka.Cluster.Tests
 {
-    public class ClusterHeartbeatReceiverSpec : AkkaSpec
+    public class ClusterHeartbeatReceiverSpec : ClusterHeartbeatReceiverBase
     {
-        public static Config Config = @"akka.actor.provider = cluster";
+        public ClusterHeartbeatReceiverSpec(ITestOutputHelper output) : base(output, false)
+        {
+        }
+    }
+    
+    public class ClusterHeartbeatReceiverLegacySpec : ClusterHeartbeatReceiverBase
+    {
+        public ClusterHeartbeatReceiverLegacySpec(ITestOutputHelper output) : base(output, true)
+        {
+        }
+    }
+    
+    public abstract class ClusterHeartbeatReceiverBase : AkkaSpec
+    {
+        private static Config Config(bool useLegacyHeartbeat) => $@"
+akka.actor.provider = cluster
+akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "false")}
+";
 
-        public ClusterHeartbeatReceiverSpec(ITestOutputHelper output)
-            : base(Config, output)
+        protected ClusterHeartbeatReceiverBase(ITestOutputHelper output, bool useLegacyHeartbeat)
+            : base(Config(useLegacyHeartbeat), output)
         {
 
         }
