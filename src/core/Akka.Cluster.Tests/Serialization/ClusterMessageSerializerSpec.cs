@@ -37,11 +37,13 @@ namespace Akka.Cluster.Tests.Serialization
     
     public abstract class ClusterMessageSerializerBase : AkkaSpec
     {
+        private readonly bool _useLegacyHeartbeat;
         public ClusterMessageSerializerBase(ITestOutputHelper output, bool useLegacyHeartbeat)
             : base($@"
 akka.actor.provider = cluster
 akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "false")}", output)
         {
+            _useLegacyHeartbeat = useLegacyHeartbeat;
         }
 
         private static readonly Member a1 = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Joining, appVersion: AppVersion.Create("1.0.0"));
@@ -54,8 +56,11 @@ akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "fal
         public void Can_serialize_Heartbeat()
         {
             var address = new Address("akka.tcp", "system", "some.host.org", 4711);
-            var message = new ClusterHeartbeatSender.Heartbeat(address, -1, -1);
-            AssertEqual(message);
+            var legacyMessage = new ClusterHeartbeatSender.Heartbeat(address, -1, -1);
+            var message =  new ClusterHeartbeatSender.Heartbeat(address, 10, 3);
+            
+            // Legacy heartbeat serializer will replace the sequence number and creation date with -1 and -1 respectively
+            AssertEqual(message, _useLegacyHeartbeat ? legacyMessage : message);
         }
 
         [Fact]
@@ -63,8 +68,11 @@ akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "fal
         {
             var address = new Address("akka.tcp", "system", "some.host.org", 4711);
             var uniqueAddress = new UniqueAddress(address, 17);
-            var message = new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress, -1, -1);
-            AssertEqual(message);
+            var legacyMessage = new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress, -1, -1);
+            var message = new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress, 10, 3);
+            
+            // Legacy heartbeat serializer will replace the sequence number and creation date with -1 and -1 respectively
+            AssertEqual(message, _useLegacyHeartbeat ? legacyMessage : message);
         }
 
         [Fact]
@@ -218,10 +226,10 @@ akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "fal
             return (T) serializer.FromBinary(serialized, manifest);
         }
 
-        private void AssertEqual<T>(T message)
+        private void AssertEqual<T>(T message, T newMessage = null) where T : class
         {
             var deserialized = AssertAndReturn(message);
-            Assert.Equal(message, deserialized);
+            Assert.Equal(newMessage ?? message, deserialized);
         }
     }
 }
