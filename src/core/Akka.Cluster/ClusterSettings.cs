@@ -118,6 +118,7 @@ namespace Akka.Cluster
 
             WeaklyUpAfter = GetWeaklyUpDuration();
 
+            UseLegacyHeartbeatMessage = clusterConfig.GetBoolean("use-legacy-heartbeat-message", false);
         }
 
         /// <summary>
@@ -300,6 +301,13 @@ namespace Akka.Cluster
         /// The leader will move <see cref="MemberStatus.WeaklyUp"/> members to <see cref="MemberStatus.Up"/> status once convergence has been reached.
         /// </summary>
         public TimeSpan WeaklyUpAfter { get; }
+        
+        /// <summary>
+        /// Enable/disable legacy pre-1.4.19 <see cref="ClusterHeartbeatSender.Heartbeat"/> and
+        /// <see cref="ClusterHeartbeatSender.HeartbeatRsp"/> wire format serialization support.
+        /// Set this to true if you're doing a rolling update from Akka.NET version older than 1.4.19.
+        /// </summary>
+        public bool UseLegacyHeartbeatMessage { get; }
     }
 }
 

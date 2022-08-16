@@ -9,12 +9,27 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Xunit;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests
 {
-    public class HeartbeatNodeRingSpec : ClusterSpecBase
+    public class HeartbeatNodeRingSpec : HeartbeatNodeRingBase
     {
-        public HeartbeatNodeRingSpec()
+        public HeartbeatNodeRingSpec(ITestOutputHelper output) : base(output, false)
+        {
+        }
+    }
+    
+    public class HeartbeatNodeRingLegacySpec : HeartbeatNodeRingBase
+    {
+        public HeartbeatNodeRingLegacySpec(ITestOutputHelper output) : base(output, true)
+        {
+        }
+    }
+    
+    public abstract class HeartbeatNodeRingBase : ClusterSpecBase
+    {
+        protected HeartbeatNodeRingBase(ITestOutputHelper output, bool useLegacyMessage) : base(output, useLegacyMessage)
         {
             _nodes = ImmutableHashSet.Create(aa, bb, cc, dd, ee, ff);
         }

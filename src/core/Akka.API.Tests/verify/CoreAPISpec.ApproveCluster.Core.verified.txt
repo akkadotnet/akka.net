@@ -221,6 +221,7 @@ namespace Akka.Cluster
         public System.Nullable<System.TimeSpan> ShutdownAfterUnsuccessfulJoinSeedNodes { get; }
         public System.TimeSpan UnreachableNodesReaperInterval { get; }
         public string UseDispatcher { get; }
+        public bool UseLegacyHeartbeatMessage { get; }
         public bool VerboseGossipReceivedLogging { get; }
         public bool VerboseHeartbeatLogging { get; }
         public System.TimeSpan WeaklyUpAfter { get; }
