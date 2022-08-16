@@ -302,6 +302,11 @@ namespace Akka.Cluster
         /// </summary>
         public TimeSpan WeaklyUpAfter { get; }
         
+        /// <summary>
+        /// Enable/disable legacy pre-1.4.19 <see cref="ClusterHeartbeatSender.Heartbeat"/> and
+        /// <see cref="ClusterHeartbeatSender.HeartbeatRsp"/> wire format serialization support.
+        /// Set this to true if you're doing a rolling update from Akka.NET version older than 1.4.19.
+        /// </summary>
         public bool UseLegacyHeartbeatMessage { get; }
     }
 }
