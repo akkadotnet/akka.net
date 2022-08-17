@@ -59,10 +59,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             {
                 Create(Address.Parse("akka://sys@darkstar:1112"), upNumber: 3, appVersion: AppVersion.Create("1.0.0")),
                 Create(Address.Parse("akka://sys@darkstar:1113"), upNumber: 1, appVersion: AppVersion.Create("1.0.0")),
-                Create(Address.Parse("akka://sys@darkstar:1116"), upNumber: 6, appVersion: AppVersion.Create("1.0.2")),
                 Create(Address.Parse("akka://sys@darkstar:1111"), upNumber: 2, appVersion: AppVersion.Create("1.0.0")),
                 Create(Address.Parse("akka://sys@darkstar:1114"), upNumber: 7, appVersion: AppVersion.Create("1.0.2")),
                 Create(Address.Parse("akka://sys@darkstar:1115"), upNumber: 8, appVersion: AppVersion.Create("1.0.2")),
+                Create(Address.Parse("akka://sys@darkstar:1116"), upNumber: 6, appVersion: AppVersion.Create("1.0.2")),
             };
 
             var seq = members.ToList();
