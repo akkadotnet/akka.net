@@ -15,15 +15,25 @@ namespace Akka.Cluster.Tools.Singleton
     internal sealed class MemberAgeOrdering : IComparer<Member>
     {
         private readonly bool _ascending;
+        private readonly bool _considerAppVersion;
 
-        private MemberAgeOrdering(bool ascending)
+        private MemberAgeOrdering(bool ascending, bool considerAppVersion)
         {
             _ascending = ascending;
+            _considerAppVersion = considerAppVersion;
         }
 
         /// <inheritdoc/>
         public int Compare(Member x, Member y)
         {
+            if (_considerAppVersion)
+            {
+                // prefer nodes with the highest app version, even if they're younger
+                var appVersionDiff = x.AppVersion.CompareTo(y.AppVersion);
+                if (appVersionDiff != 0)
+                    return _ascending ? appVersionDiff : appVersionDiff * -1;
+            }
+            
             if (x.Equals(y)) return 0;
             return x.IsOlderThan(y)
                 ? (_ascending ? 1 : -1)
@@ -33,11 +43,15 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly MemberAgeOrdering Ascending = new MemberAgeOrdering(true);
+        public static readonly MemberAgeOrdering Ascending = new MemberAgeOrdering(true, false);
+
+        public static readonly MemberAgeOrdering AscendingWithAppVersion = new MemberAgeOrdering(true, true);
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly MemberAgeOrdering Descending = new MemberAgeOrdering(false);
+        public static readonly MemberAgeOrdering Descending = new MemberAgeOrdering(false, false);
+        
+        public static readonly MemberAgeOrdering DescendingWithAppVersion = new MemberAgeOrdering(false, true);
     }
 }

@@ -208,7 +208,7 @@ namespace Akka.Util
 
         public int CompareTo(AppVersion other)
         {
-            if (Version == other.Version) // String equals without requiring parse
+            if (string.Equals(Version, other.Version, StringComparison.Ordinal)) // String equals without requiring parse
                 return 0;
             else
             {
@@ -232,7 +232,7 @@ namespace Akka.Util
                                 if (other._rest == "" && _rest != "")
                                     diff = -1;
                                 else
-                                    diff = _rest.CompareTo(other._rest);
+                                    diff = string.Compare(_rest, other._rest, StringComparison.Ordinal);
                             }
                         }
                     }
@@ -243,12 +243,12 @@ namespace Akka.Util
 
         public bool Equals(AppVersion other)
         {
-            return other != null && Version == other.Version;
+            return other != null && string.Equals(Version, other.Version, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj)
         {
-            return base.Equals(obj as AppVersion);
+            return obj is AppVersion av && Equals(av);
         }
 
         public static bool operator ==(AppVersion first, AppVersion second)
