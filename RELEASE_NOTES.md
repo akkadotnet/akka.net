@@ -76,6 +76,8 @@ akka.cluster.sharding{
 }
 ```
 
+Switching over to using `remember-entities-store = eventsourced` will cause an initial migration of data from the `ShardCoordinator`'s journal into separate event journals going forward - __this migration is irreversible__ without taking the cluster offline and deleting all Akka.Cluster.Sharding-related data from Akka.Persistence, so plan accordingly.
+
 __Akka.Cluster.Tools__
 
 * [Add typed `ClusterSingleton` support](https://github.com/akkadotnet/akka.net/pull/6050)
