@@ -1,5 +1,75 @@
-#### 1.5.0-beta1 April 20 2022 ####
-**Placeholder for first beta release of Akka.NET v1.5**
+#### 1.5.0-alpha1 August 22 2022 ####
+Akka.NET v1.5.0-alpha1 is a major release that contains a lot of code improvement and rewrites/refactors.
+
+__Deprecation__
+
+Some codes and packages are being deprecated in v1.5
+* [Deprecated/removed Akka.DI package](https://github.com/akkadotnet/akka.net/pull/6003)
+  Please use the new `Akka.DependencyInjection` NuGet package as a replacement. Documentation can be read [here](https://getakka.net/articles/actors/dependency-injection.html)
+* [Deprecated/removed Akka.MultiNodeTestRunner package](https://github.com/akkadotnet/akka.net/pull/6002)
+  Please use the new `Akka.MultiNode.TestAdapter` NuGet package as a replacement. Documentation can be read [here](https://getakka.net/articles/testing/multi-node-testing.html).
+* [Streams] [Refactor `SetHandler(Inlet, Outlet, IanAndOutGraphStageLogic)` to `SetHandlers()`](https://github.com/akkadotnet/akka.net/pull/5931)
+
+__Changes__
+
+__Akka__
+
+* [Add dual targetting to support .NET 6.0](https://github.com/akkadotnet/akka.net/pull/5926)
+  All `Akka.NET` packages are now dual targetting netstandard2.0 and net6.0 platforms, we will be integrating .NET 6.0 better performing API and SDK in the future.
+* [Add `IThreadPoolWorkItem` support to `ThreadPoolDispatcher`](https://github.com/akkadotnet/akka.net/pull/5943)
+* [Add `ValueTask` support to `PipeTo` extensions](https://github.com/akkadotnet/akka.net/pull/6025)
+* [Add `CancellationToken` support to `Cancelable`](https://github.com/akkadotnet/akka.net/pull/6032)
+* [Fix long starting loggers crashing `ActorSystem` startup](https://github.com/akkadotnet/akka.net/pull/6053)
+  All loggers are asynchronously started during `ActorSystem` startup. A warning will be logged if a logger does not respond within the prescribed `akka.logger-startup-timeout` period and will be awaited upon in a detached task until the `ActorSystem` is shut down. This have a side effect in that slow starting loggers might not be able to capture all log events emmited by the `EventBus` until it is ready.
+
+__Akka.Cluster__
+
+* [Fix `ChannelTaskScheduler` to work with Akka.Cluster, ported from 1.4](https://github.com/akkadotnet/akka.net/pull/5920)
+* [Harden `Cluster.JoinAsync()` and `Cluster.JoinSeedNodesAsync()` methods](https://github.com/akkadotnet/akka.net/pull/6033)
+* [Fix `ShardedDaemonProcess` should use lease, if configured](https://github.com/akkadotnet/akka.net/pull/6058)
+* [Make `SplitBrainResolver` more tolerant to invalid node records](https://github.com/akkadotnet/akka.net/pull/6064)
+* [Enable `Heartbeat` and `HearbeatRsp` message serialization and deserialization](https://github.com/akkadotnet/akka.net/pull/6063)
+  By default, `Akka.Cluster` will now use the new `Heartbeat` and `HartbeatRsp` message serialization/deserialization that was introduced in version 1.4.19. If you're doing a rolling upgrade from a version older than 1.4.19, you will need to set `akka.cluster.use-legacy-heartbeat-message` to true.
+
+__Akka.Cluster.Sharding__
+
+* [Refactor the underlying code organization](https://github.com/akkadotnet/akka.net/pull/5857)
+  * TODO: What are the actual changes in this PR?
+* [Make Cluster.Sharding recovery more tolerant against corrupted persistence data](https://github.com/akkadotnet/akka.net/pull/5978)
+
+__Akka.Cluster.Tools__
+
+* [Add typed `ClusterSingleton` support](https://github.com/akkadotnet/akka.net/pull/6050)
+* [Singleton can use `Member.AppVersion` metadata to decide its host node during hand-over](https://github.com/akkadotnet/akka.net/pull/6065)
+  `Akka.Cluster.Singleton` can use `Member.AppVersion` metadata when it is relocating the singleton instance. When turned on, new singleton instance will be created on the oldest node in the cluster with the highest `AppVersion` number. You can opt-in to this behavior by setting `akka.cluster.singleton.consider-app-version` to true.
+
+__Akka.Persistence.Query__
+
+* [Add `TimeBasedUuid` offset property](https://github.com/akkadotnet/akka.net/pull/5995)
+
+__Akka.Remote__
+
+* [Fix typo in HOCON SSL settings. Backward compatible with the old setting names](https://github.com/akkadotnet/akka.net/pull/5895)
+* [Treat all exceptions thrown inside `EndpointReader` message dispatch as transient, Ported from 1.4](https://github.com/akkadotnet/akka.net/pull/5972)
+* [Fix SSL enable HOCON setting](https://github.com/akkadotnet/akka.net/pull/6038)
+
+__Akka.Streams__
+
+* [Allow GroupBy sub-flow to re-create closed sub-streams, backported to 1.4](https://github.com/akkadotnet/akka.net/pull/5874)
+* [Fix ActorRef source not completing properly, backported to 1.4](https://github.com/akkadotnet/akka.net/pull/5875)
+* [Rewrite `ActorRefSink` as a `GraphStage`](https://github.com/akkadotnet/akka.net/pull/5920)
+* [Add stream cancellation cause upstream propagation, ported from 1.4](https://github.com/akkadotnet/akka.net/pull/5949)
+* [Fix `VirtualProcessor` subscription bug, ported from 1.4](https://github.com/akkadotnet/akka.net/pull/5950)
+* [Refactor `Sink.Ignore` signature from `Task` to `Task<Done>`](https://github.com/akkadotnet/akka.net/pull/5973)
+* [Add `SourceWithContext.FromTuples()` operator`](https://github.com/akkadotnet/akka.net/pull/5987)
+* [Add `GroupedWeightedWithin` operator](https://github.com/akkadotnet/akka.net/pull/6000)
+* [Add `IAsyncEnumerable` source](https://github.com/akkadotnet/akka.net/pull/6044)
+
+__Akka.TestKit__
+
+* [Rewrite Akka.TestKit to work asynchronously from the ground up](https://github.com/akkadotnet/akka.net/pull/5953)
+
+
 
 #### 1.4.37 April 14 2022 ####
 Akka.NET v1.4.37 is a minor release that contains some minor bug fixes.
