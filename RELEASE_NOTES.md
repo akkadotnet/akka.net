@@ -1,5 +1,5 @@
 #### 1.5.0-alpha1 August 22 2022 ####
-Akka.NET v1.5.0-alpha1 is a major release that contains a lot of code improvement and rewrites/refactors.
+Akka.NET v1.5.0-alpha1 is a major release that contains a lot of code improvement and rewrites/refactors. **Major upgrades to Akka.Cluster.Sharding in particular**.
 
 __Deprecation__
 
@@ -33,9 +33,48 @@ __Akka.Cluster__
 
 __Akka.Cluster.Sharding__
 
-* [Refactor the underlying code organization](https://github.com/akkadotnet/akka.net/pull/5857)
-  * TODO: What are the actual changes in this PR?
 * [Make Cluster.Sharding recovery more tolerant against corrupted persistence data](https://github.com/akkadotnet/akka.net/pull/5978)
+* [Major reorganization to Akka.Cluster.Sharding](https://github.com/akkadotnet/akka.net/pull/5857)
+
+The Akka.Cluster.Sharding changes in Akka.NET v1.5 are significant, but backwards compatible with v1.4 and upgrades should happen seamlessly.
+
+Akka.Cluster.Sharding's `state-store-mode` has been split into two parts:
+
+* CoordinatorStore
+* ShardStore
+
+Which can use different persistent mode configured via `akka.cluster.sharding.state-store-mode` & `akka.cluster.sharding.remember-entities-store`.
+
+Possible combinations:
+
+state-store-mode | remember-entities-store | CoordinatorStore mode | ShardStore mode
+------------------ | ------------------------- | ------------------------ | ------------------
+persistence (default) | - (ignored) | persistence | persistence
+ddata | ddata | ddata | ddata
+ddata | eventsourced (new) | ddata | persistence
+
+There should be no breaking changes from user perspective. Only some internal messages/objects were moved.
+There should be no change in the `PersistentId` behavior and default persistent configuration (`akka.cluster.sharding.state-store-mode`)
+
+This change is designed to speed up the performance of Akka.Cluster.Sharding coordinator recovery by moving `remember-entities` recovery into separate actors - this also solves major performance problems with the `ddata` recovery mode overall.
+
+The recommended settings for maximum ease-of-use for Akka.Cluster.Sharding going forward will be:
+
+```
+akka.cluster.sharding{
+  state-store-mode = ddata
+  remember-entities-store = eventsourced
+}
+```
+
+However, for the sake of backwards compatibility the Akka.Cluster.Sharding defaults have been left as-is:
+
+```
+akka.cluster.sharding{
+  state-store-mode = persistence
+  # remember-entities-store (not set - also uses legacy Akka.Persistence)
+}
+```
 
 __Akka.Cluster.Tools__
 
