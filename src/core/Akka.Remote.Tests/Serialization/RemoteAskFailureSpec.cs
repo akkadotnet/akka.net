@@ -22,7 +22,7 @@ namespace Akka.Remote.Tests.Serialization
     public class RemoteAskFailureSpec: TestKit.Xunit2.TestKit
     {
         private static Config Config(int port) => @$"
-akka.actor.ask-timeout = 1s
+akka.actor.ask-timeout = 5s
 akka.actor.serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
 akka.actor.serialization-bindings {{
   ""System.Object"" = hyperion
