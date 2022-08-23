@@ -142,9 +142,8 @@ namespace Akka.Actor
         {
             if (LoggingEnabled)
             {
-                var actorInitializationException = cause as ActorInitializationException;
                 string message;
-                if (actorInitializationException != null && actorInitializationException.InnerException != null)
+                if (cause is ActorInitializationException actorInitializationException && actorInitializationException.InnerException != null)
                     message = actorInitializationException.InnerException.Message;
                 else
                     message = cause.Message;
@@ -152,7 +151,7 @@ namespace Akka.Actor
                 switch (directive)
                 {
                     case Directive.Resume:
-                        Publish(context, new Warning(child.Path.ToString(), GetType(), message));
+                        Publish(context, new Warning(cause, child.Path.ToString(), GetType(), message));
                         break;
                     case Directive.Escalate:
                         //Don't log here
@@ -171,7 +170,7 @@ namespace Akka.Actor
         /// </summary>
         protected bool LoggingEnabled { get; set; }
 
-        private void Publish(IActorContext context, LogEvent logEvent)
+        private static void Publish(IActorContext context, LogEvent logEvent)
         {
             try
             {
