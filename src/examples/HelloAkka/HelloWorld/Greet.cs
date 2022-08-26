@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#region hello-world-message
 namespace HelloWorld
 {
     /// <summary>

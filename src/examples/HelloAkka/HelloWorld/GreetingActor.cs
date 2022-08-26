@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-
+#region akka-hello-world-greeting
 using System;
 using Akka.Actor;
 
