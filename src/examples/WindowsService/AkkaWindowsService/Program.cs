@@ -1,4 +1,11 @@
-﻿#region akka-windows-service-program
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+#region akka-windows-service-program
 using AkkaWindowsService;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

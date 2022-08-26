@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#region akka-hello-world-main
+
 
 using System;
 using Akka.Actor;

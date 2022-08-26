@@ -1,4 +1,11 @@
-﻿module Akka.FSharp.Tests.SerializationSpecs
+﻿//-----------------------------------------------------------------------
+// <copyright file="SerializationSpecs.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+module Akka.FSharp.Tests.SerializationSpecs
 
 open Akka.Configuration
 open Akka.Serialization
