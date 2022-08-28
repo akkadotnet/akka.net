@@ -1937,26 +1937,24 @@ namespace Akka.Remote
                     var ackAndMessage = TryDecodeMessageAndAck(payload);
                     if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
                         _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
-                    if (ackAndMessage.MessageOption != null)
+                    if (ackAndMessage.MessageOption == null) return;
+                    if (ackAndMessage.MessageOption.ReliableDeliveryEnabled)
                     {
-                        if (ackAndMessage.MessageOption.ReliableDeliveryEnabled)
+                        _ackedReceiveBuffer = _ackedReceiveBuffer.Receive(ackAndMessage.MessageOption);
+                        DeliverAndAck();
+                    }
+                    else
+                    {
+                        try
                         {
-                            _ackedReceiveBuffer = _ackedReceiveBuffer.Receive(ackAndMessage.MessageOption);
-                            DeliverAndAck();
+                            _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
+                                ackAndMessage.MessageOption.RecipientAddress,
+                                ackAndMessage.MessageOption.SerializedMessage,
+                                ackAndMessage.MessageOption.SenderOptional);
                         }
-                        else
+                        catch (Exception e)
                         {
-                            try
-                            {
-                                _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                                    ackAndMessage.MessageOption.RecipientAddress,
-                                    ackAndMessage.MessageOption.SerializedMessage,
-                                    ackAndMessage.MessageOption.SenderOptional);
-                            }
-                            catch (Exception e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
+                            LogTransientSerializationError(ackAndMessage.MessageOption, e);
                         }
                     }
                 }
@@ -2055,7 +2053,10 @@ namespace Akka.Remote
 
             // Notify writer that some messages can be acked
             Context.Parent.Tell(new EndpointWriter.OutboundAck(deliverable.Ack));
-            deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
+            foreach (var msg in deliverable.Deliverables)
+            {
+                _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional);
+            }
         }
 
         private AckAndMessage TryDecodeMessageAndAck(ByteString pdu)
