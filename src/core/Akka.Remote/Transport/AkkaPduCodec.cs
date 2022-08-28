@@ -420,33 +420,28 @@ namespace Akka.Remote.Transport
 
             Message messageOption = null;
 
-            if (ackAndEnvelope.Envelope != null)
+            var envelopeContainer = ackAndEnvelope.Envelope;
+            if (envelopeContainer == null) return new AckAndMessage(ackOption, null);
+            var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
+                    
+            //todo get parsed address from provider
+            var recipientAddress = ActorPathCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path).Address;
+                    
+            var serializedMessage = envelopeContainer.Message;
+            IActorRef senderOption = null;
+            if (envelopeContainer.Sender != null)
+                senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
+                    
+            SeqNo seqOption = null;
+            if (envelopeContainer.Seq != SeqUndefined)
             {
-                var envelopeContainer = ackAndEnvelope.Envelope;
-                if (envelopeContainer != null)
+                unchecked
                 {
-                    var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
-                    
-                    //todo get parsed address from provider
-                    var recipientAddress = ActorPathCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path).Address;
-                    
-                    var serializedMessage = envelopeContainer.Message;
-                    IActorRef senderOption = null;
-                    if (envelopeContainer.Sender != null)
-                        senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
-                    
-                    SeqNo seqOption = null;
-                    if (envelopeContainer.Seq != SeqUndefined)
-                    {
-                        unchecked
-                        {
-                            seqOption = new SeqNo((long)envelopeContainer.Seq); //proto takes a ulong
-                        }
-                    }
-
-                    messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
+                    seqOption = new SeqNo((long)envelopeContainer.Seq); //proto takes a ulong
                 }
             }
+
+            messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
 
 
             return new AckAndMessage(ackOption, messageOption);
