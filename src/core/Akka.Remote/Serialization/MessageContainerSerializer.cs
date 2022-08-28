@@ -46,17 +46,17 @@ namespace Akka.Remote.Serialization
                 foreach (var element in sel.Elements)
                 {
                     Proto.Msg.Selection selection = null;
-                    if (element is SelectChildName m1)
+                    switch (element)
                     {
-                        selection = BuildPattern(m1.Name, Proto.Msg.Selection.Types.PatternType.ChildName);
-                    }
-                    else if (element is SelectChildPattern m)
-                    {
-                        selection = BuildPattern(m.PatternStr, Proto.Msg.Selection.Types.PatternType.ChildPattern);
-                    }
-                    else if (element is SelectParent)
-                    {
-                        selection = BuildPattern(null, Proto.Msg.Selection.Types.PatternType.Parent);
+                        case SelectChildName m1:
+                            selection = BuildPattern(m1.Name, Proto.Msg.Selection.Types.PatternType.ChildName);
+                            break;
+                        case SelectChildPattern m:
+                            selection = BuildPattern(m.PatternStr, Proto.Msg.Selection.Types.PatternType.ChildPattern);
+                            break;
+                        case SelectParent _:
+                            selection = BuildPattern(null, Proto.Msg.Selection.Types.PatternType.Parent);
+                            break;
                     }
 
                     envelope.Pattern.Add(selection);
@@ -78,12 +78,18 @@ namespace Akka.Remote.Serialization
             for (var i = 0; i < selectionEnvelope.Pattern.Count; i++)
             {
                 var p = selectionEnvelope.Pattern[i];
-                if (p.Type == Proto.Msg.Selection.Types.PatternType.ChildName)
-                    elements[i] = new SelectChildName(p.Matcher);
-                if (p.Type == Proto.Msg.Selection.Types.PatternType.ChildPattern)
-                    elements[i] = new SelectChildPattern(p.Matcher);
-                if (p.Type == Proto.Msg.Selection.Types.PatternType.Parent)
-                    elements[i] = new SelectParent();
+                switch (p.Type)
+                {
+                    case Proto.Msg.Selection.Types.PatternType.ChildName:
+                        elements[i] = new SelectChildName(p.Matcher);
+                        break;
+                    case Proto.Msg.Selection.Types.PatternType.ChildPattern:
+                        elements[i] = new SelectChildPattern(p.Matcher);
+                        break;
+                    case Proto.Msg.Selection.Types.PatternType.Parent:
+                        elements[i] = new SelectParent();
+                        break;
+                }
             }
 
             object message;
@@ -108,7 +114,7 @@ namespace Akka.Remote.Serialization
             return new ActorSelectionMessage(message, elements);
         }
 
-        private Proto.Msg.Selection BuildPattern(string matcher, Proto.Msg.Selection.Types.PatternType tpe)
+        private static Proto.Msg.Selection BuildPattern(string matcher, Proto.Msg.Selection.Types.PatternType tpe)
         {
             var selection = new Proto.Msg.Selection { Type = tpe };
             if (matcher != null)

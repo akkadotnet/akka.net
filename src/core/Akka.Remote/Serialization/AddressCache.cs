@@ -48,8 +48,7 @@ namespace Akka.Remote.Serialization
 
         protected override Address Compute(string k)
         {
-            Address addr;
-            if (ActorPath.TryParseAddress(k, out addr))
+            if (ActorPath.TryParseAddress(k, out var addr))
             {
                 return addr;
             }
