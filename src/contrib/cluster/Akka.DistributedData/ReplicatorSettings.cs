@@ -11,6 +11,7 @@ using Akka.Dispatch;
 using System;
 using System.Collections.Immutable;
 using System.Collections.Generic;
+using Akka.Event;
 
 namespace Akka.DistributedData
 {
@@ -79,7 +80,8 @@ namespace Akka.DistributedData
                 durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromDays(10)),
                 maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 50),
                 restartReplicatorOnFailure: config.GetBoolean("recreate-on-failure", false),
-                preferOldest: config.GetBoolean("prefer-oldest"));
+                preferOldest: config.GetBoolean("prefer-oldest"),
+                verboseDebugLogging: config.GetBoolean("verbose-debug-logging"));
         }
 
         /// <summary>
@@ -159,6 +161,11 @@ namespace Akka.DistributedData
         /// </summary>
         public bool PreferOldest { get; }
 
+        /// <summary>
+        /// Whether verbose debug logging is enabled.
+        /// </summary>
+        public bool VerboseDebugLogging { get; }
+
         [Obsolete]
         public ReplicatorSettings(string role,
                                   TimeSpan gossipInterval,
@@ -218,6 +225,7 @@ namespace Akka.DistributedData
                   durablePruningMarkerTimeToLive,
                   maxDeltaSize,
                   false,
+                  false,
                   false
                  )
         {
@@ -236,7 +244,8 @@ namespace Akka.DistributedData
             TimeSpan durablePruningMarkerTimeToLive,
             int maxDeltaSize,
             bool restartReplicatorOnFailure,
-            bool preferOldest)
+            bool preferOldest,
+            bool verboseDebugLogging)
         {
             Role = role;
             GossipInterval = gossipInterval;
@@ -252,6 +261,7 @@ namespace Akka.DistributedData
             MaxDeltaSize = maxDeltaSize;
             RestartReplicatorOnFailure = restartReplicatorOnFailure;
             PreferOldest = preferOldest;
+            VerboseDebugLogging = verboseDebugLogging;
         }
 
         private ReplicatorSettings Copy(string role = null,
@@ -267,7 +277,8 @@ namespace Akka.DistributedData
             TimeSpan? durablePruningMarkerTimeToLive = null,
             int? maxDeltaSize = null,
             bool? restartReplicatorOnFailure = null,
-            bool? preferOldest = null)
+            bool? preferOldest = null,
+            bool? verboseDebugLogging = null)
         {
             return new ReplicatorSettings(
                 role: role ?? this.Role,
@@ -283,7 +294,8 @@ namespace Akka.DistributedData
                 durablePruningMarkerTimeToLive: durablePruningMarkerTimeToLive ?? this.DurablePruningMarkerTimeToLive,
                 maxDeltaSize: maxDeltaSize ?? this.MaxDeltaSize,
                 restartReplicatorOnFailure: restartReplicatorOnFailure ?? this.RestartReplicatorOnFailure,
-                preferOldest: preferOldest ?? this.PreferOldest);
+                preferOldest: preferOldest ?? this.PreferOldest,
+                verboseDebugLogging: verboseDebugLogging ?? this.VerboseDebugLogging);
         }
 
         public ReplicatorSettings WithRole(string role) => Copy(role: role);
@@ -302,5 +314,7 @@ namespace Akka.DistributedData
             Copy(restartReplicatorOnFailure: restart);
         public ReplicatorSettings WithPreferOldest(bool preferOldest) =>
             Copy(preferOldest: preferOldest);
+        public ReplicatorSettings WithVerboseDebugLogging(bool verboseDebugLogging) =>
+            Copy(verboseDebugLogging: verboseDebugLogging);
     }
 }
