@@ -25,7 +25,7 @@ namespace Akka.Serialization
     ///
     /// <ul>
     /// <li>taking exactly one argument of type <see cref="ExtendedActorSystem"/>;
-    /// this should be the preferred one because all reflective publloading of classes
+    /// this should be the preferred one because all reflective loading of classes
     /// during deserialization should use ExtendedActorSystem.dynamicAccess (see
     /// [[akka.actor.DynamicAccess]]), and</li>
     /// <li>without arguments, which is only an option if the serializer does not
