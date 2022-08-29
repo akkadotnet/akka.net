@@ -35,8 +35,8 @@ namespace Akka.Benchmarks.Remoting
 
         private IActorRef _senderActorRef;
         private IActorRef _localReceiveRef;
-        private IActorRef _remoteReceiveRef;
-        private IActorRef _remoteSenderRef;
+        private RemoteActorRef _remoteReceiveRef;
+        private RemoteActorRef _remoteSenderRef;
 
         private Address _addr1;
         private Address _addr2;
@@ -71,11 +71,11 @@ namespace Akka.Benchmarks.Remoting
                 "recv1");
 
             // create an association
-            _remoteReceiveRef = await _sys2.ActorSelection(new RootActorPath(RARP.For(_sys1).Provider.DefaultAddress) / "user" /
-                                 _localReceiveRef.Path.Name).ResolveOne(TimeSpan.FromSeconds(3));
+            _remoteReceiveRef = (RemoteActorRef)(await _sys2.ActorSelection(new RootActorPath(RARP.For(_sys1).Provider.DefaultAddress) / "user" /
+                                 _localReceiveRef.Path.Name).ResolveOne(TimeSpan.FromSeconds(3)));
             
-            _remoteSenderRef = await _sys1.ActorSelection(new RootActorPath(RARP.For(_sys2).Provider.DefaultAddress) / "user" /
-                                                          _senderActorRef.Path.Name).ResolveOne(TimeSpan.FromSeconds(3));
+            _remoteSenderRef = (RemoteActorRef)(await _sys1.ActorSelection(new RootActorPath(RARP.For(_sys2).Provider.DefaultAddress) / "user" /
+                                                          _senderActorRef.Path.Name).ResolveOne(TimeSpan.FromSeconds(3)));
 
             _recvCodec = new AkkaPduProtobuffCodec(_sys1);
             _sendCodec = new AkkaPduProtobuffCodec(_sys2);
@@ -87,6 +87,24 @@ namespace Akka.Benchmarks.Remoting
         [GlobalCleanup]
         public async Task Cleanup()
         {
+
+            void PrintCacheStats(string prefix, ActorSystem sys)
+            {
+                var resolveCache = ActorRefResolveThreadLocalCache.For(sys);
+                var pathCache = ActorPathThreadLocalCache.For(sys);
+                var addressCache = AddressThreadLocalCache.For(sys);
+
+                ConsoleLogger.Default.WriteLine(LogKind.Result,
+                    $"[{prefix}] ResolveCache entries: [{resolveCache.Cache.Stats.Entries}]");
+                ConsoleLogger.Default.WriteLine(LogKind.Result,
+                    $"[{prefix}] PathCache entries: [{pathCache.Cache.Stats.Entries}]");
+                ConsoleLogger.Default.WriteLine(LogKind.Result,
+                    $"[{prefix}] AddressCache entries: [{addressCache.Cache.Stats.Entries}]");
+            }
+                
+            PrintCacheStats("Addr1", _sys1);
+            PrintCacheStats("Addr2", _sys2);
+            
             var resolveCache = ActorRefResolveThreadLocalCache.For(_sys1);
             var pathCache = ActorPathThreadLocalCache.For(_sys1);
             var addressCache = AddressThreadLocalCache.For(_sys1);
@@ -169,8 +187,8 @@ namespace Akka.Benchmarks.Remoting
 
         private ByteString CreatePayloadPdu()
         {
-            return _sendCodec.ConstructPayload(_sendCodec.ConstructMessage(_addr1, _remoteReceiveRef,
-                MessageSerializer.Serialize(_sys2, _addr1, _message), _senderActorRef, null, _lastAck));
+            return _sendCodec.ConstructPayload(_sendCodec.ConstructMessage(_remoteReceiveRef.LocalAddressToUse, _remoteReceiveRef,
+                MessageSerializer.Serialize(_sys2, _addr2, _message), _senderActorRef, null, _lastAck));
         }
     }
 }
