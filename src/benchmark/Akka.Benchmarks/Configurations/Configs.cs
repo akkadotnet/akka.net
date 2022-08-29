@@ -8,6 +8,7 @@
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Exporters;
+using BenchmarkDotNet.Loggers;
 
 namespace Akka.Benchmarks.Configurations
 {
@@ -20,6 +21,7 @@ namespace Akka.Benchmarks.Configurations
         {
             this.Add(MemoryDiagnoser.Default);
             this.Add(MarkdownExporter.GitHub);
+            AddLogger(ConsoleLogger.Default);
         }
     }
 
