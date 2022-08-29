@@ -5,6 +5,7 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -12,8 +13,10 @@ using Akka.Actor.Dsl;
 using Akka.Benchmarks.Configurations;
 using Akka.Configuration;
 using Akka.Remote;
+using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Loggers;
 using Google.Protobuf;
 
 namespace Akka.Benchmarks.Remoting
@@ -24,16 +27,21 @@ namespace Akka.Benchmarks.Remoting
         public const int Operations = 10_000;
 
         private ExtendedActorSystem _sys1;
+        private ExtendedActorSystem _sys2;
         private IRemoteActorRefProvider _rarp;
 
         private Config _config = @"akka.actor.provider = remote
                                      akka.remote.dot-netty.tcp.port = 0";
 
         private IActorRef _senderActorRef;
-        private IActorRef _receiveRef;
+        private IActorRef _localReceiveRef;
+        private IActorRef _remoteReceiveRef;
+        private IActorRef _remoteSenderRef;
 
         private Address _addr1;
-        private AkkaPduProtobuffCodec _codec;
+        private Address _addr2;
+        private AkkaPduProtobuffCodec _recvCodec;
+        private AkkaPduProtobuffCodec _sendCodec;
 
         /// <summary>
         /// The message we're going to serialize
@@ -50,28 +58,57 @@ namespace Akka.Benchmarks.Remoting
         public async Task Setup()
         {
             _sys1 = (ExtendedActorSystem)ActorSystem.Create("BenchSys", _config);
-
-            var es = (ExtendedActorSystem)_sys1;
+            _sys2 = (ExtendedActorSystem)ActorSystem.Create("BenchSys", _config);
             _rarp = RARP.For(_sys1).Provider;
-            _addr1 = es.Provider.DefaultAddress;
+            _addr1 = _rarp.DefaultAddress;
+            _addr2 = RARP.For(_sys2).Provider.DefaultAddress;
 
             _senderActorRef =
-                _sys1.ActorOf(act => { act.ReceiveAny((o, context) => context.Sender.Tell(context.Sender)); },
+                _sys2.ActorOf(act => { act.ReceiveAny((o, context) => context.Sender.Tell(context.Sender)); },
                     "sender1");
 
-            _receiveRef = _sys1.ActorOf(act => { act.ReceiveAny((o, context) => context.Sender.Tell(context.Sender)); },
+            _localReceiveRef = _sys1.ActorOf(act => { act.ReceiveAny((o, context) => context.Sender.Tell(context.Sender)); },
                 "recv1");
 
-            _codec = new AkkaPduProtobuffCodec(_sys1);
+            // create an association
+            _remoteReceiveRef = await _sys2.ActorSelection(new RootActorPath(RARP.For(_sys1).Provider.DefaultAddress) / "user" /
+                                 _localReceiveRef.Path.Name).ResolveOne(TimeSpan.FromSeconds(3));
+            
+            _remoteSenderRef = await _sys1.ActorSelection(new RootActorPath(RARP.For(_sys2).Provider.DefaultAddress) / "user" /
+                                                          _senderActorRef.Path.Name).ResolveOne(TimeSpan.FromSeconds(3));
+
+            _recvCodec = new AkkaPduProtobuffCodec(_sys1);
+            _sendCodec = new AkkaPduProtobuffCodec(_sys2);
             _fullDecode = CreatePayloadPdu();
-            _pduDecoded = ((Payload)_codec.DecodePdu(_fullDecode)).Bytes;
-            _payloadDecoded = _codec.DecodeMessage(_pduDecoded, _rarp, _addr1).MessageOption.SerializedMessage;
+            _pduDecoded = ((Payload)_recvCodec.DecodePdu(_fullDecode)).Bytes;
+            _payloadDecoded = _recvCodec.DecodeMessage(_pduDecoded, _rarp, _addr1).MessageOption.SerializedMessage;
         }
 
         [GlobalCleanup]
         public async Task Cleanup()
         {
-            await _sys1.Terminate();
+            var resolveCache = ActorRefResolveThreadLocalCache.For(_sys1);
+            var pathCache = ActorPathThreadLocalCache.For(_sys1);
+            var addressCache = AddressThreadLocalCache.For(_sys1);
+
+            var senderResolveCache = ActorRefResolveThreadLocalCache.For(_sys2);
+            var senderPathCache = ActorPathThreadLocalCache.For(_sys2);
+            var senderAddressCache = AddressThreadLocalCache.For(_sys2);
+
+            ConsoleLogger.Default.WriteLine(LogKind.Result, $"[Addr1] Used ResolveCache for recipient? {resolveCache.Cache.TryGet(_remoteReceiveRef.Path.ToSerializationFormat(), out _)}");
+            ConsoleLogger.Default.WriteLine(LogKind.Result, $"[Addr1] Used PathCache for recipient? {pathCache.Cache.TryGet(_remoteReceiveRef.Path.ToSerializationFormat(), out _)}");
+            ConsoleLogger.Default.WriteLine(LogKind.Result, $"[Addr1] Used ResolveCache for sender? {resolveCache.Cache.TryGet(_remoteSenderRef.Path.ToSerializationFormat(), out _)}");
+            ConsoleLogger.Default.WriteLine(LogKind.Result, $"[Addr1] Used PathCache for sender? {pathCache.Cache.TryGet(_remoteSenderRef.Path.ToSerializationFormat(), out _)}");
+            
+            ConsoleLogger.Default.WriteLine(LogKind.Result, $"[Addr2] Used ResolveCache for recipient? {senderResolveCache.Cache.TryGet(_remoteReceiveRef.Path.ToSerializationFormat(), out _)}");
+            ConsoleLogger.Default.WriteLine(LogKind.Result, $"[Addr2] Used PathCache for recipient? {senderPathCache.Cache.TryGet(_remoteReceiveRef.Path.ToSerializationFormat(), out _)}");
+            ConsoleLogger.Default.WriteLine(LogKind.Result, $"[Addr2] Used ResolveCache for sender? {senderResolveCache.Cache.TryGet(_senderActorRef.Path.ToSerializationFormat(), out _)}");
+            ConsoleLogger.Default.WriteLine(LogKind.Result, $"[Addr2] Used PathCache for sender? {senderPathCache.Cache.TryGet(_senderActorRef.Path.ToSerializationFormat(), out _)}");
+            
+            ConsoleLogger.Default.WriteLine(LogKind.Result, $"[Addr1] Used AddressCache for sys1? {addressCache.Cache.TryGet(_addr2.ToString(), out _)}");
+            ConsoleLogger.Default.WriteLine(LogKind.Result, $"[Addr2] Used AddressCache for sys2? {senderAddressCache.Cache.TryGet(_addr1.ToString(), out _)}");
+
+            await Task.WhenAll(_sys1.Terminate(), _sys2.Terminate());
         }
 
         /// <summary>
@@ -94,10 +131,10 @@ namespace Akka.Benchmarks.Remoting
         {
             for (var i = 0; i < Operations; i++)
             {
-                var pdu = _codec.DecodePdu(_fullDecode);
+                var pdu = _recvCodec.DecodePdu(_fullDecode);
                 if (pdu is Payload p)
                 {
-                    var msg = _codec.DecodeMessage(p.Bytes, _rarp, _addr1);
+                    var msg = _recvCodec.DecodeMessage(p.Bytes, _rarp, _addr1);
                     var deserialize = MessageSerializer.Deserialize(_sys1, msg.MessageOption.SerializedMessage);
                 }
             }
@@ -108,7 +145,7 @@ namespace Akka.Benchmarks.Remoting
         {
             for (var i = 0; i < Operations; i++)
             {
-                var pdu = _codec.DecodePdu(_fullDecode);
+                var pdu = _recvCodec.DecodePdu(_fullDecode);
             }
         }
 
@@ -117,7 +154,7 @@ namespace Akka.Benchmarks.Remoting
         {
             for (var i = 0; i < Operations; i++)
             {
-                var msg = _codec.DecodeMessage(_pduDecoded, _rarp, _addr1);
+                var msg = _recvCodec.DecodeMessage(_pduDecoded, _rarp, _addr1);
             }
         }
 
@@ -132,8 +169,8 @@ namespace Akka.Benchmarks.Remoting
 
         private ByteString CreatePayloadPdu()
         {
-            return _codec.ConstructPayload(_codec.ConstructMessage(_addr1, _receiveRef,
-                MessageSerializer.Serialize(_sys1, _addr1, _message), _senderActorRef, null, _lastAck));
+            return _sendCodec.ConstructPayload(_sendCodec.ConstructMessage(_addr1, _remoteReceiveRef,
+                MessageSerializer.Serialize(_sys2, _addr1, _message), _senderActorRef, null, _lastAck));
         }
     }
 }
