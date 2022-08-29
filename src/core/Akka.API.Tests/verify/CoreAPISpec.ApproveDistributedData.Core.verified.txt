@@ -789,6 +789,7 @@ namespace Akka.DistributedData
         public System.TimeSpan MaxPruningDissemination { get; }
         public System.TimeSpan NotifySubscribersInterval { get; }
         public bool PreferOldest { get; }
+        public bool VerboseDebugLogging { get; }
         public System.TimeSpan PruningInterval { get; }
         public System.TimeSpan PruningMarkerTimeToLive { get; }
         public bool RestartReplicatorOnFailure { get; }
@@ -803,6 +804,7 @@ namespace Akka.DistributedData
         public Akka.DistributedData.ReplicatorSettings WithMaxDeltaSize(int maxDeltaSize) { }
         public Akka.DistributedData.ReplicatorSettings WithNotifySubscribersInterval(System.TimeSpan notifySubscribersInterval) { }
         public Akka.DistributedData.ReplicatorSettings WithPreferOldest(bool preferOldest) { }
+        public Akka.DistributedData.ReplicatorSettings WithVerboseDebugLogging(bool verboseDebugLogging) { }
         public Akka.DistributedData.ReplicatorSettings WithPruning(System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination) { }
         public Akka.DistributedData.ReplicatorSettings WithPruningMarkerTimeToLive(System.TimeSpan pruningMarkerTtl, System.TimeSpan durablePruningMarkerTtl) { }
         public Akka.DistributedData.ReplicatorSettings WithRestartReplicatorOnFailure(bool restart) { }
