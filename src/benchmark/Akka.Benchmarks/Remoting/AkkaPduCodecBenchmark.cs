@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Remote;
 using Akka.Remote.Transport;
 using BenchmarkDotNet.Attributes;
+using Google.Protobuf;
 
 namespace Akka.Benchmarks.Remoting
 {
@@ -23,6 +24,7 @@ namespace Akka.Benchmarks.Remoting
         public const int Operations = 10_000;
         
         private ExtendedActorSystem _sys1;
+        private IRemoteActorRefProvider _rarp;
         private Config _config = @"akka.actor.provider = remote
                                      akka.remote.dot-netty.tcp.port = 0";
         
@@ -39,12 +41,15 @@ namespace Akka.Benchmarks.Remoting
 
         private readonly Ack _lastAck = new Ack(-1);
 
+        private ByteString _decodePduMsg;
+
         [GlobalSetup]
         public async Task Setup()
         {
             _sys1 = (ExtendedActorSystem)ActorSystem.Create("BenchSys", _config);
 
             var es = (ExtendedActorSystem)_sys1;
+            _rarp = RARP.For(_sys1).Provider;
             _addr1 = es.Provider.DefaultAddress;
             
             _senderActorRef = _sys1.ActorOf(act =>
@@ -58,6 +63,7 @@ namespace Akka.Benchmarks.Remoting
             }, "recv1");
 
             _codec = new AkkaPduProtobuffCodec(_sys1);
+            _decodePduMsg = CreatePayloadPdu();
         }
         
         [GlobalCleanup]
@@ -71,9 +77,23 @@ namespace Akka.Benchmarks.Remoting
         {
             for (var i = 0; i < Operations; i++)
             {
-                var pdu = _codec.ConstructPayload(_codec.ConstructMessage(_addr1, _receiveRef,
-                    MessageSerializer.Serialize(_sys1, _addr1, _message), _senderActorRef, null, _lastAck));
+                CreatePayloadPdu();
             }
+        }
+
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public void DecodePayloadPdu()
+        {
+            for (var i = 0; i < Operations; i++)
+            {
+                _codec.DecodePdu(_decodePduMsg);
+            }
+        }
+
+        private ByteString CreatePayloadPdu()
+        {
+            return _codec.ConstructPayload(_codec.ConstructMessage(_addr1, _receiveRef,
+                MessageSerializer.Serialize(_sys1, _addr1, _message), _senderActorRef, null, _lastAck));
         }
     }
 }
