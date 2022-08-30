@@ -94,7 +94,7 @@ namespace Akka.Remote.Tests.Serialization
                 MessageSerializer.Serialize(_sys2, _addr2, _message), _senderActorRef, null, _lastAck));
         }
 
-        [Fact]
+        [Fact(DisplayName = "Skip - disabled.")]
         public void AkkaPduCodecShouldCacheAppropriateRefs()
         {
             // arrange - "send" from Sys2

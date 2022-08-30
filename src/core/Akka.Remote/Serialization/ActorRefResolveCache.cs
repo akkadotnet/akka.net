@@ -61,6 +61,9 @@ namespace Akka.Remote.Serialization
         protected override bool IsCacheable(IActorRef v)
         {
             // don't cache any FutureActorRefs, et al
+            // TODO: filter out temporary actors explicitly
+            // "temp" only for one request-response interaction so don't cache
+            //!InternalActorRef.isTemporaryRef(ref)
             return !(v is MinimalActorRef && !(v is FunctionRef));
         }
     }
