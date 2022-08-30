@@ -16,12 +16,16 @@ namespace Akka.Benchmarks.Actor
     {
         private Address x;
         private Address y;
+        private Address z;
 
         [GlobalSetup]
         public void Setup()
         {
             x = new Address("akka.tcp", "test-system", "10.62.0.101", 4000);
             y = new Address("akka.tcp", "test-system", "10.62.0.101", 4123);
+            
+            // same as X, but not literally the same instance so we can't short-circuit the `==` comparison
+            z = new Address("akka.tcp", "test-system", "10.62.0.101", 4000);
         }
 
         [Benchmark]
@@ -43,9 +47,15 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark]
-        public bool Address_Equals()
+        public bool Address_Equals_Different()
         {
             return x == y;
+        }
+        
+        [Benchmark]
+        public bool Address_Equals_Same()
+        {
+            return x == z;
         }
 
         [Benchmark]
