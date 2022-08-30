@@ -149,6 +149,10 @@ namespace Akka.TestKit
                 }
                 system = ActorSystem.Create(actorSystemName ?? "test", config.WithSetup(newBootstrap));
             }
+            else
+            {
+                system.Settings.InjectTopLevelFallback(_defaultConfig);
+            }
 
             _testState.System = system;
 
