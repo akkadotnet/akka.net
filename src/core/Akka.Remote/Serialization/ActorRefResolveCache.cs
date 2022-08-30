@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor;
@@ -18,13 +19,15 @@ namespace Akka.Remote.Serialization
     internal sealed class ActorRefResolveThreadLocalCache : ExtensionIdProvider<ActorRefResolveThreadLocalCache>, IExtension
     {
         private readonly IRemoteActorRefProvider _provider;
+        
+        [ThreadStatic]
+        private static ActorRefResolveCache _current;
 
         public ActorRefResolveThreadLocalCache() { }
 
         public ActorRefResolveThreadLocalCache(IRemoteActorRefProvider provider)
         {
             _provider = provider;
-            _current = new ThreadLocal<ActorRefResolveCache>(() => new ActorRefResolveCache(_provider));
         }
 
         public override ActorRefResolveThreadLocalCache CreateExtension(ExtendedActorSystem system)
@@ -32,9 +35,7 @@ namespace Akka.Remote.Serialization
             return new ActorRefResolveThreadLocalCache((IRemoteActorRefProvider)system.Provider);
         }
 
-        private readonly ThreadLocal<ActorRefResolveCache> _current;
-
-        public ActorRefResolveCache Cache => _current.Value;
+        public ActorRefResolveCache Cache => _current ?? (_current = new ActorRefResolveCache(_provider));
 
         public static ActorRefResolveThreadLocalCache For(ActorSystem system)
         {

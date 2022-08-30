@@ -18,7 +18,6 @@ namespace Akka.Remote.Serialization
     {
         public AddressThreadLocalCache()
         {
-            _current = new ThreadLocal<AddressCache>(() => new AddressCache());
         }
 
         public override AddressThreadLocalCache CreateExtension(ExtendedActorSystem system)
@@ -26,9 +25,10 @@ namespace Akka.Remote.Serialization
             return new AddressThreadLocalCache();
         }
 
-        private readonly ThreadLocal<AddressCache> _current;
+        [ThreadStatic]
+        private static AddressCache _current;
 
-        public AddressCache Cache => _current.Value;
+        public AddressCache Cache =>  _current ?? (_current = new AddressCache());
 
         public static AddressThreadLocalCache For(ActorSystem system)
         {
