@@ -14,18 +14,18 @@ namespace Akka.Benchmarks.Actor
     [Config(typeof(MicroBenchmarkConfig))]
     public class AddressBenchmarks
     {
-        private Address x;
-        private Address y;
-        private Address z;
+        private Address _x;
+        private Address _y;
+        private Address _z;
 
-        [GlobalSetup]
+        [IterationSetup]
         public void Setup()
         {
-            x = new Address("akka.tcp", "test-system", "10.62.0.101", 4000);
-            y = new Address("akka.tcp", "test-system", "10.62.0.101", 4123);
+            _x = new Address("akka.tcp", "test-system", "10.62.0.101", 4000);
+            _y = new Address("akka.tcp", "test-system", "10.62.0.101", 4123);
             
             // same as X, but not literally the same instance so we can't short-circuit the `==` comparison
-            z = new Address("akka.tcp", "test-system", "10.62.0.101", 4000);
+            _z = new Address("akka.tcp", "test-system", "10.62.0.101", 4000);
         }
 
         [Benchmark]
@@ -37,31 +37,31 @@ namespace Akka.Benchmarks.Actor
         [Benchmark]
         public int Address_CompareTo()
         {
-            return x.CompareTo(y);
+            return _x.CompareTo(_y);
         }
 
         [Benchmark]
         public string Address_ToString()
         {
-            return x.ToString();
+            return _x.ToString();
         }
 
         [Benchmark]
         public bool Address_Equals_Different()
         {
-            return x == y;
+            return _x == _y;
         }
         
         [Benchmark]
         public bool Address_Equals_Same()
         {
-            return x == z;
+            return _x == _z;
         }
 
         [Benchmark]
         public int Address_GetHashCode()
         {
-            return x.GetHashCode();
+            return _x.GetHashCode();
         }
     }
 }
