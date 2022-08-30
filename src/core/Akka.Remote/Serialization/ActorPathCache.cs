@@ -7,8 +7,6 @@
 
 using System;
 using Akka.Actor;
-using System.Threading;
-using System.Collections.Generic;
 
 namespace Akka.Remote.Serialization
 {
