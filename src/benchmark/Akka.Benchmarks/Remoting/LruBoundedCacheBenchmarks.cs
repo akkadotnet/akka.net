@@ -26,9 +26,9 @@ namespace Akka.Benchmarks.Remoting
         private Config _config = @"akka.actor.provider = remote
                                      akka.remote.dot-netty.tcp.port = 0";
 
-        private ActorRefResolveCache _resolveCache;
-        private ActorPathCache _pathCache;
-        private AddressCache _addressCache;
+        private ActorRefResolveThreadLocalCache _resolveCache;
+        private ActorPathThreadLocalCache _pathCache;
+        private AddressThreadLocalCache _addressCache;
 
         private string _cacheMissPath;
         private IActorRef _cacheMissActorRef;
@@ -44,9 +44,9 @@ namespace Akka.Benchmarks.Remoting
         public async Task Setup()
         {
             _sys1 = ActorSystem.Create("BenchSys", _config);
-            _resolveCache = ActorRefResolveThreadLocalCache.For(_sys1).Cache;
-            _pathCache = ActorPathThreadLocalCache.For(_sys1).Cache;
-            _addressCache = AddressThreadLocalCache.For(_sys1).Cache;
+            _resolveCache = ActorRefResolveThreadLocalCache.For(_sys1);
+            _pathCache = ActorPathThreadLocalCache.For(_sys1);
+            _addressCache = AddressThreadLocalCache.For(_sys1);
 
             var es = (ExtendedActorSystem)_sys1;
             _addr1 = es.Provider.DefaultAddress;
@@ -68,43 +68,43 @@ namespace Akka.Benchmarks.Remoting
         public void IterationSetup()
         {
             _cacheMissPath = $"/user/f/{_cacheHitPathCount++}";
-            _resolveCache.TrySet(_cacheHitPath, _cacheHitActorRef);
-            _addressCache.TrySet(_addr1String, _addr1);
-            _pathCache.TrySet(_cacheHitPath, _cacheHitActorRef.Path);
+            _resolveCache.Cache.TrySet(_cacheHitPath, _cacheHitActorRef);
+            _addressCache.Cache.TrySet(_addr1String, _addr1);
+            _pathCache.Cache.TrySet(_cacheHitPath, _cacheHitActorRef.Path);
             
-            ConsoleLogger.Default.WriteLine(LogKind.Info, $"Cached IActorRef? {_resolveCache.TryGet(_cacheHitPath, out _)}");
-            ConsoleLogger.Default.WriteLine(LogKind.Info, $"Cached Address? {_addressCache.TryGet(_addr1String, out _)}");
-            ConsoleLogger.Default.WriteLine(LogKind.Info, $"Cached ActorPath? {_pathCache.TryGet(_cacheHitPath, out _)}");
+            ConsoleLogger.Default.WriteLine(LogKind.Info, $"Cached IActorRef? {_resolveCache.Cache.TryGet(_cacheHitPath, out _)}");
+            ConsoleLogger.Default.WriteLine(LogKind.Info, $"Cached Address? {_addressCache.Cache.TryGet(_addr1String, out _)}");
+            ConsoleLogger.Default.WriteLine(LogKind.Info, $"Cached ActorPath? {_pathCache.Cache.TryGet(_cacheHitPath, out _)}");
         }
 
         [Benchmark]
         public void ActorRefResolveMissBenchmark()
         {
-            _resolveCache.GetOrCompute("/user/ignore");
+            _resolveCache.Cache.GetOrCompute("/user/ignore");
         }
         
         [Benchmark]
         public void ActorRefResolveHitBenchmark()
         {
-            _resolveCache.GetOrCompute(_cacheHitPath);
+            _resolveCache.Cache.GetOrCompute(_cacheHitPath);
         }
 
         [Benchmark]
         public void AddressHitBenchmark()
         {
-            _addressCache.GetOrCompute(_addr1String);
+            _addressCache.Cache.GetOrCompute(_addr1String);
         }
         
         [Benchmark]
         public void ActorPathCacheHitBenchmark()
         {
-            _pathCache.GetOrCompute(_cacheHitPath);
+            _pathCache.Cache.GetOrCompute(_cacheHitPath);
         }
         
         [Benchmark]
         public void ActorPathCacheMissBenchmark()
         {
-            _pathCache.GetOrCompute(_cacheMissPath);
+            _pathCache.Cache.GetOrCompute(_cacheMissPath);
         }
         
         [GlobalCleanup]
