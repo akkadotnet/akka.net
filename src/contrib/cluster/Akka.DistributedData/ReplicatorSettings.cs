@@ -230,6 +230,40 @@ namespace Akka.DistributedData
                  )
         {
         }
+        
+        [Obsolete]
+         public ReplicatorSettings(string role,
+                    TimeSpan gossipInterval,
+                    TimeSpan notifySubscribersInterval,
+                    int maxDeltaElements,
+                    string dispatcher,
+                    TimeSpan pruningInterval,
+                    TimeSpan maxPruningDissemination,
+                    IImmutableSet<string> durableKeys,
+                    Props durableStoreProps,
+                    TimeSpan pruningMarkerTimeToLive,
+                    TimeSpan durablePruningMarkerTimeToLive,
+                    int maxDeltaSize,
+                    bool restartReplicatorOnFailure,
+                    bool preferOldest) : this(
+                                                           role,
+                                                           gossipInterval,
+                                                           notifySubscribersInterval,
+                                                           maxDeltaElements,
+                                                           dispatcher,
+                                                           pruningInterval,
+                                                           maxPruningDissemination,
+                                                           durableKeys,
+                                                           durableStoreProps,
+                                                           pruningMarkerTimeToLive,
+                                                           durablePruningMarkerTimeToLive,
+                                                           maxDeltaSize,
+                                                           restartReplicatorOnFailure,
+                                                           preferOldest,
+                                                           false
+                                                          )
+                {
+                }
 
         public ReplicatorSettings(string role,
             TimeSpan gossipInterval,
