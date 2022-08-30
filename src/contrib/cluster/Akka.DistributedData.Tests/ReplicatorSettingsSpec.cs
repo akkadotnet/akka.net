@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.DistributedData.Tests
@@ -39,6 +40,7 @@ namespace Akka.DistributedData.Tests
             settings.DurableKeys.Count.ShouldBe(0);
             settings.DurableStoreProps.ShouldBe(Props.Empty);
             settings.DurablePruningMarkerTimeToLive.ShouldBe(TimeSpan.FromDays(10));
+            settings.VerboseDebugLogging.Should().BeFalse();
             
             Sys.Settings.Config.GetTimeSpan("akka.cluster.distributed-data.serializer-cache-time-to-live")
                 .ShouldBe(TimeSpan.FromSeconds(10));
