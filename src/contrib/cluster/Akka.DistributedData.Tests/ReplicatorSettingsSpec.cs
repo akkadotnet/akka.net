@@ -1,15 +1,16 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="DDataSettingsSpec.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ReplicatorSettingsSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.DistributedData.Tests
@@ -39,6 +40,7 @@ namespace Akka.DistributedData.Tests
             settings.DurableKeys.Count.ShouldBe(0);
             settings.DurableStoreProps.ShouldBe(Props.Empty);
             settings.DurablePruningMarkerTimeToLive.ShouldBe(TimeSpan.FromDays(10));
+            settings.VerboseDebugLogging.Should().BeFalse();
             
             Sys.Settings.Config.GetTimeSpan("akka.cluster.distributed-data.serializer-cache-time-to-live")
                 .ShouldBe(TimeSpan.FromSeconds(10));

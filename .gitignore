@@ -30,6 +30,9 @@ TestResults/
 PerfResults/
 *.lock.json
 
+# BenchmarkDotNet files
+[rR]esults/
+
 # Visual Studo 2015 cache/options directory
 .vs/
 
