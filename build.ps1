@@ -32,7 +32,7 @@ Param(
 $FakeVersion = "4.63.0"
 $NugetVersion = "5.8.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
-$ProtobufVersion = "3.13.0"
+$ProtobufVersion = "3.21.5"
 $DocfxVersion = "2.58.9"
 
 $IncrementalistVersion = "0.6.0";
