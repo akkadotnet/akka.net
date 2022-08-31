@@ -142,6 +142,43 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
                 .ExpectAsync(2, async () => actor.Tell( toSend ));
         }
 
+        [Fact]
+        public async Task ExpectLogNoWarningsNorErrorsAsync_should_pass_with_info_and_debug_logs()
+        {
+            await ExpectLogNoWarningsNorErrorsAsync(async delegate
+            {
+                await Task.CompletedTask;
+                Log.Debug("whatever");
+                Log.Info("whatever");
+            });
+        }
+
+        [Fact]
+        public async Task ExpectLogNoWarningsNorErrorsAsync_should_fail_with_one_log_warning()
+        {
+            await Assert.ThrowsAnyAsync<TrueException>(async delegate
+            {
+                await ExpectLogNoWarningsNorErrorsAsync(async () =>
+                {
+                    await Task.CompletedTask;
+                    Log.Warning("whatever");
+                });
+            });
+        }
+
+        [Fact]
+        public async Task ExpectLogNoWarningsNorErrorsAsync_should_fail_with_one_log_error()
+        {
+            await Assert.ThrowsAnyAsync<TrueException>(async delegate
+            {
+                await ExpectLogNoWarningsNorErrorsAsync(async () =>
+                {
+                    await Task.CompletedTask;
+                    Log.Error("whatever");
+                });
+            });
+        }
+
         internal sealed class ExceptionTestActor : UntypedActor
         {
             private ILoggingAdapter Log { get; } = Context.GetLogger();

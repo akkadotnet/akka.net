@@ -297,6 +297,19 @@ namespace Akka.TestKit
         }
 
         /// <summary>
+        /// Asserts that no warnings nor errors have been loggged within <paramref name="timeout"/>.
+        /// </summary>
+        /// <param name="actionAsync"></param>
+        /// <param name="timeout"></param>
+        /// <returns></returns>
+        public async Task ExpectLogNoWarningsNorErrorsAsync(Func<Task> actionAsync, TimeSpan? timeout = null)
+        {
+            await CreateEventFilter(Sys)
+                .Custom(logEvent => logEvent is Error || logEvent is Warning)
+                .ExpectAsync(0, actionAsync, timeout);
+        }
+
+        /// <summary>
         /// Returns <c>true</c> if messages are available.
         /// </summary>
         /// <value>
