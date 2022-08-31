@@ -1,10 +1,67 @@
+#### 1.4.41 August 31 2022 ####
+Akka.NET v1.4.41 is a minor release that contains some minor bug fix and throughput performance improvement for Akka.Remote
+
+* [Akka: Fix AddLogger in LoggingBus](https://github.com/akkadotnet/akka.net/issues/6028)
+ 
+  Akka loggers are now loaded asynchronously by default. The `ActorSystem` will wait at most `akka.logger-startup-timeout` period long (5 seconds by default) for all loggers to report that they are ready before continuing the start-up process. 
+
+  A warning will be logged on each loggers that did not report within this grace period. These loggers will still be awaited upon inside a detached Task until either it is ready or the `ActorSystem` is shut down. 
+ 
+  These late loggers will not capture all log events until they are ready. If your logs are missing portion of the start-up events, check that the logger were loaded within this grace period.
+
+* [Akka: Log Exception cause inside Directive.Resume SupervisorStrategy warning log](https://github.com/akkadotnet/akka.net/issues/6070)
+* [DData: Add "verbose-debug-logging" setting to suppress debug message spam](https://github.com/akkadotnet/akka.net/issues/6080)
+* [Akka: Regenerate protobuf codes](https://github.com/akkadotnet/akka.net/issues/6087)
+
+  All protobuf codes were re-generated, causing a significant improvement in message deserialization, increasing `Akka.Remote` throughput.
+
+__Before__
+``` ini
+BenchmarkDotNet=v0.13.1, OS=Windows 10.0.19041.1415 (2004/May2020Update/20H1)
+AMD Ryzen 9 3900X, 1 CPU, 24 logical and 12 physical cores
+.NET SDK=6.0.200
+  [Host]     : .NET 6.0.2 (6.0.222.6406), X64 RyuJIT
+  DefaultJob : .NET 6.0.2 (6.0.222.6406), X64 RyuJIT
+```
+|                 Method |       Mean |    Error |   StdDev |  Gen 0 |  Gen 1 | Allocated |
+|----------------------- |-----------:|---------:|---------:|-------:|-------:|----------:|
+|        WritePayloadPdu | 1,669.6 ns | 21.10 ns | 19.74 ns | 0.2156 |      - |   1,808 B |
+|       DecodePayloadPdu | 2,039.7 ns | 12.52 ns | 11.71 ns | 0.2156 | 0.0031 |   1,816 B |
+|          DecodePduOnly |   131.3 ns |  1.32 ns |  1.11 ns | 0.0563 | 0.0002 |     472 B |
+|      DecodeMessageOnly | 1,665.0 ns | 15.03 ns | 14.05 ns | 0.1406 |      - |   1,184 B |
+| DeserializePayloadOnly |   151.2 ns |  1.88 ns |  1.76 ns | 0.0199 |      - |     168 B |
+
+__After__
+``` ini
+BenchmarkDotNet=v0.13.1, OS=Windows 10.0.19041.1415 (2004/May2020Update/20H1)
+AMD Ryzen 9 3900X, 1 CPU, 24 logical and 12 physical cores
+.NET SDK=6.0.200
+  [Host]     : .NET 6.0.2 (6.0.222.6406), X64 RyuJIT
+  DefaultJob : .NET 6.0.2 (6.0.222.6406), X64 RyuJIT
+```
+|                 Method |       Mean |    Error |   StdDev |  Gen 0 |  Gen 1 | Allocated |
+|----------------------- |-----------:|---------:|---------:|-------:|-------:|----------:|
+|        WritePayloadPdu | 1,623.4 ns | 19.95 ns | 18.66 ns | 0.2219 | 0.0031 |   1,880 B |
+|       DecodePayloadPdu | 1,738.6 ns | 22.79 ns | 21.31 ns | 0.2250 |      - |   1,888 B |
+|          DecodePduOnly |   175.1 ns |  2.31 ns |  1.93 ns | 0.0572 |      - |     480 B |
+|      DecodeMessageOnly | 1,296.8 ns | 11.89 ns | 10.54 ns | 0.1469 | 0.0016 |   1,232 B |
+| DeserializePayloadOnly |   143.6 ns |  1.59 ns |  1.33 ns | 0.0199 | 0.0002 |     168 B |
+ 
+
+If you want to see the [full set of changes made in Akka.NET v1.4.41, click here](https://github.com/akkadotnet/akka.net/milestone/72).
+
+| COMMITS | LOC+  | LOC- | AUTHOR              |
+|---------|-------|------|---------------------|
+| 4       | 13003 | 1150 | Gregorius Soedharmo |
+| 1       | 3     | 4    | Aaron Stannard      |
+
 #### 1.4.40 July 19 2022 ####
 Akka.NET v1.4.40 is a minor release that contains a bug fix for DotNetty SSL support.
 
 * [Akka.Remote: SSL Configuration Fails even EnbleSsl property is set to false](https://github.com/akkadotnet/akka.net/issues/6043)
 * [Akka.Streams: Add IAsyncEnumerable Source](https://github.com/akkadotnet/akka.net/issues/6047)
 
-If you want to see the [full set of changes made in Akka.NET v1.4.39, click here](https://github.com/akkadotnet/akka.net/milestone/71).
+If you want to see the [full set of changes made in Akka.NET v1.4.40, click here](https://github.com/akkadotnet/akka.net/milestone/71).
 
 | COMMITS | LOC+  | LOC- | AUTHOR              |
 |---------|-------|------|---------------------|
