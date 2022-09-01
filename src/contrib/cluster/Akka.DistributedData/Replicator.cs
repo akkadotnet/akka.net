@@ -1177,7 +1177,7 @@ namespace Akka.DistributedData
 
             if (keys.Length != 0)
             {
-                if (_log.IsDebugEnabled)
+                if (_log.IsDebugEnabled && _settings.VerboseDebugLogging)
                     _log.Debug("Sending gossip to [{0}]: {1}", Sender.Path.Address, string.Join(", ", keys));
 
                 var g = new Gossip(keys.ToImmutableDictionary(x => x, _ => GetData(_)), !otherDifferentKeys.IsEmpty);
@@ -1197,7 +1197,7 @@ namespace Akka.DistributedData
 
         private void ReceiveGossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack)
         {
-            if (_log.IsDebugEnabled)
+            if (_log.IsDebugEnabled && _settings.VerboseDebugLogging)
                 _log.Debug("Received gossip from [{0}], containing [{1}]", Sender.Path.Address, string.Join(", ", updatedData.Keys));
 
             var replyData = ImmutableDictionary<string, DataEnvelope>.Empty.ToBuilder();
