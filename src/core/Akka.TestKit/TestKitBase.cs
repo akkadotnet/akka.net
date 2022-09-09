@@ -125,7 +125,7 @@ namespace Akka.TestKit
         /// <param name="config">The configuration that <paramref name="system"/> will use if it's null.</param>
         /// <param name="actorSystemName">The name that <paramref name="system"/> will use if it's null.</param>
         /// <param name="testActorName">The name of the test actor. Can be null.</param>
-        protected void InitializeTest(ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
+        protected virtual void InitializeTest(ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
         {
             _testState = new TestState();
 
