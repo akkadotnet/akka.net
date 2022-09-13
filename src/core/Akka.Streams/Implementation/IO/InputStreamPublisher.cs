@@ -73,11 +73,20 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
-            => message.Match()
-                    .With<Request>(ReadAndSignal)
-                    .With<Continue>(ReadAndSignal)
-                    .With<Actors.Cancel>(() => Context.Stop(Self))
-                    .WasHandled;
+        {
+            switch (message)
+            {
+                case Request _:
+                case Continue _:
+                    ReadAndSignal();
+                    return true;
+                case Actors.Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
         /// <summary>
         /// TBD

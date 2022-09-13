@@ -142,21 +142,27 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 private void OnCommand(IPingCmd cmd)
                 {
-                    cmd.Match()
-                        .With<Register>(r => _listener = r.Probe)
-                        .With<Ping>(() => _listener.Tell(Pong.Instance))
-                        .With<CompleteStage>(() =>
-                        {
+                    switch (cmd)
+                    {
+                        case Register r:
+                            _listener = r.Probe;
+                            break;
+                        
+                        case Ping _:
+                            _listener.Tell(Pong.Instance);
+                            break;
+                        
+                        case CompleteStage _:
                             CompleteStage();
                             _listener.Tell(EndOfEventHandler.Instance);
-                        })
-                        .With<FailStage>(() =>
-                        {
+                            break;
+                        
+                        case FailStage _:
                             FailStage(new TestException("test"));
                             _listener.Tell(EndOfEventHandler.Instance);
-                        })
-                        .With<Throw>(() =>
-                        {
+                            break;
+                        
+                        case Throw _:
                             try
                             {
                                 throw new TestException("test");
@@ -165,7 +171,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                             {
                                 _listener.Tell(EndOfEventHandler.Instance);
                             }
-                        });
+                    }
                 }
             }
 

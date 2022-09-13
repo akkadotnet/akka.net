@@ -232,18 +232,18 @@ namespace Akka.Persistence.Tests
 
             private void UpdateState(IEvt evt)
             {
-                evt.Match()
-                    .With<AcceptedReq>(a =>
-                    {
+                switch (evt)
+                {
+                    case AcceptedReq a:
                         _log.Debug("Deliver(destination, deliveryId => Action(deliveryId, {0})), recovering: {1}",
                             a.Payload, IsRecovering);
                         Deliver(ActorPath.Parse(a.DestinationPath), deliveryId => new Action(deliveryId, a.Payload));
-                    })
-                    .With<ReqDone>(r =>
-                    {
+                        break;
+                    case ReqDone r:
                         _log.Debug("ConfirmDelivery({0}), recovering: {1}", r.Id, IsRecovering);
                         ConfirmDelivery(r.Id);
-                    });
+                        break;
+                }
             }
         }
 

@@ -591,17 +591,17 @@ namespace Akka.Remote.Transport
         /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
-            PatternMatch.Match(message)
-                .With<ListenUnderlying>(listen =>
-                {
+            switch (message)
+            {
+                case ListenUnderlying listen:
                     LocalAddress = listen.ListenAddress;
                     var capturedSelf = Self;
                     listen.UpstreamListener.ContinueWith(
                         listenerRegistered => capturedSelf.Tell(new ListenerRegistered(listenerRegistered.Result)),
                         TaskContinuationOptions.ExecuteSynchronously);
-                })
-                .With<ListenerRegistered>(listener =>
-                {
+                    break;
+                
+                case ListenerRegistered listener:
                     AssociationListener = listener.Listener;
                     foreach (var dEvent in DelayedEvents)
                     {
@@ -609,8 +609,12 @@ namespace Akka.Remote.Transport
                     }
                     DelayedEvents = new Queue<object>();
                     Context.Become(Ready);
-                })
-                .Default(m => DelayedEvents.Enqueue(m));
+                    break;
+                
+                default:
+                    DelayedEvents.Enqueue(message);
+                    break;
+            }
         }
 
         /// <summary>

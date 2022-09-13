@@ -22,11 +22,13 @@ namespace Akka.Tests.Performance.Actor
         {
             protected override bool Receive(object message)
             {
-                return message.Match()
-                    .With<string>(s => { })
-                    .With<int>(i => { })
-                    .With<bool>(b => { })
-                    .WasHandled;
+                return message switch
+                {
+                    string _ => true,
+                    int _ => true,
+                    bool _ => true,
+                    _ => false
+                };
             }
 
             public static Props Props { get; } = Props.Create(() => new MemoryActorBasePatternMatchActor());

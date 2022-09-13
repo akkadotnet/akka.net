@@ -498,81 +498,71 @@ namespace Akka.Remote.TestKit
 
             WhenUnhandled(@event =>
             {
-                State<State, Data> nextState = null;
                 var clients = @event.StateData.Clients;
                 var arrived = @event.StateData.Arrived;
-                @event.FsmEvent.Match()
-                    .With<Controller.NodeInfo>(node =>
-                    {
+                switch (@event.FsmEvent)
+                {
+                    case Controller.NodeInfo node:
                         if (clients.Any(x => x.Name == node.Name)) throw new DuplicateNodeException(@event.StateData, node);
-                        nextState = Stay().Using(@event.StateData.Copy(clients.Add(node)));
-                    })
-                    .With<Controller.ClientDisconnected>(disconnected =>
-                    {
+                        return Stay().Using(@event.StateData.Copy(clients.Add(node)));
+                    
+                    case Controller.ClientDisconnected disconnected:
                         if (arrived == null || arrived.Count == 0)
-                            nextState =
-                                Stay()
-                                    .Using(
-                                        @event.StateData.Copy(clients.Where(x => x.Name != disconnected.Name).ToImmutableHashSet()));
-                        else
-                        {
-                            var client = clients.FirstOrDefault(x => x.Name == disconnected.Name);
-                            if (client == null) nextState = Stay();
-                            else
-                            {
-                                throw new ClientLostException(@event.StateData.Copy(clients.Remove(client), arrived:arrived.Where(x => x != client.FSM).ToImmutableHashSet()), disconnected.Name);
-                            }
-                        }
-                    });
-
-                return nextState;
+                            return Stay()
+                                .Using(@event.StateData.Copy(clients.Where(x => x.Name != disconnected.Name).ToImmutableHashSet()));
+                        
+                        var client = clients.FirstOrDefault(x => x.Name == disconnected.Name);
+                        if (client == null) 
+                            return Stay();
+                        
+                        throw new ClientLostException(@event.StateData.Copy(clients.Remove(client), arrived:arrived.Where(x => x != client.FSM).ToImmutableHashSet()), disconnected.Name);
+                    
+                    default:
+                        return null;
+                }
             });
 
             When(State.Idle, @event =>
             {
-                State<State, Data> nextState = null;
                 var clients = @event.StateData.Clients;
-                @event.FsmEvent.Match()
-                    .With<EnterBarrier>(barrier =>
-                    {
+                switch (@event.FsmEvent)
+                {
+                    case EnterBarrier barrier:
                         if (_failed)
-                            nextState =
-                                Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, false)));
-                        else if (clients.Select(x => x.FSM).SequenceEqual(new List<IActorRef>() {Sender}))
-                            nextState =
-                                Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, true)));
-                        else if (clients.All(x => !Equals(x.FSM, Sender)))
-                            nextState =
-                                Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, false)));
-                        else
-                        {
-                            nextState =
-                                GoTo(State.Waiting)
-                                    .Using(@event.StateData.Copy(barrier: barrier.Name,
-                                        arrived: ImmutableHashSet.Create(Sender),
-                                        deadline: GetDeadline(barrier.Timeout)));
-                        }
-                    })
-                    .With<RemoveClient>(client =>
-                    {
+                            return Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, false)));
+                        
+                        if (clients.Select(x => x.FSM).SequenceEqual(new List<IActorRef>() {Sender}))
+                            return Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, true)));
+                        
+                        if (clients.All(x => !Equals(x.FSM, Sender)))
+                            return Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, false)));
+                        
+                        return GoTo(State.Waiting)
+                            .Using(@event.StateData.Copy(
+                                barrier: barrier.Name,
+                                arrived: ImmutableHashSet.Create(Sender),
+                                deadline: GetDeadline(barrier.Timeout)));
+                    
+                    case RemoveClient client:
                         if (clients.Count == 0)
                             throw new BarrierEmptyException(@event.StateData, $"cannot remove {client.Name}: no client to remove");
-                        nextState =
-                            Stay().Using(@event.StateData.Copy(clients.Where(x => x.Name != client.Name).ToImmutableHashSet()));
-                    });
-
-                return nextState;
+                        
+                        return Stay().Using(@event.StateData.Copy(clients.Where(x => x.Name != client.Name).ToImmutableHashSet()));
+                    
+                    default:
+                        return null;
+                }
             });
 
             When(State.Waiting, @event =>
             {
-                State<State, Data> nextState = null;
                 var currentBarrier = @event.StateData.Barrier;
                 var clients = @event.StateData.Clients;
                 var arrived = @event.StateData.Arrived;
-                @event.FsmEvent.Match()
-                    .With<EnterBarrier>(barrier =>
-                    {
+
+                switch (@event.FsmEvent)
+                {
+                    case EnterBarrier barrier:
                         if (barrier.Name != currentBarrier)
                             throw new WrongBarrierException(barrier.Name, Sender, @event.StateData);
                         var together = clients.Any(x => Equals(x.FSM, Sender))
@@ -583,35 +573,30 @@ namespace Akka.Remote.TestKit
                         if (enterDeadline.TimeLeft < @event.StateData.Deadline.TimeLeft)
                         {
                             SetTimer("Timeout", StateTimeout.Instance, enterDeadline.TimeLeft, false);
-                            nextState = HandleBarrier(@event.StateData.Copy(arrived: together, deadline: enterDeadline));
+                            return HandleBarrier(@event.StateData.Copy(arrived: together, deadline: enterDeadline));
                         }
-                        else
-                        {
-                            nextState = HandleBarrier(@event.StateData.Copy(arrived: together));
-                        }
-                    })
-                    .With<RemoveClient>(client =>
-                    {
+                        
+                        return HandleBarrier(@event.StateData.Copy(arrived: together));
+                    
+                    case RemoveClient client:
                         var removedClient = clients.FirstOrDefault(x => x.Name == client.Name);
-                        if (removedClient == null) nextState = Stay();
-                        else
-                        {
-                            nextState =
-                                HandleBarrier(@event.StateData.Copy(clients.Remove(removedClient),
-                                    arrived: arrived.Where(x => !Equals(x, removedClient.FSM)).ToImmutableHashSet()));
-                        }
-                    })
-                    .With<FailBarrier>(barrier =>
-                    {
-                        if(barrier.Name != currentBarrier) throw new WrongBarrierException(barrier.Name, Sender, @event.StateData);
+                        if (removedClient == null) 
+                            return Stay();
+                        
+                        return HandleBarrier(@event.StateData.Copy(clients.Remove(removedClient),
+                                arrived: arrived.Where(x => !Equals(x, removedClient.FSM)).ToImmutableHashSet()));
+                    
+                    case FailBarrier barrier:
+                        if(barrier.Name != currentBarrier) 
+                            throw new WrongBarrierException(barrier.Name, Sender, @event.StateData);
                         throw new FailedBarrierException(@event.StateData);
-                    })
-                    .With<StateTimeout>(() =>
-                    {
+                        
+                    case StateTimeout _:
                         throw new BarrierTimeoutException(@event.StateData);
-                    });
-
-                return nextState;
+                    
+                    default:
+                        return null;
+                }
             });
 
             OnTransition((state, nextState) =>

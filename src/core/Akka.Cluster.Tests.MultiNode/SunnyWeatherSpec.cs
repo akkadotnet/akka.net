@@ -61,15 +61,15 @@ namespace Akka.Cluster.Tests.MultiNode
 
             protected override void OnReceive(object message)
             {
-                message.Match()
-                    .With<ClusterEvent.IMemberEvent>(evt =>
-                    {
+                switch (message)
+                {
+                    case ClusterEvent.IMemberEvent evt:
                         _unexpected.Value.Add(evt.Member);
-                    })
-                    .With<ClusterEvent.CurrentClusterState>(() =>
-                    {
+                        break;
+                    case ClusterEvent.CurrentClusterState _:
                         // ignore
-                    });
+                        break;
+                }
             }
         }
 

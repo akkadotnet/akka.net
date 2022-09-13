@@ -168,8 +168,14 @@ namespace Akka.Remote.Tests.MultiNode
 
             protected override bool Receive(object message)
             {
-                return message.Match().With<ParentMessage>(_ => Context.ActorOf(_.Props, _.Name)).Default(m =>
-                    _monitor.Tell(m)).WasHandled;
+                if (message is ParentMessage msg)
+                {
+                    Context.ActorOf(msg.Props, msg.Name); 
+                    return true;
+                }
+
+                _monitor.Tell(message);
+                return true;
             }
         }
 

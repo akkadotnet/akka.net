@@ -63,24 +63,44 @@ namespace Akka.Persistence.Query.Sql
         protected abstract void ReceiveIdleRequest();
         protected abstract void ReceiveRecoverySuccess(long highestSequenceNr);
 
-        protected override bool Receive(object message)  => message.Match()
-            .With<Request>(_ => ReceiveInitialRequest())
-            .With<EventsByTagPublisher.Continue>(() => { })
-            .With<Cancel>(_ => Context.Stop(Self))
-            .WasHandled;
+        protected override bool Receive(object message)
+        {
+            switch (message)
+            {
+                case Request _:
+                    ReceiveInitialRequest();
+                    return true;
+                case EventsByTagPublisher.Continue _:
+                    // no-op
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
-        protected bool Idle(object message) => message.Match()
-            .With<EventsByTagPublisher.Continue>(() =>
+        protected bool Idle(object message)
+        {
+            switch (message)
             {
-                if (IsTimeForReplay) Replay();
-            })
-            .With<TaggedEventAppended>(() =>
-            {
-                if (IsTimeForReplay) Replay();
-            })
-            .With<Request>(ReceiveIdleRequest)
-            .With<Cancel>(() => Context.Stop(Self))
-            .WasHandled;
+                case EventsByTagPublisher.Continue _:
+                    if (IsTimeForReplay) Replay();
+                    return true;
+                case TaggedEventAppended _:
+                    if (IsTimeForReplay) Replay();
+                    return true;
+                case Request _:
+                    ReceiveIdleRequest();
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
         protected void Replay()
         {
@@ -92,35 +112,53 @@ namespace Akka.Persistence.Query.Sql
 
         protected Receive Replaying(int limit)
         {
-            return message => message.Match()
-                .With<ReplayedTaggedMessage>(replayed =>
+            return message =>
+            {
+                switch (message)
                 {
-                    Buffer.Add(new EventEnvelope(
-                        offset: new Sequence(replayed.Offset),
-                        persistenceId: replayed.Persistent.PersistenceId,
-                        sequenceNr: replayed.Persistent.SequenceNr,
-                        @event: replayed.Persistent.Payload,
-                        timestamp: replayed.Persistent.Timestamp));
+                    case ReplayedTaggedMessage replayed:
+                        Buffer.Add(new EventEnvelope(
+                            offset: new Sequence(replayed.Offset),
+                            persistenceId: replayed.Persistent.PersistenceId,
+                            sequenceNr: replayed.Persistent.SequenceNr,
+                            @event: replayed.Persistent.Payload,
+                            timestamp: replayed.Persistent.Timestamp));
 
-                    CurrentOffset = replayed.Offset;
-                    Buffer.DeliverBuffer(TotalDemand);
-                })
-                .With<RecoverySuccess>(success =>
-                {
-                    Log.Debug("replay completed for tag [{0}], currOffset [{1}]", Tag, CurrentOffset);
-                    ReceiveRecoverySuccess(success.HighestSequenceNr);
-                })
-                .With<ReplayMessagesFailure>(failure =>
-                {
-                    Log.Debug("replay failed for tag [{0}], due to [{1}]", Tag, failure.Cause.Message);
-                    Buffer.DeliverBuffer(TotalDemand);
-                    OnErrorThenStop(failure.Cause);
-                })
-                .With<Request>(_ => Buffer.DeliverBuffer(TotalDemand))
-                .With<EventsByTagPublisher.Continue>(() => { })
-                .With<TaggedEventAppended>(() => { })
-                .With<Cancel>(() => Context.Stop(Self))
-                .WasHandled;
+                        CurrentOffset = replayed.Offset;
+                        Buffer.DeliverBuffer(TotalDemand);
+                        return true;
+                    
+                    case RecoverySuccess success:
+                        Log.Debug("replay completed for tag [{0}], currOffset [{1}]", Tag, CurrentOffset);
+                        ReceiveRecoverySuccess(success.HighestSequenceNr);
+                        return true;
+                    
+                    case ReplayMessagesFailure failure:
+                        Log.Debug("replay failed for tag [{0}], due to [{1}]", Tag, failure.Cause.Message);
+                        Buffer.DeliverBuffer(TotalDemand);
+                        OnErrorThenStop(failure.Cause);
+                        return true;
+                    
+                    case Request _:
+                        Buffer.DeliverBuffer(TotalDemand);
+                        return true;
+                    
+                    case EventsByTagPublisher.Continue _:
+                        // no-op
+                        return true;
+                    
+                    case  TaggedEventAppended _:
+                        // no-op
+                        return true;
+                    
+                    case Cancel _:
+                        Context.Stop(Self);
+                        return true;
+                    
+                    default:
+                        return false;
+                }
+            };
         }
     }
 
