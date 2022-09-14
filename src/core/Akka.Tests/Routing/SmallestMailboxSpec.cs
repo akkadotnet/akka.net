@@ -30,7 +30,7 @@ namespace Akka.Tests.Routing
             {
                 switch (message)
                 {
-                    case Tuple<TestLatch, TestLatch> t:
+                    case ValueTuple<TestLatch, TestLatch> t:
                     {
                         TestLatch busy = t.Item1, receivedLatch = t.Item2;
                         usedActors.TryAdd(0, Self.Path.ToString());
@@ -40,7 +40,7 @@ namespace Akka.Tests.Routing
                         break;
                     }
                     
-                    case Tuple<int, TestLatch> t:
+                    case ValueTuple<int, TestLatch> t:
                     {
                         var msg = t.Item1;
                         var receivedLatch = t.Item2;
