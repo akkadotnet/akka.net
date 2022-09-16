@@ -936,56 +936,71 @@ namespace Akka.Cluster.Sharding
             {
                 return shardOrRegionRef.Path.Address.HasGlobalScope ? shardOrRegionRef.Path.Address : Cluster.SelfAddress;
             }
-            
-            var shardId = this.ExtractShardId(getEntityLocation.EntityId);
-            if (string.IsNullOrEmpty(shardId))
-            {
-                // unsupported entityId - could only happen in highly customized extractors
-                sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, Address.AllSystems, Option<IActorRef>.None));
-                return;
-            }
-            
-            if(!Shards.TryGetValue(shardId, out var shardActorRef))
-            {
-                // shard is not homed yet, so try looking up the ShardRegion
-                if (!RegionByShard.TryGetValue(shardId, out var shardRegionRef))
-                {
-                    // shardRegion isn't allocated either
-                    sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, Address.AllSystems, Option<IActorRef>.None));
-                }
-                else
-                {
-                    // ShardRegion exists, but shard is not homed
-                    sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, GetNodeAddress(shardRegionRef), Option<IActorRef>.None));
-                }
-                
-                return;
-            }
-            
-            var destinationAddress = GetNodeAddress(shardActorRef);
 
-            async Task ResolveEntityRef()
+            try
             {
-                // we have a ShardRef - now we just need to check to see if an entity ref exists
-                // we are going to
-
-                var entityPath = shardActorRef.Path / shardId;
-                
-                try
+                var shardId = ExtractShardId(new StartEntity(getEntityLocation.EntityId));
+                if (string.IsNullOrEmpty(shardId))
                 {
-                    var entityRef = await Context.ActorSelection(entityPath).ResolveOne(getEntityLocation.Timeout);
-                    sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress, new Option<IActorRef>(entityRef)));
+                    // unsupported entityId - could only happen in highly customized extractors
+                    sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, Address.AllSystems,
+                        Option<IActorRef>.None));
+                    return;
                 }
-                catch (ActorNotFoundException ex)
-                {
-                    // entity does not exist
-                    sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress, Option<IActorRef>.None));
-                }
-            }
 
-#pragma warning disable CS4014 
-            ResolveEntityRef(); // needs to run as a detached task
+                if (!Shards.TryGetValue(shardId, out var shardActorRef))
+                {
+                    // shard is not homed yet, so try looking up the ShardRegion
+                    if (!RegionByShard.TryGetValue(shardId, out var shardRegionRef))
+                    {
+                        // shardRegion isn't allocated either
+                        sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, Address.AllSystems,
+                            Option<IActorRef>.None));
+                    }
+                    else
+                    {
+                        // ShardRegion exists, but shard is not homed
+                        sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId,
+                            GetNodeAddress(shardRegionRef), Option<IActorRef>.None));
+                    }
+
+                    return;
+                }
+
+                var destinationAddress = GetNodeAddress(shardActorRef);
+
+                async Task ResolveEntityRef()
+                {
+                    // we have a ShardRef - now we just need to check to see if an entity ref exists
+                    // we are going to
+
+                    var entityPath = shardActorRef.Path / shardId;
+
+                    try
+                    {
+                        var entityRef = await Context.ActorSelection(entityPath).ResolveOne(getEntityLocation.Timeout);
+                        sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress,
+                            new Option<IActorRef>(entityRef)));
+                    }
+                    catch (ActorNotFoundException ex)
+                    {
+                        // entity does not exist
+                        sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress,
+                            Option<IActorRef>.None));
+                    }
+                }
+
+#pragma warning disable CS4014
+                ResolveEntityRef(); // needs to run as a detached task
 #pragma warning restore CS4014
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "Error while trying to resolve GetEntityLocation query for entityId [{0}]", getEntityLocation.EntityId);
+                // unsupported entityId - could only happen in highly customized extractors
+                sender.Tell(new EntityLocation(getEntityLocation.EntityId, string.Empty, Address.AllSystems,
+                    Option<IActorRef>.None));
+            }
 
         }
 

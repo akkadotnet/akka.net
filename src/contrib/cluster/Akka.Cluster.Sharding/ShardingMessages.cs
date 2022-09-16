@@ -166,6 +166,9 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     /// <remarks>
     /// This is used primarily for testing and telemetry purposes.
+    ///
+    /// In order for this query to work, the <see cref="MessageExtractor"/> must support <see cref="ShardRegion.StartEntity"/>,
+    /// which is also used when remember-entities=on.
     /// </remarks>
     public sealed class GetEntityLocation : IShardRegionQuery
     {
