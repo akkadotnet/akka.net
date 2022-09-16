@@ -63,13 +63,16 @@ namespace Akka.Tests.Routing
 
             protected override void OnReceive(object message)
             {
-                PatternMatch.Match(message)
-                    .With<ListenerMessage>(l => Listeners.ListenerReceive(l))
-                    .With<string>(s =>
-                    {
+                switch (message)
+                {
+                    case ListenerMessage l:
+                        Listeners.ListenerReceive(l);
+                        break;
+                    case string s:
                         if (s.Equals("foo"))
                             Listeners.Gossip("bar");
-                    });
+                        break;
+                }
             }
 
             public ListenerSupport Listeners { get; private set; }
@@ -91,20 +94,19 @@ namespace Akka.Tests.Routing
 
             protected override void OnReceive(object message)
             {
-                PatternMatch.Match(message)
-                    .With<string>(str =>
+                if (message is string str)
+                {
+                    if (str.Equals("bar"))
                     {
-                        if (str.Equals("bar"))
-                        {
-                            _barCount.GetAndIncrement();
-                            _barLatch.CountDown();
-                        }
+                        _barCount.GetAndIncrement();
+                        _barLatch.CountDown();
+                    }
 
-                        if (str.Equals("foo"))
-                        {
-                            _fooLatch.CountDown();
-                        }
-                    });
+                    if (str.Equals("foo"))
+                    {
+                        _fooLatch.CountDown();
+                    }
+                }
             }
 
             public ListenerSupport Listeners { get; private set; }

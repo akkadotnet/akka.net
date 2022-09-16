@@ -47,39 +47,49 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveRecover(object message)
             {
-                return message.Match()
-                    .With<IEvt>(UpdateState)
-                    .With<SnapshotOffer>(o =>
-                    {
+                switch (message)
+                {
+                    case IEvt e:
+                        UpdateState(e);
+                        return true;
+                    case SnapshotOffer o:
                         var snap = (Snap)o.Snapshot;
                         SetDeliverySnapshot(snap.DeliverySnapshot);
-                    })
-                    .WasHandled;
+                        return true;
+                    default:
+                        return false;
+                }
             }
 
             protected override bool ReceiveCommand(object message)
             {
-                return message.Match()
-                    .With<Req>(req =>
+                switch (message)
+                {
+                    case Req req:
                     {
                         if (string.IsNullOrEmpty(req.Payload)) Sender.Tell(InvalidReq.Instance);
                         else
                         {
                             var c = char.ToUpper(req.Payload[0]);
                             var destination = _destinations[c.ToString()];
-                            if (_isAsync) PersistAsync(new AcceptedReq(req.Payload, destination.ToString()), e =>
-                            {
-                                UpdateState(e);
-                                Sender.Tell(ReqAck.Instance);
-                            });
-                            else Persist(new AcceptedReq(req.Payload, destination.ToString()), e =>
-                            {
-                                UpdateState(e);
-                                Sender.Tell(ReqAck.Instance);
-                            });
+                            if (_isAsync)
+                                PersistAsync(new AcceptedReq(req.Payload, destination.ToString()), e =>
+                                {
+                                    UpdateState(e);
+                                    Sender.Tell(ReqAck.Instance);
+                                });
+                            else
+                                Persist(new AcceptedReq(req.Payload, destination.ToString()), e =>
+                                {
+                                    UpdateState(e);
+                                    Sender.Tell(ReqAck.Instance);
+                                });
                         }
-                    })
-                    .With<ReqSelection>(msg =>
+
+                        return true;
+                    }
+                    
+                    case ReqSelection msg:
                     {
                         var c = char.ToUpper(msg.Payload[0]);
                         var destination = _destinations[c.ToString()];
@@ -88,59 +98,62 @@ namespace Akka.Persistence.Tests
                             UpdateState(e);
                             Sender.Tell(ReqAck.Instance);
                         });
-                    })
-                    .With<ActionAck>(ack =>
-                    {
+                        return true;
+                    }
+                    
+                    case ActionAck ack:
                         _log.Debug("Sender got ack: {0}", ack.Id);
                         if (ConfirmDelivery(ack.Id))
                         {
-                            if (_isAsync) PersistAsync(new ReqDone(ack.Id), done => UpdateState(done));
-                            else Persist(new ReqDone(ack.Id), done => UpdateState(done));
+                            if (_isAsync) PersistAsync(new ReqDone(ack.Id), UpdateState);
+                            else Persist(new ReqDone(ack.Id), UpdateState);
                         }
-                    })
-                    .With<Boom>(boom =>
-                    {
+
+                        return true;
+                    
+                    case Boom _:
                         _log.Debug("Boom!");
                         throw new Exception("boom");
-                    })
-                    .With<SaveSnap>(save =>
-                    {
+                    
+                    case SaveSnap _:
                         _log.Debug("Save snapshot");
                         _lastSnapshotAskedForBy = Sender;
                         SaveSnapshot(new Snap(GetDeliverySnapshot()));
-                    })
-                    .With<SaveSnapshotSuccess>(succ =>
-                    {
+                        return true;
+                    
+                    case SaveSnapshotSuccess succ:
                         _log.Debug("Save snapshot success!");
                         if (_lastSnapshotAskedForBy != null)
                             _lastSnapshotAskedForBy.Tell(succ);
-                    })
-                    .With<UnconfirmedWarning>(warn =>
-                    {
+                        return true;
+                    
+                    case UnconfirmedWarning warn:
                         _log.Debug("Sender got unconfirmed warning: unconfirmed deliveries count {0}", warn.UnconfirmedDeliveries.Count());
                         _testActor.Tell(warn);
-                    })
-                    .WasHandled;
+                        return true;
+                    
+                    default:
+                        return false;
+                }
             }
 
             private void UpdateState(IEvt evt)
             {
-                evt.Match()
-                    .With<AcceptedReq>(a =>
-                    {
+                switch (evt)
+                {
+                    case AcceptedReq a:
                         _log.Debug("Deliver(destination, deliveryId => Action(deliveryId, {0})), recovering: {1}", a.Payload, IsRecovering);
                         Deliver(ActorPath.Parse(a.DestinationPath), deliveryId => new Action(deliveryId, a.Payload));
-                    })
-                    .With<AcceptedSelectionReq>(a =>
-                    {
+                        break;
+                    case AcceptedSelectionReq a:
                         _log.Debug("Deliver(destination, deliveryId => Action(deliveryId, {0})), recovering: {1}", a.Payload, IsRecovering);
                         Deliver(Context.System.ActorSelection(a.DestinationPath), deliveryId => new Action(deliveryId, a.Payload));
-                    })
-                    .With<ReqDone>(r =>
-                    {
+                        break;
+                    case ReqDone r:
                         _log.Debug("ConfirmDelivery({0}), recovering: {1}", r.Id, IsRecovering);
                         ConfirmDelivery(r.Id);
-                    });
+                        break;
+                }
             }
         }
 

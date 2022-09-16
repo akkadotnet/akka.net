@@ -28,22 +28,23 @@ namespace Akka.Tests.Routing
 
             protected override void OnReceive(object message)
             {
-                message.Match()
-                    .With<(TestLatch, TestLatch)>(t =>
-                    {
-                        TestLatch busy = t.Item1, receivedLatch = t.Item2;
+                switch (message)
+                {
+                    case (TestLatch busy, TestLatch receivedLatch) _:
                         usedActors.TryAdd(0, Self.Path.ToString());
                         Self.Tell("another in busy mailbox");
                         receivedLatch.CountDown();
                         busy.Ready(TestLatch.DefaultTimeout);
-                    })
-                    .With<(int, TestLatch)>(t =>
-                    {
-                        var msg = t.Item1; var receivedLatch = t.Item2;
+                        break;
+                    
+                    case (int msg, TestLatch receivedLatch) _:
                         usedActors.TryAdd(msg, Self.Path.ToString());
                         receivedLatch.CountDown();
-                    })
-                    .With<string>(t => { });
+                        break;
+                    
+                    case string _:
+                        break;
+                }
             }
         }
 

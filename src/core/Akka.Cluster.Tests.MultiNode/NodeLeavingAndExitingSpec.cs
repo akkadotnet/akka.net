@@ -46,25 +46,24 @@ namespace Akka.Cluster.Tests.MultiNode
 
             protected override void OnReceive(object message)
             {
-                message.Match()
-                    .With<ClusterEvent.CurrentClusterState>(state =>
-                    {
+                switch (message)
+                {
+                    case ClusterEvent.CurrentClusterState state:
                         if (state.Members.Any(c => c.Address.Equals(_secondAddress) && c.Status == MemberStatus.Exiting))
                         {
                             _exitingLatch.CountDown();
                         }
-                    })
-                    .With<ClusterEvent.MemberExited>(m =>
-                    {
+                        break;
+                    case ClusterEvent.MemberExited m:
                         if (m.Member.Address.Equals(_secondAddress))
                         {
                             _exitingLatch.CountDown();
                         }
-                    })
-                    .With<ClusterEvent.MemberRemoved>(_ =>
-                    {
+                        break;
+                    case ClusterEvent.MemberRemoved _:
                         // not tested here
-                    });
+                        break;
+                }
             }
         }
 

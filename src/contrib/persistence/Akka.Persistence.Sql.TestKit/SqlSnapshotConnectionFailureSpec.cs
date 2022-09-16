@@ -49,20 +49,38 @@ namespace Akka.Persistence.Sql.TestKit
 
             protected override bool ReceiveRecover(object message)
             {
-                return message.Match()
-                    .With<SnapshotOffer>(offer => _state = offer.Snapshot as LinkedList<string>)
-                    .With<string>(m => _state.AddFirst(m + "-" + LastSequenceNr))
-                    .WasHandled;
+                switch (message)
+                {
+                    case SnapshotOffer offer:
+                        _state = (LinkedList<string>)offer.Snapshot;
+                        return true;
+                    case string m:
+                        _state.AddFirst(m + "-" + LastSequenceNr);
+                        return true;
+                    default:
+                        return false;
+                }
             }
 
             protected override bool ReceiveCommand(object message)
             {
-                return message.Match()
-                    .With<string>(payload => Persist(payload, _ => _state.AddFirst(payload + "-" + LastSequenceNr)))
-                    .With<TakeSnapshot>(_ => SaveSnapshot(_state))
-                    .With<SaveSnapshotSuccess>(s => _probe.Tell(s.Metadata.SequenceNr))
-                    .With<GetState>(_ => _probe.Tell(_state.Reverse().ToArray()))
-                    .WasHandled;
+                switch (message)
+                {
+                    case string payload:
+                        Persist(payload, _ => _state.AddFirst(payload + "-" + LastSequenceNr));
+                        return true;
+                    case TakeSnapshot _:
+                        SaveSnapshot(_state);
+                        return true;
+                    case SaveSnapshotSuccess s:
+                        _probe.Tell(s.Metadata.SequenceNr);
+                        return true;
+                    case GetState _:
+                        _probe.Tell(_state.Reverse().ToArray());
+                        return true;
+                    default:
+                        return false;
+                }
             }
         }
 

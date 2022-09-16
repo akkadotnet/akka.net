@@ -150,30 +150,34 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         private void Idle(object message)
         {
-            message.Match()
-                .With<RegisterConsumer>(_ =>
-                {
+            switch (message)
+            {
+                case RegisterConsumer _:
                     _log.Info("Register consumer [{0}]", Sender.Path);
                     Sender.Tell(RegistrationOk.Instance);
                     Context.Become(Active(Sender));
-                })
-                .With<UnregisterConsumer>(_ =>
-                {
+                    break;
+                case UnregisterConsumer _:
                     _log.Info("Unexpected unregistration: [{0}]", Sender.Path);
                     Sender.Tell(UnexpectedRegistration.Instance);
                     Context.Stop(Self);
-                })
-                .With<Reset>(_ => Sender.Tell(ResetOk.Instance))
-                .Default(msg => { });
+                    break;
+                case Reset _:
+                    Sender.Tell(ResetOk.Instance);
+                    break;
+                default:
+                    // no-op
+                    break;
+            }
         }
 
         private UntypedReceive Active(IActorRef consumer)
         {
             return message =>
             {
-                message.Match()
-                    .With<UnregisterConsumer>(_ =>
-                    {
+                switch (message)
+                {
+                    case UnregisterConsumer _:
                         if (Sender.Equals(consumer))
                         {
                             _log.Info("UnregistrationOk: [{0}]", Sender.Path);
@@ -186,19 +190,23 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                             Sender.Tell(UnexpectedUnregistration.Instance);
                             Context.Stop(Self);
                         }
-                    })
-                    .With<RegisterConsumer>(_ =>
-                    {
+                        break;
+                    
+                    case RegisterConsumer _:
                         _log.Info("Unexpected RegisterConsumer: [{0}], active consumer: [{1}]", Sender.Path, consumer.Path);
                         Sender.Tell(UnexpectedRegistration.Instance);
                         Context.Stop(Self);
-                    })
-                    .With<Reset>(_ =>
-                    {
+                        break;
+                    
+                    case Reset _:
                         Context.Become(Idle);
                         Sender.Tell(ResetOk.Instance);
-                    })
-                    .Default(msg => consumer.Tell(msg));
+                        break;
+                    
+                    default:
+                        consumer.Tell(message);
+                        break;
+                }
             };
         }
 

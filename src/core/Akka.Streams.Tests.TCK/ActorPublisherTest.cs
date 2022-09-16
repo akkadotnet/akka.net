@@ -75,11 +75,15 @@ namespace Akka.Streams.Tests.TCK
                 }
             }
 
-            protected override bool Receive(object message) =>
-                message.Match()
-                    .With<Request>(_ => LoopDemand())
-                    .With<Produce>(_ =>
-                    {
+            protected override bool Receive(object message)
+            {
+                switch (message)
+                {
+                    case Request _:
+                        LoopDemand();
+                        return true;
+                    
+                    case Produce _:
                         if (TotalDemand > 0 && !IsCompleted && _current < _count)
                             OnNext(_current++);
                         else if (!IsCompleted && _current == _count)
@@ -88,11 +92,13 @@ namespace Akka.Streams.Tests.TCK
                         {
                             //no-op
                         }
-                    }).Default(_ =>
-                    {
+                        return true;
+                    
+                    default:
                         //no-op
-                    })
-                    .WasHandled;
+                        return true;
+                }
+            }
 
             private void LoopDemand()
             {
