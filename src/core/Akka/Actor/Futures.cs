@@ -438,9 +438,9 @@ namespace Akka.Actor
         {
             while (true)
             {
-                if (State == null)
+                switch (State)
                 {
-                    if (UpdateState(null, Registering.Instance))
+                    case null when UpdateState(null, Registering.Instance):
                     {
                         ActorPath p = null;
                         try
@@ -454,21 +454,19 @@ namespace Akka.Actor
                             State = p;
                         }
                     }
-                    continue;
+                    case null:
+                        continue;
+                    case ActorPath _:
+                        return State as ActorPath;
+                    case StoppedWithPath stoppedWithPath:
+                        return stoppedWithPath.Path;
+                    case Stopped _:
+                        //even if we are already stopped we still need to produce a proper path
+                        UpdateState(Stopped.Instance, new StoppedWithPath(Provider.TempPath()));
+                        continue;
+                    case Registering _:
+                        continue;
                 }
-
-                if (State is ActorPath)
-                    return State as ActorPath;
-                if (State is StoppedWithPath)
-                    return State.AsInstanceOf<StoppedWithPath>().Path;
-                if (State is Stopped)
-                {
-                    //even if we are already stopped we still need to produce a proper path
-                    UpdateState(Stopped.Instance, new StoppedWithPath(Provider.TempPath()));
-                    continue;
-                }
-                if (State is Registering)
-                    continue;
             }
         }
 
@@ -494,14 +492,12 @@ namespace Akka.Actor
         public override void SendSystemMessage(ISystemMessage message)
         {
             if (message is Terminate) Stop();
-            else if (message is DeathWatchNotification)
+            else if (message is DeathWatchNotification dw)
             {
-                var dw = message as DeathWatchNotification;
                 Tell(new Terminated(dw.Actor, dw.ExistenceConfirmed, dw.AddressTerminated), this);
             }
-            else if (message is Watch)
+            else if (message is Watch watch)
             {
-                var watch = message as Watch;
                 if (Equals(watch.Watchee, this))
                 {
                     if (!AddWatcher(watch.Watcher))
@@ -517,9 +513,8 @@ namespace Akka.Actor
                     }
                 }
             }
-            else if (message is Unwatch)
+            else if (message is Unwatch unwatch)
             {
-                var unwatch = message as Unwatch;
                 if (Equals(unwatch.Watchee, this) && !Equals(unwatch.Watcher, this)) RemoveWatcher(unwatch.Watcher);
                 else Console.WriteLine("BUG: illegal Unwatch({0},{1}) for {2}", unwatch.Watchee, unwatch.Watcher, this);
             }
@@ -539,9 +534,8 @@ namespace Akka.Actor
                     if (UpdateState(null, Stopped.Instance)) StopEnsureCompleted();
                     else continue;
                 }
-                else if (state is ActorPath)
+                else if (state is ActorPath p)
                 {
-                    var p = state as ActorPath;
                     if (UpdateState(p, new StoppedWithPath(p)))
                     {
                         try
