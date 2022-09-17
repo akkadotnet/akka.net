@@ -165,13 +165,6 @@ Possible reasons for disabling remember entity storage are:
 
 For supporting remembered entities in an environment without disk storage but with access to a database, use persistence mode instead.
 
-> [!NOTE]
-> Currently, Lightning.NET library, the storage solution used to store DData in disk, is having problem
-> deploying native library files in [Linux operating system operating in x64 and ARM platforms]
-> (<https://github.com/CoreyKaylor/Lightning.NET/issues/141>).
->
-> You will need to install LightningDB in your Linux distribution manually if you wanted to use the durable DData feature.
-
 ### Terminating Remembered Entities
 
 One complication that  `akka.cluster.sharding.remember-entities = true` introduces is that your sharded entity actors can no longer be terminated through the normal Akka.NET channels, i.e. `Context.Stop(Self)`, `PoisonPill.Instance`, and the like. This is because as part of the `remember-entities` contract - the sharding system is going to insist on keeping all remembered entities alive until explicitly told to stop.
@@ -216,6 +209,19 @@ You can inspect current sharding stats by using following messages:
 
 * On `GetShardRegionState` shard region will reply with `ShardRegionState` containing data about shards living in the current actor system and what entities are alive on each one of them.
 * On `GetClusterShardingStats` shard region will reply with `ClusterShardingStats` having information about shards living in the whole cluster and how many entities alive in each one of them.
+
+### Querying for the Location of Specific Entities
+
+It's possible to query a `ShardRegion` or a `ShardRegionProxy` using a `GetEntityLocation` query:
+
+[!code-csharp[ShardedDaemonProcessSpec.cs](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/ShardRegionQueriesSpecs.cs?name=GetEntityLocationQuery)]
+
+A `GetEntityLocation` query will always return an `EntityLocation` response - even if the query could not be executed.
+
+> [!IMPORTANT]
+> One major caveat is that in order for the `GetEntityLocation` to execute your `IMessageExtractor` or `ShardExtractor` delegate will need to support the `ShardRegion.StartEntity` message - just like you'd have to use in order to support `remember-entities=on`:
+
+[!code-csharp[ShardedDaemonProcessSpec.cs](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/ShardRegionQueriesSpecs.cs?name=GetEntityLocationExtractor)]
 
 ## Integrating Cluster Sharding with Persistent Actors
 
