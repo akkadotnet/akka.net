@@ -37,7 +37,7 @@ jobs:
   - job: DocsMarkdownLinting
     displayName: "Docs: Markdown Linting"
     pool:
-      vmImage: ubuntu-20.04
+      vmImage: ubuntu-latest
     steps:
       - checkout: self # self represents the repo where the initial Pipelines YAML file was found
         clean: false # whether to fetch clean each time
@@ -118,7 +118,7 @@ jobs:
     parameters:
       name: "net_core_tests_linux"
       displayName: ".NET Core Unit Tests (Linux)"
-      vmImage: "ubuntu-18.04"
+      vmImage: "ubuntu-latest"
       scriptFileName: "./build.sh"
       scriptArgs: runTestsNetCore incremental
       outputDirectory: "TestResults"
@@ -149,7 +149,7 @@ jobs:
     parameters:
       name: "net_6_tests_linux"
       displayName: ".NET 6 Unit Tests (Linux)"
-      vmImage: "ubuntu-18.04"
+      vmImage: "ubuntu-latest"
       scriptFileName: "./build.sh"
       scriptArgs: runTestsNet incremental
       outputDirectory: "TestResults"
