@@ -31,9 +31,24 @@ namespace Akka.Tests.Actor
 
             // assert
             stopped.Should().BeTrue();
-           
         }
-        
+
+        [Fact(DisplayName = "GracefulStop should return true for an already terminated actor")]
+        public async Task GracefulStopShouldReturnTrueForAlreadyDeadActor()
+        {
+            // arrange
+            var actor = Sys.ActorOf(BlackHoleActor.Props);
+            Watch(actor);
+
+            // act
+            Sys.Stop(actor);
+            await ExpectTerminatedAsync(actor);
+            var stopped = await actor.GracefulStop(TimeSpan.FromSeconds(3));
+
+            // assert
+            stopped.Should().BeTrue();
+        }
+
         private class CustomShutdown{}
 
         [Fact(DisplayName = "GracefulStop should return false if shutdown goes overtime", Skip = "GracefulStop currently throws a TaskCancellationException, which seems wrong")]
