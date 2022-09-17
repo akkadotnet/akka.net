@@ -17,6 +17,6 @@ jobs:
 - template: azure-pipeline.template.yaml
   parameters:
     name: Ubuntu
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-latest'
     scriptFileName: ./build.sh
     scriptArgs: all
