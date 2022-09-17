@@ -87,6 +87,14 @@ namespace Akka.Cluster.Sharding
         public readonly System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> Shards;
         public CurrentShardRegionState(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> shards) { }
     }
+    public sealed class EntityLocation
+    {
+        public EntityLocation(string entityId, string shardId, Akka.Actor.Address shardRegion, Akka.Util.Option<Akka.Actor.IActorRef> entityRef) { }
+        public string EntityId { get; }
+        public Akka.Util.Option<Akka.Actor.IActorRef> EntityRef { get; }
+        public string ShardId { get; }
+        public Akka.Actor.Address ShardRegion { get; }
+    }
     public class static EnumerableExtensions
     {
         public static System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> Grouped<T>(this System.Collections.Generic.IEnumerable<T> items, int size) { }
@@ -104,6 +112,12 @@ namespace Akka.Cluster.Sharding
     public sealed class GetCurrentRegions : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
     {
         public static readonly Akka.Cluster.Sharding.GetCurrentRegions Instance;
+    }
+    public sealed class GetEntityLocation : Akka.Cluster.Sharding.IShardRegionQuery
+    {
+        public GetEntityLocation(string entityId, System.TimeSpan timeout) { }
+        public string EntityId { get; }
+        public System.TimeSpan Timeout { get; }
     }
     public sealed class GetShardRegionState : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
     {
