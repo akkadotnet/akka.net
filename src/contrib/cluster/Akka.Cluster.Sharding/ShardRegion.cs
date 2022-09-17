@@ -1059,7 +1059,9 @@ namespace Akka.Cluster.Sharding
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "Error while trying to resolve GetEntityLocation query for entityId [{0}]",
+                _log.Error(ex, "Error while trying to resolve GetEntityLocation query for entityId [{0}]. " +
+                               "Does MessageExtractor support `ShardRegion.StartEntity`? " +
+                               "If not, that's why you might be receiving this error.",
                     getEntityLocation.EntityId);
                 // unsupported entityId - could only happen in highly customized extractors
                 sender.Tell(new EntityLocation(getEntityLocation.EntityId, string.Empty, Address.AllSystems,

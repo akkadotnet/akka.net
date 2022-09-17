@@ -64,18 +64,22 @@ namespace Akka.Cluster.Sharding.Tests
             throw new NotSupportedException();
         }
 
+        // <GetEntityLocationExtractor>
         private string ExtractShardId(object message)
         {
             switch (message)
             {
                 case int i:
                     return (i % 10).ToString();
+                // must support ShardRegion.StartEntity in order for
+                // GetEntityLocation to work properly
                 case ShardRegion.StartEntity se:
                     return se.EntityId;
             }
 
             throw new NotSupportedException();
         }
+        // </GetEntityLocationExtractor>
 
         private static Config GetConfig()
         {
@@ -87,6 +91,32 @@ namespace Akka.Cluster.Sharding.Tests
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(DistributedData.DistributedData.DefaultConfig())
                 .WithFallback(ClusterSingletonManager.DefaultConfig());
+        }
+
+        /// <summary>
+        /// DocFx material for demonstrating how this query type works
+        /// </summary>
+        [Fact]
+        public async Task ShardRegion_GetEntityLocation_DocumentationSpec()
+        {
+            // <GetEntityLocationQuery>
+            // creates an entity with entityId="1"
+            await _shardRegion.Ask<int>(1, TimeSpan.FromSeconds(3));
+            
+            // determine where entity with "entityId=1" is located in cluster
+            var q1 = await _shardRegion.Ask<EntityLocation>(new GetEntityLocation("1", TimeSpan.FromSeconds(1)));
+
+            q1.EntityId.Should().Be("1");
+            
+            // have a valid ShardId
+            q1.ShardId.Should().NotBeEmpty();
+            
+            // have valid address for node that will / would host entity
+            q1.ShardRegion.Should().NotBe(Address.AllSystems); // has real address
+            
+            // if entity actor is alive, will retrieve a reference to it
+            q1.EntityRef.HasValue.Should().BeTrue();
+            // </GetEntityLocationQuery>
         }
 
         [Fact(DisplayName = "ShardRegion should support GetEntityLocation queries locally")]
@@ -127,8 +157,6 @@ namespace Akka.Cluster.Sharding.Tests
             
             await shardRegionProxy.Ask<int>(1, TimeSpan.FromSeconds(3));
             await shardRegionProxy.Ask<int>(2, TimeSpan.FromSeconds(3));
-
-            
 
             // act
             var q1 = await shardRegionProxy.Ask<EntityLocation>(new GetEntityLocation("1", TimeSpan.FromSeconds(1)));
