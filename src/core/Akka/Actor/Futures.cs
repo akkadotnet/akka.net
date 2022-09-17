@@ -126,7 +126,7 @@ namespace Akka.Actor
             var result = TaskEx.NonBlockingTaskCompletionSource<T>();
 
             CancellationTokenSource timeoutCancellation = null;
-            timeout = timeout ?? provider.Settings.AskTimeout;
+            timeout ??= provider.Settings.AskTimeout;
 
             CancellationTokenRegistration? ctr1 = null;
             CancellationTokenRegistration? ctr2 = null;
@@ -176,16 +176,22 @@ namespace Akka.Actor
         /// <returns>Provider used for Ask pattern implementation</returns>
         internal static IActorRefProvider ResolveProvider(ICanTell self)
         {
-            if (self is ActorSelection selection)
-                return ResolveProvider(selection.Anchor);
+            while (true)
+            {
+                switch (self)
+                {
+                    case ActorSelection selection:
+                        self = selection.Anchor;
+                        continue;
+                    case IInternalActorRef actorRef:
+                        return actorRef.Provider;
+                }
 
-            if (self is IInternalActorRef actorRef)
-                return actorRef.Provider;
+                if (ActorCell.Current is ActorCell cell) return cell.SystemImpl.Provider;
 
-            if (ActorCell.Current is ActorCell cell)
-                return cell.SystemImpl.Provider;
-
-            return null;
+                return null;
+                break;
+            }
         }
     }
 
@@ -244,12 +250,11 @@ namespace Akka.Actor
         {
             private Registering() { }
             // ReSharper disable once InconsistentNaming
-            private static readonly Registering _instance = new Registering();
 
             /// <summary>
             /// TBD
             /// </summary>
-            public static Registering Instance { get { return _instance; } }
+            public static Registering Instance { get; } = new Registering();
         }
 
         /// <summary>
@@ -259,12 +264,11 @@ namespace Akka.Actor
         {
             private Stopped() { }
             // ReSharper disable once InconsistentNaming
-            private static readonly Stopped _instance = new Stopped();
 
             /// <summary>
-            /// TBD
+            /// Singleton instance.
             /// </summary>
-            public static Stopped Instance { get { return _instance; } }
+            public static Stopped Instance { get; } = new Stopped();
         }
 
         /// <summary>
@@ -337,28 +341,37 @@ namespace Akka.Actor
             sender = sender ?? ActorRefs.NoSender;
             var result = new TaskCompletionSource<object>();
             var a = new PromiseActorRef(provider, result, messageClassName);
-            var cancellationSource = new CancellationTokenSource();
-            cancellationSource.Token.Register(CancelAction, result);
-            cancellationSource.CancelAfter(timeout);
 
-            //var scheduler = provider.Guardian.Underlying.System.Scheduler.Advanced;
-            //var c = new Cancelable(scheduler, timeout);
-            //scheduler.ScheduleOnce(timeout, () => result.TrySetResult(new Status.Failure(new AskTimeoutException(
-            //    string.Format("Ask timed out on [{0}] after [{1} ms]. Sender[{2}] sent message of type {3}.", targetName, timeout.TotalMilliseconds, sender, messageClassName)))),
-            //    c);
-
-            result.Task.ContinueWith(r =>
+            if (timeout != TimeSpan.Zero)
             {
-                a.Stop();
-            }, TaskContinuationOptions.ExecuteSynchronously);
+                // avoid CTS + delegate allocation if timeouts aren't needed
+                var cancellationSource = new CancellationTokenSource();
+                cancellationSource.Token.Register(CancelAction, result);
+                cancellationSource.CancelAfter(timeout);
+            }
+
+
+            async Task ExecPromise()
+            {
+                try
+                {
+                    await result.Task;
+                }
+                finally
+                {
+                    a.Stop();
+                }
+            }
+
+#pragma warning disable CS4014
+            ExecPromise(); // need this to run as a detached task
+#pragma warning restore CS4014
 
             return a;
         }
 
         #endregion
-
-        //TODO: ActorCell.emptyActorRefSet ?
-        // Aaronontheweb: using the ImmutableHashSet.Empty for now
+        
         private readonly AtomicReference<ImmutableHashSet<IActorRef>> _watchedByDoNotCallMeDirectly = new AtomicReference<ImmutableHashSet<IActorRef>>(ImmutableHashSet<IActorRef>.Empty);
 
         private ImmutableHashSet<IActorRef> WatchedBy
@@ -399,7 +412,6 @@ namespace Akka.Actor
 
         private ImmutableHashSet<IActorRef> ClearWatchers()
         {
-            //TODO: ActorCell.emptyActorRefSet ?
             if (WatchedBy == null || WatchedBy.IsEmpty) return ImmutableHashSet<IActorRef>.Empty;
             if (!UpdateWatchedBy(WatchedBy, null)) return ClearWatchers();
             else return WatchedBy;
@@ -491,32 +503,39 @@ namespace Akka.Actor
         /// <inheritdoc cref="InternalActorRefBase.SendSystemMessage(ISystemMessage)"/>
         public override void SendSystemMessage(ISystemMessage message)
         {
-            if (message is Terminate) Stop();
-            else if (message is DeathWatchNotification dw)
+            switch (message)
             {
-                Tell(new Terminated(dw.Actor, dw.ExistenceConfirmed, dw.AddressTerminated), this);
-            }
-            else if (message is Watch watch)
-            {
-                if (Equals(watch.Watchee, this))
+                case Terminate _:
+                    Stop();
+                    break;
+                case DeathWatchNotification dw:
+                    Tell(new Terminated(dw.Actor, dw.ExistenceConfirmed, dw.AddressTerminated), this);
+                    break;
+                case Watch watch:
                 {
-                    if (!AddWatcher(watch.Watcher))
+                    if (Equals(watch.Watchee, this))
                     {
-                        // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
-                        watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, existenceConfirmed: true,
-                            addressTerminated: false));
+                        if (!AddWatcher(watch.Watcher))
+                        {
+                            // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
+                            watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, existenceConfirmed: true,
+                                addressTerminated: false));
+                        }
+                        else
+                        {
+                            //TODO: find a way to get access to logger?
+                            Console.WriteLine("BUG: illegal Watch({0},{1}) for {2}", watch.Watchee, watch.Watcher, this);
+                        }
                     }
-                    else
-                    {
-                        //TODO: find a way to get access to logger?
-                        Console.WriteLine("BUG: illegal Watch({0},{1}) for {2}", watch.Watchee, watch.Watcher, this);
-                    }
+
+                    break;
                 }
-            }
-            else if (message is Unwatch unwatch)
-            {
-                if (Equals(unwatch.Watchee, this) && !Equals(unwatch.Watcher, this)) RemoveWatcher(unwatch.Watcher);
-                else Console.WriteLine("BUG: illegal Unwatch({0},{1}) for {2}", unwatch.Watchee, unwatch.Watcher, this);
+                case Unwatch unwatch when Equals(unwatch.Watchee, this) && !Equals(unwatch.Watcher, this):
+                    RemoveWatcher(unwatch.Watcher);
+                    break;
+                case Unwatch unwatch:
+                    Console.WriteLine("BUG: illegal Unwatch({0},{1}) for {2}", unwatch.Watchee, unwatch.Watcher, this);
+                    break;
             }
         }
 

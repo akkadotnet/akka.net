@@ -72,34 +72,30 @@ namespace Akka.Actor
         /// This exception is thrown if the underlying task is <see cref="TaskStatus.Canceled"/>.
         /// </exception>
         /// <returns>A <see cref="Task"/> that will return <c>true</c> if the <see cref="target"/> shuts down within <see cref="timeout"/></returns>
-        public static Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout, object stopMessage)
+        public static async Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout, object stopMessage)
         {
             var internalTarget = target.AsInstanceOf<IInternalActorRef>();
 
             var promiseRef = PromiseActorRef.Apply(internalTarget.Provider, timeout, target, stopMessage.GetType().Name);
             internalTarget.SendSystemMessage(new Watch(internalTarget, promiseRef));
             target.Tell(stopMessage, ActorRefs.NoSender);
-            return promiseRef.Result.ContinueWith(t =>
+
+            try
             {
-                if (t.Status == TaskStatus.RanToCompletion)
+                var result = await promiseRef.Result;
+                switch (result)
                 {
-                    switch (t.Result)
-                    {
-                        case Terminated terminated:
-                            return terminated.ActorRef.Path.Equals(target.Path);
-                        default:
-                            internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
-                            return false;
-                        
-                    }
+                    case Terminated terminated:
+                        return terminated.ActorRef.Path.Equals(target.Path);
+                    default:
+                        return false;
                 }
-                
+            }
+            finally
+            {
+                // need to cleanup DeathWatch afterwards
                 internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
-                if (t.Status == TaskStatus.Canceled)
-                    throw new TaskCanceledException();
-                
-                throw t.Exception;
-            }, TaskContinuationOptions.ExecuteSynchronously);
+            }
         }
     }
 }

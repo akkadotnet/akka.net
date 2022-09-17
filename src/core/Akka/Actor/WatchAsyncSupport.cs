@@ -16,15 +16,15 @@ namespace Akka.Actor
     /// </summary>
     public static class WatchAsyncSupport
     {
-        public static Task WatchAsync(this IActorRef target)
-        {
-            if (target is IInternalActorRef internalActorRef)
-            {
-                var promiseRef = PromiseActorRef.Apply(internalActorRef.Provider, )
-            }
-
-            throw new InvalidOperationException(
-                $"{target} is not an {typeof(IInternalActorRef)} and cannot be death-watched");
-        }
+        // public static Task WatchAsync(this IActorRef target)
+        // {
+        //     if (target is IInternalActorRef internalActorRef)
+        //     {
+        //         var promiseRef = PromiseActorRef.Apply(internalActorRef.Provider, )
+        //     }
+        //
+        //     throw new InvalidOperationException(
+        //         $"{target} is not an {typeof(IInternalActorRef)} and cannot be death-watched");
+        // }
     }
 }
