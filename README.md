@@ -1,6 +1,6 @@
 # Akka.NET
 
-![Akka.NET logo](https://github.com/akkadotnet/akka.net/blob/v1.4/docs/shfb/icons/AkkaNetLogo.Normal.png)
+![Akka.NET logo](https://raw.githubusercontent.com/akkadotnet/akka.net/v1.4/docs/shfb/icons/AkkaNetLogo.Normal.png)
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/akkadotnet/akka.net?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
@@ -14,7 +14,7 @@
 
 Akka.NET is a [.NET Foundation](https://dotnetfoundation.org/) project.
 
-![.NET Foundation Logo](https://github.com/akkadotnet/akka.net/blob/dev/docs/images/dotnetfoundationhorizontal.svg)
+![.NET Foundation Logo](https://raw.githubusercontent.com/akkadotnet/akka.net/v1.4/docs/images/dotnetfoundationhorizontal.svg)
 
 ## How is Akka.NET Used?
 
