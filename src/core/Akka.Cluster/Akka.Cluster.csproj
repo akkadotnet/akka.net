@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster</AssemblyTitle>
-    <Description>Cluster support for Akka.NET</Description>
+    <Description>Clustering support for Akka.NET actors. Used to build highly-available, distributed applications.</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;cluster</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
