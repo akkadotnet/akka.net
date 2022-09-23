@@ -16,6 +16,7 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Internal;
+using Get = Akka.DistributedData.Get;
 
 namespace Akka.Cluster.Sharding
 {
@@ -925,9 +926,89 @@ namespace Akka.Cluster.Sharding
                 case GetShardRegionStatus _:
                     Sender.Tell(new ShardRegionStatus(_typeName, _coordinator != null));
                     break;
+                case GetEntityLocation g:
+                    ReplyToGetEntityLocationQuery(g, Sender);
+                    break;
                 default:
                     Unhandled(query);
                     break;
+            }
+        }
+
+        private void ReplyToGetEntityLocationQuery(GetEntityLocation getEntityLocation, IActorRef sender)
+        {
+            // Get the Address of the remote IActorRef, or return our Cluster.SelfAddress is the shard / entity
+            // is hosted locally.
+            Address GetNodeAddress(IActorRef shardOrRegionRef)
+            {
+                return shardOrRegionRef.Path.Address.HasGlobalScope
+                    ? shardOrRegionRef.Path.Address
+                    : _cluster.SelfAddress;
+            }
+
+            try
+            {
+                var shardId = _extractShardId(new StartEntity(getEntityLocation.EntityId));
+                if (string.IsNullOrEmpty(shardId))
+                {
+                    // unsupported entityId - could only happen in highly customized extractors
+                    sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, Address.AllSystems,
+                        Option<IActorRef>.None));
+                    return;
+                }
+                
+                async Task ResolveEntityRef(Address destinationAddress, ActorPath entityPath)
+                {
+                    // now we just need to check to see if an entity ref exists
+                    try
+                    {
+                        var entityRef = await Context.ActorSelection(entityPath).ResolveOne(getEntityLocation.Timeout);
+                        sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress,
+                            new Option<IActorRef>(entityRef)));
+                    }
+                    catch (ActorNotFoundException ex)
+                    {
+                        // entity does not exist
+                        sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress,
+                            Option<IActorRef>.None));
+                    }
+                }
+
+                if (!_shards.TryGetValue(shardId, out var shardActorRef))
+                {
+                    // shard is not homed yet, so try looking up the ShardRegion
+                    if (!_regionByShard.TryGetValue(shardId, out var shardRegionRef))
+                    {
+                        // shardRegion isn't allocated either
+                        sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, Address.AllSystems,
+                            Option<IActorRef>.None));
+                    }
+                    else
+                    {
+                        // ShardRegion exists, but shard is not homed
+                        // NOTE: in the event that we're querying a shard's location from a ShardRegionProxy
+                        // the shard may not be technically "homed" inside the proxy, but it does exist.
+#pragma warning disable CS4014
+                        ResolveEntityRef(GetNodeAddress(shardRegionRef), shardRegionRef.Path / shardId / shardId); // needs to run as a detached task
+#pragma warning restore CS4014
+                    }
+
+                    return;
+                }
+                
+#pragma warning disable CS4014
+                ResolveEntityRef(GetNodeAddress(shardActorRef), shardActorRef.Path / shardId); // needs to run as a detached task
+#pragma warning restore CS4014
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "Error while trying to resolve GetEntityLocation query for entityId [{0}]. " +
+                               "Does MessageExtractor support `ShardRegion.StartEntity`? " +
+                               "If not, that's why you might be receiving this error.",
+                    getEntityLocation.EntityId);
+                // unsupported entityId - could only happen in highly customized extractors
+                sender.Tell(new EntityLocation(getEntityLocation.EntityId, string.Empty, Address.AllSystems,
+                    Option<IActorRef>.None));
             }
         }
 

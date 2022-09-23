@@ -10,15 +10,24 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Cluster.Sharding
 {
     using ShardId = String;
 
     /// <summary>
-    /// Marker interface for all <see cref="ShardRegion"/> commands.
+    /// Marker interface for commands that can be sent to a <see cref="ShardRegion"/>.
     /// </summary>
     public interface IShardRegionCommand { }
+    
+    /// <summary>
+    /// Marker interface for read-only queries that can be sent to a <see cref="ShardRegion"/>.
+    /// </summary>
+    /// <remarks>
+    /// These have no side-effects on the state of the sharding system. 
+    /// </remarks>
+    public interface IShardRegionQuery { }
 
     /// <summary>
     /// If the state of the entities are persistent you may stop entities that are not used to
@@ -131,11 +140,6 @@ namespace Akka.Cluster.Sharding
     }
 
     /// <summary>
-    /// TBD
-    /// </summary>
-    public interface IShardRegionQuery { }
-
-    /// <summary>
     /// Send this message to the <see cref="ShardRegion"/> actor to request for <see cref="CurrentRegions"/>,
     /// which contains the addresses of all registered regions.
     /// Intended for testing purpose to see when cluster sharding is "ready" or to monitor
@@ -154,6 +158,77 @@ namespace Akka.Cluster.Sharding
         }
         
         public override string ToString() => $"GetCurrentRegions";
+    }
+
+    /// <summary>
+    /// Send this message to a <see cref="ShardRegion"/> actor to determine the location and liveness
+    /// of a specific entity actor in the region.
+    ///
+    /// Creates a <see cref="EntityLocation"/> message in response.
+    /// </summary>
+    /// <remarks>
+    /// This is used primarily for testing and telemetry purposes.
+    ///
+    /// In order for this query to work, the <see cref="MessageExtractor"/> must support <see cref="ShardRegion.StartEntity"/>,
+    /// which is also used when remember-entities=on.
+    /// </remarks>
+    public sealed class GetEntityLocation : IShardRegionQuery
+    {
+        public GetEntityLocation(string entityId, TimeSpan timeout)
+        {
+            EntityId = entityId;
+            Timeout = timeout;
+        }
+
+        /// <summary>
+        /// The id of the entity we're searching for.
+        /// </summary>
+        public string EntityId { get; }
+        
+        /// <summary>
+        /// Used to timeout the Ask{T} operation used to identify whether or not
+        /// this entity actor currently exists.
+        /// </summary>
+        public TimeSpan Timeout { get; }
+    }
+
+    /// <summary>
+    /// Response to a <see cref="GetEntityLocation"/> query.
+    /// </summary>
+    /// <remarks>
+    /// In the event that no ShardId can be extracted for the given <see cref="EntityId"/>, we will return
+    /// <see cref="string.Empty"/> and <see cref="Address.AllSystems"/> for the shard and shard region respectively.
+    /// </remarks>
+    public sealed class EntityLocation
+    {
+        public EntityLocation(string entityId, string shardId, Address shardRegion, Option<IActorRef> entityRef)
+        {
+            EntityId = entityId;
+            ShardId = shardId;
+            ShardRegion = shardRegion ?? Address.AllSystems;
+            EntityRef = entityRef;
+        }
+
+        /// <summary>
+        /// The Id of the entity.
+        /// </summary>
+        public string EntityId { get; }
+        
+        /// <summary>
+        /// The shard Id that would host this entity.
+        /// </summary>
+        public string ShardId { get; }
+        
+        /// <summary>
+        /// The <see cref="ShardRegion"/> in the cluster that would host
+        /// this particular entity.
+        /// </summary>
+        public Address ShardRegion { get; }
+        
+        /// <summary>
+        /// Optional - a reference to this entity actor, if it's alive.
+        /// </summary>
+        public Option<IActorRef> EntityRef { get; }
     }
 
     /// <summary>
