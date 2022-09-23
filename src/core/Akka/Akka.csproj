@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka</AssemblyTitle>
-    <Description>Akka.NET is a port of the popular Java/Scala framework Akka to .NET</Description>
+    <Description>Canonical actor model implementation for .NET with local + distributed actors in C# and F#.</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
