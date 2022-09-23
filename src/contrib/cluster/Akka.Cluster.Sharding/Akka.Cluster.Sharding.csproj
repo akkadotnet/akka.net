@@ -8,6 +8,13 @@
         <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyTitle>Akka.Cluster.Sharding</AssemblyTitle>
+    <Description>Sharded actors with managed lifecycle for Akka.NET cluster. Used to distribute state in a fault-tolerant, consistent fashion over an Akka.NET cluster.</Description>
+    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
 
     <ItemGroup>
         <EmbeddedResource Include="reference.conf"/>

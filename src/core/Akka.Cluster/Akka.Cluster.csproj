@@ -8,6 +8,13 @@
         <PackageTags>$(AkkaPackageTags);network;cluster</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyTitle>Akka.Cluster</AssemblyTitle>
+    <Description>Clustering support for Akka.NET actors. Used to build highly-available, distributed applications.</Description>
+    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);network;cluster</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
 
     <ItemGroup>
         <EmbeddedResource Include="Configuration\Cluster.conf"/>
