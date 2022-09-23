@@ -1,3 +1,19 @@
+#### 1.4.42 September 23 2022 ####
+Akka.NET v1.4.42 is a minor release that contains some minor bug fixes.
+
+* [DData: Suppress gossip message from showing up in debug log unless verbose debug logging is turned on](https://github.com/akkadotnet/akka.net/issues/6091)
+* [TestKit: TestKit automatically injects the default TestKit default configuration if an ActorSystem is passed into its constructor](https://github.com/akkadotnet/akka.net/issues/6094)
+* [Sharding: Added a new `GetEntityLocation` query message to retrieve an entity address location in the shard region](https://github.com/akkadotnet/akka.net/issues/6101)
+  
+  In order to use this query, "remember entities" should be turned on _or_ the provided shard `IMessageExtractor` supports the `ShardRegion.StartEntity` message. Complete documentation can be read [here](https://getakka.net/articles/clustering/cluster-sharding.html#querying-for-the-location-of-specific-entities)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.42, click here](https://github.com/akkadotnet/akka.net/milestone/73).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 3       | 66   | 3    | Gregorius Soedharmo |
+| 1       | 557  | 118  | Aaron Stannard      |
+
 #### 1.4.41 August 31 2022 ####
 Akka.NET v1.4.41 is a minor release that contains some minor bug fix and throughput performance improvement for Akka.Remote
 
