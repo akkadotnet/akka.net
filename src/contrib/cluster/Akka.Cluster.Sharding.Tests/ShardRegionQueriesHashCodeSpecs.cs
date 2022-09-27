@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
@@ -19,20 +20,35 @@ using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ShardRegionQueriesSpecs : AkkaSpec
+    public class ShardRegionQueriesHashCodeSpecs : AkkaSpec
     {
-        private Cluster _cluster;
-        private ClusterSharding _clusterSharding;
-        private IActorRef _shardRegion;
+        private class MessageExtractor: HashCodeMessageExtractor
+        {
+            public MessageExtractor() : base(10)
+            { }
 
-        private ActorSystem _proxySys;
+            public override string EntityId(object message)
+            {
+                return message switch
+                {
+                    int i => i.ToString(),
+                    _ => throw new NotSupportedException()
+                };
+            }
+        }
+        
+        private readonly Cluster _cluster;
+        private readonly ClusterSharding _clusterSharding;
+        private readonly IActorRef _shardRegion;
 
-        public ShardRegionQueriesSpecs(ITestOutputHelper outputHelper) : base(GetConfig(), outputHelper)
+        private readonly ActorSystem _proxySys;
+
+        public ShardRegionQueriesHashCodeSpecs(ITestOutputHelper outputHelper) : base(GetConfig(), outputHelper)
         {
             _clusterSharding = ClusterSharding.Get(Sys);
             _cluster = Cluster.Get(Sys);
             _shardRegion = _clusterSharding.Start("entity", s => EchoActor.Props(this, true),
-                ClusterShardingSettings.Create(Sys).WithRole("shard"), ExtractEntityId, ExtractShardId);
+                ClusterShardingSettings.Create(Sys).WithRole("shard"), new MessageExtractor());
 
             var proxySysConfig = ConfigurationFactory.ParseString("akka.cluster.roles = [proxy]")
                 .WithFallback(Sys.Settings.Config);
@@ -53,34 +69,6 @@ namespace Akka.Cluster.Sharding.Tests
             base.AfterAll();
         }
 
-        private Option<(string, object)> ExtractEntityId(object message)
-        {
-            switch (message)
-            {
-                case int i:
-                    return (i.ToString(), message);
-            }
-
-            throw new NotSupportedException();
-        }
-
-        // <GetEntityLocationExtractor>
-        private string ExtractShardId(object message)
-        {
-            switch (message)
-            {
-                case int i:
-                    return (i % 10 + 1).ToString();
-                // must support ShardRegion.StartEntity in order for
-                // GetEntityLocation to work properly
-                case ShardRegion.StartEntity se:
-                    return (int.Parse(se.EntityId) % 10 + 1).ToString();
-            }
-
-            throw new NotSupportedException();
-        }
-        // </GetEntityLocationExtractor>
-
         private static Config GetConfig()
         {
             return ConfigurationFactory.ParseString(@"
@@ -93,13 +81,9 @@ namespace Akka.Cluster.Sharding.Tests
                 .WithFallback(ClusterSingletonManager.DefaultConfig());
         }
 
-        /// <summary>
-        /// DocFx material for demonstrating how this query type works
-        /// </summary>
         [Fact]
-        public async Task ShardRegion_GetEntityLocation_DocumentationSpec()
+        public async Task ShardRegion_GetEntityLocation_test()
         {
-            // <GetEntityLocationQuery>
             // creates an entity with entityId="1"
             await _shardRegion.Ask<int>(1, TimeSpan.FromSeconds(3));
             
@@ -116,7 +100,6 @@ namespace Akka.Cluster.Sharding.Tests
             
             // if entity actor is alive, will retrieve a reference to it
             q1.EntityRef.HasValue.Should().BeTrue();
-            // </GetEntityLocationQuery>
         }
 
         [Fact(DisplayName = "ShardRegion should support GetEntityLocation queries locally")]
@@ -153,7 +136,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             // arrange
             var sharding2 = ClusterSharding.Get(_proxySys);
-            var shardRegionProxy = await sharding2.StartProxyAsync("entity", "shard", ExtractEntityId, ExtractShardId);
+            var shardRegionProxy = await sharding2.StartProxyAsync("entity", "shard", new MessageExtractor());
             
             await shardRegionProxy.Ask<int>(1, TimeSpan.FromSeconds(3));
             await shardRegionProxy.Ask<int>(2, TimeSpan.FromSeconds(3));
