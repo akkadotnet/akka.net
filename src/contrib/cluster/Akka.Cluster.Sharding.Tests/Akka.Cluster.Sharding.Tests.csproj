@@ -5,6 +5,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Sharding.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
