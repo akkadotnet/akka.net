@@ -64,7 +64,6 @@ Which can use different persistence modes configured via `akka.cluster.sharding.
 > [!IMPORTANT]
 > The goal behind this split was to remove the `ShardCoordinator` as a single point of bottleneck during `remember-entities=on` recovery - in Akka.NET v1.4 all remember-entity state is concentrated in the journal of the `PersistentShardCoordinator` or the CRDT used by the `DDataCoordinator`. In v1.5 the responsibility for remembering entities has been pushed to the `Shard` actors themselves, which allows for remembered-entities to be recovered in parallel for all shards.
 
-
 Possible combinations:
 
 state-store-mode | remember-entities-store | CoordinatorStore mode | ShardStore mode
@@ -109,7 +108,7 @@ Upgrading to Akka.NET v1.5 will **cause an irreversible migration of Akka.Cluste
 
 ##### Step 1 - Upgrade to Akka.NET v1.5 with Updated Persistence HOCON
 
-Upgdate your Akka.Cluster.Sharding HOCON to look like the following (adjust as necessary for your custom settings):
+Update your Akka.Cluster.Sharding HOCON to look like the following (adjust as necessary for your custom settings):
 
 ```hocon
 akka.cluster.sharding {
@@ -141,7 +140,7 @@ With these HOCON settings in-place the following will happen:
 2. Old `Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent` will be upgraded to a new storage format via the `coordinator-migration` Akka.Persistence event adapter; and
 3. The `PersistentShardCoordinator` will migrate its journal to the new format as well.
 
-##### Step 2 - Migrating Away from `state-store-mode=persistence` to `state-store-mode=ddata`
+##### Step 2 - Migrating Away from Persistence to DData
 
 Once your cluster has successfully booted up with these settings, you can now optionally move to using `DData` as your `akka.cluster.sharding.state-store-mode` by deploying a second time with the following HOCON:
 
