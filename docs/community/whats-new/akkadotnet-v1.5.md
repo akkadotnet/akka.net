@@ -51,6 +51,9 @@ Contributing to the v1.5 effort is somewhat different than our [normal maintenan
 
 One of the most significant upgrades we've made in Akka.NET v1.5 is a complete rewrite of Akka.Cluster.Sharding's state storage system.
 
+> [!NOTE]
+> You can watch [our discussion of this Akka.Cluster.Sharding upgrade during our September, 2022 Akka.NET Community Standup for more details](https://www.youtube.com/watch?v=rTBgxeHf91M&t=359s).
+
 In Akka.NET v1.5 we've split Akka.Cluster.Sharding's `state-store-mode` into two parts:
 
 * CoordinatorStore (`akka.cluster.sharding.state-store-mode`) and
