@@ -94,7 +94,7 @@ akka.cluster.sharding{
 }
 ```
 
-#### Migrating to New Sharding Storage from Akka.Persistence
+#### Migrating to New Sharding Storage From Akka.Persistence
 
 > [!NOTE]
 > This section applies only to users who were using `akka.cluster.sharding.state-store-mode = persistence`. If you were using `akka.cluster.sharding.state-store-mode`
@@ -106,7 +106,7 @@ Upgrading to Akka.NET v1.5 will **cause an irreversible migration of Akka.Cluste
 > [!IMPORTANT]
 > This migration is intended to be performed via upgrading Akka.NET to v1.5 and applying HOCON configuration changes - it requires no downtime.
 
-##### Step 1 - Upgrade to Akka.NET v1.5 with Updated Persistence HOCON
+##### Step 1 - Upgrade to Akka.NET v1.5 With Updated Persistence HOCON
 
 Update your Akka.Cluster.Sharding HOCON to look like the following (adjust as necessary for your custom settings):
 
@@ -140,7 +140,7 @@ With these HOCON settings in-place the following will happen:
 2. Old `Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent` will be upgraded to a new storage format via the `coordinator-migration` Akka.Persistence event adapter; and
 3. The `PersistentShardCoordinator` will migrate its journal to the new format as well.
 
-##### Step 2 - Migrating Away from Persistence to DData
+##### Step 2 - Migrating Away From Persistence to DData
 
 Once your cluster has successfully booted up with these settings, you can now optionally move to using `DData` as your `akka.cluster.sharding.state-store-mode` by deploying a second time with the following HOCON:
 
@@ -167,7 +167,7 @@ akka.cluster.sharding {
 
 Now you'll be running Akka.Cluster.Sharding with the recommended settings.
 
-#### Migrating to New Sharding Storage from Akka.DistributedData
+#### Migrating to New Sharding Storage From Akka.DistributedData
 
 The migration process onto Akka.NET v1.5's new Cluster.Sharding storage system is less involved for users who were already using `akka.cluster.sharding.state-store-mode=ddata`.
 
