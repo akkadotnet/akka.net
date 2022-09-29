@@ -7,7 +7,7 @@ title: Akka.NET v1.5 Upgrade Advisories
 
 This document contains specific upgrade suggestions, warnings, and notices that you will want to pay attention to when upgrading between versions within the Akka.NET v1.5 roadmap.
 
-## Upgrading from Akka.NET v1.4 to v1.5
+## Upgrading From Akka.NET v1.4 to v1.5
 
 ### Akka.Cluster.Sharding State Storage
 
