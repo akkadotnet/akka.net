@@ -148,7 +148,7 @@ akka.cluster.sharding.snapshot-plugin-id = <plugin>
 ```
 
 > [!IMPORTANT]
-> It's considered a good practice to have Akka.Cluster.Sharding store its state in a separate journal and snapshote store - that way, in the event that you need to purge all sharding data, this can be easily isolated in its own table.
+> It's considered a good practice to have Akka.Cluster.Sharding store its state in a separate journal and snapshot store - that way, in the event that you need to purge all sharding data, this can be easily isolated in its own table.
 
 You can have Akka.Cluster.Sharding use its own separate journal and snapshot store via the following HOCON, for instance:
 
