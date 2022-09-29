@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Akka.Actor;
 
@@ -89,16 +88,14 @@ namespace Akka.Event
         public abstract LogLevel LogLevel();
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this LogEvent.
+        /// Returns a <see cref="string" /> that represents this LogEvent.
         /// </summary>
-        /// <returns>A <see cref="System.String" /> that represents this LogEvent.</returns>
+        /// <returns>A <see cref="string" /> that represents this LogEvent.</returns>
         public override string ToString()
         {
-            if(Cause == null)
-                return
-                    $"[{LogLevel().PrettyNameFor()}][{Timestamp}][Thread {Thread.ManagedThreadId.ToString().PadLeft(4, '0')}][{LogSource}] {Message}";
-            return
-                $"[{LogLevel().PrettyNameFor()}][{Timestamp}][Thread {Thread.ManagedThreadId.ToString().PadLeft(4, '0')}][{LogSource}] {Message}{Environment.NewLine}Cause: {Cause}";
+            return Cause == null
+                ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fff}][Thread {Thread.ManagedThreadId.ToString().PadLeft(4, '0')}][{LogSource}] {Message}"
+                : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fff}][Thread {Thread.ManagedThreadId.ToString().PadLeft(4, '0')}][{LogSource}] {Message}{Environment.NewLine}Cause: {Cause}";
         }
     }
 }
