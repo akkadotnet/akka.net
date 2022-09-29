@@ -6,6 +6,9 @@ title: Akka.Cluster.Sharding module
 
 Cluster sharding is useful in cases when you want to contact with cluster actors using their logical id's, but don't want to care about their physical location inside the cluster or manage their creation. Moreover it's able to re-balance them, as nodes join/leave the cluster. It's often used to represent i.e. Aggregate Roots in Domain Driven Design terminology.
 
+> [!IMPORTANT]
+> Interested in upgrading an Akka.NET v1.4 Cluster.Sharding application to v1.5? [Please read our Akka.Cluster.Sharding v1.5 migration guide](xref:akkadotnet-v15-upgrade-advisories#akkaclustersharding-state-storage).
+
 Cluster sharding can operate in 2 modes, configured via `akka.cluster.sharding.state-store-mode` HOCON configuration:
 
 1. `persistence` (**default**) depends on Akka.Persistence module. In order to use it, you'll need to specify an event journal accessible by all of the participating nodes. An information about the particular shard placement is stored in a persistent cluster singleton actor known as *coordinator*. In order to guarantee consistent state between different incarnations, coordinator stores its own state using Akka.Persistence event journals.
@@ -13,7 +16,7 @@ Cluster sharding can operate in 2 modes, configured via `akka.cluster.sharding.s
 
 Cluster sharding may be active only on nodes in `Up` status - so the ones fully recognized and acknowledged by every other node in a cluster.
 
-## QuickStart
+## Quick Start
 
 Actors managed by cluster sharding are called **entities** and can be automatically distributed across multiple nodes inside the cluster. One entity instance may live only at one node at the time, and can be communicated with via `ShardRegion` without need to know, what it's exact node location is.
 
@@ -135,12 +138,72 @@ akka.cluster.sharding.state-store-mode = persistence
 ```
 
 This mode uses [persistence](../persistence/event-sourcing.md) to store the active shards and active entities for each shard.
+
 By default, cluster sharding will use the journal and snapshot store plugin defined in `akka.persistence.journal.plugin` and
 `akka.persistence.snapshot-store.plugin` respectively; to change this behavior, you can use these configuration:
 
 ```hocon
 akka.cluster.sharding.journal-plugin-id = <plugin>
 akka.cluster.sharding.snapshot-plugin-id = <plugin>
+```
+
+> [!IMPORTANT]
+> It's considered a good practice to have Akka.Cluster.Sharding store its state in a separate journal and snapshot store - that way, in the event that you need to purge all sharding data, this can be easily isolated in its own table.
+
+You can have Akka.Cluster.Sharding use its own separate journal and snapshot store via the following HOCON, for instance:
+
+```hocon
+akka.persistence {
+    # default plugins
+    journal {
+        plugin = "akka.persistence.journal.mongodb"
+        mongodb {
+            # qualified type name of the MongoDb persistence journal actor
+            class = "Akka.Persistence.MongoDb.Journal.MongoDbJournal, Akka.Persistence.MongoDb"
+
+            # connection string used for database access
+            connection-string = ""
+            collection = "EventJournal"
+            metadata-collection = "Metadata"
+        }
+
+        sharding {
+            # qualified type name of the MongoDb persistence journal actor
+            class = "Akka.Persistence.MongoDb.Journal.MongoDbJournal, Akka.Persistence.MongoDb"
+
+            # connection string used for database access
+            connection-string = ""
+
+            # separate collections / tables for Akka.Cluster.Sharding
+            collection = "EventJournalSharding"
+            metadata-collection = "MetadataSharding"
+        }
+    }
+
+    snapshot-store {
+        plugin = "akka.persistence.snapshot-store.mongodb"
+        mongodb {
+            class = "Akka.Persistence.MongoDb.Snapshot.MongoDbSnapshotStore, Akka.Persistence.MongoDb"
+
+            # connection string used for database access
+            connection-string = ""
+
+            collection = "SnapshotStore"
+        }
+
+        sharding {
+            class = "Akka.Persistence.MongoDb.Snapshot.MongoDbSnapshotStore, Akka.Persistence.MongoDb"
+
+            # connection string used for database access
+            connection-string = ""
+
+            collection = "SnapshotStoreSharding"
+        }
+    }
+}
+
+akka.cluster.sharding.journal-plugin-id = akka.persistence.journal.sharding
+akka.cluster.sharding.snapshot-plugin-id = akka.persistence.snapshot-store.sharding
 ```
 
 #### Remember Entities Distributed Data Mode
@@ -151,8 +214,7 @@ You can enable DData mode by setting these configuration:
 akka.cluster.sharding.state-store-mode = ddata
 ```
 
-To support restarting entities after a full cluster restart (non-rolling) the remember entities store
-is persisted to disk by distributed data. This can be disabled if not needed:
+To support restarting entities after a full cluster restart (non-rolling) the remember entities store is persisted to disk by distributed data. This can be disabled if not needed:
 
 ```hocon
 akka.cluster.sharding.distributed-data.durable.keys = []

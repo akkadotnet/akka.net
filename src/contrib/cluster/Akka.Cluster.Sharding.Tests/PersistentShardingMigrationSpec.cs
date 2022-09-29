@@ -114,6 +114,17 @@ namespace Akka.Cluster.Sharding.Tests
                     retry-interval = 500ms
                 }
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
+
+                 akka.persistence.journal.memory-journal-shared {
+                    event-adapters {
+                        coordinator-migration = ""Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter, Akka.Cluster.Sharding""
+                    }
+
+                    event-adapter-bindings {
+                        ""Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent, Akka.Cluster.Sharding"" = coordinator-migration
+                    }
+                }
+
                 akka.cluster.sharding.verbose-debug-logging = on")
                     .WithFallback(ClusterSingletonManager.DefaultConfig())
                     .WithFallback(ClusterSharding.DefaultConfig());
