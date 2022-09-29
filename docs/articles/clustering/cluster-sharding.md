@@ -7,7 +7,7 @@ title: Akka.Cluster.Sharding module
 Cluster sharding is useful in cases when you want to contact with cluster actors using their logical id's, but don't want to care about their physical location inside the cluster or manage their creation. Moreover it's able to re-balance them, as nodes join/leave the cluster. It's often used to represent i.e. Aggregate Roots in Domain Driven Design terminology.
 
 > [!IMPORTANT]
-> Interested in upgrading an Akka.NET v1.4 Cluster.Sharding application to v1.5? [Please read our Akka.Cluster.Sharding v1.5 migration guide](xref:akkadotnet-v15-whats-new#migrating-to-new-sharding-storage-from-state-store-modepersistence).
+> Interested in upgrading an Akka.NET v1.4 Cluster.Sharding application to v1.5? [Please read our Akka.Cluster.Sharding v1.5 migration guide](xref:akkadotnet-v15-upgrade-advisories#akkaclustersharding-state-storage).
 
 Cluster sharding can operate in 2 modes, configured via `akka.cluster.sharding.state-store-mode` HOCON configuration:
 
