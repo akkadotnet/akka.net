@@ -56,11 +56,11 @@ namespace Akka.Benchmarks.Dispatch
             }
         ");
         
-        [Params(10_000, 100_000)] // higher values will cause the CallingThreadDispatcher to stack overflow
+        [Params(10_000, 100_000, 1_000_000, 10_000_000)] // higher values will cause the CallingThreadDispatcher to stack overflow
         public int MsgCount { get; set; }
         
-        [Params(true, false)]
-        public bool UseCallingThreadDispatcher { get; set; }
+        //[Params(true, false)]
+        public bool UseCallingThreadDispatcher { get; set; } = false;
         
         [GlobalSetup]
         public void Setup()
