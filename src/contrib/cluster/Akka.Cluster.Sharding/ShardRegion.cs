@@ -1005,6 +1005,7 @@ namespace Akka.Cluster.Sharding
 
             try
             {
+                var entityId = getEntityLocation.EntityId;
                 var shardId = ExtractShardId(new StartEntity(getEntityLocation.EntityId));
                 if (string.IsNullOrEmpty(shardId))
                 {
@@ -1046,7 +1047,7 @@ namespace Akka.Cluster.Sharding
                         // NOTE: in the event that we're querying a shard's location from a ShardRegionProxy
                         // the shard may not be technically "homed" inside the proxy, but it does exist.
 #pragma warning disable CS4014
-                        ResolveEntityRef(GetNodeAddress(shardRegionRef), shardRegionRef.Path / shardId / shardId); // needs to run as a detached task
+                        ResolveEntityRef(GetNodeAddress(shardRegionRef), shardRegionRef.Path / shardId / entityId); // needs to run as a detached task
 #pragma warning restore CS4014
                     }
 
@@ -1054,7 +1055,7 @@ namespace Akka.Cluster.Sharding
                 }
                 
 #pragma warning disable CS4014
-                ResolveEntityRef(GetNodeAddress(shardActorRef), shardActorRef.Path / shardId); // needs to run as a detached task
+                ResolveEntityRef(GetNodeAddress(shardActorRef), shardActorRef.Path / entityId); // needs to run as a detached task
 #pragma warning restore CS4014
             }
             catch (Exception ex)

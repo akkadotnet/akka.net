@@ -1,3 +1,15 @@
+#### 1.4.43 September 27 2022 ####
+Akka.NET v1.4.43 is a minor release that contains a minor bug fix.
+
+* [Sharding: Fix `GetEntityLocation` uses wrong actor path to resolve actor reference](https://github.com/akkadotnet/akka.net/issues/6120)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.42, click here](https://github.com/akkadotnet/akka.net/milestone/74).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 2    | 2    | Aaron Stannard      |
+| 1       | 172  | 4    | Gregorius Soedharmo |
+
 #### 1.4.42 September 23 2022 ####
 Akka.NET v1.4.42 is a minor release that contains some minor bug fixes.
 
