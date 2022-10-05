@@ -686,7 +686,7 @@ namespace Akka.Actor
         protected virtual bool SpecialHandle(object message, Akka.Actor.IActorRef sender) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
-    public struct Envelope
+    public sealed class Envelope
     {
         public Envelope(object message, Akka.Actor.IActorRef sender, Akka.Actor.ActorSystem system) { }
         public Envelope(object message, Akka.Actor.IActorRef sender) { }
