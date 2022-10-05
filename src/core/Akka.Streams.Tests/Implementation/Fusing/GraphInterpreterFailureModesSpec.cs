@@ -57,7 +57,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new Cancel(upstream, testException()), new OnError(downstream, testException()), new PostStop(stage.Value));
+                .BeEquivalentTo(new TestSetup.ITestEvent[]
+                {
+                    new Cancel(upstream, testException()), 
+                    new OnError(downstream, testException()), 
+                    new PostStop(stage.Value)
+                });
         }
 
         [Fact]
@@ -74,7 +79,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new Cancel(upstream, testException()), new OnError(downstream, testException()), new PostStop(stage.Value));
+                .BeEquivalentTo(new TestSetup.ITestEvent[]
+                    {
+                        new Cancel(upstream, testException()),
+                        new OnError(downstream, testException()),
+                        new PostStop(stage.Value)
+                    });
         }
 
         [Fact]
@@ -89,7 +99,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new Cancel(upstream, testException()), new PostStop(stage.Value));
+                .BeEquivalentTo(new TestSetup.ITestEvent[]
+                    {
+                        new Cancel(upstream, testException()),
+                        new PostStop(stage.Value)
+                    });
         }
 
         [Fact]
@@ -107,7 +121,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new OnError(downstream, testException()), new PostStop(stage.Value));
+                .BeEquivalentTo(new TestSetup.ITestEvent[]
+                    {
+                        new OnError(downstream, testException()), 
+                        new PostStop(stage.Value)
+                    });
         }
 
         [Fact]
@@ -121,7 +139,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new OnError(downstream, testException()), new PostStop(stage.Value));
+                .BeEquivalentTo(new TestSetup.ITestEvent[]
+                    {
+                        new OnError(downstream, testException()), 
+                        new PostStop(stage.Value)
+                    });
         }
 
         [Fact]
@@ -135,7 +157,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new OnError(downstream, testException()), new PostStop(stage.Value));
+                .BeEquivalentTo(new TestSetup.ITestEvent[]
+                    {
+                        new OnError(downstream, testException()), 
+                        new PostStop(stage.Value)
+                    });
         }
 
         [Fact]
@@ -149,7 +175,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new Cancel(upstream, testException()), new PostStop(stage.Value));
+                .BeEquivalentTo(new TestSetup.ITestEvent[]
+                    {
+                        new Cancel(upstream, testException()), 
+                        new PostStop(stage.Value)
+                    });
         }
 
         [Fact]
@@ -161,8 +191,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             setup.LastEvents()
                 .Should()
-                .BeEquivalentTo(new Cancel(setup.Upstream, setup.TestException()), 
-                    new OnError(setup.Downstream, setup.TestException()), new PostStop(setup.Stage.Value));
+                .BeEquivalentTo(new TestSetup.ITestEvent[]
+                    {
+                        new Cancel(setup.Upstream, setup.TestException()),
+                        new OnError(setup.Downstream, setup.TestException()), 
+                        new PostStop(setup.Stage.Value)
+                    });
         }
 
         [Fact]

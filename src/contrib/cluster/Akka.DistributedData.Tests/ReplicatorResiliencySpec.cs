@@ -183,7 +183,7 @@ namespace Akka.DistributedData.Tests
             // termination orders aren't guaranteed, so can't use ExpectTerminated here
             var terminated1 = ExpectMsg<Terminated>(TimeSpan.FromSeconds(10));
             var terminated2 = ExpectMsg<Terminated>(TimeSpan.FromSeconds(10));
-            ImmutableHashSet.Create(terminated1.ActorRef, terminated2.ActorRef).Should().BeEquivalentTo(durableStore, replicator);
+            ImmutableHashSet.Create(terminated1.ActorRef, terminated2.ActorRef).Should().BeEquivalentTo(new []{durableStore, replicator});
 
             // The replicator should not have been recreated, so expect ActorNotFound
             await Assert.ThrowsAsync<ActorNotFoundException>(() =>

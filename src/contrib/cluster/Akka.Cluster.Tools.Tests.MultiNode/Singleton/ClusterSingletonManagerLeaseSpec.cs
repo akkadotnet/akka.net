@@ -167,7 +167,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 JoinWithin(_config.First);
                 AwaitAssert(() =>
                 {
-                    Cluster.State.Members.Select(i => i.Status).Should().BeEquivalentTo(MemberStatus.Up, MemberStatus.Up, MemberStatus.Up);
+                    Cluster.State.Members.Select(i => i.Status).Should().BeEquivalentTo(new []{MemberStatus.Up, MemberStatus.Up, MemberStatus.Up});
                 }, TimeSpan.FromSeconds(10));
             }, _config.Second);
 
@@ -177,7 +177,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 JoinWithin(_config.First);
                 AwaitAssert(() =>
                 {
-                    Cluster.State.Members.Select(i => i.Status).Should().BeEquivalentTo(MemberStatus.Up, MemberStatus.Up, MemberStatus.Up, MemberStatus.Up);
+                    Cluster.State.Members.Select(i => i.Status).Should().BeEquivalentTo(new []{MemberStatus.Up, MemberStatus.Up, MemberStatus.Up, MemberStatus.Up});
                 }, TimeSpan.FromSeconds(10));
             }, _config.Third);
             EnterBarrier("third-up");
@@ -186,7 +186,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 JoinWithin(_config.First);
                 AwaitAssert(() =>
                 {
-                    Cluster.State.Members.Select(i => i.Status).Should().BeEquivalentTo(MemberStatus.Up, MemberStatus.Up, MemberStatus.Up, MemberStatus.Up, MemberStatus.Up);
+                    Cluster.State.Members.Select(i => i.Status).Should().BeEquivalentTo(new []{MemberStatus.Up, MemberStatus.Up, MemberStatus.Up, MemberStatus.Up, MemberStatus.Up});
                 }, TimeSpan.FromSeconds(10));
             }, _config.Fourth);
             EnterBarrier("fourth-up");
@@ -237,7 +237,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             RunOn(() =>
             {
                 TestLeaseActorClientExt.Get(Sys).GetLeaseActor().Tell(TestLeaseActor.GetRequests.Instance);
-                ExpectMsg<TestLeaseActor.LeaseRequests>(msg => msg.Requests.Should().BeEquivalentTo(new TestLeaseActor.Acquire(GetAddress(_config.First).HostPort())));
+                ExpectMsg<TestLeaseActor.LeaseRequests>(msg => msg.Requests.Should().BeEquivalentTo(new []{new TestLeaseActor.Acquire(GetAddress(_config.First).HostPort())}));
                 TestLeaseActorClientExt.Get(Sys).GetLeaseActor().Tell(new TestLeaseActor.ActionRequest(new TestLeaseActor.Acquire(GetAddress(_config.First).HostPort()), true));
             }, _config.Controller);
             EnterBarrier("lease-acquired");
@@ -258,7 +258,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 Cluster.Down(GetAddress(_config.First));
                 AwaitAssert(() =>
                 {
-                    Cluster.State.Members.Select(i => i.Status).Should().BeEquivalentTo(MemberStatus.Up, MemberStatus.Up, MemberStatus.Up, MemberStatus.Up);
+                    Cluster.State.Members.Select(i => i.Status).Should().BeEquivalentTo(new []{MemberStatus.Up, MemberStatus.Up, MemberStatus.Up, MemberStatus.Up});
                 }, TimeSpan.FromSeconds(20));
 
                 TestLeaseActor.LeaseRequests requests = null;
@@ -280,7 +280,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 AwaitAssert(() =>
                 {
-                    Cluster.State.Members.Select(i => i.Status).Should().BeEquivalentTo(MemberStatus.Up, MemberStatus.Up, MemberStatus.Up, MemberStatus.Up);
+                    Cluster.State.Members.Select(i => i.Status).Should().BeEquivalentTo(new []{MemberStatus.Up, MemberStatus.Up, MemberStatus.Up, MemberStatus.Up});
                 }, TimeSpan.FromSeconds(20));
             }, _config.Second, _config.Third, _config.Fourth);
 

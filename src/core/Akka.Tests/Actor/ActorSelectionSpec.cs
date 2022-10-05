@@ -428,7 +428,7 @@ namespace Akka.Tests.Actor
             new ActorSelection(_c21, "../../*").Tell(new GetSender(TestActor), _c1);
             //Three messages because the selection includes the TestActor, GetSender -> TestActor + response from c1 and c2 to TestActor
             var actors = (await ReceiveWhileAsync(_ => LastSender, msgs: 3).ToListAsync()).Distinct();
-            actors.Should().BeEquivalentTo(_c1, _c2);
+            actors.Should().BeEquivalentTo(new[]{_c1, _c2});
             await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
@@ -593,7 +593,7 @@ namespace Akka.Tests.Actor
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
                 .ToListAsync();
-            received.Should().BeEquivalentTo(b1, b2, b3, c1, c2, d);
+            received.Should().BeEquivalentTo(new []{b1, b2, b3, c1, c2, d});
             await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
 
             // grab everything below /user/a/b2
@@ -602,7 +602,7 @@ namespace Akka.Tests.Actor
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
                 .ToListAsync();
-            received.Should().BeEquivalentTo(c1, c2, d);
+            received.Should().BeEquivalentTo(new []{c1, c2, d});
             await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
 
             // nothing under /user/a/b2/c1/d

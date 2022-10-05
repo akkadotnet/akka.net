@@ -148,7 +148,7 @@ namespace Akka.Cluster.Sharding.Tests
                 var secondAddress = Node(config.Second).Address;
                 var thirdAddress = Node(config.Third).Address;
 
-                stats.Regions.Keys.Should().BeEquivalentTo(firstAddress, secondAddress, thirdAddress);
+                stats.Regions.Keys.Should().BeEquivalentTo(new []{firstAddress, secondAddress, thirdAddress});
                 stats.Regions[firstAddress].Stats.Values.Sum().Should().Be(1);
                 EnterBarrier("after-2");
             });

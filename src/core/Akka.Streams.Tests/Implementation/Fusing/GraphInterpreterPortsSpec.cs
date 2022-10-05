@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new RequestOne(outlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new RequestOne(outlet) });
             outlet.IsAvailable().Should().Be(true);
             outlet.IsClosed().Should().Be(false);
             inlet.IsAvailable().Should().Be(false);
@@ -99,7 +99,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnNext(inlet, 0) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(false);
             inlet.IsAvailable().Should().Be(true);
@@ -134,7 +134,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             outlet.Push(0);
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnNext(inlet, 0) });
 
             inlet.Pull();
 
@@ -167,7 +167,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnComplete(inlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnComplete(inlet) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -214,7 +214,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Pull();
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new RequestOne(outlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new RequestOne(outlet) });
             outlet.IsAvailable().Should().Be(true);
             outlet.IsClosed().Should().Be(false);
             inlet.IsAvailable().Should().Be(false);
@@ -233,7 +233,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnComplete(inlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnComplete(inlet) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -298,7 +298,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnComplete(inlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnComplete(inlet) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -367,7 +367,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnNext(inlet, 0) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(true);
@@ -379,7 +379,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnComplete(inlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnComplete(inlet) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -418,10 +418,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             outlet.Complete();
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnNext(inlet, 0) });
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnComplete(inlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnComplete(inlet) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(true);
@@ -445,13 +445,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             outlet.Complete();
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnNext(inlet, 0) });
             inlet.Grab().Should().Be(0);
 
             inlet.Pull();
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnComplete(inlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnComplete(inlet) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -476,7 +476,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnComplete(inlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnComplete(inlet) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -514,7 +514,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
+            lastEvents().Should().BeEquivalentTo(new [] { new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -561,7 +561,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Pull();
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new RequestOne(outlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new RequestOne(outlet) });
             outlet.IsAvailable().Should().Be(true);
             outlet.IsClosed().Should().Be(false);
             inlet.IsAvailable().Should().Be(false);
@@ -581,7 +581,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
+            lastEvents().Should().BeEquivalentTo(new [] { new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -647,7 +647,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
+            lastEvents().Should().BeEquivalentTo(new [] { new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -716,7 +716,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
+            lastEvents().Should().BeEquivalentTo(new [] { new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -771,7 +771,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
+            lastEvents().Should().BeEquivalentTo(new [] { new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -795,7 +795,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             outlet.Push(0);
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnNext(inlet, 0) });
 
             inlet.Cancel();
 
@@ -809,7 +809,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             stepAll();
-            lastEvents().Should().BeEquivalentTo(new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
+            lastEvents().Should().BeEquivalentTo(new [] { new Cancel(outlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -910,7 +910,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnNext(inlet, 0) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(true);
@@ -991,7 +991,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnError(inlet, new TestException("test")) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -1038,7 +1038,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Pull();
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new RequestOne(outlet));
+            lastEvents().Should().BeEquivalentTo(new [] { new RequestOne(outlet) });
             outlet.IsAvailable().Should().Be(true);
             outlet.IsClosed().Should().Be(false);
             inlet.IsAvailable().Should().Be(false);
@@ -1057,7 +1057,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnError(inlet, new TestException("test")) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -1122,7 +1122,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnError(inlet, new TestException("test")) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -1191,7 +1191,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnNext(inlet, 0) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(true);
@@ -1203,7 +1203,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnError(inlet, new TestException("test")) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -1242,10 +1242,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             outlet.Fail(new TestException("test"));
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnNext(inlet, 0) });
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnError(inlet, new TestException("test")) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(true);
@@ -1267,7 +1267,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnError(inlet, new TestException("test")) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -1368,7 +1368,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
+            lastEvents().Should().BeEquivalentTo(new [] { new OnNext(inlet, 0) });
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(true);

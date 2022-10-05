@@ -207,9 +207,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_LazyFlow_must_fail_correctly_when_factory_throw_error()
+        public async Task A_LazyFlow_must_fail_correctly_when_factory_throw_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStopped(async () =>
             {
                 const string msg = "fail!";
                 var matFail = new TestException(msg);
@@ -219,7 +219,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(Sink.Ignore<string>(), Keep.Left)
                     .Invoking(source => source.Run(Materializer));
 
-                result.Should().Throw<TestException>().WithMessage(msg);
+                (await result.Should().ThrowAsync<TestException>()).WithMessage(msg);;
             }, Materializer);
         }
     }

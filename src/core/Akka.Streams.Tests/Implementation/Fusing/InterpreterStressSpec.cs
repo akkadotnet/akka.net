@@ -55,15 +55,15 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     while (i < Repetition)
                     {
                         downstream.RequestOne();
-                        lastEvents().Should().BeEquivalentTo(new RequestOne());
+                        lastEvents().Should().BeEquivalentTo(new []{new RequestOne()});
 
                         upstream.OnNext(i);
-                        lastEvents().Should().BeEquivalentTo(new OnNext(i + ChainLength));
+                        lastEvents().Should().BeEquivalentTo(new []{new OnNext(i + ChainLength)});
                         i++;
                     }
 
                     upstream.OnComplete();
-                    lastEvents().Should().BeEquivalentTo(new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new []{new OnComplete()});
 
                     tstamp.Stop();
                     var time = tstamp.Elapsed.TotalSeconds;
@@ -92,18 +92,18 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 while (i < (Repetition/2) - 1)
                 {
                     downstream.RequestOne();
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new []{new RequestOne()});
 
                     upstream.OnNext(i);
-                    lastEvents().Should().BeEquivalentTo(new OnNext(i + ChainLength));
+                    lastEvents().Should().BeEquivalentTo(new []{new OnNext(i + ChainLength)});
                     i++;
                 }
 
                 downstream.RequestOne();
-                lastEvents().Should().BeEquivalentTo(new RequestOne());
+                lastEvents().Should().BeEquivalentTo(new []{new RequestOne()});
 
                 upstream.OnNext(0);
-                lastEvents().Should().BeEquivalentTo(new OnNext(0 + ChainLength), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete());
+                lastEvents().Should().BeEquivalentTo(new OneBoundedSetup.ITestEvent[]{new OnNext(0 + ChainLength), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete()});
 
                 tstamp.Stop();
                 var time = tstamp.Elapsed.TotalSeconds;
@@ -122,10 +122,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 downstream.RequestOne();
-                lastEvents().Should().BeEquivalentTo(new RequestOne());
+                lastEvents().Should().BeEquivalentTo(new []{new RequestOne()});
 
                 upstream.OnNext(0);
-                lastEvents().Should().BeEquivalentTo(new OnNext(0), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete());
+                lastEvents().Should().BeEquivalentTo(new OneBoundedSetup.ITestEvent[]{new OnNext(0), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete()});
             });
         }
 
@@ -139,18 +139,18 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 downstream.RequestOne();
-                lastEvents().Should().BeEquivalentTo(new RequestOne());
+                lastEvents().Should().BeEquivalentTo(new []{new RequestOne()});
 
                 var i = 0;
                 while (i < (ChainLength / 1000))
                 {
                     upstream.OnNext(0);
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new []{new RequestOne()});
                     i++;
                 }
 
                 upstream.OnNext(0);
-                lastEvents().Should().BeEquivalentTo(new OnNext(0));
+                lastEvents().Should().BeEquivalentTo(new []{new OnNext(0)});
             });
 
         }
@@ -163,13 +163,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
             {
-                lastEvents().Should().BeEquivalentTo(new RequestOne());
+                lastEvents().Should().BeEquivalentTo(new []{new RequestOne()});
 
                 var i = 0;
                 while (i < Repetition)
                 {
                     upstream.OnNext(1);
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new []{new RequestOne()});
                     i++;
                 }
             });
