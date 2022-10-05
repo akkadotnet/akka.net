@@ -58,12 +58,12 @@ namespace Akka.Benchmarks.Dispatch
         public IEnumerable<DispatcherConfig> AllConfigurators()
         {
             yield return new DispatcherConfig(DefaultConfig.GetConfig("akka.actor.default-dispatcher"), "DefaultThreadPool");
-            yield return new DispatcherConfig(DefaultConfig.GetConfig("akka.actor.internal-dispatcher"), "ForkJoinDispatcher(Default /system)");
-            yield return new DispatcherConfig(DefaultConfig.GetConfig("akka.remote.default-remote-dispatcher"), "ForkJoinDispatcher(Default /remoting)");
+            yield return new DispatcherConfig(DefaultConfig.GetConfig("akka.actor.internal-dispatcher"), "ForkJoin(sys)");
+            yield return new DispatcherConfig(DefaultConfig.GetConfig("akka.remote.default-remote-dispatcher"), "ForkJoin(remote)");
             yield return new DispatcherConfig(@" executor = channel-executor
-                throughput=30", "ChannelDispatcher(default priority)");
+                throughput=30", "ChannelD");
             yield return new DispatcherConfig(@" executor = task-executor
-                throughput=30", "TaskDispatcher");
+                throughput=30", "TaskD");
         }
 
         private TaskCompletionSource<int> _tcs;
