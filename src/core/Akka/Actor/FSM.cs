@@ -752,7 +752,7 @@ namespace Akka.Actor
         /// <returns>Descriptor for staying in the current state.</returns>
         public State<TState, TData> Stay()
         {
-            return GoTo(_currentState.StateName).WithNotification(false);
+            return _currentState.WithNotification(false);
         }
 
         /// <summary>
