@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -130,18 +131,48 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        private sealed class Finish
+        {
+        }
+        
         internal class SendTestActor : AtLeastOnceDeliveryReceiveActor
         {
+            private int _identityCount;
+            private Dictionary<Guid, IActorRef> _guids = new Dictionary<Guid, IActorRef>();
             public override string PersistenceId => "SendTest";
 
             public SendTestActor(IActorRef probe)
             {
+                Command<ActorIdentity>(msg =>
+                {
+                    var guid = Guid.Parse(msg.MessageId.ToString());
+                    if (!_guids.TryGetValue(guid, out var actor) || !actor.Equals(msg.Subject))
+                        throw new Exception("CORRELATION FAILED");
+                    _identityCount++;
+                });
+                
+                Command<Finish>(_ =>
+                {
+                    Sender.Tell((_guids, _identityCount));
+                });
+                
                 CommandAny(msg =>
                 {
                     var actor = Context.System.ActorOf(Props.Create(() => new SendTestReceiverActor(probe)));
                     
+                    var guid = Guid.NewGuid();
+                    _guids[guid] = actor;
+                    actor.Tell(new Identify(guid));
                     actor.Tell($"one-{msg}");
+                    
+                    guid = Guid.NewGuid();
+                    _guids[guid] = actor;
+                    actor.Tell(new Identify(guid));
                     actor.Tell($"two-{msg}");
+                    
+                    guid = Guid.NewGuid();
+                    _guids[guid] = actor;
+                    actor.Tell(new Identify(guid));
                     actor.Tell($"three-{msg}");
                 });
             }
@@ -387,7 +418,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact(DisplayName = "PersistentReceive must be able to send multiple messages to actors created inside handler")]
-        public void SendTestTest()
+        public async Task SendTestTest()
         {
             const int totalSend = 10000;
             
@@ -411,7 +442,14 @@ namespace Akka.Persistence.Tests
             {
                 var received = probe.ExpectMsg<string>();
                 expected.Should().Contain(received);
+                expected.Remove(received);
             }
+
+            expected.Count.Should().Be(0);
+
+            var (dict, count) = await sendActor.Ask<(Dictionary<Guid, IActorRef>, int)>(new Finish());
+            dict.Count.Should().Be(totalSend * 3);
+            count.Should().Be(dict.Count);
         }
         
         [Fact]
