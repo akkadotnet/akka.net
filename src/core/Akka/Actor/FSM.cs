@@ -483,7 +483,22 @@ namespace Akka.Actor
             /// <returns>TBD</returns>
             internal State<TS, TD> Copy(TimeSpan? timeout, Reason stopReason = null, IReadOnlyList<object> replies = null)
             {
+                // otherwise, return a new copy.
                 return new State<TS, TD>(StateName, StateData, timeout, stopReason ?? StopReason, replies ?? Replies, Notifies);
+            }
+
+            /// <summary>
+            /// Remove all of the unwanted bits we don't need during a Stay() operation.
+            /// </summary>
+            /// <remarks>
+            /// This is a performance optimization designed to 
+            /// </remarks>
+            /// <returns>Returns a "clean" copy of a state object the first time it's called. Idempotent after.</returns>
+            internal State<TS, TD> SpecialCopyForStay()
+            {
+                if(Replies.Count > 0 || StopReason != null || Timeout != null || Notifies)
+                    return new State<TS, TD>(StateName, StateData, notifies:false);
+                return this;
             }
 
             /// <summary>
@@ -752,7 +767,8 @@ namespace Akka.Actor
         /// <returns>Descriptor for staying in the current state.</returns>
         public State<TState, TData> Stay()
         {
-            return _currentState.WithNotification(false);
+            // don't want to allocate a new state if we don't have to
+            return _currentState.SpecialCopyForStay();
         }
 
         /// <summary>
