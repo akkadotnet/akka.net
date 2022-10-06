@@ -1150,7 +1150,7 @@ namespace Akka.Cluster.Sharding
         {
             Log.Error("{0}: Failed to load initial entity ids from remember entities store within [{1}], stopping shard for backoff and restart",
                 _typeName,
-                _settings.TuningParameters.WaitingForStateTimeout);
+                _settings.TuningParameters.UpdatingStateTimeout);
             // parent ShardRegion supervisor will notice that it terminated and will start it again, after backoff
             Context.Stop(Self);
         }
