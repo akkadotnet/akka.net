@@ -35,6 +35,7 @@ namespace Akka.TestKit.Xunit2.Internals
             Receive<InitializeLogger>(e =>
             {
                 e.LoggingBus.Subscribe(Self, typeof (LogEvent));
+                Sender.Tell(new LoggerInitialized());
             });
         }
 
