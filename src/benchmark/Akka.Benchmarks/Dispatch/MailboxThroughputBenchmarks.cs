@@ -69,6 +69,12 @@ namespace Akka.Benchmarks.Dispatch
             _msg = new Envelope("hit", ActorRefs.NoSender);
         }
 
+        [GlobalCleanup]
+        public void CleanUp()
+        {
+            _system.Terminate().Wait();
+        }
+
         [IterationSetup]
         public void IterationSetup()
         {
