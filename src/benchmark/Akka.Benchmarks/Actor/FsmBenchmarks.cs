@@ -118,9 +118,9 @@ namespace Akka.Benchmarks.Actor
         }
 
         [GlobalCleanup]
-        public void CleanUp()
+        public async Task CleanUp()
         {
-            _sys.Terminate().Wait();
+            await _sys.Terminate();
         }
 
         [Benchmark]
