@@ -258,7 +258,7 @@ namespace Akka.Actor
         /// </summary>
         public sealed class StateTimeout
         {
-            public StateTimeout() { }
+            private StateTimeout() { }
 
             /// <summary>
             /// Singleton instance of StateTimeout
