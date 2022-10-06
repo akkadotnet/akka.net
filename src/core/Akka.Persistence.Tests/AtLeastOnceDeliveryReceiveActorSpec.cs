@@ -12,6 +12,8 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
+using FluentAssertions;
 
 namespace Akka.Persistence.Tests
 {
@@ -128,6 +130,31 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        internal class SendTestActor : AtLeastOnceDeliveryReceiveActor
+        {
+            public override string PersistenceId => "SendTest";
+
+            public SendTestActor(IActorRef probe)
+            {
+                CommandAny(msg =>
+                {
+                    var actor = Context.System.ActorOf(Props.Create(() => new SendTestReceiverActor(probe)));
+                    
+                    actor.Tell($"one-{msg}");
+                    actor.Tell($"two-{msg}");
+                    actor.Tell($"three-{msg}");
+                });
+            }
+        }
+        
+        internal class SendTestReceiverActor : ReceiveActor
+        {
+            public SendTestReceiverActor(IActorRef probe)
+            {
+                Receive<string>(probe.Tell);
+            }
+        }
+        
         internal class Receiver : AtLeastOnceDeliveryReceiveActor
         {
             private readonly IDictionary<string, ActorPath> _destinations;
@@ -354,11 +381,39 @@ namespace Akka.Persistence.Tests
 
         #endregion
 
-        public AtLeastOnceDeliveryReceiveActorSpec()
-            : base(Configuration("AtLeastOnceDeliveryReceiveActorSpec"))
+        public AtLeastOnceDeliveryReceiveActorSpec(ITestOutputHelper output)
+            : base(Configuration("AtLeastOnceDeliveryReceiveActorSpec"), output)
         {
         }
 
+        [Fact(DisplayName = "PersistentReceive must be able to send multiple messages to actors created inside handler")]
+        public void SendTestTest()
+        {
+            const int totalSend = 10000;
+            
+            var probe = CreateTestProbe();
+            var sendActor = Sys.ActorOf(Props.Create(() => new SendTestActor(probe)));
+
+            var expected = new List<string>();
+            foreach (var i in Enumerable.Range(0, totalSend))
+            {
+                expected.Add($"one-{i}");
+                expected.Add($"two-{i}");
+                expected.Add($"three-{i}");
+            }            
+            
+            foreach (var i in Enumerable.Range(0, totalSend))
+            {
+                sendActor.Tell(i);
+            }
+
+            foreach (var _ in Enumerable.Range(0, totalSend * 3))
+            {
+                var received = probe.ExpectMsg<string>();
+                expected.Should().Contain(received);
+            }
+        }
+        
         [Fact]
         public void PersistentReceive_must_deliver_messages_in_order_when_nothing_is_lost()
         {
