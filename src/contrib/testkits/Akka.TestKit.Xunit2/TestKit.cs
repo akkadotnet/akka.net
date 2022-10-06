@@ -145,7 +145,8 @@ namespace Akka.TestKit.Xunit2
             {
                 var extSystem = (ExtendedActorSystem)system;
                 var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
-                logger.Tell(new InitializeLogger(system.EventStream));
+                logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TimeSpan.FromSeconds(3))
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
 
@@ -156,7 +157,8 @@ namespace Akka.TestKit.Xunit2
                 var extSystem = (ExtendedActorSystem)system;
                 var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(
                     string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))), "log-test");
-                logger.Tell(new InitializeLogger(system.EventStream));
+                logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TimeSpan.FromSeconds(3))
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
         public virtual Task InitializeAsync()
