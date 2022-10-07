@@ -416,7 +416,7 @@ namespace Helios.Concurrency
                 get { return Volatile.Read(ref _isAddingCompleted) == CompletedState; }
             }
 
-            public bool TryAdd(IRunnable work)
+            public bool TryAdd<T>(T work) where T:IRunnable
             {
                 // If TryAdd returns true, it's guaranteed the work item will be executed.
                 // If it returns false, it's also guaranteed the work item won't be executed.
