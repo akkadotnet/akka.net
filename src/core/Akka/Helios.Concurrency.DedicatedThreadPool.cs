@@ -226,7 +226,7 @@ namespace Helios.Concurrency
             }
         }
 
-        private struct RequestWorkerTask : IRunnable
+        private readonly struct RequestWorkerTask : IRunnable
         {
             private readonly DedicatedThreadPoolTaskScheduler _scheduler;
 
@@ -312,7 +312,7 @@ namespace Helios.Concurrency
         /// This exception is thrown if the given <paramref name="work"/> item is undefined.
         /// </exception>
         /// <returns>TBD</returns>
-        public bool QueueUserWorkItem(IRunnable work)
+        public bool QueueUserWorkItem<T>(T work) where T:IRunnable
         {
             if (work == null)
                 throw new ArgumentNullException(nameof(work), "Work item cannot be null.");
@@ -416,7 +416,7 @@ namespace Helios.Concurrency
                 get { return Volatile.Read(ref _isAddingCompleted) == CompletedState; }
             }
 
-            public bool TryAdd(IRunnable work)
+            public bool TryAdd<T>(T work) where T:IRunnable
             {
                 // If TryAdd returns true, it's guaranteed the work item will be executed.
                 // If it returns false, it's also guaranteed the work item won't be executed.
