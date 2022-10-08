@@ -17,6 +17,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Dispatch;
 
 namespace Helios.Concurrency
 {
@@ -225,9 +226,16 @@ namespace Helios.Concurrency
             }
         }
 
-        private void RequestWorker()
+        private sealed class RequestWorkerTask : IRunnable
         {
-            _pool.QueueUserWorkItem(() =>
+            private readonly DedicatedThreadPoolTaskScheduler _scheduler;
+
+            public RequestWorkerTask(DedicatedThreadPoolTaskScheduler scheduler)
+            {
+                _scheduler = scheduler;
+            }
+
+            public void Run()
             {
                 // this thread is now available for inlining
                 _currentThreadIsRunningTasks = true;
@@ -237,27 +245,37 @@ namespace Helios.Concurrency
                     while (true)
                     {
                         Task item;
-                        lock (_tasks)
+                        lock (_scheduler._tasks)
                         {
                             // done processing
-                            if (_tasks.Count == 0)
+                            if (_scheduler._tasks.Count == 0)
                             {
-                                ReleaseWorker();
+                                _scheduler.ReleaseWorker();
                                 break;
                             }
 
                             // Get the next item from the queue
-                            item = _tasks.First.Value;
-                            _tasks.RemoveFirst();
+                            item = _scheduler._tasks.First.Value;
+                            _scheduler._tasks.RemoveFirst();
                         }
 
                         // Execute the task we pulled out of the queue
-                        TryExecuteTask(item);
+                        _scheduler.TryExecuteTask(item);
                     }
                 }
                 // We're done processing items on the current thread
                 finally { _currentThreadIsRunningTasks = false; }
-            });
+            }
+
+            public void Execute()
+            {
+                Run();
+            }
+        }
+
+        private void RequestWorker()
+        {
+            _pool.QueueUserWorkItem(new RequestWorkerTask(this));
         }
     }
 
@@ -299,7 +317,7 @@ namespace Helios.Concurrency
         /// This exception is thrown if the given <paramref name="work"/> item is undefined.
         /// </exception>
         /// <returns>TBD</returns>
-        public bool QueueUserWorkItem(Action work)
+        public bool QueueUserWorkItem<T>(T work) where T:IRunnable
         {
             if (work == null)
                 throw new ArgumentNullException(nameof(work), "Work item cannot be null.");
@@ -369,7 +387,7 @@ namespace Helios.Concurrency
                     {
                         try
                         {
-                            action();
+                            action.Run();
                         }
                         catch (Exception ex)
                         {
@@ -393,7 +411,7 @@ namespace Helios.Concurrency
             private static readonly int ProcessorCount = Environment.ProcessorCount;
             private const int CompletedState = 1;
 
-            private readonly ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
+            private readonly ConcurrentQueue<IRunnable> _queue = new ConcurrentQueue<IRunnable>();
             private readonly UnfairSemaphore _semaphore = new UnfairSemaphore();
             private int _outstandingRequests;
             private int _isAddingCompleted;
@@ -403,7 +421,7 @@ namespace Helios.Concurrency
                 get { return Volatile.Read(ref _isAddingCompleted) == CompletedState; }
             }
 
-            public bool TryAdd(Action work)
+            public bool TryAdd<T>(T work) where T:IRunnable
             {
                 // If TryAdd returns true, it's guaranteed the work item will be executed.
                 // If it returns false, it's also guaranteed the work item won't be executed.
@@ -417,12 +435,11 @@ namespace Helios.Concurrency
                 return true;
             }
 
-            public IEnumerable<Action> GetConsumingEnumerable()
+            public IEnumerable<IRunnable> GetConsumingEnumerable()
             {
                 while (true)
                 {
-                    Action work;
-                    if (_queue.TryDequeue(out work))
+                    if (_queue.TryDequeue(out var work))
                     {
                         yield return work;
                     }
