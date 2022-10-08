@@ -226,7 +226,7 @@ namespace Helios.Concurrency
             }
         }
 
-        private readonly struct RequestWorkerTask : IRunnable
+        private sealed class RequestWorkerTask : IRunnable
         {
             private readonly DedicatedThreadPoolTaskScheduler _scheduler;
 
@@ -265,6 +265,11 @@ namespace Helios.Concurrency
                 }
                 // We're done processing items on the current thread
                 finally { _currentThreadIsRunningTasks = false; }
+            }
+
+            public void Execute()
+            {
+                Run();
             }
         }
 

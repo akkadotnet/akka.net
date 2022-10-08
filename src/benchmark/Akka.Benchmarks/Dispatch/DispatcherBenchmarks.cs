@@ -87,6 +87,11 @@ namespace Akka.Benchmarks.Dispatch
                     _tcs.TrySetResult(_counter);
                 }
             }
+
+            public void Execute()
+            {
+                Run();
+            }
         }
 
         private RunnableTarget _runnable;

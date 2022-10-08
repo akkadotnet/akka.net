@@ -688,13 +688,12 @@ namespace Akka.Actor
         protected virtual bool SpecialHandle(object message, Akka.Actor.IActorRef sender) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
     public struct Envelope
     {
         public Envelope(object message, Akka.Actor.IActorRef sender, Akka.Actor.ActorSystem system) { }
         public Envelope(object message, Akka.Actor.IActorRef sender) { }
-        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public object Message { get; }
-        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public Akka.Actor.IActorRef Sender { get; }
         public override string ToString() { }
     }
@@ -741,7 +740,8 @@ namespace Akka.Actor
             public override int GetHashCode() { }
             public override string ToString() { }
         }
-        public sealed class Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
+        [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
+        public struct Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
         {
             public Event(object fsmEvent, TD stateData) { }
             public object FsmEvent { get; }
@@ -778,10 +778,10 @@ namespace Akka.Actor
         {
             public static Akka.Actor.FSMBase.StateTimeout Instance { get; }
         }
-        public class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
+        public sealed class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
         {
             public State(TS stateName, TD stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, bool notifies = True) { }
-            public System.Collections.Generic.IReadOnlyList<object> Replies { get; set; }
+            public System.Collections.Generic.IReadOnlyList<object> Replies { get; }
             public TD StateData { get; }
             public TS StateName { get; }
             public Akka.Actor.FSMBase.Reason StopReason { get; }
