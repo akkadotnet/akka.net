@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Shard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1150,7 +1150,7 @@ namespace Akka.Cluster.Sharding
         {
             Log.Error("{0}: Failed to load initial entity ids from remember entities store within [{1}], stopping shard for backoff and restart",
                 _typeName,
-                _settings.TuningParameters.WaitingForStateTimeout);
+                _settings.TuningParameters.UpdatingStateTimeout);
             // parent ShardRegion supervisor will notice that it terminated and will start it again, after backoff
             Context.Stop(Self);
         }

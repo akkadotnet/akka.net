@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Cancelable.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -90,6 +90,7 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public CancellationToken Token => _source.Token;
 
+        public bool IsDisposed { get; private set; }
 
         /// <inheritdoc/>
         public void Cancel()
@@ -155,11 +156,7 @@ namespace Akka.Actor
         /// <param name="cancelables">The cancelables instances to observe.</param>
         /// <returns>A new <see cref="ICancelable"/> that is linked to the source .</returns>
         public static ICancelable CreateLinkedCancelable(IScheduler scheduler, params ICancelable[] cancelables)
-        {
-            var cancellationTokens = cancelables.Select(c => c.Token).ToArray();
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokens);
-            return new Cancelable(scheduler.Advanced, cts);
-        }
+            => CreateLinkedCancelable(scheduler.Advanced, cancelables.Select(c => c.Token).ToArray());
 
         /// <summary>
         /// Creates a <see cref="ICancelable"/> that will be in the canceled state
@@ -169,22 +166,24 @@ namespace Akka.Actor
         /// <param name="cancelables">The cancelables instances to observe.</param>
         /// <returns>A new <see cref="ICancelable"/> that is linked to the source .</returns>
         public static ICancelable CreateLinkedCancelable(IActionScheduler scheduler, params ICancelable[] cancelables)
+            => CreateLinkedCancelable(scheduler, cancelables.Select(c => c.Token).ToArray());
+
+        public static ICancelable CreateLinkedCancelable(IScheduler scheduler, params CancellationToken[] cancellationTokens)
+            => CreateLinkedCancelable(scheduler.Advanced, cancellationTokens);
+        
+        public static ICancelable CreateLinkedCancelable(IActionScheduler scheduler, params CancellationToken[] cancellationTokens)
         {
-            var cancellationTokens = cancelables.Select(c => c.Token).ToArray();
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokens);
             return new Cancelable(scheduler, cts);
         }
 
-
-
         private void ThrowIfDisposed()
         {
-            if(_isDisposed)
+            if(IsDisposed)
                 throw new ObjectDisposedException(null, "The cancelable has been disposed");
         }
 
         //  Dispose ---------------------------------------------------------------
-        private bool _isDisposed; //Automatically initialized to false;
 
 
         public void Dispose()
@@ -207,26 +206,21 @@ namespace Akka.Actor
             // runtime from inside the finalizer and you should not reference
             // other objects. Only unmanaged resources can be disposed.
 
-            try
+            //Make sure Dispose does not get called more than once, by checking the disposed field
+            if(disposing)
             {
-                //Make sure Dispose does not get called more than once, by checking the disposed field
-                if(!_isDisposed)
+                if(!IsDisposed)
                 {
-                    if(disposing)
+                    //Clean up managed resources
+                    try
                     {
-                        //Clean up managed resources
-                        if(_source != null)
-                        {
-                            _source.Dispose();
-                        }
+                        _source?.Dispose();
                     }
-                    //Clean up unmanaged resources
+                    finally
+                    {
+                        IsDisposed = true;
+                    }                    
                 }
-                _isDisposed = true;
-            }
-            finally
-            {
-                // base.dispose(disposing);
             }
         }
     }

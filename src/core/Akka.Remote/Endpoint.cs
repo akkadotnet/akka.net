@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Endpoint.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1319,10 +1319,18 @@ namespace Akka.Remote
 
         private void PublishAndThrow(Exception reason, LogLevel level, bool needToThrow = true)
         {
-            reason.Match()
-                .With<EndpointDisassociatedException>(endpoint => PublishDisassociated())
-                .With<ShutDownAssociation>(shutdown => { }) // don't log an error for planned shutdowns
-                .Default(msg => PublishError(reason, level));
+            switch (reason)
+            {
+                case EndpointDisassociatedException _:
+                    PublishDisassociated();
+                    break;
+                case ShutDownAssociation _:
+                    // don't log an error for planned shutdowns
+                    break;
+                default:
+                    PublishError(reason, level);
+                    break;
+            }
 
             if (needToThrow)
             {

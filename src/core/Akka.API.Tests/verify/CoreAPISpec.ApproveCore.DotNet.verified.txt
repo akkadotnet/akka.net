@@ -492,6 +492,7 @@ namespace Akka.Actor
         public Cancelable(Akka.Actor.IScheduler scheduler) { }
         public Cancelable(Akka.Actor.IActionScheduler scheduler) { }
         public bool IsCancellationRequested { get; }
+        public bool IsDisposed { get; }
         public System.Threading.CancellationToken Token { get; }
         public void Cancel() { }
         public void Cancel(bool throwOnFirstException) { }
@@ -500,6 +501,8 @@ namespace Akka.Actor
         public static Akka.Actor.ICancelable CreateCanceled() { }
         public static Akka.Actor.ICancelable CreateLinkedCancelable(Akka.Actor.IScheduler scheduler, params Akka.Actor.ICancelable[] cancelables) { }
         public static Akka.Actor.ICancelable CreateLinkedCancelable(Akka.Actor.IActionScheduler scheduler, params Akka.Actor.ICancelable[] cancelables) { }
+        public static Akka.Actor.ICancelable CreateLinkedCancelable(Akka.Actor.IScheduler scheduler, params System.Threading.CancellationToken[] cancellationTokens) { }
+        public static Akka.Actor.ICancelable CreateLinkedCancelable(Akka.Actor.IActionScheduler scheduler, params System.Threading.CancellationToken[] cancellationTokens) { }
         public void Dispose() { }
         protected virtual void Dispose(bool disposing) { }
     }
@@ -2152,48 +2155,6 @@ namespace Akka.Annotations
         public InternalApiAttribute() { }
     }
 }
-namespace Akka
-{
-    public class Case : Akka.IMatchResult
-    {
-        public Case(object message) { }
-        public bool WasHandled { get; }
-        public Akka.IMatchResult Default(System.Action<object> action) { }
-        public Akka.Case With<TMessage>(System.Action action) { }
-        public Akka.Case With<TMessage>(System.Action<TMessage> action) { }
-    }
-    public class Case<T> : Akka.IMatchResult
-    {
-        public Case(object message) { }
-        public bool WasHandled { get; }
-        public T ResultOrDefault(System.Func<object, T> function) { }
-        public Akka.Case<T> With<TMessage>(System.Func<T> function) { }
-        public Akka.Case<T> With<TMessage>(System.Func<TMessage, T> function) { }
-    }
-    public sealed class Done
-    {
-        public static readonly Akka.Done Instance;
-    }
-    public interface IMatchResult
-    {
-        bool WasHandled { get; }
-    }
-    public sealed class NotUsed : System.IComparable<Akka.NotUsed>, System.IEquatable<Akka.NotUsed>
-    {
-        public static readonly Akka.NotUsed Instance;
-        public int CompareTo(Akka.NotUsed other) { }
-        public override bool Equals(object obj) { }
-        public bool Equals(Akka.NotUsed other) { }
-        public override int GetHashCode() { }
-        public override string ToString() { }
-    }
-    [System.ObsoleteAttribute("Use instead the pattern matching feature introduced in C# 7.0")]
-    public class static PatternMatch
-    {
-        public static Akka.Case Match(this object target) { }
-        public static Akka.Case<T> Match<T>(this object target) { }
-    }
-}
 namespace Akka.Configuration
 {
     public class Config
@@ -2959,6 +2920,22 @@ namespace Akka.Dispatch.SysMsg
         public Akka.Actor.IInternalActorRef Watcher { get; }
         protected bool Equals(Akka.Dispatch.SysMsg.Watch other) { }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+}
+namespace Akka
+{
+    public sealed class Done
+    {
+        public static readonly Akka.Done Instance;
+    }
+    public sealed class NotUsed : System.IComparable<Akka.NotUsed>, System.IEquatable<Akka.NotUsed>
+    {
+        public static readonly Akka.NotUsed Instance;
+        public int CompareTo(Akka.NotUsed other) { }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.NotUsed other) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }

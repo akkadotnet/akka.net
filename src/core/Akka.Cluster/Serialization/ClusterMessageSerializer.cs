@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -55,6 +55,16 @@ namespace Akka.Cluster.Serialization
         internal const string GossipEnvelopeManifest = "Akka.Cluster.GossipEnvelope, Akka.Cluster";
         internal const string ClusterRouterPoolManifest = "Akka.Cluster.Routing.ClusterRouterPool, Akka.Cluster";
 
+        private Option<bool> _useLegacyHeartbeatMessageDontUseDirectly = Option<bool>.None;
+        private bool UseLegacyHeartbeatMessage
+        {
+            get
+            {
+                if(_useLegacyHeartbeatMessageDontUseDirectly.IsEmpty)
+                    _useLegacyHeartbeatMessageDontUseDirectly = Cluster.Get(system).Settings.UseLegacyHeartbeatMessage;
+                return _useLegacyHeartbeatMessageDontUseDirectly.Value;
+            }
+        }
 
         public ClusterMessageSerializer(ExtendedActorSystem system) : base(system)
         {
@@ -67,9 +77,13 @@ namespace Akka.Cluster.Serialization
             switch (obj)
             {
                 case ClusterHeartbeatSender.Heartbeat heartbeat:
-                    return AddressToProto(heartbeat.From).ToByteArray();
+                    return UseLegacyHeartbeatMessage
+                        ? AddressToProto(heartbeat.From).ToByteArray()
+                        : HeartbeatToProto(heartbeat).ToByteArray();
                 case ClusterHeartbeatSender.HeartbeatRsp heartbeatRsp:
-                    return UniqueAddressToProto(heartbeatRsp.From).ToByteArray();
+                    return UseLegacyHeartbeatMessage 
+                        ? UniqueAddressToProto(heartbeatRsp.From).ToByteArray() 
+                        : HeartbeatRspToProto(heartbeatRsp).ToByteArray();
                 case GossipEnvelope gossipEnvelope:
                     return GossipEnvelopeToProto(gossipEnvelope);
                 case GossipStatus gossipStatus:
@@ -159,9 +173,9 @@ namespace Akka.Cluster.Serialization
                 case InternalClusterAction.InitJoinNack _:
                     return InitJoinNackManifest;
                 case ClusterHeartbeatSender.Heartbeat _:
-                    return HeartBeatManifestPre1419;
+                    return UseLegacyHeartbeatMessage ? HeartBeatManifestPre1419 : HeartBeatManifest;
                 case ClusterHeartbeatSender.HeartbeatRsp _:
-                    return HeartBeatRspManifestPre1419;
+                    return UseLegacyHeartbeatMessage ? HeartBeatRspManifestPre1419 : HeartBeatRspManifest;
                 case InternalClusterAction.ExitingConfirmed _:
                     return ExitingConfirmedManifest;
                 case GossipStatus _:
@@ -460,6 +474,14 @@ namespace Akka.Cluster.Serialization
             return new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress, -1, -1);
         }
 
+        private static Proto.Msg.HeartBeatResponse HeartbeatRspToProto(ClusterHeartbeatSender.HeartbeatRsp heartbeatRsp)
+            => new HeartBeatResponse
+                {
+                    From = UniqueAddressToProto(heartbeatRsp.From),
+                    CreationTime = heartbeatRsp.CreationTimeNanos,
+                    SequenceNr = heartbeatRsp.SequenceNr
+                };
+
         private static ClusterHeartbeatSender.HeartbeatRsp DeserializeHeartbeatRsp(byte[] bytes)
         {
             var hbsp = HeartBeatResponse.Parser.ParseFrom(bytes);
@@ -470,6 +492,14 @@ namespace Akka.Cluster.Serialization
         {
             return new ClusterHeartbeatSender.Heartbeat(AddressFrom(AddressData.Parser.ParseFrom(bytes)), -1, -1);
         }
+
+        private static Proto.Msg.Heartbeat HeartbeatToProto(ClusterHeartbeatSender.Heartbeat heartbeat)
+            => new Heartbeat
+            {
+                From = AddressToProto(heartbeat.From), 
+                CreationTime = heartbeat.CreationTimeNanos, 
+                SequenceNr = heartbeat.SequenceNr
+            };
 
         private static ClusterHeartbeatSender.Heartbeat DeserializeHeartbeat(byte[] bytes)
         {

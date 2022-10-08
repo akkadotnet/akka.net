@@ -1,6 +1,6 @@
 ---
 uid: persistent-actors
-title: Event sourcing
+title: Event Sourcing with Akka.Persistence Actors
 ---
 # Event Sourcing
 

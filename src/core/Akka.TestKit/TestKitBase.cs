@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -127,7 +127,7 @@ namespace Akka.TestKit
         /// <param name="config">The configuration that <paramref name="system"/> will use if it's null.</param>
         /// <param name="actorSystemName">The name that <paramref name="system"/> will use if it's null.</param>
         /// <param name="testActorName">The name of the test actor. Can be null.</param>
-        protected void InitializeTest(ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
+        protected virtual void InitializeTest(ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
         {
             _testState = new TestState();
 
@@ -148,6 +148,10 @@ namespace Akka.TestKit
                         newBootstrap.WithActorRefProvider(bootstrap.FlatSelect(x => x.ActorRefProvider).Value);
                 }
                 system = ActorSystem.Create(actorSystemName ?? "test", config.WithSetup(newBootstrap));
+            }
+            else
+            {
+                system.Settings.InjectTopLevelFallback(_defaultConfig);
             }
 
             _testState.System = system;

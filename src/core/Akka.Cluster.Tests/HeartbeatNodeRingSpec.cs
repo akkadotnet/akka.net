@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HeartbeatNodeRingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,12 +9,27 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Xunit;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests
 {
-    public class HeartbeatNodeRingSpec : ClusterSpecBase
+    public class HeartbeatNodeRingSpec : HeartbeatNodeRingBase
     {
-        public HeartbeatNodeRingSpec()
+        public HeartbeatNodeRingSpec(ITestOutputHelper output) : base(output, false)
+        {
+        }
+    }
+    
+    public class HeartbeatNodeRingLegacySpec : HeartbeatNodeRingBase
+    {
+        public HeartbeatNodeRingLegacySpec(ITestOutputHelper output) : base(output, true)
+        {
+        }
+    }
+    
+    public abstract class HeartbeatNodeRingBase : ClusterSpecBase
+    {
+        protected HeartbeatNodeRingBase(ITestOutputHelper output, bool useLegacyMessage) : base(output, useLegacyMessage)
         {
             _nodes = ImmutableHashSet.Create(aa, bb, cc, dd, ee, ff);
         }

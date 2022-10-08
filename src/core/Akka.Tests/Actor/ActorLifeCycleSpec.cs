@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorLifeCycleSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -213,31 +213,21 @@ namespace Akka.Tests
         }
         public class BecomeActor : UntypedActor
         {
-            private IActorRef testActor;
+            private readonly IActorRef _testActor;
             public BecomeActor(IActorRef testActor)
             {
-                this.testActor = testActor;
-            }
-
-            protected override void PreRestart(Exception cause, object message)
-            {
-                base.PreRestart(cause, message);
-            }
-
-            protected override void PostRestart(Exception cause)
-            {
-                base.PostRestart(cause);
+                _testActor = testActor;
             }
             protected override void OnReceive(object message)
             {
                 if (message is Become)
                 {
                     Context.Become(OnBecome);
-                    testActor.Tell("ok");
+                    _testActor.Tell("ok");
                 }
                 else
                 {
-                    testActor.Tell(42);
+                    _testActor.Tell(42);
                 }
             }
 
@@ -249,7 +239,7 @@ namespace Akka.Tests
                 }
                 else
                 {
-                    testActor.Tell(43);
+                    _testActor.Tell(43);
                 }
             }
         }
@@ -266,7 +256,12 @@ namespace Akka.Tests
             a.Tell("hello");
             await ExpectMsgAsync(43);
 
-            await EventFilter.Exception<Exception>("buh").ExpectOneAsync(async () => a.Tell("fail"));
+            await EventFilter.Exception<Exception>("buh").ExpectOneAsync(async () =>
+            {
+                a.Tell("fail");
+                await Task.CompletedTask;
+            });
+            
             a.Tell("hello");
             await ExpectMsgAsync(42);
         }

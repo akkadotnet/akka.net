@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HubSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,6 +16,8 @@ using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Akka.Actor;
+using Akka.Streams.Dsl.Internal;
+using Akka.Streams.Tests.Actor;
 using Akka.TestKit.Extensions;
 using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
@@ -183,7 +185,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var (sink, probe) = MergeHub.Source<int>(1).Take(20000)
+                var (sink, probe) = MergeHub.Source<int>(1)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
 
@@ -191,9 +193,17 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
 
                 await probe.RequestAsync(int.MaxValue);
-                var result = await probe.ExpectNextNAsync(20000, 300.Seconds()).ToListAsync();
+                var result = new List<int>();
+                foreach (var i in Enumerable.Range(1, 20000))
+                {
+                    var evt = await probe.ExpectEventAsync();
+                    if (evt is TestSubscriber.OnNext<int> next)
+                        result.Add(next.Element);
+                    else
+                        throw new Exception($"For element [{i}]: Expected OnNext<int> but received {evt.GetType()}");
+                }
                 result.OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
-            }, Materializer);
+            }, Materializer, 300.Seconds());
         }
 
         [Fact]

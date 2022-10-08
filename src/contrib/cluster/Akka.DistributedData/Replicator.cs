@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Replicator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1150,7 +1150,7 @@ namespace Akka.DistributedData
 
         private void ReceiveStatus(IImmutableDictionary<string, ByteString> otherDigests, int chunk, int totChunks)
         {
-            if (_log.IsDebugEnabled)
+            if (_log.IsDebugEnabled && _settings.VerboseDebugLogging)
                 _log.Debug("Received gossip status from [{0}], chunk {1}/{2} containing [{3}]", Sender.Path.Address, chunk + 1, totChunks, string.Join(", ", otherDigests.Keys));
 
             // if no data was send we do nothing
@@ -1177,7 +1177,7 @@ namespace Akka.DistributedData
 
             if (keys.Length != 0)
             {
-                if (_log.IsDebugEnabled)
+                if (_log.IsDebugEnabled && _settings.VerboseDebugLogging)
                     _log.Debug("Sending gossip to [{0}]: {1}", Sender.Path.Address, string.Join(", ", keys));
 
                 var g = new Gossip(keys.ToImmutableDictionary(x => x, _ => GetData(_)), !otherDifferentKeys.IsEmpty);
@@ -1197,7 +1197,7 @@ namespace Akka.DistributedData
 
         private void ReceiveGossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack)
         {
-            if (_log.IsDebugEnabled)
+            if (_log.IsDebugEnabled && _settings.VerboseDebugLogging)
                 _log.Debug("Received gossip from [{0}], containing [{1}]", Sender.Path.Address, string.Join(", ", updatedData.Keys));
 
             var replyData = ImmutableDictionary<string, DataEnvelope>.Empty.ToBuilder();

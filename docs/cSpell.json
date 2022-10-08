@@ -28,6 +28,8 @@
         "deserialization",
         "downstream",
         "downstreams",
+        "ddata",
+        "eventsourced",
         "Gitter",
         "Hasher",
         "Hipsterize",

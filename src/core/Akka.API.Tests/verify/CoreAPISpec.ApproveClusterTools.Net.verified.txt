@@ -333,6 +333,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 }
 namespace Akka.Cluster.Tools.Singleton
 {
+    [Akka.Annotations.DoNotInheritAttribute()]
+    public class ClusterSingleton : Akka.Actor.IExtension
+    {
+        public ClusterSingleton(Akka.Actor.ExtendedActorSystem system) { }
+        public static Akka.Cluster.Tools.Singleton.ClusterSingleton Get(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.IActorRef Init(Akka.Cluster.Tools.Singleton.SingletonActor singleton) { }
+    }
     public sealed class ClusterSingletonManager : Akka.Actor.FSM<Akka.Cluster.Tools.Singleton.ClusterSingletonState, Akka.Cluster.Tools.Singleton.IClusterSingletonData>
     {
         public ClusterSingletonManager(Akka.Actor.Props singletonProps, object terminationMessage, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
@@ -349,8 +356,9 @@ namespace Akka.Cluster.Tools.Singleton
     }
     public sealed class ClusterSingletonManagerSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
-        public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval) { }
-        public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
+        public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, bool considerAppVersion) { }
+        public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, Akka.Coordination.LeaseUsageSettings leaseSettings, bool considerAppVersion) { }
+        public bool ConsiderAppVersion { get; }
         public System.TimeSpan HandOverRetryInterval { get; }
         public Akka.Coordination.LeaseUsageSettings LeaseSettings { get; }
         public System.TimeSpan RemovalMargin { get; }
@@ -364,6 +372,11 @@ namespace Akka.Cluster.Tools.Singleton
         public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithRole(string role) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithSingletonName(string singletonName) { }
     }
+    public class ClusterSingletonProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Tools.Singleton.ClusterSingleton>
+    {
+        public ClusterSingletonProvider() { }
+        public override Akka.Cluster.Tools.Singleton.ClusterSingleton CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
     public sealed class ClusterSingletonProxy : Akka.Actor.ReceiveActor
     {
         public ClusterSingletonProxy(string singletonManagerPath, Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings settings) { }
@@ -374,19 +387,37 @@ namespace Akka.Cluster.Tools.Singleton
     }
     public sealed class ClusterSingletonProxySettings : Akka.Actor.INoSerializationVerificationNeeded
     {
-        public ClusterSingletonProxySettings(string singletonName, string role, System.TimeSpan singletonIdentificationInterval, int bufferSize) { }
+        public ClusterSingletonProxySettings(string singletonName, string role, System.TimeSpan singletonIdentificationInterval, int bufferSize, bool considerAppVersion) { }
         public int BufferSize { get; }
+        public bool ConsiderAppVersion { get; }
         public string Role { get; }
         public System.TimeSpan SingletonIdentificationInterval { get; }
         public string SingletonName { get; }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Actor.ActorSystem system) { }
-        public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Configuration.Config config) { }
+        public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Configuration.Config config, bool considerAppVersion) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithRole(string role) { }
         [System.ObsoleteAttribute("For compatibility reasons only. Use method with TimeSpan parameter instead")]
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(System.TimeSpan singletonIdentificationInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonName(string singletonName) { }
+    }
+    public class ClusterSingletonSettings : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        public int BufferSize { get; }
+        public bool ConsiderAppVersion { get; }
+        public System.TimeSpan HandOverRetryInterval { get; }
+        public Akka.Coordination.LeaseUsageSettings LeaseSettings { get; }
+        public System.TimeSpan RemovalMargin { get; }
+        public string Role { get; }
+        public System.TimeSpan SingletonIdentificationInterval { get; }
+        public static Akka.Cluster.Tools.Singleton.ClusterSingletonSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.Cluster.Tools.Singleton.ClusterSingletonSettings Create(Akka.Configuration.Config config) { }
+        public override string ToString() { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithHandOverRetryInterval(System.TimeSpan handOverRetryInterval) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithLeaseSettings(Akka.Coordination.LeaseUsageSettings leaseSettings) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithRemovalMargin(System.TimeSpan removalMargin) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithRole(string role) { }
     }
     public enum ClusterSingletonState
     {
@@ -403,6 +434,17 @@ namespace Akka.Cluster.Tools.Singleton
     }
     public interface IClusterSingletonData { }
     public interface IClusterSingletonMessage { }
+    public class SingletonActor
+    {
+        public string Name { get; }
+        public Akka.Actor.Props Props { get; }
+        public Akka.Util.Option<Akka.Cluster.Tools.Singleton.ClusterSingletonSettings> Settings { get; }
+        public Akka.Util.Option<object> StopMessage { get; }
+        public static Akka.Cluster.Tools.Singleton.SingletonActor Create(Akka.Actor.Props props, string name) { }
+        public Akka.Cluster.Tools.Singleton.SingletonActor WithProps(Akka.Actor.Props props) { }
+        public Akka.Cluster.Tools.Singleton.SingletonActor WithSettings(Akka.Cluster.Tools.Singleton.ClusterSingletonSettings settings) { }
+        public Akka.Cluster.Tools.Singleton.SingletonActor WithStopMessage(object stopMessage) { }
+    }
 }
 namespace Akka.Cluster.Tools.Singleton.Serialization
 {
