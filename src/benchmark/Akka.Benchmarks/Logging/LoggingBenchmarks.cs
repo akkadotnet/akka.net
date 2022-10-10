@@ -54,7 +54,7 @@ namespace Akka.Benchmarks
             /// <param name="message">The error message.</param>
             protected override void NotifyError(Exception cause, object message)
             {
-                AddLogMessage((new Error(cause, _logSource, _logClass, message);
+                AddLogMessage(new Error(cause, _logSource, _logClass, message));
             }
 
             /// <summary>
@@ -63,7 +63,7 @@ namespace Akka.Benchmarks
             /// <param name="message">The warning message.</param>
             protected override void NotifyWarning(object message)
             {
-                AddLogMessage((new Warning(_logSource, _logClass, message);
+                AddLogMessage(new Warning(_logSource, _logClass, message));
             }
 
             protected override void NotifyWarning(Exception cause, object message)
