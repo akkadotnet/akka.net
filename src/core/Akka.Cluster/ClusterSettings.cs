@@ -34,8 +34,7 @@ namespace Akka.Cluster
         {
             //TODO: Requiring!
             var clusterConfig = config.GetConfig("akka.cluster");
-            if (clusterConfig.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<ClusterSettings>("akka.cluster", "did you forgot to set the 'akka.cluster.provider' HOCON property to 'cluster'?");
+            ValidateConfig(clusterConfig);
 
             LogInfoVerbose = clusterConfig.GetBoolean("log-info-verbose", false);
             LogInfo = LogInfoVerbose || clusterConfig.GetBoolean("log-info", false);
@@ -300,6 +299,13 @@ namespace Akka.Cluster
         /// The leader will move <see cref="MemberStatus.WeaklyUp"/> members to <see cref="MemberStatus.Up"/> status once convergence has been reached.
         /// </summary>
         public TimeSpan WeaklyUpAfter { get; }
+
+        private void ValidateConfig(Config config)
+        {
+            if (config?.GetConfig("failure-detector") != null)
+                return;
+            throw ConfigurationException.NullOrEmptyConfig<ClusterSettings>("akka.cluster", "Did you forgot to set the 'akka.cluster.provider' HOCON property to 'cluster'?");
+        }
     }
 }
 
