@@ -235,7 +235,7 @@ build.sh docfx
 
 This will generate all of the static HTML / CSS / JS files needed to render the website into the `~/docs/_site` folder in your local repository.
 
-In order for all of the JavaScript components to work correctly in your browser, you'll need to serve the documents via a local webserver rather than the file system. You can launch DocFx's build in server via the following script in the root of this repository:
+In order for all of the JavaScript components to work correctly in your browser, you'll need to serve the documents via a local web server rather than the file system. You can launch DocFx's build in server via the following script in the root of this repository:
 
 ```console
 serve-docs.cmd
