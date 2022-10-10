@@ -26,11 +26,11 @@ jobs:
         submodules: recursive # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules
       - task: NodeTool@0
         inputs:
-          versionSpec: "12.x"
+          versionSpec: "16.x"
       - task: Npm@1
         inputs:
           command: "custom"
-          customCommand: "install -g cspell@5.17.0"
+          customCommand: "install -g cspell@6.12.0"
       - task: CmdLine@2
         inputs:
           script: 'cspell --config ./docs/cSpell.json "docs/**/*.md"'
