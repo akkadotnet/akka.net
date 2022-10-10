@@ -19,8 +19,8 @@ namespace Akka.Configuration
         public static ConfigurationException NullOrEmptyConfig<T>(string path = null, string reason = null)
         {
             if (!string.IsNullOrWhiteSpace(path))
-                return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration does not contain `{path}` node{(reason is { } ? $". {reason}" : "")}");
-            return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration is null or empty{(reason is { } ? $". {reason}" : "")}");
+                return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration does not contain `{path}` node{(reason != null ? $". {reason}" : "")}");
+            return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration is null or empty{(reason != null ? $". {reason}" : "")}");
         }
 
         /// <summary>
