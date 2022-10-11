@@ -17,16 +17,14 @@ namespace Akka.Event
         private readonly LoggingBus _bus;
         private readonly Type _logClass;
         private readonly string _logSource;
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="BusLogging" /> class.
         /// </summary>
         /// <param name="bus">The logging bus instance that messages will be published to.</param>
-        /// <param name="logSource">The log source.</param>
-        /// <param name="logClass">The log class.</param>
-        /// <param name="logMessageFormatter">The log message formatter.</param>
-        public BusLogging(LoggingBus bus, string logSource, Type logClass, ILogMessageFormatter logMessageFormatter)
-            : base(logMessageFormatter)
+        /// <param name="source"></param>
+        public BusLogging(LoggingBus bus, LogSource source)
+            : base()
         {
             _bus = bus;
             _logSource = logSource;
