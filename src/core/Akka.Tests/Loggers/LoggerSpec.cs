@@ -129,7 +129,7 @@ akka.stdout-loglevel = DEBUG");
             var logSource = LogSource.Create(nameof(LoggerSpec));
             var ls = logSource.Source;
             var lc = logSource.Type;
-            var formatter = new DefaultLogMessageFormatter();
+            var formatter =  DefaultLogMessageFormatter.Instance;
 
             yield return new object[] { new Error(ex, ls, lc, new LogMessage(formatter, Case.t, Case.p)) }; 
 

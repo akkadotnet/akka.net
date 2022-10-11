@@ -12,6 +12,9 @@ namespace Akka.Event
     /// </summary>
     public class DefaultLogMessageFormatter : ILogMessageFormatter
     {
+        public static readonly DefaultLogMessageFormatter Instance = new DefaultLogMessageFormatter();
+        private DefaultLogMessageFormatter(){}
+        
         /// <summary>
         /// Formats a specified composite string using an optional list of item substitutions.
         /// </summary>
