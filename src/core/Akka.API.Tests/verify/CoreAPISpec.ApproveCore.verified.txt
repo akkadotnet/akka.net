@@ -2239,7 +2239,7 @@ namespace Akka.Configuration
         public ConfigurationException(string message) { }
         public ConfigurationException(string message, System.Exception exception) { }
         protected ConfigurationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        public static Akka.Configuration.ConfigurationException NullOrEmptyConfig<T>(string path = null) { }
+        public static Akka.Configuration.ConfigurationException NullOrEmptyConfig<T>(string path = null, string reason = null) { }
     }
     public class ConfigurationFactory
     {
