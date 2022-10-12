@@ -9,11 +9,20 @@ using System;
 
 namespace Akka.Event
 {
+    public interface ILogContents
+    {
+        /// <summary>
+        /// Renders an underlying <see cref="LogEntry{TState}"/> in a non-generic fashion.
+        /// </summary>
+        /// <returns></returns>
+        string Format();
+    }
+    
     /// <summary>
     /// Raw data payload produced from any logging call.
     /// </summary>
     /// <typeparam name="TState">The state for the specified log message.</typeparam>
-    public readonly struct LogEntry<TState>
+    public readonly struct LogEntry<TState> : ILogContents
     {
         public LogEntry(LogLevel logLevel, TState message, Func<TState, Exception, string> formatter, 
             LogSource source, int threadId, DateTime timestamp, Exception exception = null)
@@ -49,6 +58,15 @@ namespace Akka.Event
         public LogSource LogSource { get; }
 
         public Func<TState, Exception, string> Formatter { get; }
+        public string ToString(string format, IFormatProvider formatProvider)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Format()
+        {
+            return Formatter(Message, Exception);
+        }
     }
 
     /// <summary>
