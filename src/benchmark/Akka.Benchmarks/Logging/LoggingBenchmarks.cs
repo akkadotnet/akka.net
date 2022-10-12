@@ -25,7 +25,7 @@ namespace Akka.Benchmarks
             private readonly string _logSource;
             private readonly Type _logClass;
 
-            public BenchmarkLogAdapter(int capacity) : base(new DefaultLogMessageFormatter())
+            public BenchmarkLogAdapter(int capacity) : base(DefaultLogMessageFormatter.Instance)
             {
                 AllLogs = new LogEvent[capacity];
                 _logSource = LogSource.Create(this).Source;

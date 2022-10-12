@@ -2986,7 +2986,7 @@ namespace Akka.Event
     }
     public class DefaultLogMessageFormatter : Akka.Event.ILogMessageFormatter
     {
-        public DefaultLogMessageFormatter() { }
+        public static readonly Akka.Event.DefaultLogMessageFormatter Instance;
         public string Format(string format, params object[] args) { }
     }
     public class DefaultLogger : Akka.Actor.ActorBase, Akka.Dispatch.IRequiresMessageQueue<Akka.Event.ILoggerMessageQueueSemantics>
