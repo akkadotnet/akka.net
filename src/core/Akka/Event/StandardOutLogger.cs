@@ -127,7 +127,7 @@ namespace Akka.Event
 
                 if (UseColors)
                 {
-                    var logLevel = logEvent.LogLevel();
+                    var logLevel = logEvent.LogLevel;
                     switch (logLevel)
                     {
                         case LogLevel.DebugLevel:
@@ -156,27 +156,14 @@ namespace Akka.Event
                  */
                 var sb = new StringBuilder();
                 sb.AppendFormat("[ERROR][{0}]", logEvent.Timestamp)
-                    .AppendFormat("[Thread {0}]", logEvent.Thread.ManagedThreadId.ToString().PadLeft(4, '0'))
+                    .AppendFormat("[Thread {0}]", logEvent.ThreadId.ToString().PadLeft(4, '0'))
                     .AppendFormat("[{0}] ", nameof(StandardOutLogger))
-                    .AppendFormat("Encountered System.FormatException while recording log: [{0}]", logEvent.LogLevel().PrettyNameFor())
+                    .AppendFormat("Encountered System.FormatException while recording log: [{0}]", logEvent.LogLevel.PrettyNameFor())
                     .AppendFormat("[{0}]. ", logEvent.LogSource)
                     .Append(ex.Message);
+                
 
-                string msg;
-                switch (logEvent.Message)
-                {
-                    case LogMessage formatted: // a parameterized log
-                        msg = " str=[" + formatted.Format + "], args=["+ string.Join(",", formatted.Args) +"]";
-                        break;
-                    case string unformatted: // pre-formatted or non-parameterized log
-                        msg = unformatted;
-                        break;
-                    default: // surprise!
-                        msg = logEvent.Message.ToString(); 
-                        break;
-                }
-
-                sb.Append(msg)
+                sb.Append(logEvent.Message)
                     .Append(" Please take a look at the logging call where this occurred and fix your format string.");
 
                 StandardOutWriter.WriteLine(sb.ToString(), ErrorColor);

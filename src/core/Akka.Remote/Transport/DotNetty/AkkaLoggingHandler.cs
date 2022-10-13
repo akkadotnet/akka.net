@@ -10,11 +10,11 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;
 using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
-using ILoggingAdapter = Akka.Event.ILoggingAdapter;
 
 namespace Akka.Remote.Transport.DotNetty
 {

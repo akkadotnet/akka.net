@@ -464,7 +464,7 @@ namespace Akka.Actor.Internal
 
         private void ConfigureLoggers()
         {
-            _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), DefaultLogMessageFormatter.Instance);
+            _log = new BusLogging(_eventStream, LogSource.Create("ActorSystem(" + _name + ")"));
         }
 
         private void ConfigureDispatchers()

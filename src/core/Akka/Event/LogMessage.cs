@@ -6,11 +6,32 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 
 namespace Akka.Event
 {
     public interface ILogContents
     {
+        public LogLevel LogLevel { get; }
+
+        public Exception Exception { get; }
+        
+        /// <summary>
+        /// The timestamp that this event occurred.
+        /// </summary>
+        public DateTime Timestamp { get; }
+
+        /// <summary>
+        /// The thread where this event occurred.
+        /// </summary>
+        public int ThreadId { get; }
+
+        /// <summary>
+        /// The source that generated this event.
+        /// </summary>
+        public LogSource LogSource { get; }
+
+        
         /// <summary>
         /// Renders an underlying <see cref="LogEntry{TState}"/> in a non-generic fashion.
         /// </summary>
@@ -58,16 +79,22 @@ namespace Akka.Event
         public LogSource LogSource { get; }
 
         public Func<TState, Exception, string> Formatter { get; }
-        public string ToString(string format, IFormatProvider formatProvider)
-        {
-            throw new NotImplementedException();
-        }
 
         public string Format()
         {
             return Formatter(Message, Exception);
         }
     }
+
+    internal static class LogEntryExtensions
+    {
+        public static LogEntry<string> CreateLogEntryFromString(LogLevel level, string source, Type sourceType,
+            string msg, Exception ex = null)
+        {
+            return new LogEntry<string>(level, msg, LoggingAdapterExtensions.StringOnlyFormatter, new LogSource(source, sourceType), Thread.CurrentThread.ManagedThreadId, DateTime.UtcNow, ex);
+        }
+    }
+    
 
     /// <summary>
     /// Used for the original <c>params object[]</c> methods.

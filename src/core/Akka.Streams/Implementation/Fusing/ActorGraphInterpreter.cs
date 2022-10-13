@@ -422,7 +422,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         private BusLogging GetLogger()
         {
-            return new BusLogging(Materializer.System.EventStream, Self.ToString(), typeof(GraphInterpreterShell), DefaultLogMessageFormatter.Instance);
+            var logSource = LogSource.Create(Self);
+            return new BusLogging(Materializer.System.EventStream, logSource);
         }
 
         /// <summary>

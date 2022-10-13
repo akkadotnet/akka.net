@@ -16,6 +16,10 @@ namespace Akka.Event
                 ? string.Format(state.Format, state.Args)
                 : string.Format(state.Format, state.Args) + $"{Environment.NewLine}Cause: {exception}";
 
+        internal static readonly Func<string, Exception, string> StringOnlyFormatter = (str, ex) => ex == null
+            ? str
+            : str + $"{Environment.NewLine}Cause: {ex}";
+
         /// <summary>
         /// Logs a <see cref="LogLevel.DebugLevel"/> message.
         /// </summary>

@@ -244,7 +244,8 @@ namespace Akka.Actor
             }
             else
             {
-                Publish(new Warning(Self.Path.ToString(), Actor.GetType(), string.Format("BUG: illegal Watch({0},{1} for {2}", watchee, watcher, Self)));
+                Publish(new Warning(null, Self.Path.ToString(), Actor.GetType(),
+                    $"BUG: illegal Watch({watchee},{watcher} for {Self}"));
             }
         }
 
@@ -273,7 +274,8 @@ namespace Akka.Actor
             }
             else
             {
-                Publish(new Warning(Self.Path.ToString(), Actor.GetType(), string.Format("BUG: illegal Unwatch({0},{1} for {2}", watchee, watcher, Self)));
+                Publish(new Warning(null, Self.Path.ToString(), Actor.GetType(),
+                    $"BUG: illegal Unwatch({watchee},{watcher} for {Self}"));
             }
         }
 

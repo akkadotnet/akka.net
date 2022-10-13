@@ -1063,7 +1063,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
                     }
                     else if (!watcheeSelf && watcherSelf)
                     {
-                        Publish(new Warning(Path.ToString(), typeof(FunctionRef), $"Externally triggered watch from {watcher} to {watchee} is illegal on FunctionRef"));
+                        Publish(new Warning( Path.ToString(), typeof(FunctionRef), $"Externally triggered watch from {watcher} to {watchee} is illegal on FunctionRef"));
                     }
                     else
                     {

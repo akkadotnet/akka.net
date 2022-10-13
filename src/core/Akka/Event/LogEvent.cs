@@ -45,47 +45,49 @@ namespace Akka.Event
         /// <summary>
         /// Initializes a new instance of the <see cref="LogEvent" /> class.
         /// </summary>
-        protected LogEvent()
+        protected LogEvent(ILogContents contents)
         {
-            Timestamp = DateTime.UtcNow;
-            Thread = Thread.CurrentThread;
+            Contents = contents;
         }
+
+        protected readonly ILogContents Contents;
 
         /// <summary>
         /// The exception that caused the log event. Can be <c>null</c>
         /// </summary>
-        public Exception Cause { get; protected set; }
+        public Exception Cause => Contents.Exception;
 
         /// <summary>
         /// The timestamp that this event occurred.
         /// </summary>
-        public DateTime Timestamp { get; private set; }
+        public DateTime Timestamp => Contents.Timestamp;
 
         /// <summary>
-        /// The thread where this event occurred.
+        /// The id of the thread where this event occurred.
         /// </summary>
-        public Thread Thread { get; private set; }
+        public int ThreadId => Contents.ThreadId;
 
         /// <summary>
         /// The source that generated this event.
         /// </summary>
-        public string LogSource { get; protected set; }
+        public LogSource LogSource => Contents.LogSource;
 
-        /// <summary>
-        /// The type that generated this event.
-        /// </summary>
-        public Type LogClass { get; protected set; }
+        public LogLevel LogLevel => Contents.LogLevel;
 
-        /// <summary>
-        /// The message associated with this event.
-        /// </summary>
-        public object Message { get; protected set; }
+        private string _msg;
 
-        /// <summary>
-        /// Retrieves the <see cref="Akka.Event.LogLevel" /> used to classify this event.
-        /// </summary>
-        /// <returns>The <see cref="Akka.Event.LogLevel" /> used to classify this event.</returns>
-        public abstract LogLevel LogLevel();
+        public string Message
+        {
+            get
+            {
+                if (_msg == null)
+                {
+                    _msg = Contents.Format();
+                }
+
+                return _msg;
+            }
+        }
 
         /// <summary>
         /// Returns a <see cref="string" /> that represents this LogEvent.
@@ -93,9 +95,8 @@ namespace Akka.Event
         /// <returns>A <see cref="string" /> that represents this LogEvent.</returns>
         public override string ToString()
         {
-            return Cause == null
-                ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fff}][Thread {Thread.ManagedThreadId.ToString().PadLeft(4, '0')}][{LogSource}] {Message}"
-                : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fff}][Thread {Thread.ManagedThreadId.ToString().PadLeft(4, '0')}][{LogSource}] {Message}{Environment.NewLine}Cause: {Cause}";
+            return
+                $"[{LogLevel.PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fff}][Thread {ThreadId.ToString().PadLeft(4, '0')}][{LogSource}] {Message}";
         }
     }
 }

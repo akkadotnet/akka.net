@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Execution;

@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Util;

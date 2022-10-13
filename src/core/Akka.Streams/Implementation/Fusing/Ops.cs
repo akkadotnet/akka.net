@@ -2948,7 +2948,8 @@ namespace Akka.Streams.Implementation.Fusing
                     try
                     {
                         var materializer = ActorMaterializerHelper.Downcast(Materializer);
-                        _log = new BusLogging(materializer.System.EventStream, _stage._name, GetType(), DefaultLogMessageFormatter.Instance);
+                        
+                        _log = new BusLogging(materializer.System.EventStream, Akka.Event.LogSource.Create(_stage._name));
                     }
                     catch (Exception ex)
                     {

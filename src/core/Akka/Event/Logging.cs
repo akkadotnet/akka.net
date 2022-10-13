@@ -25,9 +25,9 @@ namespace Akka.Event
     /// * providing a <see cref="string"/> as source will append "(ActorSystem address)" and use the result.
     /// * providing a <see cref="Type"/> will extract its simple name,  append "(ActorSystem address)", and use the result.
     /// </summary>
-    public struct LogSource
+    public readonly struct LogSource
     {
-        private LogSource(string source, Type type)
+        public LogSource(string source, Type type)
         {
             Source = source;
             Type = type;
@@ -213,7 +213,7 @@ namespace Akka.Event
             catch // had a failure, don't want to propagate it. Just start the logger without remote context
             {
                 var logSource = LogSource.Create(context);
-                return new BusLogging(context.System.EventStream, logSource.Source, logSource.Type, logMessageFormatter ?? DefaultLogMessageFormatter.Instance);
+                return new BusLogging(context.System.EventStream, logSource);
             }
         }
 
@@ -226,7 +226,7 @@ namespace Akka.Event
         public static ILoggingAdapter GetLogger(this IActorContext context, ILogMessageFormatter logMessageFormatter = null)
         {
             var logSource = LogSource.Create(context, context.System);
-            return new BusLogging(context.System.EventStream, logSource.Source, logSource.Type, logMessageFormatter ?? DefaultLogMessageFormatter.Instance);
+            return new BusLogging(context.System.EventStream, logSource);
         }
 
         /// <summary>
@@ -239,7 +239,7 @@ namespace Akka.Event
         public static ILoggingAdapter GetLogger(ActorSystem system, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
             var logSource = LogSource.Create(logSourceObj, system);
-            return new BusLogging(system.EventStream, logSource.Source, logSource.Type, logMessageFormatter ?? DefaultLogMessageFormatter.Instance);
+            return new BusLogging(system.EventStream, logSource);
         }
 
         /// <summary>
@@ -252,7 +252,7 @@ namespace Akka.Event
         public static ILoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
             var logSource = LogSource.Create(logSourceObj);
-            return new BusLogging(loggingBus, logSource.Source, logSource.Type, logMessageFormatter ?? DefaultLogMessageFormatter.Instance);
+            return new BusLogging(loggingBus, logSource);
         }
 
         /// <summary>

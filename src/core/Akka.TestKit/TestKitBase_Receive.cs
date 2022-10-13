@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Event;
 using Akka.TestKit.Internal;
 
 namespace Akka.TestKit

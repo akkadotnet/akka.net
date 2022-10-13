@@ -38,8 +38,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         protected override bool IsMatch(LogEvent evt)
         {
-            var warning = evt as Warning;
-            if(warning != null)
+            if(evt is Warning warning)
             {
                 var deadLetter = warning.Message as DeadLetter;
                 if(deadLetter != null)

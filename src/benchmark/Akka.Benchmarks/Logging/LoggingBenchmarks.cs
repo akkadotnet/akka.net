@@ -22,81 +22,24 @@ namespace Akka.Benchmarks
             public int CurrentLogs { get; private set; }
             public LogEvent[] AllLogs { get; private set; }
 
-            private readonly string _logSource;
-            private readonly Type _logClass;
-
-            public BenchmarkLogAdapter(int capacity) : base(DefaultLogMessageFormatter.Instance)
+            public BenchmarkLogAdapter(int capacity) : base(LogSource.Create(typeof(BenchmarkLogAdapter)))
             {
                 AllLogs = new LogEvent[capacity];
-                _logSource = LogSource.Create(this).Source;
-                _logClass = typeof(BenchmarkLogAdapter);
             }
 
             public override bool IsDebugEnabled { get; } = true;
             public override bool IsInfoEnabled { get; } = true;
             public override bool IsWarningEnabled { get; } = true;
+            protected override void NotifyLog<TState>(in LogEntry<TState> entry)
+            {
+                
+            }
+
             public override bool IsErrorEnabled { get; } = true;
 
             private void AddLogMessage(LogEvent m)
             {
                 AllLogs[CurrentLogs++] = m;
-            }
-
-            protected override void NotifyError(object message)
-            {
-               AddLogMessage(new Error(null, _logSource, _logClass, message));
-            }
-
-            /// <summary>
-            /// Publishes the error message and exception onto the LoggingBus.
-            /// </summary>
-            /// <param name="cause">The exception that caused this error.</param>
-            /// <param name="message">The error message.</param>
-            protected override void NotifyError(Exception cause, object message)
-            {
-                AddLogMessage(new Error(cause, _logSource, _logClass, message));
-            }
-
-            /// <summary>
-            /// Publishes the warning message onto the LoggingBus.
-            /// </summary>
-            /// <param name="message">The warning message.</param>
-            protected override void NotifyWarning(object message)
-            {
-                AddLogMessage(new Warning(_logSource, _logClass, message));
-            }
-
-            protected override void NotifyWarning(Exception cause, object message)
-            {
-                AddLogMessage(new Warning(cause, _logSource, _logClass, message));
-            }
-
-            /// <summary>
-            /// Publishes the info message onto the LoggingBus.
-            /// </summary>
-            /// <param name="message">The info message.</param>
-            protected override void NotifyInfo(object message)
-            {
-                AddLogMessage(new Info(_logSource, _logClass, message));
-            }
-
-            protected override void NotifyInfo(Exception cause, object message)
-            {
-                AddLogMessage(new Info(cause, _logSource, _logClass, message));
-            }
-
-            /// <summary>
-            /// Publishes the debug message onto the LoggingBus.
-            /// </summary>
-            /// <param name="message">The debug message.</param>
-            protected override void NotifyDebug(object message)
-            {
-                AddLogMessage(new Debug(_logSource, _logClass, message));
-            }
-
-            protected override void NotifyDebug(Exception cause, object message)
-            {
-                AddLogMessage(new Debug(cause, _logSource, _logClass, message));
             }
         }
 

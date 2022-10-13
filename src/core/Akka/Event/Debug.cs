@@ -12,43 +12,15 @@ namespace Akka.Event
     /// <summary>
     /// This class represents a Debug log event.
     /// </summary>
-    public class Debug : LogEvent
+    public sealed class Debug : LogEvent
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Debug" /> class.
-        /// </summary>
-        /// <param name="logSource">The source that generated the log event.</param>
-        /// <param name="logClass">The type of logger used to log the event.</param>
-        /// <param name="message">The message that is being logged.</param>
-        public Debug(string logSource, Type logClass, object message) 
-            : this(null, logSource, logClass, message)
+        public Debug(ILogContents contents) : base(contents)
         {
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Debug" /> class.
-        /// </summary>
-        /// <param name="cause">The exception that generated the log event.</param>
-        /// <param name="logSource">The source that generated the log event.</param>
-        /// <param name="logClass">The type of logger used to log the event.</param>
-        /// <param name="message">The message that is being logged.</param>
-        public Debug(Exception cause, string logSource, Type logClass, object message)
+        public Debug(string sourceName, Type actorType, string msg) 
+            : base(LogEntryExtensions.CreateLogEntryFromString(LogLevel.DebugLevel, sourceName, actorType, msg))
         {
-            LogSource = logSource;
-            LogClass = logClass;
-            Message = message;
-            Cause = cause;
-        }
-
-        /// <summary>
-        /// Retrieves the <see cref="Akka.Event.LogLevel" /> used to classify this event.
-        /// </summary>
-        /// <returns>
-        /// The <see cref="Akka.Event.LogLevel" /> used to classify this event.
-        /// </returns>
-        public override LogLevel LogLevel()
-        {
-            return Event.LogLevel.DebugLevel;
         }
     }
 }

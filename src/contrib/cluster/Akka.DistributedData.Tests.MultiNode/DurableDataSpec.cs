@@ -13,6 +13,7 @@ using Akka.Cluster;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.DistributedData.Durable;
+using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;

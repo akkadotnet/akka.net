@@ -47,16 +47,11 @@ namespace Akka.TestKit.Xunit2.Internals
             }
             catch (FormatException ex)
             {
-                if (e.Message is LogMessage msg)
-                {
-                    var message =
-                        $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Args)}]";
-                    if (e.Cause != null)
-                        throw new AggregateException(message, ex, e.Cause);
-                    throw new FormatException(message, ex);
-                }
-
-                throw;
+                var message =
+                    $"Received a malformed formatted message. Log level: [{e.LogLevel}], Source: [{e.LogSource}]";
+                if (e.Cause != null)
+                    throw new AggregateException(message, ex, e.Cause);
+                throw new FormatException(message, ex);
             }
             catch (InvalidOperationException ie)
             {

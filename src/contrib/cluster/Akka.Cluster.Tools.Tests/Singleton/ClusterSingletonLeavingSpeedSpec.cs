@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
@@ -149,7 +150,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                     });
                 });
 
-                Log.Info($"Singleton {i} stopped in {(int)stoppedDuration.TotalMilliseconds} ms, started in {(int)startedDuration.Milliseconds} ms, diff ${(int)(startedDuration - stoppedDuration).TotalMilliseconds} ms");
+                Log.Info($"Singleton {i} stopped in {(int)stoppedDuration.TotalMilliseconds} ms, started in {(int)startedDuration.TotalMilliseconds} ms, diff ${(int)(startedDuration - stoppedDuration).TotalMilliseconds} ms");
                 durations.Add((stoppedDuration, startedDuration));
             }
             sw.Stop();

@@ -107,7 +107,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Log_on_source_must_allow_passing_in_custom_LoggingAdapter()
         {
-            var log = new BusLogging(Sys.EventStream, "com.example.ImportantLogger", LogType, DefaultLogMessageFormatter.Instance);
+            var logSource = new LogSource("com.example.ImportantLogger", LogType);
+            var log = new BusLogging(Sys.EventStream, logSource);
 
             Source.Single(42)
                 .Log("flow-5", log: log)
