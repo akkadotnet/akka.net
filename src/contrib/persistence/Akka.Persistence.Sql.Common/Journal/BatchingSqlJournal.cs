@@ -974,7 +974,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 using (var tx = connection.BeginTransaction(Setup.IsolationLevel))
                 using (var command = (TCommand)connection.CreateCommand())
                 {
-                    command.CommandTimeout = (int)Setup.ConnectionTimeout.TotalMilliseconds;
+                    command.CommandTimeout = (int)Setup.ConnectionTimeout.TotalSeconds;
                     command.Transaction = tx;
                     try
                     {
