@@ -58,7 +58,7 @@ namespace Akka.Remote
 
        
         public override bool Equals(object obj) =>
-            obj is Deadline deadline && Equals(deadline);
+            obj is Deadline deadline && deadline.When.Equals(When);
 
       
         public override int GetHashCode()
