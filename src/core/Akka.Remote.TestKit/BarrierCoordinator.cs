@@ -75,12 +75,12 @@ namespace Akka.Remote.TestKit
             public Deadline Deadline { get; private set; }
 
             public Data Copy(ImmutableHashSet<Controller.NodeInfo> clients = null, string barrier = null,
-                ImmutableHashSet<IActorRef> arrived = null, Deadline deadline = default)
+                ImmutableHashSet<IActorRef> arrived = null, Deadline? deadline = null)
             {
                 return new Data(clients ?? Clients,
                     barrier ?? Barrier,
                     arrived ?? Arrived,
-                    deadline == default ? Deadline : deadline);
+                    deadline ?? Deadline);
             }
 
             private bool Equals(Data other)

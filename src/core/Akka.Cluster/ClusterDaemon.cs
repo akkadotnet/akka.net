@@ -1286,11 +1286,11 @@ namespace Akka.Cluster
                     break;
                 case InternalClusterAction.ITick _:
                     {
-                        if (_joinSeedNodesDeadline != null && _joinSeedNodesDeadline.IsOverdue)
+                        if (_joinSeedNodesDeadline != Deadline.Never && _joinSeedNodesDeadline.IsOverdue)
                         {
                             JoinSeedNodesWasUnsuccessful();
                         }
-                        else if (deadline != null && deadline.IsOverdue)
+                        else if (deadline != Deadline.Never && deadline.IsOverdue)
                         {
                             // join attempt failed, retry
                             BecomeUninitialized();
