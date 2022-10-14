@@ -463,7 +463,6 @@ namespace Akka.Cluster.Sharding.Serialization
     {
         public ClusterShardingMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public override object FromBinary(byte[] bytes, string manifest) { }
-        public static string GetManifest(object o) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }
     }
