@@ -233,7 +233,7 @@ namespace Akka.Cluster.Sharding.Serialization
         /// This exception is thrown when the specified <paramref name="o"/> does not have an associated manifest.
         /// </exception>
         /// <returns>The manifest needed for the deserialization of the specified <paramref name="o" />.</returns>
-        public static string GetManifest(object o)
+        internal static string GetManifest(object o)
             => o switch
             {
                 EventSourcedRememberEntitiesShardStore.State _ => EntityStateManifest,
