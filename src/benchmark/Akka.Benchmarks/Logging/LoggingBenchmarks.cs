@@ -32,7 +32,7 @@ namespace Akka.Benchmarks
             public override bool IsWarningEnabled { get; } = true;
             protected override void NotifyLog<TState>(in LogEntry<TState> entry)
             {
-                
+                AddLogMessage(LogEvent.Create(entry));
             }
 
             public override bool IsErrorEnabled { get; } = true;

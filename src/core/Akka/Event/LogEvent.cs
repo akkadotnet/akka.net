@@ -98,5 +98,22 @@ namespace Akka.Event
             return
                 $"[{LogLevel.PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fff}][Thread {ThreadId.ToString().PadLeft(4, '0')}][{LogSource}] {Message}";
         }
+
+        public static LogEvent Create(in ILogContents c)
+        {
+            switch (c.LogLevel)
+            {
+                case LogLevel.DebugLevel:
+                    return new Debug(c);
+                case LogLevel.InfoLevel:
+                    return new Info(c);
+                case LogLevel.WarningLevel:
+                    return new Warning(c);
+                case LogLevel.ErrorLevel:
+                    return new Error(c);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(c), $"Unsupported LogLevel [{c.LogLevel}]");
+            }
+        }
     }
 }

@@ -56,11 +56,24 @@ namespace Akka.Event
         /// </summary>
         public override bool IsWarningEnabled { get { return _isWarningEnabled; } }
 
-        protected override void NotifyLog<TState>(in LogEntry<TState> entry)
+        protected override void NotifyLog<TState>(in LogEntry<TState> c)
         {
-            switch (entry.LogLevel)
+            switch (c.LogLevel)
             {
-                
+                case LogLevel.DebugLevel:
+                    _bus.Publish(new Debug(c));
+                    break;
+                case LogLevel.InfoLevel:
+                    _bus.Publish(new Info(c));
+                    break;
+                case LogLevel.WarningLevel:
+                    _bus.Publish(new Warning(c));
+                    break;
+                case LogLevel.ErrorLevel:
+                    _bus.Publish(new Error(c));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(c), $"Unsupported LogLevel [{c.LogLevel}]");
             }
         }
     }
