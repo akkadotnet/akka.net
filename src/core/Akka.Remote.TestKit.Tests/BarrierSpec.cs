@@ -94,7 +94,7 @@ namespace Akka.Remote.TestKit.Tests
             b.Tell(new BarrierCoordinator.RemoveClient(A));
             ExpectMsg(new Failed(b,
                 new BarrierCoordinator.BarrierEmptyException(
-                    new BarrierCoordinator.Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "", null, null),
+                    new BarrierCoordinator.Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "", null, Deadline.Never),
                     "cannot remove RoleName(a): no client to remove")));
         }
 

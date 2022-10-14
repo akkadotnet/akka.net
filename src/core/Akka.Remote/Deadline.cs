@@ -12,7 +12,7 @@ namespace Akka.Remote
     /// <summary>
     /// This class represents the latest date or time by which an operation should be completed.
     /// </summary>
-    public class Deadline
+    public readonly struct Deadline
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Deadline"/> class.
@@ -42,7 +42,7 @@ namespace Akka.Remote
         /// <summary>
         /// The <see cref="DateTime"/> that the deadline is due.
         /// </summary>
-        public DateTime When { get; private set; }
+        public DateTime When { get; }
 
         /// <summary>
         /// <para>
@@ -91,6 +91,11 @@ namespace Akka.Remote
         }
 
         /// <summary>
+        /// A <see cref="Deadline"/> that will never expire.
+        /// </summary>
+        public static readonly Deadline Never = new Deadline(DateTime.MaxValue);
+
+        /// <summary>
         /// Adds a given <see cref="TimeSpan"/> to the due time of this <see cref="Deadline"/>
         /// </summary>
         /// <param name="deadline">The deadline whose time is being extended</param>
@@ -113,6 +118,16 @@ namespace Akka.Remote
                 return new Deadline(deadline.When.Add(duration.Value));
             else
                 return deadline;
+        }
+
+        public static bool operator ==(Deadline left, Deadline right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(Deadline left, Deadline right)
+        {
+            return !(left == right);
         }
 
         #endregion

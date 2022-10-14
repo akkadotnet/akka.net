@@ -1310,7 +1310,7 @@ namespace Akka.Cluster
         {
             _joinSeedNodesDeadline = _cluster.Settings.ShutdownAfterUnsuccessfulJoinSeedNodes != null
                 ? Deadline.Now + _cluster.Settings.ShutdownAfterUnsuccessfulJoinSeedNodes
-                : null;
+                : Deadline.Never;
         }
 
         private void JoinSeedNodesWasUnsuccessful()
@@ -1318,7 +1318,7 @@ namespace Akka.Cluster
             _log.Warning("Joining of seed-nodes [{0}] was unsuccessful after configured shutdown-after-unsuccessful-join-seed-nodes [{1}]. Running CoordinatedShutdown.",
                 string.Join(", ", _seedNodes), _cluster.Settings.ShutdownAfterUnsuccessfulJoinSeedNodes);
 
-            _joinSeedNodesDeadline = null;
+            _joinSeedNodesDeadline = Deadline.Never;
             _coordShutdown.Run(CoordinatedShutdown.ClusterJoinUnsuccessfulReason.Instance);
         }
 
@@ -1534,7 +1534,7 @@ namespace Akka.Cluster
                 else
                 {
                     var joinDeadline = _cluster.Settings.RetryUnsuccessfulJoinAfter == null
-                        ? null
+                        ? Deadline.Never
                         : Deadline.Now + _cluster.Settings.RetryUnsuccessfulJoinAfter;
 
                     Context.Become(m => TryingToJoin(m, address, joinDeadline));

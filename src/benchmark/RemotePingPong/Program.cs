@@ -116,9 +116,11 @@ namespace RemotePingPong
                 var bestThroughput = 0L;
                 foreach (var throughput in GetClientSettings())
                 {
+                    GC.Collect();
                     var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount);
                     bestThroughput = result1.Item2;
                     redCount = result1.Item3;
+                    GC.Collect(); // for good measure
                 }
             }
 

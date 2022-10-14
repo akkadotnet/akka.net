@@ -66,7 +66,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        protected Deadline PruneDeadline = null;
+        protected Deadline PruneDeadline = Deadline.Never;
 
         /// <summary>
         /// Used to toggle what we do during publication when there are no subscribers
@@ -109,7 +109,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                 case Subscribe subscribe:
                     Context.Watch(subscribe.Ref);
                     Subscribers.Add(subscribe.Ref);
-                    PruneDeadline = null;
+                    PruneDeadline = Deadline.Never;
                     Context.Parent.Tell(new Subscribed(new SubscribeAck(subscribe), Sender));
                     return true;
 
@@ -124,9 +124,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     return true;
 
                 case Prune _:
-                    if (PruneDeadline != null && PruneDeadline.IsOverdue)
+                    if (PruneDeadline != Deadline.Never && PruneDeadline.IsOverdue)
                     {
-                        PruneDeadline = null;
+                        PruneDeadline = Deadline.Never;
                         Context.Parent.Tell(NoMoreSubscribers.Instance);
                     }
 
@@ -224,7 +224,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                             NewGroupActor(encodedGroup).Forward(message);
                         }
                     });
-                    PruneDeadline = null;
+                    PruneDeadline = Deadline.Never;
                     return true;
 
                 case Unsubscribe unsubscribe when unsubscribe.Group != null:
