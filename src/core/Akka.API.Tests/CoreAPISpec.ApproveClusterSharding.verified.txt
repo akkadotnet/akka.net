@@ -135,6 +135,7 @@ namespace Akka.Cluster.Sharding
     {
         public readonly int MaxNumberOfShards;
         protected HashCodeMessageExtractor(int maxNumberOfShards) { }
+        public static Akka.Cluster.Sharding.HashCodeMessageExtractor Create(int maxNumberOfShards, System.Func<object, string> entityIdExtractor, System.Func<object, object> messageExtractor = null) { }
         public abstract string EntityId(object message);
         public virtual object EntityMessage(object message) { }
         public virtual string ShardId(object message) { }
