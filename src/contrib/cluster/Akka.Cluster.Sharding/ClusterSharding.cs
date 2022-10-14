@@ -55,6 +55,33 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     public abstract class HashCodeMessageExtractor : IMessageExtractor
     {
+        private class Implementation : HashCodeMessageExtractor
+        {
+            private readonly Func<object, string> _entityIdExtractor;
+            private readonly Func<object, object> _messageExtractor;
+            public Implementation(int maxNumberOfShards, Func<object, string> entityIdExtractor, Func<object, object> messageExtractor = null) : base(maxNumberOfShards)
+            {
+                _entityIdExtractor = entityIdExtractor ?? throw new NullReferenceException(nameof(entityIdExtractor));
+                _messageExtractor = messageExtractor;
+            }
+
+            public override string EntityId(object message)
+                => _entityIdExtractor.Invoke(message);
+
+            public override object EntityMessage(object message)
+                => _messageExtractor?.Invoke(message) ?? base.EntityMessage(message);
+        }
+
+        /// <summary>
+        /// creates a instance of the <see cref="HashCodeMessageExtractor"/> with the given handlers
+        /// </summary>
+        /// <param name="maxNumberOfShards"></param>
+        /// <param name="entityIdExtractor"></param>
+        /// <param name="messageExtractor"></param>
+        /// <returns></returns>
+        public static HashCodeMessageExtractor Create(int maxNumberOfShards, Func<object, string> entityIdExtractor, Func<object, object> messageExtractor = null)
+            => new Implementation(maxNumberOfShards, entityIdExtractor, messageExtractor);
+
         /// <summary>
         /// TBD
         /// </summary>
