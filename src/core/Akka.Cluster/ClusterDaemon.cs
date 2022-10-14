@@ -1246,7 +1246,7 @@ namespace Akka.Cluster
                     _publisher.Forward(isub);
                     break;
                 case InternalClusterAction.ITick _:
-                    if (_joinSeedNodesDeadline != null && _joinSeedNodesDeadline.IsOverdue) JoinSeedNodesWasUnsuccessful();
+                    if (_joinSeedNodesDeadline != Deadline.Never && _joinSeedNodesDeadline.IsOverdue) JoinSeedNodesWasUnsuccessful();
                     break;
                 default:
                     if (!ReceiveExitingCompleted(message)) Unhandled(message);
