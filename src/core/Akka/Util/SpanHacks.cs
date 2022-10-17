@@ -31,6 +31,71 @@ namespace Akka.Util
             throw new FormatException($"[{str.ToString()}] is now a valid numeric format");
         }
 
+        private const char Negative = '-';
+        private static readonly char[] Numbers = { '0','1','2','3','4','5','6','7','8','9' };
+
+        /// <summary>
+        /// Can replace with int64.TryFormat in later versions of .NET.
+        /// </summary>
+        /// <param name="i">The integer we want to format into a string.</param>
+        /// <param name="startPos">Starting position in the destination span we're going to write from</param>
+        /// <param name="span">The span we're going to write our characters into.</param>
+        /// <param name="sizeHint">Optional size hint, in order to avoid recalculating it.</param>
+        /// <returns></returns>
+        public static int TryFormat(long i, int startPos, ref Span<char> span, int sizeHint = 0)
+        {
+            var index = 0;
+            var negative = i < 0;
+            if (i == 0)
+            {
+                span[index++] = Numbers[0];
+                return index;
+            }
+	
+            var targetLength = sizeHint > 0 ? sizeHint : Int64SizeInCharacters(i);
+            if(negative){
+                i = Math.Abs(i);
+            }
+
+            while (i > 0)
+            {
+                span[startPos + targetLength - index++ - 1] = Numbers[i % 10];
+                i /= 10;
+            }
+	
+            if(negative){
+                span[0] = Negative;
+                index++;
+            }
+
+            return index;
+        }
+
+        /// <summary>
+        /// How many characters do we need to represent this int as a string?
+        /// </summary>
+        /// <param name="i">The int.</param>
+        /// <returns>Character length.</returns>
+        public static int Int64SizeInCharacters(long i)
+        {
+            // still need 1 char to represent '0'
+            if(i == 0) return 1;
+	
+            // account for negative characters
+            var startLen = i < 0 ? 1 : 0;
+
+            i = Math.Abs(i);
+
+            // count sig figs
+            while (i > 0)
+            {
+                i = i / 10;
+                startLen++;
+            }
+
+            return startLen;
+        }
+
         /// <summary>
         /// Parses an integer from a string.
         /// </summary>
