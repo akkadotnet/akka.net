@@ -1,3 +1,27 @@
+#### 1.5.0-alpha2 October 17th 2022 ####
+Akka.NET v1.5.0-alpha2 is a maintenance release for Akka.NET v1.5 that contains numerous performance improvements in critical areas, including core actor message processing and Akka.Remote.
+
+**Performance Fixes**
+
+* [remove delegate allocation from `ForkJoinDispatcher` and `DedicatedThreadPool`](https://github.com/akkadotnet/akka.net/pull/6162)
+* [eliminate `Mailbox` delegate allocations](https://github.com/akkadotnet/akka.net/pull/6162)
+* [Reduce `FSM<TState, TData>` allocations](https://github.com/akkadotnet/akka.net/pull/6162)
+* [removed boxing allocations inside `FSM.State.Equals`](https://github.com/akkadotnet/akka.net/pull/6196)
+* [Eliminate `DefaultLogMessageFormatter` allocations](https://github.com/akkadotnet/akka.net/pull/6166)
+
+In sum you should expect to see total memory consumption, garbage collection, and throughput improve when you upgrade to Akka.NET v1.5.0-alpha2.
+
+**Other Features and Improvements**
+
+* [DData: Suppress gossip message from showing up in debug log unless verbose debug logging is turned on](https://github.com/akkadotnet/akka.net/pull/6089)
+* [TestKit: TestKit automatically injects the default TestKit default configuration if an ActorSystem is passed into its constructor](https://github.com/akkadotnet/akka.net/pull/6092)
+* [Sharding: Added a new `GetEntityLocation` query message to retrieve an entity address location in the shard region](https://github.com/akkadotnet/akka.net/pull/6107)
+* [Sharding: Fixed `GetEntityLocation` uses wrong actor path](https://github.com/akkadotnet/akka.net/pull/6121)
+* [Akka.Cluster and Akka.Cluster.Sharding: should throw human-friendly exception when accessing cluster / sharding plugins when clustering is not running](https://github.com/akkadotnet/akka.net/pull/6169)
+* [Akka.Cluster.Sharding: Add `HashCodeMessageExtractor` factory](https://github.com/akkadotnet/akka.net/pull/6173)
+* [Akka.Persistence.Sql.Common: Fix `DbCommand.CommandTimeout` in `BatchingSqlJournal`](https://github.com/akkadotnet/akka.net/pull/6175)
+
+
 #### 1.5.0-alpha1 August 22 2022 ####
 Akka.NET v1.5.0-alpha1 is a major release that contains a lot of code improvement and rewrites/refactors. **Major upgrades to Akka.Cluster.Sharding in particular**.
 
