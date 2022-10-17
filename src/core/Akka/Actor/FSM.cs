@@ -1262,12 +1262,14 @@ namespace Akka.Actor
                 {
                     Sender.Tell(nextState.Replies[i]);
                 }
-                if (!_currentState.StateName.Equals(nextState.StateName) || nextState.Notifies)
+                
+                // avoid boxing
+                if (!EqualityComparer<TState>.Default.Equals(_currentState.StateName, nextState.StateName) || nextState.Notifies)
                 {
                     _nextState = nextState;
                     HandleTransition(_currentState.StateName, nextState.StateName);
                     Listeners.Gossip(new Transition<TState>(Self, _currentState.StateName, nextState.StateName));
-                    _nextState = default(State<TState, TData>);
+                    _nextState = default;
                 }
                 _currentState = nextState;
 
