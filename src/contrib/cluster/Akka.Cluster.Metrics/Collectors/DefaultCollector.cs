@@ -55,13 +55,13 @@ namespace Akka.Cluster.Metrics.Collectors
         {
             using (var process = Process.GetCurrentProcess())
             {
+                process.Refresh();
                 var metrics = new List<NodeMetrics.Types.Metric>()
                 {
                     // Memory
-                    // Forcing garbage collection to keep metrics more resilent to occasional allocations
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(true)).Value,
-                    // VirtualMemorySize64 is not best idea here...
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.VirtualMemorySize64).Value,
+                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(false)).Value,
+                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.WorkingSet64).Value,
+                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryVirtual, process.VirtualMemorySize64).Value,
                     // CPU Processors
                     NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount).Value,
                 };

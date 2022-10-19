@@ -14,12 +14,14 @@ namespace Akka.Util.Extensions
     /// </summary>
     public static class DateTimeExtensions
     {
+        private static readonly DateTime UnixOffset = new DateTime(1970, 1, 1);
+        
         /// <summary>
         /// Converts given date and time to UNIX Timestamp - number of milliseconds elapsed since 1 Jan 1970
         /// </summary>
         public static long ToTimestamp(this DateTime dateTime)
         {
-            return (long)(dateTime - new DateTime(1970, 1, 1)).TotalMilliseconds;
+            return (long)(dateTime - UnixOffset).TotalMilliseconds;
         }
     }
 }

@@ -68,6 +68,9 @@ namespace Akka.Cluster.Metrics.Tests
                     case StandardMetrics.MemoryUsed: 
                         m.Value.LongValue.Should().BeGreaterOrEqualTo(0);
                         break;
+                    case StandardMetrics.MemoryVirtual: 
+                        m.Value.LongValue.Should().BeGreaterOrEqualTo(0);
+                        break;
                     case StandardMetrics.MaxMemoryRecommended:
                         m.Value.LongValue.Should().BeGreaterThan(0);
                         // Since setting is only a recommendation, we can ignore it

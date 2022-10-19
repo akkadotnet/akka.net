@@ -25,13 +25,17 @@ namespace Akka.Cluster.Metrics
         /// </summary>
         public const string MemoryUsed = "MemoryUsed";
         /// <summary>
-        /// Memory, available for the process (<see cref="Process.VirtualMemorySize64"/>)
+        /// Memory, available for the process (<see cref="Process.WorkingSet64"/>)
         /// </summary>
         public const string MemoryAvailable = "MemoryAvailable";
         /// <summary>
         /// Memory limit recommended for current process (<see cref="Process.MaxWorkingSet"/>)
         /// </summary>
         public const string MaxMemoryRecommended = "MaxMemoryRecommended";
+        /// <summary>
+        /// Virtual memory allocated for current process (<see cref="Process.VirtualMemorySize64"/>)
+        /// </summary>
+        public const string MemoryVirtual = "MemoryVirtual";
         
         /// <summary>
         /// Number of available processors
@@ -54,7 +58,7 @@ namespace Akka.Cluster.Metrics
         {
             return Memory.Decompose(nodeMetrics).Select(data =>
             {
-                return new Memory(data.Address, data.Timestamp, data.UsedSmoothValue, data.AvailableSmoothValue, data.MaxRecommendedSmoothValue);
+                return new Memory(data.Address, data.Timestamp, data.UsedSmoothValue, data.AvailableSmoothValue, data.VirtualSmoothValue, data.MaxRecommendedSmoothValue);
             });
         }
 
@@ -95,25 +99,31 @@ namespace Akka.Cluster.Metrics
             /// Max memory recommended for process (in bytes) (<see cref="Process.MaxWorkingSet"/>)
             /// </summary>
             public Option<double> MaxRecommended { get; }
+            /// <summary>
+            /// Virtual memory allocated for current process (in bytes) (<see cref="Process.VirtualMemorySize64"/>)
+            /// </summary>
+            public double Virtual { get; }
 
             /// <summary>
             /// Given a NodeMetrics it returns the HeapMemory data if the nodeMetrics contains necessary heap metrics.
             /// </summary>
             /// <returns>If possible a tuple matching the HeapMemory constructor parameters</returns>
-            public static Option<(Actor.Address Address, long Timestamp, double UsedSmoothValue, double AvailableSmoothValue, Option<double> MaxRecommendedSmoothValue)> 
+            public static Option<(Actor.Address Address, long Timestamp, double UsedSmoothValue, double AvailableSmoothValue, double VirtualSmoothValue, Option<double> MaxRecommendedSmoothValue)> 
                 Decompose(NodeMetrics nodeMetrics)
             {
                 var used = nodeMetrics.Metric(MemoryUsed);
                 var available = nodeMetrics.Metric(MemoryAvailable);
+                var @virtual = nodeMetrics.Metric(MemoryVirtual);
                 
                 if (!used.HasValue || !available.HasValue)
-                    return Option<(Actor.Address, long, double, double, Option<double>)>.None;
+                    return Option<(Actor.Address, long, double, double, double, Option<double>)>.None;
 
                 return (
                     nodeMetrics.Address,
                     nodeMetrics.Timestamp,
                     used.Value.SmoothValue,
                     available.Value.SmoothValue,
+                    @virtual.HasValue ? @virtual.Value.SmoothValue : 0,
                     nodeMetrics.Metric(MaxMemoryRecommended).Select(v => v.SmoothValue)
                 );
             }
@@ -125,8 +135,9 @@ namespace Akka.Cluster.Metrics
             /// <param name="timestamp">The time of sampling, in milliseconds since midnight, January 1, 1970 UTC</param>
             /// <param name="used">Total memory allocated to the currently running process (in bytes)</param>
             /// <param name="available">Memory available for current process (in bytes)</param>
+            /// <param name="virtual">Virtual memory allocated for current process (in bytes)</param>
             /// <param name="max">Max memory recommended for process (in bytes)</param>
-            public Memory(Actor.Address address, long timestamp, double used, double available, Option<double> max)
+            public Memory(Actor.Address address, long timestamp, double used, double available, double @virtual, Option<double> max)
             {
                 if (used <= 0)
                     throw new ArgumentException(nameof(used), $"{used} expected to be > 0 bytes");
@@ -139,6 +150,7 @@ namespace Akka.Cluster.Metrics
                 Timestamp = timestamp;
                 Used = used;
                 Available = available;
+                Virtual = @virtual;
                 MaxRecommended = max;
             }
         }
