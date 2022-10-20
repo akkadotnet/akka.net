@@ -165,7 +165,6 @@ namespace Akka.Cluster.Metrics
         public const string MaxMemoryRecommended = "MaxMemoryRecommended";
         public const string MemoryAvailable = "MemoryAvailable";
         public const string MemoryUsed = "MemoryUsed";
-        public const string MemoryVirtual = "MemoryVirtual";
         public const string Processors = "Processors";
         public static Akka.Util.Option<Akka.Cluster.Metrics.StandardMetrics.Cpu> ExtractCpu(Akka.Cluster.Metrics.Serialization.NodeMetrics nodeMetrics) { }
         public static Akka.Util.Option<Akka.Cluster.Metrics.StandardMetrics.Memory> ExtractMemory(Akka.Cluster.Metrics.Serialization.NodeMetrics nodeMetrics) { }
@@ -187,21 +186,19 @@ namespace Akka.Cluster.Metrics
         }
         public sealed class Memory
         {
-            public Memory(Akka.Actor.Address address, long timestamp, double used, double available, double @virtual, Akka.Util.Option<double> max) { }
+            public Memory(Akka.Actor.Address address, long timestamp, double used, double available, Akka.Util.Option<double> max) { }
             public Akka.Actor.Address Address { get; }
             public double Available { get; }
             public Akka.Util.Option<double> MaxRecommended { get; }
             public long Timestamp { get; }
             public double Used { get; }
-            public double Virtual { get; }
             [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
                     "Address",
                     "Timestamp",
                     "UsedSmoothValue",
                     "AvailableSmoothValue",
-                    "VirtualSmoothValue",
                     "MaxRecommendedSmoothValue"})]
-            public static Akka.Util.Option<System.ValueTuple<Akka.Actor.Address, long, double, double, double, Akka.Util.Option<double>>> Decompose(Akka.Cluster.Metrics.Serialization.NodeMetrics nodeMetrics) { }
+            public static Akka.Util.Option<System.ValueTuple<Akka.Actor.Address, long, double, double, Akka.Util.Option<double>>> Decompose(Akka.Cluster.Metrics.Serialization.NodeMetrics nodeMetrics) { }
         }
     }
     [Akka.Annotations.InternalApiAttribute()]
