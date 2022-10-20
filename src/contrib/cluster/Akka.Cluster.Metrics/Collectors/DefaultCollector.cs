@@ -59,9 +59,8 @@ namespace Akka.Cluster.Metrics.Collectors
                 var metrics = new List<NodeMetrics.Types.Metric>()
                 {
                     // Memory
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(false)).Value,
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.WorkingSet64).Value,
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryVirtual, process.VirtualMemorySize64).Value,
+                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, process.WorkingSet64).Value,
+                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.VirtualMemorySize64).Value,
                     // CPU Processors
                     NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount).Value,
                 };
