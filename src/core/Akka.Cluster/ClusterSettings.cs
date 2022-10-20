@@ -35,7 +35,7 @@ namespace Akka.Cluster
             //TODO: Requiring!
             var clusterConfig = config.GetConfig("akka.cluster");
             if (clusterConfig?.GetConfig("failure-detector") == null)
-                throw ConfigurationException.NullOrEmptyConfig<ClusterSettings>("akka.cluster", "Did you forgot to set the 'akka.cluster.provider' HOCON property to 'cluster'?");
+                throw new ConfigurationException($"Failed to instantiate {nameof(ClusterSettings)}: Configuration does not contain `akka.cluster` node. Did you forgot to set the 'akka.cluster.provider' HOCON property to 'cluster'?");
 
             LogInfoVerbose = clusterConfig.GetBoolean("log-info-verbose", false);
             LogInfo = LogInfoVerbose || clusterConfig.GetBoolean("log-info", false);
