@@ -14,25 +14,25 @@ option optimize_for = SPEED;
 /**
  * Metrics Gossip Envelope
  */
-message MetricsGossipEnvelope {
+message MetricsGossipEnvelopeProto {
   AddressData from = 1;
-  MetricsGossip gossip = 2;
+  MetricsGossipProto gossip = 2;
   bool reply = 3;
 }
 
 /**
  * Metrics Gossip
  */
-message MetricsGossip {
+message MetricsGossipProto {
   repeated AddressData allAddresses = 1;
   repeated string allMetricNames = 2;
-  repeated NodeMetrics nodeMetrics = 3;
+  repeated NodeMetricsProto nodeMetrics = 3;
 }
 
 /**
  * Node Metrics
  */
-message NodeMetrics {
+message NodeMetricsProto {
   enum NumberType {
     Serialized = 0;
     Double = 1;
@@ -40,24 +40,24 @@ message NodeMetrics {
     Integer = 3;
     Long = 4;
   }
-  message Number {
+  message NumberProto {
     NumberType type = 1;
     uint32 value32 = 2;
     uint64 value64 = 3;
     bytes serialized = 4;
   }
-  message EWMA {
+  message EWMAProto {
     double value = 1;
     double alpha = 2;
   }
-  message Metric {
+  message MetricProto {
     int32 nameIndex = 1;
-    Number number = 2;
-    EWMA ewma = 3;
+    NumberProto number = 2;
+    EWMAProto ewma = 3;
   }
   int32 addressIndex = 1;
   int64 timestamp = 2;
-  repeated Metric metrics = 3;
+  repeated MetricProto metrics = 3;
 }
 
 /****************************************
@@ -78,9 +78,9 @@ message AddressData {
  * Router pool (for remote deployment
  ****************************************/
 
-message AdaptiveLoadBalancingPool {
+message AdaptiveLoadBalancingPoolProto {
   // omitted if default
-  MetricsSelector metricsSelector = 1;
+  MetricsSelectorProto metricsSelector = 1;
   uint32 nrOfInstances = 2;
   // omitted if default
   string routerDispatcher = 3;
@@ -89,12 +89,12 @@ message AdaptiveLoadBalancingPool {
 
 
 // couldn't figure out how to import Payload
-message MetricsSelector {
+message MetricsSelectorProto {
   uint32 serializerId = 1;
   string manifest = 2;
   bytes data = 3;
 }
 
 message MixMetricsSelector {
-  repeated MetricsSelector selectors = 1;
+  repeated MetricsSelectorProto selectors = 1;
 }
