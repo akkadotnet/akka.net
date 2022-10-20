@@ -1,3 +1,9 @@
+#### 1.4.45 October 19th 2022 ####
+Akka.NET v1.4.45 is a patch release for Akka.NET v1.4 for a bug introduced in v1.4.44.
+
+**Patch**
+* [Akka.NET: Revert change to ConfigurationException that is causing binary backward compatibility problem](https://github.com/akkadotnet/akka.net/pull/6201)
+
 #### 1.4.44 October 17th 2022 ####
 Akka.NET v1.4.44 is a maintenance release for Akka.NET v1.4 that contains numerous performance improvements in critical areas, including core actor message processing and Akka.Remote.
 
