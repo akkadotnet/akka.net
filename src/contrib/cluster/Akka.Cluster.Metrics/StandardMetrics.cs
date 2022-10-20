@@ -21,11 +21,11 @@ namespace Akka.Cluster.Metrics
     public static class StandardMetrics
     {
         /// <summary>
-        /// Total memory allocated to the currently running process (<see cref="GC.GetTotalMemory"/>)
+        /// Total memory allocated to the currently running process (<see cref="Process.WorkingSet64"/>)
         /// </summary>
         public const string MemoryUsed = "MemoryUsed";
         /// <summary>
-        /// Memory, available for the process (<see cref="Process.WorkingSet64"/>)
+        /// Memory, available for the process (<see cref="Process.VirtualMemorySize64"/>)
         /// </summary>
         public const string MemoryAvailable = "MemoryAvailable";
         /// <summary>
@@ -84,7 +84,7 @@ namespace Akka.Cluster.Metrics
             /// </summary>
             public long Timestamp { get; }
             /// <summary>
-            /// The current process allocated memory (in bytes) (<see cref="GC.GetTotalMemory"/>)
+            /// The current process allocated memory (in bytes) (<see cref="Process.WorkingSet64"/>)
             /// </summary>
             public double Used { get; }
             /// <summary>
@@ -106,16 +106,14 @@ namespace Akka.Cluster.Metrics
                 var used = nodeMetrics.Metric(MemoryUsed);
                 var available = nodeMetrics.Metric(MemoryAvailable);
                 
-                /*
                 if (!used.HasValue || !available.HasValue)
-                    return Option<(Actor.Address, long, double, double, double, Option<double>)>.None;
-                */
+                    return Option<(Actor.Address, long, double, double, Option<double>)>.None;
 
                 return (
                     nodeMetrics.Address,
                     nodeMetrics.Timestamp,
-                    used.HasValue ? used.Value.SmoothValue : 0.000001,
-                    available.HasValue ? available.Value.SmoothValue : 0.000001,
+                    used.Value.SmoothValue,
+                    available.Value.SmoothValue,
                     nodeMetrics.Metric(MaxMemoryRecommended).Select(v => v.SmoothValue)
                 );
             }
@@ -127,7 +125,6 @@ namespace Akka.Cluster.Metrics
             /// <param name="timestamp">The time of sampling, in milliseconds since midnight, January 1, 1970 UTC</param>
             /// <param name="used">Total memory allocated to the currently running process (in bytes)</param>
             /// <param name="available">Memory available for current process (in bytes)</param>
-            /// <param name="virtual">Virtual memory allocated for current process (in bytes)</param>
             /// <param name="max">Max memory recommended for process (in bytes)</param>
             public Memory(Actor.Address address, long timestamp, double used, double available, Option<double> max)
             {
