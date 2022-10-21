@@ -89,12 +89,13 @@ It should be noted that if the last message-receiving assertion of the block is 
 
 ```csharp
 var worker = ActorOf<Worker>();
-Within(200.Milliseconds()) {
-  worker.Tell("some work");
-  ExpectMsg("Some Result");
-  ExpectNoMsg(); //will block for the rest of the 200ms
-  Thead.Sleep(300); //will NOT make this block fail
-}
+Within(200.Milliseconds(), () =>
+{
+    worker.Tell("some work");
+    ExpectMsg("Some Result");
+    ExpectNoMsg(); //will block for the rest of the 200ms
+    Thead.Sleep(300); //will NOT make this block fail
+});
 ```
 
 ## Accounting for Slow Test System
