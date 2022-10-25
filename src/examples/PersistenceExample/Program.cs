@@ -12,27 +12,24 @@ using Akka.Persistence;
 
 namespace PersistenceExample
 {
-    class Program
+    public static class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-           
+            using var system = ActorSystem.Create("example");
+            
+            //SqlServerPersistence.Init(system);
+            //BasicUsage(system);
 
-            using (var system = ActorSystem.Create("example"))
-            {
-                //SqlServerPersistence.Init(system);
-                BasicUsage(system);
+            //FailingActorExample(system);
 
-                //FailingActorExample(system);
+            SnapshotedActor(system);
 
-                //SnapshotedActor(system);
+            //ViewExample(system);
 
-                //ViewExample(system);
+            AtLeastOnceDelivery(system);
 
-                AtLeastOnceDelivery(system);
-
-                Console.ReadLine();
-            }
+            Console.ReadLine();
         }
 
         private static void AtLeastOnceDelivery(ActorSystem system)
@@ -61,16 +58,6 @@ namespace PersistenceExample
             Console.WriteLine("\nSYSTEM: Enabled confirmations\n");
             delivery.Tell("start");
             
-        }
-
-        private static void ViewExample(ActorSystem system)
-        {
-            Console.WriteLine("\n--- PERSISTENT VIEW EXAMPLE ---\n");
-            var pref = system.ActorOf(Props.Create<ViewExampleActor>());
-            var view = system.ActorOf(Props.Create<ExampleView>());
-
-            system.Scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, TimeSpan.FromSeconds(2), pref, "scheduled", ActorRefs.NoSender);
-            system.Scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, TimeSpan.FromSeconds(5), view, "snap", ActorRefs.NoSender);
         }
 
         private static void SnapshotedActor(ActorSystem system)

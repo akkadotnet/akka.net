@@ -20,26 +20,33 @@ namespace PersistenceExample
         }
 
         public override string PersistenceId { get { return "sample-id-2"; } }
-        public LinkedList<string> Received { get; private set; }
+        public LinkedList<string> Received { get; }
 
         protected override bool ReceiveRecover(object message)
         {
-            if (message is string)
-                Received.AddFirst(message.ToString());
-            else return false;
+            if (!(message is string str)) 
+                return false;
+            
+            Received.AddFirst(str);
             return true;
+
         }
 
         protected override bool ReceiveCommand(object message)
         {
-            if (message as string == "print")
-                Console.WriteLine("Received: " + string.Join(";, ", Enumerable.Reverse(Received)));
-            else if (message as string == "boom")
-                throw new Exception("controlled demolition");
-            else if (message is string)
-                Persist(message.ToString(), s => Received.AddFirst(s));
-            else return false;
-            return true;
+            switch (message)
+            {
+                case string str when str == "print":
+                    Console.WriteLine("Received: " + string.Join(";, ", Enumerable.Reverse(Received)));
+                    return true;
+                case string str when str == "boom":
+                    throw new Exception("controlled demolition");
+                case string str:
+                    Persist(str, s => Received.AddFirst(s));
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }
