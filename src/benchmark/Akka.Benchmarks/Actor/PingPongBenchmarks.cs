@@ -15,7 +15,6 @@ using BenchmarkDotNet.Engines;
 
 namespace Akka.Benchmarks.Actor
 {
-    [Config(typeof(MonitoringConfig))]
     [SimpleJob(RunStrategy.Monitoring, launchCount: 3, warmupCount: 3, targetCount: 3)]
     public class PingPongBenchmarks
     {
