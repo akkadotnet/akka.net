@@ -3,9 +3,11 @@
  */
 
 syntax = "proto3";
+package Akka.Cluster.Metrics.Serialization.Proto.Msg;
 
-option csharp_namespace = "Akka.Cluster.Metrics.Serialization";
 option optimize_for = SPEED;
+
+import "ContainerFormats.proto";
 
 /****************************************
  * Metrics Gossip Messages
@@ -14,25 +16,25 @@ option optimize_for = SPEED;
 /**
  * Metrics Gossip Envelope
  */
-message MetricsGossipEnvelopeProto {
-  AddressData from = 1;
-  MetricsGossipProto gossip = 2;
+message MetricsGossipEnvelope {
+  Akka.Remote.Serialization.Proto.Msg.AddressData from = 1;
+  MetricsGossip gossip = 2;
   bool reply = 3;
 }
 
 /**
  * Metrics Gossip
  */
-message MetricsGossipProto {
-  repeated AddressData allAddresses = 1;
+message MetricsGossip {
+  repeated Akka.Remote.Serialization.Proto.Msg.AddressData allAddresses = 1;
   repeated string allMetricNames = 2;
-  repeated NodeMetricsProto nodeMetrics = 3;
+  repeated NodeMetrics nodeMetrics = 3;
 }
 
 /**
  * Node Metrics
  */
-message NodeMetricsProto {
+message NodeMetrics {
   enum NumberType {
     Serialized = 0;
     Double = 1;
@@ -40,47 +42,33 @@ message NodeMetricsProto {
     Integer = 3;
     Long = 4;
   }
-  message NumberProto {
+  message Number {
     NumberType type = 1;
     uint32 value32 = 2;
     uint64 value64 = 3;
     bytes serialized = 4;
   }
-  message EWMAProto {
+  message EWMA {
     double value = 1;
     double alpha = 2;
   }
-  message MetricProto {
+  message Metric {
     int32 nameIndex = 1;
-    NumberProto number = 2;
-    EWMAProto ewma = 3;
+    Number number = 2;
+    EWMA ewma = 3;
   }
   int32 addressIndex = 1;
   int64 timestamp = 2;
-  repeated MetricProto metrics = 3;
-}
-
-/****************************************
- * Common Datatypes and Messages
- ****************************************/
-
-/**
- * Defines a remote address.
- */
-message AddressData {
-  string system = 1;
-  string hostname = 2;
-  uint32 port = 3;
-  string protocol = 4;
+  repeated Metric metrics = 3;
 }
 
 /****************************************
  * Router pool (for remote deployment
  ****************************************/
 
-message AdaptiveLoadBalancingPoolProto {
+message AdaptiveLoadBalancingPool {
   // omitted if default
-  MetricsSelectorProto metricsSelector = 1;
+  MetricsSelector metricsSelector = 1;
   uint32 nrOfInstances = 2;
   // omitted if default
   string routerDispatcher = 3;
@@ -89,12 +77,12 @@ message AdaptiveLoadBalancingPoolProto {
 
 
 // couldn't figure out how to import Payload
-message MetricsSelectorProto {
+message MetricsSelector {
   uint32 serializerId = 1;
   string manifest = 2;
   bytes data = 3;
 }
 
 message MixMetricsSelector {
-  repeated MetricsSelectorProto selectors = 1;
+  repeated MetricsSelector selectors = 1;
 }
