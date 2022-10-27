@@ -23,7 +23,7 @@ namespace Akka.Cluster.Metrics.Serialization
             ///
             /// Equality of Metric is based on its name index.
             /// </summary>
-            public sealed partial class Metric
+            public sealed class Metric: IEquatable<Metric>
             {
                 /// <summary>
                 /// Metric average value
@@ -79,7 +79,6 @@ namespace Akka.Cluster.Metrics.Serialization
                     Name = name;
                     Value = value;
                     Average = average;
-                    ewma_ = average.HasValue ? average.Value : default(EWMA);
                 }
 
                 /// <summary>
@@ -163,21 +162,15 @@ namespace Akka.Cluster.Metrics.Serialization
                     }
                 }
                 
-                /*
-                 * Two methods below, Equals and GetHashCode, should be used instead of generated in ClusterMetrics.Messages.g.cs
-                 * file. Since we do not have an option to not generate those methods for this particular class,
-                 * just stip them from generated code and paste here, with adding Address property check
-                 */
+                public override bool Equals(object obj)
+                    => obj is Metric other && Equals(other);
 
-
-                
                 public bool Equals(Metric other)
                 {
                     if (ReferenceEquals(null, other)) return false;
                     if (ReferenceEquals(this, other)) return true;
-                    return Name == other.Name;
+                    return Name.Equals(other.Name);
                 }
-
                 
                 public override int GetHashCode()
                 {

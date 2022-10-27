@@ -6,16 +6,16 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Dispatch;
+using Akka.Cluster.Metrics.Serialization.Proto.Msg;
+using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
-using Google.Protobuf.WellKnownTypes;
 
 namespace Akka.Cluster.Metrics.Serialization
 {
@@ -35,15 +35,21 @@ namespace Akka.Cluster.Metrics.Serialization
         private const string HeapMetricsSelectorManifest = "e";
         private const string SystemLoadAverageMetricsSelectorManifest = "f";
 
-        private readonly Lazy<Akka.Serialization.Serialization> _serialization; 
-        
         #endregion
+
+        private readonly ExtendedActorSystem _system;
+        private Akka.Serialization.Serialization _ser;
+
+        private Akka.Serialization.Serialization Serialization
+        {
+            get => _ser ?? (_ser = new Akka.Serialization.Serialization(_system));
+        }
         
         /// <inheritdoc />
         public ClusterMetricsMessageSerializer(ExtendedActorSystem system) 
             : base(system)
         {
-            _serialization = new Lazy<Akka.Serialization.Serialization>(() => new Akka.Serialization.Serialization(system));
+            _system = system;
         }
         
         /// <inheritdoc />
@@ -52,10 +58,10 @@ namespace Akka.Cluster.Metrics.Serialization
             switch (obj)
             {
                 case MetricsGossipEnvelope m: return Compress(MetricsGossipEnvelopeToProto(m)); // TODO: Add compression here
-                case Metrics.AdaptiveLoadBalancingPool alb: return AdaptiveLoadBalancingPoolToBinary(alb);
-                case Metrics.MixMetricsSelector mms: return MixMetricsSelectorToBinary(mms);
-                case CpuMetricsSelector _: return new byte[0];
-                case MemoryMetricsSelector _: return new byte[0];
+                case AdaptiveLoadBalancingPool alb: return AdaptiveLoadBalancingPoolToBinary(alb);
+                case MixMetricsSelector mms: return MixMetricsSelectorToBinary(mms);
+                case CpuMetricsSelector _: return Array.Empty<byte>();
+                case MemoryMetricsSelector _: return Array.Empty<byte>();
                 default:
                     throw new ArgumentException($"Can't serialize object of type ${obj.GetType().Name} in [${GetType().Name}]");
             }
@@ -119,8 +125,8 @@ namespace Akka.Cluster.Metrics.Serialization
             switch (o)
             {
                 case MetricsGossipEnvelope _: return MetricsGossipEnvelopeManifest;
-                case Metrics.AdaptiveLoadBalancingPool _: return AdaptiveLoadBalancingPoolManifest;
-                case Metrics.MixMetricsSelector _: return MixMetricsSelectorManifest;
+                case AdaptiveLoadBalancingPool _: return AdaptiveLoadBalancingPoolManifest;
+                case MixMetricsSelector _: return MixMetricsSelectorManifest;
                 case CpuMetricsSelector _: return CpuMetricsSelectorManifest;
                 case MemoryMetricsSelector _: return HeapMetricsSelectorManifest;
                 default:
@@ -128,15 +134,15 @@ namespace Akka.Cluster.Metrics.Serialization
             }
         }
 
-        private byte[] AdaptiveLoadBalancingPoolToBinary(Metrics.AdaptiveLoadBalancingPool pool)
+        private byte[] AdaptiveLoadBalancingPoolToBinary(AdaptiveLoadBalancingPool pool)
         {
-            var proto = new AdaptiveLoadBalancingPool()
+            var proto = new Akka.Cluster.Metrics.Serialization.Proto.Msg.AdaptiveLoadBalancingPool()
             {
                 NrOfInstances = (uint)pool.NrOfInstances,
                 UsePoolDispatcher = pool.UsePoolDispatcher
             };
             
-            if (!pool.MetricsSelector.Equals(Metrics.MixMetricsSelector.Instance))
+            if (!pool.MetricsSelector.Equals(MixMetricsSelector.Instance))
                 proto.MetricsSelector = MetricsSelectorToProto(pool.MetricsSelector);
 
             if (pool.RouterDispatcher != Dispatchers.DefaultDispatcherId)
@@ -147,7 +153,7 @@ namespace Akka.Cluster.Metrics.Serialization
 
         private MetricsSelector MetricsSelectorToProto(IMetricsSelector selector)
         {
-            var serializer = _serialization.Value.FindSerializerFor(selector);
+            var serializer = Serialization.FindSerializerFor(selector);
             
             return new MetricsSelector()
             {
@@ -157,9 +163,9 @@ namespace Akka.Cluster.Metrics.Serialization
             };
         }
 
-        private byte[] MixMetricsSelectorToBinary(Metrics.MixMetricsSelector selector)
+        private byte[] MixMetricsSelectorToBinary(MixMetricsSelector selector)
         {
-            var proto = new MixMetricsSelector()
+            var proto = new Akka.Cluster.Metrics.Serialization.Proto.Msg.MixMetricsSelector
             {
                 Selectors = { selector.Selectors.Select(MetricsSelectorToProto) }
             };
@@ -169,7 +175,7 @@ namespace Akka.Cluster.Metrics.Serialization
         /// <summary>
         /// Converts Akka.NET type into Protobuf serializable message
         /// </summary>
-        private AddressData AddressToProto(Actor.Address address)
+        private AddressData AddressToProto(Address address)
         {
             return new AddressData()
             {
@@ -185,9 +191,9 @@ namespace Akka.Cluster.Metrics.Serialization
         /// </summary>
         /// <param name="address"></param>
         /// <returns></returns>
-        private Akka.Actor.Address AddressFromProto(AddressData address)
+        private Address AddressFromProto(AddressData address)
         {
-            return new Akka.Actor.Address(address.Protocol, address.System, address.Hostname, (int)address.Port);
+            return new Address(address.Protocol, address.System, address.Hostname, (int)address.Port);
         }
 
         private int MapWithErrorMessage<T>(IImmutableDictionary<T, int> dict, T value, string unknown)
@@ -200,10 +206,10 @@ namespace Akka.Cluster.Metrics.Serialization
 
         private MetricsGossipEnvelope MetricsGossipEnvelopeFromBinary(byte[] bytes)
         {
-            return MetricsGossipEnvelopeFromProto(MetricsGossipEnvelope.Parser.ParseFrom(Decompress(bytes)));
+            return MetricsGossipEnvelopeFromProto(Akka.Cluster.Metrics.Serialization.Proto.Msg.MetricsGossipEnvelope.Parser.ParseFrom(Decompress(bytes)));
         }
 
-        private MetricsGossipEnvelope MetricsGossipEnvelopeToProto(MetricsGossipEnvelope envelope)
+        private Akka.Cluster.Metrics.Serialization.Proto.Msg.MetricsGossipEnvelope MetricsGossipEnvelopeToProto(MetricsGossipEnvelope envelope)
         {
             var allNodeMetrics = envelope.Gossip.Nodes;
             var allAddresses = allNodeMetrics.Select(m => m.Address).ToImmutableArray();
@@ -213,31 +219,31 @@ namespace Akka.Cluster.Metrics.Serialization
                 (set, metrics) => set.Union(metrics.Metrics.Select(m => m.Name))).ToImmutableArray();
             var metricNamesMapping = allMetricNames.Select((a, i) => (Index: i, Value: a)).ToImmutableDictionary(p => p.Value, p => p.Index);
             
-            int MapAddress(Actor.Address address) => MapWithErrorMessage(addressMapping, address, "address");
+            int MapAddress(Address address) => MapWithErrorMessage(addressMapping, address, "address");
             int MapName(string name) => MapWithErrorMessage(metricNamesMapping, name, "metric name");
 
-            Option<NodeMetrics.Types.EWMA> EwmaToProto(Option<NodeMetrics.Types.EWMA> ewma)
-                => ewma.Select(e => new NodeMetrics.Types.EWMA(e.Value, e.Alpha));
+            Option<Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.EWMA> EwmaToProto(Option<NodeMetrics.Types.EWMA> ewma)
+                => ewma.Select(e => new Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.EWMA{Value = e.Value, Alpha = e.Alpha});
 
-            NodeMetrics.Types.Number NumberToProto(AnyNumber number)
+            Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.Number NumberToProto(AnyNumber number)
             {
-                var proto = new NodeMetrics.Types.Number();
+                var proto = new Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.Number();
                 switch (number.Type)
                 {
                     case AnyNumber.NumberType.Int:
-                        proto.Type = NodeMetrics.Types.NumberType.Integer;
+                        proto.Type = Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.NumberType.Integer;
                         proto.Value32 = Convert.ToUInt32(number.LongValue);
                         break;
                     case AnyNumber.NumberType.Long:
-                        proto.Type = NodeMetrics.Types.NumberType.Long;
+                        proto.Type = Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.NumberType.Long;
                         proto.Value64 = Convert.ToUInt64(number.LongValue);
                         break;
                     case AnyNumber.NumberType.Float:
-                        proto.Type = NodeMetrics.Types.NumberType.Float;
+                        proto.Type = Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.NumberType.Float;
                         proto.Value32 = (uint)BitConverter.ToInt32(BitConverter.GetBytes((float)number.DoubleValue), 0);
                         break;
                     case AnyNumber.NumberType.Double:
-                        proto.Type = NodeMetrics.Types.NumberType.Double;
+                        proto.Type = Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.NumberType.Double;
                         proto.Value64 = (ulong)BitConverter.DoubleToInt64Bits(number.DoubleValue);
                         break;
                     default:
@@ -247,9 +253,9 @@ namespace Akka.Cluster.Metrics.Serialization
                 return proto;
             }
 
-            NodeMetrics.Types.Metric MetricToProto(NodeMetrics.Types.Metric m)
+            Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.Metric MetricToProto(NodeMetrics.Types.Metric m)
             {
-                var metric = new NodeMetrics.Types.Metric()
+                var metric = new Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.Metric
                 {
                      NameIndex = MapName(m.Name),
                      Number = NumberToProto(m.Value),
@@ -262,9 +268,9 @@ namespace Akka.Cluster.Metrics.Serialization
                 return metric;
             }
 
-            NodeMetrics NodeMetricsToProto(NodeMetrics nodeMetrics)
+            Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics NodeMetricsToProto(NodeMetrics nodeMetrics)
             {
-                return new NodeMetrics()
+                return new Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics
                 {
                     AddressIndex = MapAddress(nodeMetrics.Address),
                     Timestamp = nodeMetrics.Timestamp,
@@ -274,11 +280,11 @@ namespace Akka.Cluster.Metrics.Serialization
 
             var nodeMetricsProto = allNodeMetrics.Select(NodeMetricsToProto);
             
-            return new MetricsGossipEnvelope()
+            return new Akka.Cluster.Metrics.Serialization.Proto.Msg.MetricsGossipEnvelope
             {
                 From = AddressToProto(envelope.FromAddress),
                 Reply = envelope.Reply,
-                Gossip = new MetricsGossip()
+                Gossip = new Akka.Cluster.Metrics.Serialization.Proto.Msg.MetricsGossip
                 {
                     AllAddresses = { allAddresses.Select(AddressToProto) },
                     AllMetricNames = { allMetricNames },
@@ -287,28 +293,28 @@ namespace Akka.Cluster.Metrics.Serialization
             };
         }
 
-        private MetricsGossipEnvelope MetricsGossipEnvelopeFromProto(MetricsGossipEnvelope envelope)
+        private MetricsGossipEnvelope MetricsGossipEnvelopeFromProto(Akka.Cluster.Metrics.Serialization.Proto.Msg.MetricsGossipEnvelope envelope)
         {
             var gossip = envelope.Gossip;
             var addressMapping = gossip.AllAddresses.Select(AddressFromProto).ToImmutableArray();
             var metricNameMapping = gossip.AllMetricNames.ToImmutableArray();
             
-            Option<NodeMetrics.Types.EWMA> EwmaFromProto(NodeMetrics.Types.EWMA ewma) 
+            Option<NodeMetrics.Types.EWMA> EwmaFromProto(Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.EWMA ewma) 
                 => new NodeMetrics.Types.EWMA(ewma.Value, ewma.Alpha);
 
-            AnyNumber NumberFromProto(NodeMetrics.Types.Number number)
+            AnyNumber NumberFromProto(Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.Number number)
             {
                 switch (number.Type)
                 {
-                    case NodeMetrics.Types.NumberType.Double:
+                    case Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.NumberType.Double:
                         return BitConverter.Int64BitsToDouble((long)number.Value64);
-                    case NodeMetrics.Types.NumberType.Float:
+                    case Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.NumberType.Float:
                         return BitConverter.ToSingle(BitConverter.GetBytes((int)number.Value32), 0);
-                    case NodeMetrics.Types.NumberType.Integer:
+                    case Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.NumberType.Integer:
                         return Convert.ToInt32(number.Value32);
-                    case NodeMetrics.Types.NumberType.Long:
+                    case Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.NumberType.Long:
                         return Convert.ToInt64(number.Value64);
-                    case NodeMetrics.Types.NumberType.Serialized:
+                    case Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.NumberType.Serialized:
                         // TODO: Should we somehow port this?
                         /*val in = new ClassLoaderObjectInputStream(
                             system.dynamicAccess.classLoader,
@@ -316,13 +322,13 @@ namespace Akka.Cluster.Metrics.Serialization
                         val obj = in.readObject
                             in.close()
                         obj.asInstanceOf[jl.Number]*/
-                        throw new NotImplementedException($"{NodeMetrics.Types.NumberType.Serialized} number type is not supported");
+                        throw new NotImplementedException($"{Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.NumberType.Serialized} number type is not supported");
                     default:
                         throw new ArgumentOutOfRangeException(nameof(number));
                 }
             }
 
-            NodeMetrics.Types.Metric MetricFromProto(NodeMetrics.Types.Metric metric)
+            NodeMetrics.Types.Metric MetricFromProto(Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics.Types.Metric metric)
             {
                 return new NodeMetrics.Types.Metric(
                     metricNameMapping[metric.NameIndex], 
@@ -330,7 +336,7 @@ namespace Akka.Cluster.Metrics.Serialization
                     metric.Ewma != null ? EwmaFromProto(metric.Ewma) : Option<NodeMetrics.Types.EWMA>.None);
             }
 
-            NodeMetrics NodeMetricsFromProto(NodeMetrics metrics)
+            NodeMetrics NodeMetricsFromProto(Akka.Cluster.Metrics.Serialization.Proto.Msg.NodeMetrics metrics)
             {
                 return new NodeMetrics(
                     addressMapping[metrics.AddressIndex], 
@@ -343,22 +349,22 @@ namespace Akka.Cluster.Metrics.Serialization
             return new MetricsGossipEnvelope(AddressFromProto(envelope.From), new MetricsGossip(nodeMetrics), envelope.Reply);
         }
 
-        private Metrics.AdaptiveLoadBalancingPool AdaptiveLoadBalancingPoolFromBinary(byte[] bytes)
+        private AdaptiveLoadBalancingPool AdaptiveLoadBalancingPoolFromBinary(byte[] bytes)
         {
-            var proto = AdaptiveLoadBalancingPool.Parser.ParseFrom(bytes);
+            var proto = Akka.Cluster.Metrics.Serialization.Proto.Msg.AdaptiveLoadBalancingPool.Parser.ParseFrom(bytes);
 
             IMetricsSelector selector;
             if (proto.MetricsSelector != null)
             {
                 var s = proto.MetricsSelector;
-                selector = _serialization.Value.Deserialize(s.Data.ToByteArray(), (int)s.SerializerId, s.Manifest) as IMetricsSelector;
+                selector = Serialization.Deserialize(s.Data.ToByteArray(), (int)s.SerializerId, s.Manifest) as IMetricsSelector;
             }
             else
             {
-                selector = Metrics.MixMetricsSelector.Instance;
+                selector = MixMetricsSelector.Instance;
             }
             
-            return new Metrics.AdaptiveLoadBalancingPool(
+            return new AdaptiveLoadBalancingPool(
                 metricsSelector: selector, 
                 nrOfInstances: (int)proto.NrOfInstances, 
                 supervisorStrategy: null, 
@@ -366,19 +372,19 @@ namespace Akka.Cluster.Metrics.Serialization
                 usePoolDispatcher: proto.UsePoolDispatcher);
         }
 
-        private Metrics.MixMetricsSelector MixMetricSelectorFromBinary(byte[] bytes)
+        private MixMetricsSelector MixMetricSelectorFromBinary(byte[] bytes)
         {
-            var proto = MixMetricsSelector.Parser.ParseFrom(bytes);
-            return new Metrics.MixMetricsSelector(proto.Selectors.Select(s =>
+            var proto = Akka.Cluster.Metrics.Serialization.Proto.Msg.MixMetricsSelector.Parser.ParseFrom(bytes);
+            return new MixMetricsSelector(proto.Selectors.Select(s =>
             {
                 // should be safe because we serialized only the right subtypes of MetricsSelector
-                return MetricSelectorFromProto(s) as CapacityMetricsSelector;
+                return (CapacityMetricsSelector) MetricSelectorFromProto(s);
             }).ToImmutableArray());
         }
 
-        private IMetricsSelector MetricSelectorFromProto(Serialization.MetricsSelector selector)
+        private IMetricsSelector MetricSelectorFromProto(MetricsSelector selector)
         {
-            return _serialization.Value.Deserialize(selector.Data.ToByteArray(), (int)selector.SerializerId, selector.Manifest) as IMetricsSelector;
+            return Serialization.Deserialize(selector.Data.ToByteArray(), (int)selector.SerializerId, selector.Manifest) as IMetricsSelector;
         }
         
     }

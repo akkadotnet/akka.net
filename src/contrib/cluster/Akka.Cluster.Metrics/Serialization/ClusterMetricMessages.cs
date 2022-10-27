@@ -25,12 +25,14 @@ namespace Akka.Cluster.Metrics.Serialization
     /// Envelope adding a sender address to the cluster metrics gossip.
     /// </summary>
     [InternalApi]
-    public sealed partial class MetricsGossipEnvelope : IClusterMetricMessage, IDeadLetterSuppression
+    public sealed class MetricsGossipEnvelope : IClusterMetricMessage, IDeadLetterSuppression
     {
         /// <summary>
         /// Akka's actor address
         /// </summary>
         public Actor.Address FromAddress { get; }
+        public MetricsGossip Gossip { get; }
+        public bool Reply { get; }
 
         /// <summary>
         /// Creates new instance of <see cref="MetricsGossipEnvelope"/>

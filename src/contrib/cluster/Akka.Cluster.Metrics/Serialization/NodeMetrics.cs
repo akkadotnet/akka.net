@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Util;
-using Google.Protobuf.Collections;
 
 namespace Akka.Cluster.Metrics.Serialization
 {
@@ -20,9 +19,11 @@ namespace Akka.Cluster.Metrics.Serialization
     ///
     /// Equality of NodeMetrics is based on its address.
     /// </summary>
-    public sealed partial class NodeMetrics
+    public sealed partial class NodeMetrics : IEquatable<NodeMetrics>
     {
-        public Actor.Address Address { get; private set; }
+        public Actor.Address Address { get; }
+        public ImmutableList<Types.Metric> Metrics { get; }
+        public long Timestamp { get; }
         
         /// <summary>
         /// Creates new instance of <see cref="NodeMetrics"/>
@@ -33,9 +34,8 @@ namespace Akka.Cluster.Metrics.Serialization
         public NodeMetrics(Actor.Address address, long timestamp, IEnumerable<Types.Metric> metrics)
         {
             Address = address;
-            timestamp_ = timestamp;
-            metrics_ = new RepeatedField<Types.Metric>();
-            metrics_.AddRange(metrics);
+            Timestamp = timestamp;
+            Metrics = metrics.ToImmutableList();
         }
 
         /// <summary>
@@ -93,19 +93,19 @@ namespace Akka.Cluster.Metrics.Serialization
          * just stip them from generated code and paste here, with adding Address property check
          */
 
-
+        public override bool Equals(object obj)
+            => obj is NodeMetrics other && Equals(other);
         
         public bool Equals(NodeMetrics other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(Address, other.Address);
+            return Address.Equals(other.Address);
         }
 
-        
         public override int GetHashCode()
         {
-            return (Address != null ? Address.GetHashCode() : 0);
+            return Address.GetHashCode();
         }
     }
 }
