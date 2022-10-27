@@ -591,7 +591,8 @@ Target "Protobuf" <| fun _ ->
         ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/");
         ("StreamRefMessages.proto", "/src/core/Akka.Streams/Serialization/Proto/");
         ("ReplicatorMessages.proto", "/src/contrib/cluster/Akka.DistributedData/Serialization/Proto/");
-        ("ReplicatedDataMessages.proto", "/src/contrib/cluster/Akka.DistributedData/Serialization/Proto/"); ]
+        ("ReplicatedDataMessages.proto", "/src/contrib/cluster/Akka.DistributedData/Serialization/Proto/")
+        ("ClusterMetricsMessages.proto", "/src/contrib/cluster/Akka.Cluster.Metrics/Serialization/Proto/") ]
 
     printfn "Using proto.exe: %s" protocPath
 
