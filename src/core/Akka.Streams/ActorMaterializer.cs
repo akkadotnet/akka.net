@@ -623,7 +623,7 @@ namespace Akka.Streams
                 s.SyncProcessingLimit == SyncProcessingLimit &&
                 s.IsFuzzingMode == IsFuzzingMode &&
                 s.IsAutoFusing == IsAutoFusing &&
-                s.SubscriptionTimeoutSettings == SubscriptionTimeoutSettings &&
+                s.MaxFixedBufferSize == MaxFixedBufferSize &&
                 s.StreamRefSettings == StreamRefSettings;
         }
 
