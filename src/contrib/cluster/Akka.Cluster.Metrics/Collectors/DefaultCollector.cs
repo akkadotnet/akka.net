@@ -62,7 +62,7 @@ namespace Akka.Cluster.Metrics.Collectors
                     NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(true)).Value,
                     
                     // total committed process memory = working set + paged
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.WorkingSet64 + PagedMemorySize64).Value,
+                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.WorkingSet64 + process.PagedMemorySize64).Value,
                     // CPU Processors
                     NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount).Value,
                 };
