@@ -23,14 +23,14 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
       <PackageReference Include="System.Configuration.ConfigurationManager">
-          <Version>4.7.0</Version>
+          <Version>6.0.1</Version>
       </PackageReference>
        <PackageReference Include="System.Threading.Channels" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == '$(NetLibVersion)'">
       <PackageReference Include="System.Configuration.ConfigurationManager">
-          <Version>4.7.0</Version>
+          <Version>6.0.1</Version>
       </PackageReference>
   </ItemGroup>
 
