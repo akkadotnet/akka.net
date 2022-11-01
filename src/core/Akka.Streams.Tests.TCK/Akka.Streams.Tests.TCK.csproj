@@ -24,7 +24,7 @@
     <!-- !!!WARNING!!! 
          NUNIT VERSION HAVE TO MATCH WITH THE VERSION USED BY REACTIVE TCK. 
          !!!WARNING!!! -->
-    <PackageReference Include="NUnit" Version="3.7.1" Condition="'$(TargetFramework)' == '$(NetCoreTestVersion)'"/>
+    <PackageReference Include="NUnit" Version="3.13.3" Condition="'$(TargetFramework)' == '$(NetCoreTestVersion)'"/>
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
