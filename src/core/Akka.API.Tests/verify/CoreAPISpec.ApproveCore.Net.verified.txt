@@ -3311,6 +3311,11 @@ namespace Akka.IO
         public static byte[] op_Explicit(Akka.IO.ByteString byteString) { }
         public static bool !=(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ConnectException : System.Exception
+    {
+        public ConnectException(string message) { }
+    }
     public class Dns : Akka.Actor.ExtensionIdProvider<Akka.IO.DnsExt>
     {
         public static readonly Akka.IO.Dns Instance;
@@ -3525,8 +3530,13 @@ namespace Akka.IO
         public sealed class CommandFailed : Akka.IO.Tcp.Event
         {
             public CommandFailed(Akka.IO.Tcp.Command cmd) { }
+            public Akka.Util.Option<System.Exception> Cause { get; }
+            [Akka.Annotations.InternalApiAttribute()]
+            public string CauseString { get; }
             public Akka.IO.Tcp.Command Cmd { get; }
             public override string ToString() { }
+            [Akka.Annotations.InternalApiAttribute()]
+            public Akka.IO.Tcp.CommandFailed WithCause(System.Exception cause) { }
         }
         public class CompoundWrite : Akka.IO.Tcp.WriteCommand, System.Collections.Generic.IEnumerable<Akka.IO.Tcp.SimpleWriteCommand>, System.Collections.IEnumerable
         {
