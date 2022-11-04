@@ -10,10 +10,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj"/>
     </ItemGroup>
 
