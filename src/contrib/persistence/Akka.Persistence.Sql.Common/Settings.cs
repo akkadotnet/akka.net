@@ -117,6 +117,7 @@ namespace Akka.Persistence.Sql.Common
         /// <summary>
         /// The default serializer being used if no type match override is specified
         /// </summary>
+        [Obsolete(message: "This property should never be used, use the default `System.Object` serializer instead")]
         public string DefaultSerializer { get; private set; }
 
         /// <summary>
