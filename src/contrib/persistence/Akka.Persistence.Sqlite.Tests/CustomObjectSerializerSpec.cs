@@ -21,7 +21,15 @@ namespace Akka.Persistence.Sqlite.Tests
 {
     public class CustomObjectSerializerSpec : Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
     {
-        private static readonly Config Config = ConfigurationFactory.ParseString($@"
+        private static readonly string ConnectionString;
+        private static readonly Config Config;
+        static CustomObjectSerializerSpec()
+        {
+            var filename = $"AkkaSqlite-{Guid.NewGuid()}.db";
+            File.Copy("./data/Sqlite.CustomObject.db", $"{filename}.db");
+            
+            ConnectionString = $"DataSource={filename}.db";
+            Config = ConfigurationFactory.ParseString($@"
 akka.actor {{
     serializers {{
         mySerializer = ""{typeof(MySerializer).AssemblyQualifiedName}""
@@ -35,18 +43,19 @@ akka.persistence {{
     journal {{
         plugin = ""akka.persistence.journal.sqlite""
         sqlite {{
-            connection-string = ""DataSource=AkkaJournal.db""
+            connection-string = ""{ConnectionString}""
             auto-initialize = on
         }}
     }}
     snapshot-store {{
         plugin = ""akka.persistence.snapshot-store.sqlite""
         sqlite {{
-            connection-string = ""DataSource=AkkaSnapshot.db""
+            connection-string = ""{ConnectionString}""
             auto-initialize = on
         }}
     }}
 }}").WithFallback(SqlitePersistence.DefaultConfiguration());
+        }
 
         public CustomObjectSerializerSpec(ITestOutputHelper helper) 
             : base(Config, nameof(CustomObjectSerializerSpec), helper)
@@ -62,12 +71,13 @@ akka.persistence {{
             var serializer = Sys.Serialization.FindSerializerForType(typeof(Persisted));
             serializer.Should().BeOfType<MySerializer>();
             
-            var actor = Sys.ActorOf(Props.Create(() => new PersistedActor("a")));
+            var actor = Sys.ActorOf(Props.Create(() => new PersistedActor("a", probe)));
+            probe.ExpectMsg("recovered");
             actor.Tell(new Persisted("a"), probe);
             probe.ExpectMsg(new Persisted("a"));
 
             // Read the database directly, make sure that we're using the correct object type serializer
-            var conn = new SqliteConnection("DataSource=AkkaJournal.db");
+            var conn = new SqliteConnection(ConnectionString);
             conn.Open();
             const string sql = "SELECT ej.serializer_id FROM event_journal ej WHERE ej.persistence_id = 'a'";
             await using var cmd = new SqliteCommand(sql, conn);
@@ -78,10 +88,19 @@ akka.persistence {{
             record[0].Should().Be(9999);
         }
 
+        [Fact(DisplayName = "Persistence.Sql should be able to read legacy data")]
+        public void LegacyDataTest()
+        {
+            var probe = CreateTestProbe();
+            var actor = Sys.ActorOf(Props.Create(() => new PersistedActor("old", probe)));
+            probe.ExpectMsg(new Persisted("old"));
+            probe.ExpectMsg("recovered");
+        }
+        
         public Task InitializeAsync()
         {
-            if(File.Exists("AkkaJournal.db"))
-                File.Delete("AkkaJournal.db");
+            if(File.Exists("AkkaSqlite.db"))
+                File.Delete("AkkaSqlite.db");
             return Task.CompletedTask;
         }
 
@@ -140,9 +159,12 @@ akka.persistence {{
     
     internal sealed class PersistedActor : UntypedPersistentActor
     {
-        public PersistedActor(string persistenceId)
+        private readonly IActorRef _probe;
+        
+        public PersistedActor(string persistenceId, IActorRef probe)
         {
             PersistenceId = persistenceId;
+            _probe = probe;
         }
     
         public override string PersistenceId { get; }
@@ -158,6 +180,15 @@ akka.persistence {{
 
         protected override void OnRecover(object message)
         {
+            switch (message)
+            {
+                case Persisted msg:
+                    _probe.Tell(msg);
+                    break;
+                case RecoveryCompleted _:
+                    _probe.Tell("recovered");
+                    break;
+            }
         }
     }    
 }
