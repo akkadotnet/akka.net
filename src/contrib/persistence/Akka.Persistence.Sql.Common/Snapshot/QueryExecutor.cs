@@ -110,6 +110,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <summary>
         /// The default serializer used when not type override matching is found
         /// </summary>
+        [Obsolete(message: "This property should never be used for writes, use the default `System.Object` serializer instead")]
         public readonly string DefaultSerializer;
 
         /// <summary>
@@ -336,7 +337,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected virtual void SetPayloadParameter(object snapshot, DbCommand command)
         {
             var snapshotType = snapshot.GetType();
-            var serializer = Serialization.FindSerializerForType(snapshotType, Configuration.DefaultSerializer);
+            var serializer = Serialization.FindSerializerForType(snapshotType);
             // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
             var binary = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => serializer.ToBinary(snapshot));
             AddParameter(command, "@Payload", DbType.Binary, binary);
@@ -350,7 +351,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected virtual void SetManifestParameters(object snapshot, DbCommand command)
         {
             var snapshotType = snapshot.GetType();
-            var serializer = Serialization.FindSerializerForType(snapshotType, Configuration.DefaultSerializer);
+            var serializer = Serialization.FindSerializerForType(snapshotType);
 
             string manifest = "";
             if (serializer is SerializerWithStringManifest)

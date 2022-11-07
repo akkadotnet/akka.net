@@ -181,7 +181,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// The default serializer used when not type override matching is found
         /// </summary>
-        [Obsolete(message: "This property should never be used, use the default `System.Object` serializer instead")]
+        [Obsolete(message: "This property should never be used for writes, use the default `System.Object` serializer instead")]
         public string DefaultSerializer { get; }
 
         /// <summary>
