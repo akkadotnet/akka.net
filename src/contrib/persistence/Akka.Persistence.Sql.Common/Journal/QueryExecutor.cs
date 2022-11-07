@@ -181,8 +181,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// The default serializer used when not type override matching is found
         /// </summary>
-        [Obsolete(message: "This property will always return null")]
-        public string DefaultSerializer => null;
+        [Obsolete(message: "This property should never be used, use the default `System.Object` serializer instead")]
+        public string DefaultSerializer { get; }
 
         /// <summary>
         /// Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.
@@ -221,7 +221,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             string orderingColumnName,
             string serializerIdColumnName,
             TimeSpan timeout,
-            string defaultSerializer, // This is being ignored now
+            string defaultSerializer,
             bool useSequentialAccess)
         {
             SchemaName = schemaName;
@@ -236,6 +236,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             Timeout = timeout;
             TagsColumnName = tagsColumnName;
             OrderingColumnName = orderingColumnName;
+            DefaultSerializer = defaultSerializer;
             SerializerIdColumnName = serializerIdColumnName;
             UseSequentialAccess = useSequentialAccess;
         }
@@ -846,7 +847,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 // Support old writes that did not set the serializer id
                 var type = Type.GetType(manifest, true);
-                var deserializer = Serialization.FindSerializerForType(type);
+#pragma warning disable CS0618
+                // Backward compatibility code, we still need to use the old default serializer on read to support legacy data
+                var deserializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
+#pragma warning restore CS0618
                 // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
                 deserialized = Akka.Serialization.Serialization.WithTransport(
                     Serialization.System, (deserializer, (byte[])payload, type),
