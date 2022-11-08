@@ -14,7 +14,7 @@
     <XunitRunnerVersion>2.4.3</XunitRunnerVersion>
     <TestSdkVersion>17.0.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
-    <NewtonsoftJsonVersion>[12.0.3,)</NewtonsoftJsonVersion>
+    <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.19.4</ProtobufVersion>
     <BenchmarkDotNetVersion>0.13.1</BenchmarkDotNetVersion>
