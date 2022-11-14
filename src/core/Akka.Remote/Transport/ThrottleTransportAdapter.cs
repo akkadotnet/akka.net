@@ -726,7 +726,6 @@ namespace Akka.Remote.Transport
                 && _availableTokens == other._availableTokens;
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -734,7 +733,6 @@ namespace Akka.Remote.Transport
             return obj is TokenBucket && Equals((TokenBucket)obj);
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
