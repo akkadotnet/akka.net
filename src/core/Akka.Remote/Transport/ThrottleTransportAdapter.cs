@@ -139,7 +139,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Management command to force disassociation of an address
     /// </summary>
-    internal sealed class ForceDisassociate
+    public sealed class ForceDisassociate
     {
         /// <summary>
         /// TBD
@@ -159,7 +159,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Management command to force disassociation of an address with an explicit error.
     /// </summary>
-    internal sealed class ForceDisassociateExplicitly
+    public sealed class ForceDisassociateExplicitly
     {
         /// <summary>
         /// TBD
@@ -186,7 +186,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class ForceDisassociateAck
+    public sealed class ForceDisassociateAck
     {
         private ForceDisassociateAck() { }
         // ReSharper disable once InconsistentNaming
@@ -653,7 +653,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Applies token-bucket throttling to introduce latency to a connection
     /// </summary>
-    sealed class TokenBucket : ThrottleMode
+    public sealed class TokenBucket : ThrottleMode
     {
         readonly int _capacity;
         readonly double _tokensPerSecond;
