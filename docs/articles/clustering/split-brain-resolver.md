@@ -262,10 +262,60 @@ akka.cluster.split-brain-resolver.lease-majority {
 }
 ```
 
-A `Lease` is a type of distributed lock implementation.
+A `Lease` is a type of distributed lock implementation to decide which nodes are allowed to survive. Only one SBR instance can acquire the lease to make the decision to remain up. The other side will not be able to acquire the lease and will therefore down itself.
 
-> [!NOTE]
-> We are working on improving the documentation for Akka.Coordination, which will shed some more light on how this feature can be used in the future.
+Best effort is to keep the side that has the most nodes, i.e. the majority side. This is achieved by delaying the minority site from trying to acquire a lease.
+
+There are currently two supported lease implementation:
+
+* [Akka.Coordination.KubernetesApi](https://github.com/akkadotnet/Akka.Management/tree/dev/src/coordination/kubernetes/Akka.Coordination.KubernetesApi) is a lease implementation backed by a Kubernetes [Custom Resource Definition (CRD)](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+* [Akka.Coordination.Azure](https://github.com/akkadotnet/Akka.Management/tree/dev/src/coordination/azure/Akka.Coordination.Azure) is a lease implementation backed by [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction)
+
+This strategy is very safe since coordination is provided by an external arbiter. The trade-off compared to other strategies is that it requires additional infrastructure for lease implementation and it reduces the availability of a decision to that of the system backing the lease store.
+
+Similar to other strategies, it is important that decisions are not deferred for too long, because the nodes that could not acquire a lease must decide to down themselves; see [Down all when unstable](#down-all-when-unstable)
+
+In some cases, the lease provider will be unavailable when an SBR decision needs to be made, e.g. when it is on another side of a network partition or it is not available, in which case all nodes in the cluster will be downed.
+
+### Down All When Unstable
+
+When reachability observations by the failure detector changes, the SBR decision are deferred until there are no changes within the `stable-after` duration. If this continues for too long, it might indicate that the system/network is unstable and it could result in delayed and/or conflicting decisions on separate sides of the network partition.
+
+As a precaution for that scenario, all nodes are downed if no decision can be made within `stable-after + down-all-when-unstable` duration from the first detected unreachability event was observed. This measurement is reset when all unreachable nodes have been healed, downed, or removed, or if there are no changes detected within `stable-after * 2` duration.
+
+This behavior is enabled by default for all new SBR strategies and by default the duration is derived as 3/4 of `stable-after` duration, but never less than 4 seconds.
+
+This duration can be overriden by changing the HOCON setting to a specific duration value or turned off by setting the HOCON setting to `off`:
+
+```hocon
+akka.cluster.split-brain-resolver {
+    down-all-when-unstable = 15s
+    stable-after = 20s
+}
+```
+
+> [!WARNING]
+> It is recommended to keep `down-all-when-unstable` enabled and not to set it to be longer than `stable-after` because that can cause a delayed SBR decision on partition sides that should be downed, e.g. in the case of a clean network partition followed by continued instability on the side that should be downed. This can result in members being removed in one side but kept on running on the other side.
+
+### How Split Brain Resolver Works
+
+* The SBR actor subscribes itself to all cluster events from the event bus during actor `PreStart`.
+* The SBR actor starts a one second recurring timer (ticks).
+* The SBR updates its internal cluster state representation based on the received cluster events:
+  * Detects if the node its living in has been elected as the cluster leader.
+  * Updates the membership state of all cluster members.
+  * Tracks reachability state of all cluster members.
+  * Tracks network instability state:
+    * When the instability started, usually when the first unreachable event was observed.
+    * The time of the last observed instability event.
+    * Resets the state when the cluster was judged as healed.
+  * Tracks the stability deadline. This deadline is __not__ tracking cluster stability, but used to determine if a turbulent network instability has stopped before trying to execute an SBR decision. This deadline is advanced for every cluster member instability event detected.
+* On every tick, each cluster leader SBR inspects its internal cluster state representation to judge the cluster state. If there are any cluster instability: 
+  * if `down-all-when-unstable` is enabled 
+    * SBR checks to see if the instability is still going on and will down all cluster members if the instability duration have past the `stable-after + down-all-when-unstable` deadline.
+  * if `down-all-when-unstable` is not enabled
+    * SBR checks to see if the last observed instability time has past the `stable-after * 2` deadline duration. If it is, the cluster is then considered as healed.
+  * If there are any members in the cluster that are registered as unreachable and the stability deadline has past, SBR will execute its strategy decision. This is where the `Lease` is obtained if you're using the `lease-majority` strategy.
 
 ### Relation to Cluster Singleton and Cluster Sharding
 
