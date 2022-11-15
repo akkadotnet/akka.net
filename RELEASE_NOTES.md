@@ -1,3 +1,23 @@
+#### 1.5.0-alpha3 November 15th 2022 ####
+Akka.NET v1.5.0-alpha3 is a security patch for Akka.NET v1.5.0-alpha2 but also includes some other fixes.
+
+**Security Advisory**: Akka.NET v1.5.0-alpha2 and earlier depend on an old System.Configuration.ConfigurationManager version 4.7.0 which transitively depends on System.Common.Drawing v4.7.0. The System.Common.Drawing v4.7.0 is affected by a remote code execution vulnerability [GHSA-ghhp-997w-qr28](https://github.com/advisories/GHSA-ghhp-997w-qr28).
+
+We have separately created a security advisory for [Akka.NET Versions < 1.4.46 and < 1.5.0-alpha3 to track this issue](https://github.com/akkadotnet/akka.net/security/advisories/GHSA-gpv5-rp6w-58r8).
+
+**Fixes and Updates**
+
+* [Akka: Revert ConfigurationException due to binary incompatibility](https://github.com/akkadotnet/akka.net/pull/6204)
+* [Akka: Upgrade to Newtonsoft.Json 13.0.1 as minimum version](https://github.com/akkadotnet/akka.net/pull/6230) - resolves security issue.
+* [Akka: Upgrade to System.Configuration.ConfigurationManager 6.0.1](https://github.com/akkadotnet/akka.net/pull/6229) - resolves security issue. 
+* [Akka: Upgrade to Google.Protobuf 3.21.9](https://github.com/akkadotnet/akka.net/pull/6217)
+* [Akka.Cluster.Tools: Make sure that `DeadLetter`s published by `DistributedPubSubMediator` contain full context of topic](https://github.com/akkadotnet/akka.net/pull/6212)
+* [Akka.Streams: Remove suspicious code fragment in ActorMaterializer](https://github.com/akkadotnet/akka.net/pull/6216)
+* [Akka.IO: Report cause for Akka/IO TCP `CommandFailed` events](https://github.com/akkadotnet/akka.net/pull/6221)
+* [Akka.Cluster.Metrics: Improve CPU/Memory metrics collection at Akka.Cluster.Metrics](https://github.com/akkadotnet/akka.net/pull/6225) - built-in metrics are now much more accurate.
+
+You can see the [full set of tracked issues for Akka.NET v1.5.0 here](https://github.com/akkadotnet/akka.net/milestone/7).
+
 #### 1.5.0-alpha2 October 17th 2022 ####
 Akka.NET v1.5.0-alpha2 is a maintenance release for Akka.NET v1.5 that contains numerous performance improvements in critical areas, including core actor message processing and Akka.Remote.
 
