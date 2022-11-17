@@ -309,9 +309,9 @@ akka.cluster.split-brain-resolver {
     * When the instability started, usually when the first unreachable event was observed.
     * The time of the last observed instability event.
     * Resets the state when the cluster was judged as healed.
-  * Tracks the stability deadline. This deadline is __not__ tracking cluster stability, but used to determine if a turbulent network instability has stopped before trying to execute an SBR decision. This deadline is advanced for every cluster member instability event detected.
-* On every tick, each cluster leader SBR inspects its internal cluster state representation to judge the cluster state. If there are any cluster instability: 
-  * if `down-all-when-unstable` is enabled 
+  * Tracks the stability deadline. This deadline is **not** tracking cluster stability, but used to determine if a turbulent network instability has stopped before trying to execute an SBR decision. This deadline is advanced for every cluster member instability event detected.
+* On every tick, each cluster leader SBR inspects its internal cluster state representation to judge the cluster state. If there are any cluster instability:
+  * if `down-all-when-unstable` is enabled
     * SBR checks to see if the instability is still going on and will down all cluster members if the instability duration have past the `stable-after + down-all-when-unstable` deadline.
   * if `down-all-when-unstable` is not enabled
     * SBR checks to see if the last observed instability time has past the `stable-after * 2` deadline duration. If it is, the cluster is then considered as healed.
