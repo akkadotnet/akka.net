@@ -285,7 +285,7 @@ As a precaution for that scenario, all nodes are downed if no decision can be ma
 
 This behavior is enabled by default for all new SBR strategies and by default the duration is derived as 3/4 of `stable-after` duration, but never less than 4 seconds.
 
-This duration can be overriden by changing the HOCON setting to a specific duration value or turned off by setting the HOCON setting to `off`:
+This duration can be overridden by changing the HOCON setting to a specific duration value or turned off by setting the HOCON setting to `off`:
 
 ```hocon
 akka.cluster.split-brain-resolver {
