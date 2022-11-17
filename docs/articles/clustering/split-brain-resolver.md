@@ -262,7 +262,7 @@ akka.cluster.split-brain-resolver.lease-majority {
 }
 ```
 
-A `Lease` is a type of distributed lock implementation to decide which nodes are allowed to survive. Only one SBR instance can acquire the lease to make the decision to remain up. The other side will not be able to acquire the lease and will therefore down itself.
+A `Lease` is a type of distributed lock implementation. In the context of SBR, the leader who acquires the Lease gets to make downing decisions for the entire cluster. Only one SBR instance can acquire the lease to make the decision to remain up. The other side will not be able to acquire the lease and will therefore down itself.
 
 Best effort is to keep the side that has the most nodes, i.e. the majority side. This is achieved by delaying the minority site from trying to acquire a lease.
 
