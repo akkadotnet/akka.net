@@ -14,15 +14,15 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.Util;
-using Akka.Util.Internal;
 using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.TestKit
+namespace Akka.Streams.Tests
 {
     [Serializable]
     public class ScriptException : Exception

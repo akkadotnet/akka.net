@@ -15,7 +15,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit;
 using Reactive.Streams;
-using Xunit.Sdk;
 
 namespace Akka.Streams.TestKit
 {

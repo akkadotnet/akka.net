@@ -9,13 +9,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.TestKit
+namespace Akka.Streams.Tests
 {
     public abstract class BaseTwoStreamsSetup<TOutputs> : AkkaSpec
     {
