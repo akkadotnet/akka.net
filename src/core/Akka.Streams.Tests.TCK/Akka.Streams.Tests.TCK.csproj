@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.3.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.3.1" />
     <PackageReference Include="Reactive.Streams.TCK" Version="1.0.2" />
     <!-- !!!WARNING!!! 
          NUNIT VERSION HAVE TO MATCH WITH THE VERSION USED BY REACTIVE TCK. 
