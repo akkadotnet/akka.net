@@ -26,31 +26,24 @@ Logger vs. sink minimums - it is important to realize that the logging level can
 Thus, if Akka.NET log level is `DEBUG`, but a Serilog sink log level is `INFO`, all debug messages from Akka will be filtered out. You can set the default logging level on host startup:
 
 ```csharp
-public static IHostBuilder AddSerilogLogger(
-            this IHostBuilder builder,
-            string applicationName,
-            Func<LoggerConfiguration, LoggerConfiguration> configureLogger)
-        {
-            return builder.UseSerilog((hostingContext, services, loggerConfiguration) =>
+public static IHostBuilder CreateHostBuilder(string[] args) => Host.CreateDefaultBuilder(args)
+        .UseSerilog((hostingContext, services, loggerConfiguration) => 
+           (Environment.GetEnvironmentVariable("MY_AKKA_APP__DEFAULT_LOG_LEVEL") switch
             {
-                var baseConfiguration = (Environment.GetEnvironmentVariable("MY_AKKA_APP__DEFAULT_LOG_LEVEL") switch
-                    {
-                        "INFO" => loggerConfiguration.MinimumLevel.Information(),
-                        "WARN" => loggerConfiguration.MinimumLevel.Warning(),
-                        "ERROR" => loggerConfiguration.MinimumLevel.Error(),
-                        "DEBUG" => loggerConfiguration.MinimumLevel.Debug(),
-                        _ => loggerConfiguration.MinimumLevel.Information()
-                    }).ReadFrom.Services(services)
-                    .Enrich.FromLogContext()
-                    .EnrichWithCommonProperties(...)
-                    ... // continue logger configuration;
-                
-                configureLogger?.Invoke(baseConfiguration);
-            });
-        }
+                "INFO" => loggerConfiguration.MinimumLevel.Information(),
+                "WARN" => loggerConfiguration.MinimumLevel.Warning(),
+                "ERROR" => loggerConfiguration.MinimumLevel.Error(),
+                "DEBUG" => loggerConfiguration.MinimumLevel.Debug(),
+                _ => loggerConfiguration.MinimumLevel.Information()
+            })
+            .WriteTo.Console()
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .EnrichWithCommonProperties(...)
+            ... // continue logger configuration);
 ```
 
-`Serilog.Log.Logger` will be initialized during host boostrap and Akka.NET will use the final configured logger. 
+`Serilog.Log.Logger` will be initialized during host boostrap and Akka.NET will use the final configured logger.
 
 ## Example
 
