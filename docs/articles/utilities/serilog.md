@@ -19,6 +19,7 @@ PM> Install-Package Akka.Logger.Serilog
 If you are using Akka.NET in an ASP.NET Core application, follow the [Serilog guide](https://github.com/serilog/serilog-aspnetcore) to setup a logger injection. Akka.NET also works with Serilog configured using [two-stage initialization](https://github.com/serilog/serilog-aspnetcore#two-stage-initialization).
 
 It is important to remember that logging level is first controlled by a Serilog sink, and only then by Akka.NET, as described in this [document](https://github.com/serilog/serilog/wiki/Configuration-Basics):
+
 ```text
 Logger vs. sink minimums - it is important to realize that the logging level can only be raised for sinks, not lowered. So, if the logger's MinimumLevel is set to Information then a sink with Debug as its specified level will still only see Information level events.
 ```
@@ -43,7 +44,7 @@ public static IHostBuilder CreateHostBuilder(string[] args) => Host.CreateDefaul
             ... // continue logger configuration);
 ```
 
-`Serilog.Log.Logger` will be initialized during host boostrap and Akka.NET will use the final configured logger.
+`Serilog.Log.Logger` will be initialized during host bootstrap and Akka.NET will use the final configured logger.
 
 ## Example
 
