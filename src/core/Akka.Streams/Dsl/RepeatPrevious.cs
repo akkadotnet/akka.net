@@ -6,6 +6,7 @@
 
 using System;
 using Akka.Streams.Stage;
+using Akka.Util;
 
 namespace Akka.Streams.Dsl
 {
@@ -17,7 +18,7 @@ namespace Akka.Streams.Dsl
     /// </summary>
     /// <typeparam name="T">The type of element handled by the <see cref="RepeatPrevious{T}"/></typeparam>
     public delegate void SwapPrevious<T>(T previousValue, T newValue);
-    
+
     /// <summary>
     /// Repeats the previous element from upstream until it's replaced by a new value.
     ///
@@ -36,56 +37,75 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Do nothing by default
         /// </summary>
-        private static readonly SwapPrevious<T> DefaultSwap = (value, newValue) => { }; 
-        
-        public RepeatPrevious() : this(DefaultSwap){ }
+        private static readonly SwapPrevious<T> DefaultSwap = (value, newValue) => { };
+
+        public RepeatPrevious() : this(DefaultSwap)
+        {
+        }
 
         public RepeatPrevious(SwapPrevious<T> swapPrevious)
         {
             _swapPrevious = swapPrevious;
         }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, _swapPrevious);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) =>
+            new Logic(this, _swapPrevious);
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly RepeatPrevious<T> _stage;
-            private T _last;
+            private Option<T> _last;
             private readonly SwapPrevious<T> _swapPrevious;
+            private bool _pulled = false;
 
             public Logic(RepeatPrevious<T> stage, SwapPrevious<T> swapPrevious) : base(stage.Shape)
             {
                 _stage = stage;
                 _swapPrevious = swapPrevious;
-                SetHandler(stage._in, onPush: () =>
-                {
-                    var next = Grab(stage._in);
-                    swapPrevious(_last, next);
-                    _last = next;
-                    Push(stage._out, _last);
-                }, onUpstreamFinish: () => Complete(stage._out));
 
-                SetHandler(stage._out, onPull: () =>
-                {
-                    if (_last != null)
-                        Push(stage._out, _last);
-                    else
-                        Pull(stage._in);
-                });
+                SetHandler(_stage._in, this);
+                SetHandler(_stage._out, this);
             }
 
-            public override void PostStop()
+            public override void OnDownstreamFinish()
             {
-                DisposeIfNecessary();
-                base.PostStop();
+                base.OnDownstreamFinish();
             }
 
-            private void DisposeIfNecessary()
+            public override void OnPush()
             {
-                if (_last is IDisposable disposable)
-                    disposable.Dispose();
+                var next = Grab(_stage._in);
+                if (_last.HasValue)
+                    _swapPrevious(_last.Value, next);
+                _last = next;
+
+                if (IsAvailable(_stage._out))
+                {
+                    Push(_stage._out, _last.Value);
+                }
+            }
+            
+            public override void OnPull()
+            {
+                if (_last.HasValue)
+                {
+                    if (!HasBeenPulled(_stage._in))
+                    {
+                        Pull(_stage._in);
+                    }
+
+                    Push(_stage._out, _last.Value);
+                }
+                else
+                {
+                    Pull(_stage._in);
+                }
             }
         }
-    }
 
+        public override string ToString()
+        {
+            return "RepeatPrevious";
+        }
+    }
 }
