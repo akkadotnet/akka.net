@@ -40,7 +40,8 @@ namespace Akka.Streams.Tests.Dsl
             var source = Source.Single(1).RepeatPrevious();
             var result = await source.RunWith(Sink.Seq<int>(), Materializer);
 
-            result.Should().BeEquivalentTo(1);
+            // as a side-effect of RepeatPrevious' buffering process, there's going to be an extra element in the result
+            result.Should().BeEquivalentTo(1, 1);
         }
 
         [Fact]
@@ -64,18 +65,20 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task RepeatPrevious_should_only_repeat_when_no_newValues_available()
+        public async Task RepeatPrevious_should_repeat_when_no_newValues_available()
         {
+            // <RepeatPrevious>
             var (queue, source) = Source.Queue<int>(10, OverflowStrategy.Backpressure).PreMaterialize(Materializer);
             
-            // populate 1,2,3 into queue
+            // populate 1 into queue
             await queue.OfferAsync(1);
-            await queue.OfferAsync(2); 
-            await queue.OfferAsync(3);
-            
+
             // take 4 items from the queue
             var result = await source.RepeatPrevious().Take(4).RunWith(Sink.Seq<int>(), Materializer);
-            result.Should().BeEquivalentTo(1,2,3,3);
+            
+            // the most recent queue item will be repeated 3 times, plus the original element
+            result.Should().BeEquivalentTo(1,1,1,1);
+            // </RepeatPrevious>
         }
     }
 }

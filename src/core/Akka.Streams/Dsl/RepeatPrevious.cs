@@ -56,7 +56,6 @@ namespace Akka.Streams.Dsl
             private readonly RepeatPrevious<T> _stage;
             private Option<T> _last;
             private readonly SwapPrevious<T> _swapPrevious;
-            private bool _pulled = false;
 
             public Logic(RepeatPrevious<T> stage, SwapPrevious<T> swapPrevious) : base(stage.Shape)
             {
@@ -65,11 +64,6 @@ namespace Akka.Streams.Dsl
 
                 SetHandler(_stage._in, this);
                 SetHandler(_stage._out, this);
-            }
-
-            public override void OnDownstreamFinish()
-            {
-                base.OnDownstreamFinish();
             }
 
             public override void OnPush()
@@ -84,7 +78,7 @@ namespace Akka.Streams.Dsl
                     Push(_stage._out, _last.Value);
                 }
             }
-            
+
             public override void OnPull()
             {
                 if (_last.HasValue)
@@ -93,7 +87,7 @@ namespace Akka.Streams.Dsl
                     {
                         Pull(_stage._in);
                     }
-
+                    
                     Push(_stage._out, _last.Value);
                 }
                 else

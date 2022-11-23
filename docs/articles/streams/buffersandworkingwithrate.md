@@ -189,3 +189,33 @@ var driftFlow = Flow.Create<int>()
 ```
 
 Note that all of the elements coming from upstream will go through expand at least once. This means that the output of this flow is going to report a drift of zero if producer is fast enough, or a larger drift otherwise.
+
+
+### Repeating Previous Values Downstream
+
+When working with fan-in stages such as `Zip` where one `Source<T>` might produce messages infrequently, it can be helpful to cache the previous value and re-use it in combination with a faster stream.
+
+For instance, consider the following scenario:
+
+* A `Source<HttpClient, NotUsed>` that emits an updated `HttpClient` with new bearer-token credentials every 30 minutes and
+* A `Source<HttpRequestMessage, NotUsed>` that emits outbound `HttpRequestMessage`s as they come - at any given moment it can produce zero requests per second or thousands of requests per second.
+
+In this scenario we're going to want to combine the `Source<HttpClient, NotUsed>` and `Source<HttpRequestMessage, NotUsed>` together so the `HttpClient` can execute all of the `HttpRequestMessage`s - however, given that `HttpClient`s are only emitted once every 30 minutes - how can we use a stage like `Zip` to make sure that every `HttpRequestMessage` gets serviced in a timely, low-latency fashion?
+
+Enter the `RepeatPrevious` stage - which will allow us to reuse the most recent `HttpClient` each time a new `HttpRequestMessage` arrives:
+
+```csharp
+public static Source<HttpClient, ICancelable> CreateSourceInternal(string clientId,
+        Func<Task<string>> tokenProvider, TimeSpan tokenRefreshTimeout)
+{
+        var source = Source.Tick(TimeSpan.Zero, TimeSpan.FromSeconds(30), clientId)
+            .SelectAsync(1, async c => 
+                // refresh bearer token, create new HttpClient
+                CreateClient(c, (await tokenProvider().WaitAsync(tokenRefreshTimeout))))
+             // reuse the previous value whenever there's downstream demand
+            .RepeatPrevious();
+        return source;
+}
+```
+
+This type of design allows us to decouple the rate at which `HttpClient`s are produced from the rate at which `HttpRequestMessage`s are.
