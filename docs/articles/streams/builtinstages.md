@@ -672,7 +672,7 @@ Skip elements as long as a predicate function return true for the element
 Re-use a previously emitted element downstream.
 
 > [!NOTE]
-> `RepeatPrevious` is typically used in combination with fan-in stages such as `Zip` - please see "[Repeating Previous Values Downstream](xref:streams-buffers)"
+> `RepeatPrevious` is typically used in combination with fan-in stages such as `Zip` - please see "[Repeating Previous Values Downstream](xref:streams-buffers#repeating-previous-values-downstream)"
 
 **emits** as long as one element has been emitted from upstream, that element will be emitted downstream
 whenever the `RepeatPrevious` stage is pulled. If a new value is emitted from upstream, that value will be pushed and will replace the previous value.
@@ -680,6 +680,8 @@ whenever the `RepeatPrevious` stage is pulled. If a new value is emitted from up
 **backpressures** when downstream backpressures.
 
 **completes** when upstream completes
+
+`RepeatPrevious` Sample:
 
 [!code-csharp[RepeatPrevious](../../../src/core/Akka.Streams.Tests/Dsl/RepeatPreviousSpec.cs?name=RepeatPrevious)]
 
