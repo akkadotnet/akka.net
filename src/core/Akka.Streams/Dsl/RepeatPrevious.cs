@@ -13,7 +13,7 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// Delegate used to customize replacement functions.
     ///
-    /// This is used for things like calling <see cref="IDisposable.Dispose"/> on the <see cref="previousValue"/>
+    /// This is used for things like calling <see cref="IDisposable.Dispose"/> on the previous element.
     /// when a new value is emitted.
     /// </summary>
     /// <typeparam name="T">The type of element handled by the <see cref="RepeatPrevious{T}"/></typeparam>
