@@ -190,7 +190,6 @@ var driftFlow = Flow.Create<int>()
 
 Note that all of the elements coming from upstream will go through expand at least once. This means that the output of this flow is going to report a drift of zero if producer is fast enough, or a larger drift otherwise.
 
-
 ### Repeating Previous Values Downstream
 
 When working with fan-in stages such as `Zip` where one `Source<T>` might produce messages infrequently, it can be helpful to cache the previous value and re-use it in combination with a faster stream.
