@@ -667,6 +667,24 @@ Skip elements as long as a predicate function return true for the element
 
 **completes** when upstream completes
 
+### ReuseLatest
+
+Re-use the most recently emitted element downstream.
+
+> [!NOTE]
+> `ReuseLatest` is typically used in combination with fan-in stages such as `Zip` - please see "[Reusing Values Downstream](xref:streams-buffers#reusing-values-downstream)"
+
+**emits** as long as one element has been emitted from upstream, that element will be emitted downstream
+whenever the `ReuseLatest` stage is pulled. If a new value is emitted from upstream, that value will be pushed and will replace the previous value.
+
+**backpressures** when downstream backpressures.
+
+**completes** when upstream completes
+
+`ReuseLatest` Sample:
+
+[!code-csharp[ReuseLatest](../../../src/core/Akka.Streams.Tests/Dsl/ReuseLatestSpec.cs?name=RepeatPrevious)]
+
 ### Recover
 
 Allow sending of one last element downstream when a failure has happened upstream.
