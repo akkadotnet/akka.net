@@ -62,7 +62,7 @@ namespace Akka.IO
                     return true;
                 
                 case Status.Failure fail:
-                    _bindCommander.Tell(_bind.FailureMessage);
+                    _bindCommander.Tell(_bind.FailureMessage.WithCause(fail.Cause));
                     _log.Error(fail.Cause, "Bind failed for TCP channel on endpoint [{0}]", _bind.LocalAddress);
                     Context.Stop(Self);
                     _binding = false;

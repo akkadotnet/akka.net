@@ -20,7 +20,7 @@ namespace Akka.Configuration
         {
             if (!string.IsNullOrWhiteSpace(path))
                 return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration does not contain `{path}` node");
-            return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration is null or empty.");
+            return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration is null or empty");
         }
 
         /// <summary>

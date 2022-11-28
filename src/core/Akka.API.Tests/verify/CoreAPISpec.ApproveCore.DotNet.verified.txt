@@ -688,13 +688,12 @@ namespace Akka.Actor
         protected virtual bool SpecialHandle(object message, Akka.Actor.IActorRef sender) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
     public struct Envelope
     {
         public Envelope(object message, Akka.Actor.IActorRef sender, Akka.Actor.ActorSystem system) { }
         public Envelope(object message, Akka.Actor.IActorRef sender) { }
-        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public object Message { get; }
-        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public Akka.Actor.IActorRef Sender { get; }
         public override string ToString() { }
     }
@@ -741,7 +740,8 @@ namespace Akka.Actor
             public override int GetHashCode() { }
             public override string ToString() { }
         }
-        public sealed class Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
+        [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
+        public struct Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
         {
             public Event(object fsmEvent, TD stateData) { }
             public object FsmEvent { get; }
@@ -778,10 +778,10 @@ namespace Akka.Actor
         {
             public static Akka.Actor.FSMBase.StateTimeout Instance { get; }
         }
-        public class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
+        public sealed class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
         {
             public State(TS stateName, TD stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, bool notifies = True) { }
-            public System.Collections.Generic.IReadOnlyList<object> Replies { get; set; }
+            public System.Collections.Generic.IReadOnlyList<object> Replies { get; }
             public TD StateData { get; }
             public TS StateName { get; }
             public Akka.Actor.FSMBase.Reason StopReason { get; }
@@ -2991,7 +2991,7 @@ namespace Akka.Event
     }
     public class DefaultLogMessageFormatter : Akka.Event.ILogMessageFormatter
     {
-        public DefaultLogMessageFormatter() { }
+        public static readonly Akka.Event.DefaultLogMessageFormatter Instance;
         public string Format(string format, params object[] args) { }
     }
     public class DefaultLogger : Akka.Actor.ActorBase, Akka.Dispatch.IRequiresMessageQueue<Akka.Event.ILoggerMessageQueueSemantics>
@@ -3318,6 +3318,11 @@ namespace Akka.IO
         public static byte[] op_Explicit(Akka.IO.ByteString byteString) { }
         public static bool !=(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ConnectException : System.Exception
+    {
+        public ConnectException(string message) { }
+    }
     public class Dns : Akka.Actor.ExtensionIdProvider<Akka.IO.DnsExt>
     {
         public static readonly Akka.IO.Dns Instance;
@@ -3532,8 +3537,13 @@ namespace Akka.IO
         public sealed class CommandFailed : Akka.IO.Tcp.Event
         {
             public CommandFailed(Akka.IO.Tcp.Command cmd) { }
+            public Akka.Util.Option<System.Exception> Cause { get; }
+            [Akka.Annotations.InternalApiAttribute()]
+            public string CauseString { get; }
             public Akka.IO.Tcp.Command Cmd { get; }
             public override string ToString() { }
+            [Akka.Annotations.InternalApiAttribute()]
+            public Akka.IO.Tcp.CommandFailed WithCause(System.Exception cause) { }
         }
         public class CompoundWrite : Akka.IO.Tcp.WriteCommand, System.Collections.Generic.IEnumerable<Akka.IO.Tcp.SimpleWriteCommand>, System.Collections.IEnumerable
         {

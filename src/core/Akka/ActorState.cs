@@ -430,7 +430,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Removes a terminated actor
         /// </summary>
         /// <param name="actor">TBD</param>
         /// <returns>TBD</returns>

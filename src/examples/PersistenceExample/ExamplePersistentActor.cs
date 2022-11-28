@@ -19,12 +19,10 @@ namespace PersistenceExample
             Data = data;
         }
 
-        public string Data { get; private set; }
+        public string Data { get; }
 
         public override string ToString()
-        {
-            return Data;
-        }
+            => Data;
     }
 
     public class Event
@@ -34,12 +32,10 @@ namespace PersistenceExample
             Data = data;
         }
 
-        public string Data { get; private set; }
+        public string Data { get; }
 
         public override string ToString()
-        {
-            return Data;
-        }
+            => Data;
     }
 
     public class ExampleState
@@ -49,7 +45,7 @@ namespace PersistenceExample
             Events = events ?? new List<string>();
         }
 
-        public IEnumerable<string> Events { get; private set; }
+        public IEnumerable<string> Events { get; }
 
         public ExampleState Update(Event evt)
         {
@@ -73,38 +69,52 @@ namespace PersistenceExample
 
         public override string PersistenceId { get { return "sample-id-1"; }}
 
-        public ExampleState State { get; set; }
-        public int EventsCount { get { return State.Events.Count(); } }
+        private ExampleState State { get; set; }
 
-        public void UpdateState(Event evt)
+        private int EventsCount
+        {
+            get => State.Events.Count();
+        }
+
+        private void UpdateState(Event evt)
         {
             State = State.Update(evt);
         }
 
         protected override bool ReceiveRecover(object message)
         {
-            ExampleState state;
-            if (message is Event)
-                UpdateState(message as Event);
-            else if (message is SnapshotOffer && (state = ((SnapshotOffer) message).Snapshot as ExampleState) != null)
-                State = state;
-            else return false;
-            return true;
+            switch (message)
+            {
+                case Event @event:
+                    UpdateState(@event);
+                    return true;
+                case SnapshotOffer { Snapshot: ExampleState state }:
+                    State = state;
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         protected override bool ReceiveCommand(object message)
         {
-            if (message is Command)
+            switch (message)
             {
-                var cmd = message as Command;
-                Persist(new Event(cmd.Data + "-" + EventsCount), UpdateState);
+                case Command cmd:
+                    Persist(new Event(cmd.Data + "-" + EventsCount), UpdateState);
+                    return true;
+                case string msg when msg == "snap":
+                    SaveSnapshot(State);
+                    return true;
+                case string msg when msg == "print":
+                    Console.WriteLine(State);
+                    return true;
+                case SaveSnapshotSuccess _:
+                case SaveSnapshotFailure _:
+                    return true;
+                default:
+                    return false;
             }
-            else if (message as string == "snap")
-                SaveSnapshot(State);
-            else if (message as string == "print")
-                Console.WriteLine(State);
-            else return false;
-            return true;
         }
     }
 }

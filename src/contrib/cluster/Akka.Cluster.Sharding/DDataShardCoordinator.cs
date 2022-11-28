@@ -541,12 +541,12 @@ namespace Akka.Cluster.Sharding
                         _baseImpl.AllocateShardHomesForRememberEntities();
                     }
                     Timers.Cancel(RememberEntitiesTimeoutKey);
-                    break;
+                    return true;
 
                 case RememberEntitiesLoadTimeout _:
                     // repeat until successful
                     GetAllRememberedShards();
-                    break;
+                    return true;
             }
             return false;
         }

@@ -496,20 +496,20 @@ namespace Akka.Tests.Actor
             var fsmRef = new TestFSMRef<StopTimersFSM, string, object>(Sys, Props.Create(
                 () => new StopTimersFSM(TestActor, timerNames)));
 
-            Action<bool> checkTimersActive = active =>
+            void CheckTimersActive(bool active)
             {
                 foreach (var timer in timerNames)
                 {
                     fsmRef.IsTimerActive(timer).Should().Be(active);
                     fsmRef.IsStateTimerActive().Should().Be(active);
                 }
-            };
+            }
 
-            checkTimersActive(false);
+            CheckTimersActive(false);
 
             fsmRef.Tell("start");
             await ExpectMsgAsync("starting", 1.Seconds());
-            checkTimersActive(true);
+            CheckTimersActive(true);
 
             fsmRef.Tell("stop");
             await ExpectMsgAsync("stopped", 1.Seconds());

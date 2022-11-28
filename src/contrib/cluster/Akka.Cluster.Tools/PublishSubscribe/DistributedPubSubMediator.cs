@@ -192,19 +192,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     new Router(_settings.RoutingLogic, routees.ToArray()).Route(
                         Internal.Utils.WrapIfNeeded(send.Message), Sender);
                 else
-                    IgnoreOrSendToDeadLetters(send.Message);
+                    IgnoreOrSendToDeadLetters(send);
             });
             Receive<SendToAll>(sendToAll =>
             {
-                PublishMessage(sendToAll.Path, sendToAll.Message, sendToAll.ExcludeSelf);
+                PublishMessage(sendToAll.Path, sendToAll, sendToAll.ExcludeSelf);
             });
             Receive<Publish>(publish =>
             {
                 string path = Internal.Utils.MakeKey(Self.Path / Internal.Utils.EncodeName(publish.Topic));
                 if (publish.SendOneMessageToEachGroup)
-                    PublishToEachGroup(path, publish.Message);
+                    PublishToEachGroup(path, publish);
                 else
-                    PublishMessage(path, publish.Message);
+                    PublishMessage(path, publish);
             });
             Receive<Put>(put =>
             {
@@ -500,7 +500,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Context.Self));
         }
 
-        private void PublishMessage(string path, object message, bool allButSelf = false)
+        private void PublishMessage(string path, IWrappedMessage publish, bool allButSelf = false)
         {
             IEnumerable<IActorRef> Refs()
             {
@@ -521,24 +521,24 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             foreach (var r in Refs())
             {
                 if (r == null) continue;
-                r.Forward(message);
+                r.Forward(publish.Message);
                 counter++;
             }
 
-            if (counter == 0) IgnoreOrSendToDeadLetters(message);
+            if (counter == 0) IgnoreOrSendToDeadLetters(publish);
         }
 
-        private void PublishToEachGroup(string path, object message)
+        private void PublishToEachGroup(string path, Publish publish)
         {
             var prefix = path + "/";
             var lastKey = path + "0";   // '0' is the next char of '/'
 
             var groups = ExtractGroups(prefix, lastKey).GroupBy(kv => kv.Key).ToList();
-            var wrappedMessage = new SendToOneSubscriber(message);
+            var wrappedMessage = new SendToOneSubscriber(publish.Message);
 
             if (groups.Count == 0)
             {
-                IgnoreOrSendToDeadLetters(message);
+                IgnoreOrSendToDeadLetters(publish);
             }
             else
             {

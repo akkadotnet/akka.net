@@ -233,58 +233,73 @@ namespace Akka.Cluster.Sharding.Serialization
         /// This exception is thrown when the specified <paramref name="o"/> does not have an associated manifest.
         /// </exception>
         /// <returns>The manifest needed for the deserialization of the specified <paramref name="o" />.</returns>
+        internal static string GetManifest(object o)
+            => o switch
+            {
+                EventSourcedRememberEntitiesShardStore.State _ => EntityStateManifest,
+                EventSourcedRememberEntitiesShardStore.EntitiesStarted _ => EntitiesStartedManifest,
+                EventSourcedRememberEntitiesShardStore.EntitiesStopped _ => EntitiesStoppedManifest,
+
+                ShardCoordinator.CoordinatorState _ => CoordinatorStateManifest,
+                ShardCoordinator.ShardRegionRegistered _ => ShardRegionRegisteredManifest,
+                ShardCoordinator.ShardRegionProxyRegistered _ => ShardRegionProxyRegisteredManifest,
+                ShardCoordinator.ShardRegionTerminated _ => ShardRegionTerminatedManifest,
+                ShardCoordinator.ShardRegionProxyTerminated _ => ShardRegionProxyTerminatedManifest,
+                ShardCoordinator.ShardHomeAllocated _ => ShardHomeAllocatedManifest,
+                ShardCoordinator.ShardHomeDeallocated _ => ShardHomeDeallocatedManifest,
+
+                ShardCoordinator.Register _ => RegisterManifest,
+                ShardCoordinator.RegisterProxy _ => RegisterProxyManifest,
+                ShardCoordinator.RegisterAck _ => RegisterAckManifest,
+                ShardCoordinator.GetShardHome _ => GetShardHomeManifest,
+                ShardCoordinator.ShardHome _ => ShardHomeManifest,
+                ShardCoordinator.HostShard _ => HostShardManifest,
+                ShardCoordinator.ShardStarted _ => ShardStartedManifest,
+                ShardCoordinator.BeginHandOff _ => BeginHandOffManifest,
+                ShardCoordinator.BeginHandOffAck _ => BeginHandOffAckManifest,
+                ShardCoordinator.HandOff _ => HandOffManifest,
+                ShardCoordinator.ShardStopped _ => ShardStoppedManifest,
+                ShardCoordinator.GracefulShutdownRequest _ => GracefulShutdownReqManifest,
+                ShardCoordinator.RegionStopped _ => RegionStoppedManifest,
+
+                ShardRegion.StartEntity _ => StartEntityManifest,
+                ShardRegion.StartEntityAck _ => StartEntityAckManifest,
+
+                Shard.GetShardStats _ => GetShardStatsManifest,
+                Shard.ShardStats _ => ShardStatsManifest,
+                GetShardRegionStats _ => GetShardRegionStatsManifest,
+                ShardRegionStats _ => ShardRegionStatsManifest,
+                GetClusterShardingStats _ => GetClusterShardingStatsManifest,
+                ClusterShardingStats _ => ClusterShardingStatsManifest,
+                GetCurrentRegions _ => GetCurrentRegionsManifest,
+                CurrentRegions _ => CurrentRegionsManifest,
+
+                Shard.GetCurrentShardState _ => GetCurrentShardStateManifest,
+                Shard.CurrentShardState _ => CurrentShardStateManifest,
+                GetShardRegionState _ => GetShardRegionStateManifest,
+                ShardState _ => ShardStateManifest,
+                CurrentShardRegionState _ => CurrentShardRegionStateManifest,
+
+                EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker _ => EventSourcedRememberShardsMigrationMarkerManifest,
+                EventSourcedRememberEntitiesCoordinatorStore.State _ => EventSourcedRememberShardsState,
+
+                _ => string.Empty
+            };
+        
+        /// <summary>
+        /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(byte[], string)" /> method.
+        /// </summary>
+        /// <param name="o">The object for which the manifest is needed.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="o"/> does not have an associated manifest.
+        /// </exception>
+        /// <returns>The manifest needed for the deserialization of the specified <paramref name="o" />.</returns>
         public override string Manifest(object o)
         {
-            switch (o)
-            {
-                case EventSourcedRememberEntitiesShardStore.State _: return EntityStateManifest;
-                case EventSourcedRememberEntitiesShardStore.EntitiesStarted _: return EntitiesStartedManifest;
-                case EventSourcedRememberEntitiesShardStore.EntitiesStopped _: return EntitiesStoppedManifest;
-
-                case ShardCoordinator.CoordinatorState _: return CoordinatorStateManifest;
-                case ShardCoordinator.ShardRegionRegistered _: return ShardRegionRegisteredManifest;
-                case ShardCoordinator.ShardRegionProxyRegistered _: return ShardRegionProxyRegisteredManifest;
-                case ShardCoordinator.ShardRegionTerminated _: return ShardRegionTerminatedManifest;
-                case ShardCoordinator.ShardRegionProxyTerminated _: return ShardRegionProxyTerminatedManifest;
-                case ShardCoordinator.ShardHomeAllocated _: return ShardHomeAllocatedManifest;
-                case ShardCoordinator.ShardHomeDeallocated _: return ShardHomeDeallocatedManifest;
-
-                case ShardCoordinator.Register _: return RegisterManifest;
-                case ShardCoordinator.RegisterProxy _: return RegisterProxyManifest;
-                case ShardCoordinator.RegisterAck _: return RegisterAckManifest;
-                case ShardCoordinator.GetShardHome _: return GetShardHomeManifest;
-                case ShardCoordinator.ShardHome _: return ShardHomeManifest;
-                case ShardCoordinator.HostShard _: return HostShardManifest;
-                case ShardCoordinator.ShardStarted _: return ShardStartedManifest;
-                case ShardCoordinator.BeginHandOff _: return BeginHandOffManifest;
-                case ShardCoordinator.BeginHandOffAck _: return BeginHandOffAckManifest;
-                case ShardCoordinator.HandOff _: return HandOffManifest;
-                case ShardCoordinator.ShardStopped _: return ShardStoppedManifest;
-                case ShardCoordinator.GracefulShutdownRequest _: return GracefulShutdownReqManifest;
-                case ShardCoordinator.RegionStopped _: return RegionStoppedManifest;
-
-                case ShardRegion.StartEntity _: return StartEntityManifest;
-                case ShardRegion.StartEntityAck _: return StartEntityAckManifest;
-
-                case Shard.GetShardStats _: return GetShardStatsManifest;
-                case Shard.ShardStats _: return ShardStatsManifest;
-                case GetShardRegionStats _: return GetShardRegionStatsManifest;
-                case ShardRegionStats _: return ShardRegionStatsManifest;
-                case GetClusterShardingStats _: return GetClusterShardingStatsManifest;
-                case ClusterShardingStats _: return ClusterShardingStatsManifest;
-                case GetCurrentRegions _: return GetCurrentRegionsManifest;
-                case CurrentRegions _: return CurrentRegionsManifest;
-
-                case Shard.GetCurrentShardState _: return GetCurrentShardStateManifest;
-                case Shard.CurrentShardState _: return CurrentShardStateManifest;
-                case GetShardRegionState _: return GetShardRegionStateManifest;
-                case ShardState _: return ShardStateManifest;
-                case CurrentShardRegionState _: return CurrentShardRegionStateManifest;
-
-                case EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker _: return EventSourcedRememberShardsMigrationMarkerManifest;
-                case EventSourcedRememberEntitiesCoordinatorStore.State _: return EventSourcedRememberShardsState;
-            }
-            throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{GetType()}]");
+            var man = GetManifest(o);
+            if(ReferenceEquals(man, string.Empty))
+                throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{GetType()}]");
+            return man;
         }
 
         //

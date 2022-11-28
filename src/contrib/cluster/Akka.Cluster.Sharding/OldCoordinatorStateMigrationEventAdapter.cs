@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Cluster.Sharding.Serialization;
+using Akka.Persistence;
 using Akka.Persistence.Journal;
 
 namespace Akka.Cluster.Sharding
@@ -17,7 +19,10 @@ namespace Akka.Cluster.Sharding
     {
         public string Manifest(object evt)
         {
-            return "";
+            if (evt is IPersistentRepresentation p)
+                return p.Manifest;
+            
+            return ClusterShardingMessageSerializer.GetManifest(evt);
         }
 
         public object ToJournal(object evt)

@@ -63,7 +63,7 @@ namespace Akka.Actor
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is CurrentState<TS> && Equals((CurrentState<TS>)obj);
+                return obj is CurrentState<TS> state && Equals(state);
             }
 
             
@@ -129,7 +129,7 @@ namespace Akka.Actor
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is Transition<TS> && Equals((Transition<TS>)obj);
+                return obj is Transition<TS> transition && Equals(transition);
             }
 
             
@@ -206,7 +206,7 @@ namespace Akka.Actor
         /// </summary>
         public sealed class Normal : Reason
         {
-            internal Normal() { }
+            private Normal() { }
 
             /// <summary>
             /// Singleton instance of Normal
@@ -220,7 +220,7 @@ namespace Akka.Actor
         /// </summary>
         public sealed class Shutdown : Reason
         {
-            internal Shutdown() { }
+            private Shutdown() { }
 
             /// <summary>
             /// Singleton instance of Shutdown
@@ -258,7 +258,7 @@ namespace Akka.Actor
         /// </summary>
         public sealed class StateTimeout
         {
-            internal StateTimeout() { }
+            private StateTimeout() { }
 
             /// <summary>
             /// Singleton instance of StateTimeout
@@ -422,7 +422,7 @@ namespace Akka.Actor
         /// </summary>
         /// <typeparam name="TS">The name of the state</typeparam>
         /// <typeparam name="TD">The data of the state</typeparam>
-        public class State<TS, TD> : IEquatable<State<TS, TD>>
+        public sealed class State<TS, TD> : IEquatable<State<TS, TD>>
         {
             /// <summary>
             /// Initializes a new instance of the State
@@ -435,7 +435,7 @@ namespace Akka.Actor
             /// <param name="notifies">TBD</param>
             public State(TS stateName, TD stateData, TimeSpan? timeout = null, Reason stopReason = null, IReadOnlyList<object> replies = null, bool notifies = true)
             {
-                Replies = replies ?? new List<object>();
+                Replies = replies ?? Array.Empty<object>();
                 StopReason = stopReason;
                 Timeout = timeout;
                 StateData = stateData;
@@ -444,32 +444,33 @@ namespace Akka.Actor
             }
 
             /// <summary>
-            /// TBD
+            /// The name of this state
             /// </summary>
             public TS StateName { get; }
 
             /// <summary>
-            /// TBD
+            /// The data belonging to this sate
             /// </summary>
             public TD StateData { get; }
 
             /// <summary>
-            /// TBD
+            /// Optional. The state timeout.
             /// </summary>
             public TimeSpan? Timeout { get; }
 
             /// <summary>
-            /// TBD
+            /// Optional - the reason why we're stopping.
             /// </summary>
             public Reason StopReason { get; }
 
             /// <summary>
-            /// TBD
+            /// Optional - the set of replies to send to subscribers.
             /// </summary>
-            public IReadOnlyList<object> Replies { get; protected set; }
+            public IReadOnlyList<object> Replies { get; }
 
             /// <summary>
-            /// TBD
+            /// INTERNAL API. Indicates whether or not we're sending transition notifications
+            /// for this state change.
             /// </summary>
             internal bool Notifies { get; }
 
@@ -482,7 +483,22 @@ namespace Akka.Actor
             /// <returns>TBD</returns>
             internal State<TS, TD> Copy(TimeSpan? timeout, Reason stopReason = null, IReadOnlyList<object> replies = null)
             {
+                // otherwise, return a new copy.
                 return new State<TS, TD>(StateName, StateData, timeout, stopReason ?? StopReason, replies ?? Replies, Notifies);
+            }
+
+            /// <summary>
+            /// Remove all of the unwanted bits we don't need during a Stay() operation.
+            /// </summary>
+            /// <remarks>
+            /// This is a performance optimization designed to 
+            /// </remarks>
+            /// <returns>Returns a "clean" copy of a state object the first time it's called. Idempotent after.</returns>
+            internal State<TS, TD> SpecialCopyForStay()
+            {
+                if(Replies.Count > 0 || StopReason != null || Timeout != null || Notifies)
+                    return new State<TS, TD>(StateName, StateData, notifies:false);
+                return this;
             }
 
             /// <summary>
@@ -539,15 +555,16 @@ namespace Akka.Actor
             /// </summary>
             internal State<TS, TD> WithNotification(bool notifies)
             {
+                // don't bother allocating even a stack type if the notifies value is identical.
+                if (Notifies == notifies)
+                    return this;
                 return new State<TS, TD>(StateName, StateData, Timeout, StopReason, Replies, notifies);
             }
 
-            
             public override string ToString()
             {
                 return $"{StateName}, {StateData}";
             }
-
             
             public bool Equals(State<TS, TD> other)
             {
@@ -585,13 +602,13 @@ namespace Akka.Actor
         /// which allows pattern matching to extract both state and data.
         /// </summary>
         /// <typeparam name="TD">The state data for this event</typeparam>
-        public sealed class Event<TD> : INoSerializationVerificationNeeded
+        public readonly struct Event<TD> : INoSerializationVerificationNeeded
         {
             /// <summary>
             /// Initializes a new instance of the Event
             /// </summary>
-            /// <param name="fsmEvent">TBD</param>
-            /// <param name="stateData">TBD</param>
+            /// <param name="fsmEvent">The message received by the FSM.</param>
+            /// <param name="stateData">The current state data of the FSM.</param>
             public Event(object fsmEvent, TD stateData)
             {
                 StateData = stateData;
@@ -599,12 +616,12 @@ namespace Akka.Actor
             }
 
             /// <summary>
-            /// TBD
+            /// The message received by the FSM.
             /// </summary>
             public object FsmEvent { get; }
 
             /// <summary>
-            /// TBD
+            /// The current state data of the FSM.
             /// </summary>
             public TD StateData { get; }
 
@@ -750,7 +767,8 @@ namespace Akka.Actor
         /// <returns>Descriptor for staying in the current state.</returns>
         public State<TState, TData> Stay()
         {
-            return GoTo(_currentState.StateName).WithNotification(false);
+            // don't want to allocate a new state if we don't have to
+            return _currentState.SpecialCopyForStay();
         }
 
         /// <summary>
@@ -940,7 +958,7 @@ namespace Akka.Actor
         {
             get
             {
-                if (_currentState != null)
+                if (_currentState != null) 
                     return _currentState.StateName;
                 throw new IllegalStateException("You must call StartWith before calling StateName.");
             }
@@ -1175,7 +1193,7 @@ namespace Akka.Actor
             var stateFunc = _stateFunctions[_currentState.StateName];
             var oldState = _currentState;
 
-            State<TState, TData> nextState = null;
+            State<TState, TData> nextState = default;
 
             if (stateFunc != null)
             {
@@ -1195,7 +1213,7 @@ namespace Akka.Actor
             }
         }
 
-        private string GetSourceString(object source)
+        private static string GetSourceString(object source)
         {
             if (source is string s)
                 return s;
@@ -1244,12 +1262,14 @@ namespace Akka.Actor
                 {
                     Sender.Tell(nextState.Replies[i]);
                 }
-                if (!_currentState.StateName.Equals(nextState.StateName) || nextState.Notifies)
+                
+                // avoid boxing
+                if (!EqualityComparer<TState>.Default.Equals(_currentState.StateName, nextState.StateName) || nextState.Notifies)
                 {
                     _nextState = nextState;
                     HandleTransition(_currentState.StateName, nextState.StateName);
                     Listeners.Gossip(new Transition<TState>(Self, _currentState.StateName, nextState.StateName));
-                    _nextState = null;
+                    _nextState = default;
                 }
                 _currentState = nextState;
 
