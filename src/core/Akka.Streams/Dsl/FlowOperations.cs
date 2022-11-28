@@ -2452,7 +2452,7 @@ namespace Akka.Streams.Dsl
         /// </remarks>
         public static Flow<TIn, TOut, TMat> RepeatPrevious<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow)
         {
-            return flow.Via(new RepeatPrevious<TOut>());
+            return flow.Via(new ReuseLatest<TOut>());
         }
 
         /// <summary>
@@ -2473,7 +2473,7 @@ namespace Akka.Streams.Dsl
         /// </remarks>
         public static Flow<TIn, TOut, TMat> RepeatPrevious<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Action<TOut, TOut> onItemChanged)
         {
-            return flow.Via(new RepeatPrevious<TOut>(onItemChanged));
+            return flow.Via(new ReuseLatest<TOut>(onItemChanged));
         }
     }
 }

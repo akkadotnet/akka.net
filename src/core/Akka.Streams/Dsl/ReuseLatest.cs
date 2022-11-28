@@ -11,13 +11,13 @@ using Akka.Util;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// Repeats the previous element from upstream until it's replaced by a new value.
+    /// Reuses the latest element from upstream until it's replaced by a new value.
     ///
     /// This is designed to allow fan-in stages where output from one of the sources is intermittent / infrequent
     /// and users just want the previous value to be reused.
     /// </summary>
     /// <typeparam name="T">The output type.</typeparam>
-    public sealed class RepeatPrevious<T> : GraphStage<FlowShape<T, T>>
+    public sealed class ReuseLatest<T> : GraphStage<FlowShape<T, T>>
     {
         private readonly Inlet<T> _in = new Inlet<T>("RepeatPrevious.in");
         private readonly Outlet<T> _out = new Outlet<T>("RepeatPrevious.out");
@@ -30,11 +30,11 @@ namespace Akka.Streams.Dsl
         /// </summary>
         private static readonly Action<T,T> DefaultSwap = (oldValue, newValue) => { };
 
-        public RepeatPrevious() : this(DefaultSwap)
+        public ReuseLatest() : this(DefaultSwap)
         {
         }
 
-        public RepeatPrevious(Action<T, T> onItemChanged)
+        public ReuseLatest(Action<T, T> onItemChanged)
         {
             _onItemChanged = onItemChanged;
         }
@@ -44,11 +44,11 @@ namespace Akka.Streams.Dsl
 
         private sealed class Logic : InAndOutGraphStageLogic
         {
-            private readonly RepeatPrevious<T> _stage;
+            private readonly ReuseLatest<T> _stage;
             private Option<T> _last;
             private readonly Action<T,T> _onItemChanged;
 
-            public Logic(RepeatPrevious<T> stage, Action<T,T> onItemChanged) : base(stage.Shape)
+            public Logic(ReuseLatest<T> stage, Action<T,T> onItemChanged) : base(stage.Shape)
             {
                 _stage = stage;
                 _onItemChanged = onItemChanged;

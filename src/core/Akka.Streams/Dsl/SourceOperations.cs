@@ -2302,7 +2302,7 @@ namespace Akka.Streams.Dsl
         /// </remarks>
         public static Source<T, TMat> RepeatPrevious<T, TMat>(this Source<T, TMat> source)
         {
-            return source.Via(new RepeatPrevious<T>());
+            return source.Via(new ReuseLatest<T>());
         }
         
         /// <summary>
@@ -2322,7 +2322,7 @@ namespace Akka.Streams.Dsl
         /// </remarks>
         public static Source<T, TMat> RepeatPrevious<T, TMat>(this Source<T, TMat> source, Action<T,T> onItemUpdated)
         {
-            return source.Via(new RepeatPrevious<T>(onItemUpdated));
+            return source.Via(new ReuseLatest<T>(onItemUpdated));
         }
     }
 }

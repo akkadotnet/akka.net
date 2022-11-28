@@ -1793,14 +1793,6 @@ namespace Akka.Streams.Dsl
         public Pulse(System.TimeSpan interval, bool initiallyOpen = False) { }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
-    public sealed class RepeatPrevious<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
-    {
-        public RepeatPrevious() { }
-        public RepeatPrevious(System.Action<T, T> onItemChanged) { }
-        public override Akka.Streams.FlowShape<T, T> Shape { get; }
-        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
-        public override string ToString() { }
-    }
     public class static RestartFlow
     {
         [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
@@ -1854,6 +1846,14 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.ValueTuple<TIn, TState>, System.ValueTuple<Akka.Util.Result<TOut>, TState>>, TMat> Concat<TIn, TState, TOut, TMat>(long limit, Akka.Streams.IGraph<Akka.Streams.FlowShape<System.ValueTuple<TIn, TState>, System.ValueTuple<Akka.Util.Result<TOut>, TState>>, TMat> flow, System.Func<TState, System.Collections.Generic.IEnumerable<System.ValueTuple<TIn, TState>>> retryWith) { }
         [Akka.Annotations.ApiMayChangeAttribute()]
         public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.ValueTuple<TIn, TState>, System.ValueTuple<Akka.Util.Result<TOut>, TState>>, TMat> Create<TIn, TState, TOut, TMat>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.ValueTuple<TIn, TState>, System.ValueTuple<Akka.Util.Result<TOut>, TState>>, TMat> flow, System.Func<TState, Akka.Util.Option<System.ValueTuple<TIn, TState>>> retryWith) { }
+    }
+    public sealed class ReuseLatest<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    {
+        public ReuseLatest() { }
+        public ReuseLatest(System.Action<T, T> onItemChanged) { }
+        public override Akka.Streams.FlowShape<T, T> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+        public override string ToString() { }
     }
     public class static ReverseOps
     {

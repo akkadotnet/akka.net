@@ -16,11 +16,11 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class RepeatPreviousSpec : AkkaSpec
+    public class ReuseLatestSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 
-        public RepeatPreviousSpec(ITestOutputHelper testOutputHelper) : base(Config.Empty, output: testOutputHelper)
+        public ReuseLatestSpec(ITestOutputHelper testOutputHelper) : base(Config.Empty, output: testOutputHelper)
         {
             var settings = ActorMaterializerSettings.Create(Sys);
             Materializer = ActorMaterializer.Create(Sys, settings);
