@@ -2459,7 +2459,7 @@ namespace Akka.Streams.Dsl
         /// Repeats the previous element from upstream until it's replaced by a new value.
         /// </summary>
         /// <param name="flow">The previous Flow stage in this stream.</param>
-        /// <param name="swapFunc">A <see cref="SwapPrevious{T}"/> function that allows the stage to perform clean-up operations when the previously repeated
+        /// <param name="onItemChanged">A <see cref="Action{TOut, TOut}"/> function that allows the stage to perform clean-up operations when the previously repeated
         /// value is being replaced.
         /// 
         /// This is used for things like calling <see cref="IDisposable.Dispose"/> on the previous value.
@@ -2471,9 +2471,9 @@ namespace Akka.Streams.Dsl
         /// This is designed to allow fan-in stages where output from one of the sources is intermittent / infrequent
         /// and users just want the previous value to be reused.
         /// </remarks>
-        public static Flow<TIn, TOut, TMat> RepeatPrevious<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, SwapPrevious<TOut> swapFunc)
+        public static Flow<TIn, TOut, TMat> RepeatPrevious<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Action<TOut, TOut> onItemChanged)
         {
-            return flow.Via(new RepeatPrevious<TOut>(swapFunc));
+            return flow.Via(new RepeatPrevious<TOut>(onItemChanged));
         }
     }
 }

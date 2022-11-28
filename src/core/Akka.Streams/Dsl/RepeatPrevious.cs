@@ -11,15 +11,6 @@ using Akka.Util;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// Delegate used to customize replacement functions.
-    ///
-    /// This is used for things like calling <see cref="IDisposable.Dispose"/> on the previous element.
-    /// when a new value is emitted.
-    /// </summary>
-    /// <typeparam name="T">The type of element handled by the <see cref="RepeatPrevious{T}"/></typeparam>
-    public delegate void SwapPrevious<T>(T previousValue, T newValue);
-
-    /// <summary>
     /// Repeats the previous element from upstream until it's replaced by a new value.
     ///
     /// This is designed to allow fan-in stages where output from one of the sources is intermittent / infrequent
@@ -32,35 +23,35 @@ namespace Akka.Streams.Dsl
         private readonly Outlet<T> _out = new Outlet<T>("RepeatPrevious.out");
 
         public override FlowShape<T, T> Shape => new FlowShape<T, T>(_in, _out);
-        private readonly SwapPrevious<T> _swapPrevious;
+        private readonly Action<T,T> _onItemChanged;
 
         /// <summary>
         /// Do nothing by default
         /// </summary>
-        private static readonly SwapPrevious<T> DefaultSwap = (value, newValue) => { };
+        private static readonly Action<T,T> DefaultSwap = (oldValue, newValue) => { };
 
         public RepeatPrevious() : this(DefaultSwap)
         {
         }
 
-        public RepeatPrevious(SwapPrevious<T> swapPrevious)
+        public RepeatPrevious(Action<T, T> onItemChanged)
         {
-            _swapPrevious = swapPrevious;
+            _onItemChanged = onItemChanged;
         }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) =>
-            new Logic(this, _swapPrevious);
+            new Logic(this, _onItemChanged);
 
         private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly RepeatPrevious<T> _stage;
             private Option<T> _last;
-            private readonly SwapPrevious<T> _swapPrevious;
+            private readonly Action<T,T> _onItemChanged;
 
-            public Logic(RepeatPrevious<T> stage, SwapPrevious<T> swapPrevious) : base(stage.Shape)
+            public Logic(RepeatPrevious<T> stage, Action<T,T> onItemChanged) : base(stage.Shape)
             {
                 _stage = stage;
-                _swapPrevious = swapPrevious;
+                _onItemChanged = onItemChanged;
 
                 SetHandler(_stage._in, this);
                 SetHandler(_stage._out, this);
@@ -70,7 +61,7 @@ namespace Akka.Streams.Dsl
             {
                 var next = Grab(_stage._in);
                 if (_last.HasValue)
-                    _swapPrevious(_last.Value, next);
+                    _onItemChanged(_last.Value, next);
                 _last = next;
 
                 if (IsAvailable(_stage._out))
