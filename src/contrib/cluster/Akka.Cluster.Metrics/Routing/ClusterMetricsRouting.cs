@@ -131,7 +131,7 @@ namespace Akka.Cluster.Metrics
     ///
     /// The supervision strategy of the router actor can be configured with
     /// [[#withSupervisorStrategy]]. If no strategy is provided, routers default to
-    /// a strategy of â€œalways escalateâ€. This means that errors are passed up to the
+    /// a strategy of [[always escalate]]. This means that errors are passed up to the
     /// router's supervisor for handling.
     ///
     /// The router's supervisor will treat the error as an error with the router itself.

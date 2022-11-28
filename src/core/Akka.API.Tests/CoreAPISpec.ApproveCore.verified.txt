@@ -23,7 +23,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("1a5cab08-b032-49ca-8db3-9428c5a9db14")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Actor
 {
     public abstract class ActorBase : Akka.Actor.IInternalActor
@@ -2239,7 +2239,7 @@ namespace Akka.Configuration
         public ConfigurationException(string message) { }
         public ConfigurationException(string message, System.Exception exception) { }
         protected ConfigurationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        public static Akka.Configuration.ConfigurationException NullOrEmptyConfig<T>(string path = null, string reason = null) { }
+        public static Akka.Configuration.ConfigurationException NullOrEmptyConfig<T>(string path = null) { }
     }
     public class ConfigurationFactory
     {
@@ -3328,6 +3328,11 @@ namespace Akka.IO
         public static byte[] op_Explicit(Akka.IO.ByteString byteString) { }
         public static bool !=(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ConnectException : System.Exception
+    {
+        public ConnectException(string message) { }
+    }
     public class Dns : Akka.Actor.ExtensionIdProvider<Akka.IO.DnsExt>
     {
         public static readonly Akka.IO.Dns Instance;
@@ -3542,8 +3547,13 @@ namespace Akka.IO
         public sealed class CommandFailed : Akka.IO.Tcp.Event
         {
             public CommandFailed(Akka.IO.Tcp.Command cmd) { }
+            public Akka.Util.Option<System.Exception> Cause { get; }
+            [Akka.Annotations.InternalApiAttribute()]
+            public string CauseString { get; }
             public Akka.IO.Tcp.Command Cmd { get; }
             public override string ToString() { }
+            [Akka.Annotations.InternalApiAttribute()]
+            public Akka.IO.Tcp.CommandFailed WithCause(System.Exception cause) { }
         }
         public class CompoundWrite : Akka.IO.Tcp.WriteCommand, System.Collections.Generic.IEnumerable<Akka.IO.Tcp.SimpleWriteCommand>, System.Collections.IEnumerable
         {

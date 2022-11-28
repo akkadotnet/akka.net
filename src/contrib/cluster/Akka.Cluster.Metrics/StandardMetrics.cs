@@ -21,7 +21,7 @@ namespace Akka.Cluster.Metrics
     public static class StandardMetrics
     {
         /// <summary>
-        /// Total memory allocated to the currently running process (<see cref="GC.GetTotalMemory"/>)
+        /// Total memory allocated to the currently running process (<see cref="Process.WorkingSet64"/>)
         /// </summary>
         public const string MemoryUsed = "MemoryUsed";
         /// <summary>
@@ -84,7 +84,7 @@ namespace Akka.Cluster.Metrics
             /// </summary>
             public long Timestamp { get; }
             /// <summary>
-            /// The current process allocated memory (in bytes) (<see cref="GC.GetTotalMemory"/>)
+            /// The current process allocated memory (in bytes) (<see cref="Process.WorkingSet64"/>)
             /// </summary>
             public double Used { get; }
             /// <summary>

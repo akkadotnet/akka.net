@@ -16,11 +16,11 @@ namespace Akka.Configuration
     /// </summary>
     public class ConfigurationException : AkkaException
     {
-        public static ConfigurationException NullOrEmptyConfig<T>(string path = null, string reason = null)
+        public static ConfigurationException NullOrEmptyConfig<T>(string path = null)
         {
             if (!string.IsNullOrWhiteSpace(path))
-                return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration does not contain `{path}` node{(reason != null ? $". {reason}" : "")}");
-            return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration is null or empty{(reason != null ? $". {reason}" : "")}");
+                return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration does not contain `{path}` node");
+            return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration is null or empty");
         }
 
         /// <summary>

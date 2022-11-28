@@ -1,14 +1,52 @@
-#### 1.4.43 September 27 2022 ####
-Akka.NET v1.4.43 is a minor release that contains a minor bug fix.
+#### 1.4.46 November 15th 2022 ####
+Akka.NET v1.4.46 is a security patch for Akka.NET v1.4.45 but also includes some other fixes.
 
-* [Sharding: Fix `GetEntityLocation` uses wrong actor path to resolve actor reference](https://github.com/akkadotnet/akka.net/issues/6120)
+**Security Advisory**: Akka.NET v1.4.45 and earlier depend on an old System.Configuration.ConfigurationManager version 4.7.0 which transitively depends on System.Common.Drawing v4.7.0. The System.Common.Drawing v4.7.0 is affected by a remote code execution vulnerability [GHSA-ghhp-997w-qr28](https://github.com/advisories/GHSA-ghhp-997w-qr28).
 
-If you want to see the [full set of changes made in Akka.NET v1.4.42, click here](https://github.com/akkadotnet/akka.net/milestone/74).
+We have separately created a security advisory for [Akka.NET Versions < 1.4.46 and < 1.5.0-alpha3 to track this issue](https://github.com/akkadotnet/akka.net/security/advisories/GHSA-gpv5-rp6w-58r8).
 
-| COMMITS | LOC+ | LOC- | AUTHOR              |
-|---------|------|------|---------------------|
-| 1       | 2    | 2    | Aaron Stannard      |
-| 1       | 172  | 4    | Gregorius Soedharmo |
+**Fixes and Updates**
+
+* [Akka: Upgrade to Newtonsoft.Json 13.0.1 as minimum version](https://github.com/akkadotnet/akka.net/pull/6252)
+* [Akka: Upgrade to System.Configuration.ConfigurationManager 6.0.1](https://github.com/akkadotnet/akka.net/pull/6253) - resolves security issue.
+* [Akka.IO: Report cause for Akka/IO TCP `CommandFailed` events](https://github.com/akkadotnet/akka.net/pull/6224)
+* [Akka.Cluster.Tools: Make sure that `DeadLetter`s published by `DistributedPubSubMediator` contain full context of topic](https://github.com/akkadotnet/akka.net/pull/6209)
+* [Akka.Cluster.Metrics: Improve CPU/Memory metrics collection at Akka.Cluster.Metrics](https://github.com/akkadotnet/akka.net/issues/4142) - built-in metrics are now much more accurate.
+
+You can see the [full set of tracked issues for Akka.NET v1.4.46 here](https://github.com/akkadotnet/akka.net/milestone/77).
+
+
+#### 1.4.45 October 19th 2022 ####
+Akka.NET v1.4.45 is a patch release for Akka.NET v1.4 for a bug introduced in v1.4.44.
+
+**Patch**
+* [Akka.NET: Revert change to ConfigurationException that is causing binary backward compatibility problem](https://github.com/akkadotnet/akka.net/pull/6201)
+
+#### 1.4.44 October 17th 2022 ####
+Akka.NET v1.4.44 is a maintenance release for Akka.NET v1.4 that contains numerous performance improvements in critical areas, including core actor message processing and Akka.Remote.
+
+**Performance Fixes**
+
+* [remove delegate allocation from `ForkJoinDispatcher` and `DedicatedThreadPool`](https://github.com/akkadotnet/akka.net/pull/6143)
+* [eliminate `Mailbox` delegate allocations](https://github.com/akkadotnet/akka.net/pull/6134)
+* [Reduce `FSM<TState, TData>` allocations](https://github.com/akkadotnet/akka.net/pull/6145)
+* [removed boxing allocations inside `FSM.State.Equals`](https://github.com/akkadotnet/akka.net/pull/6183)
+* [Eliminate `DefaultLogMessageFormatter` allocations](https://github.com/akkadotnet/akka.net/pull/6168)
+
+In sum you should expect to see total memory consumption, garbage collection, and throughput improve when you upgrade to Akka.NET v1.4.44.
+
+**Other Features and Improvements**
+
+* [Akka.Cluster and Akka.Cluster.Sharding: should throw human-friendly exception when accessing cluster / sharding plugins when clustering is not running](https://github.com/akkadotnet/akka.net/issues/6163)
+* [Akka.Cluster.Sharding: Add `HashCodeMessageExtractor` factory](https://github.com/akkadotnet/akka.net/pull/6182)
+* [Akka.Persistence.Sql.Common: Fix `DbCommand.CommandTimeout` in `BatchingSqlJournal`](https://github.com/akkadotnet/akka.net/pull/6180)
+
+You can [see the full list of fixes in Akka.NET v1.4.44 here](https://github.com/akkadotnet/akka.net/milestone/75).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 10 | 651 | 69 | @Aaronontheweb |
+| 4 | 275 | 17 | @Arkatufus |
 
 #### 1.4.42 September 23 2022 ####
 Akka.NET v1.4.42 is a minor release that contains some minor bug fixes.
