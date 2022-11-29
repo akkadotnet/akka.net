@@ -50,7 +50,7 @@ namespace Akka.Benchmarks.Utils
         }
 
         [Benchmark]
-        public int FastLazy_satefull_get_value()
+        public int FastLazy_stateful_get_value()
         {
             return fastLazyWithInit.Value;
         }
