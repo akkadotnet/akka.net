@@ -26,7 +26,7 @@ namespace Akka.Util
         {
             if (TryParse(str, out var i))
                 return i;
-            throw new FormatException($"[{str.ToString()}] is now a valid numeric format");
+            throw new FormatException($"[{str.ToString()}] is not a valid numeric format");
         }
 
         private const char Negative = '-';
@@ -89,27 +89,27 @@ namespace Akka.Util
                 case 0:
                     return 1;
                 case < 10:
-                    return 2 + padding;
+                    return 1 + padding;
                 case < 100:
-                    return 3 + padding;
+                    return 2 + padding;
                 case < 1000:
-                    return 4 + padding;
+                    return 3 + padding;
                 case < 10000:
-                    return 5 + padding;
+                    return 4 + padding;
                 case < 100000:
-                    return 6 + padding;
+                    return 5 + padding;
                 case < 1_000_000:
-                    return 7 + padding;
+                    return 6 + padding;
                 case < 10_000_000:
-                    return 8 + padding;
+                    return 7 + padding;
                 case < 100_000_000:
-                    return 9 + padding;
+                    return 8 + padding;
                 case < 1_000_000_000:
-                    return 10 + padding;
+                    return 9 + padding;
                 case < 10_000_000_000:
-                    return 11 + padding;
+                    return 10 + padding;
                 case 100_000_000_000:
-                    return 12 + padding;
+                    return 11 + padding;
                 default:
                     return (int)Math.Log10(i) + 1 + padding;
             }
