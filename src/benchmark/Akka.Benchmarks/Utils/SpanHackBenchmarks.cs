@@ -17,11 +17,18 @@ namespace Akka.Benchmarks.Utils
     {
         [Params(0, 1, -1, 1000, int.MaxValue, long.MaxValue)]
         public long Formatted { get; set; }
-        
+
         [Benchmark]
         public int Int64CharCountBenchmark()
         {
             return SpanHacks.Int64SizeInCharacters(Formatted);
+        }
+
+        [Benchmark]
+        public int TryFormatBenchmark()
+        {
+            Span<char> buffer = stackalloc char[22];
+            return SpanHacks.TryFormat(Formatted, 0, ref buffer);
         }
     }
 }
