@@ -45,9 +45,10 @@ namespace Akka.Util
             var index = 0;
             if (i is < 10 and >= 0)
             {
-                span[index++] = (char)(i+'0');
-                return index;
+                span[startPos] = (char)(i+'0');
+                return 1;
             }
+            
             var negative = 0;
             if (i < 0)
             {
