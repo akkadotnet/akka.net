@@ -43,25 +43,27 @@ namespace Akka.Util
         public static int TryFormat(long i, int startPos, ref Span<char> span, int sizeHint = 0)
         {
             var index = 0;
-            var negative = i < 0;
-            if (i == 0)
+            if (i is < 10 and >= 0)
             {
-                span[index++] = Numbers[0];
+                span[index++] = (char)(i+'0');
                 return index;
             }
-	
-            var targetLength = sizeHint > 0 ? sizeHint : Int64SizeInCharacters(i);
-            if(negative){
+            var negative = 0;
+            if (i < 0)
+            {
+                negative = 1;
                 i = Math.Abs(i);
             }
+	
+            var targetLength = sizeHint > 0 ? sizeHint : PositiveInt64SizeInCharacters(i, negative);
 
             while (i > 0)
             {
-                span[startPos + targetLength - index++ - 1] = Numbers[i % 10];
-                i /= 10;
+                i = Math.DivRem(i, 10, out var rem);
+                span[startPos + targetLength - index++ - 1] = (char)(rem+'0');
             }
 	
-            if(negative){
+            if(negative == 1){
                 span[0] = Negative;
                 index++;
             }
@@ -84,6 +86,11 @@ namespace Akka.Util
                 padding = 1;
             }
 
+            return PositiveInt64SizeInCharacters(i, padding);
+        }
+        
+        public static int PositiveInt64SizeInCharacters(long i, int padding)
+        {
             switch (i)
             {
                 case 0:
