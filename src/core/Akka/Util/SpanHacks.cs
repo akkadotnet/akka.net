@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Akka.Util
 {
@@ -78,22 +76,43 @@ namespace Akka.Util
         /// <returns>Character length.</returns>
         public static int Int64SizeInCharacters(long i)
         {
-            // still need 1 char to represent '0'
-            if(i == 0) return 1;
-	
-            // account for negative characters
-            var startLen = i < 0 ? 1 : 0;
-
-            i = Math.Abs(i);
-
-            // count sig figs
-            while (i > 0)
+	        // account for negative characters
+            var padding = 0;
+            if (i < 0)
             {
-                i = i / 10;
-                startLen++;
+                i *= -1;
+                padding = 1;
             }
 
-            return startLen;
+            switch (i)
+            {
+                case 0:
+                    return 1;
+                case < 10:
+                    return 2 + padding;
+                case < 100:
+                    return 3 + padding;
+                case < 1000:
+                    return 4 + padding;
+                case < 10000:
+                    return 5 + padding;
+                case < 100000:
+                    return 6 + padding;
+                case < 1_000_000:
+                    return 7 + padding;
+                case < 10_000_000:
+                    return 8 + padding;
+                case < 100_000_000:
+                    return 9 + padding;
+                case < 1_000_000_000:
+                    return 10 + padding;
+                case < 10_000_000_000:
+                    return 11 + padding;
+                case 100_000_000_000:
+                    return 12 + padding;
+                default:
+                    return (int)Math.Log10(i) + 1 + padding;
+            }
         }
 
         /// <summary>

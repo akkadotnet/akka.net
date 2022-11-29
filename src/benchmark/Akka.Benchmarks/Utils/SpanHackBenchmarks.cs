@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Benchmarks.Configurations;
 using Akka.Util;
 using BenchmarkDotNet.Attributes;
@@ -14,7 +15,7 @@ namespace Akka.Benchmarks.Utils
     [Config(typeof(MicroBenchmarkConfig))]
     public class SpanHackBenchmarks
     {
-        [Params(1, 1000, long.MaxValue)]
+        [Params(0, 1, -1, 1000, int.MaxValue, long.MaxValue)]
         public long Formatted { get; set; }
         
         [Benchmark]
