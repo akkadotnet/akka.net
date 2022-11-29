@@ -116,7 +116,7 @@ namespace Akka.Util
                     return 9 + padding;
                 case < 10_000_000_000:
                     return 10 + padding;
-                case 100_000_000_000:
+                case < 100_000_000_000:
                     return 11 + padding;
                 default:
                     return (int)Math.Log10(i) + 1 + padding;
