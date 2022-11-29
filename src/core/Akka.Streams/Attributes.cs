@@ -301,7 +301,7 @@ namespace Akka.Streams
         /// INTERNAL API
         /// </summary>
         internal bool IsAsync
-            => _attributes.Count() > 0 &&
+            => _attributes.Length > 0 &&
                 _attributes.Any(
                     attr => attr is AsyncBoundary ||
                     attr is ActorAttributes.Dispatcher);
@@ -489,9 +489,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static string ExtractName(IModule module, string defaultIfNotFound)
         {
-            var copy = module as CopiedModule;
-
-            return copy != null
+            return module is CopiedModule copy
                 ? copy.Attributes.And(copy.CopyOf.Attributes).GetNameOrDefault(defaultIfNotFound)
                 : module.Attributes.GetNameOrDefault(defaultIfNotFound);
         }
@@ -531,7 +529,7 @@ namespace Akka.Streams
                     return true;
                 return Equals(Name, other.Name);
             }
-            public override bool Equals(object obj) => obj is Dispatcher && Equals((Dispatcher)obj);
+            public override bool Equals(object obj) => obj is Dispatcher dispatcher && Equals(dispatcher);
             public override int GetHashCode() => Name?.GetHashCode() ?? 0;
             public override string ToString() => $"Dispatcher({Name})";
         }
