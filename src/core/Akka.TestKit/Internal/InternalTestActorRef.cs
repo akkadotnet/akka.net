@@ -6,11 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
-using Akka.Dispatch.SysMsg;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -87,6 +88,14 @@ namespace Akka.TestKit.Internal
             sender = sender.IsNobody() ? cell.System.DeadLetters : sender;
             var envelope = new Envelope(message, sender);
             cell.UseThreadContext(() => cell.ReceiveMessageForTest(envelope));
+        }
+
+        public Task ReceiveAsync(object message, IActorRef sender = null)
+        {
+            var cell = (TestActorCell)Cell;
+            sender = sender.IsNobody() ? cell.System.DeadLetters : sender;
+            var envelope = new Envelope(message, sender);
+            return cell.UseThreadContextAsync(() => cell.ReceiveMessageForTestAsync(envelope));
         }
 
         /// <summary>
@@ -245,9 +254,55 @@ namespace Akka.TestKit.Internal
                     if (taskScheduler != null)
                         return taskScheduler;
 
-                    taskScheduler = new TestActorTaskScheduler(this);
+                    taskScheduler = new TestActorTaskScheduler(this, TaskFailureHook);
                     return Interlocked.CompareExchange(ref _taskScheduler, taskScheduler, null) ?? taskScheduler;
                 }
+            }
+
+
+            private readonly Dictionary<object, TaskCompletionSource<Done>> _testActorTasks =
+                new Dictionary<object, TaskCompletionSource<Done>>();
+        
+            /// <summary>
+            /// This is only intended to be called from TestKit's TestActorRef
+            /// </summary>
+            /// <param name="envelope">TBD</param>
+            public Task ReceiveMessageForTestAsync(Envelope envelope)
+            {
+                var tcs = new TaskCompletionSource<Done>();
+                _testActorTasks[envelope.Message] = tcs;
+                ReceiveMessageForTest(envelope);
+                return tcs.Task;
+            }
+        
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="actionAsync">TBD</param>
+            public Task UseThreadContextAsync(Func<Task> actionAsync)
+            {
+                var tmp = InternalCurrentActorCellKeeper.Current;
+                InternalCurrentActorCellKeeper.Current = this;
+                try
+                {
+                    return actionAsync();
+                }
+                finally
+                {
+                    //ensure we set back the old context
+                    InternalCurrentActorCellKeeper.Current = tmp;
+                }
+            }
+
+            private void TaskFailureHook(object message, Exception exception)
+            {
+                if (!_testActorTasks.TryGetValue(message, out var tcs)) 
+                    return;
+                if (exception is { })
+                    tcs.TrySetException(exception);
+                else
+                    tcs.TrySetResult(Done.Instance);
+                _testActorTasks.Remove(message);
             }
 
             /// <summary>
@@ -256,14 +311,16 @@ namespace Akka.TestKit.Internal
             public new object Actor { get { return base.Actor; } }
         }
 
-        internal class TestActorTaskScheduler : ActorTaskScheduler
+        internal class TestActorTaskScheduler : ActorTaskScheduler, IAsyncResultInterceptor
         {
-            private readonly ActorCell _testActorCell;
+            private readonly TestActorCell _testActorCell;
+            private readonly Action<object, Exception> _taskCallback;
 
             /// <inheritdoc />
-            internal TestActorTaskScheduler(ActorCell testActorCell) : base(testActorCell)
+            internal TestActorTaskScheduler(ActorCell testActorCell, Action<object, Exception> taskCallback) : base(testActorCell)
             {
-                _testActorCell = testActorCell;
+                _taskCallback = taskCallback;
+                _testActorCell = (TestActorCell) testActorCell;
             }
 
             /// <inheritdoc />
@@ -276,6 +333,11 @@ namespace Akka.TestKit.Internal
             protected override void OnAfterTaskCompleted()
             {
                 ActorCellKeepingSynchronizationContext.AsyncCache = null;
+            }
+
+            public void OnTaskCompleted(object message, Exception exception)
+            {
+                _taskCallback(message, exception);
             }
         }
 

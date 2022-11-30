@@ -149,7 +149,7 @@ namespace Akka.Dispatch
             //suspend the mailbox
             dispatcher.Suspend(context);
 
-            ActorTaskScheduler actorScheduler = context.TaskScheduler;
+            var actorScheduler = context.TaskScheduler;
             actorScheduler.CurrentMessage = context.CurrentMessage;
 
             actorScheduler.OnBeforeTaskStarted();
@@ -158,18 +158,21 @@ namespace Akka.Dispatch
                               .Unwrap()
                               .ContinueWith(parent =>
                               {
-                                  Exception exception = GetTaskException(parent);
-
+                                  var exception = GetTaskException(parent);
                                   if (exception == null)
                                   {
                                       dispatcher.Resume(context);
-
                                       context.CheckReceiveTimeout();
                                   }
                                   else
                                   {
                                       context.Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage));
                                   }
+                                  
+                                  // Used by TestActorRef to intercept async execution result
+                                  if(actorScheduler is IAsyncResultInterceptor interceptor)
+                                      interceptor.OnTaskCompleted(actorScheduler.CurrentMessage, exception);
+                                  
                                   //clear the current message field of the scheduler
                                   actorScheduler.CurrentMessage = null;
                                   actorScheduler.OnAfterTaskCompleted();
@@ -203,3 +206,7 @@ namespace Akka.Dispatch
     }
 }
 
+internal interface IAsyncResultInterceptor
+{
+    void OnTaskCompleted(object message, Exception exception);
+}
