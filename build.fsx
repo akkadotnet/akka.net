@@ -28,7 +28,7 @@ let outputMultiNode = outputTests @@ "multinode"
 let outputFailedMultiNode = outputTests @@ "multinode" @@ "FAILED_SPECS_LOGS"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard2.0"
-let outputBinariesNet = outputBinaries @@ "net6.0"
+let outputBinariesNet = outputBinaries @@ "net7.0"
 
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
 let hasTeamCity = (not (buildNumber = "0")) // check if we have the TeamCity environment variable for build # set
@@ -57,7 +57,7 @@ let incrementalistReport = output @@ "incrementalist.txt"
 // Configuration values for tests
 let testNetFrameworkVersion = "net471"
 let testNetCoreVersion = "netcoreapp3.1"
-let testNetVersion = "net6.0"
+let testNetVersion = "net7.0"
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
