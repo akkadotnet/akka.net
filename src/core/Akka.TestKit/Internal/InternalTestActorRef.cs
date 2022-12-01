@@ -298,7 +298,7 @@ namespace Akka.TestKit.Internal
             {
                 if (!_testActorTasks.TryGetValue(message, out var tcs)) 
                     return;
-                if (exception is { })
+                if (!(exception is null))
                     tcs.TrySetException(exception);
                 else
                     tcs.TrySetResult(Done.Instance);
