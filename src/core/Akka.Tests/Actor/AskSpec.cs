@@ -10,6 +10,7 @@ using Xunit;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -360,7 +361,7 @@ namespace Akka.Tests.Actor
             // create AsyncAwaitActor
             var asyncAwaitActor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor(replyActor, configureAwait)));
             asyncAwaitActor.Tell(count);
-            ReceiveN(count);
+            ReceiveN(count, Debugger.IsAttached ? TimeSpan.FromMinutes(2) : RemainingOrDefault);
         }
     }
 }
