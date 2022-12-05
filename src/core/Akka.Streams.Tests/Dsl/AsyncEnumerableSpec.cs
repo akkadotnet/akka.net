@@ -24,7 +24,7 @@ using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-#if !NETFRAMEWORK
+#if !NETFRAMEWORK // disabling this causes .NET Framework 4.7.2 builds to fail on Linux
     public class AsyncEnumerableSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
