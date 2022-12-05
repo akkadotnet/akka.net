@@ -28,7 +28,6 @@ using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-#if NETCOREAPP
     public class AsyncEnumerableSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
@@ -275,6 +274,4 @@ namespace Akka.Streams.Tests.Dsl
         }
         
     }
-#else
-#endif
 }
