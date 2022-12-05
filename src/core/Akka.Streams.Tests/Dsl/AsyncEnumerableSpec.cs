@@ -17,11 +17,7 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using System.Collections.Generic;
-using Akka.Actor;
-using Akka.Streams.Actors;
 using Akka.Streams.TestKit.Tests;
-using Akka.Streams.Tests.Actor;
-using Reactive.Streams;
 using System.Runtime.CompilerServices;
 using Akka.Util;
 using FluentAssertions.Extensions;
@@ -228,6 +224,47 @@ namespace Akka.Streams.Tests.Dsl
 
             // The cancellation token inside the IAsyncEnumerable should be cancelled
             await WithinAsync(3.Seconds(), async () => latch.Value);
+        }
+        
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/6280
+        /// </summary>
+        [Fact]
+        public async Task AsyncEnumerableSource_BugFix6280()
+        {
+            async IAsyncEnumerable<int> GenerateInts()
+            {
+                foreach (var i in Enumerable.Range(0, 100))
+                {
+                    if (i > 50)
+                        await Task.Delay(1000);
+                    yield return i;
+                }
+            }
+
+            var source = Source.From(GenerateInts);
+            var subscriber = this.CreateManualSubscriberProbe<int>();
+
+            await EventFilter.Warning().ExpectAsync(0, async () =>
+            {
+                var mat = source
+                    .WatchTermination(Keep.Right)
+                    .ToMaterialized(Sink.FromSubscriber(subscriber), Keep.Left);
+            
+#pragma warning disable CS4014
+                var task = mat.Run(Materializer);
+#pragma warning restore CS4014
+
+                var subscription = subscriber.ExpectSubscription();
+                subscription.Request(50);
+                subscriber.ExpectNextN(Enumerable.Range(0, 50));
+                subscription.Request(10); // the iterator is going to start delaying 1000ms per item here
+                subscription.Cancel();
+
+
+                // The cancellation token inside the IAsyncEnumerable should be cancelled
+                await task;
+            });
         }
 
         private static async IAsyncEnumerable<int> RangeAsync(int start, int count, 
