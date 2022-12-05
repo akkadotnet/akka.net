@@ -24,10 +24,12 @@ using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
+#if !NETFRAMEWORK
     public class AsyncEnumerableSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
         private ITestOutputHelper _helper;
+
         public AsyncEnumerableSpec(ITestOutputHelper helper) : base(
             AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig),
             helper)
@@ -45,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var cts = new CancellationTokenSource();
             var token = cts.Token;
-            
+
             var asyncEnumerable = Source.From(input).RunAsAsyncEnumerable(Materializer);
             var output = input.ToArray();
             bool caught = false;
@@ -60,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 caught = true;
             }
-            
+
             caught.ShouldBeTrue();
         }
 
@@ -75,6 +77,7 @@ namespace Akka.Streams.Tests.Dsl
                 (output[0] == a).ShouldBeTrue("Did not get elements in order!");
                 output = output.Skip(1).ToArray();
             }
+
             output.Length.ShouldBe(0, "Did not receive all elements!");
         }
 
@@ -89,14 +92,16 @@ namespace Akka.Streams.Tests.Dsl
                 (output[0] == a).ShouldBeTrue("Did not get elements in order!");
                 output = output.Skip(1).ToArray();
             }
+
             output.Length.ShouldBe(0, "Did not receive all elements!");
-            
+
             output = input.ToArray();
             await foreach (var a in asyncEnumerable)
             {
                 (output[0] == a).ShouldBeTrue("Did not get elements in order!");
                 output = output.Skip(1).ToArray();
             }
+
             output.Length.ShouldBe(0, "Did not receive all elements in second enumeration!!");
         }
 
@@ -107,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
             var materializer = ActorMaterializer.Create(Sys);
             var probe = this.CreatePublisherProbe<int>();
             var task = Source.FromPublisher(probe).RunAsAsyncEnumerable(materializer);
-            
+
             var a = Task.Run(async () =>
             {
                 await foreach (var notused in task)
@@ -135,7 +140,7 @@ namespace Akka.Streams.Tests.Dsl
 
             thrown.ShouldBeTrue();
         }
-        
+
         [Fact]
         public async Task RunAsAsyncEnumerable_Throws_if_materializer_gone_before_Enumeration()
         {
@@ -150,7 +155,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                 }
             }
-            
+
             await Assert.ThrowsAsync<IllegalStateException>(ShouldThrow);
         }
 
@@ -182,7 +187,7 @@ namespace Akka.Streams.Tests.Dsl
             subscription.Request(101);
 
             subscriber.ExpectNextN(Enumerable.Range(0, 100));
-            
+
             subscriber.ExpectComplete();
         }
 
@@ -201,7 +206,7 @@ namespace Akka.Streams.Tests.Dsl
             subscriber.ExpectNextN(Enumerable.Range(0, 50));
 
             var exception = subscriber.ExpectError();
-            
+
             // Exception should be automatically unrolled, this SHOULD NOT be AggregateException
             exception.Should().BeOfType<TestException>();
             exception.Message.Should().Be("BOOM!");
@@ -225,7 +230,7 @@ namespace Akka.Streams.Tests.Dsl
             // The cancellation token inside the IAsyncEnumerable should be cancelled
             await WithinAsync(3.Seconds(), async () => latch.Value);
         }
-        
+
         /// <summary>
         /// Reproduction for https://github.com/akkadotnet/akka.net/issues/6280
         /// </summary>
@@ -250,7 +255,7 @@ namespace Akka.Streams.Tests.Dsl
                 var mat = source
                     .WatchTermination(Keep.Right)
                     .ToMaterialized(Sink.FromSubscriber(subscriber), Keep.Left);
-            
+
 #pragma warning disable CS4014
                 var task = mat.Run(Materializer);
 #pragma warning restore CS4014
@@ -267,13 +272,13 @@ namespace Akka.Streams.Tests.Dsl
             });
         }
 
-        private static async IAsyncEnumerable<int> RangeAsync(int start, int count, 
+        private static async IAsyncEnumerable<int> RangeAsync(int start, int count,
             [EnumeratorCancellation] CancellationToken token = default)
         {
             foreach (var i in Enumerable.Range(start, count))
             {
                 await Task.Delay(10, token);
-                if(token.IsCancellationRequested)
+                if (token.IsCancellationRequested)
                     yield break;
                 yield return i;
             }
@@ -284,12 +289,12 @@ namespace Akka.Streams.Tests.Dsl
         {
             foreach (var i in Enumerable.Range(start, count))
             {
-                if(token.IsCancellationRequested)
+                if (token.IsCancellationRequested)
                     yield break;
 
                 if (i == throwAt)
                     throw new TestException("BOOM!");
-                
+
                 yield return i;
             }
         }
@@ -297,18 +302,15 @@ namespace Akka.Streams.Tests.Dsl
         private static async IAsyncEnumerable<int> ProbeableRangeAsync(int start, int count, AtomicBoolean latch,
             [EnumeratorCancellation] CancellationToken token = default)
         {
-            token.Register(() =>
-            {
-                latch.GetAndSet(true);
-            });
+            token.Register(() => { latch.GetAndSet(true); });
             foreach (var i in Enumerable.Range(start, count))
             {
-                if(token.IsCancellationRequested)
+                if (token.IsCancellationRequested)
                     yield break;
 
                 yield return i;
             }
         }
-        
     }
+#endif
 }
