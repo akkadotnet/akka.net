@@ -3816,7 +3816,6 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _completionCts.Cancel();
                 _completionCts.Dispose();
-
                 CompleteStage();
                 base.OnDownstreamFinish();
             }
