@@ -25,7 +25,7 @@ using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-#if NETCOREAPP
+#if !NETFRAMEWORK // disabling this causes .NET Framework 4.7.2 builds to fail on Linux
     public class AsyncEnumerableSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
@@ -227,6 +227,47 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/6280
+        /// </summary>
+        [Fact]
+        public async Task AsyncEnumerableSource_BugFix6280()
+        {
+            async IAsyncEnumerable<int> GenerateInts()
+            {
+                foreach (var i in Enumerable.Range(0, 100))
+                {
+                    if (i > 50)
+                        await Task.Delay(1000);
+                    yield return i;
+                }
+            }
+
+            var source = Source.From(GenerateInts);
+            var subscriber = this.CreateManualSubscriberProbe<int>();
+
+            await EventFilter.Warning().ExpectAsync(0, async () =>
+            {
+                var mat = source
+                    .WatchTermination(Keep.Right)
+                    .ToMaterialized(Sink.FromSubscriber(subscriber), Keep.Left);
+
+#pragma warning disable CS4014
+                var task = mat.Run(Materializer);
+#pragma warning restore CS4014
+
+                var subscription = await subscriber.ExpectSubscriptionAsync();
+                subscription.Request(50);
+                subscriber.ExpectNextN(Enumerable.Range(0, 50));
+                subscription.Request(10); // the iterator is going to start delaying 1000ms per item here
+                subscription.Cancel();
+
+
+                // The cancellation token inside the IAsyncEnumerable should be cancelled
+                await task;
+            });
+        }
+
         private static async IAsyncEnumerable<int> RangeAsync(int start, int count, 
             [EnumeratorCancellation] CancellationToken token = default)
         {
@@ -257,10 +298,7 @@ namespace Akka.Streams.Tests.Dsl
         private static async IAsyncEnumerable<int> ProbeableRangeAsync(int start, int count, AtomicBoolean latch,
             [EnumeratorCancellation] CancellationToken token = default)
         {
-            token.Register(() =>
-            {
-                latch.GetAndSet(true);
-            });
+            token.Register(() => { latch.GetAndSet(true); });
             foreach (var i in Enumerable.Range(start, count))
             {
                 if(token.IsCancellationRequested)
@@ -269,8 +307,6 @@ namespace Akka.Streams.Tests.Dsl
                 yield return i;
             }
         }
-        
     }
-#else
 #endif
 }
