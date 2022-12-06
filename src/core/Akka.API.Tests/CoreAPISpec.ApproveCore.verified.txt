@@ -314,6 +314,13 @@ namespace Akka.Actor
         public static readonly Akka.Actor.IActorRef NoSender;
         public static readonly Akka.Actor.Nobody Nobody;
     }
+    public struct ActorRestarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public ActorRestarted(Akka.Actor.IActorRef subject, System.Type actorType, Akka.Actor.Reason reason) { }
+        public System.Type ActorType { get; }
+        public Akka.Actor.Reason Reason { get; }
+        public Akka.Actor.IActorRef Subject { get; }
+    }
     public class ActorSelection : Akka.Actor.ICanTell
     {
         public ActorSelection() { }
@@ -340,12 +347,24 @@ namespace Akka.Actor
         public Akka.Actor.ActorSelectionMessage Copy(object message = null, Akka.Actor.SelectionPathElement[] elements = null, System.Nullable<bool> wildCardFanOut = null) { }
         public override string ToString() { }
     }
+    public struct ActorStarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public ActorStarted(Akka.Actor.IActorRef subject, System.Type actorType) { }
+        public System.Type ActorType { get; }
+        public Akka.Actor.IActorRef Subject { get; }
+    }
     public class ActorStashPlugin : Akka.Actor.ActorProducerPluginBase
     {
         public ActorStashPlugin() { }
         public override void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public override void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public override bool CanBeAppliedTo(System.Type actorType) { }
+    }
+    public struct ActorStopped : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public ActorStopped(Akka.Actor.IActorRef subject, System.Type actorType) { }
+        public System.Type ActorType { get; }
+        public Akka.Actor.IActorRef Subject { get; }
     }
     public abstract class ActorSystem : Akka.Actor.IActorRefFactory, System.IDisposable
     {
@@ -988,6 +1007,11 @@ namespace Akka.Actor
     {
         Akka.Actor.IStash Stash { get; set; }
     }
+    public interface IActorTelemetryEvent : Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        System.Type ActorType { get; }
+        Akka.Actor.IActorRef Subject { get; }
+    }
     public interface IAdvancedScheduler : Akka.Actor.IActionScheduler, Akka.Actor.IRunnableScheduler { }
     public interface IAutoReceivedMessage { }
     public interface ICanTell
@@ -1486,6 +1510,16 @@ namespace Akka.Actor
             public static readonly Akka.Actor.ProviderSelection.Remote Instance;
         }
     }
+    public sealed class Reason
+    {
+        public Reason(string type, string message = null) { }
+        public string Message { get; }
+        public string Type { get; }
+    }
+    public class static ReasonExtensions
+    {
+        public static Akka.Actor.Reason ToReason(this System.Exception ex) { }
+    }
     public delegate bool Receive(object message);
     public abstract class ReceiveActor : Akka.Actor.UntypedActor, Akka.Actor.Internal.IInitializableActor
     {
@@ -1682,6 +1716,7 @@ namespace Akka.Actor
         public bool DebugRouterMisconfiguration { get; }
         public bool DebugUnhandledMessage { get; }
         public int DefaultVirtualNodesFactor { get; }
+        public bool EmitActorTelemetry { get; }
         public bool FsmDebugEvent { get; }
         public bool HasCluster { get; }
         public string Home { get; }
