@@ -7,6 +7,7 @@
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);reactive;stream</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <LangVersion>9</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />
