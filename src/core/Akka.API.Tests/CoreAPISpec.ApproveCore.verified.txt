@@ -314,9 +314,8 @@ namespace Akka.Actor
         public static readonly Akka.Actor.IActorRef NoSender;
         public static readonly Akka.Actor.Nobody Nobody;
     }
-    public struct ActorRestarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    public sealed class ActorRestarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
     {
-        public ActorRestarted(Akka.Actor.IActorRef subject, System.Type actorType, Akka.Actor.Reason reason) { }
         public System.Type ActorType { get; }
         public Akka.Actor.Reason Reason { get; }
         public Akka.Actor.IActorRef Subject { get; }
@@ -347,9 +346,8 @@ namespace Akka.Actor
         public Akka.Actor.ActorSelectionMessage Copy(object message = null, Akka.Actor.SelectionPathElement[] elements = null, System.Nullable<bool> wildCardFanOut = null) { }
         public override string ToString() { }
     }
-    public struct ActorStarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    public sealed class ActorStarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
     {
-        public ActorStarted(Akka.Actor.IActorRef subject, System.Type actorType) { }
         public System.Type ActorType { get; }
         public Akka.Actor.IActorRef Subject { get; }
     }
@@ -360,9 +358,8 @@ namespace Akka.Actor
         public override void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public override bool CanBeAppliedTo(System.Type actorType) { }
     }
-    public struct ActorStopped : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    public sealed class ActorStopped : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
     {
-        public ActorStopped(Akka.Actor.IActorRef subject, System.Type actorType) { }
         public System.Type ActorType { get; }
         public Akka.Actor.IActorRef Subject { get; }
     }

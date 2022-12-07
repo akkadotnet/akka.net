@@ -33,9 +33,9 @@ namespace Akka.Actor
     }
     
     // Create ActorTelemetryEvent messages for the following events: starting an actor, stopping an actor, restarting an actor
-    public readonly struct ActorStarted : IActorTelemetryEvent
+    public sealed class ActorStarted : IActorTelemetryEvent
     {
-        public ActorStarted(IActorRef subject, Type actorType)
+        internal ActorStarted(IActorRef subject, Type actorType)
         {
             Subject = subject;
             ActorType = actorType;
@@ -72,9 +72,9 @@ namespace Akka.Actor
     /// <summary>
     /// Event emitted when actor shuts down.
     /// </summary>
-    public readonly struct ActorStopped : IActorTelemetryEvent
+    public sealed class ActorStopped : IActorTelemetryEvent
     {
-        public ActorStopped(IActorRef subject, Type actorType)
+        internal ActorStopped(IActorRef subject, Type actorType)
         {
             Subject = subject;
             ActorType = actorType;
@@ -87,9 +87,9 @@ namespace Akka.Actor
     /// <summary>
     /// Emitted when an actor restarts.
     /// </summary>
-    public readonly struct ActorRestarted : IActorTelemetryEvent
+    public sealed class ActorRestarted : IActorTelemetryEvent
     {
-        public ActorRestarted(IActorRef subject, Type actorType, Reason reason)
+        internal ActorRestarted(IActorRef subject, Type actorType, Reason reason)
         {
             Subject = subject;
             ActorType = actorType;
