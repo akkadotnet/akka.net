@@ -291,6 +291,9 @@ namespace Akka.Actor
                     var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(a.GetType());
                     pipeline.BeforeActorIncarnated(a, this);
                 }
+                
+                if(System.Settings.EmitActorTelemetry)
+                    System.EventStream.Publish(new ActorStopped(Self, Props.Type));
             }
             catch (Exception x)
             {
@@ -348,7 +351,9 @@ namespace Akka.Actor
 
                 if (System.Settings.DebugLifecycle)
                     Publish(new Debug(_self.Path.ToString(), freshActor.GetType(), "Restarted (" + freshActor + ")"));
-
+                if(System.Settings.EmitActorTelemetry)
+                    System.EventStream.Publish(new ActorRestarted(Self, Props.Type, cause));
+                
                 // only after parent is up and running again do restart the children which were not stopped
                 foreach (var survivingChild in survivors)
                 {
@@ -382,8 +387,7 @@ namespace Akka.Actor
             //the UID protects against reception of a Failed from a child which was
             //killed in preRestart and re-created in postRestart
 
-            ChildRestartStats childStats;
-            if (TryGetChildStatsByRef(failedChild, out childStats))
+            if (TryGetChildStatsByRef(failedChild, out var childStats))
             {
                 var statsUid = childStats.Child.Path.Uid;
                 if (statsUid == f.Uid)
@@ -429,8 +433,7 @@ namespace Akka.Actor
 
             // if the removal changed the state of the (terminating) children container,
             // then we are continuing the previously suspended recreate/create/terminate action
-            var recreation = status as SuspendReason.Recreation;
-            if (recreation != null)
+            if (status is SuspendReason.Recreation recreation)
             {
                 FinishRecreate(recreation.Cause, _actor);
             }
