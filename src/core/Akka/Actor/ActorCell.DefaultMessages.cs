@@ -449,6 +449,8 @@ namespace Akka.Actor
                 CheckReceiveTimeout();
                 if (System.Settings.DebugLifecycle)
                     Publish(new Debug(Self.Path.ToString(), created.GetType(), "Started (" + created + ")"));
+                if(System.Settings.EmitActorTelemetry)
+                    System.EventStream.Publish(new ActorStarted(Self, Props.Type));
             }
             catch (Exception e)
             {
