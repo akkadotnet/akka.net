@@ -76,6 +76,30 @@ namespace Akka.Remote.Tests.Serialization
             AssertEqual(identify);
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData(1)]
+        [InlineData("hi")]
+        public void Can_serialize_StatusSuccess(object payload)
+        {
+            var success = new Status.Success(payload);
+            AssertEqual(success);
+        }
+        
+        [Theory]
+        [InlineData(null)]
+        [InlineData(1)]
+        [InlineData("hi")]
+        public void Can_serialize_StatusFailure(object payload)
+        {
+            var success = new Status.Failure(new ApplicationException("foo"),payload);
+            // can't use AssertEqual here since the Exception data isn't 100% identical after round-trip serialization
+            var deserialized = AssertAndReturn(success);
+            deserialized.State.Should().BeEquivalentTo(success.State);
+            deserialized.Cause.Message.Should().BeEquivalentTo(success.Cause.Message);
+            deserialized.Cause.Should().BeOfType(success.Cause.GetType());
+        }
+
         [Fact]
         public void Can_serialize_ActorIdentity()
         {
@@ -372,7 +396,7 @@ namespace Akka.Remote.Tests.Serialization
         private void AssertEqual<T>(T message)
         {
             var deserialized = AssertAndReturn(message);
-            Assert.Equal(message, deserialized);
+            deserialized.Should().BeEquivalentTo(message);
         }
     }
 }
