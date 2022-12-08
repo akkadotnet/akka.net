@@ -317,7 +317,7 @@ namespace Akka.Actor
     public sealed class ActorRestarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
     {
         public System.Type ActorType { get; }
-        public Akka.Actor.Reason Reason { get; }
+        public System.Exception Reason { get; }
         public Akka.Actor.IActorRef Subject { get; }
     }
     public class ActorSelection : Akka.Actor.ICanTell
@@ -1506,16 +1506,6 @@ namespace Akka.Actor
         {
             public static readonly Akka.Actor.ProviderSelection.Remote Instance;
         }
-    }
-    public sealed class Reason
-    {
-        public Reason(string type, string message = null) { }
-        public string Message { get; }
-        public string Type { get; }
-    }
-    public class static ReasonExtensions
-    {
-        public static Akka.Actor.Reason ToReason(this System.Exception ex) { }
     }
     public delegate bool Receive(object message);
     public abstract class ReceiveActor : Akka.Actor.UntypedActor, Akka.Actor.Internal.IInitializableActor

@@ -44,31 +44,7 @@ namespace Akka.Actor
         public IActorRef Subject { get; }
         public Type ActorType { get; }
     }
-    
-    /// <summary>
-    /// Reason for stopping or restarting.
-    /// </summary>
-    public sealed class Reason
-    {
-        public Reason(string type, string message = null)
-        {
-            Type = type;
-            Message = message ?? string.Empty;
-        }
 
-        public string Type { get; }
-
-        public string Message { get; }
-    }
-
-    public static class ReasonExtensions
-    {
-        public static Reason ToReason(this Exception ex)
-        {
-            return new Reason(ex.GetType().Name, ex.Message);
-        }
-    }
-    
     /// <summary>
     /// Event emitted when actor shuts down.
     /// </summary>
@@ -89,7 +65,7 @@ namespace Akka.Actor
     /// </summary>
     public sealed class ActorRestarted : IActorTelemetryEvent
     {
-        internal ActorRestarted(IActorRef subject, Type actorType, Reason reason)
+        internal ActorRestarted(IActorRef subject, Type actorType, Exception reason)
         {
             Subject = subject;
             ActorType = actorType;
@@ -99,6 +75,6 @@ namespace Akka.Actor
         public IActorRef Subject { get; }
         public Type ActorType { get; }
         
-        public Reason Reason { get; }
+        public Exception Reason { get; }
     }
 }

@@ -352,7 +352,7 @@ namespace Akka.Actor
                 if (System.Settings.DebugLifecycle)
                     Publish(new Debug(_self.Path.ToString(), freshActor.GetType(), "Restarted (" + freshActor + ")"));
                 if(System.Settings.EmitActorTelemetry)
-                    System.EventStream.Publish(new ActorRestarted(Self, Props.Type, cause.ToReason()));
+                    System.EventStream.Publish(new ActorRestarted(Self, Props.Type, cause));
                 
                 // only after parent is up and running again do restart the children which were not stopped
                 foreach (var survivingChild in survivors)
