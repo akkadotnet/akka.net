@@ -76,6 +76,26 @@ namespace Akka.Remote.Tests.Serialization
             AssertEqual(identify);
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData(1)]
+        [InlineData("hi")]
+        public void Can_serialize_StatusSuccess(object payload)
+        {
+            var success = new Status.Success(payload);
+            AssertEqual(success);
+        }
+        
+        [Theory]
+        [InlineData(null)]
+        [InlineData(1)]
+        [InlineData("hi")]
+        public void Can_serialize_StatusFailure(object payload)
+        {
+            var success = new Status.Failure(new ApplicationException("foo"),payload);
+            AssertEqual(success);
+        }
+
         [Fact]
         public void Can_serialize_ActorIdentity()
         {
