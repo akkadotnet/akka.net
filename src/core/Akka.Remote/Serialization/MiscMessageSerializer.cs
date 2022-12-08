@@ -42,10 +42,13 @@ namespace Akka.Remote.Serialization
         private const string TailChoppingPoolManifest = "ROTCP";
         private const string ConsistentHashingPoolManifest = "ROCHP";
         private const string RemoteRouterConfigManifest = "RORRC";
+        private const string StatusFailureManifest = "STF";
+        private const string StatusSuccessManifest = "STS";
 
-        private static readonly byte[] EmptyBytes = {};
+        private static readonly byte[] EmptyBytes = Array.Empty<byte>();
 
         private readonly WrappedPayloadSupport _payloadSupport;
+        private readonly ExceptionSupport _exceptionSupport;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MiscMessageSerializer" /> class.
@@ -54,84 +57,161 @@ namespace Akka.Remote.Serialization
         public MiscMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             _payloadSupport = new WrappedPayloadSupport(system);
+            _exceptionSupport = new ExceptionSupport(system);
         }
 
         /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
-            if (obj is Identify identify) return IdentifyToProto(identify);
-            if (obj is ActorIdentity actorIdentity) return ActorIdentityToProto(actorIdentity);
-            if (obj is IActorRef actorRef) return ActorRefToProto(actorRef);
-            if (obj is PoisonPill) return EmptyBytes;
-            if (obj is Kill) return EmptyBytes;
-            if (obj is RemoteWatcher.Heartbeat) return EmptyBytes;
-            if (obj is RemoteWatcher.HeartbeatRsp heartbeatRsp) return HeartbeatRspToProto(heartbeatRsp);
-            if (obj is LocalScope) return EmptyBytes;
-            if (obj is RemoteScope remoteScope) return RemoteScopeToProto(remoteScope);
-            if (obj is Config config) return ConfigToProto(config);
-            if (obj is FromConfig fromConfig) return FromConfigToProto(fromConfig);
-            if (obj is DefaultResizer defaultResizer) return DefaultResizerToProto(defaultResizer);
-            if (obj is RoundRobinPool roundRobinPool) return RoundRobinPoolToProto(roundRobinPool);
-            if (obj is BroadcastPool broadcastPool) return BroadcastPoolToProto(broadcastPool);
-            if (obj is RandomPool randomPool) return RandomPoolToProto(randomPool);
-            if (obj is ScatterGatherFirstCompletedPool scatterPool) return ScatterGatherFirstCompletedPoolToProto(scatterPool);
-            if (obj is TailChoppingPool tailChoppingPool) return TailChoppingPoolToProto(tailChoppingPool);
-            if (obj is ConsistentHashingPool hashingPool) return ConsistentHashingPoolToProto(hashingPool);
-            if (obj is RemoteRouterConfig remoteRouterConfig) return RemoteRouterConfigToProto(remoteRouterConfig);
-
-            throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");
+            switch (obj)
+            {
+                case Identify identify:
+                    return IdentifyToProto(identify);
+                case ActorIdentity actorIdentity:
+                    return ActorIdentityToProto(actorIdentity);
+                case IActorRef actorRef:
+                    return ActorRefToProto(actorRef);
+                case PoisonPill _:
+                case Kill _:
+                case RemoteWatcher.Heartbeat _:
+                    return EmptyBytes;
+                case RemoteWatcher.HeartbeatRsp heartbeatRsp:
+                    return HeartbeatRspToProto(heartbeatRsp);
+                case Status.Success success:
+                    return StatusSuccessToProto(success); 
+                case Status.Failure failure:
+                    return StatusFailureToProto(failure);
+                case LocalScope _:
+                    return EmptyBytes;
+                case RemoteScope remoteScope:
+                    return RemoteScopeToProto(remoteScope);
+                case Config config:
+                    return ConfigToProto(config);
+                case FromConfig fromConfig:
+                    return FromConfigToProto(fromConfig);
+                case DefaultResizer defaultResizer:
+                    return DefaultResizerToProto(defaultResizer);
+                case RoundRobinPool roundRobinPool:
+                    return RoundRobinPoolToProto(roundRobinPool);
+                case BroadcastPool broadcastPool:
+                    return BroadcastPoolToProto(broadcastPool);
+                case RandomPool randomPool:
+                    return RandomPoolToProto(randomPool);
+                case ScatterGatherFirstCompletedPool scatterPool:
+                    return ScatterGatherFirstCompletedPoolToProto(scatterPool);
+                case TailChoppingPool tailChoppingPool:
+                    return TailChoppingPoolToProto(tailChoppingPool);
+                case ConsistentHashingPool hashingPool:
+                    return ConsistentHashingPoolToProto(hashingPool);
+                case RemoteRouterConfig remoteRouterConfig:
+                    return RemoteRouterConfigToProto(remoteRouterConfig);
+                default:
+                    throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");
+            }
         }
 
         /// <inheritdoc />
         public override string Manifest(object obj)
         {
-            if (obj is Identify) return IdentifyManifest;
-            if (obj is ActorIdentity) return ActorIdentityManifest;
-            if (obj is IActorRef) return ActorRefManifest;
-            if (obj is PoisonPill) return PoisonPillManifest;
-            if (obj is Kill) return KillManifest;
-            if (obj is RemoteWatcher.Heartbeat) return RemoteWatcherHearthbeatManifest;
-            if (obj is RemoteWatcher.HeartbeatRsp) return RemoteWatcherHearthbeatRspManifest;
-            if (obj is LocalScope) return LocalScopeManifest;
-            if (obj is RemoteScope) return RemoteScopeManifest;
-            if (obj is Config) return ConfigManifest;
-            if (obj is FromConfig) return FromConfigManifest;
-            if (obj is DefaultResizer) return DefaultResizerManifest;
-            if (obj is RoundRobinPool) return RoundRobinPoolManifest;
-            if (obj is BroadcastPool) return BroadcastPoolManifest;
-            if (obj is RandomPool) return RandomPoolManifest;
-            if (obj is ScatterGatherFirstCompletedPool) return ScatterGatherPoolManifest;
-            if (obj is TailChoppingPool) return TailChoppingPoolManifest;
-            if (obj is ConsistentHashingPool) return ConsistentHashingPoolManifest;
-            if (obj is RemoteRouterConfig) return RemoteRouterConfigManifest;
-
-            throw new ArgumentException($"Cannot deserialize object of type [{obj.GetType().TypeQualifiedName()}]");
+            switch (obj)
+            {
+                case Identify _:
+                    return IdentifyManifest;
+                case ActorIdentity _:
+                    return ActorIdentityManifest;
+                case IActorRef _:
+                    return ActorRefManifest;
+                case PoisonPill _:
+                    return PoisonPillManifest;
+                case Kill _:
+                    return KillManifest;
+                case RemoteWatcher.Heartbeat _:
+                    return RemoteWatcherHearthbeatManifest;
+                case RemoteWatcher.HeartbeatRsp _:
+                    return RemoteWatcherHearthbeatRspManifest;
+                case Status.Success _:
+                    return StatusSuccessManifest;
+                case Status.Failure _:
+                    return StatusFailureManifest;
+                case LocalScope _:
+                    return LocalScopeManifest;
+                case RemoteScope _:
+                    return RemoteScopeManifest;
+                case Config _:
+                    return ConfigManifest;
+                case FromConfig _:
+                    return FromConfigManifest;
+                case DefaultResizer _:
+                    return DefaultResizerManifest;
+                case RoundRobinPool _:
+                    return RoundRobinPoolManifest;
+                case BroadcastPool _:
+                    return BroadcastPoolManifest;
+                case RandomPool _:
+                    return RandomPoolManifest;
+                case ScatterGatherFirstCompletedPool _:
+                    return ScatterGatherPoolManifest;
+                case TailChoppingPool _:
+                    return TailChoppingPoolManifest;
+                case ConsistentHashingPool _:
+                    return ConsistentHashingPoolManifest;
+                case RemoteRouterConfig _:
+                    return RemoteRouterConfigManifest;
+                default:
+                    throw new ArgumentException($"Cannot deserialize object of type [{obj.GetType().TypeQualifiedName()}]");
+            }
         }
 
         /// <inheritdoc />
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            if (manifest == IdentifyManifest) return IdentifyFromProto(bytes);
-            if (manifest == ActorIdentityManifest) return ActorIdentityFromProto(bytes);
-            if (manifest == ActorRefManifest) return ActorRefFromProto(bytes);
-            if (manifest == PoisonPillManifest) return PoisonPill.Instance;
-            if (manifest == KillManifest) return Kill.Instance;
-            if (manifest == RemoteWatcherHearthbeatManifest) return RemoteWatcher.Heartbeat.Instance;
-            if (manifest == RemoteWatcherHearthbeatRspManifest) return HearthbeatRspFromProto(bytes);
-            if (manifest == LocalScopeManifest) return LocalScope.Instance;
-            if (manifest == RemoteScopeManifest) return RemoteScopeFromProto(bytes);
-            if (manifest == ConfigManifest) return ConfigFromProto(bytes);
-            if (manifest == FromConfigManifest) return FromConfigFromProto(bytes);
-            if (manifest == DefaultResizerManifest) return DefaultResizerFromProto(bytes);
-            if (manifest == RoundRobinPoolManifest) return RoundRobinPoolFromProto(bytes);
-            if (manifest == BroadcastPoolManifest) return BroadcastPoolFromProto(bytes);
-            if (manifest == RandomPoolManifest) return RandomPoolFromProto(bytes);
-            if (manifest == ScatterGatherPoolManifest) return ScatterGatherFirstCompletedPoolFromProto(bytes);
-            if (manifest == TailChoppingPoolManifest) return TailChoppingPoolFromProto(bytes);
-            if (manifest == ConsistentHashingPoolManifest) return ConsistentHashingPoolFromProto(bytes);
-            if (manifest == RemoteRouterConfigManifest) return RemoteRouterConfigFromProto(bytes);
- 
-            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{nameof(MiscMessageSerializer)}]");
+            switch (manifest)
+            {
+                case IdentifyManifest:
+                    return IdentifyFromProto(bytes);
+                case ActorIdentityManifest:
+                    return ActorIdentityFromProto(bytes);
+                case ActorRefManifest:
+                    return ActorRefFromProto(bytes);
+                case PoisonPillManifest:
+                    return PoisonPill.Instance;
+                case KillManifest:
+                    return Kill.Instance;
+                case RemoteWatcherHearthbeatManifest:
+                    return RemoteWatcher.Heartbeat.Instance;
+                case RemoteWatcherHearthbeatRspManifest:
+                    return HearthbeatRspFromProto(bytes);
+                case StatusSuccessManifest:
+                    return StatusSuccessFromProto(bytes);
+                case StatusFailureManifest:
+                    return StatusFailureFromProto(bytes);
+                case LocalScopeManifest:
+                    return LocalScope.Instance;
+                case RemoteScopeManifest:
+                    return RemoteScopeFromProto(bytes);
+                case ConfigManifest:
+                    return ConfigFromProto(bytes);
+                case FromConfigManifest:
+                    return FromConfigFromProto(bytes);
+                case DefaultResizerManifest:
+                    return DefaultResizerFromProto(bytes);
+                case RoundRobinPoolManifest:
+                    return RoundRobinPoolFromProto(bytes);
+                case BroadcastPoolManifest:
+                    return BroadcastPoolFromProto(bytes);
+                case RandomPoolManifest:
+                    return RandomPoolFromProto(bytes);
+                case ScatterGatherPoolManifest:
+                    return ScatterGatherFirstCompletedPoolFromProto(bytes);
+                case TailChoppingPoolManifest:
+                    return TailChoppingPoolFromProto(bytes);
+                case ConsistentHashingPoolManifest:
+                    return ConsistentHashingPoolFromProto(bytes);
+                case RemoteRouterConfigManifest:
+                    return RemoteRouterConfigFromProto(bytes);
+                default:
+                    throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{nameof(MiscMessageSerializer)}]");
+            }
         }
 
         //
@@ -205,6 +285,45 @@ namespace Akka.Remote.Serialization
         {
             var message = Proto.Msg.RemoteWatcherHeartbeatResponse.Parser.ParseFrom(bytes);
             return new RemoteWatcher.HeartbeatRsp((int)message.Uid);
+        }
+        
+        //
+        // Status.Success
+        //
+        
+        private byte[] StatusSuccessToProto(Status.Success success)
+        {
+            var message = new Proto.Msg.StatusSuccess();
+            message.Status = _payloadSupport.PayloadToProto(success.Status);
+            return message.ToByteArray();
+        }
+        
+        private Status.Success StatusSuccessFromProto(byte[] bytes)
+        {
+            var message = Proto.Msg.StatusSuccess.Parser.ParseFrom(bytes);
+            return new Status.Success(_payloadSupport.PayloadFrom(message.Status));
+        }
+        
+        //
+        // Status.Failure
+        //
+        
+        private byte[] StatusFailureToProto(Status.Failure failure)
+        {
+            var message = new Proto.Msg.StatusFailure();
+            message.Cause = _exceptionSupport.ExceptionToProto(failure.Cause);
+            if(failure.State != null)
+                message.State = _payloadSupport.PayloadToProto(failure.State);
+            return message.ToByteArray();
+        }
+        
+        private Status.Failure StatusFailureFromProto(byte[] bytes)
+        {
+            var message = Proto.Msg.StatusFailure.Parser.ParseFrom(bytes);
+            object payload = string.Empty;
+            if(message.State != null)
+                payload = _payloadSupport.PayloadFrom(message.State);
+            return new Status.Failure(_exceptionSupport.ExceptionFromProto(message.Cause), payload);
         }
 
         //
