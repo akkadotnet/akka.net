@@ -312,17 +312,14 @@ namespace Akka.Remote.Serialization
         {
             var message = new Proto.Msg.StatusFailure();
             message.Cause = _exceptionSupport.ExceptionToProto(failure.Cause);
-            if(failure.State != null)
-                message.State = _payloadSupport.PayloadToProto(failure.State);
+            message.State = _payloadSupport.PayloadToProto(failure.State);
             return message.ToByteArray();
         }
         
         private Status.Failure StatusFailureFromProto(byte[] bytes)
         {
             var message = Proto.Msg.StatusFailure.Parser.ParseFrom(bytes);
-            object payload = string.Empty;
-            if(message.State != null)
-                payload = _payloadSupport.PayloadFrom(message.State);
+            var payload = _payloadSupport.PayloadFrom(message.State);
             return new Status.Failure(_exceptionSupport.ExceptionFromProto(message.Cause), payload);
         }
 

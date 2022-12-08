@@ -93,7 +93,11 @@ namespace Akka.Remote.Tests.Serialization
         public void Can_serialize_StatusFailure(object payload)
         {
             var success = new Status.Failure(new ApplicationException("foo"),payload);
-            AssertEqual(success);
+            // can't use AssertEqual here since the Exception data isn't 100% identical after round-trip serialization
+            var deserialized = AssertAndReturn(success);
+            deserialized.State.Should().BeEquivalentTo(success.State);
+            deserialized.Cause.Message.Should().BeEquivalentTo(success.Cause.Message);
+            deserialized.Cause.Should().BeOfType(success.Cause.GetType());
         }
 
         [Fact]
@@ -392,7 +396,7 @@ namespace Akka.Remote.Tests.Serialization
         private void AssertEqual<T>(T message)
         {
             var deserialized = AssertAndReturn(message);
-            Assert.Equal(message, deserialized);
+            deserialized.Should().BeEquivalentTo(message);
         }
     }
 }
