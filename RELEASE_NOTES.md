@@ -74,6 +74,11 @@ The performance impact of enabling telemetry is negligible, as you can [see via 
 
 You can see the [full set of tracked issues for Akka.NET v1.4.47 here](https://github.com/akkadotnet/akka.net/issues?q=is%3Aclosed+milestone%3A1.4.47).
 
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 10 | 2027 | 188 | Aaron Stannard |
+| 1 | 157 | 10 | Gregorius Soedharmo |
+
 #### 1.4.46 November 15th 2022 ####
 Akka.NET v1.4.46 is a security patch for Akka.NET v1.4.45 but also includes some other fixes.
 
@@ -90,11 +95,6 @@ We have separately created a security advisory for [Akka.NET Versions < 1.4.46 a
 * [Akka.Cluster.Metrics: Improve CPU/Memory metrics collection at Akka.Cluster.Metrics](https://github.com/akkadotnet/akka.net/issues/4142) - built-in metrics are now much more accurate.
 
 You can see the [full set of tracked issues for Akka.NET v1.4.46 here](https://github.com/akkadotnet/akka.net/milestone/77).
-
-| COMMITS | LOC+ | LOC- | AUTHOR |
-| --- | --- | --- | --- |
-| 10 | 2027 | 188 | Aaron Stannard |
-| 1 | 157 | 10 | Gregorius Soedharmo |
 
 
 #### 1.4.45 October 19th 2022 ####
