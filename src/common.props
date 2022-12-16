@@ -12,7 +12,7 @@
   <PropertyGroup>
     <XunitVersion>2.4.2</XunitVersion>
     <XunitRunnerVersion>2.4.2</XunitRunnerVersion>
-    <TestSdkVersion>17.4.0</TestSdkVersion>
+    <TestSdkVersion>17.4.1</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
