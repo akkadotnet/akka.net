@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -51,6 +52,22 @@ namespace Akka.TestKit
             _internalRef.Receive(message, sender);
         }
 
+        /// <summary>
+        /// Directly inject messages into actor ReceiveAsync behavior. Any exceptions
+        /// thrown will be available to you, while still being able to use
+        /// become/unbecome.
+        /// Note: This method violates the actor model and could cause unpredictable 
+        /// behavior. For example, a Receive call to an actor could run simultaneously 
+        /// (2 simultaneous threads running inside the actor) with the actor's handling 
+        /// of a previous Tell call. 
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="sender">The sender.</param>
+        public Task ReceiveAsync(object message, IActorRef sender = null)
+        {
+            return _internalRef.ReceiveAsync(message, sender);
+        }
+        
         /// <summary>
         /// TBD
         /// </summary>

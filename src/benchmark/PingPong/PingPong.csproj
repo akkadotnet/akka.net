@@ -10,6 +10,11 @@
     <Content Include="App.config" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
   </ItemGroup>

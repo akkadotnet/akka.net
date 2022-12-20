@@ -22,6 +22,17 @@ namespace Akka.Tests.Actor
             var path = new RootActorPath(new Address("akka.tcp", "mysys")) / "user";
             ActorPathParse(path.ToString()).ShouldBe(path);
         }
+        
+        [Theory]
+        [InlineData(1)]
+        [InlineData(100)]
+        [InlineData(int.MaxValue)]
+        public void SupportsParsingItsStringRepWithUid(int uid)
+        {
+            var path = new RootActorPath(new Address("akka.tcp", "mysys", "localhost", 9110)) / "user";
+            var pathWithUid = path.WithUid(uid);
+            ActorPathParse(pathWithUid.ToSerializationFormat()).ShouldBe(pathWithUid);
+        }
 
         private ActorPath ActorPathParse(string path)
         {
