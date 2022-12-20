@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
@@ -638,5 +639,16 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         public static Sink<T, IObservable<T>> AsObservable<T>() => FromGraph(new ObservableSinkStage<T>());
+
+        public static Sink<T, ChannelReader<T>> ChannelReader<T>(int bufferSize, bool singleReader, BoundedChannelFullMode fullMode = BoundedChannelFullMode.Wait)
+        {
+            return ChannelSink.AsReader<T>(bufferSize, singleReader, fullMode);
+        }
+
+        public static Sink<T, NotUsed> FromWriter<T>(ChannelWriter<T> writer,
+            bool isOwner)
+        {
+            return ChannelSink.FromWriter(writer, isOwner);
+        }
     }
 }
