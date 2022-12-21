@@ -1300,6 +1300,16 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Outlet<T> Out(int id) { }
         public override string ToString() { }
     }
+    public class static ChannelSink
+    {
+        public static Akka.Streams.Dsl.Sink<T, System.Threading.Channels.ChannelReader<T>> AsReader<T>(int bufferSize, bool singleReader = False, System.Threading.Channels.BoundedChannelFullMode fullMode = 0) { }
+        public static Akka.Streams.Dsl.Sink<T, Akka.NotUsed> FromWriter<T>(System.Threading.Channels.ChannelWriter<T> writer, bool isOwner) { }
+    }
+    public class static ChannelSource
+    {
+        public static Akka.Streams.Dsl.Source<T, System.Threading.Channels.ChannelWriter<T>> Create<T>(int bufferSize, bool singleWriter = False, System.Threading.Channels.BoundedChannelFullMode fullMode = 0) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromReader<T>(System.Threading.Channels.ChannelReader<T> reader) { }
+    }
     public class static Concat
     {
         public static Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, T>, Akka.NotUsed> Create<T>(int inputPorts = 2) { }
@@ -1938,6 +1948,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<T, System.IObservable<T>> AsObservable<T>() { }
         public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> AsPublisher<TIn>(bool fanout) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Cancelled<TIn>() { }
+        public static Akka.Streams.Dsl.Sink<T, System.Threading.Channels.ChannelReader<T>> ChannelReader<T>(int bufferSize, bool singleReader, System.Threading.Channels.BoundedChannelFullMode fullMode = 0) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Combine<TIn, TOut, TMat>(System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanOutShape<TIn, TOut>, TMat>> strategy, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> first, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> second, params Akka.Streams.Dsl.Sink<, >[] rest) { }
         public static Akka.Streams.Dsl.Sink<TIn, object> Create<TIn>(Reactive.Streams.ISubscriber<TIn> subscriber) { }
         [Akka.Annotations.InternalApiAttribute()]
@@ -1950,6 +1961,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<Akka.Done>> ForEachParallel<TIn>(int parallelism, System.Action<TIn> action) { }
         public static Akka.Streams.Dsl.Sink<TIn, TMat> FromGraph<TIn, TMat>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TIn>, TMat> graph) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> FromSubscriber<TIn>(Reactive.Streams.ISubscriber<TIn> subscriber) { }
+        public static Akka.Streams.Dsl.Sink<T, Akka.NotUsed> FromWriter<T>(System.Threading.Channels.ChannelWriter<T> writer, bool isOwner) { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<Akka.Done>> Ignore<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> Last<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> LastOrDefault<TIn>() { }
@@ -1995,6 +2007,8 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.Actor.IActorRef> ActorPublisher<T>(Akka.Actor.Props props) { }
         public static Akka.Streams.Dsl.Source<T, Akka.Actor.IActorRef> ActorRef<T>(int bufferSize, Akka.Streams.OverflowStrategy overflowStrategy) { }
         public static Akka.Streams.Dsl.Source<T, Reactive.Streams.ISubscriber<T>> AsSubscriber<T>() { }
+        public static Akka.Streams.Dsl.Source<T, System.Threading.Channels.ChannelWriter<T>> Channel<T>(int bufferSize, bool singleWriter = False, System.Threading.Channels.BoundedChannelFullMode fullMode = 0) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> ChannelReader<T>(System.Threading.Channels.ChannelReader<T> channelReader) { }
         public static Akka.Streams.Dsl.Source<TOut2, Akka.NotUsed> Combine<T, TOut2>(Akka.Streams.Dsl.Source<T, Akka.NotUsed> first, Akka.Streams.Dsl.Source<T, Akka.NotUsed> second, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, params Akka.Streams.Dsl.Source<, >[] rest) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(Akka.Streams.Dsl.Source<T, TMat1> first, Akka.Streams.Dsl.Source<T, TMat2> second, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, System.Func<TMat1, TMat2, TMatOut> combineMaterializers) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Cycle<T>(System.Func<System.Collections.Generic.IEnumerator<T>> enumeratorFactory) { }
