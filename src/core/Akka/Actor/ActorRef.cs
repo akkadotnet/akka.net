@@ -139,6 +139,10 @@ namespace Akka.Actor
             if (!handled && !_result.Task.IsCanceled)
                 _provider.DeadLetters.Tell(message ?? default(T), this);            
         }
+        
+        public virtual void DeliverAsk(object message, ICanTell destination){
+            destination.Tell(message, this);
+        }
     }
 
 

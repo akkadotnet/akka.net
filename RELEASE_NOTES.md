@@ -1,3 +1,6 @@
+#### 1.4.48 December 29th 2022 ####
+*Placeholder for
+
 #### 1.4.47 December 9th 2022 ####
 Akka.NET v1.4.47 is a maintenance patch for Akka.NET v1.4.46 that includes a variety of bug fixes, performance improvements, and new features.
 
