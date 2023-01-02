@@ -15,54 +15,63 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor.Internal
 {
-    /// <summary>INTERNAL
-    /// Abstract base class for stash support
-    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    /// <summary>
+    /// INTERNAL API
+    /// <para>
+    /// Support class for implementing a stash for an actor instance. A default stash per actor (= user stash)
+    /// is maintained by [[UnrestrictedStash]] by extending this trait. Actors that explicitly need other stashes
+    /// (optionally in addition to and isolated from the user stash) can create new stashes via <see cref="StashFactory"/>.
+    /// </para>
     /// </summary>
     public abstract class AbstractStash : IStash
     {
-        private LinkedList<Envelope> _theStash;
+        /// <summary>
+        /// The private stash of the actor. It is only accessible using <see cref="Stash()"/> and
+        /// <see cref="UnstashAll()"/>.
+        /// </summary>
+        private LinkedList<Envelope> _theStash = new();
+
         private readonly ActorCell _actorCell;
+
+        /// <summary>
+        /// The capacity of the stash. Configured in the actor's mailbox or dispatcher config.
+        /// </summary>
         private readonly int _capacity;
 
-        /// <summary>INTERNAL
-        /// Abstract base class for stash support
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+        /// <summary>
+        /// The actor's deque-based message queue. 
+        /// `mailbox.queue` is the underlying `Deque`.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="capacity">TBD</param>
-        /// <exception cref="NotSupportedException">This exception is thrown if the actor's mailbox isn't deque-based (e.g. <see cref="UnboundedDequeBasedMailbox"/>).</exception>
-        protected AbstractStash(IActorContext context, int capacity = 100)
+        private readonly IDequeBasedMessageQueueSemantics _mailbox;
+
+        protected AbstractStash(IActorContext context)
         {
             var actorCell = (ActorCell)context;
-            Mailbox = actorCell.Mailbox.MessageQueue as IDequeBasedMessageQueueSemantics;
-            if(Mailbox == null)
+            _mailbox = actorCell.Mailbox.MessageQueue as IDequeBasedMessageQueueSemantics;
+            if (_mailbox == null)
             {
-                string message = $@"DequeBasedMailbox required, got: {actorCell.Mailbox.GetType().Name}
-An (unbounded) deque-based mailbox can be configured as follows:
-    my-custom-mailbox {{
-        mailbox-type = ""Akka.Dispatch.UnboundedDequeBasedMailbox""
-    }}";
-                throw new NotSupportedException(message);
+                var message = $"DequeBasedMailbox required, got: {actorCell.Mailbox.GetType().Name}\n" +
+                    "An (unbounded) deque-based mailbox can be configured as follows:\n" +
+                    "my-custom-mailbox {\n" +
+                    "    mailbox-type = \"Akka.Dispatch.UnboundedDequeBasedMailbox\"\n" +
+                    "}\n";
+
+                throw new ActorInitializationException(actorCell.Self, message);
             }
-            _theStash = new LinkedList<Envelope>();
             _actorCell = actorCell;
 
-            // TODO: capacity needs to come from dispatcher or mailbox config
-            // https://github.com/akka/akka/blob/master/akka-actor/src/main/scala/akka/actor/Stash.scala#L126
-            _capacity = capacity;
+            // The capacity of the stash. Configured in the actor's mailbox or dispatcher config.
+            _capacity = context.System.Mailboxes.StashCapacity(context.Props.Dispatcher, context.Props.Mailbox);
         }
-
-        private IDequeBasedMessageQueueSemantics Mailbox { get; }
 
         private int _currentEnvelopeId;
 
         /// <summary>
-        /// Stashes the current message in the actor's state.
+        /// Adds the current message (the message that the actor received last) to the actor's stash.
         /// </summary>
         /// <exception cref="IllegalActorStateException">This exception is thrown if we attempt to stash the same message more than once.</exception>
         /// <exception cref="StashOverflowException">
-        /// This exception is thrown in the event that we're using a <see cref="BoundedMessageQueue"/>  for the <see cref="IStash"/> and we've exceeded capacity.
+        /// This exception is thrown in the event that we're using a <see cref="BoundedMessageQueue"/> for the <see cref="IStash"/> and we've exceeded capacity.
         /// </exception>
         public void Stash()
         {
@@ -74,68 +83,90 @@ An (unbounded) deque-based mailbox can be configured as follows:
                 throw new IllegalActorStateException($"Can't stash the same message {currMsg} more than once");
             }
             _currentEnvelopeId = _actorCell.CurrentEnvelopeId;
-            
-            if(_capacity <= 0 || _theStash.Count < _capacity)
+
+            if (_capacity <= 0 || _theStash.Count < _capacity)
                 _theStash.AddLast(new Envelope(currMsg, sender));
-            else throw new StashOverflowException($"Couldn't enqueue message {currMsg} to stash of {_actorCell.Self}");
+            else 
+                throw new StashOverflowException($"Couldn't enqueue message {currMsg} from ${sender} to stash of {_actorCell.Self}");
         }
 
         /// <summary>
-        /// Unstash the most recently stashed message (top of the message stack.)
+        /// Prepends the oldest message in the stash to the mailbox, and then removes that
+        /// message from the stash.
+        /// <para>
+        /// Messages from the stash are enqueued to the mailbox until the capacity of the
+        /// mailbox (if any) has been reached. In case a bounded mailbox overflows, a
+        /// `MessageQueueAppendFailedException` is thrown. 
+        /// </para>
+        /// The unstashed message is guaranteed to be removed from the stash regardless
+        /// if the <see cref="Unstash()"/> call successfully returns or throws an exception.
         /// </summary>
         public void Unstash()
         {
-            if(_theStash.Count > 0)
+            if (_theStash.Count <= 0)
+                return;
+
+            try
             {
-                try
-                {
-                    EnqueueFirst(_theStash.Head());
-                }
-                finally
-                {
-                    _theStash.RemoveFirst();
-                }
+                EnqueueFirst(_theStash.Head());
+            }
+            finally
+            {
+                _theStash.RemoveFirst();
             }
         }
 
         /// <summary>
-        /// Unstash all of the <see cref="Envelope"/>s in the Stash.
+        /// Prepends all messages in the stash to the mailbox, and then clears the stash.
+        /// <para>
+        /// Messages from the stash are enqueued to the mailbox until the capacity of the
+        /// mailbox(if any) has been reached. In case a bounded mailbox overflows, a
+        /// `MessageQueueAppendFailedException` is thrown. 
+        /// </para>
+        /// The stash is guaranteed to be empty after calling <see cref="UnstashAll()"/>.
         /// </summary>
-        public void UnstashAll()
+        public void UnstashAll() => UnstashAll(_ => true);
+
+        /// <summary>
+        /// INTERNA API
+        /// <para>
+        /// Prepends selected messages in the stash, applying `filterPredicate`,  to the
+        /// mailbox, and then clears the stash.
+        /// </para>
+        /// <para>
+        /// Messages from the stash are enqueued to the mailbox until the capacity of the
+        /// mailbox(if any) has been reached. In case a bounded mailbox overflows, a
+        /// `MessageQueueAppendFailedException` is thrown.
+        /// </para>
+        /// The stash is guaranteed to be empty after calling <see cref="UnstashAll(Func{Envelope, bool})"/>.
+        /// </summary>
+        /// <param name="filterPredicate">Only stashed messages selected by this predicate are prepended to the mailbox.</param>
+        public void UnstashAll(Func<Envelope, bool> filterPredicate)
         {
-            UnstashAll(envelope => true);
+            if (_theStash.Count <= 0)
+                return;
+
+            try
+            {
+                foreach (var item in _theStash.Reverse().Where(filterPredicate))
+                    EnqueueFirst(item);
+            }
+            finally
+            {
+                _theStash = new LinkedList<Envelope>();
+            }
         }
 
         /// <summary>
-        /// Unstash all of the <see cref="Envelope"/>s in the Stash.
-        /// </summary>
-        /// <param name="predicate">A predicate function to determine which messages to select.</param>
-        public void UnstashAll(Func<Envelope, bool> predicate)
-        {
-            if(_theStash.Count > 0)
-            {
-                try
-                {
-                    foreach(var item in _theStash.Reverse().Where(predicate))
-                    {
-                        EnqueueFirst(item);
-                    }
-                }
-                finally
-                {
-                    _theStash = new LinkedList<Envelope>();
-                }
-            }
-        }
-     
-        /// <summary>
-        /// Eliminates the contents of the <see cref="IStash"/>, and returns
-        /// the previous contents of the messages.
+        /// INTERNAL API.
+        /// <para>
+        /// Clears the stash and and returns all envelopes that have not been unstashed.
+        /// </para>
         /// </summary>
         /// <returns>Previously stashed messages.</returns>
         public IEnumerable<Envelope> ClearStash()
         {
-            if(_theStash.Count == 0)
+            if (_theStash.Count == 0)
                 return Enumerable.Empty<Envelope>();
 
             var stashed = _theStash;
@@ -144,7 +175,8 @@ An (unbounded) deque-based mailbox can be configured as follows:
         }
 
         /// <summary>
-        /// TBD
+        /// Prepends `others` to this stash. This method is optimized for a large stash and
+        /// small `others`.
         /// </summary>
         /// <param name="envelopes">TBD</param>
         public void Prepend(IEnumerable<Envelope> envelopes)
@@ -164,8 +196,8 @@ An (unbounded) deque-based mailbox can be configured as follows:
         /// </summary>
         private void EnqueueFirst(Envelope msg)
         {
-            Mailbox.EnqueueFirst(msg);
-            if(msg.Message is Terminated terminatedMessage)
+            _mailbox.EnqueueFirst(msg);
+            if (msg.Message is Terminated terminatedMessage)
             {
                 _actorCell.TerminatedQueuedFor(terminatedMessage.ActorRef, Option<object>.None);
             }
