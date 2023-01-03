@@ -19,7 +19,7 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="context">TBD</param>
         public UnboundedStashImpl(IActorContext context)
-            : base(context, int.MaxValue)
+            : base(context)
         {
         }
     }

@@ -632,6 +632,18 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
+    /// INTERNAL API
+    /// <para>
+    /// Used to determine mailbox factories which create <see cref="IBoundedMessageQueueSemantics"/>
+    /// mailboxes, and thus should be validated that the `pushTimeOut` is greater than 0.
+    /// </para>
+    /// </summary>
+    public interface IProducesPushTimeoutSemanticsMailbox
+    {
+        TimeSpan PushTimeout { get; }
+    }
+
+    /// <summary>
     /// UnboundedMailbox is the default <see cref="MailboxType"/> used by Akka.NET Actors
     /// </summary>
     public sealed class UnboundedMailbox : MailboxType, IProducesMessageQueue<UnboundedMessageQueue>
@@ -659,7 +671,9 @@ namespace Akka.Dispatch
     /// <summary>
     /// The default bounded mailbox implementation
     /// </summary>
-    public sealed class BoundedMailbox : MailboxType, IProducesMessageQueue<BoundedMessageQueue>
+    public sealed class BoundedMailbox : MailboxType, 
+        IProducesMessageQueue<BoundedMessageQueue>, 
+        IProducesPushTimeoutSemanticsMailbox
     {
         /// <summary>
         /// The capacity of this mailbox.
@@ -676,7 +690,8 @@ namespace Akka.Dispatch
         /// This exception is thrown if the 'mailbox-capacity' in <paramref name="config"/>
         /// or the 'mailbox-push-timeout-time' in <paramref name="config"/> is negative.
         /// </exception>
-        public BoundedMailbox(Settings settings, Config config) : base(settings, config)
+        public BoundedMailbox(Settings settings, Config config) 
+            : base(settings, config)
         {
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<BoundedMailbox>();
@@ -687,15 +702,12 @@ namespace Akka.Dispatch
             if (Capacity < 0)
                 throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
             if (PushTimeout.TotalSeconds < 0)
-                throw new ArgumentException("The push time-out for BoundedMailbox cannot be be negative",
-                    nameof(config));
+                throw new ArgumentException("The push time-out for BoundedMailbox cannot be be negative", nameof(config));
         }
 
         /// <inheritdoc cref="MailboxType"/>
-        public override IMessageQueue Create(IActorRef owner, ActorSystem system)
-        {
-            return new BoundedMessageQueue(Capacity, PushTimeout);
-        }
+        public override IMessageQueue Create(IActorRef owner, ActorSystem system) => 
+            new BoundedMessageQueue(Capacity, PushTimeout);
     }
 
     /// <summary>
@@ -797,7 +809,9 @@ namespace Akka.Dispatch
     /// <summary>
     /// BoundedDequeBasedMailbox is an bounded <see cref="MailboxType"/> backed by a double-ended queue. Used for stashing.
     /// </summary>
-    public sealed class BoundedDequeBasedMailbox : MailboxType, IProducesMessageQueue<BoundedDequeMessageQueue>
+    public class BoundedDequeBasedMailbox : MailboxType, 
+        IProducesMessageQueue<BoundedDequeMessageQueue>, 
+        IProducesPushTimeoutSemanticsMailbox
     {
         /// <summary>
         /// The capacity of this mailbox.
@@ -815,7 +829,8 @@ namespace Akka.Dispatch
         /// This exception is thrown if the 'mailbox-capacity' in <paramref name="config"/>
         /// or the 'mailbox-push-timeout-time' in <paramref name="config"/> is negative.
         /// </exception>
-        public BoundedDequeBasedMailbox(Settings settings, Config config) : base(settings, config)
+        public BoundedDequeBasedMailbox(Settings settings, Config config) 
+            : base(settings, config)
         {
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<BoundedDequeBasedMailbox>();
