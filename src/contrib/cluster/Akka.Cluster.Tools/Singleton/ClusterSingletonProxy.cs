@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonProxy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,6 +76,7 @@ namespace Akka.Cluster.Tools.Singleton
                 .WithDeploy(Deploy.Local);
         }
 
+        private readonly MemberAgeOrdering _memberAgeComparer;
         private readonly ClusterSingletonProxySettings _settings;
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly Queue<KeyValuePair<object, IActorRef>> _buffer = new Queue<KeyValuePair<object, IActorRef>>(); // queue seems to fit better
@@ -84,7 +85,7 @@ namespace Akka.Cluster.Tools.Singleton
         private string _identityId;
         private IActorRef _singleton = null;
         private ICancelable _identityTimer = null;
-        private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
+        private ImmutableSortedSet<Member> _membersByAge;
         private ILoggingAdapter _log;
 
         /// <summary>
@@ -97,6 +98,11 @@ namespace Akka.Cluster.Tools.Singleton
             _settings = settings;
             _singletonPath = (singletonManagerPath + "/" + settings.SingletonName).Split('/');
             _identityId = CreateIdentifyId(_identityCounter);
+
+            _memberAgeComparer = settings.ConsiderAppVersion
+                ? MemberAgeOrdering.DescendingWithAppVersion
+                : MemberAgeOrdering.Descending;
+            _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(_memberAgeComparer);
 
             Receive<ClusterEvent.CurrentClusterState>(s => HandleInitial(s));
             Receive<ClusterEvent.MemberUp>(m => Add(m.Member));
@@ -197,7 +203,7 @@ namespace Akka.Cluster.Tools.Singleton
             TrackChanges(() =>
                 _membersByAge = state.Members
                     .Where(m => m.Status == MemberStatus.Up && MatchingRole(m))
-                    .ToImmutableSortedSet(MemberAgeOrdering.Descending));
+                    .ToImmutableSortedSet(_memberAgeComparer));
         }
 
         // Discard old singleton ActorRef and send a periodic message to self to identify the singleton.

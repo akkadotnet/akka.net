@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SplitBrainResolverSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1232,6 +1232,25 @@ namespace Akka.Cluster.Tests.SBR
         }
 
         [Fact]
+        public void LeaseMajority_must_down_indirectly_connected_when_combined_with_clean_partition_A_B_C_D__E_F___A_B_C_D()
+        {
+            var setup = new LeaseMajoritySetup(this);
+            var memberELeaving = Leaving(MemberE);
+            var memberFDown = Downed(MemberF);
+            setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC, MemberD);
+            setup.Side2 = ImmutableHashSet.Create(memberELeaving, memberFDown);
+
+            // trouble when indirectly connected happens before clean partition
+            setup.IndirectlyConnected = ImmutableHashSet.Create((memberELeaving, memberFDown));
+
+            // from side1 of the partition, majority
+            setup.AssertDowningSide(setup.Side1, new[] { memberELeaving });
+
+            // from side2 of the partition, minority
+            setup.AssertDowningSide(setup.Side2, new[] { MemberA, MemberB, MemberC, MemberD, memberELeaving });
+        }
+
+        [Fact]
         public void Strategy_must_add_and_remove_members_with_default_Member_ordering()
         {
             var setup = new KeepMajoritySetup(this);
@@ -1802,6 +1821,58 @@ namespace Akka.Cluster.Tests.SBR
             // Note that memberC is not downed, as on the other side, because those indirectly connected
             // not seen from this side. That outcome is OK.
             setup.ExpectDownCalled(MemberD, MemberE);
+            setup.Stop();
+        }
+
+        [Fact]
+        public void Split_Brain_Resolver_must_down_indirectly_connected_when_combined_with_partition_and_exiting_A_B_C_D__E_Fexiting___A_B_C_D()
+        {
+            var setup = new SetupKeepMajority(this, TimeSpan.Zero, MemberA.UniqueAddress, null);
+            setup.MemberUp(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF);
+            var memberFExiting = Exiting(MemberF);
+            setup.A.Tell(new ClusterEvent.MemberExited(memberFExiting));
+            setup.Leader(MemberA);
+            // indirectly connected: memberF
+            // partition: memberA, memberB, memberC, memberD | memberE, memberF
+            setup.ReachabilityChanged(
+                (MemberA, MemberE),
+                (MemberA, memberFExiting),
+                (MemberB, MemberE),
+                (MemberB, memberFExiting),
+                (MemberC, MemberE),
+                (MemberC, memberFExiting),
+                (MemberD, MemberE),
+                (MemberD, memberFExiting),
+                (MemberE, memberFExiting));
+            setup.Tick();
+            // keep fully connected members
+            setup.ExpectDownCalled(MemberE);
+            setup.Stop();
+        }
+
+        [Fact]
+        public void Split_Brain_Resolver_must_down_indirectly_connected_when_combined_with_partition_and_exiting_A_B_C_D__Eexiting_F___A_B_C_D()
+        {
+            var setup = new SetupKeepMajority(this, TimeSpan.Zero, MemberA.UniqueAddress, null);
+            setup.MemberUp(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF);
+            var memberEExiting = Exiting(MemberE);
+            setup.A.Tell(new ClusterEvent.MemberExited(memberEExiting));
+            setup.Leader(MemberA);
+            // indirectly connected: memberF
+            // partition: memberA, memberB, memberC, memberD | memberE, memberF
+            setup.ReachabilityChanged(
+                (MemberA, memberEExiting),
+                (MemberA, MemberF),
+                (MemberB, memberEExiting),
+                (MemberB, MemberF),
+                (MemberC, memberEExiting),
+                (MemberC, MemberF),
+                (MemberD, memberEExiting),
+                (MemberD, MemberF),
+                (MemberE, MemberF));
+            setup.Tick();
+            // keep fully connected members
+            setup.ExpectDownCalled(MemberF);
             setup.Stop();
         }
 

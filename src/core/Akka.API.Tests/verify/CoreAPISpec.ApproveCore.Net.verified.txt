@@ -23,7 +23,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("1a5cab08-b032-49ca-8db3-9428c5a9db14")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Actor
 {
     public abstract class ActorBase : Akka.Actor.IInternalActor
@@ -313,6 +313,12 @@ namespace Akka.Actor
         public static readonly Akka.Actor.IActorRef NoSender;
         public static readonly Akka.Actor.Nobody Nobody;
     }
+    public sealed class ActorRestarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public System.Type ActorType { get; }
+        public System.Exception Reason { get; }
+        public Akka.Actor.IActorRef Subject { get; }
+    }
     public class ActorSelection : Akka.Actor.ICanTell
     {
         public ActorSelection() { }
@@ -339,12 +345,22 @@ namespace Akka.Actor
         public Akka.Actor.ActorSelectionMessage Copy(object message = null, Akka.Actor.SelectionPathElement[] elements = null, System.Nullable<bool> wildCardFanOut = null) { }
         public override string ToString() { }
     }
+    public sealed class ActorStarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public System.Type ActorType { get; }
+        public Akka.Actor.IActorRef Subject { get; }
+    }
     public class ActorStashPlugin : Akka.Actor.ActorProducerPluginBase
     {
         public ActorStashPlugin() { }
         public override void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public override void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public override bool CanBeAppliedTo(System.Type actorType) { }
+    }
+    public sealed class ActorStopped : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public System.Type ActorType { get; }
+        public Akka.Actor.IActorRef Subject { get; }
     }
     public abstract class ActorSystem : Akka.Actor.IActorRefFactory, System.IDisposable
     {
@@ -739,7 +755,7 @@ namespace Akka.Actor
             public override int GetHashCode() { }
             public override string ToString() { }
         }
-        public sealed class Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
+        public struct Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
         {
             public Event(object fsmEvent, TD stateData) { }
             public object FsmEvent { get; }
@@ -776,10 +792,10 @@ namespace Akka.Actor
         {
             public static Akka.Actor.FSMBase.StateTimeout Instance { get; }
         }
-        public class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
+        public sealed class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
         {
             public State(TS stateName, TD stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, bool notifies = True) { }
-            public System.Collections.Generic.IReadOnlyList<object> Replies { get; set; }
+            public System.Collections.Generic.IReadOnlyList<object> Replies { get; }
             public TD StateData { get; }
             public TS StateName { get; }
             public Akka.Actor.FSMBase.Reason StopReason { get; }
@@ -990,6 +1006,11 @@ namespace Akka.Actor
     public interface IActorStash
     {
         Akka.Actor.IStash Stash { get; set; }
+    }
+    public interface IActorTelemetryEvent : Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        System.Type ActorType { get; }
+        Akka.Actor.IActorRef Subject { get; }
     }
     public interface IAdvancedScheduler : Akka.Actor.IActionScheduler, Akka.Actor.IRunnableScheduler { }
     public interface IAutoReceivedMessage { }
@@ -1689,6 +1710,7 @@ namespace Akka.Actor
         public bool DebugRouterMisconfiguration { get; }
         public bool DebugUnhandledMessage { get; }
         public int DefaultVirtualNodesFactor { get; }
+        public bool EmitActorTelemetry { get; }
         public bool FsmDebugEvent { get; }
         public bool HasCluster { get; }
         public string Home { get; }
@@ -2151,48 +2173,6 @@ namespace Akka.Annotations
     public sealed class InternalApiAttribute : System.Attribute
     {
         public InternalApiAttribute() { }
-    }
-}
-namespace Akka
-{
-    public class Case : Akka.IMatchResult
-    {
-        public Case(object message) { }
-        public bool WasHandled { get; }
-        public Akka.IMatchResult Default(System.Action<object> action) { }
-        public Akka.Case With<TMessage>(System.Action action) { }
-        public Akka.Case With<TMessage>(System.Action<TMessage> action) { }
-    }
-    public class Case<T> : Akka.IMatchResult
-    {
-        public Case(object message) { }
-        public bool WasHandled { get; }
-        public T ResultOrDefault(System.Func<object, T> function) { }
-        public Akka.Case<T> With<TMessage>(System.Func<T> function) { }
-        public Akka.Case<T> With<TMessage>(System.Func<TMessage, T> function) { }
-    }
-    public sealed class Done
-    {
-        public static readonly Akka.Done Instance;
-    }
-    public interface IMatchResult
-    {
-        bool WasHandled { get; }
-    }
-    public sealed class NotUsed : System.IComparable<Akka.NotUsed>, System.IEquatable<Akka.NotUsed>
-    {
-        public static readonly Akka.NotUsed Instance;
-        public int CompareTo(Akka.NotUsed other) { }
-        public override bool Equals(object obj) { }
-        public bool Equals(Akka.NotUsed other) { }
-        public override int GetHashCode() { }
-        public override string ToString() { }
-    }
-    [System.ObsoleteAttribute("Use instead the pattern matching feature introduced in C# 7.0")]
-    public class static PatternMatch
-    {
-        public static Akka.Case Match(this object target) { }
-        public static Akka.Case<T> Match<T>(this object target) { }
     }
 }
 namespace Akka.Configuration
@@ -2961,6 +2941,22 @@ namespace Akka.Dispatch.SysMsg
         public override string ToString() { }
     }
 }
+namespace Akka
+{
+    public sealed class Done
+    {
+        public static readonly Akka.Done Instance;
+    }
+    public sealed class NotUsed : System.IComparable<Akka.NotUsed>, System.IEquatable<Akka.NotUsed>
+    {
+        public static readonly Akka.NotUsed Instance;
+        public int CompareTo(Akka.NotUsed other) { }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.NotUsed other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+}
 namespace Akka.Event
 {
     public abstract class ActorEventBus<TEvent, TClassifier> : Akka.Event.EventBus<TEvent, TClassifier, Akka.Actor.IActorRef>
@@ -3012,7 +3008,7 @@ namespace Akka.Event
     }
     public class DefaultLogMessageFormatter : Akka.Event.ILogMessageFormatter
     {
-        public DefaultLogMessageFormatter() { }
+        public static readonly Akka.Event.DefaultLogMessageFormatter Instance;
         public string Format(string format, params object[] args) { }
     }
     public class DefaultLogger : Akka.Actor.ActorBase, Akka.Dispatch.IRequiresMessageQueue<Akka.Event.ILoggerMessageQueueSemantics>
@@ -3345,6 +3341,11 @@ namespace Akka.IO
         public static byte[] op_Explicit(Akka.IO.ByteString byteString) { }
         public static bool !=(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ConnectException : System.Exception
+    {
+        public ConnectException(string message) { }
+    }
     public class Dns : Akka.Actor.ExtensionIdProvider<Akka.IO.DnsExt>
     {
         public static readonly Akka.IO.Dns Instance;
@@ -3559,8 +3560,13 @@ namespace Akka.IO
         public sealed class CommandFailed : Akka.IO.Tcp.Event
         {
             public CommandFailed(Akka.IO.Tcp.Command cmd) { }
+            public Akka.Util.Option<System.Exception> Cause { get; }
+            [Akka.Annotations.InternalApiAttribute()]
+            public string CauseString { get; }
             public Akka.IO.Tcp.Command Cmd { get; }
             public override string ToString() { }
+            [Akka.Annotations.InternalApiAttribute()]
+            public Akka.IO.Tcp.CommandFailed WithCause(System.Exception cause) { }
         }
         public class CompoundWrite : Akka.IO.Tcp.WriteCommand, System.Collections.Generic.IEnumerable<Akka.IO.Tcp.SimpleWriteCommand>, System.Collections.IEnumerable
         {

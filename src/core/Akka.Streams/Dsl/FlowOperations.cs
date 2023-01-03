@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ using Akka.Util;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// TBD
+    /// The set of DSL methods for composing <see cref="Flow{TIn,TOut,TMat}"/> stages together.
     /// </summary>
     public static class FlowOperations
     {
@@ -2460,6 +2460,43 @@ namespace Akka.Streams.Dsl
                 .Select(e => (e, extractContext(e)));
 
             return FlowWithContext.From(flowWithTuples);
+        }
+        
+        /// <summary>
+        /// Repeats the previous element from upstream until it's replaced by a new value.
+        /// </summary>
+        /// <param name="flow">The previous Flow stage in this stream.</param>
+        /// <typeparam name="TIn">The input type.</typeparam>
+        /// <typeparam name="TOut">The output type.</typeparam>
+        /// <typeparam name="TMat">The materialization type.</typeparam>
+        /// <remarks>
+        /// This is designed to allow fan-in stages where output from one of the sources is intermittent / infrequent
+        /// and users just want the previous value to be reused.
+        /// </remarks>
+        public static Flow<TIn, TOut, TMat> RepeatPrevious<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow)
+        {
+            return flow.Via(new ReuseLatest<TOut>());
+        }
+
+        /// <summary>
+        /// Repeats the previous element from upstream until it's replaced by a new value.
+        /// </summary>
+        /// <param name="flow">The previous Flow stage in this stream.</param>
+        /// <param name="onItemChanged">A <see cref="Action{TOut, TOut}"/> function that allows the stage to perform clean-up operations when the previously repeated
+        /// value is being replaced.
+        /// 
+        /// This is used for things like calling <see cref="IDisposable.Dispose"/> on the previous value.
+        /// </param>
+        /// <typeparam name="TIn">The input type.</typeparam>
+        /// <typeparam name="TOut">The output type.</typeparam>
+        /// <typeparam name="TMat">The materialization type.</typeparam>
+        /// <remarks>
+        /// This is designed to allow fan-in stages where output from one of the sources is intermittent / infrequent
+        /// and users just want the previous value to be reused.
+        /// </remarks>
+        public static Flow<TIn, TOut, TMat> RepeatPrevious<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Action<TOut, TOut> onItemChanged)
+        {
+            return flow.Via(new ReuseLatest<TOut>(onItemChanged));
         }
     }
 }

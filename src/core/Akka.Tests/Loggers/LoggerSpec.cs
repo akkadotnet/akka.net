@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="LoggerSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -129,7 +136,7 @@ akka.stdout-loglevel = DEBUG");
             var logSource = LogSource.Create(nameof(LoggerSpec));
             var ls = logSource.Source;
             var lc = logSource.Type;
-            var formatter = new DefaultLogMessageFormatter();
+            var formatter =  DefaultLogMessageFormatter.Instance;
 
             yield return new object[] { new Error(ex, ls, lc, new LogMessage(formatter, Case.t, Case.p)) }; 
 

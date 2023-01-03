@@ -6,7 +6,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DistributedData.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("f22db348-9ab3-4c6a-b1e8-9b835308d367")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.DistributedData
 {
     public sealed class Changed : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Changed>
@@ -777,7 +777,9 @@ namespace Akka.DistributedData
         public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize) { }
         [System.ObsoleteAttribute()]
         public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure) { }
+        [System.ObsoleteAttribute()]
         public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure, bool preferOldest) { }
+        public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure, bool preferOldest, bool verboseDebugLogging) { }
         public string Dispatcher { get; }
         public System.Collections.Immutable.IImmutableSet<string> DurableKeys { get; }
         public System.TimeSpan DurablePruningMarkerTimeToLive { get; }
@@ -793,6 +795,7 @@ namespace Akka.DistributedData
         public System.TimeSpan PruningMarkerTimeToLive { get; }
         public bool RestartReplicatorOnFailure { get; }
         public string Role { get; }
+        public bool VerboseDebugLogging { get; }
         public static Akka.DistributedData.ReplicatorSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.DistributedData.ReplicatorSettings Create(Akka.Configuration.Config config) { }
         public Akka.DistributedData.ReplicatorSettings WithDispatcher(string dispatcher) { }
@@ -807,6 +810,7 @@ namespace Akka.DistributedData
         public Akka.DistributedData.ReplicatorSettings WithPruningMarkerTimeToLive(System.TimeSpan pruningMarkerTtl, System.TimeSpan durablePruningMarkerTtl) { }
         public Akka.DistributedData.ReplicatorSettings WithRestartReplicatorOnFailure(bool restart) { }
         public Akka.DistributedData.ReplicatorSettings WithRole(string role) { }
+        public Akka.DistributedData.ReplicatorSettings WithVerboseDebugLogging(bool verboseDebugLogging) { }
     }
     [System.Diagnostics.DebuggerDisplayAttribute("VersionVector({Node}->{Version})")]
     public sealed class SingleVersionVector : Akka.DistributedData.VersionVector

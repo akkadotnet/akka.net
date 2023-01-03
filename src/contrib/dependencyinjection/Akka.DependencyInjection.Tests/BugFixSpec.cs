@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="BugFix.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="BugFixSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
@@ -60,16 +60,18 @@ namespace Akka.DependencyInjection.Tests
         }
         
         
-        public async Task InitializeAsync()
+        public override async Task InitializeAsync()
         {
             await _akkaService.StartAsync(default);
             InitializeLogger(_akkaService.ActorSystem);
+            await base.InitializeAsync();
         }
 
-        public async Task DisposeAsync()
+        public override async Task DisposeAsync()
         {
             var sys = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
             await sys.Terminate();
+            await base.DisposeAsync();
         }
         
         internal class AkkaService : IHostedService

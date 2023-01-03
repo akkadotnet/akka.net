@@ -2,11 +2,12 @@
     <Import Project="..\..\common.props" />
     <PropertyGroup>
         <AssemblyTitle>Akka.Streams</AssemblyTitle>
-        <Description>Reactive stream support for Akka.NET</Description>
+        <Description>Streaming support for Akka.NET. Introduces a LINQ-like interface for writing asynchronous,
+            back-pressure-aware streams built on top of Akka.NET actors.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);reactive;stream</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <LangVersion>8.0</LangVersion>
+        <LangVersion>9</LangVersion>
     </PropertyGroup>
     <ItemGroup>
         <EmbeddedResource Include="reference.conf" />

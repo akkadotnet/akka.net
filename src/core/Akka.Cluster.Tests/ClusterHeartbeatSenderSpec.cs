@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterHeartbeatSenderSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,21 @@ using static Akka.Cluster.ClusterHeartbeatSender;
 
 namespace Akka.Cluster.Tests
 {
-    public class ClusterHeartbeatSenderSpec : AkkaSpec
+    public class ClusterHeartbeatSenderSpec : ClusterHeartbeatSenderBase
+    {
+        public ClusterHeartbeatSenderSpec(ITestOutputHelper output) : base(output, false)
+        {
+        }
+    }
+    
+    public class ClusterHeartbeatSenderLegacySpec : ClusterHeartbeatSenderBase
+    {
+        public ClusterHeartbeatSenderLegacySpec(ITestOutputHelper output) : base(output, true)
+        {
+        }
+    }
+    
+    public abstract class ClusterHeartbeatSenderBase : AkkaSpec
     {
         class TestClusterHeartbeatSender : ClusterHeartbeatSender
         {
@@ -40,14 +54,15 @@ namespace Akka.Cluster.Tests
             }
         }
 
-        public static readonly Config Config = @"
+        private static Config Config(bool useLegacyHeartbeat) => $@"
             akka.loglevel = DEBUG
             akka.actor.provider = cluster
             akka.cluster.failure-detector.heartbeat-interval = 0.2s
+            akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "false")}
         ";
 
-        public ClusterHeartbeatSenderSpec(ITestOutputHelper output)
-            : base(Config, output){ }
+        protected ClusterHeartbeatSenderBase(ITestOutputHelper output, bool useLegacyMessage)
+            : base(Config(useLegacyMessage), output){ }
 
         [Fact]
         public async Task ClusterHeartBeatSender_must_increment_heartbeat_SeqNo()

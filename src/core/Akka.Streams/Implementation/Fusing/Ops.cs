@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Ops.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -2948,7 +2948,7 @@ namespace Akka.Streams.Implementation.Fusing
                     try
                     {
                         var materializer = ActorMaterializerHelper.Downcast(Materializer);
-                        _log = new BusLogging(materializer.System.EventStream, _stage._name, GetType(), new DefaultLogMessageFormatter());
+                        _log = new BusLogging(materializer.System.EventStream, _stage._name, GetType(), DefaultLogMessageFormatter.Instance);
                     }
                     catch (Exception ex)
                     {
@@ -3871,20 +3871,8 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _completionCts.Cancel();
                 _completionCts.Dispose();
-
-                try
-                {
-                    _enumerator.DisposeAsync().GetAwaiter().GetResult();
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning(ex, "Failed to dispose IAsyncEnumerator asynchronously");
-                }
-                finally
-                {
-                    CompleteStage();
-                    base.OnDownstreamFinish(cause);
-                }
+                CompleteStage();
+                base.OnDownstreamFinish(cause);
             }
 
         }

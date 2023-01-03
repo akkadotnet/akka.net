@@ -314,6 +314,12 @@ namespace Akka.Actor
         public static readonly Akka.Actor.IActorRef NoSender;
         public static readonly Akka.Actor.Nobody Nobody;
     }
+    public sealed class ActorRestarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public System.Type ActorType { get; }
+        public System.Exception Reason { get; }
+        public Akka.Actor.IActorRef Subject { get; }
+    }
     public class ActorSelection : Akka.Actor.ICanTell
     {
         public ActorSelection() { }
@@ -340,12 +346,22 @@ namespace Akka.Actor
         public Akka.Actor.ActorSelectionMessage Copy(object message = null, Akka.Actor.SelectionPathElement[] elements = null, System.Nullable<bool> wildCardFanOut = null) { }
         public override string ToString() { }
     }
+    public sealed class ActorStarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public System.Type ActorType { get; }
+        public Akka.Actor.IActorRef Subject { get; }
+    }
     public class ActorStashPlugin : Akka.Actor.ActorProducerPluginBase
     {
         public ActorStashPlugin() { }
         public override void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public override void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public override bool CanBeAppliedTo(System.Type actorType) { }
+    }
+    public sealed class ActorStopped : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public System.Type ActorType { get; }
+        public Akka.Actor.IActorRef Subject { get; }
     }
     public abstract class ActorSystem : Akka.Actor.IActorRefFactory, System.IDisposable
     {
@@ -736,7 +752,7 @@ namespace Akka.Actor
             public override int GetHashCode() { }
             public override string ToString() { }
         }
-        public sealed class Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
+        public struct Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
         {
             public Event(object fsmEvent, TD stateData) { }
             public object FsmEvent { get; }
@@ -773,10 +789,10 @@ namespace Akka.Actor
         {
             public static Akka.Actor.FSMBase.StateTimeout Instance { get; }
         }
-        public class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
+        public sealed class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
         {
             public State(TS stateName, TD stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, bool notifies = True) { }
-            public System.Collections.Generic.IReadOnlyList<object> Replies { get; set; }
+            public System.Collections.Generic.IReadOnlyList<object> Replies { get; }
             public TD StateData { get; }
             public TS StateName { get; }
             public Akka.Actor.FSMBase.Reason StopReason { get; }
@@ -987,6 +1003,11 @@ namespace Akka.Actor
     public interface IActorStash
     {
         Akka.Actor.IStash Stash { get; set; }
+    }
+    public interface IActorTelemetryEvent : Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        System.Type ActorType { get; }
+        Akka.Actor.IActorRef Subject { get; }
     }
     public interface IAdvancedScheduler : Akka.Actor.IActionScheduler, Akka.Actor.IRunnableScheduler { }
     public interface IAutoReceivedMessage { }
@@ -1682,6 +1703,7 @@ namespace Akka.Actor
         public bool DebugRouterMisconfiguration { get; }
         public bool DebugUnhandledMessage { get; }
         public int DefaultVirtualNodesFactor { get; }
+        public bool EmitActorTelemetry { get; }
         public bool FsmDebugEvent { get; }
         public bool HasCluster { get; }
         public string Home { get; }

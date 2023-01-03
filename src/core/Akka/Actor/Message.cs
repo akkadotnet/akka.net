@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Message.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ namespace Akka.Actor
     /// <summary>
     /// Envelope class, represents a message and the sender of the message.
     /// </summary>
-    public struct Envelope
+    public readonly struct Envelope
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Envelope"/> struct.
@@ -44,13 +44,13 @@ namespace Akka.Actor
         /// Gets or sets the sender.
         /// </summary>
         /// <value>The sender.</value>
-        public IActorRef Sender { get; private set; }
+        public IActorRef Sender { get; }
 
         /// <summary>
         /// Gets or sets the message.
         /// </summary>
         /// <value>The message.</value>
-        public object Message { get; private set; }
+        public object Message { get; }
 
         /// <summary>
         /// Converts the <see cref="Envelope"/> to a string representation.

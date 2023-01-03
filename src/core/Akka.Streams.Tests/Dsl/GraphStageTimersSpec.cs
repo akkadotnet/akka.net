@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphStageTimersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -245,18 +245,25 @@ namespace Akka.Streams.Tests.Dsl
 
                 private void OnTestEvent(object message)
                 {
-                    message.Match()
-                        .With<TestSingleTimer>(() => ScheduleOnce(TestSingleTimerKey, Dilated(500)))
-                        .With<TestSingleTimerResubmit>(() => ScheduleOnce(TestSingleTimerResubmitKey, Dilated(500)))
-                        .With<TestCancelTimer>(() =>
-                        {
+                    switch (message)
+                    {
+                        case TestSingleTimer _:
+                            ScheduleOnce(TestSingleTimerKey, Dilated(500));
+                            break;
+                        case TestSingleTimerResubmit _:
+                            ScheduleOnce(TestSingleTimerResubmitKey, Dilated(500));
+                            break;
+                        case TestCancelTimer _:
                             ScheduleOnce(TestCancelTimerKey, Dilated(1));
                             // Likely in mailbox but we cannot guarantee
                             CancelTimer(TestCancelTimerKey);
                             _stage._probe.Tell(TestCancelTimerAck.Instance);
                             ScheduleOnce(TestCancelTimerKey, Dilated(500));
-                        })
-                        .With<TestRepeatedTimer>(() => ScheduleRepeatedly(TestRepeatedTimerKey, Dilated(100)));
+                            break;
+                        case TestRepeatedTimer _:
+                            ScheduleRepeatedly(TestRepeatedTimerKey, Dilated(100));
+                            break;
+                    }
                 }
 
                 private TimeSpan Dilated(int milliseconds)

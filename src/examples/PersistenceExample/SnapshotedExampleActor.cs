@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotedExampleActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,29 +23,42 @@ namespace PersistenceExample
 
         protected override bool ReceiveRecover(object message)
         {
-            if (message is SnapshotOffer)
+            switch (message)
             {
-                var s = ((SnapshotOffer) message).Snapshot as ExampleState;
-                Console.WriteLine("Offered state (from snapshot): " + s);
-                State = s;
+                case SnapshotOffer offer:
+                    var s = (ExampleState) offer.Snapshot;
+                    Console.WriteLine("Offered state (from snapshot): " + s);
+                    State = s;
+                    return true;
+                
+                case string _:
+                    State = State.Update(new Event(message.ToString()));
+                    return true;
+                
+                default:
+                    return false;
             }
-            else if (message is string)
-                State = State.Update(new Event(message.ToString()));
-            else return false;
-            return true;
         }
 
         protected override bool ReceiveCommand(object message)
         {
-            if (message as string == "print")
-                Console.WriteLine("Current actor's state: " + State);
-            else if (message as string == "snap")
-                SaveSnapshot(State);
-            else if (message is SaveSnapshotFailure || message is SaveSnapshotSuccess) { }
-            else if (message is string)
-                Persist(message.ToString(), evt => State = State.Update(new Event(evt)));
-            else return false;
-            return true;
+            switch (message)
+            {
+                case string str when str == "print":
+                    Console.WriteLine("Current actor's state: " + State);
+                    return true;
+                case string str when str == "snap":
+                    SaveSnapshot(State);
+                    return true;
+                case string str:
+                    Persist(str, evt => State = State.Update(new Event(evt)));
+                    return true;
+                case SaveSnapshotFailure _:
+                case SaveSnapshotSuccess _:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }

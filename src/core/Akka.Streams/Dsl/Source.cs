@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
@@ -1074,6 +1075,32 @@ namespace Akka.Streams.Dsl
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
             return FromGraph(new ObservableSourceStage<T>(observable, maxBufferCapacity, overflowStrategy));
+        }
+
+        public static Source<T, NotUsed> ChannelReader<T>(
+            ChannelReader<T> channelReader)
+        {
+            return ChannelSource.FromReader(channelReader);
+        }
+
+        /// <summary>
+        /// Creates a Source that materializes a <see cref="ChannelWriter{T}"/>
+        /// that may be used to write items to the stream.
+        ///
+        /// This works similarly to <see cref="Queue{T}"/>,
+        /// The main difference being that you are allowed to have multiple
+        /// Writes in flight. Allowing multiple writes makes Multi-producer
+        /// scenarios easier but is still an important semantic difference. 
+        /// 
+        /// </summary>
+        /// <param name="bufferSize">The size of the channel's buffer</param>
+        /// <param name="singleWriter">If true, expects only one writer</param>
+        /// <param name="fullMode">How the channel behaves when full</param>
+        public static Source<T, ChannelWriter<T>> Channel<T>(int bufferSize,
+            bool singleWriter = false,
+            BoundedChannelFullMode fullMode = BoundedChannelFullMode.Wait)
+        {
+            return ChannelSource.Create<T>(bufferSize, singleWriter, fullMode);
         }
     }
 }

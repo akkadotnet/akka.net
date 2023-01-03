@@ -777,7 +777,9 @@ namespace Akka.DistributedData
         public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize) { }
         [System.ObsoleteAttribute()]
         public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure) { }
+        [System.ObsoleteAttribute()]
         public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure, bool preferOldest) { }
+        public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure, bool preferOldest, bool verboseDebugLogging) { }
         public string Dispatcher { get; }
         public System.Collections.Immutable.IImmutableSet<string> DurableKeys { get; }
         public System.TimeSpan DurablePruningMarkerTimeToLive { get; }
@@ -789,6 +791,7 @@ namespace Akka.DistributedData
         public System.TimeSpan MaxPruningDissemination { get; }
         public System.TimeSpan NotifySubscribersInterval { get; }
         public bool PreferOldest { get; }
+        public bool VerboseDebugLogging { get; }
         public System.TimeSpan PruningInterval { get; }
         public System.TimeSpan PruningMarkerTimeToLive { get; }
         public bool RestartReplicatorOnFailure { get; }
@@ -803,6 +806,7 @@ namespace Akka.DistributedData
         public Akka.DistributedData.ReplicatorSettings WithMaxDeltaSize(int maxDeltaSize) { }
         public Akka.DistributedData.ReplicatorSettings WithNotifySubscribersInterval(System.TimeSpan notifySubscribersInterval) { }
         public Akka.DistributedData.ReplicatorSettings WithPreferOldest(bool preferOldest) { }
+        public Akka.DistributedData.ReplicatorSettings WithVerboseDebugLogging(bool verboseDebugLogging) { }
         public Akka.DistributedData.ReplicatorSettings WithPruning(System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination) { }
         public Akka.DistributedData.ReplicatorSettings WithPruningMarkerTimeToLive(System.TimeSpan pruningMarkerTtl, System.TimeSpan durablePruningMarkerTtl) { }
         public Akka.DistributedData.ReplicatorSettings WithRestartReplicatorOnFailure(bool restart) { }

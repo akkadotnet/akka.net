@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Mailbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
@@ -147,7 +148,7 @@ namespace Akka.Dispatch
             {
                 // Note: contrary how it looks, there is no allocation here, as SystemMessageList is a value class and as such
                 // it just exists as a typed view during compile-time. The actual return type is still SystemMessage.
-                return new LatestFirstSystemMessageList(Volatile.Read(ref _systemQueueDoNotCallMeDirectly));
+                return new LatestFirstSystemMessageList(_systemQueueDoNotCallMeDirectly);
             }
         }
 
@@ -271,7 +272,7 @@ namespace Akka.Dispatch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetStatus(int newStatus)
         {
-            Volatile.Write(ref _statusDotNotCallMeDirectly, newStatus);
+            _statusDotNotCallMeDirectly = newStatus;
         }
 
         /// <summary>
@@ -371,13 +372,19 @@ namespace Akka.Dispatch
         {
             try
             {
-                if (!IsClosed()) // Volatile read, needed here
+                if (IsClosed()) return; // Volatile read, needed here
+                
+                var tmp = InternalCurrentActorCellKeeper.Current;
+                InternalCurrentActorCellKeeper.Current = Actor;
+                try
                 {
-                    Actor.UseThreadContext(() =>
-                    {
-                        ProcessAllSystemMessages(); // First, deal with any system messages
-                        ProcessMailbox(); // Then deal with messages
-                    });
+                    ProcessAllSystemMessages(); // First, deal with any system messages
+                    ProcessMailbox(); // Then deal with messages
+                }
+                finally
+                {
+                    //ensure we set back the old context
+                    InternalCurrentActorCellKeeper.Current = tmp;
                 }
             }
             finally

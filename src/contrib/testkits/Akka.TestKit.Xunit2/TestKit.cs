@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -145,7 +145,8 @@ namespace Akka.TestKit.Xunit2
             {
                 var extSystem = (ExtendedActorSystem)system;
                 var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
-                logger.Tell(new InitializeLogger(system.EventStream));
+                logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TimeSpan.FromSeconds(3))
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
 
@@ -156,7 +157,8 @@ namespace Akka.TestKit.Xunit2
                 var extSystem = (ExtendedActorSystem)system;
                 var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(
                     string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))), "log-test");
-                logger.Tell(new InitializeLogger(system.EventStream));
+                logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TimeSpan.FromSeconds(3))
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
         public virtual Task InitializeAsync()

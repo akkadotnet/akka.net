@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PerformanceActors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -68,29 +68,38 @@ namespace PersistenceBenchmark
 
         public sealed override string PersistenceId { get; }
 
-        protected override bool ReceiveRecover(object message) => message.Match()
-            .With<Stored>(s => state += s.Value)
-            .WasHandled;
+        protected override bool ReceiveRecover(object message)
+        {
+            if (message is Stored s)
+            {
+                state += s.Value;
+                return true;
+            }
+            return false;
+        }
 
-        protected override bool ReceiveCommand(object message) => message.Match()
-            .With<Store>(store =>
+        protected override bool ReceiveCommand(object message)
+        {
+            switch (message)
             {
-                Persist(new Stored(store.Value), s =>
-                {
-                    state += s.Value;
-                });
-            })
-            .With<Init>(_ =>
-            {
-                var sender = Sender;
-                Persist(new Stored(0), s =>
-                {
-                    state += s.Value;
-                    sender.Tell(Done.Instance);
-                });
-            })
-            .With<Finish>(_ => Sender.Tell(new Finished(state)))
-            .WasHandled;
+                case Store store:
+                    Persist(new Stored(store.Value), s => { state += s.Value; });
+                    return true;
+                case Init _:
+                    var sender = Sender;
+                    Persist(new Stored(0), s =>
+                    {
+                        state += s.Value;
+                        sender.Tell(Done.Instance);
+                    });
+                    return true;
+                case Finish _:
+                    Sender.Tell(new Finished(state));
+                    return true;
+                default:
+                    return false;
+            }
+        }
     }
 
 }

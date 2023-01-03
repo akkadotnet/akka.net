@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Sink.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
@@ -682,5 +683,16 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         public static Sink<T, IObservable<T>> AsObservable<T>() => FromGraph(new ObservableSinkStage<T>());
+
+        public static Sink<T, ChannelReader<T>> ChannelReader<T>(int bufferSize, bool singleReader, BoundedChannelFullMode fullMode = BoundedChannelFullMode.Wait)
+        {
+            return ChannelSink.AsReader<T>(bufferSize, singleReader, fullMode);
+        }
+
+        public static Sink<T, NotUsed> FromWriter<T>(ChannelWriter<T> writer,
+            bool isOwner)
+        {
+            return ChannelSink.FromWriter(writer, isOwner);
+        }
     }
 }

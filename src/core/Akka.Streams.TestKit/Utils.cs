@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Utils.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,6 +16,7 @@ using Akka.Streams.Implementation;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
+using FluentAssertions;
 using FluentAssertions.Extensions;
 
 namespace Akka.Streams.TestKit
@@ -26,7 +27,7 @@ namespace Akka.Streams.TestKit
             ConfigurationFactory.ParseString(@"akka.actor.default-mailbox.mailbox-type = ""Akka.Dispatch.UnboundedMailbox, Akka""");
 
         public static void AssertAllStagesStopped(
-            this AkkaSpec spec,
+            this TestKitBase spec,
             Action block,
             IMaterializer materializer,
             TimeSpan? timeout = null,
@@ -39,7 +40,7 @@ namespace Akka.Streams.TestKit
                 .ConfigureAwait(false).GetAwaiter().GetResult();
 
         public static T AssertAllStagesStopped<T>(
-            this AkkaSpec spec,
+            this TestKitBase spec,
             Func<T> block,
             IMaterializer materializer,
             TimeSpan? timeout = null,
@@ -48,7 +49,7 @@ namespace Akka.Streams.TestKit
                 .ConfigureAwait(false).GetAwaiter().GetResult();
 
         public static async Task AssertAllStagesStoppedAsync(
-            this AkkaSpec spec,
+            this TestKitBase spec,
             Func<Task> block,
             IMaterializer materializer,
             TimeSpan? timeout = null,
@@ -61,7 +62,7 @@ namespace Akka.Streams.TestKit
                 .ConfigureAwait(false);
         
         public static async Task<T> AssertAllStagesStoppedAsync<T>(
-            this AkkaSpec spec,
+            this TestKitBase spec,
             Func<Task<T>> block, 
             IMaterializer materializer,
             TimeSpan? timeout = null,
@@ -117,7 +118,7 @@ namespace Akka.Streams.TestKit
         [Obsolete("Use ShouldCompleteWithin instead")]
         public static T AwaitResult<T>(this Task<T> task, TimeSpan? timeout = null)
         {
-            task.Wait(timeout??TimeSpan.FromSeconds(3)).ShouldBeTrue();
+            task.Wait(timeout??TimeSpan.FromSeconds(3)).Should().BeTrue();
             return task.Result;
         }
     }

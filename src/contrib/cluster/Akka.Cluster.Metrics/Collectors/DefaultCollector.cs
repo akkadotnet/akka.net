@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DefaultCollector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -55,13 +55,14 @@ namespace Akka.Cluster.Metrics.Collectors
         {
             using (var process = Process.GetCurrentProcess())
             {
+                process.Refresh();
                 var metrics = new List<NodeMetrics.Types.Metric>()
                 {
                     // Memory
-                    // Forcing garbage collection to keep metrics more resilent to occasional allocations
                     NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(true)).Value,
-                    // VirtualMemorySize64 is not best idea here...
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.VirtualMemorySize64).Value,
+                    
+                    // total committed process memory = working set + paged
+                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.WorkingSet64 + process.PagedMemorySize64).Value,
                     // CPU Processors
                     NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount).Value,
                 };

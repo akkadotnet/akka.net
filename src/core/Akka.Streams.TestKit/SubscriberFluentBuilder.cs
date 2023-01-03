@@ -1,19 +1,19 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="SubscriberFluentBuilder.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="SubscriberFluentBuilder.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit;
 using Reactive.Streams;
-using Xunit.Sdk;
 using static Akka.Streams.TestKit.TestSubscriber;
 
 namespace Akka.Streams.TestKit
@@ -411,7 +411,10 @@ namespace Akka.Streams.TestKit
                     var next = await probe.ExpectNextAsync(ct);
                     if (Comparer<T>.Default.Compare(elements[i], next) != 0)
                     {
-                        throw new CollectionException(elements, elements.Length, i + 1, i);
+                        throw new Exception(string.Format(
+                            CultureInfo.CurrentCulture,
+                            "Collection Comparison Failure{3}Error during comparison of item at index {0}. Expected: {1}, found: {2}",
+                            i, elements[i], next, Environment.NewLine));
                     }
                 }
             });

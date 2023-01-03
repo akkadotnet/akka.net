@@ -6,7 +6,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("123b83e9-21f8-49a8-888a-3b1212ff21dc")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName="")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
 namespace Akka.Streams
 {
     public sealed class AbruptStageTerminationException : System.Exception
@@ -1300,6 +1300,16 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Outlet<T> Out(int id) { }
         public override string ToString() { }
     }
+    public class static ChannelSink
+    {
+        public static Akka.Streams.Dsl.Sink<T, System.Threading.Channels.ChannelReader<T>> AsReader<T>(int bufferSize, bool singleReader = False, System.Threading.Channels.BoundedChannelFullMode fullMode = 0) { }
+        public static Akka.Streams.Dsl.Sink<T, Akka.NotUsed> FromWriter<T>(System.Threading.Channels.ChannelWriter<T> writer, bool isOwner) { }
+    }
+    public class static ChannelSource
+    {
+        public static Akka.Streams.Dsl.Source<T, System.Threading.Channels.ChannelWriter<T>> Create<T>(int bufferSize, bool singleWriter = False, System.Threading.Channels.BoundedChannelFullMode fullMode = 0) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromReader<T>(System.Threading.Channels.ChannelReader<T> reader) { }
+    }
     public class static Concat
     {
         public static Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, T>, Akka.NotUsed> Create<T>(int inputPorts = 2) { }
@@ -1406,6 +1416,8 @@ namespace Akka.Streams.Dsl
         [System.ObsoleteAttribute("Use RecoverWithRetries instead. [1.1.2]")]
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> RecoverWith<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> RecoverWithRetries<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc, int attempts) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> RepeatPrevious<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> RepeatPrevious<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Action<TOut, TOut> onItemChanged) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Scan<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> scan) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> ScanAsync<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, System.Threading.Tasks.Task<TOut2>> scan) { }
         public static Akka.Streams.Dsl.Flow<T, TOut, TMat> Select<T, TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<T, TIn, TMat> flow, System.Func<TIn, TOut> mapper) { }
@@ -1867,6 +1879,14 @@ namespace Akka.Streams.Dsl
         [Akka.Annotations.ApiMayChangeAttribute()]
         public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.ValueTuple<TIn, TState>, System.ValueTuple<Akka.Util.Result<TOut>, TState>>, TMat> Create<TIn, TState, TOut, TMat>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.ValueTuple<TIn, TState>, System.ValueTuple<Akka.Util.Result<TOut>, TState>>, TMat> flow, System.Func<TState, Akka.Util.Option<System.ValueTuple<TIn, TState>>> retryWith) { }
     }
+    public sealed class ReuseLatest<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    {
+        public ReuseLatest() { }
+        public ReuseLatest(System.Action<T, T> onItemChanged) { }
+        public override Akka.Streams.FlowShape<T, T> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+        public override string ToString() { }
+    }
     public class static ReverseOps
     {
         public static Akka.Streams.Dsl.GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this Akka.Streams.Dsl.GraphDsl.ReverseOps<TIn, TMat> ops, Akka.Streams.Outlet<TOut> outlet)
@@ -1928,6 +1948,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<T, System.IObservable<T>> AsObservable<T>() { }
         public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> AsPublisher<TIn>(bool fanout) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Cancelled<TIn>() { }
+        public static Akka.Streams.Dsl.Sink<T, System.Threading.Channels.ChannelReader<T>> ChannelReader<T>(int bufferSize, bool singleReader, System.Threading.Channels.BoundedChannelFullMode fullMode = 0) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Combine<TIn, TOut, TMat>(System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanOutShape<TIn, TOut>, TMat>> strategy, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> first, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> second, params Akka.Streams.Dsl.Sink<, >[] rest) { }
         public static Akka.Streams.Dsl.Sink<TIn, object> Create<TIn>(Reactive.Streams.ISubscriber<TIn> subscriber) { }
         [Akka.Annotations.InternalApiAttribute()]
@@ -1940,6 +1961,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<Akka.Done>> ForEachParallel<TIn>(int parallelism, System.Action<TIn> action) { }
         public static Akka.Streams.Dsl.Sink<TIn, TMat> FromGraph<TIn, TMat>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TIn>, TMat> graph) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> FromSubscriber<TIn>(Reactive.Streams.ISubscriber<TIn> subscriber) { }
+        public static Akka.Streams.Dsl.Sink<T, Akka.NotUsed> FromWriter<T>(System.Threading.Channels.ChannelWriter<T> writer, bool isOwner) { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<Akka.Done>> Ignore<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> Last<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> LastOrDefault<TIn>() { }
@@ -1985,6 +2007,8 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.Actor.IActorRef> ActorPublisher<T>(Akka.Actor.Props props) { }
         public static Akka.Streams.Dsl.Source<T, Akka.Actor.IActorRef> ActorRef<T>(int bufferSize, Akka.Streams.OverflowStrategy overflowStrategy) { }
         public static Akka.Streams.Dsl.Source<T, Reactive.Streams.ISubscriber<T>> AsSubscriber<T>() { }
+        public static Akka.Streams.Dsl.Source<T, System.Threading.Channels.ChannelWriter<T>> Channel<T>(int bufferSize, bool singleWriter = False, System.Threading.Channels.BoundedChannelFullMode fullMode = 0) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> ChannelReader<T>(System.Threading.Channels.ChannelReader<T> channelReader) { }
         public static Akka.Streams.Dsl.Source<TOut2, Akka.NotUsed> Combine<T, TOut2>(Akka.Streams.Dsl.Source<T, Akka.NotUsed> first, Akka.Streams.Dsl.Source<T, Akka.NotUsed> second, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, params Akka.Streams.Dsl.Source<, >[] rest) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(Akka.Streams.Dsl.Source<T, TMat1> first, Akka.Streams.Dsl.Source<T, TMat2> second, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, System.Func<TMat1, TMat2, TMatOut> combineMaterializers) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Cycle<T>(System.Func<System.Collections.Generic.IEnumerator<T>> enumeratorFactory) { }
@@ -2086,6 +2110,8 @@ namespace Akka.Streams.Dsl
         [System.ObsoleteAttribute("Use RecoverWithRetries instead. [1.1.2]")]
         public static Akka.Streams.Dsl.Source<TOut, TMat> RecoverWith<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> RecoverWithRetries<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc, int attempts) { }
+        public static Akka.Streams.Dsl.Source<T, TMat> RepeatPrevious<T, TMat>(this Akka.Streams.Dsl.Source<T, TMat> source) { }
+        public static Akka.Streams.Dsl.Source<T, TMat> RepeatPrevious<T, TMat>(this Akka.Streams.Dsl.Source<T, TMat> source, System.Action<T, T> onItemUpdated) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Scan<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> scan) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> ScanAsync<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, System.Threading.Tasks.Task<TOut2>> scan) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Select<TIn, TOut, TMat>(this Akka.Streams.Dsl.Source<TIn, TMat> flow, System.Func<TIn, TOut> mapper) { }

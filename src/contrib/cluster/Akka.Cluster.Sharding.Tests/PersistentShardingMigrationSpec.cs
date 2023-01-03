@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentShardingMigrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -114,6 +114,17 @@ namespace Akka.Cluster.Sharding.Tests
                     retry-interval = 500ms
                 }
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
+
+                 akka.persistence.journal.memory-journal-shared {
+                    event-adapters {
+                        coordinator-migration = ""Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter, Akka.Cluster.Sharding""
+                    }
+
+                    event-adapter-bindings {
+                        ""Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent, Akka.Cluster.Sharding"" = coordinator-migration
+                    }
+                }
+
                 akka.cluster.sharding.verbose-debug-logging = on")
                     .WithFallback(ClusterSingletonManager.DefaultConfig())
                     .WithFallback(ClusterSharding.DefaultConfig());

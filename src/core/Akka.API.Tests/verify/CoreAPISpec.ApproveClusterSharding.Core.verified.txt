@@ -3,7 +3,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("a05c31e8-0246-46a1-b3bc-4d6fe7a9aa49")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Cluster.Sharding
 {
     public class ClusterSharding : Akka.Actor.IExtension
@@ -100,6 +100,14 @@ namespace Akka.Cluster.Sharding
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    public sealed class EntityLocation
+    {
+        public EntityLocation(string entityId, string shardId, Akka.Actor.Address shardRegion, Akka.Util.Option<Akka.Actor.IActorRef> entityRef) { }
+        public string EntityId { get; }
+        public Akka.Util.Option<Akka.Actor.IActorRef> EntityRef { get; }
+        public string ShardId { get; }
+        public Akka.Actor.Address ShardRegion { get; }
+    }
     public class static EnumerableExtensions
     {
         public static System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> Grouped<T>(this System.Collections.Generic.IEnumerable<T> items, int size) { }
@@ -120,6 +128,12 @@ namespace Akka.Cluster.Sharding
         public static readonly Akka.Cluster.Sharding.GetCurrentRegions Instance;
         public override string ToString() { }
     }
+    public sealed class GetEntityLocation : Akka.Cluster.Sharding.IShardRegionQuery
+    {
+        public GetEntityLocation(string entityId, System.TimeSpan timeout) { }
+        public string EntityId { get; }
+        public System.TimeSpan Timeout { get; }
+    }
     public sealed class GetShardRegionState : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
     {
         public static readonly Akka.Cluster.Sharding.GetShardRegionState Instance;
@@ -138,6 +152,7 @@ namespace Akka.Cluster.Sharding
     {
         public readonly int MaxNumberOfShards;
         protected HashCodeMessageExtractor(int maxNumberOfShards) { }
+        public static Akka.Cluster.Sharding.HashCodeMessageExtractor Create(int maxNumberOfShards, System.Func<object, string> entityIdExtractor, System.Func<object, object> messageExtractor = null) { }
         public abstract string EntityId(object message);
         public virtual object EntityMessage(object message) { }
         public virtual string ShardId(object message) { }
