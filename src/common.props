@@ -35,7 +35,13 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Placeholder for</PackageReleaseNotes>
+    <PackageReleaseNotes>Akka.NET v1.4.48 is a minor release that introduces some additional APIs to Akka.NET.
+[Akka.Streams: `ChannelSource&lt;T&gt;` and `ChannelSink&lt;T&gt;` moved from Alpakka into main project](https://github.com/akkadotnet/akka.net/pull/6317) - these stages are now part of the normal Akka.Streams.Dsl.
+[Akka: make `FutureActorRef&lt;T&gt;` unsealed](https://github.com/akkadotnet/akka.net/pull/6322)
+You can see the [full set of tracked issues for Akka.NET v1.4.48 here](https://github.com/akkadotnet/akka.net/milestone/79).
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 846 | 29 | Aaron Stannard |</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>

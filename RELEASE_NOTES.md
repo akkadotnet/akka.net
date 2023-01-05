@@ -1,5 +1,15 @@
-#### 1.4.48 December 29th 2022 ####
-*Placeholder for
+#### 1.4.48 January 5th 2023 ####
+Akka.NET v1.4.48 is a minor release that introduces some additional APIs to Akka.NET.
+
+* [Akka.Streams: `ChannelSource<T>` and `ChannelSink<T>` moved from Alpakka into main project](https://github.com/akkadotnet/akka.net/pull/6317) - these stages are now part of the normal Akka.Streams.Dsl.
+* [Akka: make `FutureActorRef<T>` unsealed](https://github.com/akkadotnet/akka.net/pull/6322)
+
+You can see the [full set of tracked issues for Akka.NET v1.4.48 here](https://github.com/akkadotnet/akka.net/milestone/79).
+
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 846 | 29 | Aaron Stannard |
 
 #### 1.4.47 December 9th 2022 ####
 Akka.NET v1.4.47 is a maintenance patch for Akka.NET v1.4.46 that includes a variety of bug fixes, performance improvements, and new features.
