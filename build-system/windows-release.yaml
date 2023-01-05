@@ -2,7 +2,7 @@
 # See https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema for reference
 
 pool:
-  vmImage: windows-2019
+  vmImage: windows-latest
   demands: Cmd
 
 trigger:
