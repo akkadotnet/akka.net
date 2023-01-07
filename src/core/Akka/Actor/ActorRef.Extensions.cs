@@ -15,12 +15,12 @@ namespace Akka.Actor
     public static class ActorRefExtensions
     {
         /// <summary>
-        /// Determines if the specified <paramref name="actorRef"/> is valid.
+        /// Determines if the specified <paramref name="actorRef"/> is invalid.
         /// An <paramref name="actorRef"/> is thought to be invalid if it's one of the following:
         ///    <see langword="null"/>, <see cref="Nobody"/>, and <see cref="DeadLetterActorRef"/>
         /// </summary>
         /// <param name="actorRef">The actor that is being tested.</param>
-        /// <returns><c>true</c> if the <paramref name="actorRef"/> is valid; otherwise <c>false</c>.</returns>
+        /// <returns><c>true</c> if the <paramref name="actorRef"/> is invalid; otherwise <c>false</c>.</returns>
         public static bool IsNobody(this IActorRef actorRef)
         {
             return actorRef is null || actorRef is Nobody || actorRef is DeadLetterActorRef 
