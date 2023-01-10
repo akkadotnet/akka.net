@@ -408,7 +408,7 @@ namespace Akka.Serialization
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte[] Compress(byte[] data)
+        private static byte[] Compress(byte[] data)
         {
             using var compressedStream = new MemoryStream();
             using var compressor = new GZipStream(compressedStream, CompressionMode.Compress);
@@ -418,7 +418,7 @@ namespace Akka.Serialization
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte[] Decompress(byte[] raw)
+        private static byte[] Decompress(byte[] raw)
         {
             using var compressedStream = new MemoryStream(raw);
             using var compressor = new GZipStream(compressedStream, CompressionMode.Decompress);
