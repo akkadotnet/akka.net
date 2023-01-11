@@ -1,3 +1,12 @@
+#### 1.4.49-beta1 January 11th 2023 ####
+Akka.NET v1.4.49-beta is a minor release that introduces compression to the JSON serializer
+
+* [Akka: Add serialized data compression feature to NewtonSoftJsonSerializer](https://github.com/akkadotnet/akka.net/pull/6341)
+
+| COMMITS | LOC+ | LOC- | AUTHOR               |
+|---------|------|------|----------------------|
+| 1       | 157  | 28   |  Gregorius Soedharmo |
+
 #### 1.4.48 January 5th 2023 ####
 Akka.NET v1.4.48 is a minor release that introduces some additional APIs to Akka.NET.
 
