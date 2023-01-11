@@ -150,7 +150,7 @@ namespace Akka.Remote.Serialization
             return obj;
         }
 
-        private string ValueOrNull(string value)
+        private static string ValueOrNull(string value)
             => string.IsNullOrEmpty(value) ? null : value;
     }
 }

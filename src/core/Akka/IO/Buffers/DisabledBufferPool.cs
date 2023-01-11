@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Configuration;
 
 namespace Akka.IO.Buffers
 {
