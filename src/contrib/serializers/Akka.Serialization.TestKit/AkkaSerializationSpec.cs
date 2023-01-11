@@ -327,7 +327,7 @@ akka.actor {
 
 
         [Fact]
-        public void CanSerializeConfig()
+        public virtual void CanSerializeConfig()
         {
             var message = ConfigurationFactory.ParseString(@"
 my-settings{
