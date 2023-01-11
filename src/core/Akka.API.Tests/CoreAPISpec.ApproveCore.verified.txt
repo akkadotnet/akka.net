@@ -4789,7 +4789,6 @@ namespace Akka.Serialization
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Serialization.NewtonSoftJsonSerializerSettings settings) { }
-        public bool Compressed { get; }
         public override bool IncludeManifest { get; }
         public object Serializer { get; }
         public Newtonsoft.Json.JsonSerializerSettings Settings { get; }
@@ -4800,8 +4799,6 @@ namespace Akka.Serialization
     {
         public static readonly Akka.Serialization.NewtonSoftJsonSerializerSettings Default;
         public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preserveObjectReferences, System.Collections.Generic.IEnumerable<System.Type> converters, bool usePooledStringBuilder, int stringBuilderMinSize, int stringBuilderMaxSize) { }
-        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preserveObjectReferences, System.Collections.Generic.IEnumerable<System.Type> converters, bool usePooledStringBuilder, int stringBuilderMinSize, int stringBuilderMaxSize, bool compressed) { }
-        public bool Compressed { get; }
         public System.Collections.Generic.IEnumerable<System.Type> Converters { get; }
         public bool EncodeTypeNames { get; }
         public bool PreserveObjectReferences { get; }
