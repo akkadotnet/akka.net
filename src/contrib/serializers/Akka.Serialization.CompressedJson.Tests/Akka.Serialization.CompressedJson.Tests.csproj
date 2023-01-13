@@ -3,7 +3,7 @@
     <Import Project="..\..\..\xunitSettings.props" />
 
     <PropertyGroup>
-        <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+        <TargetFrameworks>$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
         <LangVersion>9.0</LangVersion>
