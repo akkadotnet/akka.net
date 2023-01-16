@@ -9,10 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
@@ -39,8 +37,7 @@ namespace Akka.Serialization
             converters: Enumerable.Empty<Type>(),
             usePooledStringBuilder:true,
             stringBuilderMinSize:2048,
-            stringBuilderMaxSize:32768, 
-            compressed: false);
+            stringBuilderMaxSize:32768);
 
         /// <summary>
         /// Creates a new instance of the <see cref="NewtonSoftJsonSerializerSettings"/> based on a provided <paramref name="config"/>.
@@ -67,8 +64,7 @@ namespace Akka.Serialization
                 stringBuilderMinSize:config.GetInt("pooled-string-builder-minsize", 2048),
                 stringBuilderMaxSize:
                     config.GetInt("pooled-string-builder-maxsize",
-                        32768),
-                compressed: config.GetBoolean("use-compression")
+                        32768)
             );
         }
 
@@ -120,11 +116,6 @@ namespace Akka.Serialization
         public bool UsePooledStringBuilder { get; }
 
         /// <summary>
-        /// If <c>true</c>, serialized data are compressed using GZip to reduce size
-        /// </summary>
-        public bool Compressed { get; }
-
-        /// <summary>
         /// Creates a new instance of the <see cref="NewtonSoftJsonSerializerSettings"/>.
         /// </summary>
         /// <param name="encodeTypeNames">Determines if a special `$type` field should be emitted into serialized JSON. Must be true if corresponding serializer is used as default.</param>
@@ -133,31 +124,7 @@ namespace Akka.Serialization
         /// <param name="usePooledStringBuilder">Determines if string builders will be used from a pool to lower memory usage</param>
         /// <param name="stringBuilderMinSize">Starting size used for pooled string builders if enabled</param>
         /// <param name="stringBuilderMaxSize">Max retained size used for pooled string builders if enabled</param>
-        public NewtonSoftJsonSerializerSettings(
-            bool encodeTypeNames,
-            bool preserveObjectReferences,
-            IEnumerable<Type> converters,
-            bool usePooledStringBuilder,
-            int stringBuilderMinSize,
-            int stringBuilderMaxSize)
-            : this(
-                encodeTypeNames: encodeTypeNames,
-                preserveObjectReferences: preserveObjectReferences,
-                converters: converters,
-                usePooledStringBuilder: usePooledStringBuilder,
-                stringBuilderMinSize: stringBuilderMinSize,
-                stringBuilderMaxSize: stringBuilderMaxSize, 
-                compressed: false)
-        { }
-        
-        public NewtonSoftJsonSerializerSettings(
-            bool encodeTypeNames, 
-            bool preserveObjectReferences,
-            IEnumerable<Type> converters,
-            bool usePooledStringBuilder,
-            int stringBuilderMinSize,
-            int stringBuilderMaxSize,
-            bool compressed)
+        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preserveObjectReferences, IEnumerable<Type> converters, bool usePooledStringBuilder, int stringBuilderMinSize, int stringBuilderMaxSize)
         {
             if (converters == null)
                 throw new ArgumentNullException(nameof(converters), $"{nameof(NewtonSoftJsonSerializerSettings)} requires a sequence of converters.");
@@ -168,7 +135,6 @@ namespace Akka.Serialization
             UsePooledStringBuilder = usePooledStringBuilder;
             StringBuilderMinSize = stringBuilderMinSize;
             StringBuilderMaxSize = stringBuilderMaxSize;
-            Compressed = compressed;
         }
     }
 
@@ -191,8 +157,6 @@ namespace Akka.Serialization
         /// </summary>
         public object Serializer { get { return _serializer; } }
 
-        public bool Compressed { get; }
-        
         /// <summary>
         /// Initializes a new instance of the <see cref="NewtonSoftJsonSerializer" /> class.
         /// </summary>
@@ -253,8 +217,6 @@ namespace Akka.Serialization
             Settings.ContractResolver = new AkkaContractResolver();
 
             _serializer = JsonSerializer.Create(Settings);
-
-            Compressed = settings.Compressed;
         }
 
 
@@ -318,9 +280,9 @@ namespace Akka.Serialization
 
         private byte[] toBinary_NewBuilder(object obj)
         {
-            var data = JsonConvert.SerializeObject(obj, Formatting.None, Settings);
-            var bytes = Encoding.UTF8.GetBytes(data);
-            return Compressed ? Compress(bytes) : bytes;
+            string data = JsonConvert.SerializeObject(obj, Formatting.None, Settings);
+            byte[] bytes = Encoding.UTF8.GetBytes(data);
+            return bytes;
         }
 
         private byte[] toBinary_PooledBuilder(object obj)
@@ -342,8 +304,7 @@ namespace Akka.Serialization
                     {
                         ser.Serialize(jw, obj);
                     }
-                    var bytes = Encoding.UTF8.GetBytes(tw.ToString());
-                    return Compressed ? Compress(bytes) : bytes;
+                    return Encoding.UTF8.GetBytes(tw.ToString());
                 }
             }
             finally
@@ -363,8 +324,8 @@ namespace Akka.Serialization
         /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
-            var data = Encoding.UTF8.GetString(Compressed ? Decompress(bytes) : bytes);
-            var res = JsonConvert.DeserializeObject(data, Settings);
+            string data = Encoding.UTF8.GetString(bytes);
+            object res = JsonConvert.DeserializeObject(data, Settings);
             return TranslateSurrogate(res, this, type);
         }
 
@@ -405,26 +366,6 @@ namespace Akka.Serialization
                 return decimal.Parse(v, NumberFormatInfo.InvariantInfo);
 
             throw new NotSupportedException();
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static byte[] Compress(byte[] data)
-        {
-            using var compressedStream = new MemoryStream();
-            using var compressor = new GZipStream(compressedStream, CompressionMode.Compress);
-            compressor.Write(data, 0, data.Length);
-            compressor.Flush(); // It is critical to flush here
-            return compressedStream.ToArray();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static byte[] Decompress(byte[] raw)
-        {
-            using var compressedStream = new MemoryStream(raw);
-            using var compressor = new GZipStream(compressedStream, CompressionMode.Decompress);
-            using var uncompressedStream = new MemoryStream();
-            compressor.CopyTo(uncompressedStream);
-            return uncompressedStream.ToArray();
         }
 
         /// <summary>

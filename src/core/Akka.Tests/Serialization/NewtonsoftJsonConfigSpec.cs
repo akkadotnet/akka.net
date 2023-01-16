@@ -29,7 +29,6 @@ namespace Akka.Tests.Serialization
                 Assert.Equal(2, serializer.Settings.Converters.Count);
                 Assert.Contains(serializer.Settings.Converters, x => x is DiscriminatedUnionConverter);
                 Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.SurrogateConverter);
-                Assert.False(serializer.Compressed);
             }
         }
 
@@ -41,7 +40,6 @@ namespace Akka.Tests.Serialization
                     serialization-settings.json {
                         preserve-object-references = false
                         encode-type-names = false
-                        use-compression = true
                     }
                 }
             ");
@@ -53,7 +51,6 @@ namespace Akka.Tests.Serialization
                 Assert.Equal(2, serializer.Settings.Converters.Count);
                 Assert.Contains(serializer.Settings.Converters, x => x is DiscriminatedUnionConverter);
                 Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.SurrogateConverter);
-                Assert.True(serializer.Compressed);
             }
         }
 

@@ -26,7 +26,7 @@ using Xunit;
 namespace Akka.Tests.Serialization
 {
     
-    public abstract class SerializationSpecBase : AkkaSpec
+    public class SerializationSpec : AkkaSpec
     {
         public class UntypedContainerMessage : IEquatable<UntypedContainerMessage>
         {
@@ -608,9 +608,26 @@ namespace Akka.Tests.Serialization
                 .Where(ex => ex.Message.Contains("Serializer Id [101] is not one of the internal Akka.NET serializer."));
         }
 
-        public SerializationSpecBase(string config):base(config)
+        public SerializationSpec():base(GetConfig())
         {
         }
+
+        private static string GetConfig() => @"
+            akka.actor {
+                serializers {
+                    dummy = """ + typeof(DummySerializer).AssemblyQualifiedName + @"""
+                    dummy2 = """ + typeof(DummyConfigurableSerializer).AssemblyQualifiedName + @"""
+                }
+
+                serialization-bindings {
+                  ""System.String"" = dummy
+                }
+                serialization-settings {
+                    dummy2 {
+                        test-key = ""test value""
+                    }
+                }
+            }";
 
         public class DummySerializer : Serializer
         {
@@ -690,81 +707,6 @@ namespace Akka.Tests.Serialization
             {
                 public string Value { get; set; }
             }
-        }
-    }
-
-    public class SerializationSpec: SerializationSpecBase
-    {
-        private static string GetConfig() => @"
-akka.actor {
-    serializers {
-        dummy = """ + typeof(DummySerializer).AssemblyQualifiedName + @"""
-        dummy2 = """ + typeof(DummyConfigurableSerializer).AssemblyQualifiedName + @"""
-    }
-
-    serialization-bindings {
-        ""System.String"" = dummy
-    }
-    serialization-settings {
-        dummy2 {
-            test-key = ""test value""
-        }
-    }
-}";
-
-        public SerializationSpec() : base(GetConfig())
-        {
-        }
-
-        [Fact(DisplayName = "Compression must be turned off")]
-        public void SettingTest()
-        {
-            var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerFor(123);
-            serializer.Compressed.Should().BeFalse();
-        }
-    }
-
-    
-    public class CompressedSerializationSpec: SerializationSpecBase
-    {
-        private static string GetConfig() => @"
-akka.actor {
-    serializers {
-        dummy = """ + typeof(DummySerializer).AssemblyQualifiedName + @"""
-        dummy2 = """ + typeof(DummyConfigurableSerializer).AssemblyQualifiedName + @"""
-    }
-
-    serialization-bindings {
-        ""System.String"" = dummy
-    }
-    serialization-settings {
-        dummy2 {
-            test-key = ""test value""
-        }
-        json {
-            use-compression = true
-        }
-    }
-}";
-
-        public CompressedSerializationSpec() : base(GetConfig())
-        {
-        }
-
-        [Fact(DisplayName = "Compression must be turned on")]
-        public void SettingTest()
-        {
-            var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerFor(123);
-            serializer.Compressed.Should().BeTrue();
-            var bytes = serializer.ToBinary(new BigData());
-            bytes.Length.Should().BeLessThan(10 * 1024); // compressed size should be less than 10Kb
-            var deserialized = serializer.FromBinary<BigData>(bytes);
-            deserialized.Message.Should().Be(new string('x', 5 * 1024 * 1024));
-        }
-        
-        private class BigData
-        {
-            public string Message { get; } = new string('x', 5 * 1024 * 1024); // 5 megabyte worth of chars
         }
     }
 }
