@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="IWithUnboundedStash.cs" company="Akka.NET Project">
+// <copyright file="IWithUnrestrictedStash.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -10,11 +10,10 @@ using Akka.Dispatch;
 namespace Akka.Actor
 {
     /// <summary>
-    /// The `IWithUnboundedStash` interface is a version of <see cref="IActorStash"/> that enforces an unbounded stash for you actor.
+    /// A version of <see cref="IActorStash"/> that does not enforce any mailbox type. The proper mailbox has to be configured
+    /// manually, and the mailbox should extend the <see cref="IDequeBasedMessageQueueSemantics"/> marker interface.
     /// </summary>
-    // ReSharper disable once InconsistentNaming
-    public interface IWithUnboundedStash : IWithUnrestrictedStash, IRequiresMessageQueue<IUnboundedDequeBasedMessageQueueSemantics>
-    {
+    public interface IWithUnrestrictedStash : IActorStash
+    { 
     }
 }
-
