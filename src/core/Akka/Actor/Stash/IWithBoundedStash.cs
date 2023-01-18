@@ -17,8 +17,8 @@ namespace Akka.Actor
     /// <code>public IStash Stash { get; set; }</code>
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    [Obsolete("Bounded stashing is not yet implemented. Unbounded stashing will be used instead [0.7.0]")]
-    public interface IWithBoundedStash : IActorStash, IRequiresMessageQueue<IBoundedDequeBasedMessageQueueSemantics>
+    [Obsolete("Use `IWithStash` with a configured BoundedDeque-based mailbox instead.")]
+    public interface IWithBoundedStash : IWithUnrestrictedStash, IRequiresMessageQueue<IBoundedDequeBasedMessageQueueSemantics>
     { }
 }
 
