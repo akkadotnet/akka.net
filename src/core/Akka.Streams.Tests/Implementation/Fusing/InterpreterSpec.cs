@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterpreterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.Cancel();
-                    lastEvents().Should().BeEquivalentTo(new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new Cancel(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
                 });
         }
 
@@ -194,7 +194,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().BeEquivalentTo(new OnNext(1), new Cancel(), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete());
                 });
         }
 
@@ -224,7 +224,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(2);
-                    lastEvents().Should().BeEquivalentTo(new OnNext(3), new Cancel(), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(3), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete());
                 });
         }
 
@@ -274,7 +274,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.Cancel();
-                    lastEvents().Should().BeEquivalentTo(new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new Cancel(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
                 });
         }
 
@@ -355,7 +355,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new OnNext(4), new RequestOne());
 
                     downstream.Cancel();
-                    lastEvents().Should().BeEquivalentTo(new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new Cancel(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
                 });
         }
 
@@ -424,7 +424,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new RequestOne(), new OnNext(4));
 
                     downstream.Cancel();
-                    lastEvents().Should().BeEquivalentTo(new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new Cancel(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
                 });
         }
 
@@ -502,7 +502,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new OnNext(2));
 
                     downstream.Cancel();
-                    lastEvents().Should().BeEquivalentTo(new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new Cancel(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance));
                 });
         }
 
@@ -662,7 +662,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().BeEquivalentTo(new Cancel(), new OnNext(1), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnNext(1), new OnComplete());
                 });
         }
 
@@ -700,7 +700,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                         .ExpectOne(() =>
                         {
                             downstream.Cancel();
-                            lastEvents().Should().BeEquivalentTo(new Cancel());
+                            lastEvents().Should().BeEquivalentTo(new Cancel(new NotSupportedException("It is not allowed to call AbsorbTermination() from OnDownstreamFinish.")));
                         });
                 });
         }
@@ -835,7 +835,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 return context.Pull();
             }
 
-            public override ITerminationDirective OnDownstreamFinish(IContext<T> context)
+            public override ITerminationDirective OnDownstreamFinish(IContext<T> context, Exception cause)
             {
                 return context.AbsorbTermination();
             }

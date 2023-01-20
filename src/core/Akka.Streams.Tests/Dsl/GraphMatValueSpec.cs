@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphMatValueSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -208,7 +208,7 @@ namespace Akka.Streams.Tests.Dsl
             });
             var r = RunnableGraph.FromGraph(GraphDsl.Create(Sink.Ignore<int>(), (b, sink) =>
             {
-                var source = Source.From(Enumerable.Range(1, 10)).MapMaterializedValue(_ => Task.FromResult(0));
+                var source = Source.From(Enumerable.Range(1, 10)).MapMaterializedValue(_ => Task.FromResult(Done.Instance));
                 b.Add(g);
                 b.From(source).To(sink);
                 return ClosedShape.Instance;

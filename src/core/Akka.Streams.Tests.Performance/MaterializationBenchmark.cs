@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MaterializationBenchmark.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using NBench;
 
 namespace Akka.Streams.Tests.Performance
@@ -23,8 +23,7 @@ namespace Akka.Streams.Tests.Performance
         [PerfSetup]
         public void Setup(BenchmarkContext context)
         {
-            _actorSystem = ActorSystem.Create("MaterializationBenchmark",
-                ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf"));
+            _actorSystem = ActorSystem.Create("MaterializationBenchmark", StreamTestDefaultMailbox.DefaultConfig);
             _actorSystem.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             _materializerSettings =
                 ActorMaterializerSettings.Create(_actorSystem).WithDispatcher("akka.test.stream-dispatcher");

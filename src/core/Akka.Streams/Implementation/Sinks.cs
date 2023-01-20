@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Sinks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -431,71 +431,6 @@ namespace Akka.Streams.Implementation
             var subscriberRef = ActorMaterializerHelper.Downcast(context.Materializer).ActorOf(context, _props);
             materializer = subscriberRef;
             return ActorSubscriber.Create<TIn>(subscriberRef);
-        }
-    }
-
-    /// <summary>
-    /// INTERNAL API
-    /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    [InternalApi]
-    public sealed class ActorRefSink<TIn> : SinkModule<TIn, NotUsed>
-    {
-        private readonly IActorRef _ref;
-        private readonly object _onCompleteMessage;
-        private readonly Attributes _attributes;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="ref">TBD</param>
-        /// <param name="onCompleteMessage">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="shape">TBD</param>
-        public ActorRefSink(IActorRef @ref, object onCompleteMessage, Attributes attributes, SinkShape<TIn> shape)
-            : base(shape)
-        {
-            _ref = @ref;
-            _onCompleteMessage = onCompleteMessage;
-            _attributes = attributes;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override Attributes Attributes => _attributes;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
-        public override IModule WithAttributes(Attributes attributes)
-            => new ActorRefSink<TIn>(_ref, _onCompleteMessage, attributes, AmendShape(attributes));
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
-        protected override SinkModule<TIn, NotUsed> NewInstance(SinkShape<TIn> shape)
-            => new ActorRefSink<TIn>(_ref, _onCompleteMessage, _attributes, shape);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
-        public override object Create(MaterializationContext context, out NotUsed materializer)
-        {
-            var actorMaterializer = ActorMaterializerHelper.Downcast(context.Materializer);
-            var effectiveSettings = actorMaterializer.EffectiveSettings(context.EffectiveAttributes);
-            var subscriberRef = actorMaterializer.ActorOf(context,
-                ActorRefSinkActor.Props(_ref, effectiveSettings.MaxInputBufferSize, _onCompleteMessage));
-
-            materializer = null;
-            return new ActorSubscriberImpl<TIn>(subscriberRef);
         }
     }
 
@@ -1053,7 +988,7 @@ namespace Akka.Streams.Implementation
                     }));
 
                 subOutlet.SetHandler(new LambdaOutHandler(
-                    () =>
+                    onPull: () =>
                     {
                         if (firstElementPushed)
                             Pull(_stage.In);
@@ -1071,9 +1006,9 @@ namespace Akka.Streams.Implementation
                             }
                         }
                     },
-                    () =>
+                    onDownstreamFinish: cause =>
                     {
-                        if (!IsClosed(_stage.In)) Cancel(_stage.In);
+                        if (!IsClosed(_stage.In)) Cancel(_stage.In, cause);
                         MaybeCompleteStage();
                     }));
 

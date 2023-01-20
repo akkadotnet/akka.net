@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DowningProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,20 +45,18 @@ namespace Akka.Cluster
     public sealed class NoDowning : IDowningProvider
     {
         private readonly ActorSystem _system;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        public NoDowning(ActorSystem system)
+        private readonly Cluster _cluster;
+        
+        public NoDowning(ActorSystem system, Cluster cluster)
         {
             _system = system;
+            _cluster = cluster;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public TimeSpan DownRemovalMargin => Cluster.Get(_system).Settings.DownRemovalMargin;
+        public TimeSpan DownRemovalMargin => _cluster.Settings.DownRemovalMargin;
 
         /// <summary>
         /// TBD
@@ -72,20 +70,25 @@ namespace Akka.Cluster
     internal static class DowningProvider
     {
         /// <summary>
-        /// TBD
+        /// Loads the <see cref="IDowningProvider"/> from configuration and instantiates it via reflection.
         /// </summary>
         /// <param name="downingProviderType">TBD</param>
         /// <param name="system">TBD</param>
+        /// <param name="cluster">The current cluster object.</param>
         /// <exception cref="ConfigurationException">
         /// This exception is thrown when the specified <paramref name="downingProviderType"/> does not implement <see cref="IDowningProvider"/>.
         /// </exception>
-        /// <returns>TBD</returns>
-        public static IDowningProvider Load(Type downingProviderType, ActorSystem system)
+        /// <returns>The activated <see cref="IDowningProvider"/></returns>
+        /// <remarks>
+        /// Required to pass in <see cref="Akka.Cluster.Cluster"/> manually here since https://github.com/akkadotnet/akka.net/issues/5962
+        /// can cause the SBR startup to fail when running with the `channel-executor`.
+        /// </remarks>
+        public static IDowningProvider Load(Type downingProviderType, ActorSystem system, Cluster cluster)
         {
             var extendedSystem = system as ExtendedActorSystem;
             try
             {
-                return (IDowningProvider)Activator.CreateInstance(downingProviderType, extendedSystem);
+                return (IDowningProvider)Activator.CreateInstance(downingProviderType, extendedSystem, cluster);
             }
             catch (Exception e)
             {

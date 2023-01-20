@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnfoldFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -57,7 +57,8 @@ namespace Akka.Streams.Dsl
             }
         }
 
-        public void OnDownstreamFinish()
+        // TODO: Is this correct? check JVM please
+        public void OnDownstreamFinish(Exception cause)
         {
             // Do Nothing until `timeout` to try and intercept completion as downstream,
             // but cancel stream after timeout if inlet is not closed to prevent deadlock.

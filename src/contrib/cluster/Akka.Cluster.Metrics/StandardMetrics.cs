@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StandardMetrics.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ namespace Akka.Cluster.Metrics
     public static class StandardMetrics
     {
         /// <summary>
-        /// Total memory allocated to the currently running process (<see cref="GC.GetTotalMemory"/>)
+        /// Total memory allocated to the currently running process (<see cref="Process.WorkingSet64"/>)
         /// </summary>
         public const string MemoryUsed = "MemoryUsed";
         /// <summary>
@@ -84,7 +84,7 @@ namespace Akka.Cluster.Metrics
             /// </summary>
             public long Timestamp { get; }
             /// <summary>
-            /// The current process allocated memory (in bytes) (<see cref="GC.GetTotalMemory"/>)
+            /// The current process allocated memory (in bytes) (<see cref="Process.WorkingSet64"/>)
             /// </summary>
             public double Used { get; }
             /// <summary>

@@ -70,3 +70,12 @@ message ExceptionData {
   ExceptionData innerException = 5;
   map<string, Payload> customFields = 6;
 }
+
+message StatusSuccess{
+  Payload status = 1;
+}
+
+message StatusFailure{
+  ExceptionData cause = 1;
+  Payload state = 2;
+}

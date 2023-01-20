@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DurablePruningSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,10 +12,10 @@ using Akka.Actor;
 using Akka.Cluster;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.DistributedData.Tests.MultiNode
 {

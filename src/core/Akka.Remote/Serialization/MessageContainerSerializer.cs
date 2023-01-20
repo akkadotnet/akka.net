@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageContainerSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ using System;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
-using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
@@ -108,7 +107,7 @@ namespace Akka.Remote.Serialization
             return new ActorSelectionMessage(message, elements);
         }
 
-        private Proto.Msg.Selection BuildPattern(string matcher, Proto.Msg.Selection.Types.PatternType tpe)
+        private static Proto.Msg.Selection BuildPattern(string matcher, Proto.Msg.Selection.Types.PatternType tpe)
         {
             var selection = new Proto.Msg.Selection { Type = tpe };
             if (matcher != null)

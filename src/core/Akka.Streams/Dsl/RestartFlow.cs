@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="Restart.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="RestartFlow.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using Akka.Pattern;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
+using Akka.Util;
 
 namespace Akka.Streams.Dsl
 {
@@ -326,10 +327,10 @@ namespace Akka.Streams.Dsl
 
             SetHandler(Out,
                 onPull: () => sinkIn.Pull(),
-                onDownstreamFinish: () =>
+                onDownstreamFinish: cause =>
                 {
                     _finishing = true;
-                    sinkIn.Cancel();
+                    sinkIn.Cancel(cause);
                 });
 
             return sinkIn;
@@ -349,10 +350,10 @@ namespace Akka.Streams.Dsl
                             Pull(In);
                     }
                 },
-                onDownstreamFinish: () =>
+                onDownstreamFinish: cause =>
                 {
                     if (_finishing || MaxRestartsReached() || _onlyOnFailures)
-                        Cancel(In);
+                        Cancel(In, cause);
                     else
                     {
                         ScheduleRestartTimer();
@@ -471,7 +472,8 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : TimerGraphStageLogic
         {
             private readonly DelayCancellationStage<T> _stage;
-            
+            private Option<Exception> _cause = Option<Exception>.None;
+
             public Logic(DelayCancellationStage<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
@@ -484,9 +486,9 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// We should really. port the Cause parameter functionality for the OnDownStreamFinished delegate
             /// </summary>
-            private void OnDownStreamFinished()
+            private void OnDownStreamFinished(Exception cause)
             {
-                //_cause = new Option<Exception>(/*cause*/);
+                _cause = cause;
                 ScheduleOnce("CompleteState", _stage._delay);
                 SetHandler(_stage.Inlet, onPush:DoNothing);
             }
@@ -494,15 +496,10 @@ namespace Akka.Streams.Dsl
             protected internal override void OnTimer(object timerKey)
             {
                 Log.Debug($"Stage was cancelled after delay of {_stage._delay}");
-                CompleteStage();
-                
-                // this code will replace the CompleteStage() call once we port the Exception Cause parameter for the OnDownStreamFinished delegate
-                /*if(_cause != null)
-                    FailStage(_cause.Value); //<-- is this the same as cancelStage ?
+                if(_cause.HasValue)
+                    CancelStage(_cause.Value);
                 else
-                {
                     throw new IllegalStateException("Timer hitting without first getting a cancel cannot happen");
-                }*/
             }
         }
     }

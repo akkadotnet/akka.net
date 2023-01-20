@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettyTransportSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,9 +76,11 @@ namespace Akka.Remote.Transport.DotNetty
 
             var batchWriterSettings = new BatchWriterSettings(config.GetConfig("batching"));
 
+            var enableSsl = config.GetBoolean("enable-ssl", false);
+
             return new DotNettyTransportSettings(
                 transportMode: transportMode == "tcp" ? TransportMode.Tcp : TransportMode.Udp,
-                enableSsl: config.GetBoolean("enable-ssl", false),
+                enableSsl: enableSsl,
                 connectTimeout: config.GetTimeSpan("connection-timeout", TimeSpan.FromSeconds(15)),
                 hostname: host,
                 publicHostname: !string.IsNullOrEmpty(publicHost) ? publicHost : host,
@@ -87,7 +89,7 @@ namespace Akka.Remote.Transport.DotNetty
                 serverSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("server-socket-worker-pool")),
                 clientSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("client-socket-worker-pool")),
                 maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size", null)) ?? 128000,
-                ssl: config.HasPath("ssl") ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
+                ssl: config.HasPath("ssl") && enableSsl ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
                 dnsUseIpv6: config.GetBoolean("dns-use-ipv6", false),
                 tcpReuseAddr: ResolveTcpReuseAddrOption(config.GetString("tcp-reuse-addr", "off-for-windows")),
                 tcpKeepAlive: config.GetBoolean("tcp-keepalive", true),
@@ -292,11 +294,17 @@ namespace Akka.Remote.Transport.DotNetty
         public static SslSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
+                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.ssl`)");
 
-            if (config.GetBoolean("certificate.use-thumprint-over-file", false))
+            if (config.GetBoolean("certificate.use-thumprint-over-file", false)
+                || config.GetBoolean("certificate.use-thumbprint-over-file", false))
             {
-                return new SslSettings(config.GetString("certificate.thumbprint", null),
+                var thumbprint = config.GetString("certificate.thumbprint", null) 
+                                 ?? config.GetString("certificate.thumpbrint", null);
+                if (string.IsNullOrWhiteSpace(thumbprint))
+                    throw new Exception("`akka.remote.dot-netty.ssl.certificate.use-thumbprint-over-file` is set to true but `akka.remote.dot-netty.ssl.certificate.thumbprint` is null or empty");
+                
+                return new SslSettings(thumbprint,
                     config.GetString("certificate.store-name", null),
                     ParseStoreLocationName(config.GetString("certificate.store-location", null)),
                         config.GetBoolean("suppress-validation", false));
@@ -366,7 +374,7 @@ namespace Akka.Remote.Transport.DotNetty
                 if (find.Count == 0)
                 {
                     throw new ArgumentException(
-                        "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.thumpbrint`. Also check akka.remote.dot-netty.tcp.ssl.certificate.store-name and akka.remote.dot-netty.tcp.ssl.certificate.store-location)");
+                        "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.thumbprint`. Also check `akka.remote.dot-netty.tcp.ssl.certificate.store-name` and `akka.remote.dot-netty.tcp.ssl.certificate.store-location`)");
                 }
 
                 Certificate = find[0];

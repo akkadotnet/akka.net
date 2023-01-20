@@ -1,17 +1,21 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamTestKitSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.TestKit.Tests
 {
@@ -27,194 +31,226 @@ namespace Akka.Streams.TestKit.Tests
         private Exception Ex() => new TestException("Boom!");
 
         [Fact]
-        public void TestSink_Probe_ToStrict()
+        public async Task TestSink_Probe_ToStrictAsync()
         {
-            Source.From(Enumerable.Range(1, 4))
+            var result = await Source.From(Enumerable.Range(1, 4))
                 .RunWith(this.SinkProbe<int>(), Materializer)
-                .ToStrict(TimeSpan.FromMilliseconds(300))
-                .Should()
-                .Equal(1, 2, 3, 4);
+                .AsyncBuilder()
+                .ToStrictAsync(TimeSpan.FromMilliseconds(300))
+                .ToListAsync();
+            result.Should().Equal(1, 2, 3, 4);
         }
 
         [Fact]
-        public void TestSink_Probe_ToStrict_with_failing_source()
+        public async Task TestSink_Probe_ToStrictAsync_with_failing_source()
         {
-            var error = Record.Exception(() =>
-            {
-                Source.From(Enumerable.Range(1, 3).Select(i =>
+            var err = await Awaiting(async () =>
                 {
-                    if (i == 3)
-                        throw Ex();
-                    return i;
-                })).RunWith(this.SinkProbe<int>(), Materializer)
-                    .ToStrict(TimeSpan.FromMilliseconds(300));
-            });
+                    await Source.From(Enumerable.Range(1, 3).Select(i =>
+                        {
+                            if (i == 3)
+                                throw Ex();
+                            return i;
+                        })).RunWith(this.SinkProbe<int>(), Materializer)
+                        .AsyncBuilder()
+                        .ToStrictAsync(TimeSpan.FromMilliseconds(300))
+                        .ToListAsync();
+                })
+                .Should().ThrowAsync<ArgumentException>();
 
+            var error = err.Subject.First();
             var aggregateException = error.InnerException;
             aggregateException.InnerException.Message.Should().Contain("Boom!");
             error.Message.Should().Contain("1, 2");
         }
 
         [Fact]
-        public void TestSink_Probe_ToStrict_when_subscription_was_already_obtained()
+        public async Task TestSink_Probe_ToStrictAsync_when_subscription_was_already_obtained()
         {
-            var p = Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer);
-            p.ExpectSubscription();
-            p.ToStrict(TimeSpan.FromMilliseconds(300)).Should().Equal(1, 2, 3, 4);
+            var result = await Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+                .AsyncBuilder()
+                .EnsureSubscription()
+                .ToStrictAsync(3.Seconds())
+                .ToListAsync();
+            result.Should().Equal(1, 2, 3, 4);
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectNextOrError_with_right_element()
+        public async Task TestSink_Probe_ExpectNextOrErrorAsync_with_right_element()
         {
-            Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+            await Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+                .AsyncBuilder()
                 .Request(4)
-                .ExpectNextOrError(1, Ex());
+                .ExpectNextOrError(1, Ex())
+                .ExecuteAsync();
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectNextOrError_with_right_exception()
+        public async Task TestSink_Probe_ExpectNextOrErrorAsync_with_right_exception()
         {
-            Source.Failed<int>(Ex()).RunWith(this.SinkProbe<int>(), Materializer)
+            await Source.Failed<int>(Ex()).RunWith(this.SinkProbe<int>(), Materializer)
+                .AsyncBuilder()
                 .Request(4)
-                .ExpectNextOrError(1, Ex());
+                .ExpectNextOrError(1, Ex())
+                .ExecuteAsync();
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectNextOrError_fail_if_the_next_element_is_not_the_expected_one()
+        public async Task TestSink_Probe_ExpectNextOrErrorAsync_fail_if_the_next_element_is_not_the_expected_one()
         {
-            Record.Exception(() =>
+            await Awaiting(async () =>
             {
-                Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+                await Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+                    .AsyncBuilder()
                     .Request(4)
-                    .ExpectNextOrError(100, Ex());
-            }).Message.Should().Contain("OnNext(100)");
+                    .ExpectNextOrError(100, Ex())
+                    .ExecuteAsync();
+            }).Should().ThrowAsync<TrueException>().WithMessage("*OnNext(100)*");
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectError()
+        public async Task TestSink_Probe_ExpectErrorAsync()
         {
-            Source.Failed<int>(Ex()).RunWith(this.SinkProbe<int>(), Materializer)
+            var ex = await Source.Failed<int>(Ex()).RunWith(this.SinkProbe<int>(), Materializer)
+                .AsyncBuilder()
                 .Request(1)
-                .ExpectError().Should().Be(Ex());
+                .ExpectErrorAsync();
+            ex.Should().Be(Ex());
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectError_fail_if_no_error_signalled()
+        public async Task TestSink_Probe_ExpectErrorAsync_fail_if_no_error_signalled()
         {
-            Record.Exception(() =>
+            await Awaiting(async () =>
             {
-                Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+                await Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+                    .AsyncBuilder()
                     .Request(1)
-                    .ExpectError();
-            }).Message.Should().Contain("OnNext");
+                    .ExpectErrorAsync();
+            }).Should().ThrowAsync<TrueException>().WithMessage("*OnNext(1)*");
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectComplete_should_fail_if_error_signalled()
+        public async Task TestSink_Probe_ExpectCompleteAsync_should_fail_if_error_signalled()
         {
-            Record.Exception(() =>
+            await Awaiting(async () =>
             {
-                Source.Failed<int>(Ex()).RunWith(this.SinkProbe<int>(), Materializer)
+                await Source.Failed<int>(Ex()).RunWith(this.SinkProbe<int>(), Materializer)
+                    .AsyncBuilder()
                     .Request(1)
-                    .ExpectComplete();
-            }).Message.Should().Contain("OnError");
+                    .ExpectComplete()
+                    .ExecuteAsync();
+            }).Should().ThrowAsync<TrueException>().WithMessage("*OnError(Boom!)*");
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectComplete_should_fail_if_next_element_signalled()
+        public async Task TestSink_Probe_ExpectCompleteAsync_should_fail_if_next_element_signalled()
         {
-            Record.Exception(() =>
+            await Awaiting(async () =>
             {
-                Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+                await Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+                    .AsyncBuilder()
                     .Request(1)
-                    .ExpectComplete();
-            }).Message.Should().Contain("OnNext");
+                    .ExpectComplete()
+                    .ExecuteAsync();
+            }).Should().ThrowAsync<TrueException>().WithMessage("*OnNext(1)*");
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectNextOrComplete_with_right_element()
+        public async Task TestSink_Probe_ExpectNextOrCompleteAsync_with_right_element()
         {
-            Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(4)
-                .ExpectNextOrComplete(1);
-        }
-
-        [Fact]
-        public void TestSink_Probe_ExpectNextOrComplete_with_completion()
-        {
-            Source.Single(1).RunWith(this.SinkProbe<int>(), Materializer)
+            await Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+                .AsyncBuilder()
                 .Request(4)
                 .ExpectNextOrComplete(1)
-                .ExpectNextOrComplete(1337);
+                .ExecuteAsync();
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectNextPredicate_should_pass_with_right_element()
+        public async Task TestSink_Probe_ExpectNextOrCompleteAsync_with_completion()
         {
-            Source.Single(1)
-                .RunWith(this.SinkProbe<int>(), Materializer)
+            await Source.Single(1).RunWith(this.SinkProbe<int>(), Materializer)
+                .AsyncBuilder()
+                .Request(4)
+                .ExpectNextOrComplete(1)
+                .ExpectNextOrComplete(1337)
+                .ExecuteAsync();
+        }
+
+        [Fact]
+        public async Task TestSink_Probe_ExpectNextAsync_should_pass_with_right_element()
+        {
+            var result = await Source.Single(1).RunWith(this.SinkProbe<int>(), Materializer)
+                .AsyncBuilder()
                 .Request(1)
-                .ExpectNext<int>(i => i == 1)
-                .ShouldBe(1);
+                .ExpectNextAsync<int>(i => i == 1);
+            result.ShouldBe(1);
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectNextPredicate_should_fail_with_wrong_element()
+        public async Task TestSink_Probe_ExpectNextPredicateAsync_should_fail_with_wrong_element()
         {
-            Record.Exception(() =>
+            await Awaiting(async () =>
             {
-                Source.Single(1)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
+                await Source.Single(1).RunWith(this.SinkProbe<int>(), Materializer)
+                    .AsyncBuilder()
                     .Request(1)
-                    .ExpectNext<int>(i => i == 2);
-            }).Message.ShouldStartWith("Got a message of the expected type");
+                    .ExpectNextAsync<int>(i => i == 2);
+            }).Should().ThrowAsync<TrueException>().WithMessage("Got a message of the expected type*");
         }
 
         [Fact]
-        public void TestSink_Probe_MatchNext_should_pass_with_right_element()
+        public async Task TestSink_Probe_MatchNextAsync_should_pass_with_right_element()
         {
-            Source.Single(1)
-                .RunWith(this.SinkProbe<int>(), Materializer)
+            await Source.Single(1).RunWith(this.SinkProbe<int>(), Materializer)
+                .AsyncBuilder()
                 .Request(1)
-                .MatchNext<int>(i => i == 1);
+                .MatchNext<int>(i => i == 1)
+                .ExecuteAsync();
         }
 
         [Fact]
-        public void TestSink_Probe_MatchNext_should_allow_to_chain_test_methods()
+        public async Task TestSink_Probe_MatchNextAsync_should_allow_to_chain_test_methods()
         {
-            Source.From(Enumerable.Range(1, 2))
-                .RunWith(this.SinkProbe<int>(), Materializer)
+            await Source.From(Enumerable.Range(1, 2)).RunWith(this.SinkProbe<int>(), Materializer)
+                .AsyncBuilder()
                 .Request(2)
                 .MatchNext<int>(i => i == 1)
-                .ExpectNext(2);
+                .ExpectNext(2)
+                .ExecuteAsync();
         }
 
         [Fact]
-        public void TestSink_Probe_MatchNext_should_fail_with_wrong_element()
+        public async Task TestSink_Probe_MatchNextAsync_should_fail_with_wrong_element()
         {
-            Record.Exception(() =>
+            await Awaiting(async () =>
             {
-                Source.Single(1)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
+                await Source.Single(1).RunWith(this.SinkProbe<int>(), Materializer)
+                    .AsyncBuilder()
                     .Request(1)
-                    .MatchNext<int>(i => i == 2);
-            }).Message.ShouldStartWith("Got a message of the expected type");
+                    .MatchNext<int>(i => i == 2)
+                    .ExecuteAsync();
+            }).Should().ThrowAsync<TrueException>().WithMessage("Got a message of the expected type*");
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectNextN_given_a_number_of_elements()
+        public async Task TestSink_Probe_ExpectNextNAsync_given_a_number_of_elements()
         {
-            Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+            var result = await Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
                 .Request(4)
-                .ExpectNextN(4).Should().Equal(1, 2, 3, 4);
+                .ExpectNextNAsync(4)
+                .ToListAsync();
+            result.Should().Equal(1, 2, 3, 4);
         }
 
         [Fact]
-        public void TestSink_Probe_ExpectNextN_given_specific_elements()
+        public async Task TestSink_Probe_ExpectNextNAsync_given_specific_elements()
         {
-            Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+            await Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), Materializer)
+                .AsyncBuilder()
                 .Request(4)
-                .ExpectNextN(new[] {1, 2, 3, 4});
+                .ExpectNextN(new[] { 1, 2, 3, 4 })
+                .ExecuteAsync();
         }
     }
 }

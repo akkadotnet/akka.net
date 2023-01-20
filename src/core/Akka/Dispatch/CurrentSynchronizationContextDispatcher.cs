@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CurrentSynchronizationContextDispatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,7 +38,8 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="config">TBD</param>
         /// <param name="prerequisites">TBD</param>
-        public CurrentSynchronizationContextExecutorServiceFactory(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
+        public CurrentSynchronizationContextExecutorServiceFactory(Config config,
+            IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
         {
         }
     }
@@ -60,11 +61,12 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="config">TBD</param>
         /// <param name="prerequisites">TBD</param>
-        public CurrentSynchronizationContextDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
+        public CurrentSynchronizationContextDispatcherConfigurator(Config config,
+            IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
-
-            _executorServiceConfigurator = new CurrentSynchronizationContextExecutorServiceFactory(config, prerequisites);
+            _executorServiceConfigurator =
+                new CurrentSynchronizationContextExecutorServiceFactory(config, prerequisites);
             // We don't bother trying to support any other type of executor here. PinnedDispatcher doesn't support them
         }
 
@@ -99,7 +101,9 @@ namespace Akka.Dispatch
         /// <param name="throughputDeadlineTime">TBD</param>
         /// <param name="executorServiceFactory">TBD</param>
         /// <param name="shutdownTimeout">TBD</param>
-        public CurrentSynchronizationContextDispatcher(MessageDispatcherConfigurator configurator, string id, int throughput, long? throughputDeadlineTime, ExecutorServiceFactory executorServiceFactory, TimeSpan shutdownTimeout) 
+        public CurrentSynchronizationContextDispatcher(MessageDispatcherConfigurator configurator, string id,
+            int throughput, long? throughputDeadlineTime, ExecutorServiceFactory executorServiceFactory,
+            TimeSpan shutdownTimeout)
             : base(configurator, id, throughput, throughputDeadlineTime, executorServiceFactory, shutdownTimeout)
         {
             /*
@@ -113,8 +117,14 @@ namespace Akka.Dispatch
         {
             public void Run()
             {
+            }
+
+#if !NETSTANDARD
+            public void Execute()
+            {
                 
             }
+#endif
         }
 
         private volatile ActorCell _owner;
@@ -129,7 +139,8 @@ namespace Akka.Dispatch
         internal override void Register(ActorCell actor)
         {
             var current = _owner;
-            if (current != null && actor != current) throw new InvalidOperationException($"Cannot register to anyone but {_owner}");
+            if (current != null && actor != current)
+                throw new InvalidOperationException($"Cannot register to anyone but {_owner}");
             _owner = actor;
             base.Register(actor);
         }
@@ -145,4 +156,3 @@ namespace Akka.Dispatch
         }
     }
 }
-

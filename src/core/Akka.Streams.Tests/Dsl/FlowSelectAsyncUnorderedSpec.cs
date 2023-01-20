@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSelectAsyncUnorderedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,9 +15,9 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys);
         }
 
-        [Fact(Skip ="Racy in Linux")]
+        [WindowsFact(Skip ="Racy in Linux")]
         public void A_Flow_with_SelectAsyncUnordered_must_produce_task_elements_in_the_order_they_are_ready()
         {
             this.AssertAllStagesStopped(() =>
@@ -71,7 +71,7 @@ namespace Akka.Streams.Tests.Dsl
             
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_requested_elements()
         {
             var probe = CreateTestProbe();
@@ -97,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectNoMsg(TimeSpan.Zero);
             sub.Request(1);
             var got = new List<int> {c.ExpectNext()};
-            probe.ExpectMsgAllOf(1, 2, 3, 4, 5);
+            probe.ExpectMsgAllOf(new []{ 1, 2, 3, 4, 5 });
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             sub.Request(25);
             probe.ExpectMsgAllOf(Enumerable.Range(6, 15).ToArray());
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
             c.ExpectComplete();
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_Flow_with_SelectAsyncUnordered_must_signal_task_failure()
         {
             this.AssertAllStagesStopped(() =>
@@ -328,7 +328,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy on AzureDevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_configured()
         {
             this.AssertAllStagesStopped(() =>

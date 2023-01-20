@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterpreterStressSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -103,7 +103,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                 upstream.OnNext(0);
-                lastEvents().Should().BeEquivalentTo(new OnNext(0 + ChainLength), new Cancel(), new OnComplete());
+                lastEvents().Should().BeEquivalentTo(new OnNext(0 + ChainLength), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete());
 
                 tstamp.Stop();
                 var time = tstamp.Elapsed.TotalSeconds;
@@ -125,7 +125,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                 upstream.OnNext(0);
-                lastEvents().Should().BeEquivalentTo(new OnNext(0), new Cancel(), new OnComplete());
+                lastEvents().Should().BeEquivalentTo(new OnNext(0), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete());
             });
         }
 

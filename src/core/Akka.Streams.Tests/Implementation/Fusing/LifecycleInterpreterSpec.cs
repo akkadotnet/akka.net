@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LifecycleInterpreterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using OnError = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.OneBoundedSetup.OnError;
@@ -284,7 +284,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>
             {
                 var events = lastEvents().ToArray();
-                events[0].Should().Be(new Cancel());
+                events[0].Should().Be(new Cancel(new TestException("Boom!")));
                 events[1].Should().BeOfType<OnError>();
                 ((OnError) events[1]).Cause.Should().BeOfType<TestException>();
                 ((OnError) events[1]).Cause.Message.Should().Be("Boom!");
@@ -322,7 +322,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
             {
                 var events = lastEvents().ToArray();
-                events[0].Should().Be(new Cancel());
+                events[0].Should().Be(new Cancel(new TestException("Boom!")));
                 events[1].Should().BeOfType<OnError>();
                 ((OnError)events[1]).Cause.Should().BeOfType<TestException>();
                 ((OnError)events[1]).Cause.Message.Should().Be("Boom!");

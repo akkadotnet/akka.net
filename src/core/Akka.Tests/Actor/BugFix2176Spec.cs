@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BugFix2176Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -55,17 +56,17 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Fix2176_Constructor_Should_create_valid_child_actor()
+        public async Task Fix2176_Constructor_Should_create_valid_child_actor()
         {
             var actor = Sys.ActorOf(Props.Create(() => new Actor1NonAsync(TestActor)), "actor1");
-            ExpectMsg("started");
+            await ExpectMsgAsync("started");
         }
 
         [Fact]
-        public void Fix2176_RunTask_Should_create_valid_child_actor()
+        public async Task Fix2176_RunTask_Should_create_valid_child_actor()
         {
             var actor = Sys.ActorOf(Props.Create(() => new Actor1(TestActor)), "actor1");
-            ExpectMsg("started");
+            await ExpectMsgAsync("started");
         }
     }
 }

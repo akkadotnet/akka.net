@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Settings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -107,6 +107,7 @@ namespace Akka.Actor
 
             SerializeAllMessages = Config.GetBoolean("akka.actor.serialize-messages", false);
             SerializeAllCreators = Config.GetBoolean("akka.actor.serialize-creators", false);
+            EmitActorTelemetry = Config.GetBoolean("akka.actor.telemetry.enabled", false);
 
             LogLevel = Config.GetString("akka.loglevel", null);
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel", null);
@@ -242,6 +243,17 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [serialize all creators]; otherwise, <c>false</c>.</value>
         public bool SerializeAllCreators { get; private set; }
+        
+        /// <summary>
+        /// When set to <c>true</c>, all actors will emit <see cref="IActorTelemetryEvent"/>s when they are created, stopped, or restarted.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>false</c>.
+        /// </remarks>
+        /// <code>
+        /// akka.actor.telemetry.enabled = on
+        /// </code>
+        public bool EmitActorTelemetry { get; }
 
         /// <summary>
         ///     Gets the default timeout for <see cref="Futures.Ask(ICanTell, object, TimeSpan?)">Futures.Ask</see> calls.

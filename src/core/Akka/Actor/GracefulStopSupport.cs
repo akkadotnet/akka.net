@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GracefulStopSupport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -67,27 +67,22 @@ namespace Akka.Actor
             {
                 if (t.Status == TaskStatus.RanToCompletion)
                 {
-                    var returnResult = false;
-                    PatternMatch.Match(t.Result)
-                        .With<Terminated>(terminated =>
-                        {
-                            returnResult = (terminated.ActorRef.Path.Equals(target.Path));
-                        })
-                        .Default(m =>
-                        {
+                    switch (t.Result)
+                    {
+                        case Terminated terminated:
+                            return terminated.ActorRef.Path.Equals(target.Path);
+                        default:
                             internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
-                            returnResult = false;
-                        });
-                    return returnResult;
+                            return false;
+                        
+                    }
                 }
-                else
-                {
-                    internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
-                    if (t.Status == TaskStatus.Canceled)
-                        throw new TaskCanceledException();
-                    else
-                        throw t.Exception;
-                }
+                
+                internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
+                if (t.Status == TaskStatus.Canceled)
+                    throw new TaskCanceledException();
+                
+                throw t.Exception;
             }, TaskContinuationOptions.ExecuteSynchronously);
         }
     }

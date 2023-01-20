@@ -1,25 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\common.props" />
+    <Import Project="..\..\..\common.props"/>
 
-  <PropertyGroup>
-    <AssemblyTitle>Akka.Cluster.Sharding</AssemblyTitle>
-    <Description>Sharded actors with managed lifecycle for Akka.NET cluster</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
-    <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+    <PropertyGroup>
+        <AssemblyTitle>Akka.Cluster.Sharding</AssemblyTitle>
+        <Description>Sharded actors with managed lifecycle for Akka.NET cluster. Used to distribute state in a fault-tolerant, consistent fashion over an Akka.NET cluster.</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <LangVersion>8.0</LangVersion>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="reference.conf" />
-    <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
-    <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
-    <ProjectReference Include="..\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj" />
-    <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="reference.conf"/>
+        <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj"/>
+        <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj"/>
+        <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj"/>
+        <ProjectReference Include="..\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj"/>
+        <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj"/>
+    </ItemGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
 
 </Project>

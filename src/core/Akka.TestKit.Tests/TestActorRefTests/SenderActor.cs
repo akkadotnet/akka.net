@@ -1,21 +1,26 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SenderActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
 using Akka.Actor;
+using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class SenderActor : TActorBase
     {
+        private readonly AtomicCounter _counter;
         private readonly IActorRef _replyActor;
 
-        public SenderActor(IActorRef replyActor)
+        public SenderActor(IActorRef replyActor, AtomicCounter counter, Thread parentThread, AtomicReference<Thread> otherThread) : base(parentThread, otherThread)
         {
             _replyActor = replyActor;
+            _counter = counter;
         }
 
         protected override bool ReceiveMessage(object message)
@@ -33,10 +38,10 @@ namespace Akka.TestKit.Tests.TestActorRefTests
                     _replyActor.Tell("simpleRequest", Self);
                     return true;
                 case "complexReply":
-                    TestActorRefSpec.Counter--;
+                    _counter.Decrement();
                     return true;
                 case "simpleReply":
-                    TestActorRefSpec.Counter--;
+                    _counter.Decrement();
                     return true;
             }
             return false;

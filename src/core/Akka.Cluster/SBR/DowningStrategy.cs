@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DowningStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -219,41 +219,40 @@ namespace Akka.Cluster.SBR
         public ImmutableHashSet<UniqueAddress> UnreachableButNotIndirectlyConnected =>
             Unreachable.Except(IndirectlyConnected);
 
-        private ImmutableHashSet<UniqueAddress> AdditionalNodesToDownWhenIndirectlyConnected
+        private ImmutableHashSet<UniqueAddress> AdditionalNodesToDownWhenIndirectlyConnected(ImmutableHashSet<UniqueAddress> downable)
         {
-            get
+            if (UnreachableButNotIndirectlyConnected.IsEmpty) return ImmutableHashSet<UniqueAddress>.Empty;
+
+            var originalUnreachable = Unreachable;
+            var originalReachability = Reachability;
+            try
             {
-                if (UnreachableButNotIndirectlyConnected.IsEmpty) return ImmutableHashSet<UniqueAddress>.Empty;
+                var intersectionOfObserversAndSubjects = IndirectlyConnectedFromIntersectionOfObserversAndSubjects;
+                var haveSeenCurrentGossip = IndirectlyConnectedFromSeenCurrentGossip;
+                Reachability = Reachability.FilterRecords(
+                    r =>
+                        // we only retain records for addresses that are still downable
+                        downable.Contains(r.Observer) && downable.Contains(r.Subject) &&
+                        // remove records between the indirectly connected
+                        !(intersectionOfObserversAndSubjects.Contains(r.Observer) &&
+                          intersectionOfObserversAndSubjects.Contains(r.Subject) ||
+                          haveSeenCurrentGossip.Contains(r.Observer) && haveSeenCurrentGossip.Contains(r.Subject)));
+                Unreachable = Reachability.AllUnreachableOrTerminated;
+                var additionalDecision = Decide();
 
-                var originalUnreachable = Unreachable;
-                var originalReachability = Reachability;
-                try
-                {
-                    var intersectionOfObserversAndSubjects = IndirectlyConnectedFromIntersectionOfObserversAndSubjects;
-                    var haveSeenCurrentGossip = IndirectlyConnectedFromSeenCurrentGossip;
-                    // remove records between the indirectly connected
-                    Reachability = Reachability.FilterRecords(
-                        r =>
-                            !(intersectionOfObserversAndSubjects.Contains(r.Observer) &&
-                              intersectionOfObserversAndSubjects.Contains(r.Subject) ||
-                              haveSeenCurrentGossip.Contains(r.Observer) && haveSeenCurrentGossip.Contains(r.Subject)));
-                    Unreachable = Reachability.AllUnreachableOrTerminated;
-                    var additionalDecision = Decide();
+                if (additionalDecision.IsIndirectlyConnected)
+                    throw new InvalidOperationException(
+                        $"SBR double {additionalDecision} decision, downing all instead. " +
+                        $"originalReachability: [{originalReachability}], filtered reachability [{Reachability}], " +
+                        $"still indirectlyConnected: [{string.Join(", ", IndirectlyConnected)}], seenBy: [{string.Join(", ", SeenBy)}]"
+                    );
 
-                    if (additionalDecision.IsIndirectlyConnected)
-                        throw new InvalidOperationException(
-                            $"SBR double {additionalDecision} decision, downing all instead. " +
-                            $"originalReachability: [{originalReachability}], filtered reachability [{Reachability}], " +
-                            $"still indirectlyConnected: [{string.Join(", ", IndirectlyConnected)}], seenBy: [{string.Join(", ", SeenBy)}]"
-                        );
-
-                    return NodesToDown(additionalDecision);
-                }
-                finally
-                {
-                    Unreachable = originalUnreachable;
-                    Reachability = originalReachability;
-                }
+                return NodesToDown(additionalDecision);
+            }
+            finally
+            {
+                Unreachable = originalUnreachable;
+                Reachability = originalReachability;
             }
         }
 
@@ -384,8 +383,8 @@ namespace Akka.Cluster.SBR
             decision = decision ?? Decide();
 
             var downable = Members
-                .Union(Joining)
                 .Where(m => m.Status != MemberStatus.Down && m.Status != MemberStatus.Exiting)
+                .Union(Joining)
                 .Select(m => m.UniqueAddress)
                 .ToImmutableHashSet();
 
@@ -407,7 +406,7 @@ namespace Akka.Cluster.SBR
                     // failure detection observations between the indirectly connected nodes.
                     // Also include nodes that corresponds to the decision without the unreachability observations from
                     // the indirectly connected nodes
-                    return downable.Intersect(IndirectlyConnected.Union(AdditionalNodesToDownWhenIndirectlyConnected));
+                    return downable.Intersect(IndirectlyConnected.Union(AdditionalNodesToDownWhenIndirectlyConnected(downable)));
 
                 case ReverseDownIndirectlyConnected _:
                     // indirectly connected + all reachable

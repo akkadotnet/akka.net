@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FSMTimingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -30,150 +31,150 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void FSM_must_receive_StateTimeout()
+        public async Task FSM_must_receive_StateTimeout()
         {
             FSM.Tell(FsmState.TestStateTimeout);
-            ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
-            ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
-            ExpectNoMsg(50.Milliseconds());
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
+            await ExpectNoMsgAsync(50.Milliseconds());
 
         }
 
         [Fact]
-        public void FSM_must_cancel_a_StateTimeout()
+        public async Task FSM_must_cancel_a_StateTimeout()
         {
             FSM.Tell(FsmState.TestStateTimeout);
             FSM.Tell(Cancel.Instance);
-            ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
-            ExpectMsg<Cancel>();
-            ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
-            ExpectNoMsg(50.Milliseconds());
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
+            await ExpectMsgAsync<Cancel>();
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
+            await ExpectNoMsgAsync(50.Milliseconds());
         }
 
         [Fact]
-        public void FSM_must_cancel_a_StateTimeout_when_actor_is_stopped()
+        public async Task FSM_must_cancel_a_StateTimeout_when_actor_is_stopped()
         {
             var stoppingActor = Sys.ActorOf(Props.Create<StoppingActor>());
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
             stoppingActor.Tell(FsmState.TestStoppingActorStateTimeout);
 
-            ExpectNoMsg(300.Milliseconds());
+            await ExpectNoMsgAsync(300.Milliseconds());
 
         }
 
         [Fact]
-        public void FSM_must_allow_StateTimeout_override()
+        public async Task FSM_must_allow_StateTimeout_override()
         {
             //the timeout in state TestStateTimeout is 800ms, then it will change back to Initial
-            Within(400.Milliseconds(), () =>
+            await WithinAsync(400.Milliseconds(), async() =>
             {
                 FSM.Tell(FsmState.TestStateTimeoutOverride);
-                ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
-                ExpectNoMsg(300.Milliseconds());
+                await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
+                await ExpectNoMsgAsync(300.Milliseconds());
             });
 
-            Within(1.Seconds(), () =>
+            await WithinAsync(1.Seconds(), async () =>
             {
                 FSM.Tell(Cancel.Instance);
-                ExpectMsg<Cancel>();
-                ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
+                await ExpectMsgAsync<Cancel>();
+                await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
             });
         }
 
         [Fact]
-        public void FSM_must_receive_single_shot_timer()
+        public async Task FSM_must_receive_single_shot_timer()
         {
-            Within(2.Seconds(), () =>
+            await WithinAsync(2.Seconds(), async() =>
             {
-                Within(500.Milliseconds(), 1.Seconds(), () =>
+                await WithinAsync(500.Milliseconds(), 1.Seconds(), async() =>
                 {
                     FSM.Tell(FsmState.TestSingleTimer);
-                    ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestSingleTimer));
-                    ExpectMsg<Tick>();
-                    ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestSingleTimer, FsmState.Initial));
+                    await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestSingleTimer));
+                    await ExpectMsgAsync<Tick>();
+                    await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestSingleTimer, FsmState.Initial));
                 });
-                ExpectNoMsg(500.Milliseconds());
+                await ExpectNoMsgAsync(500.Milliseconds());
             });
         }
 
         [Fact]
-        public void FSM_must_resubmit_single_shot_timer()
+        public async Task FSM_must_resubmit_single_shot_timer()
         {
-            Within(TimeSpan.FromSeconds(2.5), () =>
+            await WithinAsync(TimeSpan.FromSeconds(2.5), async () =>
             {
-                Within(500.Milliseconds(), 1.Seconds(), () =>
+                await WithinAsync(500.Milliseconds(), 1.Seconds(), async() =>
                 {
                     FSM.Tell(FsmState.TestSingleTimerResubmit);
-                    ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestSingleTimerResubmit));
-                    ExpectMsg<Tick>();
+                    await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestSingleTimerResubmit));
+                    await ExpectMsgAsync<Tick>();
                 });
 
-                Within(1.Seconds(), () =>
+                await WithinAsync(1.Seconds(), async() =>
                 {
-                    ExpectMsg<Tock>();
-                    ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestSingleTimerResubmit, FsmState.Initial));
+                    await ExpectMsgAsync<Tock>();
+                    await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestSingleTimerResubmit, FsmState.Initial));
                 });
-                ExpectNoMsg(500.Milliseconds());
+                await ExpectNoMsgAsync(500.Milliseconds());
             });
         }
 
         [Fact]
-        public void FSM_must_correctly_cancel_a_named_timer()
+        public async Task FSM_must_correctly_cancel_a_named_timer()
         {
             FSM.Tell(FsmState.TestCancelTimer);
-            ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestCancelTimer));
-            Within(500.Milliseconds(), () =>
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestCancelTimer));
+            await WithinAsync(500.Milliseconds(), async() =>
             {
                 FSM.Tell(Tick.Instance);
-                ExpectMsg<Tick>();
+                await ExpectMsgAsync<Tick>();
             });
 
-            Within(300.Milliseconds(), 1.Seconds(), () =>
+            await WithinAsync(300.Milliseconds(), 1.Seconds(), async() =>
             {
-                ExpectMsg<Tock>();
+                await ExpectMsgAsync<Tock>();
             });
             FSM.Tell(Cancel.Instance);
-            ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestCancelTimer, FsmState.Initial), 1.Seconds());
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestCancelTimer, FsmState.Initial), 1.Seconds());
         }
 
         [Fact]
-        public void FSM_must_not_get_confused_between_named_and_state_timers()
+        public async Task FSM_must_not_get_confused_between_named_and_state_timers()
         {
             FSM.Tell(FsmState.TestCancelStateTimerInNamedTimerMessage);
             FSM.Tell(Tick.Instance);
-            ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestCancelStateTimerInNamedTimerMessage));
-            ExpectMsg<Tick>(500.Milliseconds());
-            Task.Delay(200.Milliseconds());
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestCancelStateTimerInNamedTimerMessage));
+            await ExpectMsgAsync<Tick>(500.Milliseconds());
+            await Task.Delay(200.Milliseconds());
             Resume(FSM);
-            ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestCancelStateTimerInNamedTimerMessage, FsmState.TestCancelStateTimerInNamedTimerMessage2), 500.Milliseconds());
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestCancelStateTimerInNamedTimerMessage, FsmState.TestCancelStateTimerInNamedTimerMessage2), 500.Milliseconds());
             FSM.Tell(Cancel.Instance);
-            Within(500.Milliseconds(), () =>
+            await WithinAsync(500.Milliseconds(), async() =>
             {
-                ExpectMsg<Cancel>();
-                ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestCancelStateTimerInNamedTimerMessage2, FsmState.Initial));
+                await ExpectMsgAsync<Cancel>();
+                await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestCancelStateTimerInNamedTimerMessage2, FsmState.Initial));
             });
         }
 
         [Fact]
-        public void FSM_must_receive_and_cancel_a_repeated_timer()
+        public async Task FSM_must_receive_and_cancel_a_repeated_timer()
         {
             FSM.Tell(FsmState.TestRepeatedTimer);
-            ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestRepeatedTimer));
-            var seq = ReceiveWhile(2.Seconds(), o =>
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestRepeatedTimer));
+            var seq = await ReceiveWhileAsync(2.Seconds(), o =>
             {
                 if (o is Tick)
                     return o;
                 return null;
-            });
+            }).ToListAsync();
             seq.Should().HaveCount(5);
-            Within(500.Milliseconds(), () =>
+            await WithinAsync(500.Milliseconds(), async() =>
             {
-                ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestRepeatedTimer, FsmState.Initial));
+                await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestRepeatedTimer, FsmState.Initial));
             });
         }
 
         [Fact]
-        public void FSM_must_notify_unhandled_messages()
+        public async Task FSM_must_notify_unhandled_messages()
         {
             // EventFilter
             //    .Warning("unhandled event Akka.Tests.Actor.FSMTimingSpec+Tick in state TestUnhandled", source: fsm.Path.ToString())
@@ -183,16 +184,16 @@ namespace Akka.Tests.Actor
             //    () =>
             //    {
             FSM.Tell(FsmState.TestUnhandled);
-            ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestUnhandled));
-            Within(3.Seconds(), () =>
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestUnhandled));
+            await WithinAsync(3.Seconds(), async() =>
             {
                 FSM.Tell(Tick.Instance);
                 FSM.Tell(SetHandler.Instance);
                 FSM.Tell(Tick.Instance);
-                ExpectMsg<Unhandled>().Msg.Should().BeOfType<Tick>();
+                (await ExpectMsgAsync<Unhandled>()).Msg.Should().BeOfType<Tick>();
                 FSM.Tell(new Unhandled("test"));
                 FSM.Tell(Cancel.Instance);
-                var transition = ExpectMsg<Transition<FsmState>>();
+                var transition = await ExpectMsgAsync<Transition<FsmState>>();
                 transition.FsmRef.Should().Be(FSM);
                 transition.From.Should().Be(FsmState.TestUnhandled);
                 transition.To.Should().Be(FsmState.Initial);

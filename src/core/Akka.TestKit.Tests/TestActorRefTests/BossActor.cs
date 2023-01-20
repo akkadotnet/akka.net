@@ -1,12 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BossActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Actor;
+using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
@@ -14,9 +17,9 @@ namespace Akka.TestKit.Tests.TestActorRefTests
     {
         private TestActorRef<InternalActor> _child;
 
-        public BossActor()
+        public BossActor(AtomicCounter counter, Thread parentThread, AtomicReference<Thread> otherThread) : base(parentThread, otherThread)
         {
-            _child = new TestActorRef<InternalActor>(Context.System, Props.Create<InternalActor>(), Self, "child");
+            _child = new TestActorRef<InternalActor>(Context.System, Props.Create(() => new InternalActor(counter, parentThread, otherThread)), Self, "child");
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
@@ -36,14 +39,21 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         private class InternalActor : TActorBase
         {
+            private readonly AtomicCounter _counter;
+
+            public InternalActor(AtomicCounter counter, Thread parentThread, AtomicReference<Thread> otherThread) : base(parentThread, otherThread)
+            {
+                _counter = counter;
+            }
+
             protected override void PreRestart(Exception reason, object message)
             {
-                TestActorRefSpec.Counter--;
+                _counter.Decrement();
             }
 
             protected override void PostRestart(Exception reason)
             {
-                TestActorRefSpec.Counter--;
+                _counter.Decrement();
             }
 
             protected override bool ReceiveMessage(object message)

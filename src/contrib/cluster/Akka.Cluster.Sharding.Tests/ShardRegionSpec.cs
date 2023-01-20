@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardRegionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -93,9 +94,13 @@ namespace Akka.Cluster.Sharding.Tests
             region2 = StartShard(sysB);
         }
 
-        protected override void BeforeTermination()
+        protected override async Task AfterAllAsync()
         {
-            Shutdown(sysB);
+            if(sysA != null)
+                await ShutdownAsync(sysA);
+            if(sysB != null)
+                await ShutdownAsync(sysB);
+            await base.AfterAllAsync();
         }
 
         private IActorRef StartShard(ActorSystem sys)

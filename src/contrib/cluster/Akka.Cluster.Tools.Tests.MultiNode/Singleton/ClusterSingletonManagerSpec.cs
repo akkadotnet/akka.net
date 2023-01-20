@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,12 +12,12 @@ using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using FluentAssertions;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {
@@ -150,30 +150,34 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         private void Idle(object message)
         {
-            message.Match()
-                .With<RegisterConsumer>(_ =>
-                {
+            switch (message)
+            {
+                case RegisterConsumer _:
                     _log.Info("Register consumer [{0}]", Sender.Path);
                     Sender.Tell(RegistrationOk.Instance);
                     Context.Become(Active(Sender));
-                })
-                .With<UnregisterConsumer>(_ =>
-                {
+                    break;
+                case UnregisterConsumer _:
                     _log.Info("Unexpected unregistration: [{0}]", Sender.Path);
                     Sender.Tell(UnexpectedRegistration.Instance);
                     Context.Stop(Self);
-                })
-                .With<Reset>(_ => Sender.Tell(ResetOk.Instance))
-                .Default(msg => { });
+                    break;
+                case Reset _:
+                    Sender.Tell(ResetOk.Instance);
+                    break;
+                default:
+                    // no-op
+                    break;
+            }
         }
 
         private UntypedReceive Active(IActorRef consumer)
         {
             return message =>
             {
-                message.Match()
-                    .With<UnregisterConsumer>(_ =>
-                    {
+                switch (message)
+                {
+                    case UnregisterConsumer _:
                         if (Sender.Equals(consumer))
                         {
                             _log.Info("UnregistrationOk: [{0}]", Sender.Path);
@@ -186,19 +190,23 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                             Sender.Tell(UnexpectedUnregistration.Instance);
                             Context.Stop(Self);
                         }
-                    })
-                    .With<RegisterConsumer>(_ =>
-                    {
+                        break;
+                    
+                    case RegisterConsumer _:
                         _log.Info("Unexpected RegisterConsumer: [{0}], active consumer: [{1}]", Sender.Path, consumer.Path);
                         Sender.Tell(UnexpectedRegistration.Instance);
                         Context.Stop(Self);
-                    })
-                    .With<Reset>(_ =>
-                    {
+                        break;
+                    
+                    case Reset _:
                         Context.Become(Idle);
                         Sender.Tell(ResetOk.Instance);
-                    })
-                    .Default(msg => consumer.Tell(msg));
+                        break;
+                    
+                    default:
+                        consumer.Tell(message);
+                        break;
+                }
             };
         }
 

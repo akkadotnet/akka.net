@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonRestartSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -128,12 +129,13 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        protected override void AfterTermination()
+        protected override async Task AfterAllAsync()
         {
-            Shutdown(_sys1);
-            Shutdown(_sys2);
+            await base.AfterAllAsync();
+            await ShutdownAsync(_sys1);
+            await ShutdownAsync(_sys2);
             if(_sys3 != null)
-                Shutdown(_sys3);
+                await ShutdownAsync(_sys3);
         }
 
         /// <summary>

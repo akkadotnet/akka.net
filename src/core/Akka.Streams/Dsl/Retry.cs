@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Retry.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -176,7 +176,7 @@ namespace Akka.Streams.Dsl
                             else if (!HasBeenPulled(retry.In1))
                                 Pull(retry.In1);
                         }
-                    }, onDownstreamFinish: () =>
+                    }, onDownstreamFinish: cause =>
                     {
                         //Do Nothing, intercept completion as downstream
                     });
@@ -327,7 +327,7 @@ namespace Akka.Streams.Dsl
                                     Pull(_retry.In2);
                             }
                         }
-                    }, onDownstreamFinish: () =>
+                    }, onDownstreamFinish: cause =>
                     {
                         //Do Nothing, intercept completion as downstream
                     });

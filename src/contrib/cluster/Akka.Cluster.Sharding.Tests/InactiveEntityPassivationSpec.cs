@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InactiveEntityPassivationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -150,7 +150,8 @@ namespace Akka.Cluster.Sharding.Tests
             probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
 
             var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
-            return settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
+            var time = settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
+            return time < smallTolerance ? smallTolerance : time;
         }
     }
 
@@ -197,7 +198,7 @@ namespace Akka.Cluster.Sharding.Tests
             var probe = CreateTestProbe();
             var region = Start(probe);
             var time = await TimeUntilPassivate(region, probe);
-            probe.ExpectNoMsg(time);
+            await probe.ExpectNoMsgAsync(time);
         }
     }
 }

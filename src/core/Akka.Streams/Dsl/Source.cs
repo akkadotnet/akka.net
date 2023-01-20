@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
@@ -525,6 +526,22 @@ namespace Akka.Streams.Dsl
         public static Source<T, NotUsed> From<T>(IEnumerable<T> enumerable)
             => Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
 
+
+        /// <summary>
+        /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IAsyncEnumerable{T}"/>.
+        /// Example usage: Source.From(Enumerable.Range(1, 10))
+        /// 
+        /// Starts a new <see cref="Source{TOut,TMat}"/> from the given <see cref="IAsyncEnumerable{T}"/>. This is like starting from an
+        /// Enumerator, but every Subscriber directly attached to the Publisher of this
+        /// stream will see an individual flow of elements (always starting from the
+        /// beginning) regardless of when they subscribed.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name=" asyncEnumerable">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<T, NotUsed> From<T>(Func<IAsyncEnumerable<T>> asyncEnumerable)
+            => FromGraph(new AsyncEnumerable<T>(asyncEnumerable)).WithAttributes(DefaultAttributes.EnumerableSource);
+
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> with one element.
         /// Every connected <see cref="Sink{TIn,TMat}"/> of this stream will see an individual stream consisting of one element.
@@ -752,30 +769,42 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized as an <see cref="IActorRef"/>.
         /// Messages sent to this actor will be emitted to the stream if there is demand from downstream,
         /// otherwise they will be buffered until request for demand is received.
-        /// 
+        /// <para>
         /// Depending on the defined <see cref="OverflowStrategy"/> it might drop elements if
         /// there is no space available in the buffer.
-        /// 
+        /// </para>
+        /// <para>
         /// The strategy <see cref="OverflowStrategy.Backpressure"/> is not supported, and an
         /// IllegalArgument("Backpressure overflowStrategy not supported") will be thrown if it is passed as argument.
-        /// 
+        /// </para>
+        /// <para>
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages are dropped
         /// if there is no demand from downstream. When <paramref name="bufferSize"/> is 0 the <paramref name="overflowStrategy"/> does
         /// not matter. An async boundary is added after this Source; as such, it is never safe to assume the downstream will always generate demand.
-        /// 
+        /// </para>
+        /// <para>
         /// The stream can be completed successfully by sending the actor reference a <see cref="Status.Success"/>
         /// message (whose content will be ignored) in which case already buffered elements will be signaled before signaling completion,
         /// or by sending <see cref="PoisonPill"/> in which case completion will be signaled immediately.
-        /// 
+        /// </para>
+        /// <para>
         /// The stream can be completed with failure by sending a <see cref="Status.Failure"/> to the
         /// actor reference. In case the Actor is still draining its internal buffer (after having received
         /// a <see cref="Status.Success"/>) before signaling completion and it receives a <see cref="Status.Failure"/>,
         /// the failure will be signaled downstream immediately (instead of the completion signal).
-        /// 
+        /// </para>
+        /// <para>
+        /// Note that terminating the actor without first completing it, either with a success or a
+        /// failure, will prevent the actor triggering downstream completion and the stream will continue
+        /// to run even though the source actor is dead. Therefore you should **not** attempt to
+        /// manually terminate the actor such as with a <see cref="PoisonPill"/>.
+        /// </para>
+        /// <para>
         /// The actor will be stopped when the stream is completed, failed or canceled from downstream,
         /// i.e. you can watch it to get notified when that happens.
+        /// </para>
+        /// See also <seealso cref="Queue{T}"/>
         /// </summary>
-        /// <seealso cref="Queue{T}"/>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="bufferSize">The size of the buffer in element count</param>
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
@@ -1046,6 +1075,32 @@ namespace Akka.Streams.Dsl
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
             return FromGraph(new ObservableSourceStage<T>(observable, maxBufferCapacity, overflowStrategy));
+        }
+
+        public static Source<T, NotUsed> ChannelReader<T>(
+            ChannelReader<T> channelReader)
+        {
+            return ChannelSource.FromReader(channelReader);
+        }
+
+        /// <summary>
+        /// Creates a Source that materializes a <see cref="ChannelWriter{T}"/>
+        /// that may be used to write items to the stream.
+        ///
+        /// This works similarly to <see cref="Queue{T}"/>,
+        /// The main difference being that you are allowed to have multiple
+        /// Writes in flight. Allowing multiple writes makes Multi-producer
+        /// scenarios easier but is still an important semantic difference. 
+        /// 
+        /// </summary>
+        /// <param name="bufferSize">The size of the channel's buffer</param>
+        /// <param name="singleWriter">If true, expects only one writer</param>
+        /// <param name="fullMode">How the channel behaves when full</param>
+        public static Source<T, ChannelWriter<T>> Channel<T>(int bufferSize,
+            bool singleWriter = false,
+            BoundedChannelFullMode fullMode = BoundedChannelFullMode.Wait)
+        {
+            return ChannelSource.Create<T>(bufferSize, singleWriter, fullMode);
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,8 +15,8 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.IO;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -60,7 +60,7 @@ namespace Akka.Streams.Tests.IO
                 var inputStream = Source.From(new[] { _byteString, byteString2, null })
                     .RunWith(TestSink(sinkProbe), _materializer);
 
-                sinkProbe.ExpectMsgAllOf(GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance);
+                sinkProbe.ExpectMsgAllOf(new []{ GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance });
 
                 var result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.IO
             }, _materializer);
         }
 
-        [Fact(Skip ="Racy in Linux")]
+        [WindowsFact(Skip ="Racy in Linux")]
         public void InputStreamSink_should_block_read_until_get_requested_number_of_bytes_from_upstream()
         {
             this.AssertAllStagesStopped(() =>
@@ -236,7 +236,7 @@ namespace Akka.Streams.Tests.IO
                 var inputStream = Source.From(new[] { bytes1, bytes2, null }).RunWith(TestSink(sinkProbe), _materializer);
 
                 //need to wait while both elements arrive to sink
-                sinkProbe.ExpectMsgAllOf(GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance);
+                sinkProbe.ExpectMsgAllOf(new []{ GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance });
 
                 var r1 = ReadN(inputStream, 15);
                 r1.Item1.Should().Be(15);

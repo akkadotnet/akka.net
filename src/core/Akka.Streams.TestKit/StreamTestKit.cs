@@ -1,11 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamTestKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.TestKit;
 using Akka.Actor;
 using Akka.Streams.Implementation;
@@ -76,30 +78,57 @@ namespace Akka.Streams.TestKit
                 PublisherProbe.Ref.Tell(new TestPublisher.CancelSubscription(this));
             }
 
-            public void ExpectRequest(long n)
+            public void ExpectRequest(long n, CancellationToken cancellationToken = default)
             {
-                PublisherProbe.ExpectMsg<TestPublisher.RequestMore>(
-                    x => x.NrOfElements == n && Equals(x.Subscription, this));
+                ExpectRequestAsync(n, cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
             }
 
-            public long ExpectRequest()
+            public async Task ExpectRequestAsync(long n, CancellationToken cancellationToken = default)
             {
-                return
-                    PublisherProbe.ExpectMsg<TestPublisher.RequestMore>(x => Equals(this, x.Subscription)).NrOfElements;
+                await PublisherProbe.ExpectMsgAsync<TestPublisher.RequestMore>(
+                    isMessage: x => x.NrOfElements == n && Equals(x.Subscription, this), 
+                    cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
             }
 
-            public void ExpectCancellation()
+            public long ExpectRequest(CancellationToken cancellationToken = default)
             {
-                PublisherProbe.FishForMessage(msg =>
-                {
-                    if (msg is TestPublisher.CancelSubscription &&
-                        Equals(((TestPublisher.CancelSubscription) msg).Subscription, this)) return true;
-                    if (msg is TestPublisher.RequestMore && Equals(((TestPublisher.RequestMore) msg).Subscription, this))
-                        return false;
-                    return false;
-                });
+                return ExpectRequestAsync(cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
             }
 
+            public async Task<long> ExpectRequestAsync(CancellationToken cancellationToken = default)
+            {
+                var msg = await PublisherProbe.ExpectMsgAsync<TestPublisher.RequestMore>(
+                    isMessage: x => Equals(this, x.Subscription), 
+                    cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+                return msg.NrOfElements;
+            }
+            
+            public void ExpectCancellation(CancellationToken cancellationToken = default)
+            {
+                ExpectCancellationAsync(cancellationToken)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+
+            public async Task ExpectCancellationAsync(CancellationToken cancellationToken = default)
+            {
+                await PublisherProbe.FishForMessageAsync(
+                    isMessage: msg =>
+                    {
+                        return msg switch
+                        {
+                            TestPublisher.CancelSubscription cancel when Equals(cancel.Subscription, this) => true,
+                            TestPublisher.RequestMore more when Equals(more.Subscription, this) => false,
+                            _ => false
+                        };
+                    }, 
+                    cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            
             public void SendNext(T element) => Subscriber.OnNext(element);
 
             public void SendComplete() => Subscriber.OnComplete();
@@ -112,15 +141,14 @@ namespace Akka.Streams.TestKit
         internal sealed class ProbeSource<T> : SourceModule<T, TestPublisher.Probe<T>>
         {
             private readonly TestKitBase _testKit;
-            private readonly Attributes _attributes;
 
             public ProbeSource(TestKitBase testKit, Attributes attributes, SourceShape<T> shape) : base(shape)
             {
                 _testKit = testKit;
-                _attributes = attributes;
+                Attributes = attributes;
             }
 
-            public override Attributes Attributes => _attributes;
+            public override Attributes Attributes { get; }
 
             public override IModule WithAttributes(Attributes attributes)
             {
@@ -129,7 +157,7 @@ namespace Akka.Streams.TestKit
 
             protected override SourceModule<T, TestPublisher.Probe<T>> NewInstance(SourceShape<T> shape)
             {
-                return new ProbeSource<T>(_testKit, _attributes, shape);
+                return new ProbeSource<T>(_testKit, Attributes, shape);
             }
 
             public override IPublisher<T> Create(MaterializationContext context, out TestPublisher.Probe<T> materializer)
@@ -142,15 +170,14 @@ namespace Akka.Streams.TestKit
         internal sealed class ProbeSink<T> : SinkModule<T, TestSubscriber.Probe<T>>
         {
             private readonly TestKitBase _testKit;
-            private readonly Attributes _attributes;
 
             public ProbeSink(TestKitBase testKit, Attributes attributes, SinkShape<T> shape) : base(shape)
             {
                 _testKit = testKit;
-                _attributes = attributes;
+                Attributes = attributes;
             }
 
-            public override Attributes Attributes => _attributes;
+            public override Attributes Attributes { get; }
 
             public override IModule WithAttributes(Attributes attributes)
             {
@@ -159,7 +186,7 @@ namespace Akka.Streams.TestKit
 
             protected override SinkModule<T, TestSubscriber.Probe<T>> NewInstance(SinkShape<T> shape)
             {
-                return new ProbeSink<T>(_testKit, _attributes, shape);
+                return new ProbeSink<T>(_testKit, Attributes, shape);
             }
 
             public override object Create(MaterializationContext context, out TestSubscriber.Probe<T> materializer)

@@ -1,19 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FailureDetectorRegistrySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
-using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Remote.Tests
 {
     
-    public class FailureDetectorRegistrySpec : AkkaSpec
+    public class FailureDetectorRegistrySpec
     {
         [Fact]
         public void FailureDetectorRegistry_must_mark_node_as_available_after_a_series_of_successful_heartbeats()

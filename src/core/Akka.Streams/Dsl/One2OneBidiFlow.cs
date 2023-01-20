@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="One2OneBidiFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -119,7 +119,7 @@ namespace Akka.Streams.Dsl
                     else
                         _pullSuppressed = true;
                 },
-                    onDownstreamFinish: () => Cancel(_inInlet));
+                    onDownstreamFinish: cause => Cancel(_inInlet, cause));
             }
 
             private void SetOutInletHandler()
@@ -152,7 +152,7 @@ namespace Akka.Streams.Dsl
 
             private void SetOutOutletHandler()
             {
-                SetHandler(_outOutlet, onPull: () => Pull(_outInlet), onDownstreamFinish: () => Cancel(_outInlet));
+                SetHandler(_outOutlet, onPull: () => Pull(_outInlet), onDownstreamFinish: cause => Cancel(_outInlet, cause));
             }
         }
 

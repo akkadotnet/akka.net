@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSelectAsyncSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,9 +15,9 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
             c.ExpectComplete();
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_requested_parallelism()
         {
             var probe = CreateTestProbe();
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_Flow_with_SelectAsync_must_signal_task_failure()
         {
             this.AssertAllStagesStopped(() =>
@@ -333,7 +333,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy on AzureDevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
             this.AssertAllStagesStopped(() =>

@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
   <PropertyGroup>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,7 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="FsCheck.Xunit" Version="$(FsCheckVersion)" />
-    <PackageReference Include="Fsharp.Core" Version="6.0.1" />
+    <PackageReference Include="Fsharp.Core" Version="6.0.6" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

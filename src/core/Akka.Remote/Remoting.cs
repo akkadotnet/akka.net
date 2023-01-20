@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Remoting.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -302,22 +302,20 @@ namespace Akka.Remote
         /// <param name="cmd">TBD</param>
         /// <exception cref="RemoteTransportException">TBD</exception>
         /// <returns>TBD</returns>
-        public override Task<bool> ManagementCommand(object cmd)
+        public override async Task<bool> ManagementCommand(object cmd)
+            => await ManagementCommand(cmd, CancellationToken.None);
+
+        public override async Task<bool> ManagementCommand(object cmd, CancellationToken cancellationToken)
         {
             if (_endpointManager == null)
-            {
                 throw new RemoteTransportException("Attempted to send management command but Remoting is not running.", null);
-            }
 
-            return
-                _endpointManager.Ask<EndpointManager.ManagementCommandAck>(new EndpointManager.ManagementCommand(cmd),
-                    Provider.RemoteSettings.CommandAckTimeout)
-                    .ContinueWith(result =>
-                    {
-                        if (result.IsCanceled || result.IsFaulted)
-                            return false;
-                        return result.Result.Status;
-                    }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            var result = await _endpointManager.Ask<EndpointManager.ManagementCommandAck>(
+                message: new EndpointManager.ManagementCommand(cmd),
+                timeout: Provider.RemoteSettings.CommandAckTimeout, 
+                cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+            return result.Status;
         }
 
         /// <summary>

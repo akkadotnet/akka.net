@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStoreInterceptorsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,25 +11,33 @@ namespace Akka.Persistence.TestKit.Tests
     using System.Threading.Tasks;
     using FluentAssertions;
     using Xunit;
+    using static FluentAssertions.FluentActions;
 
     public class SnapshotStoreInterceptorsSpec
     {
         [Fact]
-        public void noop_must_do_nothing()
-            => SnapshotStoreInterceptors.Noop.Instance
-                .Awaiting(x => x.InterceptAsync(null, null))
-                .Should().NotThrow();
+        public async Task noop_must_do_nothing()
+        {
+            await Awaiting(async () =>
+            {
+                await SnapshotStoreInterceptors.Noop.Instance.InterceptAsync(null, null);
+            }).Should().NotThrowAsync();
+        }
 
         [Fact]
-        public void failure_must_always_throw_exception()
-            => SnapshotStoreInterceptors.Failure.Instance
-                .Awaiting(x => x.InterceptAsync(null, null))
-                .Should().ThrowExactly<TestSnapshotStoreFailureException>();
+        public async Task failure_must_always_throw_exception()
+        {
+            await Awaiting(async () =>
+            {
+                await SnapshotStoreInterceptors.Failure.Instance.InterceptAsync(null, null);
+            }).Should().ThrowExactlyAsync<TestSnapshotStoreFailureException>();
+        }
 
         [Fact]
         public async Task delay_must_call_next_interceptor_after_specified_delay()
         {
-            var duration = TimeSpan.FromMilliseconds(100);
+            var duration = TimeSpan.FromMilliseconds(200);
+            var epsilon = TimeSpan.FromMilliseconds(50);
             var probe = new InterceptorProbe();
             var delay = new SnapshotStoreInterceptors.Delay(duration, probe);
 
@@ -37,7 +45,7 @@ namespace Akka.Persistence.TestKit.Tests
             await delay.InterceptAsync(null, null);
 
             probe.WasCalled.Should().BeTrue();
-            probe.CalledAt.Should().BeOnOrAfter(startedAt + duration);
+            probe.CalledAt.Should().BeOnOrAfter(startedAt + duration - epsilon);
         }
 
         [Fact]

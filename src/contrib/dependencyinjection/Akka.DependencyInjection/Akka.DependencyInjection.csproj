@@ -5,7 +5,7 @@
     <PropertyGroup>
         <AssemblyTitle>Akka.DependencyInjection</AssemblyTitle>
         <Description>Dependency injection support for Akka.NET</Description>
-        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);dependency injection</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <PackageProjectUrl>https://getakka.net/articles/actors/dependency-injection.html</PackageProjectUrl>

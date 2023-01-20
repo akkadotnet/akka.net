@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HyperionConfigTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -210,7 +210,7 @@ namespace Akka.Serialization.Hyperion.Tests
 #elif NETCOREAPP3_1
                 Assert.Equal("dff", @override("def"));
                 Assert.Equal("efg", @override("efg"));
-#elif NET6_0
+#elif NET7_0
                 Assert.Equal("gii", @override("ghi"));
                 Assert.Equal("hij", @override("hij"));
 #else

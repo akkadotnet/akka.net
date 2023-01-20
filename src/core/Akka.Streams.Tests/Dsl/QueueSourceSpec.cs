@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueueSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,7 +12,6 @@ using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -173,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.Cancel();
 
-                ExpectMsgAllOf<object>(QueueClosed.Instance, "done");
+                ExpectMsgAllOf(new object[]{ QueueClosed.Instance, "done" });
             }, _materializer);
         }
 

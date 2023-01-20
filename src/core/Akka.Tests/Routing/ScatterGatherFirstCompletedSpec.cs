@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ScatterGatherFirstCompletedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -68,10 +68,10 @@ namespace Akka.Tests.Routing
                 {
 
                 });
-
-                ReceiveAny(x =>
+                
+                ReceiveAnyAsync(async x =>
                 {
-                    Thread.Sleep(100 * _id);
+                    await Task.Delay(100 * _id);
                     Sender.Tell(_id);
                 });
             }
@@ -122,19 +122,19 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Scatter_gather_pool_must_without_routees_should_reply_immediately()
+        public async Task Scatter_gather_pool_must_without_routees_should_reply_immediately()
         {
             var probe = CreateTestProbe();
             var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedPool(0, TimeSpan.FromSeconds(5)).Props(Props.Empty));
             routedActor.Tell("hello", probe.Ref);
-            var message = probe.ExpectMsg<Status.Failure>(2.Seconds());
+            var message = await probe.ExpectMsgAsync<Status.Failure>(2.Seconds());
             message.Should().NotBeNull();
             message.Cause.Should().BeOfType<AskTimeoutException>();
         }
 
         // Resolved https://github.com/akkadotnet/akka.net/issues/1718
         [Fact]
-        public void Scatter_gather_group_must_only_return_one_response()
+        public async Task Scatter_gather_group_must_only_return_one_response()
         {
             var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1, null)));
             var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14, null)));
@@ -144,8 +144,8 @@ namespace Akka.Tests.Routing
 
             routedActor.Tell(0);
 
-            ExpectMsg<int>();
-            ExpectNoMsg();
+            await ExpectMsgAsync<int>();
+            await ExpectNoMsgAsync();
         }
 
         // Resolved https://github.com/akkadotnet/akka.net/issues/1718

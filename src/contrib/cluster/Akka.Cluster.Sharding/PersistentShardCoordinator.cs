@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -109,7 +109,12 @@ namespace Akka.Cluster.Sharding
                             if (State.RegionProxies.Contains(proxyTerminated.RegionProxy))
                                 State = State.Updated(evt);
                             return true;
-                        case ShardHomeAllocated _:
+                        case ShardHomeAllocated homeAllocated:
+                            // if we already have identical ShardHomeAllocated data, skip processing it
+                            // addresses https://github.com/akkadotnet/akka.net/issues/5604
+                            if (State.Shards.TryGetValue(homeAllocated.Shard, out var currentShardRegion)
+                                && Equals(homeAllocated.Region, currentShardRegion))
+                                return true;
                             State = State.Updated(evt);
                             return true;
                         case ShardHomeDeallocated _:

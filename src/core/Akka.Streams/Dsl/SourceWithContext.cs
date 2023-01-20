@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SourceWithContext.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,9 +10,18 @@ using Akka.Annotations;
 
 namespace Akka.Streams.Dsl
 {
+    public static class SourceWithContext
+    {
+        /// <summary>
+        /// Creates a <see cref="SourceWithContext"/> from a regular source that operates on a tuple of `(data, context)` elements.
+        /// </summary>
+        public static SourceWithContext<TOut, TCtxOut, TMat> FromTuples<TOut, TCtxOut, TMat>(Source<(TOut, TCtxOut), TMat> source) =>
+            new SourceWithContext<TOut, TCtxOut, TMat>(source);
+    }
+
     /// <summary>
     /// A source that provides operations which automatically propagate the context of an element.
-    /// Only a subset of common operations from [[FlowOps]] is supported. As an escape hatch you can
+    /// Only a subset of common operations from <see cref="FlowOperations"/> is supported. As an escape hatch you can
     /// use [[FlowWithContextOps.via]] to manually provide the context propagation for otherwise unsupported
     /// operations.
     /// </summary>

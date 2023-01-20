@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnboundedStashImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="context">TBD</param>
         public UnboundedStashImpl(IActorContext context)
-            : base(context, int.MaxValue)
+            : base(context)
         {
         }
     }

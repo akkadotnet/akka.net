@@ -1,28 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\common.props" />
+    <Import Project="..\..\..\common.props"/>
 
-  <PropertyGroup>
-    <AssemblyTitle>Akka.Persistence.Sql.Common</AssemblyTitle>
-    <Description>Akka.NET Persistence ADO.NET middleware</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
-    <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+    <PropertyGroup>
+        <AssemblyTitle>Akka.Persistence.Sql.Common</AssemblyTitle>
+        <Description>Akka.NET Persistence ADO.NET middleware</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="System.Data.Common" Version="4.3.0"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Data.Common" Version="4.3.0" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
 
 </Project>

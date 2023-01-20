@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -104,7 +104,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        protected ActorBase Actor { get { return _actor; } }
+        internal ActorBase Actor { get { return _actor; } }
         /// <summary>
         /// TBD
         /// </summary>
@@ -189,7 +189,7 @@ namespace Akka.Actor
              * Create the mailbox and enqueue the Create() message to ensure that
              * this is processed before anything else.
              */
-            var mailbox = Dispatcher.CreateMailbox(this, mailboxType);
+            var mailbox = MessageDispatcher.CreateMailbox(this, mailboxType);
 
             Create createMessage;
             /*

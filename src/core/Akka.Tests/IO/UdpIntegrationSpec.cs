@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,7 @@ using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
 using FluentAssertions.Extensions;
+using System.Threading.Tasks;
 
 namespace Akka.Tests.IO
 {
@@ -41,51 +42,51 @@ namespace Akka.Tests.IO
         {
         }
 
-        private (IActorRef, IPEndPoint) BindUdp(IActorRef handler)
+        private async Task<(IActorRef, IPEndPoint)> BindUdpAsync(IActorRef handler)
         {
             var commander = CreateTestProbe();
             commander.Send(Sys.Udp(), new Udp.Bind(handler, new IPEndPoint(IPAddress.Loopback, 0)));
             IPEndPoint localEndpoint = null;
-            commander.ExpectMsg<Udp.Bound>(x => localEndpoint = (IPEndPoint)x.LocalAddress);
+            await commander.ExpectMsgAsync<Udp.Bound>(x => localEndpoint = (IPEndPoint)x.LocalAddress);
             return (commander.Sender, localEndpoint);
         }
 
-        private IActorRef SimpleSender()
+        private async Task<IActorRef> SimpleSender()
         {
             var commander = CreateTestProbe();
             commander.Send(Udp.Instance.Apply(Sys).Manager, Udp.SimpleSender.Instance);
-            commander.ExpectMsg<Udp.SimpleSenderReady>(TimeSpan.FromSeconds(10));
+            await commander.ExpectMsgAsync<Udp.SimpleSenderReady>(TimeSpan.FromSeconds(10));
             return commander.Sender;
         }
 
         [Fact]
-        public void The_UDP_Fire_and_Forget_implementation_must_be_able_to_send_without_binding()
+        public async Task The_UDP_Fire_and_Forget_implementation_must_be_able_to_send_without_binding()
         {
-            var (_, localEndpoint) = BindUdp(TestActor);
+            var (_, localEndpoint) = await BindUdpAsync(TestActor);
             var data = ByteString.FromString("To infinity and beyond!");
-            SimpleSender().Tell(Udp.Send.Create(data, localEndpoint));
+            (await SimpleSender()).Tell(Udp.Send.Create(data, localEndpoint));
 
-            ExpectMsg<Udp.Received>(x => x.Data.ShouldBe(data));
+            await ExpectMsgAsync<Udp.Received>(x => x.Data.ShouldBe(data));
         }
 
         [Fact]
-        public void The_UDP_Fire_and_Forget_implementation_must_be_able_to_send_multipart_ByteString_without_binding()
+        public async Task The_UDP_Fire_and_Forget_implementation_must_be_able_to_send_multipart_ByteString_without_binding()
         {
-            var (_, localEndpoint) = BindUdp(TestActor);
+            var (_, localEndpoint) = await BindUdpAsync(TestActor);
             var data = ByteString.FromString("This ") 
                 + ByteString.FromString("is ") 
                 + ByteString.FromString("multiline ") 
                 + ByteString.FromString(" string!");
-            SimpleSender().Tell(Udp.Send.Create(data, localEndpoint));
+            (await SimpleSender()).Tell(Udp.Send.Create(data, localEndpoint));
 
-            ExpectMsg<Udp.Received>(x => x.Data.ShouldBe(data));
+            await ExpectMsgAsync<Udp.Received>(x => x.Data.ShouldBe(data));
         }
 
         [Fact]
-        public void BugFix_UDP_fire_and_forget_must_handle_batch_writes_when_bound()
+        public async Task BugFix_UDP_fire_and_forget_must_handle_batch_writes_when_bound()
         {
-            var (server, serverLocalEndpoint) = BindUdp(TestActor);
-            var (client, clientLocalEndpoint) = BindUdp(TestActor);
+            var (server, serverLocalEndpoint) = await BindUdpAsync(TestActor);
+            var (client, clientLocalEndpoint) = await BindUdpAsync(TestActor);
             var data = ByteString.FromString("Fly little packet!");
 
             // queue 3 writes
@@ -93,43 +94,43 @@ namespace Akka.Tests.IO
             client.Tell(Udp.Send.Create(data, serverLocalEndpoint));
             client.Tell(Udp.Send.Create(data, serverLocalEndpoint));
 
-            var raw = ReceiveN(3);
+            var raw = await ReceiveNAsync(3, default).ToListAsync();
             var msgs = raw.Cast<Udp.Received>();
             msgs.Sum(x => x.Data.Count).Should().Be(data.Count*3);
-            ExpectNoMsg(100.Milliseconds()); 
+            await ExpectNoMsgAsync(100.Milliseconds()); 
 
             // repeat in the other direction
             server.Tell(Udp.Send.Create(data, clientLocalEndpoint));
             server.Tell(Udp.Send.Create(data, clientLocalEndpoint));
             server.Tell(Udp.Send.Create(data, clientLocalEndpoint));
 
-            raw = ReceiveN(3);
+            raw = await ReceiveNAsync(3, default).ToListAsync();
             msgs = raw.Cast<Udp.Received>();
             msgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
         }
 
         [Fact]
-        public void The_UDP_Fire_and_Forget_implementation_must_be_able_to_send_several_packet_back_and_forth_with_binding()
+        public async Task The_UDP_Fire_and_Forget_implementation_must_be_able_to_send_several_packet_back_and_forth_with_binding()
         {
             var serverProbe = CreateTestProbe();
             var clientProbe = CreateTestProbe();
-            var (server, serverLocalEndpoint) = BindUdp(serverProbe);
-            var (client, clientLocalEndpoint) = BindUdp(clientProbe);
+            var (server, serverLocalEndpoint) = await BindUdpAsync(serverProbe);
+            var (client, clientLocalEndpoint) = await BindUdpAsync(clientProbe);
 
-            void CheckSendingToClient(int iteration)
+            async Task CheckSendingToClient(int iteration)
             {
                 server.Tell(Udp.Send.Create(ByteString.FromString(iteration.ToString()), clientLocalEndpoint));
-                clientProbe.ExpectMsg<Udp.Received>(x =>
+                await clientProbe.ExpectMsgAsync<Udp.Received>(x =>
                 {
                     x.Data.ToString().ShouldBe(iteration.ToString());
                     x.Sender.Is(serverLocalEndpoint).ShouldBeTrue($"Client sender {x.Sender} was expected to be {serverLocalEndpoint}");
                 }, hint: $"sending to client failed in {iteration} iteration");
             }
 
-            void CheckSendingToServer(int iteration)
+            async Task CheckSendingToServer(int iteration)
             {
                 client.Tell(Udp.Send.Create(ByteString.FromString(iteration.ToString()), serverLocalEndpoint));
-                serverProbe.ExpectMsg<Udp.Received>(x =>
+                await serverProbe.ExpectMsgAsync<Udp.Received>(x =>
                 {
                     x.Data.ToString().ShouldBe(iteration.ToString());
                     x.Sender.Is(clientLocalEndpoint).ShouldBeTrue($"Server sender {x.Sender} was expected to be {clientLocalEndpoint}");
@@ -137,33 +138,33 @@ namespace Akka.Tests.IO
             }
 
             const int iterations = 20;
-            for (int i = 1; i <= iterations; i++) CheckSendingToServer(i);
-            for (int i = 1; i <= iterations; i++) CheckSendingToClient(i);
+            for (int i = 1; i <= iterations; i++) await CheckSendingToServer(i);
+            for (int i = 1; i <= iterations; i++) await CheckSendingToClient(i);
             for (int i = 1; i <= iterations; i++)
             {
-                if (i % 2 == 0) CheckSendingToServer(i);
-                else CheckSendingToClient(i);
+                if (i % 2 == 0) await CheckSendingToServer(i);
+                else await CheckSendingToClient(i);
             }
         }
 
         [Fact]
-        public void The_UDP_Fire_and_Forget_implementation_must_be_able_to_send_several_packets_in_a_row()
+        public async Task The_UDP_Fire_and_Forget_implementation_must_be_able_to_send_several_packets_in_a_row()
         {
-            var (server, serverLocalEndpoint) = BindUdp(TestActor);
-            var (client, clientLocalEndpoint) = BindUdp(TestActor);
+            var (server, serverLocalEndpoint) = await BindUdpAsync(TestActor);
+            var (client, clientLocalEndpoint) = await BindUdpAsync(TestActor);
 
-            void CheckSendingToClient(ByteString expected)
+            async Task CheckSendingToClient(ByteString expected)
             {
-                ExpectMsg<Udp.Received>(x =>
+                await ExpectMsgAsync<Udp.Received>(x =>
                 {
                     x.Data.ShouldBe(expected);
                     x.Sender.Is(serverLocalEndpoint).ShouldBeTrue($"{x.Sender} was expected to be {serverLocalEndpoint}");
                 });
             }
 
-            void CheckSendingToServer(ByteString expected)
+            async Task CheckSendingToServer(ByteString expected)
             {
-                ExpectMsg<Udp.Received>(x =>
+                await ExpectMsgAsync<Udp.Received>(x =>
                 {
                     x.Data.ShouldBe(expected);
                     x.Sender.Is(clientLocalEndpoint).ShouldBeTrue($"{x.Sender} was expected to be {clientLocalEndpoint}");
@@ -186,14 +187,14 @@ namespace Akka.Tests.IO
 
             var iterations = data.Length;
             for (int i = 0; i < iterations; i++) client.Tell(Udp.Send.Create(data[i], serverLocalEndpoint));
-            for (int i = 0; i < iterations; i++) CheckSendingToServer(data[i]);
+            for (int i = 0; i < iterations; i++) await CheckSendingToServer(data[i]);
 
             for (int i = 0; i < iterations; i++) server.Tell(Udp.Send.Create(data[i], clientLocalEndpoint));
-            for (int i = 0; i < iterations; i++) CheckSendingToClient(data[i]);
+            for (int i = 0; i < iterations; i++) await CheckSendingToClient(data[i]);
         }
 
         [Fact]
-        public void The_UDP_Fire_and_Forget_implementation_must_not_leak_memory()
+        public async Task The_UDP_Fire_and_Forget_implementation_must_not_leak_memory()
         {
             const int batchCount = 2000;
             const int batchSize = 100;
@@ -205,9 +206,9 @@ namespace Akka.Tests.IO
             poolInfo.Used.Should().Be(0);
             
             var serverProbe = CreateTestProbe();
-            var (server, _) = BindUdp(serverProbe);
+            var (server, _) = await BindUdpAsync(serverProbe);
             var clientProbe = CreateTestProbe();
-            var (client, clientLocalEndpoint) = BindUdp(clientProbe);
+            var (client, clientLocalEndpoint) = await BindUdpAsync(clientProbe);
             
             var data = ByteString.FromString("Fly little packet!");
 
@@ -217,19 +218,19 @@ namespace Akka.Tests.IO
                 for (var i = 0; i < batchSize; i++) 
                     server.Tell(Udp.Send.Create(data, clientLocalEndpoint));
 
-                var msgs = clientProbe.ReceiveN(batchSize);
+                var msgs = await clientProbe.ReceiveNAsync(batchSize, default).ToListAsync();
                 var receives = msgs.Cast<Udp.Received>();
                 receives.Sum(r => r.Data.Count).Should().Be(data.Count * batchSize);
             }
             
             // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
             server.Tell(Udp.Unbind.Instance, serverProbe);
-            serverProbe.ExpectMsg<Udp.Unbound>();
+            await serverProbe.ExpectMsgAsync<Udp.Unbound>();
             client.Tell(Udp.Unbind.Instance, clientProbe);
-            clientProbe.ExpectMsg<Udp.Unbound>();
+            await clientProbe.ExpectMsgAsync<Udp.Unbound>();
             
             // wait for all SocketAsyncEventArgs to be released
-            Thread.Sleep(1000);
+            await Task.Delay(1000);
             
             poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
             poolInfo.Type.Should().Be(typeof(DirectBufferPool));
@@ -238,7 +239,7 @@ namespace Akka.Tests.IO
         }
         
         [Fact]
-        public void The_UDP_Fire_and_Forget_SimpleSender_implementation_must_not_leak_memory()
+        public async Task The_UDP_Fire_and_Forget_SimpleSender_implementation_must_not_leak_memory()
         {
             const int batchCount = 2000;
             const int batchSize = 100;
@@ -250,8 +251,8 @@ namespace Akka.Tests.IO
             poolInfo.Used.Should().Be(0);
             
             var serverProbe = CreateTestProbe();
-            var (server, serverLocalEndpoint) = BindUdp(serverProbe);
-            var sender = SimpleSender();
+            var (server, serverLocalEndpoint) = await BindUdpAsync(serverProbe);
+            var sender = await SimpleSender();
             
             var data = ByteString.FromString("Fly little packet!");
 
@@ -261,17 +262,17 @@ namespace Akka.Tests.IO
                 for (int i = 0; i < batchSize; i++) 
                     sender.Tell(Udp.Send.Create(data, serverLocalEndpoint));
 
-                var msgs = serverProbe.ReceiveN(batchSize);
-                var receives = msgs.Cast<Udp.Received>();
-                receives.Sum(r => r.Data.Count).Should().Be(data.Count * batchSize);
+                var msgs = await serverProbe.ReceiveNAsync(batchSize, 10.Seconds())
+                    .Cast<Udp.Received>().ToListAsync();
+                msgs.Sum(r => r.Data.Count).Should().Be(data.Count * batchSize);
             }
             
             // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
             server.Tell(Udp.Unbind.Instance, serverProbe);
-            serverProbe.ExpectMsg<Udp.Unbound>();
+            await serverProbe.ExpectMsgAsync<Udp.Unbound>();
             
             // wait for all SocketAsyncEventArgs to be released
-            Thread.Sleep(1000);
+            await Task.Delay(1000);
             
             poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
             poolInfo.Type.Should().Be(typeof(DirectBufferPool));
@@ -280,31 +281,31 @@ namespace Akka.Tests.IO
         }
         
         [Fact]
-        public void The_UDP_Fire_and_Forget_implementation_must_call_SocketOption_beforeBind_method_before_bind()
+        public async Task The_UDP_Fire_and_Forget_implementation_must_call_SocketOption_beforeBind_method_before_bind()
         {
             var commander = CreateTestProbe();
             var assertOption = new AssertBeforeBind();
             commander.Send(
                 Udp.Instance.Apply(Sys).Manager, 
                 new Udp.Bind(TestActor, new IPEndPoint(IPAddress.Loopback, 0), options: new[] {assertOption}));
-            commander.ExpectMsg<Udp.Bound>();
+            await commander.ExpectMsgAsync<Udp.Bound>();
             Assert.Equal(1, assertOption.BeforeCalled);
         }
 
         [Fact]
-        public void The_UDP_Fire_and_Forget_implementation_must_call_SocketOption_afterConnect_method_after_binding()
+        public async Task The_UDP_Fire_and_Forget_implementation_must_call_SocketOption_afterConnect_method_after_binding()
         {
             var commander = CreateTestProbe();
             var assertOption = new AssertAfterChannelBind();
             commander.Send(
                 Udp.Instance.Apply(Sys).Manager,
                 new Udp.Bind(TestActor, new IPEndPoint(IPAddress.Loopback, 0), options: new[] { assertOption }));
-            commander.ExpectMsg<Udp.Bound>();
+            await commander.ExpectMsgAsync<Udp.Bound>();
             Assert.Equal(1, assertOption.AfterCalled);
         }
 
         [Fact]
-        public void The_UDP_Fire_and_Forget_implementation_must_call_DatagramChannelCreator_create_method_when_opening_channel()
+        public async Task The_UDP_Fire_and_Forget_implementation_must_call_DatagramChannelCreator_create_method_when_opening_channel()
         {
             var commander = CreateTestProbe();
             var assertOption = new AssertOpenDatagramChannel();
@@ -314,7 +315,7 @@ namespace Akka.Tests.IO
                     TestActor, 
                     new IPEndPoint(IPAddress.Loopback, 0), 
                     options: new[] { assertOption }));
-            commander.ExpectMsg<Udp.Bound>();
+            await commander.ExpectMsgAsync<Udp.Bound>();
             Assert.Equal(1, assertOption.OpenCalled);
         }
 

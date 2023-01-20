@@ -10,31 +10,48 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <PropertyGroup>
-    <XunitVersion>2.4.1</XunitVersion>
-    <XunitRunnerVersion>2.4.3</XunitRunnerVersion>
-    <TestSdkVersion>17.0.0</TestSdkVersion>
+    <XunitVersion>2.4.2</XunitVersion>
+    <XunitRunnerVersion>2.4.2</XunitRunnerVersion>
+    <TestSdkVersion>17.4.1</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
-    <NewtonsoftJsonVersion>[12.0.3,)</NewtonsoftJsonVersion>
+    <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.19.4</ProtobufVersion>
-    <BenchmarkDotNetVersion>0.13.1</BenchmarkDotNetVersion>
+    <ProtobufVersion>3.21.12</ProtobufVersion>
+    <BenchmarkDotNetVersion>0.13.2</BenchmarkDotNetVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
-    <NetTestVersion>net6.0</NetTestVersion>
+    <NetTestVersion>net7.0</NetTestVersion>
     <NetFrameworkTestVersion>net471</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
+    <NetLibVersion>net6.0</NetLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-    <FsCheckVersion>2.16.4</FsCheckVersion>
+    <FsCheckVersion>2.16.5</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
-    <ConfigurationManagerVersion>4.7.0</ConfigurationManagerVersion>
-    <MultiNodeAdapterVersion>1.1.0</MultiNodeAdapterVersion>
+    <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
+    <MultiNodeAdapterVersion>1.1.1</MultiNodeAdapterVersion>
+    <MicrosoftLibVersion>5.0.0</MicrosoftLibVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Placeholder for first beta release of Akka.NET v1.5**</PackageReleaseNotes>
+    <PackageReleaseNotes>Akka.NET v1.5.0-alpha2 is a maintenance release for Akka.NET v1.5 that contains numerous performance improvements in critical areas, including core actor message processing and Akka.Remote.
+Performance Fixes**
+[remove delegate allocation from `ForkJoinDispatcher` and `DedicatedThreadPool`](https://github.com/akkadotnet/akka.net/pull/6162)
+[eliminate `Mailbox` delegate allocations](https://github.com/akkadotnet/akka.net/pull/6162)
+[Reduce `FSM&lt;TState, TData&gt;` allocations](https://github.com/akkadotnet/akka.net/pull/6162)
+[removed boxing allocations inside `FSM.State.Equals`](https://github.com/akkadotnet/akka.net/pull/6196)
+[Eliminate `DefaultLogMessageFormatter` allocations](https://github.com/akkadotnet/akka.net/pull/6166)
+In sum you should expect to see total memory consumption, garbage collection, and throughput improve when you upgrade to Akka.NET v1.5.0-alpha2.
+Other Features and Improvements**
+[DData: Suppress gossip message from showing up in debug log unless verbose debug logging is turned on](https://github.com/akkadotnet/akka.net/pull/6089)
+[TestKit: TestKit automatically injects the default TestKit default configuration if an ActorSystem is passed into its constructor](https://github.com/akkadotnet/akka.net/pull/6092)
+[Sharding: Added a new `GetEntityLocation` query message to retrieve an entity address location in the shard region](https://github.com/akkadotnet/akka.net/pull/6107)
+[Sharding: Fixed `GetEntityLocation` uses wrong actor path](https://github.com/akkadotnet/akka.net/pull/6121)
+[Akka.Cluster and Akka.Cluster.Sharding: should throw human-friendly exception when accessing cluster / sharding plugins when clustering is not running](https://github.com/akkadotnet/akka.net/pull/6169)
+[Akka.Cluster.Sharding: Add `HashCodeMessageExtractor` factory](https://github.com/akkadotnet/akka.net/pull/6173)
+[Akka.Persistence.Sql.Common: Fix `DbCommand.CommandTimeout` in `BatchingSqlJournal`](https://github.com/akkadotnet/akka.net/pull/6175)</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>

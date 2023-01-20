@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnfoldFlowSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.Util;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
@@ -232,7 +233,7 @@ namespace Akka.Streams.Tests.Dsl
                 snk.ExpectComplete();
             }
 
-            [Fact(Skip ="Racy")]
+            [LocalFact(SkipLocal = "Racy on Azure DevOps")]
             public void UnfoldFlow_should_increment_integers_and_handle_KillSwitch_and_complete_gracefully_after_timeout_when_stopped()
             {
                 var t = _source.ToMaterialized(this.SinkProbe<int>(), Keep.Both).Run(Sys.Materializer());
@@ -331,7 +332,7 @@ namespace Akka.Streams.Tests.Dsl
                 snk.ExpectError().Should().Be(kill);
             }
 
-            [Fact(Skip ="Racy")]
+            [LocalFact(SkipLocal = "Racy on Azure DevOps")]
             public void UnfoldFlow_should_increment_integers_and_handle_KillSwitch_and_fail_after_timeout_when_aborted()
             {
                 var t = _source.ToMaterialized(this.SinkProbe<int>(), Keep.Both).Run(Sys.Materializer());

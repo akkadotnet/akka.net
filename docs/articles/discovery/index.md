@@ -1,4 +1,9 @@
-# Discovery Overview
+---
+uid: akka-discovery
+title: Akka.NET Service Discovery with Akka.Discovery
+---
+
+# Akka.Discovery Overview
 
 > [!WARNING]
 >This module is currently marked as **may change**.

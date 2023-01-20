@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterReadView.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -107,31 +107,31 @@ namespace Akka.Cluster
 
                 Receive<ClusterEvent.IClusterDomainEvent>(clusterDomainEvent =>
                 {
-                    clusterDomainEvent.Match()
-                        .With<ClusterEvent.SeenChanged>(changed =>
-                        {
+                    switch (clusterDomainEvent)
+                    {
+                        case ClusterEvent.SeenChanged changed:
                             State = State.Copy(seenBy: changed.SeenBy);
-                        })
-                        .With<ClusterEvent.ReachabilityChanged>(changed =>
-                        {
+                            break;
+                        
+                        case ClusterEvent.ReachabilityChanged changed:
                             _readView._reachability = changed.Reachability;
-                        })
-                        .With<ClusterEvent.MemberRemoved>(removed =>
-                        {
+                            break;
+                        
+                        case ClusterEvent.MemberRemoved removed:
                             State = State.Copy(members: State.Members.Remove(removed.Member),
                                 unreachable: State.Unreachable.Remove(removed.Member));
-                        })
-                        .With<ClusterEvent.UnreachableMember>(member =>
-                        {
+                            break;
+                        
+                        case ClusterEvent.UnreachableMember member:
                             // replace current member with new member (might have different status, only address is used in == comparison)
                             State = State.Copy(unreachable: State.Unreachable.Remove(member.Member).Add(member.Member));
-                        })
-                        .With<ClusterEvent.ReachableMember>(member =>
-                        {
+                            break;
+                        
+                        case ClusterEvent.ReachableMember member:
                             State = State.Copy(unreachable: State.Unreachable.Remove(member.Member));
-                        })
-                        .With<ClusterEvent.IMemberEvent>(memberEvent =>
-                        {
+                            break;
+                        
+                        case ClusterEvent.IMemberEvent memberEvent:
                             var newUnreachable = State.Unreachable;
                             // replace current member with new member (might have different status, only address is used in == comparison)
                             if (State.Unreachable.Contains(memberEvent.Member))
@@ -139,20 +139,24 @@ namespace Akka.Cluster
                             State = State.Copy(
                                 members: State.Members.Remove(memberEvent.Member).Add(memberEvent.Member),
                                 unreachable: newUnreachable);
-                        })
-                        .With<ClusterEvent.LeaderChanged>(changed =>
-                        {
+                            break;
+                        
+                        case ClusterEvent.LeaderChanged changed:
                             State = State.Copy(leader: changed.Leader);
-                        })
-                        .With<ClusterEvent.RoleLeaderChanged>(changed =>
-                        {
+                            break;
+                        
+                        case ClusterEvent.RoleLeaderChanged changed:
                             State = State.Copy(roleLeaderMap: State.RoleLeaderMap.SetItem(changed.Role, changed.Leader));
-                        })
-                        .With<ClusterEvent.CurrentInternalStats>(stats =>
-                        {
+                            break;
+                        
+                        case ClusterEvent.CurrentInternalStats stats:
                             readView._latestStats = stats;
-                        })
-                        .With<ClusterEvent.ClusterShuttingDown>(_ => { });
+                            break;
+                        
+                        case ClusterEvent.ClusterShuttingDown _:
+                            // no-op
+                            break;
+                    }
 
                     // once captured, optional verbose logging of event
                     if (!(clusterDomainEvent is ClusterEvent.SeenChanged) && _cluster.Settings.LogInfoVerbose)

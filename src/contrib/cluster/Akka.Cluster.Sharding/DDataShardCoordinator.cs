@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DDataShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -541,12 +541,12 @@ namespace Akka.Cluster.Sharding
                         _baseImpl.AllocateShardHomesForRememberEntities();
                     }
                     Timers.Cancel(RememberEntitiesTimeoutKey);
-                    break;
+                    return true;
 
                 case RememberEntitiesLoadTimeout _:
                     // repeat until successful
                     GetAllRememberedShards();
-                    break;
+                    return true;
             }
             return false;
         }

@@ -1,20 +1,23 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Mailboxes.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
-using Akka.Util.Reflection;
 using Akka.Dispatch.MessageQueues;
 using Akka.Event;
+using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Dispatch
 {
@@ -70,6 +73,7 @@ namespace Akka.Dispatch
             }
 
             _defaultMailboxConfig = Settings.Config.GetConfig(DefaultMailboxId);
+            _defaultStashCapacity = StashCapacityFromConfig(Dispatchers.DefaultDispatcherId, DefaultMailboxId);
         }
 
         /// <summary>
@@ -169,21 +173,32 @@ namespace Akka.Dispatch
                     var mailboxTypeName = conf.GetString("mailbox-type", null);
                     if (string.IsNullOrEmpty(mailboxTypeName))
                         throw new ConfigurationException($"The setting mailbox-type defined in [{id}] is empty");
-                    var type = Type.GetType(mailboxTypeName);
-                    if (type == null)
-                        throw new ConfigurationException($"Found mailbox-type [{mailboxTypeName}] in configuration for [{id}], but could not find that type in any loaded assemblies.");
-                    var args = new object[] {Settings, conf};
+                    var mailboxType = Type.GetType(mailboxTypeName) 
+                        ?? throw new ConfigurationException($"Found mailbox-type [{mailboxTypeName}] in configuration for [{id}], but could not find that type in any loaded assemblies.");
+                    var args = new object[] { Settings, conf };
                     try
                     {
-                        configurator = (MailboxType) Activator.CreateInstance(type, args);
+                        configurator = (MailboxType)Activator.CreateInstance(mailboxType, args);
+
+                        if (!_mailboxNonZeroPushTimeoutWarningIssued)
+                        {
+                            if (configurator is IProducesPushTimeoutSemanticsMailbox m && m.PushTimeout.Ticks > 0L)
+                            {
+                                Warn($"Configured potentially-blocking mailbox [{id}] configured with non-zero PushTimeOut ({m.PushTimeout}), " +
+                                    "which can lead to blocking behavior when sending messages to this mailbox. " +
+                                    $"Avoid this by setting `{id}.mailbox-push-timeout-time` to `0`.");
+
+                                _mailboxNonZeroPushTimeoutWarningIssued = true;
+                            }
+
+                            // good; nothing to see here, move along, sir.
+                        }
                     }
                     catch (Exception ex)
                     {
-                        throw new ArgumentException($"Cannot instantiate MailboxType {type}, defined in [{id}]. Make sure it has a public " +
+                        throw new ArgumentException($"Cannot instantiate MailboxType {mailboxType}, defined in [{id}]. Make sure it has a public " +
                                                      "constructor with [Akka.Actor.Settings, Akka.Configuration.Config] parameters", ex);
                     }
-
-                    // TODO: check for blocking mailbox with a non-zero pushtimeout and issue a warning
                 }
 
                 // add the new configurator to the mapping, or keep the existing if it was already added
@@ -311,39 +326,52 @@ namespace Akka.Dispatch
             return VerifyRequirements(Lookup(DefaultMailboxId));
         }
 
+        private void Warn(string msg) =>
+            _system.EventStream.Publish(new Warning("mailboxes", GetType(), msg));
+
+        private readonly AtomicReference<ImmutableDictionary<string, int>> _stashCapacityCache =
+            new(ImmutableDictionary<string, int>.Empty);
+
+        private readonly int _defaultStashCapacity;
+
         /// <summary>
-        /// Creates a mailbox from a configuration path.
+        /// INTERNAL API
+        /// <para>
+        /// The capacity of the stash. Configured in the actor's mailbox or dispatcher config.
+        /// </para>
         /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns>Mailbox.</returns>
-        public Type FromConfig(string path)
+        [InternalApi]
+        public int StashCapacity(string dispatcher, string mailbox)
         {
-            //TODO: this should not exist, its a temp hack because we are not serializing mailbox info when doing remote deploy..
-            if (string.IsNullOrEmpty(path))
+            bool UpdateCache(ImmutableDictionary<string, int> cache, string key, int value)
             {
-                return typeof (UnboundedMailbox);
+                return _stashCapacityCache.CompareAndSet(cache, cache.SetItem(key, value)) ||
+                    UpdateCache(_stashCapacityCache.Value, key, value); // recursive, try again
             }
 
-            var config = _system.Settings.Config.GetConfig(path);
-            if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot retrieve mailbox type from config: {path} configuration node not found");
+            if (dispatcher == Dispatchers.DefaultDispatcherId && mailbox == DefaultMailboxId)
+                return _defaultStashCapacity;
 
-            var type = config.GetString("mailbox-type", null);
+            var cache = _stashCapacityCache.Value;
+            var key = $"{dispatcher}-{mailbox}";
 
-            var mailboxType = TypeCache.GetType(type);
-            return mailboxType;
-            /*
-mailbox-capacity = 1000
-mailbox-push-timeout-time = 10s
-stash-capacity = -1
-            */
+            if (!cache.TryGetValue(key, out var value))
+            {
+                value = StashCapacityFromConfig(dispatcher, mailbox);
+                UpdateCache(cache, key, value);
+            }
+
+            return value;
         }
 
-        //TODO: stash capacity
-
-        private void Warn(string msg)
+        private int StashCapacityFromConfig(string dispatcher, string mailbox)
         {
-           _system.EventStream.Publish(new Warning("mailboxes", GetType(), msg));
+            var disp = Dispatchers.GetConfig(Settings.Config, dispatcher);
+            var fallback = disp.WithFallback(Settings.Config.GetConfig(DefaultMailboxId));
+            var config = mailbox == DefaultMailboxId
+                ? fallback
+                : Settings.Config.GetConfig(mailbox).WithFallback(fallback);
+            return config.GetInt("stash-capacity");
         }
     }
 }

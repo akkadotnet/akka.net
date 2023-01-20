@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefIgnoreSerializationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,12 +42,11 @@ namespace Akka.Cluster.Tests
             system2 = ActorSystem.Create("sys2", Config);
         }
 
-
-        protected override void AfterAll()
+        protected override async Task AfterAllAsync()
         {
-            base.AfterAll();
-            system1.Terminate();
-            system2.Terminate();
+            await base.AfterAllAsync();
+            await ShutdownAsync(system1);
+            await ShutdownAsync(system2);
         }
 
         [Fact]

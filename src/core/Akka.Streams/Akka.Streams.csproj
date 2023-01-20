@@ -1,72 +1,74 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\common.props" />
-  <PropertyGroup>
-    <AssemblyTitle>Akka.Streams</AssemblyTitle>
-    <Description>Reactive stream support for Akka.NET</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
-    <PackageTags>$(AkkaPackageTags);reactive;stream</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="reference.conf" />
-    <ProjectReference Include="..\Akka\Akka.csproj" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="CodeGen\Dsl\GraphApply.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>GraphApply.cs</LastGenOutput>
-    </None>
-    <Compile Update="CodeGen\Dsl\GraphApply.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>GraphApply.tt</DependentUpon>
-    </Compile>
-    <None Update="CodeGen\Dsl\UnzipWith.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>UnzipWith.cs</LastGenOutput>
-    </None>
-    <Compile Update="CodeGen\Dsl\UnzipWith.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>UnzipWith.tt</DependentUpon>
-    </Compile>
-    <None Update="CodeGen\Dsl\ZipWith.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>ZipWith.cs</LastGenOutput>
-    </None>
-    <Compile Update="CodeGen\Dsl\ZipWith.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>ZipWith.tt</DependentUpon>
-    </Compile>
-    <None Update="CodeGen\FanInShape.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>FanInShape.cs</LastGenOutput>
-    </None>
-    <Compile Update="CodeGen\FanInShape.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>FanInShape.tt</DependentUpon>
-    </Compile>
-    <None Update="CodeGen\FanOutShape.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>FanOutShape.cs</LastGenOutput>
-    </None>
-    <Compile Update="CodeGen\FanOutShape.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>FanOutShape.tt</DependentUpon>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
-    <PackageReference Include="Reactive.Streams" Version="1.0.2" />
-  </ItemGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
+    <Import Project="..\..\common.props" />
+    <PropertyGroup>
+        <AssemblyTitle>Akka.Streams</AssemblyTitle>
+        <Description>Streaming support for Akka.NET. Introduces a LINQ-like interface for writing asynchronous,
+            back-pressure-aware streams built on top of Akka.NET actors.</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags);reactive;stream</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <LangVersion>9</LangVersion>
+    </PropertyGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="reference.conf" />
+        <ProjectReference Include="..\Akka\Akka.csproj" />
+    </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
+        <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Update="CodeGen\Dsl\GraphApply.tt">
+            <Generator>TextTemplatingFileGenerator</Generator>
+            <LastGenOutput>GraphApply.cs</LastGenOutput>
+        </None>
+        <Compile Update="CodeGen\Dsl\GraphApply.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>GraphApply.tt</DependentUpon>
+        </Compile>
+        <None Update="CodeGen\Dsl\UnzipWith.tt">
+            <Generator>TextTemplatingFileGenerator</Generator>
+            <LastGenOutput>UnzipWith.cs</LastGenOutput>
+        </None>
+        <Compile Update="CodeGen\Dsl\UnzipWith.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>UnzipWith.tt</DependentUpon>
+        </Compile>
+        <None Update="CodeGen\Dsl\ZipWith.tt">
+            <Generator>TextTemplatingFileGenerator</Generator>
+            <LastGenOutput>ZipWith.cs</LastGenOutput>
+        </None>
+        <Compile Update="CodeGen\Dsl\ZipWith.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>ZipWith.tt</DependentUpon>
+        </Compile>
+        <None Update="CodeGen\FanInShape.tt">
+            <Generator>TextTemplatingFileGenerator</Generator>
+            <LastGenOutput>FanInShape.cs</LastGenOutput>
+        </None>
+        <Compile Update="CodeGen\FanInShape.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>FanInShape.tt</DependentUpon>
+        </Compile>
+        <None Update="CodeGen\FanOutShape.tt">
+            <Generator>TextTemplatingFileGenerator</Generator>
+            <LastGenOutput>FanOutShape.cs</LastGenOutput>
+        </None>
+        <Compile Update="CodeGen\FanOutShape.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>FanOutShape.tt</DependentUpon>
+        </Compile>
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+        <PackageReference Include="Reactive.Streams" Version="1.0.2" />
+    </ItemGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
 </Project>

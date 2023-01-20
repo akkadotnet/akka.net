@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="KeepGoingStageSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -142,21 +142,27 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 private void OnCommand(IPingCmd cmd)
                 {
-                    cmd.Match()
-                        .With<Register>(r => _listener = r.Probe)
-                        .With<Ping>(() => _listener.Tell(Pong.Instance))
-                        .With<CompleteStage>(() =>
-                        {
+                    switch (cmd)
+                    {
+                        case Register r:
+                            _listener = r.Probe;
+                            break;
+                        
+                        case Ping _:
+                            _listener.Tell(Pong.Instance);
+                            break;
+                        
+                        case CompleteStage _:
                             CompleteStage();
                             _listener.Tell(EndOfEventHandler.Instance);
-                        })
-                        .With<FailStage>(() =>
-                        {
+                            break;
+                        
+                        case FailStage _:
                             FailStage(new TestException("test"));
                             _listener.Tell(EndOfEventHandler.Instance);
-                        })
-                        .With<Throw>(() =>
-                        {
+                            break;
+                        
+                        case Throw _:
                             try
                             {
                                 throw new TestException("test");
@@ -165,7 +171,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                             {
                                 _listener.Tell(EndOfEventHandler.Instance);
                             }
-                        });
+                    }
                 }
             }
 

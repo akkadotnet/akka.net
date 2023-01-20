@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalTestActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,41 +52,30 @@ namespace Akka.TestKit.Internal
                     throw;
             }
 
-            var setIgnore = message as TestKit.TestActor.SetIgnore;
-            if(setIgnore != null)
+            switch (message)
             {
-                _ignore = setIgnore.Ignore;
-                return true;
-            }
-            var watch = message as TestKit.TestActor.Watch;
-            if(watch != null)
-            {
-                Context.Watch(watch.Actor);
-                return true;
-            }
-            var unwatch = message as TestKit.TestActor.Unwatch;
-            if(unwatch != null)
-            {
-                Context.Unwatch(unwatch.Actor);
-                return true;
-            }
-            var setAutoPilot = message as TestKit.TestActor.SetAutoPilot;
-            if(setAutoPilot != null)
-            {
-                _autoPilot = setAutoPilot.AutoPilot;
-                return true;
-            }
-            
-            var spawn = message as TestKit.TestActor.Spawn;
-            if (spawn != null)
-            {
-                var actor = spawn.Apply(Context);
-                if (spawn._supervisorStrategy.HasValue)
+                case TestActor.SetIgnore setIgnore:
+                    _ignore = setIgnore.Ignore;
+                    return true;
+                case TestActor.Watch watch:
+                    Context.Watch(watch.Actor);
+                    return true;
+                case TestActor.Unwatch unwatch:
+                    Context.Unwatch(unwatch.Actor);
+                    return true;
+                case TestActor.SetAutoPilot setAutoPilot:
+                    _autoPilot = setAutoPilot.AutoPilot;
+                    return true;
+                case TestActor.Spawn spawn:
                 {
-                    _supervisorStrategy.Update(actor, spawn._supervisorStrategy.Value);
+                    var actor = spawn.Apply(Context);
+                    if (spawn._supervisorStrategy.HasValue)
+                    {
+                        _supervisorStrategy.Update(actor, spawn._supervisorStrategy.Value);
+                    }
+                    _queue.Enqueue(new RealMessageEnvelope(actor, Self));
+                    return true;
                 }
-                _queue.Enqueue(new RealMessageEnvelope(actor, Self));
-                return true;
             }
 
             var actorRef = Sender;
@@ -99,20 +88,6 @@ namespace Akka.TestKit.Internal
             if(_ignore == null || !_ignore(message))
                 _queue.Enqueue(new RealMessageEnvelope(message, actorRef));
             return true;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override void PostStop()
-        {
-            var self = Self;
-            foreach(var messageEnvelope in _queue.ToList())
-            {
-                var messageSender = messageEnvelope.Sender;
-                var message = messageEnvelope.Message;
-                Context.System.DeadLetters.Tell(new DeadLetter(message, messageSender, self), messageSender);
-            }
         }
     }
 }

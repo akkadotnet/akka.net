@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpStages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -56,7 +56,19 @@ namespace Akka.Streams.Implementation.IO
                 _listener?.Tell(new Tcp.ResumeAccepting(1), StageActor.Ref);
             }
 
-            public void OnDownstreamFinish() => TryUnbind();
+            public void OnDownstreamFinish(Exception cause)
+            {
+                if (Log.IsDebugEnabled)
+                {
+                    var endpoint = (IPEndPoint)_stage._endpoint;
+                    if (cause is SubscriptionWithCancelException.NonFailureCancellation)
+                        Log.Debug("Unbinding from {0} because downstream cancelled stream", endpoint);
+                    else
+                        Log.Debug(cause, "Unbinding from {0} because of downstream failure", endpoint);
+                }
+                
+                TryUnbind();
+            }
 
             private StreamTcp.IncomingConnection ConnectionFor(Tcp.Connected connected, IActorRef connection)
             {
@@ -114,50 +126,55 @@ namespace Akka.Streams.Implementation.IO
             {
                 var sender = args.Item1;
                 var msg = args.Item2;
-                if (msg is Tcp.Bound)
+                switch (msg)
                 {
-                    var bound = (Tcp.Bound)msg;
-                    _listener = sender;
-                    StageActor.Watch(_listener);
+                    case Tcp.Bound bound:
+                        _listener = sender;
+                        StageActor.Watch(_listener);
 
-                    if (IsAvailable(_stage._out))
-                        _listener.Tell(new Tcp.ResumeAccepting(1), StageActor.Ref);
+                        if (IsAvailable(_stage._out))
+                            _listener.Tell(new Tcp.ResumeAccepting(1), StageActor.Ref);
 
-                    var thisStage = StageActor.Ref;
-                    var binding = new StreamTcp.ServerBinding(bound.LocalAddress, () =>
-                    {
-                        // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
-                        thisStage.Tell(Tcp.Unbind.Instance, thisStage);
-                        return _unbindPromise.Task;
-                    });
+                        var thisStage = StageActor.Ref;
+                        var binding = new StreamTcp.ServerBinding(bound.LocalAddress, () =>
+                        {
+                            // To allow unbind() to be invoked multiple times with minimal chance of dead letters, we check if
+                            // it's already unbound before sending the message.
+                            if (!_unbindPromise.Task.IsCompleted)
+                            {
+                                // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
+                                thisStage.Tell(Tcp.Unbind.Instance, thisStage);
+                            }
+                            return _unbindPromise.Task;
+                        });
 
-                    _bindingPromise.NonBlockingTrySetResult(binding);
-                }
-                else if (msg is Tcp.CommandFailed)
-                {
-                    var ex = BindFailedException.Instance;
-                    _bindingPromise.NonBlockingTrySetException(ex);
-                    _unbindPromise.TrySetResult(NotUsed.Instance);
-                    FailStage(ex);
-                }
-                else if (msg is Tcp.Connected)
-                {
-                    var connected = (Tcp.Connected)msg;
-                    Push(_stage._out, ConnectionFor(connected, sender));
-                }
-                else if (msg is Tcp.Unbind)
-                {
-                    if (!IsClosed(_stage._out) && !ReferenceEquals(_listener, null))
-                        TryUnbind();
-                }
-                else if (msg is Tcp.Unbound)
-                {
-                    UnbindCompleted();
-                }
-                else if (msg is Terminated)
-                {
-                    if (_unbindStarted) UnbindCompleted();
-                    else FailStage(new IllegalStateException("IO Listener actor terminated unexpectedly"));
+                        _bindingPromise.NonBlockingTrySetResult(binding);
+                        break;
+                    
+                    case Tcp.CommandFailed _:
+                        var ex = BindFailedException.Instance;
+                        _bindingPromise.NonBlockingTrySetException(ex);
+                        _unbindPromise.TrySetResult(NotUsed.Instance);
+                        FailStage(ex);
+                        break;
+                    
+                    case Tcp.Connected connected:
+                        Push(_stage._out, ConnectionFor(connected, sender));
+                        break;
+                    
+                    case Tcp.Unbind _:
+                        if (!(_unbindStarted || IsClosed(_stage._out) || ReferenceEquals(_listener, null)))
+                            TryUnbind();
+                        break;
+                    
+                    case Tcp.Unbound _:
+                    case Terminated _ when _unbindStarted:
+                        UnbindCompleted();
+                        break;
+                    
+                    case Terminated _:
+                        FailStage(new IllegalStateException("IO Listener actor terminated unexpectedly"));
+                        break;
                 }
             }
 
@@ -407,14 +424,23 @@ namespace Akka.Streams.Implementation.IO
 
                 _readHandler = new LambdaOutHandler(
                     onPull: () => _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref),
-                    onDownstreamFinish: () =>
+                    onDownstreamFinish: cause =>
                     {
-                        if (!IsClosed(_bytesIn))
-                            _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                        if (cause is SubscriptionWithCancelException.NonFailureCancellation)
+                        {
+                            if(Log.IsDebugEnabled)
+                                Log.Debug("Closing connection from {0} because downstream cancelled stream without failure", (IPEndPoint)_remoteAddress);
+                            if(IsClosed(_bytesIn))
+                                _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
+                            else
+                                _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                        }
                         else
                         {
+                            if(Log.IsDebugEnabled)
+                                Log.Debug(cause, "Aborting connection from {0} because of downstream failure", (IPEndPoint)_remoteAddress);
                             _connection.Tell(Tcp.Abort.Instance, StageActor.Ref);
-                            CompleteStage();
+                            FailStage(cause);
                         }
                     });
 

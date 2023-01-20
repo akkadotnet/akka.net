@@ -1,13 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TaskBasedScheduler_ActionScheduler_Cancellation_Tests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
 using Xunit;
 
@@ -17,7 +19,7 @@ namespace Akka.Tests.Actor.Scheduler
     public class DefaultScheduler_ActionScheduler_Cancellation_Tests : AkkaSpec
     {
         [Fact]
-        public void When_ScheduleOnce_using_canceled_Cancelable_Then_their_actions_should_not_be_invoked()
+        public async Task When_ScheduleOnce_using_canceled_Cancelable_Then_their_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
             IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -28,7 +30,7 @@ namespace Akka.Tests.Actor.Scheduler
                 scheduler.ScheduleOnce(0, () => TestActor.Tell("Test"), canceled);
 
                 //Validate that no messages were sent
-                ExpectNoMsg(100);
+                await ExpectNoMsgAsync(100);
             }
             finally
             {
@@ -37,7 +39,7 @@ namespace Akka.Tests.Actor.Scheduler
         }
 
         [Fact]
-        public void When_ScheduleRepeatedly_using_canceled_Cancelable_Then_their_actions_should_not_be_invoked()
+        public async Task When_ScheduleRepeatedly_using_canceled_Cancelable_Then_their_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
             IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -49,7 +51,7 @@ namespace Akka.Tests.Actor.Scheduler
                 scheduler.ScheduleRepeatedly(50, 100, () => TestActor.Tell("Test2"), canceled);
 
                 //Validate that no messages were sent
-                ExpectNoMsg(150);
+                await ExpectNoMsgAsync(150);
             }
             finally
             {
@@ -58,7 +60,7 @@ namespace Akka.Tests.Actor.Scheduler
         }
 
         [Fact]
-        public void When_ScheduleOnce_and_then_canceling_before_they_occur_Then_their_actions_should_not_be_invoked()
+        public async Task When_ScheduleOnce_and_then_canceling_before_they_occur_Then_their_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
             IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -70,7 +72,7 @@ namespace Akka.Tests.Actor.Scheduler
                 cancelable.Cancel();
 
                 //Validate that no messages were sent
-                ExpectNoMsg(150);
+                await ExpectNoMsgAsync(150);
             }
             finally
             {
@@ -79,7 +81,7 @@ namespace Akka.Tests.Actor.Scheduler
         }
 
         [Fact]
-        public void When_ScheduleRepeatedly_and_then_canceling_before_they_occur_Then_their_actions_should_not_be_invoked()
+        public async Task When_ScheduleRepeatedly_and_then_canceling_before_they_occur_Then_their_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
             IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -91,7 +93,7 @@ namespace Akka.Tests.Actor.Scheduler
                 cancelable.Cancel();
 
                 //Validate that no messages were sent
-                ExpectNoMsg(150);
+                await ExpectNoMsgAsync(150);
             }
             finally
             {
@@ -100,7 +102,7 @@ namespace Akka.Tests.Actor.Scheduler
         }
 
         [Fact]
-        public void When_canceling_existing_running_repeaters_Then_their_future_actions_should_not_be_invoked()
+        public async Task When_canceling_existing_running_repeaters_Then_their_future_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
             IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -109,11 +111,11 @@ namespace Akka.Tests.Actor.Scheduler
             {
                 var cancelable = new Cancelable(scheduler);
                 scheduler.ScheduleRepeatedly(0, 150, () => TestActor.Tell("Test"), cancelable);
-                ExpectMsg("Test");
+                await ExpectMsgAsync("Test");
                 cancelable.Cancel();
 
                 //Validate that no more messages were sent
-                ExpectNoMsg(200);
+                await ExpectNoMsgAsync(200);
             }
             finally
             {
@@ -121,10 +123,8 @@ namespace Akka.Tests.Actor.Scheduler
             }
         }
 
-        // Might be racy, failed at least once in Azure Pipelines.
-        // Passed 500 consecutive local test runs with no fail with very heavy load without modification
-        [Fact]
-        public void When_canceling_existing_running_repeaters_by_scheduling_the_cancellation_ahead_of_time_Then_their_future_actions_should_not_be_invoked()
+        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        public async Task When_canceling_existing_running_repeaters_by_scheduling_the_cancellation_ahead_of_time_Then_their_future_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
             IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -136,10 +136,10 @@ namespace Akka.Tests.Actor.Scheduler
                 cancelableOdd.CancelAfter(50);
 
                 //Expect one message
-                ExpectMsg("Test");
+                await ExpectMsgAsync("Test");
 
                 //Validate that no messages were sent
-                ExpectNoMsg(200);
+                await ExpectNoMsgAsync(200);
             }
             finally
             {

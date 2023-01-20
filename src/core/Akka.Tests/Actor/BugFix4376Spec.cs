@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BugFix4376Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -185,12 +185,12 @@ namespace Akka.Tests.Actor
             }
 
             poolActorRef.Tell(2);
-            ExpectMsg<int>();
-            ExpectMsg<int>();
-            ExpectMsg<int>();
-            ExpectMsg<int>();
-            ExpectMsg<int>();
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync<int>();
+            await ExpectMsgAsync<int>();
+            await ExpectMsgAsync<int>();
+            await ExpectMsgAsync<int>();
+            await ExpectMsgAsync<int>();
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
