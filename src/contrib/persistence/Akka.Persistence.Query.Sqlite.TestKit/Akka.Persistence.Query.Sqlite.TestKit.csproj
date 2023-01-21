@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
+      <ProjectReference Include="..\Akka.Persistence.Query.Sqlite\Akka.Persistence.Query.Sqlite.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
+    </ItemGroup>
+
+</Project>
