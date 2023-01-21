@@ -1927,13 +1927,13 @@ namespace Akka.Actor.Internal
 {
     public abstract class AbstractStash : Akka.Actor.IStash
     {
-        protected AbstractStash(Akka.Actor.IActorContext context, int capacity = 100) { }
+        protected AbstractStash(Akka.Actor.IActorContext context) { }
         public System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> ClearStash() { }
         public void Prepend(System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> envelopes) { }
         public void Stash() { }
         public void Unstash() { }
         public void UnstashAll() { }
-        public void UnstashAll(System.Func<Akka.Actor.Envelope, bool> predicate) { }
+        public void UnstashAll(System.Func<Akka.Actor.Envelope, bool> filterPredicate) { }
     }
     public class ActorSystemImpl : Akka.Actor.ExtendedActorSystem
     {
@@ -1981,7 +1981,7 @@ namespace Akka.Actor.Internal
     }
     public class BoundedStashImpl : Akka.Actor.Internal.AbstractStash
     {
-        public BoundedStashImpl(Akka.Actor.IActorContext context, int capacity = 100) { }
+        public BoundedStashImpl(Akka.Actor.IActorContext context) { }
     }
     public class ChildNameReserved : Akka.Actor.Internal.IChildStats
     {
@@ -2520,14 +2520,14 @@ namespace Akka.Dispatch
         public static void RunTask(System.Func<System.Threading.Tasks.Task> asyncAction) { }
         protected override bool TryExecuteTaskInline(System.Threading.Tasks.Task task, bool taskWasPreviouslyQueued) { }
     }
-    public sealed class BoundedDequeBasedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.BoundedDequeMessageQueue>
+    public class BoundedDequeBasedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.BoundedDequeMessageQueue>, Akka.Dispatch.IProducesPushTimeoutSemanticsMailbox
     {
         public BoundedDequeBasedMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
         public int Capacity { get; }
         public System.TimeSpan PushTimeout { get; }
         public override Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
     }
-    public sealed class BoundedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.BoundedMessageQueue>
+    public sealed class BoundedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.BoundedMessageQueue>, Akka.Dispatch.IProducesPushTimeoutSemanticsMailbox
     {
         public BoundedMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
         public int Capacity { get; }
@@ -2583,6 +2583,8 @@ namespace Akka.Dispatch
         public Akka.Configuration.Config DefaultDispatcherConfig { get; }
         public Akka.Dispatch.MessageDispatcher DefaultGlobalDispatcher { get; }
         public Akka.Dispatch.IDispatcherPrerequisites Prerequisites { get; }
+        [Akka.Annotations.InternalApiAttribute()]
+        public static Akka.Configuration.Config GetConfig(Akka.Configuration.Config config, string id, int depth = 0) { }
         public bool HasDispatcher(string id) { }
         public Akka.Dispatch.MessageDispatcher Lookup(string dispatcherName) { }
         public bool RegisterConfigurator(string id, Akka.Dispatch.MessageDispatcherConfigurator configurator) { }
@@ -2636,6 +2638,10 @@ namespace Akka.Dispatch
     public interface IMultipleConsumerSemantics : Akka.Dispatch.ISemantics { }
     public interface IProducesMessageQueue<TQueue>
         where TQueue : Akka.Dispatch.MessageQueues.IMessageQueue { }
+    public interface IProducesPushTimeoutSemanticsMailbox
+    {
+        System.TimeSpan PushTimeout { get; }
+    }
     public interface IRequiresMessageQueue<T>
         where T : Akka.Dispatch.ISemantics { }
     public interface IRunnable
@@ -2669,13 +2675,14 @@ namespace Akka.Dispatch
         public static readonly string NoMailboxRequirement;
         public Mailboxes(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.DeadLetterMailbox DeadLetterMailbox { get; }
-        public System.Type FromConfig(string path) { }
         public Akka.Dispatch.MailboxType GetMailboxType(Akka.Actor.Props props, Akka.Configuration.Config dispatcherConfig) { }
         public System.Type GetRequiredType(System.Type actorType) { }
         public bool HasRequiredType(System.Type actorType) { }
         public Akka.Dispatch.MailboxType Lookup(string id) { }
         public Akka.Dispatch.MailboxType LookupByQueueType(System.Type queueType) { }
         public bool ProducesMessageQueue(System.Type mailboxType) { }
+        [Akka.Annotations.InternalApiAttribute()]
+        public int StashCapacity(string dispatcher, string mailbox) { }
     }
     public abstract class MessageDispatcher
     {
