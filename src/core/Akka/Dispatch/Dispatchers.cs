@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 using Helios.Concurrency;
@@ -330,6 +331,35 @@ namespace Akka.Dispatch
         /// Has to be thread-safe, as this collection can be accessed concurrently by many actors.
         /// </summary>
         private readonly ConcurrentDictionary<string, MessageDispatcherConfigurator> _dispatcherConfigurators = new ConcurrentDictionary<string, MessageDispatcherConfigurator>();
+
+        /// <summary>
+        /// Get (possibly aliased) dispatcher config. Returns empty config if not found.
+        /// </summary>
+        [InternalApi]
+        public static Config GetConfig(Config config, string id, int depth = 0)
+        {
+            if (depth > MaxDispatcherAliasDepth)
+            {
+                // Didn't find dispatcher config after `MaxDispatcherAliasDepth` aliases
+                return ConfigurationFactory.Empty;
+            }
+            else if (config.HasPath(id))
+            {
+                var hocon = config.GetValue(id);
+                if (hocon.IsObject())
+                    return config.GetConfig(id);
+                if (hocon.IsString())
+                    return GetConfig(config, config.GetString(id), depth + 1);
+
+                // Expected either config or alias at `id` but found `unexpected`
+                return ConfigurationFactory.Empty;
+            }
+            else 
+            {
+                // Dispatcher `id` not configured
+                return ConfigurationFactory.Empty;
+            }
+        }
 
         /// <summary>Initializes a new instance of the <see cref="Dispatchers" /> class.</summary>
         /// <param name="system">The system.</param>

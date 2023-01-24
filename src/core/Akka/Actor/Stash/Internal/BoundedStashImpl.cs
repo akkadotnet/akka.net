@@ -18,9 +18,8 @@ namespace Akka.Actor.Internal
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
         /// <param name="context">TBD</param>
-        /// <param name="capacity">TBD</param>
-        public BoundedStashImpl(IActorContext context, int capacity = 100)
-            : base(context, capacity)
+        public BoundedStashImpl(IActorContext context)
+            : base(context)
         {
         }
     }
