@@ -1178,14 +1178,15 @@ namespace Akka.Actor
         void Become(Akka.Actor.UntypedReceive receive);
         void BecomeStacked(Akka.Actor.UntypedReceive receive);
     }
-    [System.ObsoleteAttribute("Bounded stashing is not yet implemented. Unbounded stashing will be used instead " +
-        "[0.7.0]")]
-    public interface IWithBoundedStash : Akka.Actor.IActorStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IBoundedDequeBasedMessageQueueSemantics> { }
+    [System.ObsoleteAttribute("Use `IWithStash` with a configured BoundedDeque-based mailbox instead.")]
+    public interface IWithBoundedStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IBoundedDequeBasedMessageQueueSemantics> { }
+    public interface IWithStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IDequeBasedMessageQueueSemantics> { }
     public interface IWithTimers
     {
         Akka.Actor.ITimerScheduler Timers { get; set; }
     }
-    public interface IWithUnboundedStash : Akka.Actor.IActorStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics> { }
+    public interface IWithUnboundedStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics> { }
+    public interface IWithUnrestrictedStash : Akka.Actor.IActorStash { }
     public interface IWrappedMessage
     {
         object Message { get; }
@@ -1863,6 +1864,21 @@ namespace Akka.Actor
         protected virtual bool Receive(object message) { }
         protected void RunTask(System.Action action) { }
         protected void RunTask(System.Func<System.Threading.Tasks.Task> action) { }
+    }
+    public abstract class UntypedActorWithStash : Akka.Actor.UntypedActor, Akka.Actor.IActorStash, Akka.Actor.IWithStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IDequeBasedMessageQueueSemantics>
+    {
+        protected UntypedActorWithStash() { }
+        public Akka.Actor.IStash Stash { get; set; }
+    }
+    public abstract class UntypedActorWithUnboundedStash : Akka.Actor.UntypedActor, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    {
+        protected UntypedActorWithUnboundedStash() { }
+        public Akka.Actor.IStash Stash { get; set; }
+    }
+    public abstract class UntypedActorWithUnrestrictedStash : Akka.Actor.UntypedActor, Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash
+    {
+        protected UntypedActorWithUnrestrictedStash() { }
+        public Akka.Actor.IStash Stash { get; set; }
     }
     public delegate void UntypedReceive(object message);
     public class static WrappedMessage
