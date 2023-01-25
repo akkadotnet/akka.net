@@ -762,7 +762,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         private void FailChunkExecution(ChunkExecutionFailure message)
         {
             _remainingOperations++;
-            var cause = message.Cause;
+
+            var cause = message.Cause is AggregateException aggregateException
+                ? aggregateException.Flatten().InnerExceptions.OfType<DbException>().FirstOrDefault()
+                    ?? aggregateException.Flatten().InnerExceptions[0]
+                : message.Cause;
+
             Log.Error(cause, "An error occurred during event batch processing. ChunkId: [{0}], batched requests: [{1}]", message.ChunkId, message.Requests.Length);
             
             foreach (var request in message.Requests)
