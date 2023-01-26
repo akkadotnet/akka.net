@@ -1,4 +1,4 @@
-#### 1.4.4 January 26th 2023 ####
+#### 1.4.49 January 26th 2023 ####
 Akka.NET v1.4.49 includes some new core Akka.NET APIs and bug fixes to fundamental `Akka.Actor` behavior.
 
 * [Akka.Actor: Read stash capacity from actor's mailbox or dispatcher configuration](https://github.com/akkadotnet/akka.net/pull/6323)
