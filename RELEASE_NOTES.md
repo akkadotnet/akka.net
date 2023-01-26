@@ -1,11 +1,18 @@
-#### 1.4.49-beta1 January 11th 2023 ####
-Akka.NET v1.4.49-beta is a minor release that introduces compression to the JSON serializer
+#### 1.4.4 January 26th 2023 ####
+Akka.NET v1.4.49 includes some new core Akka.NET APIs and bug fixes to fundamental `Akka.Actor` behavior.
 
-* [Akka: Add serialized data compression feature to NewtonSoftJsonSerializer](https://github.com/akkadotnet/akka.net/pull/6341)
+* [Akka.Actor: Read stash capacity from actor's mailbox or dispatcher configuration](https://github.com/akkadotnet/akka.net/pull/6323)
+* [Akka.Actor: Added support for `UnrestrictedStash`](https://github.com/akkadotnet/akka.net/pull/6325)
+* [Akka.Actor: Add API for `UntypedActorWithStash` types](https://github.com/akkadotnet/akka.net/pull/6327)
+* [Akka.Actor: set default `PoolRouter.SupervisorStrategy` to `Restart`](https://github.com/akkadotnet/akka.net/pull/6366)
+* [Akka.Persistence.Sql.Common: FailChunkExecution does not handle `DbExceptions` wrapped in an `AggregateException` ](https://github.com/akkadotnet/akka.net/pull/6364)
 
-| COMMITS | LOC+ | LOC- | AUTHOR               |
-|---------|------|------|----------------------|
-| 1       | 157  | 28   |  Gregorius Soedharmo |
+You can see the [full set of tracked issues for Akka.NET v1.4.49 here](https://github.com/akkadotnet/akka.net/milestone/80).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 711 | 186 | Ismael Hamed |
+| 2 | 41 | 182 | Aaron Stannard |
 
 #### 1.4.48 January 5th 2023 ####
 Akka.NET v1.4.48 is a minor release that introduces some additional APIs to Akka.NET.
