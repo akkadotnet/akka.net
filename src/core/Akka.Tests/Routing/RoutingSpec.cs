@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using Akka.Configuration;
 using Akka.Actor;
+using Akka.Actor.Dsl;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.TestKit;
@@ -293,27 +294,27 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Routers_in_general_must_default_to_all_for_one_always_escalate_strategy()
+        public void Routers_in_general_must_default_to_all_for_one_restart_strategy()
         {
-            var restarter = new OneForOneStrategy(e =>
+            var props = Props.Create(() => new RestartActor(TestActor));
+            var routes = new[]
             {
-                TestActor.Tell(e);
-                return Directive.Restart;
-            });
+                Sys.ActorOf(props, "actor-0"),
+                Sys.ActorOf(props, "actor-1"),
+                Sys.ActorOf(props, "actor-2"),
+            };
 
-            var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(restarter)));
+            var router = Sys.ActorOf(new RoundRobinGroup(routes.Select(a => a.Path.ToString())).Props());
+            var restarted = new HashSet<string>();
 
-            supervisor.Tell(new RoundRobinPool(3).Props(Props.Create(() => new RestartActor(TestActor))));
-
-            var router = ExpectMsg<IActorRef>();
-            EventFilter.Exception<ArgumentException>("die").ExpectOne(() =>
+            for (var i = 0; i < 3; i++)
             {
                 router.Tell("die");
-            });
-            ExpectMsg<ArgumentException>().Message.Should().Be("die");
-            ExpectMsg("restarted");
-            ExpectMsg("restarted");
-            ExpectMsg("restarted");
+                ExpectMsg("restarted");
+                restarted.Add(LastSender.Path.Name);
+            }
+
+            restarted.Should().BeEquivalentTo("actor-0", "actor-1", "actor-2");
         }
 
         [Fact]
