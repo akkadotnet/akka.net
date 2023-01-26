@@ -358,7 +358,7 @@ namespace Akka.Routing
         {
             get
             {
-                return new OneForOneStrategy(Decider.From(Directive.Escalate));
+                return new OneForOneStrategy(Decider.From(Directive.Restart));
             }
         }
 
