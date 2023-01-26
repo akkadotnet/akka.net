@@ -294,27 +294,20 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public async Task Routers_in_general_must_default_to_all_for_one_always_escalate_strategy()
+        public void Routers_in_general_must_default_to_all_for_one_restart_strategy()
         {
-            var restarter = new OneForOneStrategy(e =>
-            {
-                TestActor.Tell(e);
-                return Directive.Restart;
-            });
+            var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new RestartActor(TestActor))));
+            var restarted = new HashSet<string>();
 
-            var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(restarter)));
-
-            supervisor.Tell(new RoundRobinPool(3).Props(Props.Create(() => new RestartActor(TestActor))));
-
-            var router = await ExpectMsgAsync<IActorRef>();
-            await EventFilter.Exception<ArgumentException>("die").ExpectOneAsync(async () =>
+            for (var i = 0; i < 3; i++)
             {
                 router.Tell("die");
-            });
-            (await ExpectMsgAsync<ArgumentException>()).Message.Should().Be("die");
-            await ExpectMsgAsync("restarted");
-            await ExpectMsgAsync("restarted");
-            await ExpectMsgAsync("restarted");
+                ExpectMsg("restarted");
+                restarted.Add(LastSender.Path.Name);
+            }
+
+            restarted.Count.Should().Be(3);
+            restarted.Should().BeEquivalentTo(((RoutedActorRef)router).Children.Select(c => c.Path.Name));
         }
 
         [Fact]
