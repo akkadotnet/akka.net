@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Copyright>Copyright © 2013-2022 Akka.NET Team</Copyright>
+    <Copyright>Copyright © 2013-2023 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
     <VersionPrefix>1.4.48</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
