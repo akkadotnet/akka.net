@@ -296,15 +296,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Routers_in_general_must_default_to_all_for_one_restart_strategy()
         {
-            var props = Props.Create(() => new RestartActor(TestActor));
-            var routes = new[]
-            {
-                Sys.ActorOf(props, "actor-0"),
-                Sys.ActorOf(props, "actor-1"),
-                Sys.ActorOf(props, "actor-2"),
-            };
-
-            var router = Sys.ActorOf(new RoundRobinGroup(routes.Select(a => a.Path.ToString())).Props());
+            var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new RestartActor(TestActor))));
             var restarted = new HashSet<string>();
 
             for (var i = 0; i < 3; i++)
@@ -314,7 +306,8 @@ namespace Akka.Tests.Routing
                 restarted.Add(LastSender.Path.Name);
             }
 
-            restarted.Should().BeEquivalentTo("actor-0", "actor-1", "actor-2");
+            restarted.Count.Should().Be(3);
+            restarted.Should().BeEquivalentTo(((RoutedActorRef)router).Children.Select(c => c.Path.Name));
         }
 
         [Fact]
