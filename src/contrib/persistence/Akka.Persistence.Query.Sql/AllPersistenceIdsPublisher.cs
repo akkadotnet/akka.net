@@ -79,11 +79,11 @@ namespace Akka.Persistence.Query.Sql
                 case Status.Failure msg:
                     if (msg.Cause is AskTimeoutException e)
                     {
-                        _log.Warning(e, "Current persistence id query timed out, retrying");
+                        _log.Info(e, "Current persistence id query timed out, retrying");
                     }
                     else
                     {
-                        _log.Warning(msg.Cause, "Current persistence id query failed, retrying");
+                        _log.Info(msg.Cause, "Current persistence id query failed, retrying");
                     }
                     
                     _journalRef
@@ -208,11 +208,11 @@ namespace Akka.Persistence.Query.Sql
                 case Status.Failure msg:
                     if (msg.Cause is AskTimeoutException e)
                     {
-                        _log.Warning(e, $"Current persistence id query timed out, retrying. Offset: {_lastOrderingOffset}");
+                        _log.Info(e, $"Current persistence id query timed out, retrying. Offset: {_lastOrderingOffset}");
                     }
                     else
                     {
-                        _log.Warning(msg.Cause, $"Current persistence id query failed, retrying. Offset: {_lastOrderingOffset}");
+                        _log.Info(msg.Cause, $"Current persistence id query failed, retrying. Offset: {_lastOrderingOffset}");
                     }
                     
                     Become(Active);
@@ -238,7 +238,6 @@ namespace Akka.Persistence.Query.Sql
                     return true;
                 
                 case Continue _:
-                    _log.Info($"Continue: {_lastOrderingOffset}");
                     Become(Waiting);
                     _journalRef
                         .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
@@ -250,7 +249,7 @@ namespace Akka.Persistence.Query.Sql
                     return true;
                 
                 case Status.Failure msg:
-                    _log.Warning(msg.Cause, "Unexpected failure received");
+                    _log.Info(msg.Cause, "Unexpected failure received");
                     return true;
                 
                 default:
