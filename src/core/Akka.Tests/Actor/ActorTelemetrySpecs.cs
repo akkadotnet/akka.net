@@ -283,8 +283,7 @@ namespace Akka.Tests.Actor
                 // assert that actor start count is still 10
                 Assert.Equal(12, telemetry.ActorCreated);
                 
-                // bug due to https://github.com/akkadotnet/akka.net/issues/6295 - all routees and the router start each time
-                Assert.Equal(110, telemetry.ActorRestarted);
+                Assert.Equal(10, telemetry.ActorRestarted);
                 // assert no stops recorded
                 Assert.Equal(0, telemetry.ActorStopped);
             }, RemainingOrDefault);
@@ -296,7 +295,7 @@ namespace Akka.Tests.Actor
                 var telemetry = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
                 // assert that actor start count is still 10
                 Assert.Equal(12, telemetry.ActorCreated);
-                Assert.Equal(110, telemetry.ActorRestarted);
+                Assert.Equal(10, telemetry.ActorRestarted);
                 Assert.Equal(11, telemetry.ActorStopped);
             }, RemainingOrDefault);
         }
