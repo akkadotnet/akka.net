@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Reactive.Streams;
 using Akka.Actor;
 using Akka.Configuration;
@@ -26,7 +25,7 @@ namespace Akka.Persistence.Query.Sql
         IAllEventsQuery,
         ICurrentAllEventsQuery
     {
-        public static string Identifier = "akka.persistence.query.journal.sql";
+        public const string Identifier = "akka.persistence.query.journal.sql";
 
         /// <summary>
         /// Returns a default query configuration for akka persistence SQLite-based journals and snapshot stores.
@@ -52,7 +51,6 @@ namespace Akka.Persistence.Query.Sql
             _maxBufferSize = config.GetInt("max-buffer-size", 0);
             _system = system;
 
-            _lock = new ReaderWriterLockSlim();
             _persistenceIdsPublisher = null;
         }
 
