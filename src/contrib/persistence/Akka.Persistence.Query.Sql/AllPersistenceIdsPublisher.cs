@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams.Actors;
 
@@ -22,6 +23,7 @@ namespace Akka.Persistence.Query.Sql
         private readonly IActorRef _journalRef;
 
         private readonly DeliveryBuffer<string> _buffer;
+        private readonly ILoggingAdapter _log;
 
         public IStash Stash { get; set; }
 
@@ -29,6 +31,7 @@ namespace Akka.Persistence.Query.Sql
         {
             _buffer = new DeliveryBuffer<string>(OnNext);
             _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
+            _log = Context.GetLogger();
         }
 
         protected override bool Receive(object message)
@@ -36,12 +39,16 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case Request _:
-                    _journalRef.Tell(new SelectCurrentPersistenceIds(0, Self));
                     Become(Initializing);
+                    _journalRef
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self))
+                        .PipeTo(Self);
                     return true;
+                
                 case Cancel _:
                     Context.Stop(Self);
                     return true;
+                
                 default:
                     return false;
             }
@@ -64,9 +71,26 @@ namespace Akka.Persistence.Query.Sql
                     Become(Active);
                     Stash.UnstashAll();
                     return true;
+                
                 case Cancel _:
                     Context.Stop(Self);
                     return true;
+                
+                case Status.Failure msg:
+                    if (msg.Cause is AskTimeoutException e)
+                    {
+                        _log.Warning(e, "Current persistence id query timed out, retrying");
+                    }
+                    else
+                    {
+                        _log.Warning(msg.Cause, "Current persistence id query failed, retrying");
+                    }
+                    
+                    _journalRef
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self))
+                        .PipeTo(Self);
+                    return true;
+                    
                 default:
                     Stash.Stash();
                     return true;
@@ -77,14 +101,20 @@ namespace Akka.Persistence.Query.Sql
         {
             switch (message)
             {
+                case CurrentPersistenceIds _:
+                    // Ignore duplicate CurrentPersistenceIds response
+                    return true;
+                
                 case Request _:
                     _buffer.DeliverBuffer(TotalDemand);
                     if (_buffer.IsEmpty)
                         OnCompleteThenStop();
                     return true;
+                
                 case Cancel _:
                     Context.Stop(Self);
                     return true;
+                
                 default:
                     return false;
             }
@@ -93,7 +123,7 @@ namespace Akka.Persistence.Query.Sql
 
     internal sealed class LivePersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash
     {
-        private class Continue
+        private sealed class Continue
         {
             public static readonly Continue Instance = new Continue();
 
@@ -109,11 +139,13 @@ namespace Akka.Persistence.Query.Sql
         private readonly ICancelable _tickCancelable;
         private readonly IActorRef _journalRef;
         private readonly DeliveryBuffer<string> _buffer;
+        private readonly ILoggingAdapter _log;
 
         public IStash Stash { get; set; }
 
         public LivePersistenceIdsPublisher(TimeSpan refreshInterval, string writeJournalPluginId)
         {
+            _log = Context.GetLogger();
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
                 refreshInterval, 
                 refreshInterval, 
@@ -135,14 +167,19 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case Request _:
-                    _journalRef.Tell(new SelectCurrentPersistenceIds(0, Self));
                     Become(Waiting);
+                    _journalRef
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
+                        .PipeTo(Self);
                     return true;
+                
                 case Continue _:
                     return true;
+                
                 case Cancel _:
                     Context.Stop(Self);
                     return true;
+                
                 default:
                     return false;
             }
@@ -160,11 +197,28 @@ namespace Akka.Persistence.Query.Sql
                     Become(Active);
                     Stash.UnstashAll();
                     return true;
+                
                 case Continue _:
                     return true;
+                
                 case Cancel _:
                     Context.Stop(Self);
                     return true;
+                
+                case Status.Failure msg:
+                    if (msg.Cause is AskTimeoutException e)
+                    {
+                        _log.Warning(e, $"Current persistence id query timed out, retrying. Offset: {_lastOrderingOffset}");
+                    }
+                    else
+                    {
+                        _log.Warning(msg.Cause, $"Current persistence id query failed, retrying. Offset: {_lastOrderingOffset}");
+                    }
+                    
+                    Become(Active);
+                    Stash.UnstashAll();
+                    return true;
+                    
                 default:
                     Stash.Stash();
                     return true;
@@ -175,16 +229,30 @@ namespace Akka.Persistence.Query.Sql
         {
             switch (message)
             {
+                case CurrentPersistenceIds _:
+                    // Ignore duplicate CurrentPersistenceIds response
+                    return true;
+                
                 case Request _:
                     _buffer.DeliverBuffer(TotalDemand);
                     return true;
+                
                 case Continue _:
-                    _journalRef.Tell(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self));
+                    _log.Info($"Continue: {_lastOrderingOffset}");
                     Become(Waiting);
+                    _journalRef
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
+                        .PipeTo(Self);
                     return true;
+                
                 case Cancel _:
                     Context.Stop(Self);
                     return true;
+                
+                case Status.Failure msg:
+                    _log.Warning(msg.Cause, "Unexpected failure received");
+                    return true;
+                
                 default:
                     return false;
             }
