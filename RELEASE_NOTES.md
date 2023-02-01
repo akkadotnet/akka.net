@@ -21,6 +21,18 @@ Version 1.5.0-alpha3 contains several bug fixes and new features to Akka.NET
   * [Bump Microsoft.Extensions.ObjectPool from 6.0.10 to 7.0.2](https://github.com/akkadotnet/akka.net/pull/6340)
   * [Bump Microsoft.Extensions.DependencyInjection from 6.0.1 to 7.0.0](https://github.com/akkadotnet/akka.net/pull/6234)
 
+If you want to see the [full set of changes made in Akka.NET v1.5.0 so far, click here](https://github.com/akkadotnet/akka.net/milestone/7?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 27      | 30   | 30   | dependabot[bot]     |
+| 11      | 2212 | 165  | Gregorius Soedharmo |
+| 4       | 741  | 208  | Ismael Hamed        |
+| 4       | 680  | 112  | Aaron Stannard      |
+| 3       | 87   | 178  | Sergey Popov        |
+| 1       | 843  | 0    | Drew                |
+| 1       | 2    | 2    | Popov Sergey        |
+
 #### 1.5.0-alpha3 November 15th 2022 ####
 Akka.NET v1.5.0-alpha3 is a security patch for Akka.NET v1.5.0-alpha2 but also includes some other fixes.
 
