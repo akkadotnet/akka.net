@@ -223,8 +223,8 @@ namespace Akka.Persistence.Journal
             {
                 try
                 {
-                    await _breaker.WithCircuitBreaker(() =>
-                        DeleteMessagesToAsync(message.PersistenceId, message.ToSequenceNr));
+                    await _breaker.WithCircuitBreaker((message, awj: this), state =>
+                        state.awj.DeleteMessagesToAsync(state.message.PersistenceId, state.message.ToSequenceNr));
 
                     message.PersistentActor.Tell(new DeleteMessagesSuccess(message.ToSequenceNr), self);
 
@@ -272,8 +272,8 @@ namespace Akka.Persistence.Journal
                 
                 try
                 {
-                    var highSequenceNr = await _breaker.WithCircuitBreaker(() =>
-                        ReadHighestSequenceNrAsync(message.PersistenceId, readHighestSequenceNrFrom));
+                    var highSequenceNr = await _breaker.WithCircuitBreaker((message, readHighestSequenceNrFrom, awj: this), state =>
+                        state.awj.ReadHighestSequenceNrAsync(state.message.PersistenceId, state.readHighestSequenceNrFrom));
                     var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
                     if (toSequenceNr <= 0L || message.FromSequenceNr > toSequenceNr)
                     {
@@ -346,80 +346,82 @@ namespace Akka.Persistence.Journal
             var self = Self;
             _resequencerCounter += message.Messages.Aggregate(1, (acc, m) => acc + m.Size);
             var atomicWriteCount = message.Messages.OfType<AtomicWrite>().Count();
+            
+            // Using an async local function instead of ContinueWith
+#pragma warning disable CS4014
+            ExecuteBatch(message, atomicWriteCount, self, counter);
+#pragma warning restore CS4014
+        }
 
-            void Resequence(Func<IPersistentRepresentation, Exception, object> mapper, IImmutableList<Exception> results)
+        private async Task ExecuteBatch(WriteMessages message, int atomicWriteCount, IActorRef self, long counter)
+        {
+            try
             {
-                var i = 0;
-                var enumerator = results?.GetEnumerator();
-                foreach (var resequencable in message.Messages)
+                var prepared = PreparePersistentBatch(message.Messages);
+                // try in case AsyncWriteMessages throws
+                try
                 {
-                    if (resequencable is AtomicWrite aw)
-                    {
-                        Exception exception = null;
-                        if (enumerator != null)
-                        {
-                            enumerator.MoveNext();
-                            exception = enumerator.Current;
-                        }
+                    var writeResult =
+                        await _breaker.WithCircuitBreaker((prepared, awj: this), state => state.awj.WriteMessagesAsync(state.prepared)).ConfigureAwait(false);
 
-                        foreach (var p in (IEnumerable<IPersistentRepresentation>)aw.Payload)
-                        {
-                            _resequencer.Tell(new Desequenced(mapper(p, exception), counter + i + 1, message.PersistentActor, p.Sender), self);
-                            i++;
-                        }
-                    }
-                    else
+                    ProcessResults(writeResult, atomicWriteCount, message, _resequencer, counter, self);
+                }
+                catch (Exception e) // this is the old writeMessagesAsyncException
+                {
+                    _resequencer.Tell(new Desequenced(new WriteMessagesFailed(e, atomicWriteCount), counter, message.PersistentActor, self), self);
+                    Resequence((x, _) => new WriteMessageFailure(x, e, message.ActorInstanceId), null, counter, message, _resequencer, self);
+                }
+            }
+            catch (Exception ex)
+            {
+                // exception from PreparePersistentBatch => rejected
+                ProcessResults(Enumerable.Repeat(ex, atomicWriteCount).ToImmutableList(), atomicWriteCount, message, _resequencer, counter, self);
+            }
+        }
+
+        private void ProcessResults(IImmutableList<Exception> results, int atomicWriteCount, WriteMessages writeMessage, IActorRef resequencer,
+            long resequencerCounter, IActorRef writeJournal)
+        {
+            // there should be no circumstances under which `writeResult` can be `null`
+            if (results != null && results.Count != atomicWriteCount)
+                throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. " +
+                                                $"Expected [{atomicWriteCount}], but got [{results.Count}].");
+
+            resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, resequencerCounter, writeMessage.PersistentActor, writeJournal), writeJournal);
+            Resequence((x, exception) => exception == null
+                ? (object)new WriteMessageSuccess(x, writeMessage.ActorInstanceId)
+                : new WriteMessageRejected(x, exception, writeMessage.ActorInstanceId), results, resequencerCounter, writeMessage, resequencer, writeJournal);
+        }
+        
+        private void Resequence(Func<IPersistentRepresentation, Exception, object> mapper,
+            IImmutableList<Exception> results, long resequencerCounter, WriteMessages msg, IActorRef resequencer, IActorRef writeJournal)
+        {
+            var i = 0;
+            var enumerator = results?.GetEnumerator();
+            foreach (var resequencable in msg.Messages)
+            {
+                if (resequencable is AtomicWrite aw)
+                {
+                    Exception exception = null;
+                    if (enumerator != null)
                     {
-                        var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.ActorInstanceId);
-                        _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor, resequencable.Sender), self);
+                        enumerator.MoveNext();
+                        exception = enumerator.Current;
+                    }
+
+                    foreach (var p in (IEnumerable<IPersistentRepresentation>)aw.Payload)
+                    {
+                        resequencer.Tell(new Desequenced(mapper(p, exception), resequencerCounter + i + 1, msg.PersistentActor, p.Sender), writeJournal);
                         i++;
                     }
                 }
-            }
-
-            async Task ExecuteBatch()
-            {
-                void ProcessResults(IImmutableList<Exception> results)
+                else
                 {
-                    // there should be no circumstances under which `writeResult` can be `null`
-                    if (results != null && results.Count != atomicWriteCount)
-                        throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. " +
-                                                        $"Expected [{atomicWriteCount}], but got [{results.Count}].");
-
-                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self), self);
-                    Resequence((x, exception) => exception == null
-                        ? (object)new WriteMessageSuccess(x, message.ActorInstanceId)
-                        : new WriteMessageRejected(x, exception, message.ActorInstanceId), results);
-                }
-
-                try
-                {
-                    var prepared = PreparePersistentBatch(message.Messages).ToArray();
-                    // try in case AsyncWriteMessages throws
-                    try
-                    {
-                        var writeResult =
-                            await _breaker.WithCircuitBreaker(() => WriteMessagesAsync(prepared)).ConfigureAwait(false);
-
-                        ProcessResults(writeResult);
-                    }
-                    catch (Exception e) // this is the old writeMessagesAsyncException
-                    {
-                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(e, atomicWriteCount), counter, message.PersistentActor, self), self);
-                        Resequence((x, _) => new WriteMessageFailure(x, e, message.ActorInstanceId), null);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // exception from PreparePersistentBatch => rejected
-                    ProcessResults(Enumerable.Repeat(ex, atomicWriteCount).ToImmutableList());
+                    var loopMsg = new LoopMessageSuccess(resequencable.Payload, msg.ActorInstanceId);
+                    resequencer.Tell(new Desequenced(loopMsg, resequencerCounter + i + 1, msg.PersistentActor, resequencable.Sender), writeJournal);
+                    i++;
                 }
             }
-
-            // Using an async local function instead of ContinueWith
-#pragma warning disable CS4014
-            ExecuteBatch();
-#pragma warning restore CS4014
         }
 
         internal sealed class Desequenced
