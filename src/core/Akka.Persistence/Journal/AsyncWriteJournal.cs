@@ -353,7 +353,7 @@ namespace Akka.Persistence.Journal
 #pragma warning restore CS4014
         }
 
-        private async Task ExecuteBatch(WriteMessages message, int atomicWriteCount, IActorRef self, long counter)
+        private async Task ExecuteBatch(WriteMessages message, int atomicWriteCount, IActorRef self, long resequencerCounter)
         {
             try
             {
@@ -364,18 +364,18 @@ namespace Akka.Persistence.Journal
                     var writeResult =
                         await _breaker.WithCircuitBreaker((prepared, awj: this), state => state.awj.WriteMessagesAsync(state.prepared)).ConfigureAwait(false);
 
-                    ProcessResults(writeResult, atomicWriteCount, message, _resequencer, counter, self);
+                    ProcessResults(writeResult, atomicWriteCount, message, _resequencer, resequencerCounter, self);
                 }
                 catch (Exception e) // this is the old writeMessagesAsyncException
                 {
-                    _resequencer.Tell(new Desequenced(new WriteMessagesFailed(e, atomicWriteCount), counter, message.PersistentActor, self), self);
-                    Resequence((x, _) => new WriteMessageFailure(x, e, message.ActorInstanceId), null, counter, message, _resequencer, self);
+                    _resequencer.Tell(new Desequenced(new WriteMessagesFailed(e, atomicWriteCount), resequencerCounter, message.PersistentActor, self), self);
+                    Resequence((x, _) => new WriteMessageFailure(x, e, message.ActorInstanceId), null, resequencerCounter, message, _resequencer, self);
                 }
             }
             catch (Exception ex)
             {
                 // exception from PreparePersistentBatch => rejected
-                ProcessResults(Enumerable.Repeat(ex, atomicWriteCount).ToImmutableList(), atomicWriteCount, message, _resequencer, counter, self);
+                ProcessResults(Enumerable.Repeat(ex, atomicWriteCount).ToImmutableList(), atomicWriteCount, message, _resequencer, resequencerCounter, self);
             }
         }
 
