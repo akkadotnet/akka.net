@@ -74,7 +74,7 @@ We see that the following two lines are printed
 
 ```text
 First : Actor[akka://testSystem/user/first-actor#1053618476]
-Second: Actor[akka://testSystem/user/first-actor/second-actor#-1544706041]
+Second: Actor[akka://testSystem/user/first-actor/second-actor#1544706041]
 ```
 
 First, we notice that all of the paths start with `akka://testSystem/`. Since
