@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -45,6 +46,26 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             await eventFilter.DeadLetter().ExpectOneAsync(async () =>
             {
                 _deadActor.Tell("whatever");
+            });
+        }
+        
+        [Fact]
+        public async Task Should_check_properly_type_parameters()
+        {
+            await EventFilter.DeadLetter<int>().And.DeadLetter<double>().ExpectAsync(2, async () =>
+            {
+                _deadActor.Tell(5);
+                _deadActor.Tell(1.2);
+            });
+        }
+
+        [Fact]
+        public async Task Should_check_properly_type_parameters_when_one_of_them_string()
+        {
+            await EventFilter.DeadLetter<string>().And.DeadLetter<double>().ExpectAsync(2, async () =>
+            {
+                _deadActor.Tell("asd");
+                _deadActor.Tell(1.2);
             });
         }
     }
