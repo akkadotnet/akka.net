@@ -1723,6 +1723,7 @@ namespace Akka.Actor
         public bool LogDeadLettersDuringShutdown { get; }
         public System.TimeSpan LogDeadLettersSuspendDuration { get; }
         public string LogLevel { get; }
+        public bool LogSerializerOverrideOnStart { get; }
         public bool LoggerAsyncStart { get; }
         public System.TimeSpan LoggerStartTimeout { get; }
         public System.Collections.Generic.IList<string> Loggers { get; }

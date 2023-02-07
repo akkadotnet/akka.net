@@ -150,6 +150,8 @@ namespace Akka.Serialization
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
         private readonly MinimalLogger _initializationLogger;
 
+        private readonly bool _logSerializerOverrideOnStart;
+
         /// <summary>
         /// Serialization module. Contains methods for serialization and deserialization as well as
         /// locating a Serializer for a particular class as defined in the mapping in the configuration.
@@ -164,6 +166,9 @@ namespace Akka.Serialization
             System = system;
             _nullSerializer = new NullSerializer(system);
             AddSerializer("null", _nullSerializer);
+
+
+            _logSerializerOverrideOnStart = system.Settings.LogSerializerOverrideOnStart;
 
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
@@ -333,7 +338,7 @@ namespace Akka.Serialization
         public void AddSerializer(Serializer serializer)
         {
             var id = serializer.Identifier;
-            if(_serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
+            if(_logSerializerOverrideOnStart && _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
             {
                 LogWarning(
                     $"Serializer with identifier [{id}] are being overriden  " +
@@ -352,7 +357,7 @@ namespace Akka.Serialization
         public void AddSerializer(string name, Serializer serializer)
         {
             var id = serializer.Identifier;
-            if(_serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
+            if(_logSerializerOverrideOnStart && _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
             {
                 LogWarning(
                     $"Serializer with identifier [{id}] are being overriden  " +
@@ -360,7 +365,7 @@ namespace Akka.Serialization
                     "Did you mean to do this?");
             }
             
-            if(_serializersByName.ContainsKey(name) && _serializersByName[name].GetType() != serializer.GetType())
+            if(_logSerializerOverrideOnStart && _serializersByName.ContainsKey(name) && _serializersByName[name].GetType() != serializer.GetType())
                 LogWarning(
                     $"Serializer with name [{serializer.Identifier}] are being overriden  " +
                     $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]. " +
@@ -379,7 +384,7 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializationMap(Type type, Serializer serializer)
         {
-            if(_serializerMap.ContainsKey(type) && _serializerMap[type].GetType() != serializer.GetType())
+            if(_logSerializerOverrideOnStart && _serializerMap.ContainsKey(type) && _serializerMap[type].GetType() != serializer.GetType())
                 LogWarning(
                     $"Serializer for type [{type}] are being overriden  " +
                     $"from [{_serializerMap[type].GetType()}] to [{serializer.GetType()}]. " +
