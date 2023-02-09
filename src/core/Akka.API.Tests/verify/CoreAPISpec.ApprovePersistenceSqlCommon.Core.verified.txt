@@ -272,7 +272,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public long Offset { get; }
         public Akka.Actor.IActorRef ReplyTo { get; }
     }
-    public abstract class SqlJournal : Akka.Persistence.Journal.AsyncWriteJournal, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    public abstract class SqlJournal : Akka.Persistence.Journal.AsyncWriteJournal, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
     {
         protected SqlJournal(Akka.Configuration.Config journalConfig) { }
         protected bool HasNewEventSubscribers { get; }
@@ -424,7 +424,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         public readonly System.DateTime Timestamp;
         public SnapshotEntry(string persistenceId, long sequenceNr, System.DateTime timestamp, string manifest, object payload) { }
     }
-    public abstract class SqlSnapshotStore : Akka.Persistence.Snapshot.SnapshotStore, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    public abstract class SqlSnapshotStore : Akka.Persistence.Snapshot.SnapshotStore, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
     {
         protected SqlSnapshotStore(Akka.Configuration.Config config) { }
         protected Akka.Event.ILoggingAdapter Log { get; }

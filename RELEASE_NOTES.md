@@ -1,3 +1,38 @@
+#### 1.5.0-alpha4 February 1st 2022 ####
+Version 1.5.0-alpha3 contains several bug fixes and new features to Akka.NET
+
+* [Akka.TestKit: Remove Akka.Tests.Shared.Internal dependency](https://github.com/akkadotnet/akka.net/pull/6258)
+* [Akka.TestKit: Added ReceiveAsync feature to TestActorRef](https://github.com/akkadotnet/akka.net/pull/6281)
+* [Akka.Stream: Fix `IAsyncEnumerator.DisposeAsync` bug](https://github.com/akkadotnet/akka.net/pull/6296)
+* [Akka: Add `Exception` serialization support for built-in messages](https://github.com/akkadotnet/akka.net/pull/6300)
+* [Akka: Add simple actor telemetry feature](https://github.com/akkadotnet/akka.net/pull/6299)
+* [Akka.Streams: Move Channel stages from Alpakka to Akka.NET repo](https://github.com/akkadotnet/akka.net/pull/6268)
+* [Akka: Set actor stash capacity to actor mailbox or dispatcher size](https://github.com/akkadotnet/akka.net/pull/6323)
+* [Akka: Add `ByteString` support to copy to/from `Memory` and `Span`](https://github.com/akkadotnet/akka.net/pull/6026)
+* [Akka: Add support for `UnrestrictedStash`](https://github.com/akkadotnet/akka.net/pull/6325)
+* [Akka: Add API for `UntypedActorWithStash`](https://github.com/akkadotnet/akka.net/pull/6327)
+* [Akka.Persistence.Sql.Common: Fix unhandled `DbExceptions` that are wrapped inside `AggregateException`](https://github.com/akkadotnet/akka.net/pull/6361)
+* [Akka.Persistence.Sql: Fix persistence id publisher actor hung on failure messages](https://github.com/akkadotnet/akka.net/pull/6374)
+* [Akka: Change default pool router supervisor strategy to `Restart`](https://github.com/akkadotnet/akka.net/pull/6370)
+* NuGet package upgrades:
+  * [Bump Microsoft.Data.SQLite from 6.0.10 to 7.0.2](https://github.com/akkadotnet/akka.net/pull/6339)
+  * [Bump Google.Protobuf from 3.21.9 to 3.21.12](https://github.com/akkadotnet/akka.net/pull/6311)
+  * [Bump Newtonsoft.Json from 9.0.1 to 13.0.1](https://github.com/akkadotnet/akka.net/pull/6303)
+  * [Bump Microsoft.Extensions.ObjectPool from 6.0.10 to 7.0.2](https://github.com/akkadotnet/akka.net/pull/6340)
+  * [Bump Microsoft.Extensions.DependencyInjection from 6.0.1 to 7.0.0](https://github.com/akkadotnet/akka.net/pull/6234)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.0 so far, click here](https://github.com/akkadotnet/akka.net/milestone/7?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 27      | 30   | 30   | dependabot[bot]     |
+| 11      | 2212 | 165  | Gregorius Soedharmo |
+| 4       | 741  | 208  | Ismael Hamed        |
+| 4       | 680  | 112  | Aaron Stannard      |
+| 3       | 87   | 178  | Sergey Popov        |
+| 1       | 843  | 0    | Drew                |
+| 1       | 2    | 2    | Popov Sergey        |
+
 #### 1.5.0-alpha3 November 15th 2022 ####
 Akka.NET v1.5.0-alpha3 is a security patch for Akka.NET v1.5.0-alpha2 but also includes some other fixes.
 

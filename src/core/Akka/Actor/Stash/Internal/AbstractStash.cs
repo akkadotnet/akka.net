@@ -19,7 +19,7 @@ namespace Akka.Actor.Internal
     /// INTERNAL API
     /// <para>
     /// Support class for implementing a stash for an actor instance. A default stash per actor (= user stash)
-    /// is maintained by [[UnrestrictedStash]] by extending this trait. Actors that explicitly need other stashes
+    /// is maintained by this class. Actors that explicitly need other stashes
     /// (optionally in addition to and isolated from the user stash) can create new stashes via <see cref="StashFactory"/>.
     /// </para>
     /// </summary>
