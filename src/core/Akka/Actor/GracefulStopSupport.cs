@@ -40,7 +40,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="target">The actor to be terminated.</param>
         /// <param name="timeout">The amount of time we're going to wait for the actor to terminate.</param>
-        /// <returns>A <see cref="Task"/> that will return <c>true</c> if the <see cref="target"/> shuts down within <see cref="timeout"/></returns>
+        /// <returns>A <see cref="Task"/> that will return <c>true</c> if the target shuts down within timeout.</returns>
         public static Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout)
         {
             return GracefulStop(target, timeout, PoisonPill.Instance);
@@ -67,11 +67,11 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="target">The actor to be terminated.</param>
         /// <param name="timeout">The amount of time we're going to wait for the actor to terminate.</param>
-        /// <param name="stopMessage">A custom message to use to shutdown <see cref="target"/> - by default the other overload uses <see cref="PoisonPill"/>.</param>
+        /// <param name="stopMessage">A custom message to use to shutdown target - by default the other overload uses <see cref="PoisonPill"/>.</param>
         /// <exception cref="TaskCanceledException">
         /// This exception is thrown if the underlying task is <see cref="TaskStatus.Canceled"/>.
         /// </exception>
-        /// <returns>A <see cref="Task"/> that will return <c>true</c> if the <see cref="target"/> shuts down within <see cref="timeout"/></returns>
+        /// <returns>A <see cref="Task"/> that will return <c>true</c> if the target shuts down within timeout</returns>
         public static async Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout, object stopMessage)
         {
             if (target is not IInternalActorRef internalTarget)
