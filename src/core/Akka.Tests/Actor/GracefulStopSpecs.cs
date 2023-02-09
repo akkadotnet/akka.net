@@ -51,7 +51,7 @@ namespace Akka.Tests.Actor
 
         private class CustomShutdown{}
 
-        [Fact(DisplayName = "GracefulStop should return false if shutdown goes overtime", Skip = "GracefulStop currently throws a TaskCancellationException, which seems wrong")]
+        [Fact(DisplayName = "GracefulStop should return false if shutdown goes overtime")]
         public async Task GracefulStopShouldThrowIfShutdownGoesOvertime()
         {
             // arrange

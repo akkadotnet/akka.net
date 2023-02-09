@@ -1884,6 +1884,10 @@ namespace Akka.Actor
         public Akka.Actor.IStash Stash { get; set; }
     }
     public delegate void UntypedReceive(object message);
+    public class static WatchAsyncSupport
+    {
+        public static System.Threading.Tasks.Task<bool> WatchAsync(this Akka.Actor.IActorRef target, System.Threading.CancellationToken token = null) { }
+    }
     public class static WrappedMessage
     {
         public static object Unwrap(object message) { }
