@@ -74,22 +74,28 @@ namespace Akka.Actor
         /// <returns>A <see cref="Task"/> that will return <c>true</c> if the <see cref="target"/> shuts down within <see cref="timeout"/></returns>
         public static async Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout, object stopMessage)
         {
-            var internalTarget = target.AsInstanceOf<IInternalActorRef>();
+            if (target is not IInternalActorRef internalTarget)
+                throw new InvalidOperationException(
+                    $"{target} is not an {typeof(IInternalActorRef)} and cannot be death-watched");
 
-            var promiseRef = PromiseActorRef.Apply(internalTarget.Provider, timeout, target, stopMessage.GetType().Name);
+            var promiseRef =
+                PromiseActorRef.Apply(internalTarget.Provider, timeout, target, stopMessage.GetType().Name);
             internalTarget.SendSystemMessage(new Watch(internalTarget, promiseRef));
             target.Tell(stopMessage, ActorRefs.NoSender);
 
             try
             {
                 var result = await promiseRef.Result;
-                switch (result)
+                return result switch
                 {
-                    case Terminated terminated:
-                        return terminated.ActorRef.Path.Equals(target.Path);
-                    default:
-                        return false;
-                }
+                    Terminated terminated => terminated.ActorRef.Path.Equals(target.Path),
+                    _ => false
+                };
+            }
+            catch
+            {
+                // no need to throw here - the returned `false` status does the job just fine
+                return false;
             }
             finally
             {
@@ -99,4 +105,3 @@ namespace Akka.Actor
         }
     }
 }
-

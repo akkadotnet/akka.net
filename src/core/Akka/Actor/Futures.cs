@@ -187,7 +187,7 @@ namespace Akka.Actor
                         return actorRef.Provider;
                 }
 
-                if (ActorCell.Current is ActorCell cell) return cell.SystemImpl.Provider;
+                if (ActorCell.Current is { } cell) return cell.SystemImpl.Provider;
 
                 return null;
                 break;
@@ -288,7 +288,7 @@ namespace Akka.Actor
             /// <summary>
             /// TBD
             /// </summary>
-            public ActorPath Path { get; private set; }
+            public ActorPath Path { get; }
 
             #region Equality
 
@@ -305,7 +305,7 @@ namespace Akka.Actor
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is StoppedWithPath && Equals((StoppedWithPath)obj);
+                return obj is StoppedWithPath path && Equals(path);
             }
 
             /// <inheritdoc/>
@@ -330,27 +330,23 @@ namespace Akka.Actor
         /// Creates a new <see cref="PromiseActorRef"/>
         /// </summary>
         /// <param name="provider">The current actor ref provider.</param>
-        /// <param name="timeout">The timeout on the promise.</param>
-        /// <param name="targetName">The target of the object / actor</param>
         /// <param name="messageClassName">The name of the message class.</param>
-        /// <param name="sender">The actor sending the message via promise.</param>
+        /// <param name="cancellationToken">An external cancellation token.</param>
         /// <returns>A new <see cref="PromiseActorRef"/></returns>
-        public static PromiseActorRef Apply(IActorRefProvider provider, TimeSpan timeout, object targetName,
-            string messageClassName, IActorRef sender = null)
+        /// <remarks>
+        /// API is used by WatchAsync.
+        /// </remarks>
+        public static PromiseActorRef Apply(IActorRefProvider provider,
+            string messageClassName, CancellationToken cancellationToken = default)
         {
-            sender = sender ?? ActorRefs.NoSender;
-            var result = new TaskCompletionSource<object>();
+            var result = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             var a = new PromiseActorRef(provider, result, messageClassName);
 
-            if (timeout != TimeSpan.Zero)
+            if (cancellationToken != default)
             {
-                // avoid CTS + delegate allocation if timeouts aren't needed
-                var cancellationSource = new CancellationTokenSource();
-                cancellationSource.Token.Register(CancelAction, result);
-                cancellationSource.CancelAfter(timeout);
+                cancellationToken.Register(CancelAction, result);
             }
-
-
+            
             async Task ExecPromise()
             {
                 try
@@ -368,6 +364,49 @@ namespace Akka.Actor
 #pragma warning restore CS4014
 
             return a;
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="PromiseActorRef"/>
+        /// </summary>
+        /// <param name="provider">The current actor ref provider.</param>
+        /// <param name="timeout">The timeout on the promise.</param>
+        /// <param name="targetName">The target of the object / actor</param>
+        /// <param name="messageClassName">The name of the message class.</param>
+        /// <param name="sender">The actor sending the message via promise.</param>
+        /// <returns>A new <see cref="PromiseActorRef"/></returns>
+        public static PromiseActorRef Apply(IActorRefProvider provider, TimeSpan timeout, object targetName,
+            string messageClassName, IActorRef sender = null)
+        {
+            CancellationTokenSource cancellationSource = default;
+
+            if (timeout != TimeSpan.Zero)
+            {
+                // avoid CTS + delegate allocation if timeouts aren't needed
+                cancellationSource = new CancellationTokenSource();
+                cancellationSource.CancelAfter(timeout);
+            }
+
+            var p = Apply(provider, messageClassName, cancellationSource?.Token ?? default);
+            
+            // need to dispose CTS afterwards
+            async Task ExecPromise()
+            {
+                try
+                {
+                    await p._promise.Task;
+                }
+                finally
+                {
+                    cancellationSource?.Dispose();
+                }
+            }
+
+#pragma warning disable CS4014
+            ExecPromise();
+#pragma warning restore CS4014
+
+            return p;
         }
 
         #endregion
@@ -403,18 +442,26 @@ namespace Akka.Actor
 
         private void RemoveWatcher(IActorRef watcher)
         {
-            if (!WatchedBy.Contains(watcher))
+            while (true)
             {
-                return;
+                if (!WatchedBy.Contains(watcher))
+                {
+                    return;
+                }
+
+                if (!UpdateWatchedBy(WatchedBy, WatchedBy.Remove(watcher))) continue;
+                break;
             }
-            if (!UpdateWatchedBy(WatchedBy, WatchedBy.Remove(watcher))) RemoveWatcher(watcher);
         }
 
         private ImmutableHashSet<IActorRef> ClearWatchers()
         {
-            if (WatchedBy == null || WatchedBy.IsEmpty) return ImmutableHashSet<IActorRef>.Empty;
-            if (!UpdateWatchedBy(WatchedBy, null)) return ClearWatchers();
-            else return WatchedBy;
+            while (true)
+            {
+                if (WatchedBy == null || WatchedBy.IsEmpty) return ImmutableHashSet<IActorRef>.Empty;
+                if (!UpdateWatchedBy(WatchedBy, null)) continue;
+                return WatchedBy;
+            }
         }
 
         private object State
@@ -485,7 +532,7 @@ namespace Akka.Actor
         /// <inheritdoc cref="ActorRefBase.TellInternal">InternalActorRefBase.TellInternal</inheritdoc>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (State is Stopped || State is StoppedWithPath) Provider.DeadLetters.Tell(message);
+            if (State is Stopped or StoppedWithPath) Provider.DeadLetters.Tell(message);
             else
             {
                 if (message == null) throw new InvalidMessageException("Message is null");
@@ -571,7 +618,7 @@ namespace Akka.Actor
                         continue;
                     }
                 }
-                else if (state is Stopped || state is StoppedWithPath)
+                else if (state is Stopped or StoppedWithPath)
                 {
                     //already stopped
                 }
