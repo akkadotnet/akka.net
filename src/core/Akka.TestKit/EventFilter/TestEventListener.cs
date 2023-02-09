@@ -108,10 +108,7 @@ namespace Akka.TestKit
                         ? "Received dead system message: " + msg
                         : "Received dead letter from " + snd + ": " + msg;
                     var warning2 = new Warning(recipientPath, recipientType, new DeadLetter(msgStr, snd, rcp));
-                    if (!ShouldFilter(warning2))
-                    {
-                        Print(warning2);
-                    }
+                    Print(warning2);
                 }
             }
         }
