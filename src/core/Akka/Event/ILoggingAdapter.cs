@@ -134,7 +134,7 @@ namespace Akka.Event
         }
     }
     
-    /// <summary>
+        /// <summary>
         /// This interface describes the methods used to log events within the system.
         /// </summary>
         public interface ILoggingAdapter
