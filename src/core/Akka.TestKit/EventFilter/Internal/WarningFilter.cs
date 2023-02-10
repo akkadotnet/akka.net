@@ -32,10 +32,9 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         protected override bool IsMatch(LogEvent evt)
         {
-            var warning = evt as Warning;
-            if(warning != null)
+            if(evt is Warning warning)
             {
-                return InternalDoMatch(warning.LogSource, warning.Message);
+                return InternalDoMatch(warning.LogSource.Source, warning.Message);
             }
             return false;
         }

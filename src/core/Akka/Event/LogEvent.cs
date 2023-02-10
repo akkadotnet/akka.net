@@ -50,7 +50,10 @@ namespace Akka.Event
             Contents = contents;
         }
 
-        protected readonly ILogContents Contents;
+        /// <summary>
+        /// The typed contents of this payload.
+        /// </summary>
+        public ILogContents Contents { get; }
 
         /// <summary>
         /// The exception that caused the log event. Can be <c>null</c>

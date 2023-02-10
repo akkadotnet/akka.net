@@ -91,8 +91,8 @@ namespace Akka.Tests.Event
 
             void ProcessLog(LogEvent logEvent)
             {
-                logEvent.Message.ToString().Should().Be(msg);
-                logEvent.LogLevel().Should().Be(logLevel);
+                logEvent.Message.Should().Be(msg);
+                logEvent.LogLevel.Should().Be(logLevel);
                 if (includeException)
                 {
                     logEvent.Cause.Should().Be(ex);
@@ -125,13 +125,13 @@ namespace Akka.Tests.Event
             
             var loggerStarted = await ExpectMsgAsync<Debug>(TestKitSettings.DefaultTimeout);
             loggerStarted.Message.ShouldBe("Shutting down: StandardOutLogger started");
-            loggerStarted.LogClass.ShouldBe(typeof(EventStream));
-            loggerStarted.LogSource.ShouldBe(typeof(EventStream).Name);
+            loggerStarted.LogSource.Type.ShouldBe(typeof(EventStream));
+            loggerStarted.LogSource.Source.ShouldBe(nameof(EventStream));
 
             var loggerStopped = await ExpectMsgAsync<Debug>(TestKitSettings.DefaultTimeout);
             loggerStopped.Message.ShouldBe("All default loggers stopped");
-            loggerStopped.LogClass.ShouldBe(typeof(EventStream));
-            loggerStopped.LogSource.ShouldBe(typeof(EventStream).Name);
+            loggerStopped.LogSource.Type.ShouldBe(typeof(EventStream));
+            loggerStopped.LogSource.Source.ShouldBe(nameof(EventStream));
 
             await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }

@@ -16,9 +16,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
 
         protected override void Print(LogEvent m)
         {           
-            if(m.Message is ForwardAllEventsTo to)
+            if(m.Contents is LogEntry<ForwardAllEventsTo> to)
             {
-                _forwarder = to.Forwarder;
+                _forwarder = to.Message.Forwarder;
                 _forwarder.Tell("OK");
             }
             else if(_forwarder != null)

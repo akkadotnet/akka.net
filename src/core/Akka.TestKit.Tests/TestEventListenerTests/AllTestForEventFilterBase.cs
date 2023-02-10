@@ -34,12 +34,12 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             Log.Log(LogLevel, message);
         }
 
-        protected override void SendRawLogEventMessage(object message)
+        protected override void SendRawLogEventMessage<T>(T message)
         {
             PublishMessage(message, "test");
         }
 
-        protected abstract void PublishMessage(object message, string source);
+        protected abstract void PublishMessage<T>(T message, string source);
 
         [Fact]
         public async Task Single_message_is_intercepted()
@@ -127,7 +127,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
                 PublishMessage("message", source: "expected-source");
                 PublishMessage("message", source: "let-me-thru");
             });
-            await ExpectMsgAsync<TLogEvent>(err => err.LogSource == "let-me-thru");
+            await ExpectMsgAsync<TLogEvent>(err => err.LogSource.Source == "let-me-thru");
             TestSuccessful = true;
         }
 

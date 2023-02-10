@@ -31,7 +31,6 @@ namespace Akka.Event
         /// </summary>
         public LogSource LogSource { get; }
 
-        
         /// <summary>
         /// Renders an underlying <see cref="LogEntry{TState}"/> in a non-generic fashion.
         /// </summary>
@@ -86,12 +85,20 @@ namespace Akka.Event
         }
     }
 
-    internal static class LogEntryExtensions
+    /// <summary>
+    /// Extension methods for creating <see cref="LogEntry{TState}"/>
+    /// </summary>
+    public static class LogEntryExtensions
     {
         public static LogEntry<string> CreateLogEntryFromString(LogLevel level, string source, Type sourceType,
             string msg, Exception ex = null)
         {
             return new LogEntry<string>(level, msg, LoggingAdapterExtensions.StringOnlyFormatter, new LogSource(source, sourceType), Thread.CurrentThread.ManagedThreadId, DateTime.UtcNow, ex);
+        }
+
+        public static LogEntry<T> CreateLogEntryFromObject<T>(LogLevel level, string source, Type sourceType, T obj, Exception ex = null)
+        {
+            return new LogEntry<T>(level, obj, LoggingAdapterExtensions.ObjOnlyFormatter<T>(), new LogSource(source, sourceType), Thread.CurrentThread.ManagedThreadId, DateTime.UtcNow, ex);
         }
     }
     

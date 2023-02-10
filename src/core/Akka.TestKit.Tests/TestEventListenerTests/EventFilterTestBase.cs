@@ -33,7 +33,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             //From now on we know that all messages will be forwarded to TestActor
         }
 
-        protected abstract void SendRawLogEventMessage(object message);
+        protected abstract void SendRawLogEventMessage<T>(T message);
 
         protected override async Task AfterAllAsync()
         {

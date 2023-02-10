@@ -13,6 +13,7 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
 using static FluentAssertions.FluentActions;
+using static Akka.Event.LogEntryExtensions;
 
 namespace Akka.TestKit.Tests.TestEventListenerTests
 {
@@ -24,9 +25,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         }
         public class SomeException : Exception { }
 
-        protected override void SendRawLogEventMessage(object message)
+        protected override void SendRawLogEventMessage<T>(T message)
         {
-            Sys.EventStream.Publish(new Error(null, nameof(ExceptionEventFilterTests), GetType(), message));
+            Sys.EventStream.Publish(new Error(CreateLogEntryFromObject(LogLevel.ErrorLevel, nameof(ExceptionEventFilterTests), GetType(), message)));
         }
 
         [Fact]

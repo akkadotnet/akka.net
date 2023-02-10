@@ -18,7 +18,7 @@ namespace Akka.TestKit.Xunit.Internals
     public class TestOutputLogger : ReceiveActor
     {
         private readonly ITestOutputHelper _output;
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="TestOutputLogger"/> class.
         /// </summary>
@@ -26,15 +26,12 @@ namespace Akka.TestKit.Xunit.Internals
         public TestOutputLogger(ITestOutputHelper output)
         {
             _output = output;
-            
+
             Receive<Debug>(Write);
             Receive<Info>(Write);
             Receive<Warning>(Write);
             Receive<Error>(Write);
-            Receive<InitializeLogger>(e =>
-            {
-                e.LoggingBus.Subscribe(Self, typeof (LogEvent));
-            });
+            Receive<InitializeLogger>(e => { e.LoggingBus.Subscribe(Self, typeof(LogEvent)); });
         }
 
         private void Write(LogEvent e)
@@ -45,15 +42,11 @@ namespace Akka.TestKit.Xunit.Internals
             }
             catch (FormatException ex)
             {
-                if (e.Message is LogMessage msg)
-                {
-                    var message =
-                        $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Args)}]";
-                    if(e.Cause != null)
-                        throw new AggregateException(message, ex, e.Cause);
-                    throw new FormatException(message, ex);
-                }
-                throw;
+                var message =
+                    $"Received a malformed formatted message. Log level: [{e.LogLevel}], Source: [{e.LogSource}], State (type): [{e.Contents.GetType()}]";
+                if (e.Cause != null)
+                    throw new AggregateException(message, ex, e.Cause);
+                throw new FormatException(message, ex);
             }
         }
     }

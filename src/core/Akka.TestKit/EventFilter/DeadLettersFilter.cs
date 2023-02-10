@@ -38,12 +38,12 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         protected override bool IsMatch(LogEvent evt)
         {
-            if(evt is Warning warning)
+            if(evt is Warning { Contents: LogEntry<DeadLetter> de } warning)
             {
-                var deadLetter = warning.Message as DeadLetter;
+                var deadLetter = de.Message;
                 if(deadLetter != null)
                     if(_isMatch == null || _isMatch(deadLetter))
-                        return InternalDoMatch(warning.LogSource, deadLetter.Message);
+                        return InternalDoMatch(warning.LogSource.Source, deadLetter.Message);
             }
 
             return false;

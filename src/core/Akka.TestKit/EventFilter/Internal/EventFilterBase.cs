@@ -75,7 +75,7 @@ namespace Akka.TestKit.Internal
         protected virtual void OnEventMatched(LogEvent logEvent)
         {
             var delegt = EventMatched;
-            if(delegt != null) delegt(this, logEvent);
+            delegt?.Invoke(this, logEvent);
         }
 
         /// <summary>Internal helper.

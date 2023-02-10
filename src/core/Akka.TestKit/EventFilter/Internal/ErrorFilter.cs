@@ -55,13 +55,12 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         protected override bool IsMatch(LogEvent evt)
         {
-            var error = evt as Error;
-            if(error != null)
+            if(evt is Error error)
             {
                 var logSource = error.LogSource;
                 var errorMessage = error.Message;
                 var cause = error.Cause;
-                return IsMatch(logSource, errorMessage, cause);
+                return IsMatch(logSource.Source, errorMessage, cause);
             }
 
             return false;

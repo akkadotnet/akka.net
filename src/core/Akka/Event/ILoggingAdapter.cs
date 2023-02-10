@@ -19,6 +19,10 @@ namespace Akka.Event
         internal static readonly Func<string, Exception, string> StringOnlyFormatter = (str, ex) => ex == null
             ? str
             : str + $"{Environment.NewLine}Cause: {ex}";
+        
+        internal static Func<T, Exception, string> ObjOnlyFormatter<T>() => (t, ex) => ex == null
+            ? t.ToString()
+            : t + $"{Environment.NewLine}Cause: {ex}";
 
         /// <summary>
         /// Logs a <see cref="LogLevel.DebugLevel"/> message.

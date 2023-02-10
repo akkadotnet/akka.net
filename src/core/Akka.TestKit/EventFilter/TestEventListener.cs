@@ -85,7 +85,7 @@ namespace Akka.TestKit
                 }
                 
                 default:
-                    Print(new Debug(Context.System.Name,GetType(),message));
+                    Print(new Debug(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.DebugLevel, Context.System.Name ,GetType(),message)));
                     break;
             }
 
@@ -101,13 +101,13 @@ namespace Akka.TestKit
             {
                 var recipientPath = rcp.Path.ToString();
                 var recipientType = rcp.GetType();
-                var warning = new Warning(recipientPath, recipientType, message);
+                var warning = new Warning(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.WarningLevel, recipientPath, recipientType, message));
                 if (!ShouldFilter(warning))
                 {
                     var msgStr = (msg is ISystemMessage)
                         ? "Received dead system message: " + msg
                         : "Received dead letter from " + snd + ": " + msg;
-                    var warning2 = new Warning(recipientPath, recipientType, new DeadLetter(msgStr, snd, rcp));
+                    var warning2 = new Warning(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.WarningLevel, recipientPath, recipientType, new DeadLetter(msgStr, snd, rcp)));
                     Print(warning2);
                 }
             }

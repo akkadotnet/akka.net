@@ -23,9 +23,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             _unhandledMessageActor = Sys.ActorOf<UnhandledMessageActor>();
         }
 
-        protected override void SendRawLogEventMessage(object message)
+        protected override void SendRawLogEventMessage<T>(T message)
         {
-            Sys.EventStream.Publish(new Error(null, "UnhandledMessageEventFilterTests", GetType(), message));
+            Sys.EventStream.Publish(new Error(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.ErrorLevel, "UnhandledMessageEventFilterTests", GetType(), message));
         }
 
         [Fact]
