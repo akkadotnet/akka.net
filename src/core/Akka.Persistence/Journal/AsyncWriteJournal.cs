@@ -357,7 +357,7 @@ namespace Akka.Persistence.Journal
         {
             try
             {
-                var prepared = PreparePersistentBatch(message.Messages);
+                var prepared = PreparePersistentBatch(message.Messages).ToArray();
                 // try in case AsyncWriteMessages throws
                 try
                 {
