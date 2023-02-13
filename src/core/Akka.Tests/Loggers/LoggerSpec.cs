@@ -136,15 +136,17 @@ akka.stdout-loglevel = DEBUG");
             var logSource = LogSource.Create(nameof(LoggerSpec));
             var ls = logSource.Source;
             var lc = logSource.Type;
-            var formatter =  DefaultLogMessageFormatter.Instance;
 
-            yield return new object[] { new Error(ex, ls, lc, LogEntryExtensions.(formatter, Case.t, Case.p)) }; 
+            LogEntry<UntypedLogEntryState> CreateLogEntry(LogLevel level) =>
+                LogEntryExtensions.CreateLogEntryFromParams(level, ls, lc, Case.t, Case.p.Cast<object>().ToArray(), ex);
 
-            yield return new object[] {new Warning(ex, ls, lc, new LogMessage(formatter, Case.t, Case.p))};
+            yield return new object[] { new Error(CreateLogEntry(LogLevel.ErrorLevel)) }; 
 
-            yield return new object[] {new Info(ex, ls, lc, new LogMessage(formatter, Case.t, Case.p))};
+            yield return new object[] {new Warning(CreateLogEntry(LogLevel.WarningLevel))};
 
-            yield return new object[] {new Debug(ex, ls, lc, new LogMessage(formatter, Case.t, Case.p))};
+            yield return new object[] {new Info(CreateLogEntry(LogLevel.InfoLevel))};
+
+            yield return new object[] {new Debug(CreateLogEntry(LogLevel.DebugLevel))};
         }
 
         private class FakeException : Exception

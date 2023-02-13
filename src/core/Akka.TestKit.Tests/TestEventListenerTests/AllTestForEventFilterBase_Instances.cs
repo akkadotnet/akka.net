@@ -18,9 +18,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             return EventFilter;
         }
 
-        protected override void PublishMessage(object message, string source)
+        protected override void PublishMessage<T>(T message, string source)
         {
-            Sys.EventStream.Publish(new Debug(source,GetType(),message));
+            Sys.EventStream.Publish(new Debug(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.DebugLevel, source,GetType(),message)));
         }
     }
 
@@ -33,9 +33,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             return CreateEventFilter(Sys);
         }
 
-        protected override void PublishMessage(object message, string source)
+        protected override void PublishMessage<T>(T message, string source)
         {
-            Sys.EventStream.Publish(new Debug(source, GetType(), message));
+            Sys.EventStream.Publish(new Debug(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.DebugLevel, source,GetType(),message)));
         }
     }
 
@@ -47,10 +47,10 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
             return EventFilter;
         }
-
-        protected override void PublishMessage(object message, string source)
+        
+        protected override void PublishMessage<T>(T message, string source)
         {
-            Sys.EventStream.Publish(new Info(source, GetType(), message));
+            Sys.EventStream.Publish(new Info(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.InfoLevel, source,GetType(),message)));
         }
     }
 
@@ -63,9 +63,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             return CreateEventFilter(Sys);
         }
 
-        protected override void PublishMessage(object message, string source)
+        protected override void PublishMessage<T>(T message, string source)
         {
-            Sys.EventStream.Publish(new Info(source, GetType(), message));
+            Sys.EventStream.Publish(new Info(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.InfoLevel, source,GetType(),message)));
         }
     }
 
@@ -82,6 +82,11 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         protected override void PublishMessage(object message, string source)
         {
             Sys.EventStream.Publish(new Warning(source, GetType(), message));
+        }
+        
+        protected override void PublishMessage<T>(T message, string source)
+        {
+            Sys.EventStream.Publish(new Warning(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.DebugLevel, source,GetType(),message)));
         }
     }
 

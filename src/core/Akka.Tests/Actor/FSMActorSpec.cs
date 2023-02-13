@@ -461,7 +461,7 @@ namespace Akka.Tests.Actor
                 Sys.EventStream.Subscribe(TestActor, typeof(Error));
                 actorRef.Tell("go");
                 var error = await ExpectMsgAsync<Error>(1.Seconds());
-                error.LogSource.Should().Contain(name);
+                error.LogSource.Source.Should().Contain(name);
                 error.Message.Should().Be("Next state 2 does not exist");
                 Sys.EventStream.Unsubscribe(TestActor);
             });

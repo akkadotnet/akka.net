@@ -270,13 +270,13 @@ namespace Akka.Tests.Event
             bus.Publish(new SetTarget(TestActor));
             await ExpectMsgAsync("OK", TimeSpan.FromSeconds(5));
 
-            verifyLevel(bus, LogLevel.InfoLevel);
+            VerifyLevel(bus, LogLevel.InfoLevel);
             bus.SetLogLevel(LogLevel.WarningLevel);
-            verifyLevel(bus, LogLevel.WarningLevel);
+            VerifyLevel(bus, LogLevel.WarningLevel);
             bus.SetLogLevel(LogLevel.DebugLevel);
-            verifyLevel(bus, LogLevel.DebugLevel);
+            VerifyLevel(bus, LogLevel.DebugLevel);
             bus.SetLogLevel(LogLevel.ErrorLevel);
-            verifyLevel(bus, LogLevel.ErrorLevel);
+            VerifyLevel(bus, LogLevel.ErrorLevel);
         }
 
         private static string GetConfig()
@@ -328,7 +328,7 @@ namespace Akka.Tests.Event
             }
         }
 
-        private void verifyLevel(LoggingBus bus, LogLevel level)
+        private void VerifyLevel(LoggingBus bus, LogLevel level)
         {
             var allmsg = new LogEvent[] {
                 new Debug("", null, "debug"),
@@ -336,7 +336,7 @@ namespace Akka.Tests.Event
                 new  Warning("", null, "warning"),
                 new Error(null,"", null, "error")};
 
-            var msg = allmsg.Where(l => l.LogLevel() >= level);
+            var msg = allmsg.Where(l => l.LogLevel >= level);
             allmsg.ToList().ForEach(l => bus.Publish(l));
             msg.ToList().ForEach(l => ExpectMsg(l));
         }

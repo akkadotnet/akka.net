@@ -25,7 +25,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
 
         protected override void SendRawLogEventMessage<T>(T message)
         {
-            Sys.EventStream.Publish(new Error(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.ErrorLevel, "UnhandledMessageEventFilterTests", GetType(), message));
+            Sys.EventStream.Publish(new Error(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.ErrorLevel, "UnhandledMessageEventFilterTests", GetType(), message)));
         }
 
         [Fact]

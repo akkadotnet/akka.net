@@ -100,6 +100,14 @@ namespace Akka.Event
         {
             return new LogEntry<T>(level, obj, LoggingAdapterExtensions.ObjOnlyFormatter<T>(), new LogSource(source, sourceType), Thread.CurrentThread.ManagedThreadId, DateTime.UtcNow, ex);
         }
+
+        internal static LogEntry<UntypedLogEntryState> CreateLogEntryFromParams(LogLevel level, string source,
+            Type sourceType, string formatStr, object[] args, Exception ex = null)
+        {
+            return new LogEntry<UntypedLogEntryState>(level, new UntypedLogEntryState(formatStr, args),
+                LoggingAdapterExtensions.ParamsFormatter, new LogSource(source, sourceType),
+                Thread.CurrentThread.ManagedThreadId, DateTime.UtcNow, ex);
+        }
     }
     
 

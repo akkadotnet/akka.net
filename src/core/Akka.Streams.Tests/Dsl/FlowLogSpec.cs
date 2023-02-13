@@ -115,8 +115,8 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Ignore<int>(), Materializer);
 
             var msgs = LogProbe.ReceiveN(2).Cast<Debug>().ToArray();
-            msgs.All(m => m.LogSource.Equals("com.example.ImportantLogger")).Should().BeTrue();
-            msgs.All(m => m.LogClass == LogType).Should().BeTrue();
+            msgs.All(m => m.LogSource.Source.Equals("com.example.ImportantLogger")).Should().BeTrue();
+            msgs.All(m => m.LogSource.Type == LogType).Should().BeTrue();
             msgs[0].Message.ToString().Should().Be("[flow-5] Element: 42");
             msgs[1].Message.ToString().Should().Be("[flow-5] Upstream finished.");
         }
