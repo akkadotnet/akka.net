@@ -15,9 +15,10 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
     {
         protected CustomEventFilterTestsBase() : base("akka.loglevel=ERROR") { }
 
-        protected override void SendRawLogEventMessage(object message)
+        protected override void SendRawLogEventMessage<T>(T message)
         {
-            Sys.EventStream.Publish(new Error(null, "CustomEventFilterTests", GetType(), message));
+            Sys.EventStream.Publish( new Error(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.ErrorLevel,
+                "CustomEventFilterTests", GetType(), message)));
         }
 
         protected abstract EventFilterFactory CreateTestingEventFilter();

@@ -32,9 +32,10 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             await ExpectTerminatedAsync(_deadActor);
         }
 
-        protected override void SendRawLogEventMessage(object message)
+        protected override void SendRawLogEventMessage<T>(T message)
         {
-            Sys.EventStream.Publish(new Error(null, "DeadLettersEventFilterTests", GetType(), message));
+            Sys.EventStream.Publish(new Error(LogEntryExtensions.CreateLogEntryFromObject(LogLevel.ErrorLevel,
+                "DeadLettersEventFilterTests", GetType(), message)));
         }
 
         protected abstract EventFilterFactory CreateTestingEventFilter();
