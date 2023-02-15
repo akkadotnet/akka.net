@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;

@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
