@@ -32,35 +32,31 @@ namespace Akka.Event
             _logSource = logSource;
             _logClass = logClass;
 
-            _isErrorEnabled = bus.LogLevel <= LogLevel.ErrorLevel;
-            _isWarningEnabled = bus.LogLevel <= LogLevel.WarningLevel;
-            _isInfoEnabled = bus.LogLevel <= LogLevel.InfoLevel;
-            _isDebugEnabled = bus.LogLevel <= LogLevel.DebugLevel;
+            IsErrorEnabled = bus.LogLevel <= LogLevel.ErrorLevel;
+            IsWarningEnabled = bus.LogLevel <= LogLevel.WarningLevel;
+            IsInfoEnabled = bus.LogLevel <= LogLevel.InfoLevel;
+            IsDebugEnabled = bus.LogLevel <= LogLevel.DebugLevel;
         }
 
-        private readonly bool _isDebugEnabled;
         /// <summary>
         /// Check to determine whether the <see cref="LogLevel.DebugLevel" /> is enabled.
         /// </summary>
-        public override bool IsDebugEnabled { get { return _isDebugEnabled; } }
+        public override bool IsDebugEnabled { get; }
 
-        private readonly bool _isErrorEnabled;
         /// <summary>
         /// Check to determine whether the <see cref="LogLevel.ErrorLevel" /> is enabled.
         /// </summary>
-        public override bool IsErrorEnabled { get { return _isErrorEnabled; } }
+        public override bool IsErrorEnabled { get; }
 
-        private readonly bool _isInfoEnabled;
         /// <summary>
         /// Check to determine whether the <see cref="LogLevel.InfoLevel" /> is enabled.
         /// </summary>
-        public override bool IsInfoEnabled { get { return _isInfoEnabled; } }
+        public override bool IsInfoEnabled { get; }
 
-        private readonly bool _isWarningEnabled;
         /// <summary>
         /// Check to determine whether the <see cref="LogLevel.WarningLevel" /> is enabled.
         /// </summary>
-        public override bool IsWarningEnabled { get { return _isWarningEnabled; } }
+        public override bool IsWarningEnabled { get; }
 
         /// <summary>
         /// Publishes the error message onto the LoggingBus.
