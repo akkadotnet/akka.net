@@ -35,9 +35,21 @@ namespace Akka.Benchmarks
             public override bool IsDebugEnabled { get; } = true;
             public override bool IsInfoEnabled { get; } = true;
             public override bool IsWarningEnabled { get; } = true;
+            
+            private LogEvent CreateLogEvent(LogLevel logLevel, object message, Exception cause = null)
+            {
+                return logLevel switch
+                {
+                    LogLevel.DebugLevel => new Debug(cause, _logSource, _logClass, message),
+                    LogLevel.InfoLevel => new Info(cause, _logSource, _logClass, message),
+                    LogLevel.WarningLevel => new Warning(cause, _logSource, _logClass, message),
+                    LogLevel.ErrorLevel => new Error(cause, _logSource, _logClass, message),
+                    _ => throw new ArgumentOutOfRangeException(nameof(logLevel), logLevel, null)
+                };
+            }
             protected override void NotifyLog(LogLevel logLevel, object message, Exception cause = null)
             {
-                throw new NotImplementedException();
+                AddLogMessage(CreateLogEvent(logLevel, message, cause));
             }
 
             public override bool IsErrorEnabled { get; } = true;
