@@ -8,6 +8,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Akka.Annotations;
 
 namespace Akka.Event
 {
@@ -49,7 +50,8 @@ namespace Akka.Event
         /// INTERNAL API
         /// </summary>
         /// <returns>An unformatted copy of the state string - used for debugging bad logging templates</returns>
-        internal abstract string Unformatted();
+        [InternalApi]
+        public abstract string Unformatted();
     }
 
     /// <summary>
@@ -70,7 +72,7 @@ namespace Akka.Event
             return Formatter.Format(Format, Arg);
         }
 
-        internal override string Unformatted()
+        public override string Unformatted()
         {
             return Arg.ToString();
         }
@@ -93,7 +95,7 @@ namespace Akka.Event
             return Formatter.Format(Format, Args);
         }
 
-        internal override string Unformatted()
+        public override string Unformatted()
         {
             return string.Join(",", Args);
         }

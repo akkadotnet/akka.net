@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Persistence.Serialization;
 using static Akka.Persistence.Fsm.PersistentFSM;
 

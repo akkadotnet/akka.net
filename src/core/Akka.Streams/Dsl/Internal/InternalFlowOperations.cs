@@ -2568,7 +2568,7 @@ namespace Akka.Streams.Dsl.Internal
         /// elements that would've been sent to it will be dropped instead.
         /// </para>
         /// <para>It is similar to <seealso cref="AlsoToMaterialized{TOut,TMat,TMat2,TMat3}"/> which does backpressure instead of dropping elements.</para>
-        /// <para>@see <seealso cref="WireTap{TOut,TMat}"/></para>
+        /// <para>@see <seealso cref="WireTap"/></para>
         /// <para>
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.

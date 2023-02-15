@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding

@@ -48,7 +48,7 @@ namespace Akka.TestKit.Xunit.Internals
                 if (e.Message is LogMessage msg)
                 {
                     var message =
-                        $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Args)}]";
+                        $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Unformatted())}]";
                     if(e.Cause != null)
                         throw new AggregateException(message, ex, e.Cause);
                     throw new FormatException(message, ex);
