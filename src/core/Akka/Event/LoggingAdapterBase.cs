@@ -85,7 +85,7 @@ namespace Akka.Event
         /// <param name="logLevel">The level used to log the message.</param>
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
-        public virtual void Log(LogLevel logLevel, string format, params object[] args)
+        public void Log(LogLevel logLevel, string format, params object[] args)
         {
             if (args == null || args.Length == 0)
             {
@@ -104,7 +104,7 @@ namespace Akka.Event
         /// <param name="cause">The exception associated with this message.</param>
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
-        public virtual void Log(LogLevel logLevel, Exception cause, string format, params object[] args)
+        public void Log(LogLevel logLevel, Exception cause, string format, params object[] args)
         {
             if (args == null || args.Length == 0)
             {
@@ -116,39 +116,37 @@ namespace Akka.Event
             }
         }
 
-        public void Log(LogLevel logLevel, string format, Exception cause = null)
+        public void Log(LogLevel logLevel, Exception cause, string format)
         {
             NotifyLog(logLevel, format, cause);
         }
 
-        public void Log<T1>(LogLevel logLevel, string format, T1 arg1, Exception cause = null)
+        public void Log<T1>(LogLevel logLevel, Exception cause, string format, T1 arg1)
         {
             NotifyLog(logLevel, new LogMessage<LogValues<T1>>(_logMessageFormatter, format, new LogValues<T1>(arg1)), cause);
         }
 
-        public void Log<T1, T2>(LogLevel logLevel, string format, T1 arg1, T2 arg2, Exception cause = null)
+        public void Log<T1, T2>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2)
         {
             NotifyLog(logLevel, new LogMessage<LogValues<T1, T2>>(_logMessageFormatter, format, new LogValues<T1, T2>(arg1, arg2)), cause);
         }
 
-        public void Log<T1, T2, T3>(LogLevel logLevel, string format, T1 arg1, T2 arg2, T3 arg3, Exception cause = null)
+        public void Log<T1, T2, T3>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2, T3 arg3)
         {
             NotifyLog(logLevel, new LogMessage<LogValues<T1, T2, T3>>(_logMessageFormatter, format, new LogValues<T1, T2, T3>(arg1, arg2, arg3)), cause);
         }
 
-        public void Log<T1, T2, T3, T4>(LogLevel logLevel, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, Exception cause = null)
+        public void Log<T1, T2, T3, T4>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
         {
             NotifyLog(logLevel, new LogMessage<LogValues<T1, T2, T3, T4>>(_logMessageFormatter, format, new LogValues<T1, T2, T3, T4>(arg1, arg2, arg3, arg4)), cause);
         }
 
-        public void Log<T1, T2, T3, T4, T5>(LogLevel logLevel, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5,
-            Exception cause = null)
+        public void Log<T1, T2, T3, T4, T5>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
         {
             NotifyLog(logLevel, new LogMessage<LogValues<T1, T2, T3, T4, T5>>(_logMessageFormatter, format, new LogValues<T1, T2, T3, T4, T5>(arg1, arg2, arg3, arg4, arg5)), cause);
         }
 
-        public void Log<T1, T2, T3, T4, T5, T6>(LogLevel logLevel, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6,
-            Exception cause = null)
+        public void Log<T1, T2, T3, T4, T5, T6>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
         {
             NotifyLog(logLevel, new LogMessage<LogValues<T1, T2, T3, T4, T5, T6>>(_logMessageFormatter, format, new LogValues<T1, T2, T3, T4, T5, T6>(arg1, arg2, arg3, arg4, arg5, arg6)), cause);
         }
