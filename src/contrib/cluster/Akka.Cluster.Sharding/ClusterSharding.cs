@@ -174,7 +174,7 @@ namespace Akka.Cluster.Sharding
     /// <para>
     /// Typical usage of this extension:
     ///   1. At system startup on each cluster node by registering the supported entity types with
-    /// the <see cref="ClusterShardingGuardian.Start"/> method
+    /// the <see cref="ClusterSharding.Start"/> method
     ///   1. Retrieve the <see cref="Sharding.ShardRegion"/> actor for a named entity type with <see cref="ClusterSharding.ShardRegion"/>
     /// Settings can be configured as described in the `akka.cluster.sharding` section of the `reference.conf`.
     /// </para>
@@ -275,19 +275,19 @@ namespace Akka.Cluster.Sharding
         private readonly Cluster _cluster;
 
         /// <summary>
-        /// TBD
+        /// Retrieves or creates the <see cref="ClusterSharding"/> extension for the given <see cref="ActorSystem"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The ActorSystem.</param>
+        /// <returns>The singleton instances of the ClusterSharding extension associated with this ActorSystem.</returns>
         public static ClusterSharding Get(ActorSystem system)
         {
             return system.WithExtension<ClusterSharding, ClusterShardingExtensionProvider>();
         }
 
         /// <summary>
-        /// TBD
+        /// Instantiates the Akka.Cluster.Sharding extension for this system.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The ActorSystem.</param>
         public ClusterSharding(ExtendedActorSystem system)
         {
             _system = system;
@@ -1358,7 +1358,7 @@ namespace Akka.Cluster.Sharding
 #pragma warning disable CS0419 // Ambiguous reference in cref attribute
         /// <summary>
         /// Retrieve the actor reference of the <see cref="Sharding.ShardRegion"/> actor responsible for the named entity type.
-        /// The entity type must be registered with the <see cref="ClusterShardingGuardian.Start"/> or <see cref="ClusterShardingGuardian.StartProxy"/> method before it
+        /// The entity type must be registered with the <see cref="ClusterSharding.Start"/> or <see cref="ClusterSharding.StartProxy"/> method before it
         /// can be used here. Messages to the entity is always sent via the <see cref="Sharding.ShardRegion"/>.
         /// </summary>
         /// <param name="typeName">TBD</param>
@@ -1384,7 +1384,7 @@ namespace Akka.Cluster.Sharding
         /// Retrieve the actor reference of the <see cref="Sharding.ShardRegion"/> actor that will act as a proxy to the
         /// named entity type running in another data center. A proxy within the same data center can be accessed
         /// with <see cref="Sharding.ShardRegion"/> instead of this method. The entity type must be registered with the
-        /// <see cref="ClusterShardingGuardian.StartProxy"/> method before it can be used here. Messages to the entity is always sent
+        /// <see cref="ClusterSharding.StartProxy"/> method before it can be used here. Messages to the entity is always sent
         /// via the <see cref="Sharding.ShardRegion"/>.
         /// </summary>
         /// <param name="typeName"></param>

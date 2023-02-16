@@ -8,7 +8,6 @@
 using System;
 using Akka.Actor;
 using Akka.Actor.Setup;
-using Akka.Dispatch.SysMsg;
 
 namespace Akka.DependencyInjection
 {
@@ -47,7 +46,7 @@ namespace Akka.DependencyInjection
     /// The <see cref="IDependencyResolver"/> will be used to access previously registered services
     /// in the creation of actors and other pieces of infrastructure inside Akka.NET.
     ///
-    /// The constructor is internal. Please use <see cref="Dispatch.SysMsg.Create"/> to create a new instance.
+    /// The constructor is internal. Please use <see cref="DependencyResolverSetup.Create"/> to create a new instance.
     /// </summary>
     public class DependencyResolverSetup : Setup
     {
