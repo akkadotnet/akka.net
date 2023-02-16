@@ -161,10 +161,9 @@ akka.cluster.sharding {
 
 If you run into any trouble upgrading, [please file an issue with Akka.NET](https://github.com/akkadotnet/akka.net/issues/new/choose).
 
-
 ### Breaking Logging Changes
 
-In v1.5, we've re-engineering the `ILoggingAdapter` construct to be more extensible and performant. Unfortunately this necessistate some breaking changes that will affect end-user code - but the remedy for those changes is trivial.
+In v1.5, we've re-engineering the `ILoggingAdapter` construct to be more extensible and performant. Unfortunately this necessitate some breaking changes that will affect end-user code - but the remedy for those changes is trivial.
 
 After installing the v1.5 NuGet packages into your applications or libraries, you will need to add the following to all of your source files where you previously made calls to the `ILoggingAdapter`:
 
