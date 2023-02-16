@@ -462,12 +462,26 @@ namespace Akka.Event
         /// <param name="cause">The exception associated with this message.</param>
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
-        public static void Warning(this ILoggingAdapter log, Exception cause, string format, params object[] args)
+        public static void Warning(this ILoggingAdapter log, Exception cause, string format, object[] args)
         {
             if (!log.IsWarningEnabled)
                 return;
 
             log.Log(LogLevel.WarningLevel, cause, format, args);
+        }
+        
+        /// <summary>
+        /// Logs a <see cref="LogLevel.WarningLevel"/> message and associated exception.
+        /// </summary>
+        /// <param name="cause">The exception associated with this message.</param>
+        /// <param name="format">The message that is being logged.</param>
+        /// <param name="args">An optional list of items used to format the message.</param>
+        public static void Warning(this ILoggingAdapter log, string format, object[] args)
+        {
+            if (!log.IsWarningEnabled)
+                return;
+
+            log.Log(LogLevel.WarningLevel, null, format, args);
         }
 
         /* BEGIN ERROR */
