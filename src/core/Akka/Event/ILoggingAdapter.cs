@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 
 namespace Akka.Event
 {
@@ -15,13 +16,75 @@ namespace Akka.Event
         {
             log.Log(level, null, format);
         }
-        
+
+        public static void Log(this ILoggingAdapter log, LogLevel level, string format, object[] args)
+        {
+            log.Log(level, null, new DefaultLogMessage(log.Formatter, format, args));
+        }
+
+        public static void Log(this ILoggingAdapter log, LogLevel level, Exception cause, string format, object[] args)
+        {
+            log.Log(level, cause, new DefaultLogMessage(log.Formatter, format, args));
+        }
+
+        public static void Log<T1>(this ILoggingAdapter log, LogLevel logLevel, Exception cause, string format, T1 arg1)
+        {
+            log.Log(logLevel, cause, new LogMessage<LogValues<T1>>(log.Formatter, format, new LogValues<T1>(arg1)));
+        }
+
+        public static void Log<T1, T2>(this ILoggingAdapter log, LogLevel logLevel, Exception cause, string format,
+            T1 arg1, T2 arg2)
+        {
+            log.Log(logLevel, cause,
+                new LogMessage<LogValues<T1, T2>>(log.Formatter, format, new LogValues<T1, T2>(arg1, arg2)));
+        }
+
+        public static void Log<T1, T2, T3>(this ILoggingAdapter log, LogLevel logLevel, Exception cause, string format,
+            T1 arg1, T2 arg2, T3 arg3)
+        {
+            log.Log(logLevel, cause,
+                new LogMessage<LogValues<T1, T2, T3>>(log.Formatter, format,
+                    new LogValues<T1, T2, T3>(arg1, arg2, arg3)));
+        }
+
+        public static void Log<T1, T2, T3, T4>(this ILoggingAdapter log, LogLevel logLevel, Exception cause,
+            string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+        {
+            log.Log(logLevel, cause,
+                new LogMessage<LogValues<T1, T2, T3, T4>>(log.Formatter, format,
+                    new LogValues<T1, T2, T3, T4>(arg1, arg2, arg3, arg4)));
+        }
+
+        public static void Log<T1, T2, T3, T4, T5>(this ILoggingAdapter log, LogLevel logLevel, Exception cause,
+            string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+        {
+            log.Log(logLevel, cause,
+                new LogMessage<LogValues<T1, T2, T3, T4, T5>>(log.Formatter, format,
+                    new LogValues<T1, T2, T3, T4, T5>(arg1, arg2, arg3, arg4, arg5)));
+        }
+
+        public static void Log<T1, T2, T3, T4, T5, T6>(this ILoggingAdapter log, LogLevel logLevel, Exception cause,
+            string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+        {
+            log.Log(logLevel, cause,
+                new LogMessage<LogValues<T1, T2, T3, T4, T5, T6>>(log.Formatter, format,
+                    new LogValues<T1, T2, T3, T4, T5, T6>(arg1, arg2, arg3, arg4, arg5, arg6)));
+        }
+
         public static void Debug(this ILoggingAdapter log, string format)
         {
             if (!log.IsDebugEnabled)
                 return;
 
             log.Log(LogLevel.DebugLevel, null, format);
+        }
+
+        public static void Debug(this ILoggingAdapter log, Exception cause, string format)
+        {
+            if (!log.IsDebugEnabled)
+                return;
+
+            log.Log(LogLevel.DebugLevel, cause, format);
         }
 
         /// <summary>
@@ -38,7 +101,7 @@ namespace Akka.Event
             if (!log.IsDebugEnabled)
                 return;
 
-            log.Log(LogLevel.DebugLevel, cause, format, arg1);
+            log.Log<T1>(LogLevel.DebugLevel, cause, format, arg1);
         }
 
         public static void Debug<T1, T2>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2)
@@ -51,7 +114,7 @@ namespace Akka.Event
             if (!log.IsDebugEnabled)
                 return;
 
-            log.Log(LogLevel.DebugLevel, cause, format, arg1, arg2);
+            log.Log<T1, T2>(LogLevel.DebugLevel, cause, format, arg1, arg2);
         }
 
         public static void Debug<T1, T2, T3>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3)
@@ -65,7 +128,7 @@ namespace Akka.Event
             if (!log.IsDebugEnabled)
                 return;
 
-            log.Log(LogLevel.DebugLevel, cause, format, arg1, arg2, arg3);
+            log.Log<T1, T2, T3>(LogLevel.DebugLevel, cause, format, arg1, arg2, arg3);
         }
 
         public static void Debug<T1, T2, T3, T4>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3,
@@ -80,7 +143,7 @@ namespace Akka.Event
             if (!log.IsDebugEnabled)
                 return;
 
-            log.Log(LogLevel.DebugLevel, cause, format, arg1, arg2, arg3, arg4);
+            log.Log<T1, T2, T3, T4>(LogLevel.DebugLevel, cause, format, arg1, arg2, arg3, arg4);
         }
 
         public static void Debug<T1, T2, T3, T4, T5>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3,
@@ -95,7 +158,7 @@ namespace Akka.Event
             if (!log.IsDebugEnabled)
                 return;
 
-            log.Log(LogLevel.DebugLevel, cause, format, arg1, arg2, arg3, arg4, arg5);
+            log.Log<T1, T2, T3, T4, T5>(LogLevel.DebugLevel, cause, format, arg1, arg2, arg3, arg4, arg5);
         }
 
         public static void Debug<T1, T2, T3, T4, T5, T6>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2,
@@ -110,7 +173,7 @@ namespace Akka.Event
             if (!log.IsDebugEnabled)
                 return;
 
-            log.Log(LogLevel.DebugLevel, cause, format, arg1, arg2, arg3, arg4, arg5, arg6);
+            log.Log<T1, T2, T3, T4, T5, T6>(LogLevel.DebugLevel, cause, format, arg1, arg2, arg3, arg4, arg5, arg6);
         }
 
         /// <summary>
@@ -119,12 +182,20 @@ namespace Akka.Event
         /// <param name="cause">The exception associated with this message.</param>
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
-        public static void Debug(this ILoggingAdapter log, Exception cause, string format, params object[] args)
+        public static void Debug(this ILoggingAdapter log, Exception cause, string format, object[] args)
         {
             if (!log.IsDebugEnabled)
                 return;
 
             log.Log(LogLevel.DebugLevel, cause, format, args);
+        }
+
+        public static void Debug(this ILoggingAdapter log, string format, object[] args)
+        {
+            if (!log.IsDebugEnabled)
+                return;
+
+            log.Log(LogLevel.DebugLevel, null, format, args);
         }
 
         /* END DEBUG */
@@ -141,6 +212,19 @@ namespace Akka.Event
             log.Log(LogLevel.InfoLevel, null, format);
         }
 
+
+        /// <summary>
+        /// Logs a <see cref="LogLevel.InfoLevel"/> message.
+        /// </summary>
+        /// <param name="format">The message that is being logged.</param>
+        public static void Info(this ILoggingAdapter log, Exception cause, string format)
+        {
+            if (!log.IsInfoEnabled)
+                return;
+
+            log.Log(LogLevel.InfoLevel, cause, format);
+        }
+
         /// <summary>
         /// Logs a <see cref="LogLevel.InfoLevel"/> message.
         /// </summary>
@@ -155,7 +239,7 @@ namespace Akka.Event
             if (!log.IsInfoEnabled)
                 return;
 
-            log.Log(LogLevel.InfoLevel, cause, format, arg1);
+            log.Log<T1>(LogLevel.InfoLevel, cause, format, arg1);
         }
 
         public static void Info<T1, T2>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2)
@@ -168,7 +252,7 @@ namespace Akka.Event
             if (!log.IsInfoEnabled)
                 return;
 
-            log.Log(LogLevel.InfoLevel, cause, format, arg1, arg2);
+            log.Log<T1, T2>(LogLevel.InfoLevel, cause, format, arg1, arg2);
         }
 
         public static void Info<T1, T2, T3>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3)
@@ -182,7 +266,7 @@ namespace Akka.Event
             if (!log.IsInfoEnabled)
                 return;
 
-            log.Log(LogLevel.InfoLevel, cause, format, arg1, arg2, arg3);
+            log.Log<T1, T2, T3>(LogLevel.InfoLevel, cause, format, arg1, arg2, arg3);
         }
 
         public static void Info<T1, T2, T3, T4>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3,
@@ -197,7 +281,7 @@ namespace Akka.Event
             if (!log.IsInfoEnabled)
                 return;
 
-            log.Log(LogLevel.InfoLevel, cause, format, arg1, arg2, arg3, arg4);
+            log.Log<T1, T2, T3, T4>(LogLevel.InfoLevel, cause, format, arg1, arg2, arg3, arg4);
         }
 
         public static void Info<T1, T2, T3, T4, T5>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3,
@@ -212,7 +296,7 @@ namespace Akka.Event
             if (!log.IsInfoEnabled)
                 return;
 
-            log.Log(LogLevel.InfoLevel, cause, format, arg1, arg2, arg3, arg4, arg5);
+            log.Log<T1, T2, T3, T4, T5>(LogLevel.InfoLevel, cause, format, arg1, arg2, arg3, arg4, arg5);
         }
 
         public static void Info<T1, T2, T3, T4, T5, T6>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2,
@@ -227,7 +311,7 @@ namespace Akka.Event
             if (!log.IsInfoEnabled)
                 return;
 
-            log.Log(LogLevel.InfoLevel, cause, format, arg1, arg2, arg3, arg4, arg5, arg6);
+            log.Log<T1, T2, T3, T4, T5, T6>(LogLevel.InfoLevel, cause, format, arg1, arg2, arg3, arg4, arg5, arg6);
         }
 
         /// <summary>
@@ -236,14 +320,22 @@ namespace Akka.Event
         /// <param name="cause">The exception associated with this message.</param>
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
-        public static void Info(this ILoggingAdapter log, Exception cause, string format, params object[] args)
+        public static void Info(this ILoggingAdapter log, Exception cause, string format, object[] args)
         {
             if (!log.IsInfoEnabled)
                 return;
 
             log.Log(LogLevel.InfoLevel, cause, format, args);
         }
-        
+
+        public static void Info(this ILoggingAdapter log, string format, object[] args)
+        {
+            if (!log.IsInfoEnabled)
+                return;
+
+            log.Log(LogLevel.InfoLevel, null, format, args);
+        }
+
         /* BEGIN WARNING */
 
         /// <summary>
@@ -260,6 +352,19 @@ namespace Akka.Event
         }
 
         /// <summary>
+        /// Logs a <see cref="LogLevel.WarningLevel"/> message.
+        /// </summary>
+        /// <param name="format">The message that is being logged.</param>
+        /// <param name="args">An optional list of items used to format the message.</param>
+        public static void Warning(this ILoggingAdapter log, Exception cause, string format)
+        {
+            if (!log.IsWarningEnabled)
+                return;
+
+            log.Log(LogLevel.WarningLevel, cause, format);
+        }
+
+        /// <summary>
         /// Logs a <see cref="LogLevel.InfoLevel"/> message.
         /// </summary>
         /// <param name="format">The message that is being logged.</param>
@@ -273,7 +378,7 @@ namespace Akka.Event
             if (!log.IsWarningEnabled)
                 return;
 
-            log.Log(LogLevel.WarningLevel, cause, format, arg1);
+            log.Log<T1>(LogLevel.WarningLevel, cause, format, arg1);
         }
 
         public static void Warning<T1, T2>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2)
@@ -286,7 +391,7 @@ namespace Akka.Event
             if (!log.IsWarningEnabled)
                 return;
 
-            log.Log(LogLevel.WarningLevel, cause, format, arg1, arg2);
+            log.Log<T1, T2>(LogLevel.WarningLevel, cause, format, arg1, arg2);
         }
 
         public static void Warning<T1, T2, T3>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3)
@@ -294,13 +399,14 @@ namespace Akka.Event
             log.Warning<T1, T2, T3>(null, format, arg1, arg2, arg3);
         }
 
-        public static void Warning<T1, T2, T3>(this ILoggingAdapter log, Exception cause, string format, T1 arg1, T2 arg2,
+        public static void Warning<T1, T2, T3>(this ILoggingAdapter log, Exception cause, string format, T1 arg1,
+            T2 arg2,
             T3 arg3)
         {
             if (!log.IsWarningEnabled)
                 return;
 
-            log.Log(LogLevel.WarningLevel, cause, format, arg1, arg2, arg3);
+            log.Log<T1, T2, T3>(LogLevel.WarningLevel, cause, format, arg1, arg2, arg3);
         }
 
         public static void Warning<T1, T2, T3, T4>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3,
@@ -315,22 +421,24 @@ namespace Akka.Event
             if (!log.IsWarningEnabled)
                 return;
 
-            log.Log(LogLevel.WarningLevel, cause, format, arg1, arg2, arg3, arg4);
+            log.Log<T1, T2, T3, T4>(LogLevel.WarningLevel, cause, format, arg1, arg2, arg3, arg4);
         }
 
-        public static void Warning<T1, T2, T3, T4, T5>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3,
+        public static void Warning<T1, T2, T3, T4, T5>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2,
+            T3 arg3,
             T4 arg4, T5 arg5)
         {
             log.Warning<T1, T2, T3, T4, T5>(null, format, arg1, arg2, arg3, arg4, arg5);
         }
 
-        public static void Warning<T1, T2, T3, T4, T5>(this ILoggingAdapter log, Exception cause, string format, T1 arg1,
+        public static void Warning<T1, T2, T3, T4, T5>(this ILoggingAdapter log, Exception cause, string format,
+            T1 arg1,
             T2 arg2, T3 arg3, T4 arg4, T5 arg5)
         {
             if (!log.IsWarningEnabled)
                 return;
 
-            log.Log(LogLevel.WarningLevel, cause, format, arg1, arg2, arg3, arg4, arg5);
+            log.Log<T1, T2, T3, T4, T5>(LogLevel.WarningLevel, cause, format, arg1, arg2, arg3, arg4, arg5);
         }
 
         public static void Warning<T1, T2, T3, T4, T5, T6>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2,
@@ -345,7 +453,7 @@ namespace Akka.Event
             if (!log.IsWarningEnabled)
                 return;
 
-            log.Log(LogLevel.WarningLevel, cause, format, arg1, arg2, arg3, arg4, arg5, arg6);
+            log.Log<T1, T2, T3, T4, T5, T6>(LogLevel.WarningLevel, cause, format, arg1, arg2, arg3, arg4, arg5, arg6);
         }
 
         /// <summary>
@@ -361,7 +469,7 @@ namespace Akka.Event
 
             log.Log(LogLevel.WarningLevel, cause, format, args);
         }
-        
+
         /* BEGIN ERROR */
 
         /// <summary>
@@ -378,6 +486,19 @@ namespace Akka.Event
         }
 
         /// <summary>
+        /// Logs a <see cref="LogLevel.ErrorLevel"/> message.
+        /// </summary>
+        /// <param name="format">The message that is being logged.</param>
+        /// <param name="args">An optional list of items used to format the message.</param>
+        public static void Error(this ILoggingAdapter log, Exception cause, string format)
+        {
+            if (!log.IsErrorEnabled)
+                return;
+
+            log.Log(LogLevel.ErrorLevel, cause, format);
+        }
+
+        /// <summary>
         /// Logs a <see cref="LogLevel.InfoLevel"/> message.
         /// </summary>
         /// <param name="format">The message that is being logged.</param>
@@ -391,7 +512,7 @@ namespace Akka.Event
             if (!log.IsErrorEnabled)
                 return;
 
-            log.Log(LogLevel.ErrorLevel, cause, format, arg1);
+            log.Log<T1>(LogLevel.ErrorLevel, cause, format, arg1);
         }
 
         public static void Error<T1, T2>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2)
@@ -404,7 +525,7 @@ namespace Akka.Event
             if (!log.IsErrorEnabled)
                 return;
 
-            log.Log(LogLevel.ErrorLevel, cause, format, arg1, arg2);
+            log.Log<T1, T2>(LogLevel.ErrorLevel, cause, format, arg1, arg2);
         }
 
         public static void Error<T1, T2, T3>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3)
@@ -418,7 +539,7 @@ namespace Akka.Event
             if (!log.IsErrorEnabled)
                 return;
 
-            log.Log(LogLevel.ErrorLevel, cause, format, arg1, arg2, arg3);
+            log.Log<T1, T2, T3>(LogLevel.ErrorLevel, cause, format, arg1, arg2, arg3);
         }
 
         public static void Error<T1, T2, T3, T4>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3,
@@ -433,7 +554,7 @@ namespace Akka.Event
             if (!log.IsInfoEnabled)
                 return;
 
-            log.Log(LogLevel.ErrorLevel, cause, format, arg1, arg2, arg3, arg4);
+            log.Log<T1, T2, T3, T4>(LogLevel.ErrorLevel, cause, format, arg1, arg2, arg3, arg4);
         }
 
         public static void Error<T1, T2, T3, T4, T5>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3,
@@ -448,7 +569,7 @@ namespace Akka.Event
             if (!log.IsErrorEnabled)
                 return;
 
-            log.Log(LogLevel.ErrorLevel, cause, format, arg1, arg2, arg3, arg4, arg5);
+            log.Log<T1, T2, T3, T4, T5>(LogLevel.ErrorLevel, cause, format, arg1, arg2, arg3, arg4, arg5);
         }
 
         public static void Error<T1, T2, T3, T4, T5, T6>(this ILoggingAdapter log, string format, T1 arg1, T2 arg2,
@@ -463,7 +584,7 @@ namespace Akka.Event
             if (!log.IsErrorEnabled)
                 return;
 
-            log.Log(LogLevel.ErrorLevel, cause, format, arg1, arg2, arg3, arg4, arg5, arg6);
+            log.Log<T1, T2, T3, T4, T5, T6>(LogLevel.ErrorLevel, cause, format, arg1, arg2, arg3, arg4, arg5, arg6);
         }
 
 
@@ -473,12 +594,20 @@ namespace Akka.Event
         /// <param name="cause">The exception associated with this message.</param>
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
-        public static void Error(this ILoggingAdapter log, Exception cause, string format, params object[] args)
+        public static void Error(this ILoggingAdapter log, Exception cause, string format, object[] args)
         {
             if (!log.IsErrorEnabled)
                 return;
 
             log.Log(LogLevel.ErrorLevel, cause, format, args);
+        }
+
+        public static void Error(this ILoggingAdapter log, string format, object[] args)
+        {
+            if (!log.IsErrorEnabled)
+                return;
+
+            log.Log(LogLevel.ErrorLevel, null, format, args);
         }
     }
 
@@ -487,6 +616,11 @@ namespace Akka.Event
     /// </summary>
     public interface ILoggingAdapter
     {
+        /// <summary>
+        /// The <see cref="ILogMessageFormatter"/> used to format log messages.
+        /// </summary>
+        public ILogMessageFormatter Formatter { get; }
+
         /// <summary>
         /// Check to determine whether the <see cref="LogLevel.DebugLevel"/> is enabled.
         /// </summary>
@@ -530,37 +664,8 @@ namespace Akka.Event
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
         void Log(LogLevel logLevel, Exception cause, string format);
-        
-        /// <summary>
-        /// For backwards compatibility.
-        /// </summary>
-        /// <param name="logLevel"></param>
-        /// <param name="cause"></param>
-        /// <param name="format"></param>
-        /// <param name="args"></param>
-        void Log(LogLevel logLevel, Exception cause, string format, params object[] args);
-        
-        /// <summary>
-        /// For backwards compatibility.
-        /// </summary>
-        /// <param name="logLevel"></param>
-        /// <param name="format"></param>
-        /// <param name="args"></param>
-        void Log(LogLevel logLevel, string format, params object[] args);
 
-        void Log<T1>(LogLevel logLevel, Exception cause, string format, T1 arg1);
-        void Log<T1, T2>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2);
-
-        void Log<T1, T2, T3>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2, T3 arg3);
-
-        void Log<T1, T2, T3, T4>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
-
-        void Log<T1, T2, T3, T4, T5>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2, T3 arg3,
-            T4 arg4, T5 arg5);
-
-        void Log<T1, T2, T3, T4, T5, T6>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2, T3 arg3,
-            T4 arg4, T5 arg5,
-            T6 arg6);
+        void Log(LogLevel logLevel, Exception cause, LogMessage message);
     }
 
     /// <summary>
@@ -576,6 +681,8 @@ namespace Akka.Event
         private NoLogger()
         {
         }
+
+        public ILogMessageFormatter Formatter => DefaultLogMessageFormatter.Instance;
 
         /// <summary>
         /// Check to determine whether the <see cref="LogLevel.DebugLevel" /> is enabled.
@@ -625,42 +732,7 @@ namespace Akka.Event
         {
         }
 
-        public void Log(LogLevel logLevel, Exception cause, string format, params object[] args)
-        {
-            
-        }
-
-        public void Log(LogLevel logLevel, string format, params object[] args)
-        {
-            
-        }
-
-        public void Log<T1>(LogLevel logLevel, Exception cause, string format, T1 arg1)
-        {
-        }
-
-        public void Log<T1, T2>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2)
-        {
-        }
-
-        public void Log<T1, T2, T3>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2, T3 arg3)
-        {
-        }
-
-        public void Log<T1, T2, T3, T4>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2, T3 arg3,
-            T4 arg4)
-        {
-        }
-
-        public void Log<T1, T2, T3, T4, T5>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2,
-            T3 arg3, T4 arg4,
-            T5 arg5)
-        {
-        }
-
-        public void Log<T1, T2, T3, T4, T5, T6>(LogLevel logLevel, Exception cause, string format, T1 arg1, T2 arg2,
-            T3 arg3, T4 arg4,
-            T5 arg5, T6 arg6)
+        public void Log(LogLevel logLevel, Exception cause, LogMessage message)
         {
         }
     }
