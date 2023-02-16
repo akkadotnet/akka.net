@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Util.Internal;
 
 namespace Akka.Persistence.Journal
@@ -138,6 +139,60 @@ namespace Akka.Persistence.Journal
             return Task.FromResult(new object());
         }
 
+        protected override bool ReceivePluginInternal(object message)
+        {
+            switch (message)
+            {
+                case SelectCurrentPersistenceIds request:
+                    Task.FromResult(Messages.Keys.ToArray())
+                        .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result));
+                    return true;
+                
+                default:
+                    return false;
+            }
+        }
+
+        #region QueryAPI
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class SelectCurrentPersistenceIds : IJournalRequest
+        {
+            public IActorRef ReplyTo { get; }
+
+            public SelectCurrentPersistenceIds(IActorRef replyTo)
+            {
+                ReplyTo = replyTo;
+            }
+        }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class CurrentPersistenceIds : IDeadLetterSuppression
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IEnumerable<string> AllPersistenceIds;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="allPersistenceIds">TBD</param>
+            /// <param name="highestOrderingNumber">TBD</param>
+            public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds)
+            {
+                AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();
+            }
+        }
+
+        #endregion
+        
         #region IMemoryMessages implementation
 
         /// <summary>

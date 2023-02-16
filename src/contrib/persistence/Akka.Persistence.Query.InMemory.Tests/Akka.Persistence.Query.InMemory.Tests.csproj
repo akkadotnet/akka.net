@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\..\common.props" />
+
+    <PropertyGroup>
+        <AssemblyTitle>Akka.Persistence.Query.InMemory.Tests</AssemblyTitle>
+        <Description>Akka.NET Persistence Query implementation for InMemory Journal.</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\core\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj" />
+      <ProjectReference Include="..\Akka.Persistence.Query.InMemory\Akka.Persistence.Query.InMemory.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
+    </ItemGroup>
+
+</Project>
