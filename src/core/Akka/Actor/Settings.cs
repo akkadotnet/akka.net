@@ -143,6 +143,7 @@ namespace Akka.Actor
 
             //handled
             LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start", false);
+            LogSerializerOverrideOnStart = Config.GetBoolean("akka.log-serializer-override-on-start", true);
             LogDeadLetters = 0;
             switch (Config.GetString("akka.log-dead-letters", null))
             {
@@ -319,6 +320,13 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [log configuration on start]; otherwise, <c>false</c>.</value>
         public bool LogConfigOnStart { get; private set; }
+
+
+        /// <summary>
+        ///     Gets a value indicating whether [log serializer override on start].
+        /// </summary>
+        /// <value><c>true</c> if [log serializer override on start]; otherwise, <c>false</c>.</value>
+        public bool LogSerializerOverrideOnStart { get; private set; }
 
         /// <summary>
         ///     Gets the log dead letters.

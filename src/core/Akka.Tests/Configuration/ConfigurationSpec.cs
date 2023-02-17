@@ -46,6 +46,7 @@ namespace Akka.Tests.Configuration
             settings.StdoutLogger.Should().NotBeNull();
             settings.StdoutLogger.Should().BeOfType<StandardOutLogger>();
             settings.LogConfigOnStart.ShouldBeFalse();
+            settings.LogSerializerOverrideOnStart.ShouldBeTrue();
             settings.LogDeadLetters.ShouldBe(10);
             settings.LogDeadLettersDuringShutdown.ShouldBeFalse();
             settings.LogDeadLettersSuspendDuration.ShouldBe(TimeSpan.FromMinutes(5));

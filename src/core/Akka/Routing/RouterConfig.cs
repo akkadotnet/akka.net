@@ -354,15 +354,9 @@ namespace Akka.Routing
         /// <summary>
         /// TBD
         /// </summary>
-        public static SupervisorStrategy DefaultSupervisorStrategy
-        {
-            get
-            {
-                return new OneForOneStrategy(Decider.From(Directive.Escalate));
-            }
-        }
+        public static SupervisorStrategy DefaultSupervisorStrategy => SupervisorStrategy.DefaultStrategy;
 
-        
+
         public bool Equals(Pool other)
         {
             if (ReferenceEquals(null, other)) return false;

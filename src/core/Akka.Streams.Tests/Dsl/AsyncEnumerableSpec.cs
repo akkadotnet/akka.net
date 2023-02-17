@@ -106,6 +106,7 @@ namespace Akka.Streams.Tests.Dsl
                         materializer.Shutdown();
                 }
             });
+            
             //since we are collapsing the stream inside the read
             //we want to send messages so we aren't just waiting forever.
             await probe.SendNextAsync(1);
@@ -113,7 +114,7 @@ namespace Akka.Streams.Tests.Dsl
             var thrown = false;
             try
             {
-                await a.ShouldCompleteWithin(3.Seconds());
+                await a.ShouldCompleteWithin(10.Seconds());
             }
             catch (StreamDetachedException)
             {

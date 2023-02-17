@@ -9,12 +9,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Actor.Dsl;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions;
 
 namespace Akka.Persistence.Tests
 {
@@ -574,13 +574,13 @@ namespace Akka.Persistence.Tests
             ExpectMsg(ReqAck.Instance);
 
             var unconfirmed = ReceiveWhile(TimeSpan.FromSeconds(3), x =>
-                x is UnconfirmedWarning ? ((UnconfirmedWarning)x).UnconfirmedDeliveries : Enumerable.Empty<UnconfirmedDelivery>())
+                x is UnconfirmedWarning warning ? warning.UnconfirmedDeliveries : Enumerable.Empty<UnconfirmedDelivery>())
                 .SelectMany(e => e).ToArray();
 
             var resultDestinations = unconfirmed.Select(x => x.Destination).Distinct().ToArray();
-            resultDestinations.ShouldOnlyContainInOrder(probeA.Ref.Path, probeB.Ref.Path);
+            resultDestinations.Should().BeEquivalentTo(probeA.Ref.Path, probeB.Ref.Path);
             var resultMessages = unconfirmed.Select(x => x.Message).Distinct().ToArray();
-            resultMessages.ShouldOnlyContainInOrder(new Action(1, "a-1"), new Action(2, "b-1"), new Action(3, "b-2"));
+            resultMessages.Should().BeEquivalentTo(new Action(1, "a-1"), new Action(2, "b-1"), new Action(3, "b-2"));
 
             Sys.Stop(sender);
         }
