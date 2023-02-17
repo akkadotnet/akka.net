@@ -74,7 +74,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             switch (message)
             {
-                // todo: SelectCurrentPersistenceIds
+                case SelectCurrentPersistenceIds msg:
+                    SelectAllPersistenceIdsAsync(msg.Offset)
+                        .PipeTo(msg.ReplyTo, success: h => new CurrentPersistenceIds(h.Ids, h.LastOrdering), failure: e => new Status.Failure(e));
+                    return true;
                 case ReplayTaggedMessages replay:
                     ReplayTaggedMessagesAsync(replay)
                         .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
