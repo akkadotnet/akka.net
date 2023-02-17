@@ -9,6 +9,7 @@ using System;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;

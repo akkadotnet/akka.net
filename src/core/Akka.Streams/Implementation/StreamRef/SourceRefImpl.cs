@@ -9,6 +9,7 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;

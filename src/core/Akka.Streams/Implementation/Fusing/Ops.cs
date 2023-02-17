@@ -2930,6 +2930,7 @@ namespace Akka.Streams.Implementation.Fusing
                 if (IsEnabled(_logLevels.OnFinish))
                     _log.Log(
                         _logLevels.OnFinish,
+                        null,
                         "[{0}] Downstream finished. cause: {1}: {2}.",
                         _stage._name,
                         Logging.SimpleName(cause.GetType()),

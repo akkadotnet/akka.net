@@ -166,7 +166,7 @@ namespace Akka.Event
                 switch (logEvent.Message)
                 {
                     case LogMessage formatted: // a parameterized log
-                        msg = " str=[" + formatted.Format + "], args=["+ string.Join(",", formatted.Args) +"]";
+                        msg = " str=[" + formatted.Format + "], args=["+ formatted.Unformatted() +"]";
                         break;
                     case string unformatted: // pre-formatted or non-parameterized log
                         msg = unformatted;

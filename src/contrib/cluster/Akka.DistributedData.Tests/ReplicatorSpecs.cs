@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;

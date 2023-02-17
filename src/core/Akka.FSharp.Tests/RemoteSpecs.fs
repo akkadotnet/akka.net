@@ -9,9 +9,7 @@ module Akka.FSharp.Tests.RemoteSpecs
 
 open System
 open Akka.Actor
-open Akka.Configuration
-open Akka.Serialization
-open Newtonsoft.Json.Converters
+open Akka.Event
 open Xunit
 open Xunit.Abstractions
 open Akka.FSharp

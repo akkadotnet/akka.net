@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
+
 namespace Akka.Event
 {
     /// <summary>
@@ -19,5 +21,16 @@ namespace Akka.Event
         /// <param name="args">An optional list of items used to format the string.</param>
         /// <returns>The given string that has been correctly formatted.</returns>
         string Format(string format, params object[] args);
+        
+        /// <summary>
+        /// Formats a string without explicit array allocation.
+        /// </summary>
+        /// <param name="format">The string that is being formatted.</param>
+        /// <param name="args">An optional list of items used to format the string.</param>
+        /// <returns>The given string that has been correctly formatted.</returns>
+        /// <remarks>
+        /// Delays array allocation until formatting time.
+        /// </remarks>
+        string Format(string format, IEnumerable<object> args);
     }
 }

@@ -3007,14 +3007,7 @@ namespace Akka.Event
         public override bool IsErrorEnabled { get; }
         public override bool IsInfoEnabled { get; }
         public override bool IsWarningEnabled { get; }
-        protected override void NotifyDebug(object message) { }
-        protected override void NotifyDebug(System.Exception cause, object message) { }
-        protected override void NotifyError(object message) { }
-        protected override void NotifyError(System.Exception cause, object message) { }
-        protected override void NotifyInfo(object message) { }
-        protected override void NotifyInfo(System.Exception cause, object message) { }
-        protected override void NotifyWarning(object message) { }
-        protected override void NotifyWarning(System.Exception cause, object message) { }
+        protected override void NotifyLog(Akka.Event.LogLevel logLevel, object message, System.Exception cause = null) { }
     }
     public sealed class DeadLetter : Akka.Event.AllDeadLetters
     {
@@ -3039,6 +3032,7 @@ namespace Akka.Event
     {
         public static readonly Akka.Event.DefaultLogMessageFormatter Instance;
         public string Format(string format, params object[] args) { }
+        public string Format(string format, System.Collections.Generic.IEnumerable<object> args) { }
     }
     public class DefaultLogger : Akka.Actor.ActorBase, Akka.Dispatch.IRequiresMessageQueue<Akka.Event.ILoggerMessageQueueSemantics>
     {
@@ -3094,25 +3088,19 @@ namespace Akka.Event
     public interface ILogMessageFormatter
     {
         string Format(string format, params object[] args);
+        string Format(string format, System.Collections.Generic.IEnumerable<object> args);
     }
     public interface ILoggerMessageQueueSemantics : Akka.Dispatch.ISemantics { }
     public interface ILoggingAdapter
     {
+        Akka.Event.ILogMessageFormatter Formatter { get; }
         bool IsDebugEnabled { get; }
         bool IsErrorEnabled { get; }
         bool IsInfoEnabled { get; }
         bool IsWarningEnabled { get; }
-        void Debug(string format, params object[] args);
-        void Debug(System.Exception cause, string format, params object[] args);
-        void Error(string format, params object[] args);
-        void Error(System.Exception cause, string format, params object[] args);
-        void Info(string format, params object[] args);
-        void Info(System.Exception cause, string format, params object[] args);
         bool IsEnabled(Akka.Event.LogLevel logLevel);
-        void Log(Akka.Event.LogLevel logLevel, string format, params object[] args);
-        void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format, params object[] args);
-        void Warning(string format, params object[] args);
-        void Warning(System.Exception cause, string format, params object[] args);
+        void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format);
+        void Log(Akka.Event.LogLevel logLevel, System.Exception cause, Akka.Event.LogMessage message);
     }
     public class Info : Akka.Event.LogEvent
     {
@@ -3144,13 +3132,15 @@ namespace Akka.Event
         WarningLevel = 2,
         ErrorLevel = 3,
     }
-    public class LogMessage
+    public abstract class LogMessage
     {
-        public LogMessage(Akka.Event.ILogMessageFormatter formatter, string format, params object[] args) { }
-        public object[] Args { get; }
+        protected readonly Akka.Event.ILogMessageFormatter Formatter;
+        public LogMessage(Akka.Event.ILogMessageFormatter formatter, string format) { }
         public string Format { get; }
-        public override string ToString() { }
+        [Akka.Annotations.InternalApiAttribute()]
+        public abstract string Unformatted();
     }
+    public class static LogMessageExtensions { }
     public struct LogSource
     {
         public string Source { get; }
@@ -3187,32 +3177,15 @@ namespace Akka.Event
     public abstract class LoggingAdapterBase : Akka.Event.ILoggingAdapter
     {
         protected LoggingAdapterBase(Akka.Event.ILogMessageFormatter logMessageFormatter) { }
+        public Akka.Event.ILogMessageFormatter Formatter { get; }
         public abstract bool IsDebugEnabled { get; }
         public abstract bool IsErrorEnabled { get; }
         public abstract bool IsInfoEnabled { get; }
         public abstract bool IsWarningEnabled { get; }
-        public virtual void Debug(string format, params object[] args) { }
-        public virtual void Debug(System.Exception cause, string format, params object[] args) { }
-        public virtual void Error(System.Exception cause, string format, params object[] args) { }
-        public virtual void Error(string format, params object[] args) { }
-        public virtual void Info(System.Exception cause, string format, params object[] args) { }
-        public virtual void Info(string format, params object[] args) { }
         public bool IsEnabled(Akka.Event.LogLevel logLevel) { }
-        public virtual void Log(Akka.Event.LogLevel logLevel, string format, params object[] args) { }
-        public virtual void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format, params object[] args) { }
-        protected abstract void NotifyDebug(object message);
-        protected abstract void NotifyDebug(System.Exception cause, object message);
-        protected abstract void NotifyError(object message);
-        protected abstract void NotifyError(System.Exception cause, object message);
-        protected abstract void NotifyInfo(object message);
-        protected abstract void NotifyInfo(System.Exception cause, object message);
-        protected void NotifyLog(Akka.Event.LogLevel logLevel, object message) { }
-        protected void NotifyLog(Akka.Event.LogLevel logLevel, System.Exception cause, object message) { }
-        protected abstract void NotifyWarning(object message);
-        protected abstract void NotifyWarning(System.Exception cause, object message);
-        public virtual void Warn(string format, params object[] args) { }
-        public virtual void Warning(string format, params object[] args) { }
-        public virtual void Warning(System.Exception cause, string format, params object[] args) { }
+        public void Log(Akka.Event.LogLevel logLevel, System.Exception cause, Akka.Event.LogMessage message) { }
+        public void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format) { }
+        protected abstract void NotifyLog(Akka.Event.LogLevel logLevel, object message, System.Exception cause = null);
     }
     public class LoggingBus : Akka.Event.ActorEventBus<object, System.Type>
     {
@@ -3225,6 +3198,82 @@ namespace Akka.Event
         public void SetLogLevel(Akka.Event.LogLevel logLevel) { }
         public void StartStdoutLogger(Akka.Actor.Settings config) { }
     }
+    public class static LoggingExtensions
+    {
+        public static void Debug(this Akka.Event.ILoggingAdapter log, string format) { }
+        public static void Debug(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format) { }
+        public static void Debug<T1>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1) { }
+        public static void Debug<T1>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1) { }
+        public static void Debug<T1, T2>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2) { }
+        public static void Debug<T1, T2>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2) { }
+        public static void Debug<T1, T2, T3>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3) { }
+        public static void Debug<T1, T2, T3>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3) { }
+        public static void Debug<T1, T2, T3, T4>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4) { }
+        public static void Debug<T1, T2, T3, T4>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4) { }
+        public static void Debug<T1, T2, T3, T4, T5>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) { }
+        public static void Debug<T1, T2, T3, T4, T5>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) { }
+        public static void Debug<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
+        public static void Debug<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
+        public static void Debug(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, object[] args) { }
+        public static void Debug(this Akka.Event.ILoggingAdapter log, string format, object[] args) { }
+        public static void Error(this Akka.Event.ILoggingAdapter log, string format) { }
+        public static void Error(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format) { }
+        public static void Error<T1>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1) { }
+        public static void Error<T1>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1) { }
+        public static void Error<T1, T2>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2) { }
+        public static void Error<T1, T2>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2) { }
+        public static void Error<T1, T2, T3>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3) { }
+        public static void Error<T1, T2, T3>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3) { }
+        public static void Error<T1, T2, T3, T4>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4) { }
+        public static void Error<T1, T2, T3, T4>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4) { }
+        public static void Error<T1, T2, T3, T4, T5>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) { }
+        public static void Error<T1, T2, T3, T4, T5>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) { }
+        public static void Error<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
+        public static void Error<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
+        public static void Error(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, object[] args) { }
+        public static void Error(this Akka.Event.ILoggingAdapter log, string format, object[] args) { }
+        public static void Info(this Akka.Event.ILoggingAdapter log, string format) { }
+        public static void Info(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format) { }
+        public static void Info<T1>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1) { }
+        public static void Info<T1>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1) { }
+        public static void Info<T1, T2>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2) { }
+        public static void Info<T1, T2>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2) { }
+        public static void Info<T1, T2, T3>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3) { }
+        public static void Info<T1, T2, T3>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3) { }
+        public static void Info<T1, T2, T3, T4>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4) { }
+        public static void Info<T1, T2, T3, T4>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4) { }
+        public static void Info<T1, T2, T3, T4, T5>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) { }
+        public static void Info<T1, T2, T3, T4, T5>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) { }
+        public static void Info<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
+        public static void Info<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
+        public static void Info(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, object[] args) { }
+        public static void Info(this Akka.Event.ILoggingAdapter log, string format, object[] args) { }
+        public static void Log(this Akka.Event.ILoggingAdapter log, Akka.Event.LogLevel level, string format) { }
+        public static void Log(this Akka.Event.ILoggingAdapter log, Akka.Event.LogLevel level, string format, object[] args) { }
+        public static void Log(this Akka.Event.ILoggingAdapter log, Akka.Event.LogLevel level, System.Exception cause, string format, object[] args) { }
+        public static void Log<T1>(this Akka.Event.ILoggingAdapter log, Akka.Event.LogLevel logLevel, System.Exception cause, string format, T1 arg1) { }
+        public static void Log<T1, T2>(this Akka.Event.ILoggingAdapter log, Akka.Event.LogLevel logLevel, System.Exception cause, string format, T1 arg1, T2 arg2) { }
+        public static void Log<T1, T2, T3>(this Akka.Event.ILoggingAdapter log, Akka.Event.LogLevel logLevel, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3) { }
+        public static void Log<T1, T2, T3, T4>(this Akka.Event.ILoggingAdapter log, Akka.Event.LogLevel logLevel, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4) { }
+        public static void Log<T1, T2, T3, T4, T5>(this Akka.Event.ILoggingAdapter log, Akka.Event.LogLevel logLevel, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) { }
+        public static void Log<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, Akka.Event.LogLevel logLevel, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
+        public static void Warning(this Akka.Event.ILoggingAdapter log, string format) { }
+        public static void Warning(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format) { }
+        public static void Warning<T1>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1) { }
+        public static void Warning<T1>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1) { }
+        public static void Warning<T1, T2>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2) { }
+        public static void Warning<T1, T2>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2) { }
+        public static void Warning<T1, T2, T3>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3) { }
+        public static void Warning<T1, T2, T3>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3) { }
+        public static void Warning<T1, T2, T3, T4>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4) { }
+        public static void Warning<T1, T2, T3, T4>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4) { }
+        public static void Warning<T1, T2, T3, T4, T5>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) { }
+        public static void Warning<T1, T2, T3, T4, T5>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) { }
+        public static void Warning<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
+        public static void Warning<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
+        public static void Warning(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, object[] args) { }
+        public static void Warning(this Akka.Event.ILoggingAdapter log, string format, object[] args) { }
+    }
     public abstract class MinimalLogger : Akka.Actor.MinimalActorRef
     {
         protected MinimalLogger() { }
@@ -3236,22 +3285,14 @@ namespace Akka.Event
     public sealed class NoLogger : Akka.Event.ILoggingAdapter
     {
         public static readonly Akka.Event.ILoggingAdapter Instance;
+        public Akka.Event.ILogMessageFormatter Formatter { get; }
         public bool IsDebugEnabled { get; }
         public bool IsErrorEnabled { get; }
         public bool IsInfoEnabled { get; }
         public bool IsWarningEnabled { get; }
-        public void Debug(string format, params object[] args) { }
-        public void Debug(System.Exception cause, string format, params object[] args) { }
-        public void Error(string format, params object[] args) { }
-        public void Error(System.Exception cause, string format, params object[] args) { }
-        public void Info(string format, params object[] args) { }
-        public void Info(System.Exception cause, string format, params object[] args) { }
         public bool IsEnabled(Akka.Event.LogLevel logLevel) { }
-        public void Log(Akka.Event.LogLevel logLevel, string format, params object[] args) { }
-        public void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format, params object[] args) { }
-        public void Warn(string format, params object[] args) { }
-        public void Warning(string format, params object[] args) { }
-        public void Warning(System.Exception cause, string format, params object[] args) { }
+        public void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format) { }
+        public void Log(Akka.Event.LogLevel logLevel, System.Exception cause, Akka.Event.LogMessage message) { }
     }
     public class StandardOutLogger : Akka.Event.MinimalLogger
     {

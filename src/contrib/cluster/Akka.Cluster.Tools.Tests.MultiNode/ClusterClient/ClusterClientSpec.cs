@@ -17,6 +17,7 @@ using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
