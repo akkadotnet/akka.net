@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;

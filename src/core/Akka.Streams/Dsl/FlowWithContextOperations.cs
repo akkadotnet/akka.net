@@ -37,7 +37,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Context-preserving variant of <see cref="FlowOperations.Collect{TIn,T,TOut,TMat}"/>
+        /// Context-preserving variant of <see cref="Collect{TIn,TOut}"/>
         /// </summary>
         public static FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> Collect<TIn, TCtx, TOut, TOut2, TMat>(
             this FlowWithContext<TIn, TCtx, TOut, TCtx, TMat> flow, Func<TOut, TOut2> fn) where TOut2 : class
@@ -179,7 +179,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Context-preserving variant of <see cref="SourceOperations.Collect{T,TOut,TMat}"/>
+        /// Context-preserving variant of <see cref="Collect{TIn,TOut}"/>
         /// </summary>
         public static SourceWithContext<TOut2, TCtx, TMat> Collect<TOut, TCtx, TOut2, TMat>(
             this SourceWithContext<TOut, TCtx, TMat> flow, Func<TOut, TOut2> fn) where TOut2 : class

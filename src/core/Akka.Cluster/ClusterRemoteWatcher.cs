@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.Event;
 using Akka.Remote;
 
 namespace Akka.Cluster

@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 

@@ -13,6 +13,7 @@ using Akka.Cluster.Metrics.Events;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
@@ -88,7 +89,7 @@ namespace Akka.Cluster.Metrics
                     {
                         _system.Log.Error(
                             $"Configured strategy provider {Settings.SupervisorStrategyProvider} failed to load, " +
-                            $"using default {typeof(ClusterMetricsStrategy).Name}.");
+                            $"using default {nameof(ClusterMetricsStrategy)}.");
                         return new ClusterMetricsStrategy(Settings.SupervisorStrategyConfiguration);
                     })
                     .Get();

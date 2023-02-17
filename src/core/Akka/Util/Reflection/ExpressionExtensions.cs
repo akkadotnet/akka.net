@@ -110,12 +110,11 @@ namespace Akka.Util.Reflection
                         }
                     }
                 }
-                catch (Exception exception)
+                catch (Exception)
                 {
                     //Fallback. Do the worst way and compile.
                     try
                     {
-                        object fallbackVal;
                         {
                             _jobArgs[i] = Expression.Lambda(
                                     Expression.Convert(theArg, _objectType)

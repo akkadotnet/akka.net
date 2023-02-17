@@ -20,11 +20,9 @@ namespace Akka.Event
     /// <typeparam name="TSubscriber">The type of the subscriber that listens for events.</typeparam>
     public abstract class EventBus<TEvent, TClassifier, TSubscriber>
     {
-        private readonly Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> _classifiers =
-            new Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>>();
+        private readonly Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> _classifiers = new();
 
-        private volatile ConcurrentDictionary<TClassifier, List<TSubscriber>> _cache =
-            new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
+        private volatile ConcurrentDictionary<TClassifier, List<TSubscriber>> _cache = new();
 
         /// <summary>
         /// Retrieves the simplified type name (the class name without the namespace) of a given object.

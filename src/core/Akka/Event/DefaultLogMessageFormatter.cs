@@ -5,6 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Akka.Event
 {
     /// <summary>
@@ -15,15 +18,14 @@ namespace Akka.Event
         public static readonly DefaultLogMessageFormatter Instance = new DefaultLogMessageFormatter();
         private DefaultLogMessageFormatter(){}
         
-        /// <summary>
-        /// Formats a specified composite string using an optional list of item substitutions.
-        /// </summary>
-        /// <param name="format">The string that is being formatted.</param>
-        /// <param name="args">An optional list of items used to format the string.</param>
-        /// <returns>The given string that has been correctly formatted.</returns>
         public string Format(string format, params object[] args)
         {
             return string.Format(format, args);
+        }
+
+        public string Format(string format, IEnumerable<object> args)
+        {
+            return string.Format(format, args.ToArray());
         }
     }
 }

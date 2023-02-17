@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.Serialization;
 using Akka.Streams.Stage;

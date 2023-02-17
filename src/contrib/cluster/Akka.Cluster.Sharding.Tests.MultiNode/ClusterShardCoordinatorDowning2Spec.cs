@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
+using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Util;

@@ -10,6 +10,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;

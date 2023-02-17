@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.DistributedData.Durable;
 using Akka.DistributedData.LightningDB;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.TestKit;
 using FluentAssertions;

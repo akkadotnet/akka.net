@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Internal;
