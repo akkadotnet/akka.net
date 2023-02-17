@@ -8,7 +8,6 @@
 using System;
 using Akka.Actor;
 using Akka.Event;
-using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams.Actors;
 
 namespace Akka.Persistence.Query.Sql
@@ -53,7 +52,7 @@ namespace Akka.Persistence.Query.Sql
             JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         protected string PersistenceId { get; }
         protected long FromSequenceNr { get; }
         protected long ToSequenceNr { get; set; }
@@ -94,9 +93,6 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case EventsByPersistenceIdPublisher.Continue _:
-                    if (IsTimeForReplay) Replay();
-                    return true;
-                case EventAppended _:
                     if (IsTimeForReplay) Replay();
                     return true;
                 case Request _:
@@ -157,10 +153,6 @@ namespace Akka.Persistence.Query.Sql
                         // skip during replay
                         return true;
 
-                    case EventAppended _:
-                        // skip during replay
-                        return true;
-
                     case Cancel _:
                         Context.Stop(Self);
                         return true;
@@ -190,7 +182,6 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveInitialRequest()
         {
-            JournalRef.Tell(new SubscribePersistenceId(PersistenceId));
             Replay();
         }
 

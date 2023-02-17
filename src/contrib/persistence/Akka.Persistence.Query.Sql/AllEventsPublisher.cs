@@ -47,7 +47,7 @@ namespace Akka.Persistence.Query.Sql
             JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         protected IActorRef JournalRef { get; }
         protected DeliveryBuffer<EventEnvelope> Buffer { get; }
         protected long FromOffset { get; }
@@ -81,7 +81,6 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case AllEventsPublisher.Continue _:
-                case NewEventAppended _:
                     if (IsTimeForReplay) Replay();
                     return true;
                 case Request _:
@@ -138,7 +137,6 @@ namespace Akka.Persistence.Query.Sql
                     Context.Stop(Self);
                     return true;
                 case AllEventsPublisher.Continue _:
-                case NewEventAppended _:
                     return true;
                 default:
                     return false;
@@ -166,7 +164,6 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveInitialRequest()
         {
-            JournalRef.Tell(SubscribeNewEvents.Instance);
             Replay();
         }
 
