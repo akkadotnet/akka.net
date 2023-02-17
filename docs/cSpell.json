@@ -25,6 +25,7 @@
         "CRDT",
         "datacenter",
         "denormalization",
+        "deque",
         "deserialization",
         "downstream",
         "downstreams",

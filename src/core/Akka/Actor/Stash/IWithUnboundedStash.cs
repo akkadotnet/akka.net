@@ -10,13 +10,10 @@ using Akka.Dispatch;
 namespace Akka.Actor
 {
     /// <summary>
-    /// Lets the <see cref="StashFactory"/> know that this Actor needs stash support
-    /// with unrestricted storage capacity.
-    /// You need to add the property:
-    /// <code>public IStash Stash { get; set; }</code>
+    /// The `IWithUnboundedStash` interface is a version of <see cref="IActorStash"/> that enforces an unbounded stash for you actor.
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface IWithUnboundedStash : IActorStash, IRequiresMessageQueue<IUnboundedDequeBasedMessageQueueSemantics>
+    public interface IWithUnboundedStash : IWithUnrestrictedStash, IRequiresMessageQueue<IUnboundedDequeBasedMessageQueueSemantics>
     {
     }
 }

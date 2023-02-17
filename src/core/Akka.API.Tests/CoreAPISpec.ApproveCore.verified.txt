@@ -23,7 +23,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("1a5cab08-b032-49ca-8db3-9428c5a9db14")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Actor
 {
     public abstract class ActorBase : Akka.Actor.IInternalActor
@@ -314,6 +314,12 @@ namespace Akka.Actor
         public static readonly Akka.Actor.IActorRef NoSender;
         public static readonly Akka.Actor.Nobody Nobody;
     }
+    public sealed class ActorRestarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public System.Type ActorType { get; }
+        public System.Exception Reason { get; }
+        public Akka.Actor.IActorRef Subject { get; }
+    }
     public class ActorSelection : Akka.Actor.ICanTell
     {
         public ActorSelection() { }
@@ -340,12 +346,22 @@ namespace Akka.Actor
         public Akka.Actor.ActorSelectionMessage Copy(object message = null, Akka.Actor.SelectionPathElement[] elements = null, System.Nullable<bool> wildCardFanOut = null) { }
         public override string ToString() { }
     }
+    public sealed class ActorStarted : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public System.Type ActorType { get; }
+        public Akka.Actor.IActorRef Subject { get; }
+    }
     public class ActorStashPlugin : Akka.Actor.ActorProducerPluginBase
     {
         public ActorStashPlugin() { }
         public override void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public override void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public override bool CanBeAppliedTo(System.Type actorType) { }
+    }
+    public sealed class ActorStopped : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        public System.Type ActorType { get; }
+        public Akka.Actor.IActorRef Subject { get; }
     }
     public abstract class ActorSystem : Akka.Actor.IActorRefFactory, System.IDisposable
     {
@@ -869,11 +885,12 @@ namespace Akka.Actor
         public Failures() { }
         public System.Collections.Generic.List<Akka.Actor.Failure> Entries { get; }
     }
-    public sealed class FutureActorRef<T> : Akka.Actor.MinimalActorRef
+    public class FutureActorRef<T> : Akka.Actor.MinimalActorRef
     {
         public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, Akka.Actor.ActorPath path, Akka.Actor.IActorRefProvider provider) { }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
+        public virtual void DeliverAsk(object message, Akka.Actor.ICanTell destination) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     public class static Futures
@@ -987,6 +1004,11 @@ namespace Akka.Actor
     public interface IActorStash
     {
         Akka.Actor.IStash Stash { get; set; }
+    }
+    public interface IActorTelemetryEvent : Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
+    {
+        System.Type ActorType { get; }
+        Akka.Actor.IActorRef Subject { get; }
     }
     public interface IAdvancedScheduler : Akka.Actor.IActionScheduler, Akka.Actor.IRunnableScheduler { }
     public interface IAutoReceivedMessage { }
@@ -1153,14 +1175,15 @@ namespace Akka.Actor
         void Become(Akka.Actor.UntypedReceive receive);
         void BecomeStacked(Akka.Actor.UntypedReceive receive);
     }
-    [System.ObsoleteAttribute("Bounded stashing is not yet implemented. Unbounded stashing will be used instead " +
-        "[0.7.0]")]
-    public interface IWithBoundedStash : Akka.Actor.IActorStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IBoundedDequeBasedMessageQueueSemantics> { }
+    [System.ObsoleteAttribute("Use `IWithStash` with a configured BoundedDeque-based mailbox instead.")]
+    public interface IWithBoundedStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IBoundedDequeBasedMessageQueueSemantics> { }
+    public interface IWithStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IDequeBasedMessageQueueSemantics> { }
     public interface IWithTimers
     {
         Akka.Actor.ITimerScheduler Timers { get; set; }
     }
-    public interface IWithUnboundedStash : Akka.Actor.IActorStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics> { }
+    public interface IWithUnboundedStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics> { }
+    public interface IWithUnrestrictedStash : Akka.Actor.IActorStash { }
     public interface IWrappedMessage
     {
         object Message { get; }
@@ -1682,6 +1705,7 @@ namespace Akka.Actor
         public bool DebugRouterMisconfiguration { get; }
         public bool DebugUnhandledMessage { get; }
         public int DefaultVirtualNodesFactor { get; }
+        public bool EmitActorTelemetry { get; }
         public bool FsmDebugEvent { get; }
         public bool HasCluster { get; }
         public string Home { get; }
@@ -1834,6 +1858,21 @@ namespace Akka.Actor
         protected void RunTask(System.Action action) { }
         protected void RunTask(System.Func<System.Threading.Tasks.Task> action) { }
     }
+    public abstract class UntypedActorWithStash : Akka.Actor.UntypedActor, Akka.Actor.IActorStash, Akka.Actor.IWithStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IDequeBasedMessageQueueSemantics>
+    {
+        protected UntypedActorWithStash() { }
+        public Akka.Actor.IStash Stash { get; set; }
+    }
+    public abstract class UntypedActorWithUnboundedStash : Akka.Actor.UntypedActor, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    {
+        protected UntypedActorWithUnboundedStash() { }
+        public Akka.Actor.IStash Stash { get; set; }
+    }
+    public abstract class UntypedActorWithUnrestrictedStash : Akka.Actor.UntypedActor, Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash
+    {
+        protected UntypedActorWithUnrestrictedStash() { }
+        public Akka.Actor.IStash Stash { get; set; }
+    }
     public delegate void UntypedReceive(object message);
     public class static WrappedMessage
     {
@@ -1904,13 +1943,13 @@ namespace Akka.Actor.Internal
 {
     public abstract class AbstractStash : Akka.Actor.IStash
     {
-        protected AbstractStash(Akka.Actor.IActorContext context, int capacity = 100) { }
+        protected AbstractStash(Akka.Actor.IActorContext context) { }
         public System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> ClearStash() { }
         public void Prepend(System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> envelopes) { }
         public void Stash() { }
         public void Unstash() { }
         public void UnstashAll() { }
-        public void UnstashAll(System.Func<Akka.Actor.Envelope, bool> predicate) { }
+        public void UnstashAll(System.Func<Akka.Actor.Envelope, bool> filterPredicate) { }
     }
     public class ActorSystemImpl : Akka.Actor.ExtendedActorSystem
     {
@@ -1958,7 +1997,7 @@ namespace Akka.Actor.Internal
     }
     public class BoundedStashImpl : Akka.Actor.Internal.AbstractStash
     {
-        public BoundedStashImpl(Akka.Actor.IActorContext context, int capacity = 100) { }
+        public BoundedStashImpl(Akka.Actor.IActorContext context) { }
     }
     public class ChildNameReserved : Akka.Actor.Internal.IChildStats
     {
@@ -2497,14 +2536,14 @@ namespace Akka.Dispatch
         public static void RunTask(System.Func<System.Threading.Tasks.Task> asyncAction) { }
         protected override bool TryExecuteTaskInline(System.Threading.Tasks.Task task, bool taskWasPreviouslyQueued) { }
     }
-    public sealed class BoundedDequeBasedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.BoundedDequeMessageQueue>
+    public class BoundedDequeBasedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.BoundedDequeMessageQueue>, Akka.Dispatch.IProducesPushTimeoutSemanticsMailbox
     {
         public BoundedDequeBasedMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
         public int Capacity { get; }
         public System.TimeSpan PushTimeout { get; }
         public override Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
     }
-    public sealed class BoundedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.BoundedMessageQueue>
+    public sealed class BoundedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.BoundedMessageQueue>, Akka.Dispatch.IProducesPushTimeoutSemanticsMailbox
     {
         public BoundedMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
         public int Capacity { get; }
@@ -2560,6 +2599,8 @@ namespace Akka.Dispatch
         public Akka.Configuration.Config DefaultDispatcherConfig { get; }
         public Akka.Dispatch.MessageDispatcher DefaultGlobalDispatcher { get; }
         public Akka.Dispatch.IDispatcherPrerequisites Prerequisites { get; }
+        [Akka.Annotations.InternalApiAttribute()]
+        public static Akka.Configuration.Config GetConfig(Akka.Configuration.Config config, string id, int depth = 0) { }
         public bool HasDispatcher(string id) { }
         public Akka.Dispatch.MessageDispatcher Lookup(string dispatcherName) { }
         public bool RegisterConfigurator(string id, Akka.Dispatch.MessageDispatcherConfigurator configurator) { }
@@ -2613,6 +2654,10 @@ namespace Akka.Dispatch
     public interface IMultipleConsumerSemantics : Akka.Dispatch.ISemantics { }
     public interface IProducesMessageQueue<TQueue>
         where TQueue : Akka.Dispatch.MessageQueues.IMessageQueue { }
+    public interface IProducesPushTimeoutSemanticsMailbox
+    {
+        System.TimeSpan PushTimeout { get; }
+    }
     public interface IRequiresMessageQueue<T>
         where T : Akka.Dispatch.ISemantics { }
     public interface IRunnable
@@ -2646,13 +2691,14 @@ namespace Akka.Dispatch
         public static readonly string NoMailboxRequirement;
         public Mailboxes(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.DeadLetterMailbox DeadLetterMailbox { get; }
-        public System.Type FromConfig(string path) { }
         public Akka.Dispatch.MailboxType GetMailboxType(Akka.Actor.Props props, Akka.Configuration.Config dispatcherConfig) { }
         public System.Type GetRequiredType(System.Type actorType) { }
         public bool HasRequiredType(System.Type actorType) { }
         public Akka.Dispatch.MailboxType Lookup(string id) { }
         public Akka.Dispatch.MailboxType LookupByQueueType(System.Type queueType) { }
         public bool ProducesMessageQueue(System.Type mailboxType) { }
+        [Akka.Annotations.InternalApiAttribute()]
+        public int StashCapacity(string dispatcher, string mailbox) { }
     }
     public abstract class MessageDispatcher
     {

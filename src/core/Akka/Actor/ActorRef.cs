@@ -69,7 +69,7 @@ namespace Akka.Actor
     ///
     /// ActorRef implementation used for one-off tasks.
     /// </summary>
-    public sealed class FutureActorRef<T> : MinimalActorRef
+    public class FutureActorRef<T> : MinimalActorRef
     {
         private readonly TaskCompletionSource<T> _result;
         private readonly ActorPath _path;
@@ -122,9 +122,12 @@ namespace Akka.Actor
                     handled = _result.TrySetException(f.Cause
                         ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
                     break;
+#pragma warning disable CS0618
+                // for backwards compatibility
                 case Failure f:
                     handled = _result.TrySetException(f.Exception
-                        ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+                                                      ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+#pragma warning restore CS0618
                     break;
                 default:
                     _ = _result.TrySetException(new ArgumentException(
@@ -135,6 +138,10 @@ namespace Akka.Actor
             //ignore canceled ask and put unhandled answers into deadletter
             if (!handled && !_result.Task.IsCanceled)
                 _provider.DeadLetters.Tell(message ?? default(T), this);            
+        }
+        
+        public virtual void DeliverAsk(object message, ICanTell destination){
+            destination.Tell(message, this);
         }
     }
 

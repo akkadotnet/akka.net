@@ -5,17 +5,22 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Actor;
-using Akka.Dispatch.MessageQueues;
-
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// Used to help give hints to the <see cref="ActorSystem"/> as to what types of <see cref="IMessageQueue"/> this
-    /// actor requires. Used mostly for system actors.
+    /// Interface to signal that an Actor requires a certain type of message queue semantics.
+    /// <para>
+    /// The mailbox type will be looked up by mapping the type T via <c>akka.actor.mailbox.requirements</c> in the config,
+    /// to a mailbox configuration. If no mailbox is assigned on Props or in deployment config then this one will be used.
+    /// </para>
+    /// <para>
+    /// The queue type of the created mailbox will be checked against the type T and actor creation will fail if it doesn't
+    /// fulfill the requirements.
+    /// </para>
     /// </summary>
     /// <typeparam name="T">The type of <see cref="ISemantics"/> required</typeparam>
-    public interface IRequiresMessageQueue<T> where T:ISemantics
+    public interface IRequiresMessageQueue<T> 
+        where T : ISemantics
     {
     }
 }

@@ -1,3 +1,131 @@
+#### 1.4.49 January 26th 2023 ####
+Akka.NET v1.4.49 includes some new core Akka.NET APIs and bug fixes to fundamental `Akka.Actor` behavior.
+
+* [Akka.Actor: Read stash capacity from actor's mailbox or dispatcher configuration](https://github.com/akkadotnet/akka.net/pull/6323)
+* [Akka.Actor: Added support for `UnrestrictedStash`](https://github.com/akkadotnet/akka.net/pull/6325)
+* [Akka.Actor: Add API for `UntypedActorWithStash` types](https://github.com/akkadotnet/akka.net/pull/6327)
+* [Akka.Actor: set default `PoolRouter.SupervisorStrategy` to `Restart`](https://github.com/akkadotnet/akka.net/pull/6366)
+* [Akka.Persistence.Sql.Common: FailChunkExecution does not handle `DbExceptions` wrapped in an `AggregateException` ](https://github.com/akkadotnet/akka.net/pull/6364)
+
+You can see the [full set of tracked issues for Akka.NET v1.4.49 here](https://github.com/akkadotnet/akka.net/milestone/80).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 711 | 186 | Ismael Hamed |
+| 2 | 41 | 182 | Aaron Stannard |
+
+#### 1.4.48 January 5th 2023 ####
+Akka.NET v1.4.48 is a minor release that introduces some additional APIs to Akka.NET.
+
+* [Akka.Streams: `ChannelSource<T>` and `ChannelSink<T>` moved from Alpakka into main project](https://github.com/akkadotnet/akka.net/pull/6317) - these stages are now part of the normal Akka.Streams.Dsl.
+* [Akka: make `FutureActorRef<T>` unsealed](https://github.com/akkadotnet/akka.net/pull/6322)
+
+You can see the [full set of tracked issues for Akka.NET v1.4.48 here](https://github.com/akkadotnet/akka.net/milestone/79).
+
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 846 | 29 | Aaron Stannard |
+
+#### 1.4.47 December 9th 2022 ####
+Akka.NET v1.4.47 is a maintenance patch for Akka.NET v1.4.46 that includes a variety of bug fixes, performance improvements, and new features.
+
+**Actor Telemetry**
+
+Starting in Akka.NET v1.4.47 local and remotely deployed actors will now emit events when being started, stopped, and restarted:
+
+```csharp
+public interface IActorTelemetryEvent : INoSerializationVerificationNeeded, INotInfluenceReceiveTimeout
+{
+    /// <summary>
+    /// The actor who emitted this event.
+    /// </summary>
+    IActorRef Subject {get;}
+    
+    /// <summary>
+    /// The implementation type for this actor.
+    /// </summary>
+    Type ActorType { get; }
+}
+
+/// <summary>
+/// Event emitted when actor starts.
+/// </summary>
+public sealed class ActorStarted : IActorTelemetryEvent
+{
+    public IActorRef Subject { get; }
+    public Type ActorType { get; }
+}
+
+/// <summary>
+/// Event emitted when actor shuts down.
+/// </summary>
+public sealed class ActorStopped : IActorTelemetryEvent
+{
+    public IActorRef Subject { get; }
+    public Type ActorType { get; }
+}
+
+/// <summary>
+/// Emitted when an actor restarts.
+/// </summary>
+public sealed class ActorRestarted : IActorTelemetryEvent
+{
+    public IActorRef Subject { get; }
+    public Type ActorType { get; }
+    
+    public Exception Reason { get; }
+}
+```
+
+These events will be consumed from popular Akka.NET observability and management tools such as [Phobos](https://phobos.petabridge.com/) and [Petabridge.Cmd](https://cmd.petabridge.com/) to help provide users with more accurate insights into actor workloads over time, but you can also consume these events yourself by subscribing to them via the `EventStream`:
+
+```csharp
+// subscribe to all actor telemetry events
+Context.System.EventStream.Subscribe(Self, typeof(IActorTelemetryEvent));
+```
+
+**By default actor telemetry is disabled** - to enable it you'll need to turn it on via the following HOCON setting:
+
+```hocon
+akka.actor.telemetry.enabled = on
+```
+
+The performance impact of enabling telemetry is negligible, as you can [see via our benchmarks](https://github.com/akkadotnet/akka.net/pull/6294#issuecomment-1340251897).
+
+**Fixes and Updates**
+
+* [Akka.Streams: Fixed `System.NotSupportedException` when disposing stage with materialized `IAsyncEnumerable`](https://github.com/akkadotnet/akka.net/issues/6280)
+* [Akka.Streams: `ReuseLatest` stage to repeatedly emit the most recent value until a newer one is pushed](https://github.com/akkadotnet/akka.net/pull/6262)
+* [Akka.Remote: eliminate `ActorPath.ToSerializationFormat` UID allocations](https://github.com/akkadotnet/akka.net/pull/6195) - should provide a noticeable Akka.Remote performance improvement.
+* [Akka.Remote: Remoting and an exception as a payload message ](https://github.com/akkadotnet/akka.net/issues/3903) - `Exception` types are now serialized properly inside `Status.Failure` messages over the wire. `Status.Failure` and `Status.Success` messages are now managed by Protobuf - so you might see some deserialization errors while upgrading if those types are being exchanged over the wire.
+* [Akka.TestKit: `TestActorRef` can not catch exceptions on asynchronous methods](https://github.com/akkadotnet/akka.net/issues/6265)
+
+You can see the [full set of tracked issues for Akka.NET v1.4.47 here](https://github.com/akkadotnet/akka.net/issues?q=is%3Aclosed+milestone%3A1.4.47).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 10 | 2027 | 188 | Aaron Stannard |
+| 1 | 157 | 10 | Gregorius Soedharmo |
+
+#### 1.4.46 November 15th 2022 ####
+Akka.NET v1.4.46 is a security patch for Akka.NET v1.4.45 but also includes some other fixes.
+
+**Security Advisory**: Akka.NET v1.4.45 and earlier depend on an old System.Configuration.ConfigurationManager version 4.7.0 which transitively depends on System.Common.Drawing v4.7.0. The System.Common.Drawing v4.7.0 is affected by a remote code execution vulnerability [GHSA-ghhp-997w-qr28](https://github.com/advisories/GHSA-ghhp-997w-qr28).
+
+We have separately created a security advisory for [Akka.NET Versions < 1.4.46 and < 1.5.0-alpha3 to track this issue](https://github.com/akkadotnet/akka.net/security/advisories/GHSA-gpv5-rp6w-58r8).
+
+**Fixes and Updates**
+
+* [Akka: Upgrade to Newtonsoft.Json 13.0.1 as minimum version](https://github.com/akkadotnet/akka.net/pull/6252)
+* [Akka: Upgrade to System.Configuration.ConfigurationManager 6.0.1](https://github.com/akkadotnet/akka.net/pull/6253) - resolves security issue.
+* [Akka.IO: Report cause for Akka/IO TCP `CommandFailed` events](https://github.com/akkadotnet/akka.net/pull/6224)
+* [Akka.Cluster.Tools: Make sure that `DeadLetter`s published by `DistributedPubSubMediator` contain full context of topic](https://github.com/akkadotnet/akka.net/pull/6209)
+* [Akka.Cluster.Metrics: Improve CPU/Memory metrics collection at Akka.Cluster.Metrics](https://github.com/akkadotnet/akka.net/issues/4142) - built-in metrics are now much more accurate.
+
+You can see the [full set of tracked issues for Akka.NET v1.4.46 here](https://github.com/akkadotnet/akka.net/milestone/77).
+
+
 #### 1.4.45 October 19th 2022 ####
 Akka.NET v1.4.45 is a patch release for Akka.NET v1.4 for a bug introduced in v1.4.44.
 

@@ -173,5 +173,4 @@ compared to the parallel pipelines. This pattern re-balances after each step, wh
 at the entry point of the pipeline. This only matters however if the processing time distribution has a large
 deviation.
 
-[^foot-note-1]: Bartosz's reason for this seemingly suboptimal procedure is that he prefers the temperature of the second pan
-       to be slightly lower than the first in order to achieve a more homogeneous result.
+[^foot-note-1]: Bartosz's reason for this seemingly suboptimal procedure is that he prefers the temperature of the second pan to be slightly lower than the first in order to achieve a more homogeneous result.

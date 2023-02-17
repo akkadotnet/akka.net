@@ -164,7 +164,7 @@ namespace Akka.Actor
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
             var message = messageFactory(future);
-            self.Tell(message, future);
+            future.DeliverAsk(message, self);
 
             return result.Task;
         }

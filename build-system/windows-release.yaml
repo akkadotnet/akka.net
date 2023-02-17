@@ -2,7 +2,7 @@
 # See https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema for reference
 
 pool:
-  vmImage: windows-2019
+  vmImage: windows-latest
   demands: Cmd
 
 trigger:
@@ -22,6 +22,10 @@ variables:
   - name: githubRepositoryName
     value: akkadotnet/akka.net
 steps:
+- task: UseDotNet@2
+  displayName: 'Use .NET 7 SDK 7.0.100'
+  inputs:
+    version: 7.0.100
 - task: UseDotNet@2
   displayName: 'Use .NET 6 SDK 6.0.100'
   inputs:

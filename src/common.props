@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
-    <Copyright>Copyright © 2013-2022 Akka.NET Team</Copyright>
+    <Copyright>Copyright © 2013-2023 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.4.39</VersionPrefix>
+    <VersionPrefix>1.4.48</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
@@ -14,35 +14,34 @@
     <XunitRunnerVersion>2.4.3</XunitRunnerVersion>
     <TestSdkVersion>17.0.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
-    <NewtonsoftJsonVersion>[12.0.3,)</NewtonsoftJsonVersion>
+    <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.19.4</ProtobufVersion>
     <BenchmarkDotNetVersion>0.13.1</BenchmarkDotNetVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
-    <NetTestVersion>net6.0</NetTestVersion>
+    <NetTestVersion>net7.0</NetTestVersion>
     <NetFrameworkTestVersion>net471</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <FsCheckVersion>2.16.4</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
-    <ConfigurationManagerVersion>4.7.0</ConfigurationManagerVersion>
+    <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
     <MultiNodeAdapterVersion>1.1.1</MultiNodeAdapterVersion>
+    <MicrosoftLibVersion>5.0.0</MicrosoftLibVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.4.39 is a minor release that contains some very important bug fixes for Akka.Remote and Akka.Cluster users.
-[Akka.Cluster: Error in `SplitBrainResolver.PreStart` when using `ChannelTaskScheduler` for internal-dispatcher](https://github.com/akkadotnet/akka.net/issues/5962)
-[Akka.Cluster.Sharding: make PersistentShardCoordinator a tolerant reader](https://github.com/akkadotnet/akka.net/issues/5604) - Akka.Persistence-backed sharding is more lenient when recovering state.
-[Akka.Remote: Trap all `Exception`s thrown while trying to dispatch messages in `Akka.Remote.EndpointReader`](https://github.com/akkadotnet/akka.net/pull/5971) - any kind of exception thrown during deserialization can no longer force a disassociation to occur in Akka.Remote.
-If you want to see the [full set of changes made in Akka.NET v1.4.39, click here](https://github.com/akkadotnet/akka.net/milestone/70).
+    <PackageReleaseNotes>Akka.NET v1.4.48 is a minor release that introduces some additional APIs to Akka.NET.
+[Akka.Streams: `ChannelSource&lt;T&gt;` and `ChannelSink&lt;T&gt;` moved from Alpakka into main project](https://github.com/akkadotnet/akka.net/pull/6317) - these stages are now part of the normal Akka.Streams.Dsl.
+[Akka: make `FutureActorRef&lt;T&gt;` unsealed](https://github.com/akkadotnet/akka.net/pull/6322)
+You can see the [full set of tracked issues for Akka.NET v1.4.48 here](https://github.com/akkadotnet/akka.net/milestone/79).
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 3 | 204 | 99 | Aaron Stannard |
-| 1 | 1 | 13 | Gregorius Soedharmo |</PackageReleaseNotes>
+| 3 | 846 | 29 | Aaron Stannard |</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>

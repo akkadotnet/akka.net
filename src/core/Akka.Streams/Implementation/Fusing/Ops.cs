@@ -3816,20 +3816,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _completionCts.Cancel();
                 _completionCts.Dispose();
-
-                try
-                {
-                    _enumerator.DisposeAsync().GetAwaiter().GetResult();
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning(ex, "Failed to dispose IAsyncEnumerator asynchronously");
-                }
-                finally
-                {
-                    CompleteStage();
-                    base.OnDownstreamFinish();
-                }
+                CompleteStage();
                 base.OnDownstreamFinish();
             }
 
