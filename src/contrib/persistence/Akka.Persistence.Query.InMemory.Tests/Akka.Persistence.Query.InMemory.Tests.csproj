@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <Import Project="..\..\..\common.props" />
+    <Import Project="..\..\..\xunitSettings.props" />
 
     <PropertyGroup>
         <AssemblyTitle>Akka.Persistence.Query.InMemory.Tests</AssemblyTitle>
@@ -15,7 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
+      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     </ItemGroup>
 
 </Project>
