@@ -23,7 +23,6 @@ namespace Akka.Cluster.Benchmarks
 #else
             BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
 #endif
-
         }
     }
 }

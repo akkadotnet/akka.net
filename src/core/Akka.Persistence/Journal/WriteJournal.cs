@@ -36,10 +36,20 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequenceables)
         {
-            return resequenceables
-               .OfType<AtomicWrite>()
-               .Select(aw => new AtomicWrite(((IEnumerable<IPersistentRepresentation>)aw.Payload)
-                    .Select(p => AdaptToJournal(p.Update(p.SequenceNr, p.PersistenceId, p.IsDeleted, ActorRefs.NoSender, p.WriterGuid))).ToImmutableList()));
+            foreach (var resequenceable in resequenceables)
+            {
+                if (!(resequenceable is AtomicWrite)) continue;
+                
+                var result = ImmutableList.CreateBuilder<IPersistentRepresentation>();
+
+                foreach (var representation in (IEnumerable<IPersistentRepresentation>)resequenceable.Payload)
+                {
+                    var adapted = AdaptToJournal(representation.Update(representation.SequenceNr, representation.PersistenceId, representation.IsDeleted,
+                        ActorRefs.NoSender, representation.WriterGuid));
+                    result.Add(adapted);
+                }
+                yield return new AtomicWrite(result.ToImmutable());
+            }
         }
 
         /// <summary>
