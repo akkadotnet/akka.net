@@ -13,6 +13,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.Util;
 
 namespace Akka.IO

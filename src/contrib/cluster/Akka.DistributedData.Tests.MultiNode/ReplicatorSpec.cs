@@ -14,6 +14,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Cluster;
 using Akka.Cluster.TestKit;
+using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.Transport;
 using Akka.TestKit;

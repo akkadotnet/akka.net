@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Event;
 using Directive = Akka.Streams.Supervision.Directive;
 
 namespace Akka.Streams.Stage
@@ -440,7 +441,7 @@ namespace Akka.Streams.Stage
         /// with <see cref="IContext.IsFinishing"/>.
         /// </para>
         /// <para>
-        /// By default the finish signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the finish signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
@@ -453,7 +454,7 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
-        /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the cancel signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </summary>
         /// <param name="context">TBD</param>
         /// <returns>TBD</returns>
@@ -594,7 +595,7 @@ namespace Akka.Streams.Stage
         /// with <see cref="IContext.IsFinishing"/>.
         /// </para>
         /// <para>
-        /// By default the finish signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the finish signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
@@ -614,7 +615,7 @@ namespace Akka.Streams.Stage
         /// with <see cref="IContext.IsFinishing"/>.
         /// </para>
         /// <para>
-        /// By default the finish signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the finish signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
@@ -627,7 +628,7 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
-        /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the cancel signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </summary>
         /// <param name="context">TBD</param>
         /// <param name="cause"></param>
@@ -636,7 +637,7 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
-        /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the cancel signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </summary>
         /// <param name="context">TBD</param>
         /// <param name="cause"></param>

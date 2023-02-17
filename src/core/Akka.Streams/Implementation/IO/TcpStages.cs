@@ -11,6 +11,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.IO;
 using Akka.Pattern;
 using Akka.Streams.Dsl;

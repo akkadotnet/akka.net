@@ -13,6 +13,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Event;
 using Akka.TestKit;
 using Reactive.Streams;
 

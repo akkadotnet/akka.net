@@ -160,3 +160,28 @@ akka.cluster.sharding {
 ```
 
 If you run into any trouble upgrading, [please file an issue with Akka.NET](https://github.com/akkadotnet/akka.net/issues/new/choose).
+
+### Breaking Logging Changes
+
+In v1.5, we've re-engineering the `ILoggingAdapter` construct to be more extensible and performant. Unfortunately this necessitate some breaking changes that will affect end-user code - but the remedy for those changes is trivial.
+
+After installing the v1.5 NuGet packages into your applications or libraries, you will need to add the following to all of your source files where you previously made calls to the `ILoggingAdapter`:
+
+```csharp
+using Akka.Event;
+```
+
+That `using` statement will pull in the extension methods that match all of the v1.4 API `ILoggingAdapter` signatures in v1.5.
+
+_Even better_ - if you can take advantage of [`global using` statements in C#10](https://blog.jetbrains.com/dotnet/2021/11/18/global-usings-in-csharp-10/), then this is a one-liner as either the MSBuild or project level:
+
+In `Directory.Build.props`:
+
+```xml
+<Project>
+    <ItemGroup>
+        <PackageReference Include="Akka" />
+        <Using Include="Akka.Event" />
+    </ItemGroup>
+</Project>
+```

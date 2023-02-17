@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 
