@@ -1,0 +1,17 @@
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+namespace Akka.Persistence.Query.InMemory
+{
+    public class InMemoryReadJournal : Akka.Persistence.Query.ICurrentPersistenceIdsQuery, Akka.Persistence.Query.IReadJournal
+    {
+        public const string Identifier = "akka.persistence.query.journal.inmem";
+        public InMemoryReadJournal(Akka.Configuration.Config config) { }
+        public Akka.Streams.Dsl.Source<string, Akka.NotUsed> CurrentPersistenceIds() { }
+        public static Akka.Configuration.Config DefaultConfiguration() { }
+    }
+    public class InMemoryReadJournalProvider : Akka.Persistence.Query.IReadJournalProvider
+    {
+        public InMemoryReadJournalProvider(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public Akka.Persistence.Query.IReadJournal GetReadJournal() { }
+    }
+}
