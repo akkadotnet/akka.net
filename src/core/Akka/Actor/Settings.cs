@@ -21,7 +21,7 @@ namespace Akka.Actor
     /// This class represents the overall <see cref="ActorSystem"/> settings which also provides a convenient
     /// access to the <see cref="Configuration.Config"/> object. For more detailed information about the
     /// different possible configuration options, look in the Akka.NET Documentation under Configuration
-    /// (http://getakka.net/docs/concepts/configuration).
+    /// (https://getakka.net/articles/configuration/config.html).
     /// </summary>
     public class Settings
     {
@@ -140,6 +140,38 @@ namespace Akka.Actor
             LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
             LoggerAsyncStart = Config.GetBoolean("akka.logger-async-start", false);
+
+            var loggerFormatterName = Config.GetString("akka.logger-formatter", null);
+            if (string.IsNullOrWhiteSpace(loggerFormatterName))
+            {
+                LogFormatter = DefaultLogMessageFormatter.Instance;
+            }
+            else
+            {
+                var logFormatType = Type.GetType(loggerFormatterName);
+                if (logFormatType == null)
+                    throw new ArgumentException($"Could not load type of {loggerFormatterName} for ILogMessageFormatter.");
+                if(!typeof(ILogMessageFormatter).IsAssignableFrom(logFormatType))
+                    throw new ArgumentException("Log formatter type must inherit from the ILogMessageFormatter interface.");
+                
+                // SPECIAL CASE - check for the default log message formatter, which does not have an empty constructor (it's private)
+                if (logFormatType == typeof(DefaultLogMessageFormatter))
+                {
+                    LogFormatter = DefaultLogMessageFormatter.Instance;
+                }
+                else
+                {
+                    try
+                    {
+                        LogFormatter = (ILogMessageFormatter)Activator.CreateInstance(logFormatType);
+                    }
+                    catch (MissingMethodException)
+                    {
+                        throw new MissingMethodException(
+                            "Log message formatter must inherit from the ILogMessageFormatter and have an empty constructor.");
+                    }
+                }
+            }
 
             //handled
             LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start", false);
@@ -321,6 +353,13 @@ namespace Akka.Actor
         /// <value><c>true</c> if [log configuration on start]; otherwise, <c>false</c>.</value>
         public bool LogConfigOnStart { get; private set; }
 
+        /// <summary>
+        /// The default formatter used by the <see cref="ILoggingAdapter"/>.
+        /// </summary>
+        /// <remarks>
+        /// Can be overridden on individual `Context.GetLogger()` calls.
+        /// </remarks>
+        public ILogMessageFormatter LogFormatter { get; }
 
         /// <summary>
         ///     Gets a value indicating whether [log serializer override on start].
