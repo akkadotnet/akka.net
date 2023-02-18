@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data.Common;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -25,9 +24,6 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public abstract class SqlJournal : AsyncWriteJournal, IWithUnboundedStash
     {
-        private ImmutableDictionary<string, IImmutableSet<IActorRef>> _persistenceIdSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
-        private ImmutableDictionary<string, IImmutableSet<IActorRef>> _tagSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
-        private readonly HashSet<IActorRef> _newEventsSubscriber = new HashSet<IActorRef>();
         private IImmutableDictionary<string, long> _tagSequenceNr = ImmutableDictionary<string, long>.Empty;
 
         private readonly CancellationTokenSource _pendingRequestsCancellation;
@@ -48,19 +44,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         public IStash Stash { get; set; }
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        protected bool HasPersistenceIdSubscribers => _persistenceIdSubscribers.Count != 0;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected bool HasNewEventSubscribers => _newEventsSubscriber.Count != 0;
-
-        /// <summary>
         /// Returns a HOCON config path to associated journal.
         /// </summary>
         protected abstract string JournalConfigPath { get; }
@@ -68,7 +51,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// System logger.
         /// </summary>
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         /// <summary>
         /// Initializes a database connection.
@@ -91,6 +74,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             switch (message)
             {
+                case SelectCurrentPersistenceIds msg:
+                    SelectAllPersistenceIdsAsync(msg.Offset)
+                        .PipeTo(msg.ReplyTo, success: h => new CurrentPersistenceIds(h.Ids, h.LastOrdering), failure: e => new Status.Failure(e));
+                    return true;
                 case ReplayTaggedMessages replay:
                     ReplayTaggedMessagesAsync(replay)
                         .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
@@ -99,25 +86,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                     ReplayAllEventsAsync(replay)
                         .PipeTo(replay.ReplyTo, success: h => new EventReplaySuccess(h),
                             failure: e => new EventReplayFailure(e));
-                    return true;
-                case SubscribePersistenceId subscribe:
-                    AddPersistenceIdSubscriber(Sender, subscribe.PersistenceId);
-                    Context.Watch(Sender);
-                    return true;
-                case SelectCurrentPersistenceIds request:
-                    SelectAllPersistenceIdsAsync(request.Offset)
-                        .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result.Ids, result.LastOrdering));
-                    return true;
-                case SubscribeTag subscribe:
-                    AddTagSubscriber(Sender, subscribe.Tag);
-                    Context.Watch(Sender);
-                    return true;
-                case SubscribeNewEvents _:
-                    AddNewEventsSubscriber(Sender);
-                    Context.Watch(Sender);
-                    return true;
-                case Terminated terminated:
-                    RemoveSubscriber(terminated.ActorRef);
                     return true;
                 default:
                     return false;
@@ -135,9 +103,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
-            var persistenceIds = new HashSet<string>();
-            var allTags = new HashSet<string>();
-
             var writeTasks = messages.Select(async message =>
             {
                 using (var connection = CreateDbConnection())
@@ -146,18 +111,13 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                     var eventToTags = new Dictionary<IPersistentRepresentation, IImmutableSet<string>>();
                     var persistentMessages = ((IImmutableList<IPersistentRepresentation>)message.Payload).ToArray();
-                    for (int i = 0; i < persistentMessages.Length; i++)
+                    for (var i = 0; i < persistentMessages.Length; i++)
                     {
                         var p = persistentMessages[i];
                         if (p.Payload is Tagged tagged)
                         {
                             persistentMessages[i] = p = p.WithPayload(tagged.Payload);
-                            if (tagged.Tags.Count != 0)
-                            {
-                                allTags.UnionWith(tagged.Tags);
-                                eventToTags.Add(p, tagged.Tags);
-                            }
-                            else eventToTags.Add(p, ImmutableHashSet<string>.Empty);
+                            eventToTags.Add(p, tagged.Tags.Count != 0 ? tagged.Tags : ImmutableHashSet<string>.Empty);
                         }
                         else eventToTags.Add(p, ImmutableHashSet<string>.Empty);
 
@@ -175,25 +135,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                 .Factory
                 .ContinueWhenAll(writeTasks,
                     tasks => tasks.Select(t => t.IsFaulted ? TryUnwrapException(t.Exception) : null).ToImmutableList());
-
-            if (HasPersistenceIdSubscribers)
-            {
-                foreach (var persistenceId in persistenceIds)
-                {
-                    NotifyPersistenceIdChange(persistenceId);
-                }
-            }
-
-            if (HasTagSubscribers && allTags.Count != 0)
-            {
-                foreach (var tag in allTags)
-                {
-                    NotifyTagChange(tag);
-                }
-            }
-
-            if (HasNewEventSubscribers)
-                NotifyNewEventAppended();
 
             return result;
         }
@@ -357,65 +298,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             return CreateDbConnection(connectionString);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="subscriber">TBD</param>
-        public void RemoveSubscriber(IActorRef subscriber)
-        {
-            _persistenceIdSubscribers = _persistenceIdSubscribers.SetItems(_persistenceIdSubscribers
-                .Where(kv => kv.Value.Contains(subscriber))
-                .Select(kv => new KeyValuePair<string, IImmutableSet<IActorRef>>(kv.Key, kv.Value.Remove(subscriber))));
-
-            _tagSubscribers = _tagSubscribers.SetItems(_tagSubscribers
-                .Where(kv => kv.Value.Contains(subscriber))
-                .Select(kv => new KeyValuePair<string, IImmutableSet<IActorRef>>(kv.Key, kv.Value.Remove(subscriber))));
-
-            _newEventsSubscriber.Remove(subscriber);
-        }
-
-        public void AddNewEventsSubscriber(IActorRef subscriber)
-        {
-            _newEventsSubscriber.Add(subscriber);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="tag">TBD</param>
-        public void AddTagSubscriber(IActorRef subscriber, string tag)
-        {
-            if (!_tagSubscribers.TryGetValue(tag, out var subscriptions))
-            {
-                _tagSubscribers = _tagSubscribers.Add(tag, ImmutableHashSet.Create(subscriber));
-            }
-            else
-            {
-                _tagSubscribers = _tagSubscribers.SetItem(tag, subscriptions.Add(subscriber));
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="persistenceId">TBD</param>
-        public void AddPersistenceIdSubscriber(IActorRef subscriber, string persistenceId)
-        {
-            if (!_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscriptions))
-            {
-                _persistenceIdSubscribers = _persistenceIdSubscribers.Add(persistenceId, ImmutableHashSet.Create(subscriber));
-            }
-            else
-            {
-                _persistenceIdSubscribers = _persistenceIdSubscribers.SetItem(persistenceId, subscriptions.Add(subscriber));
-            }
-        }
-
         private async Task<long> NextTagSequenceNr(string tag)
         {
-            if (!_tagSequenceNr.TryGetValue(tag, out long value))
+            if (!_tagSequenceNr.TryGetValue(tag, out var value))
                 value = await ReadHighestSequenceNrAsync(TagId(tag), 0L);
 
             value++;
@@ -428,37 +313,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         private bool IsTagId(string persistenceId)
         {
             return persistenceId.StartsWith(QueryExecutor.Configuration.TagsColumnName);
-        }
-
-        private void NotifyPersistenceIdChange(string persistenceId)
-        {
-            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscribers))
-            {
-                var changed = new EventAppended(persistenceId);
-                foreach (var subscriber in subscribers)
-                    subscriber.Tell(changed);
-            }
-        }
-
-        private void NotifyTagChange(string tag)
-        {
-            if (_tagSubscribers.TryGetValue(tag, out var subscribers))
-            {
-                var changed = new TaggedEventAppended(tag);
-                foreach (var subscriber in subscribers)
-                    subscriber.Tell(changed);
-            }
-        }
-
-        private void NotifyNewEventAppended()
-        {
-            if (HasNewEventSubscribers)
-            {
-                foreach (var subscriber in _newEventsSubscriber)
-                {
-                    subscriber.Tell(NewEventAppended.Instance);
-                }
-            }
         }
 
         /// <summary>
