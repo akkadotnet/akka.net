@@ -86,7 +86,7 @@ namespace Akka.Persistence.Journal
             {
                 foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                 {
-                    Add(p);
+                    Add(p.WithTimestamp(DateTime.UtcNow.Ticks));
                 }
             }
             return Task.FromResult((IImmutableList<Exception>) null); // all good
