@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,9 +41,32 @@ namespace Akka.Tests.Loggers
         [Fact]
         public async Task ShouldUseValidCustomLogFormatter()
         {
+            // arrange
+            var probe = CreateTestProbe();
+            Sys.EventStream.Subscribe(probe.Ref, typeof(Error));
+            
+            // act
+            Sys.Log.Error("This is a test {0}", 1); // formatters aren't used when we're logging const strings
+            
+            // assert
+            var msg = await probe.ExpectMsgAsync<Error>();
+            msg.Message.Should().BeAssignableTo<LogMessage>();
+            msg.ToString().Should().Contain("Custom: This is a test 1");
+            
             await EventFilter.Error(contains: "Custom").ExpectOneAsync(() =>
             {
-                Sys.Log.Error("This is a test");
+                Sys.Log.Error("This is a test {0}", 1);
+                return Task.CompletedTask;
+            });
+        }
+        
+        [Fact]
+        public async Task ShouldDetectCustomLogFormatterOutputInEventFilter()
+        {
+            // the EventFilter filters on fully formatted output
+            await EventFilter.Error(contains: "Custom").ExpectOneAsync(() =>
+            {
+                Sys.Log.Error("This is a test {0}", 1);
                 return Task.CompletedTask;
             });
         }

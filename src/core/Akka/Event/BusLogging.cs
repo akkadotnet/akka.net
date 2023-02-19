@@ -12,7 +12,7 @@ namespace Akka.Event
     /// <summary>
     /// A logging adapter implementation publishing log events to the event stream.
     /// </summary>
-    public class BusLogging : LoggingAdapterBase
+    public sealed class BusLogging : LoggingAdapterBase
     {
         private readonly LoggingBus _bus;
         private readonly Type _logClass;
