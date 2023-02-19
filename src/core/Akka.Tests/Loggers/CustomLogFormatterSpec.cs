@@ -19,6 +19,7 @@ namespace Akka.Tests.Loggers
 {
     public class CustomLogFormatterSpec : AkkaSpec
     {
+        // <CustomLogFormatter>
         private class CustomLogFormatter : ILogMessageFormatter
         {
             public string Format(string format, params object[] args)
@@ -31,8 +32,11 @@ namespace Akka.Tests.Loggers
                 return string.Format("Custom: " + format, args.ToArray());
             }
         }
+        // </CustomLogFormatter>
 
+        // <CustomLogFormatterConfig>
         public static readonly Config Configuration = "akka.logger-formatter = \"Akka.Tests.Loggers.CustomLogFormatterSpec+CustomLogFormatter, Akka.Tests\"";
+        // </CustomLogFormatterConfig>
         
         public CustomLogFormatterSpec(ITestOutputHelper output) : base(Configuration, output)
         {
