@@ -6,7 +6,7 @@ title: Logging in Akka.NET
 # Logging
 
 > ![NOTE]
-> For info
+> For information on how to use Serilog with Akka.NET, we have a dedicated page for that: "[Using Serilog with Akka.NET's Logging](xref:serilog)."
 
 ## How to Log
 
