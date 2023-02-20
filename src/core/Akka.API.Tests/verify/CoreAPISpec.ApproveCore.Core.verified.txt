@@ -1720,6 +1720,7 @@ namespace Akka.Actor
         public int LogDeadLetters { get; }
         public bool LogDeadLettersDuringShutdown { get; }
         public System.TimeSpan LogDeadLettersSuspendDuration { get; }
+        public Akka.Event.ILogMessageFormatter LogFormatter { get; }
         public string LogLevel { get; }
         public bool LogSerializerOverrideOnStart { get; }
         public bool LoggerAsyncStart { get; }
@@ -3000,7 +3001,7 @@ namespace Akka.Event
         public Akka.Actor.IActorRef Sender { get; }
         public override string ToString() { }
     }
-    public class BusLogging : Akka.Event.LoggingAdapterBase
+    public sealed class BusLogging : Akka.Event.LoggingAdapterBase
     {
         public BusLogging(Akka.Event.LoggingBus bus, string logSource, System.Type logClass, Akka.Event.ILogMessageFormatter logMessageFormatter) { }
         public override bool IsDebugEnabled { get; }

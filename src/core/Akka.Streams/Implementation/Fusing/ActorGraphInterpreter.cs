@@ -420,9 +420,9 @@ namespace Akka.Streams.Implementation.Fusing
                 }, _settings.IsFuzzingMode, Self);
         }
 
-        private BusLogging GetLogger()
+        private ILoggingAdapter GetLogger()
         {
-            return new BusLogging(Materializer.System.EventStream, Self.ToString(), typeof(GraphInterpreterShell), DefaultLogMessageFormatter.Instance);
+            return new BusLogging(Materializer.System.EventStream, Self.ToString(), typeof(GraphInterpreterShell), Materializer.System.Settings.LogFormatter);
         }
 
         /// <summary>
