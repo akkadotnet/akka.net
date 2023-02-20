@@ -1,3 +1,8 @@
+#### 1.5.0-beta1 February 20th 2023 ####
+Version 1.5.0-beta1 contains breaking API changes for Akka.NET:
+
+* []()
+
 #### 1.5.0-alpha4 February 1st 2022 ####
 Version 1.5.0-alpha3 contains several bug fixes and new features to Akka.NET
 
