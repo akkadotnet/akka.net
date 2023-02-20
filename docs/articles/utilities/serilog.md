@@ -1,9 +1,9 @@
 ---
 uid: serilog
-title: Using Serilog with Akka.NET's Logging
+title: Using Serilog for Akka.NET Logging
 ---
 
-# Using Serilog
+# Using Serilog for Akka.NET Logging
 
 ## Setup
 
