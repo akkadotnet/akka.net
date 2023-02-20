@@ -25,11 +25,11 @@ namespace Akka.Persistence.Query.Sql
             }
         }
 
-        public static Props Props(string tag, long fromOffset, long toOffset, TimeSpan? refreshInterval, int maxBufferSize, string writeJournalPluginId)
+        public static Props Props(string tag, long fromOffset, long toOffset, TimeSpan? refreshInterval, int maxBufferSize, IActorRef writeJournal)
         {
             return refreshInterval.HasValue
-                ? Actor.Props.Create(() => new LiveEventsByTagPublisher(tag, fromOffset, toOffset, refreshInterval.Value, maxBufferSize, writeJournalPluginId))
-                : Actor.Props.Create(() => new CurrentEventsByTagPublisher(tag, fromOffset, toOffset, maxBufferSize, writeJournalPluginId));
+                ? Actor.Props.Create(() => new LiveEventsByTagPublisher(tag, fromOffset, toOffset, refreshInterval.Value, maxBufferSize, writeJournal))
+                : Actor.Props.Create(() => new CurrentEventsByTagPublisher(tag, fromOffset, toOffset, maxBufferSize, writeJournal));
         }
     }
 
@@ -40,14 +40,13 @@ namespace Akka.Persistence.Query.Sql
         protected readonly DeliveryBuffer<EventEnvelope> Buffer;
         protected readonly IActorRef JournalRef;
         protected long CurrentOffset;
-        protected AbstractEventsByTagPublisher(string tag, long fromOffset, int maxBufferSize, string writeJournalPluginId)
+        protected AbstractEventsByTagPublisher(string tag, long fromOffset, int maxBufferSize, IActorRef writeJournal)
         {
             Tag = tag;
             CurrentOffset = FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
-            WriteJournalPluginId = writeJournalPluginId;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
-            JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
+            JournalRef = writeJournal;
         }
 
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
@@ -55,7 +54,6 @@ namespace Akka.Persistence.Query.Sql
         protected long FromOffset { get; }
         protected abstract long ToOffset { get; }
         protected int MaxBufferSize { get; }
-        protected string WriteJournalPluginId { get; }
 
         protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentOffset <= ToOffset);
 
@@ -157,8 +155,8 @@ namespace Akka.Persistence.Query.Sql
     internal sealed class LiveEventsByTagPublisher : AbstractEventsByTagPublisher
     {
         private readonly ICancelable _tickCancelable;
-        public LiveEventsByTagPublisher(string tag, long fromOffset, long toOffset, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
-            : base(tag, fromOffset, maxBufferSize, writeJournalPluginId)
+        public LiveEventsByTagPublisher(string tag, long fromOffset, long toOffset, TimeSpan refreshInterval, int maxBufferSize, IActorRef writeJournal)
+            : base(tag, fromOffset, maxBufferSize, writeJournal)
         {
             ToOffset = toOffset;
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByTagPublisher.Continue.Instance, Self);
@@ -196,8 +194,8 @@ namespace Akka.Persistence.Query.Sql
 
     internal sealed class CurrentEventsByTagPublisher : AbstractEventsByTagPublisher
     {
-        public CurrentEventsByTagPublisher(string tag, long fromOffset, long toOffset, int maxBufferSize, string writeJournalPluginId)
-            : base(tag, fromOffset, maxBufferSize, writeJournalPluginId)
+        public CurrentEventsByTagPublisher(string tag, long fromOffset, long toOffset, int maxBufferSize, IActorRef writeJournal)
+            : base(tag, fromOffset, maxBufferSize, writeJournal)
         {
             _toOffset = toOffset;
         }
