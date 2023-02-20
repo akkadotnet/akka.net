@@ -1,7 +1,22 @@
 #### 1.5.0-beta1 February 20th 2023 ####
-Version 1.5.0-beta1 contains breaking API changes for Akka.NET:
+Version 1.5.0-beta1 contains **breaking API changes** and new API changes for Akka.NET.
 
-* []()
+**Breaking Changes: Logging**
+
+In [https://github.com/akkadotnet/akka.net/pull/6408](https://github.com/akkadotnet/akka.net/pull/6408) the entire `ILoggingAdapter` interface was rewritten in order to improve extensibility and performance (logging is now 30-40% faster in all cases and allocates ~50% fewer objects for large format strings).
+
+All of the changes made here are _source compatible_, but not _binary compatible_ - meaning that users and package authors will need to do the following:
+
+* Add `using Akka.Event` in all files that used the `ILoggingAdapter` and
+* Recompile.
+
+> NOTE: you can use a [`global using Akka.Event` directive](https://devblogs.microsoft.com/dotnet/welcome-to-csharp-10/#global-using-directives) to do this solution / project-wide if your project supports C# 10 and / or .NET 6.
+
+In addition to improving the performance of the `ILoggingAdapter` system, we've also made it more extensible - for instance, you can now globally configure the `ILogMessageFormatter` via the following HOCON:
+
+```
+
+```
 
 #### 1.5.0-alpha4 February 1st 2022 ####
 Version 1.5.0-alpha3 contains several bug fixes and new features to Akka.NET
