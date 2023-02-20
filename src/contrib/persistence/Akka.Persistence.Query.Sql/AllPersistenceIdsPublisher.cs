@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams.Actors;
+using static Akka.Persistence.Query.Sql.SqlQueryConstants;
 
 namespace Akka.Persistence.Query.Sql
 {
@@ -41,7 +42,7 @@ namespace Akka.Persistence.Query.Sql
                 case Request _:
                     Become(Initializing);
                     _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self))
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self), DefaultQueryTimeout)
                         .PipeTo(Self);
                     return true;
                 
@@ -87,7 +88,7 @@ namespace Akka.Persistence.Query.Sql
                     }
                     
                     _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self))
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self), DefaultQueryTimeout)
                         .PipeTo(Self);
                     return true;
                     
@@ -169,7 +170,7 @@ namespace Akka.Persistence.Query.Sql
                 case Request _:
                     Become(Waiting);
                     _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self), DefaultQueryTimeout)
                         .PipeTo(Self);
                     return true;
                 
@@ -240,7 +241,7 @@ namespace Akka.Persistence.Query.Sql
                 case Continue _:
                     Become(Waiting);
                     _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self), DefaultQueryTimeout)
                         .PipeTo(Self);
                     return true;
                 
