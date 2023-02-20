@@ -15,9 +15,9 @@ namespace Akka.Persistence.Query.Sql
 {
     internal sealed class CurrentPersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash
     {
-        public static Props Props(string writeJournalPluginId)
+        public static Props Props(IActorRef writeJournal)
         {
-            return Actor.Props.Create(() => new CurrentPersistenceIdsPublisher(writeJournalPluginId));
+            return Actor.Props.Create(() => new CurrentPersistenceIdsPublisher(writeJournal));
         }
 
         private readonly IActorRef _journalRef;
@@ -27,10 +27,10 @@ namespace Akka.Persistence.Query.Sql
 
         public IStash Stash { get; set; }
 
-        public CurrentPersistenceIdsPublisher(string writeJournalPluginId)
+        public CurrentPersistenceIdsPublisher(IActorRef journalRef)
         {
+            _journalRef = journalRef;
             _buffer = new DeliveryBuffer<string>(OnNext);
-            _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
             _log = Context.GetLogger();
         }
 
@@ -130,9 +130,9 @@ namespace Akka.Persistence.Query.Sql
             private Continue() { }
         }
 
-        public static Props Props(TimeSpan refreshInterval, string writeJournalPluginId)
+        public static Props Props(TimeSpan refreshInterval, IActorRef writeJournal)
         {
-            return Actor.Props.Create(() => new LivePersistenceIdsPublisher(refreshInterval, writeJournalPluginId));
+            return Actor.Props.Create(() => new LivePersistenceIdsPublisher(refreshInterval, writeJournal));
         }
 
         private long _lastOrderingOffset;
@@ -143,8 +143,9 @@ namespace Akka.Persistence.Query.Sql
 
         public IStash Stash { get; set; }
 
-        public LivePersistenceIdsPublisher(TimeSpan refreshInterval, string writeJournalPluginId)
+        public LivePersistenceIdsPublisher(TimeSpan refreshInterval, IActorRef journalRef)
         {
+            _journalRef = journalRef;
             _log = Context.GetLogger();
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
                 refreshInterval, 
@@ -153,7 +154,6 @@ namespace Akka.Persistence.Query.Sql
                 Continue.Instance, 
                 Self);
             _buffer = new DeliveryBuffer<string>(OnNext);
-            _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
         protected override void PostStop()

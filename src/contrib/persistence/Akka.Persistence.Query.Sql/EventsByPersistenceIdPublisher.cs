@@ -24,11 +24,11 @@ namespace Akka.Persistence.Query.Sql
             }
         }
 
-        public static Props Props(string persistenceId, long fromSequenceNr, long toSequenceNr, TimeSpan? refreshDuration, int maxBufferSize, string writeJournalPluginId)
+        public static Props Props(string persistenceId, long fromSequenceNr, long toSequenceNr, TimeSpan? refreshDuration, int maxBufferSize, IActorRef writeJournal)
         {
             return refreshDuration.HasValue
-                ? Actor.Props.Create(() => new LiveEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournalPluginId, refreshDuration.Value))
-                : Actor.Props.Create(() => new CurrentEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournalPluginId));
+                ? Actor.Props.Create(() => new LiveEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, refreshDuration.Value))
+                : Actor.Props.Create(() => new CurrentEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal));
         }
     }
 
@@ -40,16 +40,14 @@ namespace Akka.Persistence.Query.Sql
         protected readonly IActorRef JournalRef;
         protected long CurrentSequenceNr;
 
-        protected AbstractEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, string writeJournalPluginId)
+        protected AbstractEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef journalRef)
         {
             PersistenceId = persistenceId;
             CurrentSequenceNr = FromSequenceNr = fromSequenceNr;
             ToSequenceNr = toSequenceNr;
             MaxBufferSize = maxBufferSize;
-            WriteJournalPluginId = writeJournalPluginId;
+            JournalRef = journalRef;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
-
-            JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
@@ -57,7 +55,6 @@ namespace Akka.Persistence.Query.Sql
         protected long FromSequenceNr { get; }
         protected long ToSequenceNr { get; set; }
         protected int MaxBufferSize { get; }
-        protected string WriteJournalPluginId { get; }
 
         protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentSequenceNr <= ToSequenceNr);
 
@@ -168,8 +165,8 @@ namespace Akka.Persistence.Query.Sql
     {
         private readonly ICancelable _tickCancelable;
 
-        public LiveEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, string writeJournalPluginId, TimeSpan refreshInterval)
-            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournalPluginId)
+        public LiveEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef writeJournal, TimeSpan refreshInterval)
+            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal)
         {
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByPersistenceIdPublisher.Continue.Instance, Self);
         }
@@ -204,8 +201,8 @@ namespace Akka.Persistence.Query.Sql
 
     internal sealed class CurrentEventsByPersistenceIdPublisher : AbstractEventsByPersistenceIdPublisher
     {
-        public CurrentEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, string writeJournalPluginId)
-            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournalPluginId)
+        public CurrentEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef writeJournal)
+            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal)
         {
         }
 
