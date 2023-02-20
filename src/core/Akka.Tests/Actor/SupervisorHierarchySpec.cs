@@ -73,10 +73,12 @@ namespace Akka.Tests.Actor
         {
             public ResumerAsync()
             {
+#pragma warning disable CS1998
                 ReceiveAsync<string>(s => s.StartsWith("spawn:"), async s => Sender.Tell(Context.ActorOf<ResumerAsync>(s.Substring(6))));
                 ReceiveAsync<string>(s => s.Equals("spawn"), async _ => Sender.Tell(Context.ActorOf<ResumerAsync>()));
                 ReceiveAsync<string>(s => s.Equals("fail"), async _ => { throw new Exception("expected"); });
                 ReceiveAsync<string>(s => s.Equals("ping"), async _ => Sender.Tell("pong"));
+#pragma warning restore CS1998
             }
 
             protected override SupervisorStrategy SupervisorStrategy()
@@ -166,10 +168,11 @@ namespace Akka.Tests.Actor
             //We then send another "killCrasher", which again will send Kill to crasher. It crashes,
             //decider says it should be restarted but since we specified maximum 1 restart/5seconds it will be 
             //permanently stopped. Boss, which watches crasher, receives Terminated, and counts down countDownMax
-            await EventFilter.Exception<ActorKilledException>().ExpectAsync(2, async () =>
+            await EventFilter.Exception<ActorKilledException>().ExpectAsync(2, () =>
             {
                 boss.Tell("killCrasher");
                 boss.Tell("killCrasher");
+                return Task.CompletedTask;
             });
             await countDownMessages.WaitAsync().ShouldCompleteWithin(2.Seconds());
             await countDownMax.WaitAsync().ShouldCompleteWithin(2.Seconds());
@@ -248,7 +251,7 @@ namespace Akka.Tests.Actor
             {
                 //Let boss crash, this means any child under boss should be suspended, so we wait for worker to become suspended.                
                 boss.Tell("fail");
-                await AwaitConditionAsync(async () => ((LocalActorRef)worker).Cell.Mailbox.IsSuspended());
+                await AwaitConditionAsync(() => Task.FromResult(((LocalActorRef)worker).Cell.Mailbox.IsSuspended()));
 
                 //At this time slowresumer is currently handling the failure, in supervisestrategy, waiting for latch to be opened
                 //We verify that no message is handled by worker, by sending it a ping
