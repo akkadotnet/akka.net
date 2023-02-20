@@ -5,9 +5,11 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+using static Akka.Persistence.Query.Sql.SqlQueryConstants;
 
 namespace Akka.Persistence.Query.Sql
 {
@@ -26,20 +28,39 @@ namespace Akka.Persistence.Query.Sql
         {
             _journalRef = journalRef;
             _maxConcurrentQueries = maxConcurrentQueries;
+            
+            Receive<IJournalRequest>(req =>
+            {
+                _throttler.Tell((req, Sender));
+            });
         }
         
         protected override void PreStart()
         {
             var materializer = Context.Materializer();
-            var (actor, source) = Source.ActorRef<IJournalRequest>(1000, OverflowStrategy.DropHead)
+            var (actor, source) = Source.ActorRef<(IJournalRequest req, IActorRef sender)>(1000, OverflowStrategy.DropHead)
                 .PreMaterialize(materializer);
             _throttler = actor;
-            
+
             source
-                .SelectAsync(_maxConcurrentQueries, async request =>
+                .SelectAsyncUnordered(_maxConcurrentQueries, async request =>
                 {
-                    
+                    object r;
+                    try
+                    {
+                        r = await _journalRef.Ask(request.req, DefaultQueryTimeout).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        r = new Status.Failure(ex);
+                    }
+
+                    return (r, request.sender);
                 })
+                .RunForeach(tuple =>
+                {
+                    tuple.sender.Tell(tuple.r);
+                }, materializer);
         }
     }
 }

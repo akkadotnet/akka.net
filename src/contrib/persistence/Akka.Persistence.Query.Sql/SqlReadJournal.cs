@@ -12,6 +12,7 @@ using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Streams.Dsl;
 using Akka.Streams;
+using Akka.Util.Internal;
 
 namespace Akka.Persistence.Query.Sql
 {
@@ -37,7 +38,6 @@ namespace Akka.Persistence.Query.Sql
         }
         
         private readonly TimeSpan _refreshInterval;
-        private readonly string _writeJournalPluginId;
         private readonly int _maxBufferSize;
         private readonly int _maxConcurrentQueries = 30; // TODO: make configurable
         private readonly ExtendedActorSystem _system;
@@ -48,15 +48,18 @@ namespace Akka.Persistence.Query.Sql
         private readonly IActorRef _journalRef;
         private readonly IActorRef _throttlerRef;
         
+        private static AtomicCounter _idCounter = new AtomicCounter(0);
+        
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
             _refreshInterval = config.GetTimeSpan("refresh-interval", null);
-            _writeJournalPluginId = config.GetString("write-plugin", null);
+            var writeJournalPluginId = config.GetString("write-plugin", null);
             _maxBufferSize = config.GetInt("max-buffer-size", 0);
             _system = system;
 
             _persistenceIdsPublisher = null;
-            _throttlerRef = _journalRef = Persistence.Instance.Apply(system).JournalFor(_writeJournalPluginId);
+            _journalRef = Persistence.Instance.Apply(system).JournalFor(writeJournalPluginId);
+            _throttlerRef = system.SystemActorOf(Props.Create(() => new SqlQueryThrottler(_journalRef, _maxConcurrentQueries)), "sql-query-throttler-" + _idCounter.GetAndIncrement());
         }
 
         /// <summary>
