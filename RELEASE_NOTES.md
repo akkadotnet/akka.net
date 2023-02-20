@@ -15,10 +15,42 @@ All of the changes made here are _source compatible_, but not _binary compatible
 In addition to improving the performance of the `ILoggingAdapter` system, we've also made it more extensible - for instance, you can now globally configure the `ILogMessageFormatter` via the following HOCON:
 
 ```
-
+akka { 
+    loglevel=INFO,
+    loggers=["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
+    logger-formatter="Akka.Logger.Serilog.SerilogLogMessageFormatter, Akka.Logger.Serilog"
+}
 ```
 
-#### 1.5.0-alpha4 February 1st 2022 ####
+That will allow users to use the `SerilogLogMessageFormatter` globally throughout their applications - no more annoying calls like this inside individual actors that want to use semantic logging:
+
+```csharp
+private readonly ILoggingAdapter _logger = Context.GetLogger<SerilogLoggingAdapter>();
+```
+
+**Breaking Changes: Akka.Persistence.Sql.Common**
+
+This is a breaking change that should effect almost no users, but [we deleted some old, bad ideas from the API surface](https://github.com/akkadotnet/akka.net/pull/6412) and it might require all Akka.Persistence.Sql* plugins to be recompiled.
+
+For what it's worth, [Akka.Persistence.Sql.Common's performance has been improved significantly](https://github.com/akkadotnet/akka.net/pull/6384) and we'll continue working on that with some additional API changes this week.
+
+**Other Changes and Additions**
+
+* [Akka.Actor: New API - `IActorRef.WatchAsync`](https://github.com/akkadotnet/akka.net/pull/6102) - adds a new extension method to `IActorRef` which allows users to subscribe to actor lifecycle notifications outside of the `ActorSystem`.
+* [Akka.Actor: Suppress `System.Object` warning for serializer configuration changes](https://github.com/akkadotnet/akka.net/issues/6377)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.0 so far, click here](https://github.com/akkadotnet/akka.net/milestone/7?closed=1).
+
+                                        
+| COMMITS | LOC+ | LOC- | AUTHOR |      
+| --- | --- | --- | --- |               
+| 12 | 15 | 15 | dependabot[bot] |      
+| 11 | 1930 | 1278 | Aaron Stannard |   
+| 2 | 143 | 73 | Sergey Popov |         
+| 1 | 26 | 4 | Thomas Stegemann |       
+| 1 | 1 | 1 | Michel van Os |           
+
+#### 1.5.0-alpha4 February 1st 2023 ####
 Version 1.5.0-alpha3 contains several bug fixes and new features to Akka.NET
 
 * [Akka.TestKit: Remove Akka.Tests.Shared.Internal dependency](https://github.com/akkadotnet/akka.net/pull/6258)
