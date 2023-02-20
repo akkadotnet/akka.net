@@ -106,6 +106,7 @@ namespace Akka.Persistence.Query.Sql
         protected void Replay()
         {
             var limit = MaxBufferSize - Buffer.Length;
+            // TODO: use Ask<T> here to limit time similar to other queries?
             Log.Debug("request replay for persistenceId [{0}] from [{1}] to [{2}] limit [{3}]", PersistenceId, CurrentSequenceNr, ToSequenceNr, limit);
             JournalRef.Tell(new ReplayMessages(CurrentSequenceNr, ToSequenceNr, limit, PersistenceId, Self));
             Context.Become(Replaying(limit));
