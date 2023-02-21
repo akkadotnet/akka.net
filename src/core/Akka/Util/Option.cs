@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Akka.Util
 {
@@ -18,6 +19,7 @@ namespace Akka.Util
     /// <typeparam name="T">TBD</typeparam>
     public readonly struct Option<T>
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Option<T> Create(T value)
 #pragma warning disable CS0618
             => value is null ? None : new Option<T>(value);
