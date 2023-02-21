@@ -21,7 +21,7 @@ namespace Akka.TestKit.Xunit2
     /// This class represents an Akka.NET TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
     /// as its testing framework.
     /// </summary>
-    public class TestKit : TestKitBase, IAsyncLifetime
+    public class TestKit : TestKitBase, IAsyncLifetime, IDisposable
     {
         private class PrefixedOutput : ITestOutputHelper
         {
@@ -132,7 +132,18 @@ namespace Akka.TestKit.Xunit2
         /// </summary>
         protected virtual async Task AfterAllAsync()
         {
+#pragma warning disable CS0618
+            AfterAll();
+#pragma warning restore CS0618
             await ShutdownAsync();
+        }
+        
+        /// <summary>
+        /// This method is called when a test ends.
+        /// </summary>
+        [Obsolete("AfterAll() is deprecated, please use AfterAllAsync() instead")]
+        protected virtual void AfterAll()
+        {
         }
 
         /// <summary>
@@ -169,6 +180,29 @@ namespace Akka.TestKit.Xunit2
         public virtual async Task DisposeAsync()
         {
             await AfterAllAsync();
+#pragma warning disable CS0618
+            Dispose();
+#pragma warning restore CS0618
+        }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        /// <param name="disposing">
+        /// if set to <c>true</c> the method has been called directly or indirectly by a  user's code.
+        /// Managed and unmanaged resources will be disposed.<br /> if set to <c>false</c> the method
+        /// has been called by the runtime from inside the finalizer and only unmanaged resources can
+        ///  be disposed.
+        /// </param>
+        [Obsolete("Dispose(bool) is deprecated, please use DisposeAsync() instead")]
+        protected virtual void Dispose(bool disposing)
+        {
+        }
+
+        [Obsolete("Dispose() is obsolete, please use DisposeAsync() instead")]
+        public void Dispose()
+        {
+            Dispose(true);
         }
     }
 }
