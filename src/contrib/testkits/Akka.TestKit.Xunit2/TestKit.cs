@@ -21,7 +21,7 @@ namespace Akka.TestKit.Xunit2
     /// This class represents an Akka.NET TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
     /// as its testing framework.
     /// </summary>
-    public class TestKit : TestKitBase, IAsyncLifetime
+    public class TestKit : TestKitBase, IAsyncLifetime, IDisposable
     {
         private class PrefixedOutput : ITestOutputHelper
         {
@@ -179,10 +179,10 @@ namespace Akka.TestKit.Xunit2
 
         public virtual async Task DisposeAsync()
         {
-#pragma warning disable CS0618
-            Dispose(true);
-#pragma warning restore CS0618
             await AfterAllAsync();
+#pragma warning disable CS0618
+            Dispose();
+#pragma warning restore CS0618
         }
 
         /// <summary>
@@ -197,6 +197,12 @@ namespace Akka.TestKit.Xunit2
         [Obsolete("Dispose(bool) is deprecated, please use DisposeAsync() instead")]
         protected virtual void Dispose(bool disposing)
         {
+        }
+
+        [Obsolete("Dispose() is obsolete, please use DisposeAsync() instead")]
+        public void Dispose()
+        {
+            Dispose(true);
         }
     }
 }
