@@ -4968,14 +4968,6 @@ namespace Akka.Util
         public bool CompareAndSet(T expected, T newValue) { }
         public T GetAndSet(T newValue) { }
     }
-    public class static Base64Encoding
-    {
-        public const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
-        public static string Base64Encode(this long value) { }
-        [System.ObsoleteAttribute("Do not use. Pass in prefix as a string instead.")]
-        public static System.Text.StringBuilder Base64Encode(this long value, System.Text.StringBuilder sb) { }
-        public static string Base64Encode(this string s) { }
-    }
     public class static BitArrayHelpers
     {
         public static byte[] ToBytes(this System.Collections.BitArray arr) { }
@@ -5040,10 +5032,6 @@ namespace Akka.Util
         public FastLazy(System.Func<S, T> producer, S state) { }
         public bool IsValueCreated { get; }
         public T Value { get; }
-    }
-    public interface IResolver
-    {
-        T Resolve<T>(object[] args);
     }
     public interface ISurrogate
     {
@@ -5125,23 +5113,6 @@ namespace Akka.Util
         public static bool ==(Akka.Util.Option<T> left, Akka.Util.Option<T> right) { }
         public static Akka.Util.Option<T> op_Implicit(T value) { }
         public static bool !=(Akka.Util.Option<T> left, Akka.Util.Option<T> right) { }
-    }
-    public abstract class Resolve : Akka.Actor.IIndirectActorProducer
-    {
-        protected Resolve() { }
-        public abstract System.Type ActorType { get; }
-        protected static Akka.Util.IResolver Resolver { get; }
-        public abstract Akka.Actor.ActorBase Produce();
-        public void Release(Akka.Actor.ActorBase actor) { }
-        public static void SetResolver(Akka.Util.IResolver resolver) { }
-    }
-    public class Resolve<TActor> : Akka.Util.Resolve
-        where TActor : Akka.Actor.ActorBase
-    {
-        public Resolve(params object[] args) { }
-        public override System.Type ActorType { get; }
-        public object[] Arguments { get; }
-        public override Akka.Actor.ActorBase Produce() { }
     }
     public class static Result
     {
