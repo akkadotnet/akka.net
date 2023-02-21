@@ -5114,10 +5114,12 @@ namespace Akka.Util
     public struct Option<T>
     {
         public static readonly Akka.Util.Option<T> None;
+        [System.ObsoleteAttribute("Use Option<T>.Create() instead")]
         public Option(T value) { }
         public bool HasValue { get; }
         public bool IsEmpty { get; }
         public T Value { get; }
+        public static Akka.Util.Option<T> Create(T value) { }
         public bool Equals(Akka.Util.Option<T> other) { }
         public override bool Equals(object obj) { }
         public Akka.Util.Option<TNew> FlatSelect<TNew>(System.Func<T, Akka.Util.Option<TNew>> mapper) { }

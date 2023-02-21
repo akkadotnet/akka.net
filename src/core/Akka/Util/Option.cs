@@ -28,6 +28,7 @@ namespace Akka.Util
         /// </summary>
         public static readonly Option<T> None = new Option<T>();
 
+        // TODO: Change this to private constructor in the future
         [Obsolete("Use Option<T>.Create() instead")] 
         public Option(T value)
         {
