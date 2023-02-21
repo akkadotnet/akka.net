@@ -492,7 +492,9 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                     .Via(system2.TcpStream().OutgoingConnection(serverAddress))
                     .RunAggregate(0, (i, s) => i + s.Count, mat2);
 
-              
+                // give some time for all TCP stream actor parties to actually 
+                // get initialized, otherwise Kill command may run into the void
+                await Task.Delay(500);
 
                 await Awaiting(async () =>
                     {
@@ -500,10 +502,6 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                         {
                             await AwaitAssertAsync(async () =>
                             {
-                                // give some time for all TCP stream actor parties to actually 
-                                // get initialized, otherwise Kill command may run into the void
-                                await Task.Delay(500);
-
                                 // Getting rid of existing connection actors by using a blunt instrument
                                 system2.ActorSelection(system2.Tcp().Path / "$a" / "*").Tell(Kill.Instance);
                             
