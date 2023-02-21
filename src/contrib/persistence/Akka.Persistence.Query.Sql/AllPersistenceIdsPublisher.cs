@@ -251,9 +251,6 @@ namespace Akka.Persistence.Query.Sql
                 
                 case Status.Failure msg:
                     _log.Info(msg.Cause, "Unexpected failure received");
-                    _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self), DefaultQueryTimeout)
-                        .PipeTo(Self);
                     return true;
                 
                 default:
