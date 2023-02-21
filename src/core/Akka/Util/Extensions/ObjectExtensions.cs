@@ -12,6 +12,6 @@ namespace Akka.Util.Extensions
         /// <summary>
         /// Wraps object to the <see cref="Option{T}"/> monade
         /// </summary>
-        public static Option<T> AsOption<T>(this T obj) => new Option<T>(obj);
+        public static Option<T> AsOption<T>(this T obj) => Option<T>.Create(obj);
     }
 }

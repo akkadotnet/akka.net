@@ -813,7 +813,7 @@ akka.remote.default-remote-dispatcher {
         {
             Sys.ActorSelection(new RootActorPath(GetAddress(Roles.First())) / "user" / ("result" + Step))
                 .Tell(new Identify(Step), IdentifyProbe.Ref);
-            return new Option<IActorRef>(IdentifyProbe.ExpectMsg<ActorIdentity>().Subject);
+            return Option<IActorRef>.Create(IdentifyProbe.ExpectMsg<ActorIdentity>().Subject);
         }
 
         public void CreateResultAggregator(string title, int expectedResults, bool includeInHistory)
@@ -826,7 +826,7 @@ akka.remote.default-remote-dispatcher {
 
                     if (includeInHistory && Settings.Infolog)
                     {
-                        aggregator.Tell(new ReportTo(new Option<IActorRef>(ClusterResultHistory.Value)));
+                        aggregator.Tell(new ReportTo(Option<IActorRef>.Create(ClusterResultHistory.Value)));
                     }
                     else
                     {
@@ -1180,7 +1180,7 @@ akka.remote.default-remote-dispatcher {
                             var sys = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
                             MuteLog(sys);
                             Akka.Cluster.Cluster.Get(sys).JoinSeedNodes(SeedNodes.Select(x => GetAddress(x)));
-                            nextAs = new Option<ActorSystem>(sys);
+                            nextAs = Option<ActorSystem>.Create(sys);
                         }
                         else
                         {

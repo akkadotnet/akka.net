@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Recover(ex =>
                     {
                         if (ex == _done)
-                            return new Option<(int, int)>((1, 1));
+                            return Option<(int, int)>.Create((1, 1));
 
                         return Option<(int, int)>.None;
                     }), 
@@ -100,7 +100,7 @@ namespace Akka.Streams.Tests.Dsl
                             .Recover(ex =>
                             {
                                 if (ex == _done)
-                                    return new Option<(int, int)>((1, 1));
+                                    return Option<(int, int)>.Create((1, 1));
 
                                 return Option<(int, int)>.None;
                             }), _timeout)
@@ -287,7 +287,7 @@ namespace Akka.Streams.Tests.Dsl
             public WithFunction()
             {
                 var controlledFlow = Flow.FromSinkAndSource(this.SinkProbe<int>(), this.SourceProbe<int>(), Keep.Both);
-                _source = SourceGen.UnfoldFlowWith(1, controlledFlow, n => new Option<(int, int)>((n + 1, n)), _timeout);
+                _source = SourceGen.UnfoldFlowWith(1, controlledFlow, n => Option<(int, int)>.Create((n + 1, n)), _timeout);
             }
 
             [Fact]
@@ -299,9 +299,9 @@ namespace Akka.Streams.Tests.Dsl
                         return Option<(int, int)>.None;
 
                     if (x % 2 == 0)
-                        return new Option<(int, int)>((x / 2, x));
+                        return Option<(int, int)>.Create((x / 2, x));
 
-                    return new Option<(int, int)>((x * 3 + 1, x));
+                    return Option<(int, int)>.Create((x * 3 + 1, x));
                 }
 
                 var source = SourceGen.UnfoldFlowWith(27, Flow.FromFunction<int, int>(x => x), Map, _timeout);

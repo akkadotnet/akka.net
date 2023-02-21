@@ -61,7 +61,7 @@ namespace Akka.Actor.Setup
 
         public Option<T> Get<T>() where T:Setup
         {
-            return _setups.ContainsKey(typeof(T)) ? new Option<T>((T)_setups[typeof(T)]) : Option<T>.None;
+            return _setups.ContainsKey(typeof(T)) ? Option<T>.Create((T)_setups[typeof(T)]) : Option<T>.None;
         }
         
         /// <summary>

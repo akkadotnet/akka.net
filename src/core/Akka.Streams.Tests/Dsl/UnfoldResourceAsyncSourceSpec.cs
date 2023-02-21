@@ -240,7 +240,7 @@ namespace Akka.Streams.Tests.Dsl
                                 switch (next)
                                 {
                                     case int n:
-                                        return Task.FromResult(new Option<int>(n));
+                                        return Task.FromResult(Option<int>.Create(n));
                                     case TestException e:
                                         throw e;
                                     default:
@@ -274,7 +274,7 @@ namespace Akka.Streams.Tests.Dsl
                                 switch (next)
                                 {
                                     case int n:
-                                        return Task.FromResult(new Option<int>(n));
+                                        return Task.FromResult(Option<int>.Create(n));
                                     case TestException e:
                                         return Task.FromException<Option<int>>(e);
                                     default:
@@ -316,7 +316,7 @@ namespace Akka.Streams.Tests.Dsl
                             }
 
                             return reader.MoveNext() && reader.Current != null
-                                ? Task.FromResult(new Option<int>((int)reader.Current))
+                                ? Task.FromResult(Option<int>.Create((int)reader.Current))
                                 : Task.FromResult(Option<int>.None);
                         },
                         _ => Task.FromResult(Done.Instance))
@@ -352,7 +352,7 @@ namespace Akka.Streams.Tests.Dsl
                             }
 
                             return reader.MoveNext() && reader.Current != null
-                                ? Task.FromResult(new Option<int>((int)reader.Current))
+                                ? Task.FromResult(Option<int>.Create((int)reader.Current))
                                 : Task.FromResult(Option<int>.None);
                         },
                         _ => Task.FromResult(Done.Instance))
@@ -490,7 +490,7 @@ namespace Akka.Streams.Tests.Dsl
             var p = Source.UnfoldResourceAsync(
                     () => Task.FromResult(closePromise),
                     // a slow trickle of elements that never ends
-                    _ => FutureTimeoutSupport.After(TimeSpan.FromMilliseconds(100), Sys.Scheduler, () => Task.FromResult(new Option<string>("element"))),
+                    _ => FutureTimeoutSupport.After(TimeSpan.FromMilliseconds(100), Sys.Scheduler, () => Task.FromResult(Option<string>.Create("element"))),
                     tcs =>
                     {
                         tcs.SetResult("Closed");
@@ -517,7 +517,7 @@ namespace Akka.Streams.Tests.Dsl
                 var closePromise = new TaskCompletionSource<string>();
                 var probe = Source.UnfoldResourceAsync(
                         () => Task.FromResult(closePromise),
-                        _ => Task.FromResult(new Option<string>("whatever")),
+                        _ => Task.FromResult(Option<string>.Create("whatever")),
                         tcs =>
                         {
                             tcs.SetResult("Closed");
