@@ -44,11 +44,14 @@ namespace Akka.Persistence.Query.Sql
         private class RecoveryOverDue
         {
             public static readonly RecoveryOverDue Instance = new RecoveryOverDue();
-            private RecoveryOverDue(){}
+
+            private RecoveryOverDue()
+            {
+            }
         }
-        
+
         private const string SingleRecoveryTimeoutKey = "recover-1";
-        
+
         private ILoggingAdapter _log;
 
         protected DeliveryBuffer<EventEnvelope> Buffer;
@@ -115,6 +118,9 @@ namespace Akka.Persistence.Query.Sql
                 case Cancel _:
                     Context.Stop(Self);
                     return true;
+                case RecoveryOverDue _:
+                case Status.Failure _: // ignore
+                    return true;
                 default:
                     return false;
             }
@@ -149,7 +155,7 @@ namespace Akka.Persistence.Query.Sql
                         timestamp: replayed.Persistent.Timestamp));
                     CurrentSequenceNr = seqNr + 1;
                     Buffer.DeliverBuffer(TotalDemand);
-                    
+
                     // cancel the timer as soon as we get the first response
                     Timers.Cancel(SingleRecoveryTimeoutKey);
                     return true;
@@ -160,7 +166,8 @@ namespace Akka.Persistence.Query.Sql
                     ReceiveRecoverySuccess(success.HighestSequenceNr);
                     return true;
 
-                case RecoveryOverDue _:
+                case Status.Failure _: // timed out by throttler
+                case RecoveryOverDue _: // timed out by query
                     Log.Debug("replay timed out for persistenceId [{0}] after [{1}] - retrying", PersistenceId,
                         DefaultQueryTimeout);
                     Become(Idle);
@@ -204,7 +211,8 @@ namespace Akka.Persistence.Query.Sql
             int maxBufferSize, IActorRef writeJournal, TimeSpan refreshInterval)
             : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal)
         {
-            Timers.StartPeriodicTimer(ContinueTimerKey, EventsByPersistenceIdPublisher.Continue.Instance, refreshInterval);
+            Timers.StartPeriodicTimer(ContinueTimerKey, EventsByPersistenceIdPublisher.Continue.Instance,
+                refreshInterval);
         }
 
         protected override void ReceiveInitialRequest()
