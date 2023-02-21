@@ -143,23 +143,40 @@ namespace Akka.IO
             }
         }
 
-        private async Task<Tcp.Bound> BindAsync()
+        private Task<Tcp.Bound> BindAsync()
         {
-            _socket = new Socket(_bind.LocalAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp) { Blocking = false };
-                
-            _bind.Options.ForEach(x => x.BeforeServerSocketBind(_socket));
-            _socket.Bind(_bind.LocalAddress);
-            _socket.Listen(_bind.Backlog);
-            _saeas = Accept(_acceptLimit).ToArray();
-                
-            return new Tcp.Bound(_socket.LocalEndPoint);
+            try
+            {
+                _socket = new Socket(_bind.LocalAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+                {
+                    Blocking = false
+                };
+
+                _bind.Options.ForEach(x => x.BeforeServerSocketBind(_socket));
+                _socket.Bind(_bind.LocalAddress);
+                _socket.Listen(_bind.Backlog);
+                _saeas = Accept(_acceptLimit).ToArray();
+
+                return Task.FromResult(new Tcp.Bound(_socket.LocalEndPoint));
+            }
+            catch (Exception ex)
+            {
+                return Task.FromException<Tcp.Bound>(ex);
+            }
         }
 
-        private async Task<Tcp.Unbound> UnbindAsync()
+        private Task<Tcp.Unbound> UnbindAsync()
         {
-            _log.Debug("Unbinding endpoint {0}", _bind.LocalAddress);
-            _socket.Close();
-            return Tcp.Unbound.Instance;
+            try
+            {
+                _log.Debug("Unbinding endpoint {0}", _bind.LocalAddress);
+                _socket.Close();
+                return Task.FromResult(Tcp.Unbound.Instance);
+            }
+            catch (Exception ex)
+            {
+                return Task.FromException<Tcp.Unbound>(ex);
+            }
         }
         
         protected override SupervisorStrategy SupervisorStrategy()

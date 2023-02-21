@@ -164,14 +164,14 @@ namespace Akka.Routing
             {
                 // must not use group.paths(system) for old (not re-compiled) custom routers
                 // for binary backwards compatibility reasons
-                var deprecatedPaths = group.Paths;
+                var deprecatedPaths = group.GetPaths(System);
 
                 var paths = deprecatedPaths == null
                         ? group.GetPaths(System)?.ToArray()
                         : deprecatedPaths.ToArray();
 
                 if (paths.NonEmpty())
-                    AddRoutees(paths.Select(p => group.RouteeFor(p, this)).ToList());
+                    AddRoutees(paths!.Select(p => group.RouteeFor(p, this)).ToList());
             }
 
             PreSuperStart();

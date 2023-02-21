@@ -343,7 +343,6 @@ namespace Akka.Configuration
         /// Retrieves a list of string values from the specified path in the configuration.
         /// </summary>
         /// <param name="path">The path that contains the values to retrieve.</param>
-        /// <param name="strings"></param>
         /// <exception cref="InvalidOperationException">This exception is thrown if the current node is undefined.</exception>
         /// <returns>The list of string values defined in the specified path.</returns>
         public virtual IList<string> GetStringList(string path)

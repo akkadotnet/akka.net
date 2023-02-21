@@ -428,7 +428,9 @@ namespace Akka.Tests.Dispatch
         {
             public AsyncFailingActor()
             {
+#pragma warning disable CS1998
                 ReceiveAsync<string>(async m =>
+#pragma warning restore CS1998
                 {
                     ThrowException();
                 });
@@ -463,7 +465,9 @@ namespace Akka.Tests.Dispatch
             {
                 ReceiveAsync<string>(async msg =>
                 {
+#pragma warning disable CS4014
                     Delayed(msg).PipeTo(Sender, Self);
+#pragma warning restore CS4014
 
                     await Task.Delay(3000);
                 });
@@ -483,12 +487,14 @@ namespace Akka.Tests.Dispatch
                 ReceiveAsync<string>(async msg =>
                 {
                     var sender = Sender;
+#pragma warning disable CS4014
                     Task.Run(() =>
                     {
                         //Sleep to make sure the task is not completed when ContinueWith is called
                         Thread.Sleep(100);
                         return msg;
                     }).ContinueWith(_ => sender.Tell(msg)); // ContinueWith will schedule with the implicit ActorTaskScheduler
+#pragma warning restore CS4014
 
                     Thread.Sleep(3000);
                 });

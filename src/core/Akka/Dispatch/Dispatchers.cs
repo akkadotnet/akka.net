@@ -369,6 +369,7 @@ namespace Akka.Dispatch
         /// <summary>Initializes a new instance of the <see cref="Dispatchers" /> class.</summary>
         /// <param name="system">The system.</param>
         /// <param name="prerequisites">The prerequisites required for some <see cref="MessageDispatcherConfigurator"/> instances.</param>
+        /// <param name="logger">The logger for dispatchers.</param>
         public Dispatchers(ActorSystem system, IDispatcherPrerequisites prerequisites, ILoggingAdapter logger)
         {
             _system = system;
