@@ -156,8 +156,8 @@ namespace Akka.Remote
 
         internal State state
         {
-            get { return _state; }
-            set { _state = value; }
+            get { return _state.Value; }
+            set { _state.Value = value; }
         }
 
         /// <summary>
