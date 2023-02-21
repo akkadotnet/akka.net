@@ -94,7 +94,7 @@ namespace Akka.Cluster.Metrics.Tests
 
         private Task AwaitSampleAsync(double? timeMs = null)
         {
-            timeMs = timeMs ?? _sampleInterval.TotalMilliseconds * 5;
+            timeMs ??= _sampleInterval.TotalMilliseconds * 5;
 
             return Task.Delay(TimeSpan.FromMilliseconds(timeMs.Value));
         }
