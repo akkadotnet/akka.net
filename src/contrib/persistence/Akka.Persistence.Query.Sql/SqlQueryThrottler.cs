@@ -6,6 +6,7 @@
 // //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Actor;
 using Akka.Streams;
 using Akka.Streams.Dsl;
@@ -48,7 +49,7 @@ namespace Akka.Persistence.Query.Sql
                     object r;
                     try
                     {
-                        r = await _journalRef.Ask(request.req, DefaultQueryTimeout).ConfigureAwait(false);
+                        r = await _journalRef.Ask(request.req, CancellationToken.None).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
