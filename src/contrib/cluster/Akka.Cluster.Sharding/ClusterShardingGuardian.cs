@@ -305,8 +305,15 @@ namespace Akka.Cluster.Sharding
                     return;
                 
                 _typeLookup.TryRemove(msg.ActorRef, out _);
-                _regions.TryRemove(typeName, out _);
-                _proxies.TryRemove(typeName, out _);
+
+                if (_regions.TryGetValue(typeName, out var regionActor) && regionActor.Equals(msg.ActorRef))
+                {
+                    _regions.TryRemove(typeName, out _);
+                    return;
+                }
+                
+                if(_proxies.TryGetValue(typeName, out var proxyActor) && proxyActor.Equals(msg.ActorRef))
+                    _proxies.TryRemove(typeName, out _);
             });
         }
 
