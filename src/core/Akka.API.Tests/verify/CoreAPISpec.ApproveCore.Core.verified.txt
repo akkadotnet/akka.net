@@ -5272,18 +5272,9 @@ namespace Akka.Util
 }
 namespace Akka.Util.Extensions
 {
-    public class static DateTimeExtensions
-    {
-        public static long ToTimestamp(this System.DateTime dateTime) { }
-    }
     public class static ObjectExtensions
     {
         public static Akka.Util.Option<T> AsOption<T>(this T obj) { }
-    }
-    public class static TimeSpanExtensions
-    {
-        public static System.TimeSpan Multiply(this System.TimeSpan multiplicand, int multiplier) { }
-        public static System.TimeSpan Multiply(this System.TimeSpan multiplicand, double multiplier) { }
     }
 }
 namespace Akka.Util.Internal
