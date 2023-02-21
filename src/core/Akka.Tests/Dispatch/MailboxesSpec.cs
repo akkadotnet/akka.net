@@ -204,7 +204,7 @@ stable-prio-mailbox{
             actor.SendSystemMessage(new Suspend());
 
             // wait until we can confirm that the mailbox is suspended before we begin sending messages
-            await AwaitConditionAsync(async () => ((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended());
+            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
 
             actor.Tell(true);
             for (var i = 0; i < 30; i++)
@@ -242,7 +242,7 @@ stable-prio-mailbox{
             actor.SendSystemMessage(new Suspend());
 
             // wait until we can confirm that the mailbox is suspended before we begin sending messages
-            await AwaitConditionAsync(async () => ((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended());
+            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
 
             actor.Tell(true);
             for (var i = 0; i < 30; i++)
@@ -279,7 +279,7 @@ stable-prio-mailbox{
             //pause mailbox until all messages have been told
             actor.SendSystemMessage(new Suspend());
 
-            await AwaitConditionAsync(async ()=> ((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended());
+            await AwaitConditionAsync(()=> Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
             // creates 50 messages with values spanning from Int32.MinValue to Int32.MaxValue
             var values = new int[50];
             var increment = (int)(UInt32.MaxValue / values.Length);
@@ -317,7 +317,7 @@ stable-prio-mailbox{
             //pause mailbox until all messages have been told
             actor.SendSystemMessage(new Suspend());
 
-            await AwaitConditionAsync(async () => ((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended());
+            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
 
             var values = new int[10];
             var increment = (int)(UInt32.MaxValue / values.Length);
@@ -360,7 +360,7 @@ stable-prio-mailbox{
             //pause mailbox until all messages have been told
             actor.SendSystemMessage(new Suspend());
 
-            await AwaitConditionAsync(async () => ((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended());
+            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
 
             var values = new int[10];
             var increment = (int)(UInt32.MaxValue / values.Length);
