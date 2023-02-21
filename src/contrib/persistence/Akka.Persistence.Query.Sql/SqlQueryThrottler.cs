@@ -38,7 +38,7 @@ namespace Akka.Persistence.Query.Sql
         protected override void PreStart()
         {
             var materializer = Context.Materializer();
-            var (actor, source) = Source.ActorRef<(IJournalRequest req, IActorRef sender)>(1000, OverflowStrategy.DropHead)
+            var (actor, source) = Source.ActorRef<(IJournalRequest req, IActorRef sender)>(20000, OverflowStrategy.DropHead)
                 .PreMaterialize(materializer);
             _throttler = actor;
 
