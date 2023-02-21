@@ -556,6 +556,7 @@ namespace Akka.Actor
         /// Joins this instance.
         /// </summary>
         /// <param name="prefix">the address or empty</param>
+        /// <param name="uid">Optional - the UID for this path.</param>
         /// <returns> System.String. </returns>
         private string Join(ReadOnlySpan<char> prefix, long? uid = null)
         {

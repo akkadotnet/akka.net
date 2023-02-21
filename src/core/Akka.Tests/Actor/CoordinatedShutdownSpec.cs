@@ -18,10 +18,6 @@ using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
 using static Akka.Actor.CoordinatedShutdown;
-using Akka.Tests.Util;
-using FluentAssertions;
-using FluentAssertions.Extensions;
-using static FluentAssertions.FluentActions;
 
 namespace Akka.Tests.Actor
 {

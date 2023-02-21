@@ -39,7 +39,6 @@ namespace Akka.Event
         /// </summary>
         /// <param name="formatter">The formatter for the LogMessage.</param>
         /// <param name="format">The string format of the LogMessage.</param>
-        /// <param name="args">The format args of the LogMessage.</param>
         public LogMessage(ILogMessageFormatter formatter, string format)
         {
             Formatter = formatter;

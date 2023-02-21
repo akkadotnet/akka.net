@@ -70,6 +70,7 @@ namespace Akka.Actor.Internal
         /// <param name="name">The name given to the actor system.</param>
         /// <param name="config">The configuration used to configure the actor system.</param>
         /// <param name="setup">The <see cref="ActorSystemSetup"/> used to help programmatically bootstrap the actor system.</param>
+        /// <param name="guardianProps">Optional - the props from the /user guardian actor.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid name for an actor system.
         ///  Note that the name must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-').

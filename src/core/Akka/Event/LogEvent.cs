@@ -94,8 +94,8 @@ namespace Akka.Event
         public override string ToString()
         {
             return Cause == null
-                ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fff}][Thread {Thread.ManagedThreadId.ToString().PadLeft(4, '0')}][{LogSource}] {Message}"
-                : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fff}][Thread {Thread.ManagedThreadId.ToString().PadLeft(4, '0')}][{LogSource}] {Message}{Environment.NewLine}Cause: {Cause}";
+                ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}"
+                : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}{Environment.NewLine}Cause: {Cause}";
         }
     }
 }

@@ -176,7 +176,6 @@ namespace Akka.Actor
         /// </remarks>
         /// <param name="producer">The type of <see cref="IIndirectActorProducer"/> that will be used to instantiate <see cref="Type"/></param>
         /// <param name="deploy">The configuration used to deploy the actor.</param>
-        /// <param name="strategy">The supervisor strategy to use.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
         internal Props(IIndirectActorProducer producer, Deploy deploy, params object[] args)
         {
