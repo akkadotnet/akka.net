@@ -72,7 +72,6 @@ namespace Akka.Event
         /// Handles incoming log events by printing them to the console.
         /// </summary>
         /// <param name="message">The message to print</param>
-        /// <param name="sender">The actor that sent the message.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="message"/> is undefined.
         /// </exception>
