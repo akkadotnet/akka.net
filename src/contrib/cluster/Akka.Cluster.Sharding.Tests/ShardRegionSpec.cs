@@ -18,6 +18,7 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Cluster.ClusterEvent;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -118,6 +119,31 @@ namespace Akka.Cluster.Sharding.Tests
             return ClusterSharding.Get(sys).StartProxy(shardTypeName, null, extractEntityId, extractShardId);
         }
 
+        [Fact(DisplayName = "ClusterSharding must clean up its internal regions cache when ShardRegion actor died")]
+        public void ClusterShardingDeadShardRegionTest()
+        {
+            ClusterSharding_must_initialize_cluster_and_allocate_sharded_actors();
+            
+            var sharding = ClusterSharding.Get(sysA);
+
+            IActorRef testRegion = null;
+            // sanity check, region should be started and registered
+            Invoking(() => testRegion = sharding.ShardRegion(shardTypeName))
+                .Should().NotThrow();
+            testRegion.Should().Be(region1);
+            
+            sysA.Stop(region1);
+            // Shard should be unregistered after termination
+            AwaitCondition(() => !sharding.ShardTypeNames.Contains(shardTypeName));
+
+            testRegion = StartShard(sysA);
+            // Shard should start up and be registered again
+            AwaitCondition(() => sharding.ShardTypeNames.Contains(shardTypeName));
+            
+            // Original actor ref should not be the same as the old one
+            testRegion.Should().NotBe(region1);
+        }
+        
         [Fact]
         public void ClusterSharding_must()
         {
