@@ -8,6 +8,7 @@
 using System;
 using System.Threading;
 using Akka.Actor;
+using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using static Akka.Persistence.Query.Sql.SqlQueryConstants;
