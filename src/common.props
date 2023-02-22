@@ -10,7 +10,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <!-- Set the language version for C# if we're not inside an F# project -->
-  <PropertyGroup Condition=" '$(Language)' == 'CSharp' ">
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
