@@ -11,7 +11,7 @@
   </PropertyGroup>
   <!-- Set the language version for C# if we're not inside an F# project -->
   <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>11.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.4.2</XunitVersion>
