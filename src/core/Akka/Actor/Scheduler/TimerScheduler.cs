@@ -33,11 +33,11 @@ namespace Akka.Actor.Scheduler
 
             public Timer(object key, object msg, bool repeat, int generation, ICancelable task)
             {
-                this.Key = key;
-                this.Msg = msg;
-                this.Repeat = repeat;
-                this.Generation = generation;
-                this.Task = task;
+                Key = key;
+                Msg = msg;
+                Repeat = repeat;
+                Generation = generation;
+                Task = task;
             }
         }
 
@@ -75,14 +75,14 @@ namespace Akka.Actor.Scheduler
             }
         }
 
-        private readonly IActorContext ctx;
-        private readonly Dictionary<object, Timer> timers = new Dictionary<object, Timer>();
-        private AtomicCounter timerGen = new AtomicCounter(0);
+        private readonly IActorContext _ctx;
+        private readonly Dictionary<object, Timer> _timers = new();
+        private readonly AtomicCounter _timerGen = new(0);
 
 
         public TimerScheduler(IActorContext ctx)
         {
-            this.ctx = ctx;
+            _ctx = ctx;
         }
 
         /// <summary>
@@ -144,7 +144,7 @@ namespace Akka.Actor.Scheduler
         /// <returns>Name of timer</returns>
         public bool IsTimerActive(object key)
         {
-            return timers.ContainsKey(key);
+            return _timers.ContainsKey(key);
         }
 
         /// <summary>
@@ -159,7 +159,7 @@ namespace Akka.Actor.Scheduler
         /// <param name="key">Name of timer</param>
         public void Cancel(object key)
         {
-            if (timers.TryGetValue(key, out var timer))
+            if (_timers.TryGetValue(key, out var timer))
                 CancelTimer(timer);
         }
 
@@ -168,26 +168,26 @@ namespace Akka.Actor.Scheduler
         /// </summary>
         public void CancelAll()
         {
-            ctx.System.Log.Debug("Cancel all timers");
-            foreach (var timer in timers)
+            _ctx.System.Log.Debug("Cancel all timers");
+            foreach (var timer in _timers)
                 timer.Value.Task.Cancel();
-            timers.Clear();
+            _timers.Clear();
         }
 
         private void CancelTimer(Timer timer)
         {
-            ctx.System.Log.Debug("Cancel timer [{0}] with generation [{1}]", timer.Key, timer.Generation);
+            _ctx.System.Log.Debug("Cancel timer [{0}] with generation [{1}]", timer.Key, timer.Generation);
             timer.Task.Cancel();
-            timers.Remove(timer.Key);
+            _timers.Remove(timer.Key);
         }
 
 
         private void StartTimer(object key, object msg, TimeSpan timeout, TimeSpan initialDelay, bool repeat)
         {
-            if (timers.TryGetValue(key, out var timer))
+            if (_timers.TryGetValue(key, out var timer))
                 CancelTimer(timer);
 
-            var nextGen = timerGen.Next();
+            var nextGen = _timerGen.Next();
 
             ITimerMsg timerMsg;
             if (msg is INotInfluenceReceiveTimeout)
@@ -197,18 +197,18 @@ namespace Akka.Actor.Scheduler
 
             ICancelable task;
             if (repeat)
-                task = ctx.System.Scheduler.ScheduleTellRepeatedlyCancelable(initialDelay, timeout, ctx.Self, timerMsg, ActorRefs.NoSender);
+                task = _ctx.System.Scheduler.ScheduleTellRepeatedlyCancelable(initialDelay, timeout, _ctx.Self, timerMsg, ActorRefs.NoSender);
             else
-                task = ctx.System.Scheduler.ScheduleTellOnceCancelable(timeout, ctx.Self, timerMsg, ActorRefs.NoSender);
+                task = _ctx.System.Scheduler.ScheduleTellOnceCancelable(timeout, _ctx.Self, timerMsg, ActorRefs.NoSender);
 
             var nextTimer = new Timer(key, msg, repeat, nextGen, task);
-            ctx.System.Log.Debug("Start timer [{0}] with generation [{1}]", key, nextGen);
-            timers[key] = nextTimer;
+            _ctx.System.Log.Debug("Start timer [{0}] with generation [{1}]", key, nextGen);
+            _timers[key] = nextTimer;
         }
 
         public object InterceptTimerMsg(ILoggingAdapter log, ITimerMsg timerMsg)
         {
-            if (!timers.TryGetValue(timerMsg.Key, out var timer))
+            if (!_timers.TryGetValue(timerMsg.Key, out var timer))
             {
                 // it was from canceled timer that was already enqueued in mailbox
                 log.Debug("Received timer [{0}] that has been removed, discarding", timerMsg.Key);
@@ -220,23 +220,22 @@ namespace Akka.Actor.Scheduler
                 log.Debug("Received timer [{0}] from old restarted instance, discarding", timerMsg.Key);
                 return null; // message should be ignored
             }
-            else if (timerMsg.Generation == timer.Generation)
+
+            if (timerMsg.Generation == timer.Generation)
             {
                 // valid timer
                 if (!timer.Repeat)
-                    timers.Remove(timer.Key);
+                    _timers.Remove(timer.Key);
                 return timer.Msg;
             }
-            else
-            {
-                // it was from an old timer that was enqueued in mailbox before canceled
-                log.Debug(
-                    "Received timer [{0}] from old generation [{1}], expected generation [{2}], discarding",
-                    timerMsg.Key,
-                    timerMsg.Generation,
-                    timer.Generation);
-                return null; // message should be ignored
-            }
+
+            // it was from an old timer that was enqueued in mailbox before canceled
+            log.Debug(
+                "Received timer [{0}] from old generation [{1}], expected generation [{2}], discarding",
+                timerMsg.Key,
+                timerMsg.Generation,
+                timer.Generation);
+            return null; // message should be ignored
         }
     }
 }
