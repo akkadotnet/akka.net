@@ -458,7 +458,7 @@ akka.remote.default-remote-dispatcher {
                             _log.Warning("Detected phi value of infinity for [{0}] - ", node);
                             var (history, time) = _cluster.FailureDetector.GetFailureDetector(node) switch
                             {
-                                PhiAccrualFailureDetector fd => (fd.state.History, fd.state.TimeStamp),
+                                PhiAccrualFailureDetector fd => (fd.State.History, fd.State.TimeStamp),
                                 _ => (HeartbeatHistory.Apply(1), null)
                             };
                             _log.Warning("PhiValues: (Timestamp={0}, Mean={1}, Variance={2}, StdDeviation={3}, Intervals=[{4}])",time, 
