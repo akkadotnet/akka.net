@@ -8,6 +8,7 @@
         <PackageTags>$(AkkaPackageTags);F#;fsharp</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+        <IsFsharp>true</IsFsharp>
     </PropertyGroup>
 
     <ItemGroup>

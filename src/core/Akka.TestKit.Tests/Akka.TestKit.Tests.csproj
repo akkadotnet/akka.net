@@ -4,7 +4,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.TestKit.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
-    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj" />

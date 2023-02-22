@@ -5,7 +5,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Discovery.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
-    <LangVersion>8</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
