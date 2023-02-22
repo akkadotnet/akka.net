@@ -30,7 +30,7 @@ namespace Akka.Streams.Dsl
                 SetHandler(lastElement.In, onPush: () =>
                 {
                     var element = Grab(lastElement.In);
-                    currentElement = new Option<T>(element);
+                    currentElement = Option<T>.Create(element);
                     Push(lastElement.Out, element);
                 }, onUpstreamFinish: () =>
                 {

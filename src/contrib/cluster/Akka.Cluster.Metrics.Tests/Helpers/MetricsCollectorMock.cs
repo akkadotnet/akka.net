@@ -30,7 +30,7 @@ namespace Akka.Cluster.Metrics.Tests.Helpers
         /// <inheritdoc />
         public NodeMetrics Sample()
         {
-            return new NodeMetrics(new Address("akka", _system.Name), DateTime.UtcNow.ToTimestamp().Seconds, new []
+            return new NodeMetrics(new Address("akka", _system.Name), DateTime.UtcNow.ToTimestamp(), new []
             {
                 new NodeMetrics.Types.Metric("metric1", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.5)),
                 new NodeMetrics.Types.Metric("metric2", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.2)), 

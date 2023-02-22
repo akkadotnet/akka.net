@@ -7,12 +7,12 @@
 
 using System;
 
-namespace Akka.Util.Extensions
+namespace Akka.Cluster.Metrics
 {
     /// <summary>
     /// DateTimeExtensions
     /// </summary>
-    public static class DateTimeExtensions
+    internal static class DateTimeExtensions
     {
         private static readonly DateTime UnixOffset = new DateTime(1970, 1, 1);
         

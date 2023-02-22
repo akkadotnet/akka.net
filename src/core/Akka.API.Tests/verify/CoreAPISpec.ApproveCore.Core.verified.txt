@@ -5102,10 +5102,12 @@ namespace Akka.Util
     public struct Option<T>
     {
         public static readonly Akka.Util.Option<T> None;
+        [System.ObsoleteAttribute("Use Option<T>.Create() instead")]
         public Option(T value) { }
         public bool HasValue { get; }
         public bool IsEmpty { get; }
         public T Value { get; }
+        public static Akka.Util.Option<T> Create(T value) { }
         public bool Equals(Akka.Util.Option<T> other) { }
         public override bool Equals(object obj) { }
         public Akka.Util.Option<TNew> FlatSelect<TNew>(System.Func<T, Akka.Util.Option<TNew>> mapper) { }
@@ -5243,18 +5245,9 @@ namespace Akka.Util
 }
 namespace Akka.Util.Extensions
 {
-    public class static DateTimeExtensions
-    {
-        public static long ToTimestamp(this System.DateTime dateTime) { }
-    }
     public class static ObjectExtensions
     {
         public static Akka.Util.Option<T> AsOption<T>(this T obj) { }
-    }
-    public class static TimeSpanExtensions
-    {
-        public static System.TimeSpan Multiply(this System.TimeSpan multiplicand, int multiplier) { }
-        public static System.TimeSpan Multiply(this System.TimeSpan multiplicand, double multiplier) { }
     }
 }
 namespace Akka.Util.Internal
