@@ -51,7 +51,8 @@ namespace Akka.Actor
             var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel", 0);
             var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration", null);
             if (tickDuration.TotalMilliseconds < 10.0d)
-                throw new ArgumentOutOfRangeException("minimum supported akka.scheduler.tick-duration on Windows is 10ms");
+                throw new ArgumentOutOfRangeException(
+                    "minimum supported akka.scheduler.tick-duration on Windows is 10ms");
 
             // convert tick-duration to ticks
             _tickDuration = tickDuration.Ticks;
@@ -71,8 +72,10 @@ namespace Akka.Actor
         private long _startTime = 0;
         private long _tick;
         private readonly int _mask;
-        private readonly CountdownEvent _workerInitialized = new CountdownEvent(1);
-        private readonly ConcurrentQueue<SchedulerRegistration> _registrations = new ConcurrentQueue<SchedulerRegistration>();
+        private readonly CountdownEvent _workerInitialized = new(1);
+
+        private readonly ConcurrentQueue<SchedulerRegistration> _registrations = new();
+
         private readonly Bucket[] _wheel;
 
         private const int WORKER_STATE_INIT = 0;
@@ -89,7 +92,8 @@ namespace Akka.Actor
             if (ticksPerWheel <= 0)
                 throw new ArgumentOutOfRangeException(nameof(ticksPerWheel), ticksPerWheel, "Must be greater than 0.");
             if (ticksPerWheel > 1073741824)
-                throw new ArgumentOutOfRangeException(nameof(ticksPerWheel), ticksPerWheel, "Cannot be greater than 2^30.");
+                throw new ArgumentOutOfRangeException(nameof(ticksPerWheel), ticksPerWheel,
+                    "Cannot be greater than 2^30.");
 
             ticksPerWheel = NormalizeTicksPerWheel(ticksPerWheel);
             var wheel = new Bucket[ticksPerWheel];
@@ -111,9 +115,12 @@ namespace Akka.Actor
             return normalizedTicksPerWheel;
         }
 
-        private readonly HashSet<SchedulerRegistration> _unprocessedRegistrations = new HashSet<SchedulerRegistration>();
-        private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new HashSet<SchedulerRegistration>();
+        private readonly HashSet<SchedulerRegistration>
+            _unprocessedRegistrations = new();
 
+        private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new();
+
+#if NET_STANDARD
         private Thread _worker;
 
         private void Start()
@@ -145,6 +152,75 @@ namespace Akka.Actor
                 _workerInitialized.Wait();
             }
         }
+#else
+        private PeriodicTimer _timer;
+        private readonly CancellationTokenSource _cts = new();
+        
+        private void Start()
+        {
+            if (_workerState == WORKER_STATE_STARTED)
+            {
+                
+            } // do nothing
+            else if (_workerState == WORKER_STATE_INIT)
+            {
+                var t = TimeSpan.FromTicks(_tickDuration);
+                _timer = new PeriodicTimer(t);
+#pragma warning disable 420
+                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
+#pragma warning restore 420
+                    WORKER_STATE_INIT)
+                {
+                    
+                }
+            }
+
+            else if (_workerState == WORKER_STATE_SHUTDOWN)
+            {
+                throw new SchedulerException("cannot enqueue after timer shutdown");
+            }
+            else
+            {
+                throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
+            }
+
+            while (_startTime == 0)
+            {
+                _workerInitialized.Wait();
+            }
+        }
+
+        private async Task RunAsync()
+        {
+            // Initialize the clock
+            _startTime = HighResMonotonicClock.Ticks;
+            if (_startTime == 0)
+            {
+                // 0 means it's an uninitialized value, so bump to 1 to indicate it's started
+                _startTime = 1;
+            }
+
+            _workerInitialized.Signal();
+
+            while (await _timer.WaitForNextTickAsync(_cts.Token))
+            {
+                unchecked
+                {
+                    
+                
+                }
+                var deadline = _tickDuration * (_tick + 1);
+                var idx = (int)(_tick & _mask);
+                var bucket = _wheel[idx];
+                TransferRegistrationsToBuckets();
+                bucket.Execute(deadline);
+                _tick++; // it will take 2^64 * 10ms for this to overflow
+
+                bucket.ClearReschedule(_rescheduleRegistrations);
+                ProcessReschedule();
+            }
+        }
+#endif
 
         /// <summary>
         /// Scheduler thread entry method
@@ -200,6 +276,7 @@ namespace Akka.Actor
                 sched.Deadline = nextDeadline;
                 PlaceInBucket(sched);
             }
+
             _rescheduleRegistrations.Clear();
         }
 
@@ -211,14 +288,14 @@ namespace Akka.Actor
                 for (;;)
                 {
                     long currentTime = HighResMonotonicClock.Ticks - _startTime;
-                    var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond);
+                    var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) /
+                                   TimeSpan.TicksPerMillisecond);
 
                     if (sleepMs <= 0) // no need to sleep
                     {
                         if (currentTime == long.MinValue) // wrap-around
                             return -long.MaxValue;
                         return currentTime;
-
                     }
 
                     Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
@@ -232,8 +309,7 @@ namespace Akka.Actor
             // adds new timeouts in a loop.
             for (var i = 0; i < 100000; i++)
             {
-                SchedulerRegistration reg;
-                if (!_registrations.TryDequeue(out reg))
+                if (!_registrations.TryDequeue(out var reg))
                 {
                     // all processed
                     break;
@@ -265,7 +341,8 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        protected override DateTimeOffset TimeNow => DateTimeOffset.Now;
+        protected override DateTimeOffset TimeNow => DateTimeOffset.UtcNow;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -284,8 +361,9 @@ namespace Akka.Actor
         /// <param name="message">TBD</param>
         /// <param name="sender">TBD</param>
         /// <param name="cancelable">TBD</param>
-        protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender,
-                    ICancelable cancelable)
+        protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message,
+            IActorRef sender,
+            ICancelable cancelable)
         {
             InternalSchedule(delay, TimeSpan.Zero, new ScheduledTell(receiver, message, sender), cancelable);
         }
@@ -295,11 +373,7 @@ namespace Akka.Actor
             Start();
             var deadline = HighResMonotonicClock.Ticks + delay.Ticks - _startTime;
             var offset = interval.Ticks;
-            var reg = new SchedulerRegistration(action, cancelable)
-            {
-                Deadline = deadline,
-                Offset = offset
-            };
+            var reg = new SchedulerRegistration(action, cancelable) { Deadline = deadline, Offset = offset };
             _registrations.Enqueue(reg);
         }
 
@@ -312,8 +386,9 @@ namespace Akka.Actor
         /// <param name="message">TBD</param>
         /// <param name="sender">TBD</param>
         /// <param name="cancelable">TBD</param>
-        protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message,
-                    IActorRef sender, ICancelable cancelable)
+        protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval,
+            ICanTell receiver, object message,
+            IActorRef sender, ICancelable cancelable)
         {
             InternalSchedule(initialDelay, interval, new ScheduledTell(receiver, message, sender), cancelable);
         }
@@ -341,19 +416,22 @@ namespace Akka.Actor
         /// <param name="interval">TBD</param>
         /// <param name="action">TBD</param>
         /// <param name="cancelable">TBD</param>
-        protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
+        protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action,
+            ICancelable cancelable)
         {
             InternalSchedule(initialDelay, interval, new ActionRunnable(action), cancelable);
         }
 
-        protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action, ICancelable cancelable)
+        protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action,
+            ICancelable cancelable)
         {
             InternalSchedule(initialDelay, interval, action, cancelable);
         }
 
-        private AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>> _stopped = new AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>>();
+        private readonly AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>> _stopped = new();
 
-        private static readonly Task<IEnumerable<SchedulerRegistration>> Completed = Task.FromResult((IEnumerable<SchedulerRegistration>)new List<SchedulerRegistration>());
+        private static readonly Task<IEnumerable<SchedulerRegistration>> Completed =
+            Task.FromResult((IEnumerable<SchedulerRegistration>)new List<SchedulerRegistration>());
 
         private Task<IEnumerable<SchedulerRegistration>> Stop()
         {
@@ -361,12 +439,14 @@ namespace Akka.Actor
 
             if (_stopped.CompareAndSet(null, p)
 #pragma warning disable 420
-                && Interlocked.CompareExchange(ref _workerState, WORKER_STATE_SHUTDOWN, WORKER_STATE_STARTED) == WORKER_STATE_STARTED)
+                && Interlocked.CompareExchange(ref _workerState, WORKER_STATE_SHUTDOWN, WORKER_STATE_STARTED) ==
+                WORKER_STATE_STARTED)
 #pragma warning restore 420
             {
                 // Let remaining work that is already being processed finished. The termination task will complete afterwards
                 return p.Task;
             }
+
             return Completed;
         }
 
@@ -430,12 +510,12 @@ namespace Akka.Actor
                 return $"[{_receiver}.Tell({_message}, {_sender})]";
             }
 
-            #if !NETSTANDARD
+#if !NETSTANDARD
             public void Execute()
             {
                 Run();
             }
-            #endif
+#endif
         }
 
         private class SchedulerRegistration
@@ -640,6 +720,7 @@ namespace Akka.Actor
                                 {
                                 } // suppress any errors thrown during logging
                             }
+
                             remove = true;
                         }
                         else
@@ -659,10 +740,12 @@ namespace Akka.Actor
                     {
                         Remove(current);
                     }
+
                     if (current.Repeat && remove)
                     {
                         Reschedule(current);
                     }
+
                     current = next;
                 }
             }
@@ -677,6 +760,7 @@ namespace Akka.Actor
                 {
                     reg.Prev.Next = next;
                 }
+
                 if (reg.Next != null)
                 {
                     reg.Next.Prev = reg.Prev;
@@ -711,6 +795,7 @@ namespace Akka.Actor
                 {
                     return null;
                 }
+
                 var next = head.Next;
                 if (next == null)
                 {
@@ -733,6 +818,7 @@ namespace Akka.Actor
                 {
                     return null;
                 }
+
                 var next = head.Next;
                 if (next == null)
                 {
@@ -750,4 +836,3 @@ namespace Akka.Actor
         }
     }
 }
-
