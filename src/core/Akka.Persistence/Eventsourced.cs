@@ -70,7 +70,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// The base class for all persistent actors.
     /// </summary>
     public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, IPersistenceStash, IPersistenceRecovery
     {
@@ -81,7 +81,7 @@ namespace Akka.Persistence
         private readonly IStash _internalStash;
         private IActorRef _snapshotStore;
         private IActorRef _journal;
-        private ICollection<IPersistentEnvelope> _journalBatch = new List<IPersistentEnvelope>();
+        private List<IPersistentEnvelope> _journalBatch = new List<IPersistentEnvelope>();
         private bool _isWriteInProgress;
         private long _sequenceNr;
         private EventsourcedState _currentState;
