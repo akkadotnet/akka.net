@@ -30,10 +30,7 @@ namespace Akka.Persistence
 
         public override string ToString() => Name;
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public abstract partial class Eventsourced
     {
         /// <summary>
@@ -135,7 +132,7 @@ namespace Akka.Persistence
                             }
                             ReturnRecoveryPermit();
                             break;
-                        case RecoveryTick tick when tick.Snapshot:
+                        case RecoveryTick { Snapshot: true }:
                             try
                             {
                                 OnRecoveryFailure(
@@ -235,7 +232,7 @@ namespace Akka.Persistence
                             }
                             ReturnRecoveryPermit();
                             break;
-                        case RecoveryTick tick when !tick.Snapshot:
+                        case RecoveryTick { Snapshot: false }:
                             if (!eventSeenInInterval)
                             {
                                 timeoutCancelable.Cancel();
@@ -256,7 +253,7 @@ namespace Akka.Persistence
                                 eventSeenInInterval = false;
                             }
                             break;
-                        case RecoveryTick tick when tick.Snapshot:
+                        case RecoveryTick { Snapshot: true }:
                             // snapshot tick, ignore
                             break;
                         default:

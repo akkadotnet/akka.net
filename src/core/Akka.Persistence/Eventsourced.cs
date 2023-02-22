@@ -70,7 +70,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// The base class for all persistent actors.
     /// </summary>
     public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, IPersistenceStash, IPersistenceRecovery
     {
@@ -81,18 +81,18 @@ namespace Akka.Persistence
         private readonly IStash _internalStash;
         private IActorRef _snapshotStore;
         private IActorRef _journal;
-        private ICollection<IPersistentEnvelope> _journalBatch = new List<IPersistentEnvelope>();
+        private List<IPersistentEnvelope> _journalBatch = new();
         private bool _isWriteInProgress;
         private long _sequenceNr;
         private EventsourcedState _currentState;
-        private LinkedList<IPersistentEnvelope> _eventBatch = new LinkedList<IPersistentEnvelope>();
+        private LinkedList<IPersistentEnvelope> _eventBatch = new();
         private bool _asyncTaskRunning = false;
 
         /// Used instead of iterating `pendingInvocations` in order to check if safe to revert to processing commands
         private long _pendingStashingPersistInvocations = 0L;
 
         /// Holds user-supplied callbacks for persist/persistAsync calls
-        private readonly LinkedList<IPendingHandlerInvocation> _pendingInvocations = new LinkedList<IPendingHandlerInvocation>();
+        private readonly LinkedList<IPendingHandlerInvocation> _pendingInvocations = new();
 
         /// <summary>
         /// TBD
@@ -164,12 +164,12 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef Journal => _journal ?? (_journal = Extension.JournalFor(JournalPluginId));
+        public IActorRef Journal => _journal ??= Extension.JournalFor(JournalPluginId);
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef SnapshotStore => _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId));
+        public IActorRef SnapshotStore => _snapshotStore ??= Extension.SnapshotStoreFor(SnapshotPluginId);
 
         /// <summary>
         /// Returns <see cref="PersistenceId"/>.
@@ -603,7 +603,7 @@ namespace Akka.Persistence
         {
             if (!_isWriteInProgress && _journalBatch.Count > 0)
             {
-                Journal.Tell(new WriteMessages(_journalBatch.ToArray(), Self, _instanceId));
+                Journal.Tell(new WriteMessages(_journalBatch, Self, _instanceId));
                 _journalBatch = new List<IPersistentEnvelope>(0);
                 _isWriteInProgress = true;
             }
