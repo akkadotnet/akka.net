@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
                     var indices = Enumerable.Range(key * _itemsPerPage, _itemsPerPage);
                     var filteredIndices = _size.HasValue ? indices.Where(x => x < _size.Value) : indices;
 
-                    return Task.FromResult(new PagedSource.Page<int, int>(filteredIndices.Select(x => x * 2), new Option<int>(key + 1)));
+                    return Task.FromResult(new PagedSource.Page<int, int>(filteredIndices.Select(x => x * 2), Option<int>.Create(key + 1)));
                 }
             }
 
@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
             private readonly Source<string, NotUsed> _source = PagedSource.Create
             (
                 1,
-                i => Task.FromResult(new PagedSource.Page<string, int>(Page(i), new Option<int>(i + 1)))
+                i => Task.FromResult(new PagedSource.Page<string, int>(Page(i), Option<int>.Create(i + 1)))
             );
 
             private static IEnumerable<string> Page(int key)
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
                     var items = t.Item1;
                     var next = t.Item2;
 
-                    return Task.FromResult(new PagedSource.Page<int, string>(items, next == "" ? Option<string>.None : new Option<string>(next)));
+                    return Task.FromResult(new PagedSource.Page<int, string>(items, next == "" ? Option<string>.None : Option<string>.Create(next)));
                 }
             );
 

@@ -91,7 +91,7 @@ namespace Akka.Streams.Dsl.Internal
         public static Option<IModule> Unapply<TShape, TMat>(IGraph<TShape, TMat> graph) where TShape : Shape
         {
             var module = graph as IModule;
-            return module != null ? new Option<IModule>(module) : Option<IModule>.None;
+            return module != null ? Option<IModule>.Create(module) : Option<IModule>.None;
         }
     }
 }
