@@ -386,6 +386,10 @@ namespace Akka.Persistence.Journal
             resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, resequencerCounter, writeMessage.PersistentActor, writeJournal), writeJournal);
             Resequence(new NormalResult(writeMessage.ActorInstanceId), results, resequencerCounter, writeMessage, resequencer, writeJournal);
         }
+        
+        /*
+         * ValueDelegate pattern - to avoid resequencer closures
+         */
 
         private interface IResequencerMapper
         {
