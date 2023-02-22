@@ -333,7 +333,7 @@ namespace Akka.Actor
         /// <param name="hook">A task that will be executed during shutdown.</param>
         internal void AddClrShutdownHook(Func<Task<Done>> hook)
         {
-            if (!_clrHooksStarted)
+            if (!_clrHooksStarted.Value)
             {
                 _clrShutdownTasks.TryAdd(hook);
             }

@@ -4965,7 +4965,6 @@ namespace Akka.Util
         public bool CompareAndSet(bool expected, bool newValue) { }
         public bool GetAndSet(bool newValue) { }
         public static bool op_Implicit(Akka.Util.AtomicBoolean atomicBoolean) { }
-        public static Akka.Util.AtomicBoolean op_Implicit(bool value) { }
     }
     public class AtomicReference<T>
         where T :  class
@@ -4977,7 +4976,6 @@ namespace Akka.Util
         public bool CompareAndSet(T expected, T newValue) { }
         public T GetAndSet(T newValue) { }
         public static T op_Implicit(Akka.Util.AtomicReference<T> atomicReference) { }
-        public static Akka.Util.AtomicReference<T> op_Implicit(T value) { }
     }
     public class static BitArrayHelpers
     {

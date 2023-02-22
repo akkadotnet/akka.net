@@ -210,7 +210,7 @@ namespace Akka.Pattern
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format(CultureInfo.InvariantCulture, "Half-Open currently testing call for success = {0}", (_lock == true));
+            return string.Format(CultureInfo.InvariantCulture, "Half-Open currently testing call for success = {0}", (_lock.Value == true));
         }
     }
 

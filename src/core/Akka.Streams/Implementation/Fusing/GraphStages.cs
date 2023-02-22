@@ -549,7 +549,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _cancelCallback.Value = GetAsyncCallback<NotUsed>(_ => CompleteStage());
 
-                if (_cancelled)
+                if (_cancelled.Value)
                     CompleteStage();
                 else
                     ScheduleRepeatedly("TickTimer", _stage._initialDelay, _stage._interval);
@@ -557,7 +557,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (IsAvailable(_stage.Out) && !_cancelled)
+                if (IsAvailable(_stage.Out) && !_cancelled.Value)
                     Push(_stage.Out, _stage._tick);
             }
 
@@ -567,7 +567,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _cancelCallback.Value?.Invoke(NotUsed.Instance);
             }
 
-            public bool IsCancellationRequested => _cancelled;
+            public bool IsCancellationRequested => _cancelled.Value;
 
             public CancellationToken Token { get; }
 
