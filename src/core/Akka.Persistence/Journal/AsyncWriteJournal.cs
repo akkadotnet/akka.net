@@ -353,7 +353,7 @@ namespace Akka.Persistence.Journal
         {
             try
             {
-                var prepared = PreparePersistentBatch(message.Messages).ToArray();
+                var prepared = PreparePersistentBatch(message.Messages);
                 // try in case AsyncWriteMessages throws
                 try
                 {
@@ -365,7 +365,7 @@ namespace Akka.Persistence.Journal
                 catch (Exception e) // this is the old writeMessagesAsyncException
                 {
                     _resequencer.Tell(new Desequenced(new WriteMessagesFailed(e, atomicWriteCount), resequencerCounter, message.PersistentActor, self), self);
-                    Resequence(new FailedResult(message.ActorInstanceId), null, resequencerCounter, message, _resequencer, self);
+                    Resequence((x, _) => new WriteMessageFailure(x, e, message.ActorInstanceId), null, resequencerCounter, message, _resequencer, self);
                 }
             }
             catch (Exception ex)
@@ -384,53 +384,12 @@ namespace Akka.Persistence.Journal
                                                 $"Expected [{atomicWriteCount}], but got [{results.Count}].");
 
             resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, resequencerCounter, writeMessage.PersistentActor, writeJournal), writeJournal);
-            Resequence(new NormalResult(writeMessage.ActorInstanceId), results, resequencerCounter, writeMessage, resequencer, writeJournal);
+            Resequence((x, exception) => exception == null
+                ? new WriteMessageSuccess(x, writeMessage.ActorInstanceId)
+                : new WriteMessageRejected(x, exception, writeMessage.ActorInstanceId), results, resequencerCounter, writeMessage, resequencer, writeJournal);
         }
         
-        /*
-         * ValueDelegate pattern - to avoid resequencer closures
-         */
-
-        private interface IResequencerMapper
-        {
-            object Execute(IPersistentRepresentation rep, Exception ex);
-        }
-
-        private readonly struct FailedResult : IResequencerMapper
-        {
-            public FailedResult(int actorInstanceId)
-            {
-                ActorInstanceId = actorInstanceId;
-            }
-
-            private int ActorInstanceId { get; }
-            public object Execute(IPersistentRepresentation rep, Exception ex)
-            {
-                return new WriteMessageRejected(rep, ex, ActorInstanceId);
-            }
-        }
-
-        private readonly struct NormalResult : IResequencerMapper
-        {
-            public NormalResult(int actorInstanceId)
-            {
-                ActorInstanceId = actorInstanceId;
-            }
-
-            private int ActorInstanceId { get; }
-            
-            public object Execute(IPersistentRepresentation rep, Exception ex)
-            {
-                if (ex == null)
-                {
-                    return new WriteMessageSuccess(rep, ActorInstanceId);
-                }
-                
-                return new WriteMessageRejected(rep, ex, ActorInstanceId);
-            }
-        }
-
-        private void Resequence(IResequencerMapper mapper,
+        private void Resequence(Func<IPersistentRepresentation, Exception, object> mapper,
             IImmutableList<Exception> results, long resequencerCounter, WriteMessages msg, IActorRef resequencer, IActorRef writeJournal)
         {
             var i = 0;
@@ -448,7 +407,7 @@ namespace Akka.Persistence.Journal
 
                     foreach (var p in (IEnumerable<IPersistentRepresentation>)aw.Payload)
                     {
-                        resequencer.Tell(new Desequenced(mapper.Execute(p, exception), resequencerCounter + i + 1, msg.PersistentActor, p.Sender), writeJournal);
+                        resequencer.Tell(new Desequenced(mapper(p, exception), resequencerCounter + i + 1, msg.PersistentActor, p.Sender), writeJournal);
                         i++;
                     }
                 }
@@ -488,12 +447,15 @@ namespace Akka.Persistence.Journal
             protected override bool Receive(object message)
             {
                 Desequenced d;
-                if ((d = message as Desequenced) == null) return false;
-                do
+                if ((d = message as Desequenced) != null)
                 {
-                    d = Resequence(d);
-                } while (d != null);
-                return true;
+                    do
+                    {
+                        d = Resequence(d);
+                    } while (d != null);
+                    return true;
+                }
+                return false;
             }
 
             private Desequenced Resequence(Desequenced desequenced)

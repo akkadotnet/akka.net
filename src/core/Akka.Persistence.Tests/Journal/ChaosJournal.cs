@@ -95,7 +95,7 @@ namespace Akka.Persistence.Tests.Journal
 
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
-            TaskCompletionSource<IImmutableList<Exception>> promise =
+            var promise =
                 new TaskCompletionSource<IImmutableList<Exception>>();
             if (ChaosSupportExtensions.ShouldFail(_writeFailureRate))
                 promise.SetException(new WriteFailedException(messages));
