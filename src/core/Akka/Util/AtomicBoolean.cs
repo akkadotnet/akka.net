@@ -70,6 +70,16 @@ namespace Akka.Util
         {
             return Interlocked.Exchange(ref _value, newValue ? _trueValue : _falseValue) == _trueValue;
         }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="AtomicBoolean"/> to <see cref="System.Boolean"/>.
+        /// </summary>
+        /// <param name="atomicBoolean">The boolean to convert</param>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator bool(AtomicBoolean atomicBoolean)
+        {
+            return atomicBoolean.Value;
+        }
     }
 }
 
