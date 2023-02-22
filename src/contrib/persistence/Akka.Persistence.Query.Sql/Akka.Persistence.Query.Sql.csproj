@@ -7,7 +7,6 @@
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <LangVersion>8.0</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>

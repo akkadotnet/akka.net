@@ -2,7 +2,6 @@
   <Import Project="..\..\common.props" />
   <PropertyGroup>
     <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
-    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
