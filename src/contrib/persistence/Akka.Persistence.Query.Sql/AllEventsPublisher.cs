@@ -25,28 +25,44 @@ namespace Akka.Persistence.Query.Sql
             private Continue() { }
         }
 
-        public static Props Props(long fromOffset, TimeSpan? refreshInterval, int maxBufferSize, IActorRef writeJournal)
+        public static Props Props(long fromOffset, TimeSpan? refreshInterval, int maxBufferSize, IActorRef writeJournal, QuerySettings settings)
         {
             return refreshInterval.HasValue ?
-                Actor.Props.Create(() => new LiveAllEventsPublisher(fromOffset, refreshInterval.Value, maxBufferSize, writeJournal)) :
-                Actor.Props.Create(() => new CurrentAllEventsPublisher(fromOffset, maxBufferSize, writeJournal));
+                Actor.Props.Create(() => new LiveAllEventsPublisher(fromOffset, refreshInterval.Value, maxBufferSize, writeJournal, settings)) :
+                Actor.Props.Create(() => new CurrentAllEventsPublisher(fromOffset, maxBufferSize, writeJournal, settings));
         }
     }
 
-    internal abstract class AbstractAllEventsPublisher : ActorPublisher<EventEnvelope>
+    internal abstract class AbstractAllEventsPublisher : ActorPublisher<EventEnvelope>, IWithTimers
     {
+        private readonly string _retryKey = nameof(_retryKey);
+        private readonly string _operationTimeoutKey = nameof(_operationTimeoutKey);
 
+        private int _retries;
+        private readonly int _maxRetries;
+        private readonly TimeSpan _maxBackoff;
+        private readonly float _backoffMultiplier;
+        private readonly TimeSpan _backoffTime;
+        private readonly TimeSpan _operationTimeout;
+        
         private ILoggingAdapter _log;
         protected long CurrentOffset;
 
-        protected AbstractAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef journalRef)
+        protected AbstractAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef journalRef, QuerySettings settings)
         {
             CurrentOffset = FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
             JournalRef = journalRef;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
+            
+            _operationTimeout = settings.OperationTimeout;
+            _maxRetries = settings.MaxRetries;
+            _maxBackoff = settings.MaxBackoff;
+            _backoffMultiplier = settings.BackoffMultiplier;
+            _backoffTime = settings.BackoffTime;
         }
 
+        public ITimerScheduler Timers { get; set; }
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         protected IActorRef JournalRef { get; }
         protected DeliveryBuffer<EventEnvelope> Buffer { get; }
@@ -55,7 +71,6 @@ namespace Akka.Persistence.Query.Sql
         protected int MaxBufferSize { get; }
         protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentOffset <= ToOffset);
 
-        protected abstract void ReceiveInitialRequest();
         protected abstract void ReceiveIdleRequest();
         protected abstract void ReceiveRecoverySuccess(long highestOrderingNr);
 
@@ -64,7 +79,7 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case Request _:
-                    ReceiveInitialRequest();
+                    Replay();
                     return true;
                 case Cancel _:
                     Context.Stop(Self);
@@ -94,11 +109,38 @@ namespace Akka.Persistence.Query.Sql
             }
         }
 
-        protected void Replay()
+        private bool Retrying(object message)
         {
+            switch (message)
+            {
+                case Retry _:
+                    Become(Replaying);
+                    Replay();
+                    return true;
+                case EventsByTagPublisher.Continue _:
+                    // no-op
+                    return true;
+                case Request _:
+                    Buffer.DeliverBuffer(TotalDemand);
+                    if (Buffer.IsEmpty && CurrentOffset >= ToOffset)
+                        OnCompleteThenStop();
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private void Replay()
+        {
+            if (CurrentOffset >= ToOffset)
+                return;
+            
             var limit = MaxBufferSize - Buffer.Length;
             Log.Debug("replay all events request from [{0}] to [{1}], limit [{2}]", CurrentOffset, ToOffset, limit);
-            JournalRef.Tell(new ReplayAllEvents(CurrentOffset, ToOffset, limit, Self));
+            JournalRef.Tell(new ReplayAllEvents(CurrentOffset, ToOffset, limit, Self, _operationTimeout));
             Context.Become(Replaying);
         }
 
@@ -120,36 +162,70 @@ namespace Akka.Persistence.Query.Sql
 
                     CurrentOffset = replayed.Offset;
                     Buffer.DeliverBuffer(TotalDemand);
+                    if (Buffer.IsEmpty && CurrentOffset >= ToOffset)
+                        OnCompleteThenStop();
                     return true;
+                
                 case EventReplaySuccess success:
+                    Timers.CancelAll();
                     Log.Debug("event replay completed, currOffset [{0}], highestSequenceNr [{1}]", CurrentOffset, success.HighestSequenceNr);
                     ReceiveRecoverySuccess(success.HighestSequenceNr);
                     return true;
+                
                 case EventReplayFailure failure:
-                    Log.Error(failure.Cause, "event replay failed, due to [{0}]", failure.Cause.Message);
-                    Buffer.DeliverBuffer(TotalDemand);
-                    OnErrorThenStop(failure.Cause);
+                    Timers.CancelAll();
+                    RetryQuery(failure.Cause);
                     return true;
+                
+                case Status.Failure msg:
+                    Timers.CancelAll();
+                    RetryQuery(msg.Cause);
+                    return true;
+
                 case Request _:
                     Buffer.DeliverBuffer(TotalDemand);
+                    if (Buffer.IsEmpty && CurrentOffset >= ToOffset)
+                        OnCompleteThenStop();
                     return true;
+                
                 case Cancel _:
                     Context.Stop(Self);
                     return true;
+                
                 case AllEventsPublisher.Continue _:
                     return true;
+                
                 default:
                     return false;
             }
         }
 
+        private void RetryQuery(Exception ex)
+        {
+            _retries++;
+            if (_retries > _maxRetries)
+            {
+                Buffer.DeliverBuffer(TotalDemand);
+                Log.Debug(ex, "All Events query failed due to [{0}]. Maximum retry reached", ex.Message);
+                OnErrorThenStop(ex);
+                return;
+            }
+            
+            Become(Retrying);
+            var retryTime = new TimeSpan((long)(_backoffTime.Ticks * (_backoffMultiplier * _retries)));
+            if (retryTime > _maxBackoff)
+                retryTime = _maxBackoff;
+            Log.Debug(ex, "All events query failed due to [{0}]. Retrying in {1} ms ({2}/{3})", 
+                ex.Message, retryTime.TotalMilliseconds, _retries, _maxRetries);
+            Timers.StartSingleTimer(_retryKey, Retry.Instance, retryTime);
+        }
     }
 
     internal sealed class LiveAllEventsPublisher : AbstractAllEventsPublisher
     {
         private readonly ICancelable _tickCancelable;
-        public LiveAllEventsPublisher(long fromOffset, TimeSpan refreshInterval, int maxBufferSize, IActorRef writeJournal)
-            : base(fromOffset, maxBufferSize, writeJournal)
+        public LiveAllEventsPublisher(long fromOffset, TimeSpan refreshInterval, int maxBufferSize, IActorRef writeJournal, QuerySettings settings)
+            : base(fromOffset, maxBufferSize, writeJournal, settings)
         {
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, AllEventsPublisher.Continue.Instance, Self);
         }
@@ -162,22 +238,17 @@ namespace Akka.Persistence.Query.Sql
             base.PostStop();
         }
 
-        protected override void ReceiveInitialRequest()
-        {
-            Replay();
-        }
-
         protected override void ReceiveIdleRequest()
         {
             Buffer.DeliverBuffer(TotalDemand);
-            if (Buffer.IsEmpty && CurrentOffset > ToOffset)
+            if (Buffer.IsEmpty && CurrentOffset >= ToOffset)
                 OnCompleteThenStop();
         }
 
         protected override void ReceiveRecoverySuccess(long highestOrderingNr)
         {
             Buffer.DeliverBuffer(TotalDemand);
-            if (Buffer.IsEmpty && CurrentOffset > ToOffset)
+            if (Buffer.IsEmpty && CurrentOffset >= ToOffset)
                 OnCompleteThenStop();
 
             Context.Become(Idle);
@@ -186,22 +257,17 @@ namespace Akka.Persistence.Query.Sql
 
     internal sealed class CurrentAllEventsPublisher : AbstractAllEventsPublisher
     {
-        public CurrentAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef writeJournal)
-            : base(fromOffset, maxBufferSize, writeJournal)
+        public CurrentAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef writeJournal, QuerySettings settings)
+            : base(fromOffset, maxBufferSize, writeJournal, settings)
         { }
 
         private long _toOffset = long.MaxValue;
         protected override long ToOffset => _toOffset;
 
-        protected override void ReceiveInitialRequest()
-        {
-            Replay();
-        }
-
         protected override void ReceiveIdleRequest()
         {
             Buffer.DeliverBuffer(TotalDemand);
-            if (Buffer.IsEmpty && CurrentOffset > ToOffset)
+            if (Buffer.IsEmpty && CurrentOffset >= ToOffset)
                 OnCompleteThenStop();
             else
                 Self.Tell(AllEventsPublisher.Continue.Instance);

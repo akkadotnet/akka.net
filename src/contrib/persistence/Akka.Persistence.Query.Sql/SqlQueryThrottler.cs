@@ -8,10 +8,8 @@
 using System;
 using System.Threading;
 using Akka.Actor;
-using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams;
 using Akka.Streams.Dsl;
-using static Akka.Persistence.Query.Sql.SqlQueryConstants;
 
 namespace Akka.Persistence.Query.Sql
 {
@@ -31,7 +29,7 @@ namespace Akka.Persistence.Query.Sql
             _journalRef = journalRef;
             _maxConcurrentQueries = maxConcurrentQueries;
             
-            Receive<IJournalRequest>(req =>
+            Receive<IJournalQueryRequest>(req =>
             {
                 _throttler.Tell((req, Sender));
             });
@@ -40,11 +38,12 @@ namespace Akka.Persistence.Query.Sql
         protected override void PreStart()
         {
             var materializer = Context.Materializer();
-            var (actor, source) = Source.ActorRef<(IJournalRequest req, IActorRef sender)>(20000, OverflowStrategy.DropHead)
+            var (actor, source) = Source.ActorRef<(IJournalQueryRequest req, IActorRef sender)>(20000, OverflowStrategy.DropHead)
                 .PreMaterialize(materializer);
             _throttler = actor;
 
             source
+                .Where(req => req.req.Deadline > DateTime.UtcNow)
                 .SelectAsyncUnordered(_maxConcurrentQueries, async request =>
                 {
                     object r;
@@ -57,8 +56,9 @@ namespace Akka.Persistence.Query.Sql
                         r = new Status.Failure(ex);
                     }
 
-                    return (r, request.sender);
+                    return (request.req.Deadline, r, request.sender);
                 })
+                .Where(tuple => tuple.Deadline > DateTime.UtcNow)
                 .RunForeach(tuple =>
                 {
                     tuple.sender.Tell(tuple.r);

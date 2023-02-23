@@ -47,14 +47,17 @@ namespace Akka.Persistence.Query.Sql
 
         private readonly IActorRef _journalRef;
         private readonly IActorRef _throttlerRef;
+        private readonly QuerySettings _querySettings;
         
         private static AtomicCounter _idCounter = new AtomicCounter(0);
         
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
-            _refreshInterval = config.GetTimeSpan("refresh-interval", null);
-            var writeJournalPluginId = config.GetString("write-plugin", null);
-            _maxBufferSize = config.GetInt("max-buffer-size", 0);
+            _refreshInterval = config.GetTimeSpan("refresh-interval", TimeSpan.FromSeconds(3));
+            var writeJournalPluginId = config.GetString("write-plugin", "");
+            _maxBufferSize = config.GetInt("max-buffer-size", 100);
+
+            _querySettings = new QuerySettings(config);
             _system = system;
 
             _persistenceIdsPublisher = null;
@@ -90,9 +93,7 @@ namespace Akka.Persistence.Query.Sql
                 {
                     var graph =
                         Source.ActorPublisher<string>(
-                                LivePersistenceIdsPublisher.Props(
-                                    _refreshInterval,
-                                    _throttlerRef))
+                                LivePersistenceIdsPublisher.Props(_refreshInterval, _throttlerRef, _maxBufferSize, _querySettings))
                             .ToMaterialized(Sink.DistinctRetainingFanOutPublisher<string>(PersistenceIdsShutdownCallback), Keep.Right);
 
                     _persistenceIdsPublisher = graph.Run(_system.Materializer());
@@ -118,7 +119,7 @@ namespace Akka.Persistence.Query.Sql
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
         public Source<string, NotUsed> CurrentPersistenceIds()
-            => Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_throttlerRef))
+            => Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_throttlerRef, _querySettings))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentPersistenceIds");
 
@@ -149,7 +150,7 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
-                Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _throttlerRef))
+                Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _throttlerRef, _querySettings))
                     .MapMaterializedValue(_ => NotUsed.Instance)
                     .Named("EventsByPersistenceId-" + persistenceId);
 
@@ -159,7 +160,7 @@ namespace Akka.Persistence.Query.Sql
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
         public Source<EventEnvelope, NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
-                Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, null, _maxBufferSize, _throttlerRef))
+                Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, null, _maxBufferSize, _throttlerRef, _querySettings))
                     .MapMaterializedValue(_ => NotUsed.Instance)
                     .Named("CurrentEventsByPersistenceId-" + persistenceId);
 
@@ -208,7 +209,8 @@ namespace Akka.Persistence.Query.Sql
             switch (offset)
             {
                 case Sequence seq:
-                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value, long.MaxValue, _refreshInterval, _maxBufferSize, _throttlerRef))
+                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(
+                            tag, seq.Value, long.MaxValue, _refreshInterval, _maxBufferSize, _throttlerRef, _querySettings))
                         .MapMaterializedValue(_ => NotUsed.Instance)
                         .Named($"EventsByTag-{tag}");
                 case NoOffset _:
@@ -229,7 +231,8 @@ namespace Akka.Persistence.Query.Sql
             switch (offset)
             {
                 case Sequence seq:
-                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value, long.MaxValue, null, _maxBufferSize, _throttlerRef))
+                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(
+                            tag, seq.Value, long.MaxValue, null, _maxBufferSize, _throttlerRef, _querySettings))
                         .MapMaterializedValue(_ => NotUsed.Instance)
                         .Named($"CurrentEventsByTag-{tag}");
                 case NoOffset _:
@@ -255,7 +258,8 @@ namespace Akka.Persistence.Query.Sql
                     throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
             }
 
-            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, _refreshInterval, _maxBufferSize, _throttlerRef))
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(
+                    seq.Value, _refreshInterval, _maxBufferSize, _throttlerRef, _querySettings))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("AllEvents");
         }
@@ -276,7 +280,8 @@ namespace Akka.Persistence.Query.Sql
                     throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
             }
 
-            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, null, _maxBufferSize, _throttlerRef))
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(
+                    seq.Value, null, _maxBufferSize, _throttlerRef, _querySettings))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentAllEvents");
         }

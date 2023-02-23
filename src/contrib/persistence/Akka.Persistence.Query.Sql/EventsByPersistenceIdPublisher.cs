@@ -24,23 +24,31 @@ namespace Akka.Persistence.Query.Sql
             }
         }
 
-        public static Props Props(string persistenceId, long fromSequenceNr, long toSequenceNr, TimeSpan? refreshDuration, int maxBufferSize, IActorRef writeJournal)
+        public static Props Props(string persistenceId, long fromSequenceNr, long toSequenceNr, TimeSpan? refreshDuration, int maxBufferSize, IActorRef writeJournal, QuerySettings settings)
         {
             return refreshDuration.HasValue
-                ? Actor.Props.Create(() => new LiveEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, refreshDuration.Value))
-                : Actor.Props.Create(() => new CurrentEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal));
+                ? Actor.Props.Create(() => new LiveEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, refreshDuration.Value, settings))
+                : Actor.Props.Create(() => new CurrentEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, settings));
         }
     }
 
-    internal abstract class AbstractEventsByPersistenceIdPublisher : ActorPublisher<EventEnvelope>
+    internal abstract class AbstractEventsByPersistenceIdPublisher : ActorPublisher<EventEnvelope>, IWithTimers
     {
-        private ILoggingAdapter _log;
+        private readonly string _retryKey = nameof(_retryKey);
+        private readonly string _operationTimeoutKey = nameof(_operationTimeoutKey);
 
+        private int _retries;
+        private readonly int _maxRetries;
+        private readonly TimeSpan _maxBackoff;
+        private readonly float _backoffMultiplier;
+        private readonly TimeSpan _backoffTime;
+        private readonly TimeSpan _operationTimeout;
+        
         protected DeliveryBuffer<EventEnvelope> Buffer;
         protected readonly IActorRef JournalRef;
         protected long CurrentSequenceNr;
 
-        protected AbstractEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef journalRef)
+        protected AbstractEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef journalRef, QuerySettings settings)
         {
             PersistenceId = persistenceId;
             CurrentSequenceNr = FromSequenceNr = fromSequenceNr;
@@ -48,9 +56,18 @@ namespace Akka.Persistence.Query.Sql
             MaxBufferSize = maxBufferSize;
             JournalRef = journalRef;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
+            
+            _operationTimeout = settings.OperationTimeout;
+            _maxRetries = settings.MaxRetries;
+            _maxBackoff = settings.MaxBackoff;
+            _backoffMultiplier = settings.BackoffMultiplier;
+            _backoffTime = settings.BackoffTime;
+
+            Log = Context.GetLogger();
         }
 
-        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
+        public ITimerScheduler Timers { get; set; }
+        protected ILoggingAdapter Log { get; }
         protected string PersistenceId { get; }
         protected long FromSequenceNr { get; }
         protected long ToSequenceNr { get; set; }
@@ -58,16 +75,10 @@ namespace Akka.Persistence.Query.Sql
 
         protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentSequenceNr <= ToSequenceNr);
 
-        protected abstract void ReceiveInitialRequest();
         protected abstract void ReceiveIdleRequest();
         protected abstract void ReceiveRecoverySuccess(long highestSequenceNr);
 
         protected override bool Receive(object message)
-        {
-            return Init(message);
-        }
-
-        protected bool Init(object message)
         {
             switch (message)
             {
@@ -75,7 +86,7 @@ namespace Akka.Persistence.Query.Sql
                     // no-op
                     return true;
                 case Request _:
-                    ReceiveInitialRequest();
+                    Replay();
                     return true;
                 case Cancel _:
                     Context.Stop(Self);
@@ -103,62 +114,117 @@ namespace Akka.Persistence.Query.Sql
             }
         }
 
-        protected void Replay()
+        private bool Retrying(object message)
         {
-            var limit = MaxBufferSize - Buffer.Length;
-            // TODO: use Ask<T> here to limit time similar to other queries?
-            Log.Debug("request replay for persistenceId [{0}] from [{1}] to [{2}] limit [{3}]", PersistenceId, CurrentSequenceNr, ToSequenceNr, limit);
-            JournalRef.Tell(new ReplayMessages(CurrentSequenceNr, ToSequenceNr, limit, PersistenceId, Self));
-            Context.Become(Replaying(limit));
+            switch (message)
+            {
+                case Retry _:
+                    Become(Replaying);
+                    Replay();
+                    return true;
+                case EventsByTagPublisher.Continue _:
+                    // no-op
+                    return true;
+                case Request _:
+                    Buffer.DeliverBuffer(TotalDemand);
+                    if (Buffer.IsEmpty && CurrentSequenceNr > ToSequenceNr)
+                        OnCompleteThenStop();
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
         }
 
-        protected Receive Replaying(int limit)
+        private void Replay()
         {
-            return message =>
+            var limit = MaxBufferSize - Buffer.Length;
+            Log.Debug("request replay for persistenceId [{0}] from [{1}] to [{2}] limit [{3}]", 
+                PersistenceId, CurrentSequenceNr, ToSequenceNr, limit);
+            JournalRef.Tell(new ReplayMessages(CurrentSequenceNr, ToSequenceNr, limit, PersistenceId, Self, _operationTimeout));
+            Timers.StartSingleTimer(_operationTimeoutKey, OperationTimedOut.Instance, _operationTimeout);
+            Context.Become(Replaying);
+        }
+
+        private bool Replaying(object message)
+        {
+            switch (message)
             {
-                switch (message)
-                {
-                    case ReplayedMessage replayed:
-                        var seqNr = replayed.Persistent.SequenceNr;
-                        Buffer.Add(new EventEnvelope(
-                            offset: new Sequence(seqNr),
-                            persistenceId: PersistenceId,
-                            sequenceNr: seqNr,
-                            @event: replayed.Persistent.Payload,
-                            timestamp: replayed.Persistent.Timestamp));
-                        CurrentSequenceNr = seqNr + 1;
-                        Buffer.DeliverBuffer(TotalDemand);
+                case ReplayedMessage replayed:
+                    var seqNr = replayed.Persistent.SequenceNr;
+                    // discard stale messages
+                    if (seqNr < CurrentSequenceNr)
                         return true;
+                    
+                    Buffer.Add(new EventEnvelope(
+                        offset: new Sequence(seqNr),
+                        persistenceId: PersistenceId,
+                        sequenceNr: seqNr,
+                        @event: replayed.Persistent.Payload,
+                        timestamp: replayed.Persistent.Timestamp));
+                    CurrentSequenceNr = seqNr + 1;
+                    Buffer.DeliverBuffer(TotalDemand);
+                    if (Buffer.IsEmpty && CurrentSequenceNr > ToSequenceNr)
+                        OnCompleteThenStop();
+                    return true;
 
-                    case RecoverySuccess success:
-                        Log.Debug("replay completed for persistenceId [{0}], currSeqNo [{1}]", PersistenceId,
-                            CurrentSequenceNr);
-                        ReceiveRecoverySuccess(success.HighestSequenceNr);
-                        return true;
+                case RecoverySuccess success:
+                    Timers.CancelAll();
+                    _retries = 0;
+                    Log.Debug("replay completed for persistenceId [{0}], currSeqNo [{1}]", PersistenceId,
+                        CurrentSequenceNr);
+                    ReceiveRecoverySuccess(success.HighestSequenceNr);
+                    return true;
 
-                    case ReplayMessagesFailure failure:
-                        Log.Debug("replay failed for persistenceId [{0}], due to [{1}]", PersistenceId,
-                            failure.Cause.Message);
-                        Buffer.DeliverBuffer(TotalDemand);
-                        OnErrorThenStop(failure.Cause);
-                        return true;
+                case ReplayMessagesFailure failure:
+                    Timers.CancelAll();
+                    RetryQuery(failure.Cause);
+                    return true;
 
-                    case Request _:
-                        Buffer.DeliverBuffer(TotalDemand);
-                        return true;
+                case Status.Failure msg:
+                    Timers.CancelAll();
+                    RetryQuery(msg.Cause);
+                    return true;
 
-                    case EventsByPersistenceIdPublisher.Continue _:
-                        // skip during replay
-                        return true;
+                case Request _:
+                    Buffer.DeliverBuffer(TotalDemand);
+                    if (Buffer.IsEmpty && CurrentSequenceNr > ToSequenceNr)
+                        OnCompleteThenStop();
+                    return true;
 
-                    case Cancel _:
-                        Context.Stop(Self);
-                        return true;
+                case EventsByPersistenceIdPublisher.Continue _:
+                    // skip during replay
+                    return true;
 
-                    default:
-                        return false;
-                }
-            };
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void RetryQuery(Exception ex)
+        {
+            _retries++;
+            if (_retries > _maxRetries)
+            {
+                Buffer.DeliverBuffer(TotalDemand);
+                Log.Debug(ex, "Events by persistence ID query failed due to [{0}]. Maximum retry reached", ex.Message);
+                OnErrorThenStop(ex);
+                return;
+            }
+            
+            Become(Retrying);
+            var retryTime = new TimeSpan((long)(_backoffTime.Ticks * (_backoffMultiplier * _retries)));
+            if (retryTime > _maxBackoff)
+                retryTime = _maxBackoff;
+            Log.Debug(ex, "Events by persistence ID query failed due to [{0}]. Retrying in {1} ms ({2}/{3})", 
+                ex.Message, retryTime.TotalMilliseconds, _retries, _maxRetries);
+            Timers.StartSingleTimer(_retryKey, Retry.Instance, retryTime);
         }
     }
 
@@ -166,8 +232,8 @@ namespace Akka.Persistence.Query.Sql
     {
         private readonly ICancelable _tickCancelable;
 
-        public LiveEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef writeJournal, TimeSpan refreshInterval)
-            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal)
+        public LiveEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef writeJournal, TimeSpan refreshInterval, QuerySettings settings)
+            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, settings)
         {
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByPersistenceIdPublisher.Continue.Instance, Self);
         }
@@ -176,11 +242,6 @@ namespace Akka.Persistence.Query.Sql
         {
             _tickCancelable.Cancel();
             base.PostStop();
-        }
-
-        protected override void ReceiveInitialRequest()
-        {
-            Replay();
         }
 
         protected override void ReceiveIdleRequest()
@@ -202,14 +263,9 @@ namespace Akka.Persistence.Query.Sql
 
     internal sealed class CurrentEventsByPersistenceIdPublisher : AbstractEventsByPersistenceIdPublisher
     {
-        public CurrentEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef writeJournal)
-            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal)
+        public CurrentEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef writeJournal, QuerySettings settings)
+            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, settings)
         {
-        }
-
-        protected override void ReceiveInitialRequest()
-        {
-            Replay();
         }
 
         protected override void ReceiveIdleRequest()

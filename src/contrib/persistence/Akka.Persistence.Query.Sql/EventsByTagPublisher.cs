@@ -26,32 +26,54 @@ namespace Akka.Persistence.Query.Sql
         }
 
         public static Props Props(string tag, long fromOffset, long toOffset, TimeSpan? refreshInterval,
-            int maxBufferSize, IActorRef writeJournal)
+            int maxBufferSize, IActorRef writeJournal, QuerySettings settings)
         {
             return refreshInterval.HasValue
                 ? Actor.Props.Create(() => new LiveEventsByTagPublisher(tag, fromOffset, toOffset,
-                    refreshInterval.Value, maxBufferSize, writeJournal))
+                    refreshInterval.Value, maxBufferSize, writeJournal, settings))
                 : Actor.Props.Create(() =>
-                    new CurrentEventsByTagPublisher(tag, fromOffset, toOffset, maxBufferSize, writeJournal));
+                    new CurrentEventsByTagPublisher(tag, fromOffset, toOffset, maxBufferSize, writeJournal, settings));
         }
     }
 
-    internal abstract class AbstractEventsByTagPublisher : ActorPublisher<EventEnvelope>
+    internal abstract class AbstractEventsByTagPublisher : ActorPublisher<EventEnvelope>, IWithTimers
     {
+        private readonly string _retryKey = nameof(_retryKey);
+        private readonly string _operationTimeoutKey = nameof(_operationTimeoutKey);
+        
+        private int _retries;
+        private readonly int _maxRetries;
+        private readonly TimeSpan _maxBackoff;
+        private readonly float _backoffMultiplier;
+        private readonly TimeSpan _backoffTime;
+        private readonly TimeSpan _operationTimeout;
         private ILoggingAdapter _log;
 
         protected readonly DeliveryBuffer<EventEnvelope> Buffer;
         protected readonly IActorRef JournalRef;
         protected long CurrentOffset;
 
-        protected AbstractEventsByTagPublisher(string tag, long fromOffset, int maxBufferSize, IActorRef writeJournal)
+        protected AbstractEventsByTagPublisher(
+            string tag,
+            long fromOffset,
+            int maxBufferSize,
+            IActorRef writeJournal,
+            QuerySettings settings)
         {
             Tag = tag;
             CurrentOffset = FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
             JournalRef = writeJournal;
+            
+            _operationTimeout = settings.OperationTimeout;
+            _maxRetries = settings.MaxRetries;
+            _maxBackoff = settings.MaxBackoff;
+            _backoffMultiplier = settings.BackoffMultiplier;
+            _backoffTime = settings.BackoffTime;
         }
+
+        public ITimerScheduler Timers { get; set; }
 
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         protected string Tag { get; }
@@ -60,18 +82,23 @@ namespace Akka.Persistence.Query.Sql
         protected int MaxBufferSize { get; }
 
         protected bool IsTimeForReplay =>
-            (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentOffset <= ToOffset);
+            Buffer.Length <= MaxBufferSize / 2 && CurrentOffset <= ToOffset;
 
-        protected abstract void ReceiveInitialRequest();
         protected abstract void ReceiveIdleRequest();
         protected abstract void ReceiveRecoverySuccess(long highestSequenceNr);
+
+        protected override void PostStop()
+        {
+            Timers.CancelAll();
+            base.PostStop();
+        }
 
         protected override bool Receive(object message)
         {
             switch (message)
             {
                 case Request _:
-                    ReceiveInitialRequest();
+                    Replay();
                     return true;
                 case EventsByTagPublisher.Continue _:
                     // no-op
@@ -102,20 +129,47 @@ namespace Akka.Persistence.Query.Sql
             }
         }
 
-        protected void Replay()
+        private bool Retrying(object message)
+        {
+            switch (message)
+            {
+                case Retry _:
+                    Become(Replaying);
+                    Replay();
+                    return true;
+                case EventsByTagPublisher.Continue _:
+                    // no-op
+                    return true;
+                case Request _:
+                    Buffer.DeliverBuffer(TotalDemand);
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private void Replay()
         {
             var limit = MaxBufferSize - Buffer.Length;
-            Log.Debug("request replay for tag [{0}] from [{1}] to [{2}] limit [{3}]", Tag, CurrentOffset, ToOffset,
-                limit);
-            JournalRef.Tell(new ReplayTaggedMessages(CurrentOffset, ToOffset, limit, Tag, Self));
+            Log.Debug("Request replay for tag [{0}] from [{1}] to [{2}] limit [{3}]", 
+                Tag, CurrentOffset, ToOffset, limit);
+            JournalRef.Tell(new ReplayTaggedMessages(CurrentOffset, ToOffset, limit, Tag, Self, _operationTimeout));
+            Timers.StartSingleTimer(_operationTimeoutKey, OperationTimedOut.Instance, _operationTimeout);
             Context.Become(Replaying);
         }
 
-        protected bool Replaying(object message)
+        private bool Replaying(object message)
         {
             switch (message)
             {
                 case ReplayedTaggedMessage replayed:
+                    // discard stale messages
+                    if (replayed.Offset <= CurrentOffset)
+                        return true;
+                    
                     Buffer.Add(new EventEnvelope(
                         offset: new Sequence(replayed.Offset),
                         persistenceId: replayed.Persistent.PersistenceId,
@@ -128,14 +182,33 @@ namespace Akka.Persistence.Query.Sql
                     return true;
 
                 case RecoverySuccess success:
+                    Timers.CancelAll();
+                    _retries = 0;
                     Log.Debug("replay completed for tag [{0}], currOffset [{1}]", Tag, CurrentOffset);
                     ReceiveRecoverySuccess(success.HighestSequenceNr);
                     return true;
 
                 case ReplayMessagesFailure failure:
-                    Log.Debug("replay failed for tag [{0}], due to [{1}]", Tag, failure.Cause.Message);
-                    Buffer.DeliverBuffer(TotalDemand);
-                    OnErrorThenStop(failure.Cause);
+                    Timers.CancelAll();
+                    RetryQuery(failure.Cause);
+                    return true;
+                
+                case Status.Failure msg:
+                    Timers.CancelAll();
+                    RetryQuery(msg.Cause);
+                    return true;
+
+                case OperationTimedOut _:
+                    Exception ex;
+                    try
+                    {
+                        throw new TimeoutException("Query timed out");
+                    }
+                    catch (Exception e)
+                    {
+                        ex = e;
+                    }
+                    RetryQuery(ex);
                     return true;
 
                 case Request _:
@@ -145,6 +218,7 @@ namespace Akka.Persistence.Query.Sql
                 case EventsByTagPublisher.Continue _:
                     // no-op
                     return true;
+                
                 case Cancel _:
                     Context.Stop(Self);
                     return true;
@@ -153,6 +227,26 @@ namespace Akka.Persistence.Query.Sql
                     return false;
             }
         }
+
+        private void RetryQuery(Exception ex)
+        {
+            _retries++;
+            if (_retries > _maxRetries)
+            {
+                Buffer.DeliverBuffer(TotalDemand);
+                Log.Debug(ex, "Replay failed for tag [{0}] due to [{1}]. Maximum retry reached", Tag, ex.Message);
+                OnErrorThenStop(ex);
+                return;
+            }
+            
+            Become(Retrying);
+            var retryTime = new TimeSpan((long)(_backoffTime.Ticks * (_backoffMultiplier * _retries)));
+            if (retryTime > _maxBackoff)
+                retryTime = _maxBackoff;
+            Log.Debug(ex, "Replay failed for tag [{0}] due to [{1}]. Retrying in {2} ms ({3}/{4})", 
+                Tag, ex.Message, retryTime.TotalMilliseconds, _retries, _maxRetries);
+            Timers.StartSingleTimer(_retryKey, Retry.Instance, retryTime);
+        }
     }
 
     internal sealed class LiveEventsByTagPublisher : AbstractEventsByTagPublisher
@@ -160,8 +254,8 @@ namespace Akka.Persistence.Query.Sql
         private readonly ICancelable _tickCancelable;
 
         public LiveEventsByTagPublisher(string tag, long fromOffset, long toOffset, TimeSpan refreshInterval,
-            int maxBufferSize, IActorRef writeJournal)
-            : base(tag, fromOffset, maxBufferSize, writeJournal)
+            int maxBufferSize, IActorRef writeJournal, QuerySettings settings)
+            : base(tag, fromOffset, maxBufferSize, writeJournal, settings)
         {
             ToOffset = toOffset;
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval,
@@ -174,11 +268,6 @@ namespace Akka.Persistence.Query.Sql
         {
             _tickCancelable.Cancel();
             base.PostStop();
-        }
-
-        protected override void ReceiveInitialRequest()
-        {
-            Replay();
         }
 
         protected override void ReceiveIdleRequest()
@@ -201,19 +290,14 @@ namespace Akka.Persistence.Query.Sql
     internal sealed class CurrentEventsByTagPublisher : AbstractEventsByTagPublisher
     {
         public CurrentEventsByTagPublisher(string tag, long fromOffset, long toOffset, int maxBufferSize,
-            IActorRef writeJournal)
-            : base(tag, fromOffset, maxBufferSize, writeJournal)
+            IActorRef writeJournal, QuerySettings settings)
+            : base(tag, fromOffset, maxBufferSize, writeJournal, settings)
         {
             _toOffset = toOffset;
         }
 
         private long _toOffset;
         protected override long ToOffset => _toOffset;
-
-        protected override void ReceiveInitialRequest()
-        {
-            Replay();
-        }
 
         protected override void ReceiveIdleRequest()
         {

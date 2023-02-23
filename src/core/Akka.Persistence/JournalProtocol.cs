@@ -23,6 +23,14 @@ namespace Akka.Persistence
     public interface IJournalRequest : IJournalMessage { }
 
     /// <summary>
+    /// Internal journal query command
+    /// </summary>
+    public interface IJournalQueryRequest : IJournalRequest
+    {
+        DateTime Deadline { get; }
+    }
+    
+    /// <summary>
     /// Internal journal acknowledgement
     /// </summary>
     public interface IJournalResponse : IJournalMessage { }
@@ -590,7 +598,7 @@ namespace Akka.Persistence
     /// Request to replay messages to the <see cref="PersistentActor"/>.
     /// </summary>
     [Serializable]
-    public sealed class ReplayMessages : IJournalRequest, IEquatable<ReplayMessages>
+    public sealed class ReplayMessages : IJournalQueryRequest, IEquatable<ReplayMessages>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplayMessages"/> class.
@@ -600,13 +608,14 @@ namespace Akka.Persistence
         /// <param name="max">Maximum number of messages to be replayed.</param>
         /// <param name="persistenceId">Requesting persistent actor identifier.</param>
         /// <param name="persistentActor">Requesting persistent actor.</param>
-        public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId, IActorRef persistentActor)
+        public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId, IActorRef persistentActor, TimeSpan? timeout = null)
         {
             FromSequenceNr = fromSequenceNr;
             ToSequenceNr = toSequenceNr;
             Max = max;
             PersistenceId = persistenceId;
             PersistentActor = persistentActor;
+            Deadline = DateTime.UtcNow + (timeout ?? TimeSpan.Zero);
         }
 
         /// <summary>
@@ -634,6 +643,7 @@ namespace Akka.Persistence
         /// </summary>
         public IActorRef PersistentActor { get; }
 
+        public DateTime Deadline { get; }
         
         public bool Equals(ReplayMessages other)
         {

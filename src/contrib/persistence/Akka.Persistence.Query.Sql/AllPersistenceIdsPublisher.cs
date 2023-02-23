@@ -10,40 +10,61 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams.Actors;
-using static Akka.Persistence.Query.Sql.SqlQueryConstants;
 
 namespace Akka.Persistence.Query.Sql
 {
-    internal sealed class CurrentPersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash
+    internal sealed class CurrentPersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash, IWithTimers
     {
-        public static Props Props(IActorRef writeJournal)
+        public static Props Props(IActorRef writeJournal, QuerySettings settings)
         {
-            return Actor.Props.Create(() => new CurrentPersistenceIdsPublisher(writeJournal));
+            return Actor.Props.Create(() => new CurrentPersistenceIdsPublisher(writeJournal, settings));
         }
 
+        private readonly string _retryKey = nameof(_retryKey);
+        private readonly string _operationTimeoutKey = nameof(_operationTimeoutKey);
+        
+        private int _retries;
+        private readonly int _maxRetries;
+        private readonly TimeSpan _maxBackoff;
+        private readonly float _backoffMultiplier;
+        private readonly TimeSpan _backoffTime;
+        private readonly TimeSpan _operationTimeout;
+        
         private readonly IActorRef _journalRef;
 
         private readonly DeliveryBuffer<string> _buffer;
         private readonly ILoggingAdapter _log;
 
         public IStash Stash { get; set; }
+        public ITimerScheduler Timers { get; set; }
 
-        public CurrentPersistenceIdsPublisher(IActorRef journalRef)
+        public CurrentPersistenceIdsPublisher(IActorRef journalRef, QuerySettings settings)
         {
             _journalRef = journalRef;
             _buffer = new DeliveryBuffer<string>(OnNext);
             _log = Context.GetLogger();
+            
+            _operationTimeout = settings.OperationTimeout;
+            _maxRetries = settings.MaxRetries;
+            _maxBackoff = settings.MaxBackoff;
+            _backoffMultiplier = settings.BackoffMultiplier;
+            _backoffTime = settings.BackoffTime;
         }
 
+        protected override void PostStop()
+        {
+            base.PostStop();
+            Timers.CancelAll();
+        }
+        
         protected override bool Receive(object message)
         {
             switch (message)
             {
                 case Request _:
                     Become(Initializing);
-                    _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self), DefaultQueryTimeout)
-                        .PipeTo(Self);
+                    _journalRef.Tell(new SelectCurrentPersistenceIds(0, Self, _operationTimeout));
+                    Timers.StartSingleTimer(_operationTimeoutKey, OperationTimedOut.Instance, _operationTimeout);
                     return true;
                 
                 case Cancel _:
@@ -60,6 +81,7 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case CurrentPersistenceIds current:
+                    _retries = 0;
                     _buffer.AddRange(current.AllPersistenceIds);
                     _buffer.DeliverBuffer(TotalDemand);
 
@@ -78,24 +100,64 @@ namespace Akka.Persistence.Query.Sql
                     return true;
                 
                 case Status.Failure msg:
-                    if (msg.Cause is AskTimeoutException e)
-                    {
-                        _log.Info(e, "Current persistence id query timed out, retrying");
-                    }
-                    else
-                    {
-                        _log.Info(msg.Cause, "Current persistence id query failed, retrying");
-                    }
-                    
-                    _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self), DefaultQueryTimeout)
-                        .PipeTo(Self);
+                    RetryQuery(msg.Cause);
                     return true;
                     
+                case OperationTimedOut _:
+                    Exception ex;
+                    try
+                    {
+                        throw new TimeoutException("Query timed out");
+                    }
+                    catch (Exception e)
+                    {
+                        ex = e;
+                    }
+                    RetryQuery(ex);
+                    return true;
+                
                 default:
                     Stash.Stash();
                     return true;
             }
+        }
+        
+        private bool Retrying(object message)
+        {
+            switch (message)
+            {
+                case Retry _:
+                    Become(Initializing);
+                    _journalRef.Tell(new SelectCurrentPersistenceIds(0, Self, _operationTimeout));
+                    Timers.StartSingleTimer(_operationTimeoutKey, OperationTimedOut.Instance, _operationTimeout);
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    Stash.Stash();
+                    return true;
+            }
+        }
+        
+        private void RetryQuery(Exception ex)
+        {
+            _retries++;
+            if (_retries > _maxRetries)
+            {
+                _buffer.DeliverBuffer(TotalDemand);
+                _log.Debug(ex, "Current persistence id query failed due to [{0}]. Maximum retry reached", ex.Message);
+                OnErrorThenStop(ex);
+                return;
+            }
+            
+            Become(Retrying);
+            var retryTime = new TimeSpan((long)(_backoffTime.Ticks * (_backoffMultiplier * _retries)));
+            if (retryTime > _maxBackoff)
+                retryTime = _maxBackoff;
+            _log.Debug(ex, "Current persistence id query failed due to [{0}]. Retrying in {1} ms ({2}/{3})", 
+                ex.Message, retryTime.TotalMilliseconds, _retries, _maxRetries);
+            Timers.StartSingleTimer(_retryKey, Retry.Instance, retryTime);
         }
 
         private bool Active(object message)
@@ -122,7 +184,7 @@ namespace Akka.Persistence.Query.Sql
         }
     }
 
-    internal sealed class LivePersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash
+    internal sealed class LivePersistenceIdsPublisher : ActorPublisher<string>, IWithTimers
     {
         private sealed class Continue
         {
@@ -131,20 +193,31 @@ namespace Akka.Persistence.Query.Sql
             private Continue() { }
         }
 
-        public static Props Props(TimeSpan refreshInterval, IActorRef writeJournal)
+        public static Props Props(TimeSpan refreshInterval, IActorRef writeJournal, int maxBufferSize, QuerySettings settings)
         {
-            return Actor.Props.Create(() => new LivePersistenceIdsPublisher(refreshInterval, writeJournal));
+            return Actor.Props.Create(() => new LivePersistenceIdsPublisher(refreshInterval, writeJournal, maxBufferSize, settings));
         }
 
+        private readonly string _retryKey = nameof(_retryKey);
+        private readonly string _operationTimeoutKey = nameof(_operationTimeoutKey);
+
+        private int _retries;
+        private readonly int _maxRetries;
+        private readonly TimeSpan _maxBackoff;
+        private readonly float _backoffMultiplier;
+        private readonly TimeSpan _backoffTime;
+        private readonly TimeSpan _operationTimeout;
+
+        private readonly int _maxBufferSize;
         private long _lastOrderingOffset;
         private readonly ICancelable _tickCancelable;
         private readonly IActorRef _journalRef;
         private readonly DeliveryBuffer<string> _buffer;
         private readonly ILoggingAdapter _log;
 
-        public IStash Stash { get; set; }
+        public ITimerScheduler Timers { get; set; }
 
-        public LivePersistenceIdsPublisher(TimeSpan refreshInterval, IActorRef journalRef)
+        public LivePersistenceIdsPublisher(TimeSpan refreshInterval, IActorRef journalRef, int maxBufferSize, QuerySettings settings)
         {
             _journalRef = journalRef;
             _log = Context.GetLogger();
@@ -154,11 +227,19 @@ namespace Akka.Persistence.Query.Sql
                 Self, 
                 Continue.Instance, 
                 Self);
+            _maxBufferSize = maxBufferSize;
             _buffer = new DeliveryBuffer<string>(OnNext);
+            
+            _operationTimeout = settings.OperationTimeout;
+            _maxRetries = settings.MaxRetries;
+            _maxBackoff = settings.MaxBackoff;
+            _backoffMultiplier = settings.BackoffMultiplier;
+            _backoffTime = settings.BackoffTime;
         }
 
         protected override void PostStop()
         {
+            Timers.CancelAll();
             _tickCancelable.Cancel();
             base.PostStop();
         }
@@ -169,9 +250,8 @@ namespace Akka.Persistence.Query.Sql
             {
                 case Request _:
                     Become(Waiting);
-                    _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self), DefaultQueryTimeout)
-                        .PipeTo(Self);
+                    _journalRef.Tell(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self, _operationTimeout));
+                    Timers.StartSingleTimer(_operationTimeoutKey, OperationTimedOut.Instance, _operationTimeout);
                     return true;
                 
                 case Continue _:
@@ -191,12 +271,18 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case CurrentPersistenceIds current:
+                    // drop stale reply
+                    if (_lastOrderingOffset > current.HighestOrderingNumber)
+                    {
+                        Become(Active);
+                        return true;
+                    }
+                    
                     _lastOrderingOffset = current.HighestOrderingNumber;
                     _buffer.AddRange(current.AllPersistenceIds);
                     _buffer.DeliverBuffer(TotalDemand);
 
                     Become(Active);
-                    Stash.UnstashAll();
                     return true;
                 
                 case Continue _:
@@ -207,22 +293,28 @@ namespace Akka.Persistence.Query.Sql
                     return true;
                 
                 case Status.Failure msg:
-                    if (msg.Cause is AskTimeoutException e)
+                    RetryQuery(msg.Cause);
+                    return true;
+                
+                case OperationTimedOut _:
+                    Exception ex;
+                    try
                     {
-                        _log.Info(e, $"Current persistence id query timed out, retrying. Offset: {_lastOrderingOffset}");
+                        throw new TimeoutException($"Query timed out");
                     }
-                    else
+                    catch (Exception e)
                     {
-                        _log.Info(msg.Cause, $"Current persistence id query failed, retrying. Offset: {_lastOrderingOffset}");
+                        ex = e;
                     }
-                    
-                    Become(Active);
-                    Stash.UnstashAll();
+                    RetryQuery(ex);
                     return true;
                     
+                case Request _:
+                    _buffer.DeliverBuffer(TotalDemand);
+                    return true;
+                
                 default:
-                    Stash.Stash();
-                    return true;
+                    return false;
             }
         }
 
@@ -239,10 +331,12 @@ namespace Akka.Persistence.Query.Sql
                     return true;
                 
                 case Continue _:
-                    Become(Waiting);
-                    _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self), DefaultQueryTimeout)
-                        .PipeTo(Self);
+                    if (_buffer.Length < _maxBufferSize / 2)
+                    {
+                        Become(Waiting);
+                        _journalRef.Tell(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self, _operationTimeout));
+                        Timers.StartSingleTimer(_operationTimeoutKey, OperationTimedOut.Instance, _operationTimeout);
+                    }
                     return true;
                 
                 case Cancel _:
@@ -256,6 +350,57 @@ namespace Akka.Persistence.Query.Sql
                 default:
                     return false;
             }
+        }
+        
+        private bool Retrying(object message)
+        {
+            switch (message)
+            {
+                case Retry _:
+                    Become(Waiting);
+                    _journalRef.Tell(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self, _operationTimeout));
+                    Timers.StartSingleTimer(_operationTimeoutKey, OperationTimedOut.Instance, _operationTimeout);
+                    return true;
+                
+                case Continue _:
+                    // no-op
+                    return true;
+                
+                case Request _:
+                    _buffer.DeliverBuffer(TotalDemand);
+                    return true;
+                
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                
+                case Status.Failure msg:
+                    _log.Info(msg.Cause, "Unexpected failure received");
+                    return true;
+                
+                default:
+                    return false;
+            }
+        }
+        
+        private void RetryQuery(Exception ex)
+        {
+            _retries++;
+            if (_retries > _maxRetries)
+            {
+                _buffer.DeliverBuffer(TotalDemand);
+                _log.Debug(ex, "Live persistence id query failed due to [{0}]. Maximum retry reached", ex.Message);
+                OnErrorThenStop(ex);
+                return;
+            }
+            
+            Become(Retrying);
+            var retryTime = new TimeSpan((long)(_backoffTime.Ticks * (_backoffMultiplier * _retries)));
+            if (retryTime > _maxBackoff)
+                retryTime = _maxBackoff;
+            _log.Debug(ex, "Live persistence id query failed due to [{0}]. Retrying in {1} ms ({2}/{3})", 
+                ex.Message, retryTime.TotalMilliseconds, _retries, _maxRetries);
+            Timers.StartSingleTimer(_retryKey, Retry.Instance, retryTime);
         }
     }
 }

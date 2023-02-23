@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Journal;
@@ -65,15 +64,17 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     [Serializable]
-    public sealed class SelectCurrentPersistenceIds : IJournalRequest
+    public sealed class SelectCurrentPersistenceIds : IJournalQueryRequest
     {
         public IActorRef ReplyTo { get; }
         public long Offset { get; }
+        public DateTime Deadline { get; }
 
-        public SelectCurrentPersistenceIds(long offset, IActorRef replyTo)
+        public SelectCurrentPersistenceIds(long offset, IActorRef replyTo, TimeSpan timeout)
         {
             Offset = offset;
             ReplyTo = replyTo;
+            Deadline = DateTime.UtcNow + timeout; 
         }
     }
 
@@ -177,7 +178,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class ReplayAllEvents : IJournalRequest
+    public sealed class ReplayAllEvents : IJournalQueryRequest
     {
         /// <summary>
         /// TBD
@@ -196,6 +197,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public readonly IActorRef ReplyTo;
 
+        public DateTime Deadline { get; }
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplayAllEvents"/> class.
         /// </summary>
@@ -211,7 +214,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
         /// </ul>
         /// </exception>
-        public ReplayAllEvents(long fromOffset, long toOffset, long max, IActorRef replyTo)
+        public ReplayAllEvents(long fromOffset, long toOffset, long max, IActorRef replyTo, TimeSpan timeout)
         {
             if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
             if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
@@ -221,6 +224,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             ToOffset = toOffset;
             Max = max;
             ReplyTo = replyTo;
+            Deadline = DateTime.UtcNow + timeout;
         }
     }
 
@@ -324,7 +328,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class ReplayTaggedMessages : IJournalRequest
+    public sealed class ReplayTaggedMessages : IJournalQueryRequest
     {
         /// <summary>
         /// TBD
@@ -346,6 +350,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// TBD
         /// </summary>
         public readonly IActorRef ReplyTo;
+        public DateTime Deadline { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplayTaggedMessages"/> class.
@@ -366,7 +371,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="tag"/> is null or empty.
         /// </exception>
-        public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, IActorRef replyTo)
+        public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, IActorRef replyTo, TimeSpan timeout)
         {
             if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
             if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
@@ -378,6 +383,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             Max = max;
             Tag = tag;
             ReplyTo = replyTo;
+            Deadline = DateTime.UtcNow + timeout;
         }
     }
 
