@@ -183,6 +183,20 @@ namespace Akka.Actor
                 bucket.ClearReschedule(_rescheduleRegistrations);
                 ProcessReschedule();
             }
+            
+            // empty all of the buckets
+            foreach (var bucket in _wheel)
+                bucket.ClearRegistrations(_unprocessedRegistrations);
+
+            // empty tasks that haven't been placed into a bucket yet
+            foreach (var reg in _registrations)
+            {
+                if (!reg.Cancelled)
+                    _unprocessedRegistrations.Add(reg);
+            }
+
+            // return the list of unprocessedRegistrations and signal that we're finished
+            _stopped.Value.TrySetResult(_unprocessedRegistrations);
         }
 #else
 private Thread _worker;
