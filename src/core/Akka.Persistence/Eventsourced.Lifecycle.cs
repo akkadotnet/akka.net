@@ -11,16 +11,13 @@ using Akka.Event;
 
 namespace Akka.Persistence
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
     public partial class Eventsourced
     {
         /// <summary>
-        /// TBD
+        /// Function used to filter out messages that should not be unstashed during recovery.
         /// </summary>
         public static readonly Func<Envelope, bool> UnstashFilterPredicate =
-            envelope => !(envelope.Message is WriteMessageSuccess || envelope.Message is ReplayedMessage);
+            envelope => envelope.Message is not (WriteMessageSuccess or ReplayedMessage);
 
         private void StartRecovery(Recovery recovery)
         {

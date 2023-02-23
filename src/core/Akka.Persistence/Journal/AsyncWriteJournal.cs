@@ -323,15 +323,11 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="e">TBD</param>
         /// <returns>TBD</returns>
-        protected Exception TryUnwrapException(Exception e)
+        protected static Exception TryUnwrapException(Exception e)
         {
-            if (e is AggregateException aggregateException)
-            {
-                aggregateException = aggregateException.Flatten();
-                if (aggregateException.InnerExceptions.Count == 1)
-                    return aggregateException.InnerExceptions[0];
-            }
-            return e;
+            if (e is not AggregateException aggregateException) return e;
+            aggregateException = aggregateException.Flatten();
+            return aggregateException.InnerExceptions.Count == 1 ? aggregateException.InnerExceptions[0] : e;
         }
 
         private void HandleWriteMessages(WriteMessages message)
@@ -357,7 +353,7 @@ namespace Akka.Persistence.Journal
         {
             try
             {
-                var prepared = PreparePersistentBatch(message.Messages).ToArray();
+                var prepared = PreparePersistentBatch(message.Messages);
                 // try in case AsyncWriteMessages throws
                 try
                 {
@@ -389,7 +385,7 @@ namespace Akka.Persistence.Journal
 
             resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, resequencerCounter, writeMessage.PersistentActor, writeJournal), writeJournal);
             Resequence((x, exception) => exception == null
-                ? (object)new WriteMessageSuccess(x, writeMessage.ActorInstanceId)
+                ? new WriteMessageSuccess(x, writeMessage.ActorInstanceId)
                 : new WriteMessageRejected(x, exception, writeMessage.ActorInstanceId), results, resequencerCounter, writeMessage, resequencer, writeJournal);
         }
         

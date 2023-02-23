@@ -69,7 +69,7 @@ namespace Akka.Remote
             _minStdDeviation = minStdDeviation;
             _acceptableHeartbeatPause = acceptableHeartbeatPause;
             _firstHeartbeatEstimate = firstHeartbeatEstimate;
-            state = new State(FirstHeartBeat, null);
+            _state = new AtomicReference<AccrualState>(new AccrualState(FirstHeartBeat, null));
         }
 
         /// <summary>
@@ -90,7 +90,7 @@ namespace Akka.Remote
             _minStdDeviation = config.GetTimeSpan("min-std-deviation", null);
             _acceptableHeartbeatPause = config.GetTimeSpan("acceptable-heartbeat-pause", null);
             _firstHeartbeatEstimate = config.GetTimeSpan("heartbeat-interval", null);
-            state = new State(FirstHeartBeat, null);
+            _state = new AtomicReference<AccrualState>(new AccrualState(FirstHeartBeat, null));
             EventStream = ev ?? Option<EventStream>.None;
         }
 
@@ -128,14 +128,14 @@ namespace Akka.Remote
         /// <summary>
         /// Uses volatile memory and immutability for lockless concurrency.
         /// </summary>
-        internal class State
+        internal class AccrualState
         {
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="history">TBD</param>
             /// <param name="timeStamp">TBD</param>
-            public State(HeartbeatHistory history, long? timeStamp)
+            public AccrualState(HeartbeatHistory history, long? timeStamp)
             {
                 TimeStamp = timeStamp;
                 History = history;
@@ -152,12 +152,12 @@ namespace Akka.Remote
             public long? TimeStamp { get; private set; }
         }
 
-        private AtomicReference<State> _state;
+        private readonly AtomicReference<AccrualState> _state;
 
-        internal State state
+        internal AccrualState State
         {
-            get { return _state; }
-            set { _state = value; }
+            get { return _state.Value; }
+            set { _state.Value = value; }
         }
 
         /// <summary>
@@ -173,7 +173,7 @@ namespace Akka.Remote
         /// </summary>
         public override bool IsMonitoring
         {
-            get { return state.TimeStamp.HasValue; }
+            get { return State.TimeStamp.HasValue; }
         }
 
         /// <summary>
@@ -182,7 +182,7 @@ namespace Akka.Remote
         public override void HeartBeat()
         {
             var timestamp = _clock();
-            var oldState = state;
+            var oldState = State;
             HeartbeatHistory newHistory;
 
             if (!oldState.TimeStamp.HasValue)
@@ -208,7 +208,7 @@ namespace Akka.Remote
                 else newHistory = oldState.History;
             }
 
-            var newState = new State(newHistory, timestamp);
+            var newState = new AccrualState(newHistory, timestamp);
 
             //if we won the race then update else try again
             if(!_state.CompareAndSet(oldState, newState)) HeartBeat();
@@ -236,7 +236,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         internal double Phi(long timestamp)
         {
-            var oldState = state;
+            var oldState = State;
             var oldTimestamp = oldState.TimeStamp;
 
             if (!oldTimestamp.HasValue)

@@ -37,7 +37,7 @@ namespace Akka.Streams.Dsl
                     var nextState = accumulateWhileUnchanged._propertyExtractor(nextElement);
 
                     if (!_currentState.HasValue)
-                        _currentState = new Option<TProperty>(nextState);
+                        _currentState = Option<TProperty>.Create(nextState);
 
                     if (EqualityComparer<TProperty>.Default.Equals(_currentState.Value, nextState))
                     {
@@ -50,7 +50,7 @@ namespace Akka.Streams.Dsl
                         _buffer.Clear();
                         _buffer.Add(nextElement);
                         Push(accumulateWhileUnchanged.Out, result);
-                        _currentState = new Option<TProperty>(nextState);
+                        _currentState = Option<TProperty>.Create(nextState);
                     }
                 }, onUpstreamFinish: () =>
                 {

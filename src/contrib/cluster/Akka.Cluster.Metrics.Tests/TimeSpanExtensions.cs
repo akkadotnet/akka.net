@@ -7,7 +7,7 @@
 
 using System;
 
-namespace Akka.Util.Extensions
+namespace Akka.Cluster.Metrics.Tests
 {
     /// <summary>
     /// TimeSpanExtensions
