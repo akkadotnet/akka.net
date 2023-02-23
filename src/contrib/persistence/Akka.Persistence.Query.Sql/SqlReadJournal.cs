@@ -50,6 +50,7 @@ namespace Akka.Persistence.Query.Sql
 
         private readonly IActorRef _journalRef;
         private readonly IActorRef _throttlerRef;
+        private readonly bool _throttlingEnabled;
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
@@ -60,9 +61,13 @@ namespace Akka.Persistence.Query.Sql
 
             _persistenceIdsPublisher = null;
             _journalRef = Persistence.Instance.Apply(system).JournalFor(writeJournalPluginId);
-            _throttlerRef =
-                system.SystemActorOf(Props.Create(() => new SqlQueryThrottler(_journalRef, _maxConcurrentQueries)),
-                    "sql-query-throttler-" + _idCounter.GetAndIncrement());
+            _throttlingEnabled = config.GetBoolean("throttling-enabled", true);
+            if (_throttlingEnabled)
+                _throttlerRef =
+                    system.SystemActorOf(Props.Create(() => new SqlQueryThrottler(_journalRef, _maxConcurrentQueries)),
+                        "sql-query-throttler-" + _idCounter.GetAndIncrement());
+            else
+                _throttlerRef = _journalRef;
         }
 
         /// <summary>
@@ -95,7 +100,7 @@ namespace Akka.Persistence.Query.Sql
                         Source.ActorPublisher<string>(
                                 LivePersistenceIdsPublisher.Props(
                                     _refreshInterval,
-                                    _throttlerRef))
+                                    _throttlerRef, _throttlingEnabled))
                             .ToMaterialized(
                                 Sink.DistinctRetainingFanOutPublisher<string>(PersistenceIdsShutdownCallback),
                                 Keep.Right);
@@ -123,7 +128,7 @@ namespace Akka.Persistence.Query.Sql
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
         public Source<string, NotUsed> CurrentPersistenceIds()
-            => Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_throttlerRef))
+            => Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_throttlerRef, _throttlingEnabled))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentPersistenceIds");
 
@@ -156,7 +161,7 @@ namespace Akka.Persistence.Query.Sql
         public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr,
             long toSequenceNr) =>
             Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr,
-                    toSequenceNr, _refreshInterval, _maxBufferSize, _throttlerRef))
+                    toSequenceNr, _refreshInterval, _maxBufferSize, _throttlerRef, _throttlingEnabled))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("EventsByPersistenceId-" + persistenceId);
 
@@ -168,7 +173,7 @@ namespace Akka.Persistence.Query.Sql
         public Source<EventEnvelope, NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr,
             long toSequenceNr) =>
             Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr,
-                    toSequenceNr, null, _maxBufferSize, _throttlerRef))
+                    toSequenceNr, null, _maxBufferSize, _throttlerRef, _throttlingEnabled))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentEventsByPersistenceId-" + persistenceId);
 
@@ -213,12 +218,12 @@ namespace Akka.Persistence.Query.Sql
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset = null)
         {
-            offset = offset ?? new Sequence(0L);
+            offset ??= new Sequence(0L);
             switch (offset)
             {
                 case Sequence seq:
                     return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value,
-                            long.MaxValue, _refreshInterval, _maxBufferSize, _throttlerRef))
+                            long.MaxValue, _refreshInterval, _maxBufferSize, _throttlerRef, _throttlingEnabled))
                         .MapMaterializedValue(_ => NotUsed.Instance)
                         .Named($"EventsByTag-{tag}");
                 case NoOffset _:
@@ -235,12 +240,12 @@ namespace Akka.Persistence.Query.Sql
         /// </summary>
         public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset = null)
         {
-            offset = offset ?? new Sequence(0L);
+            offset ??= new Sequence(0L);
             switch (offset)
             {
                 case Sequence seq:
                     return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value,
-                            long.MaxValue, null, _maxBufferSize, _throttlerRef))
+                            long.MaxValue, null, _maxBufferSize, _throttlerRef, _throttlingEnabled))
                         .MapMaterializedValue(_ => NotUsed.Instance)
                         .Named($"CurrentEventsByTag-{tag}");
                 case NoOffset _:
@@ -268,7 +273,7 @@ namespace Akka.Persistence.Query.Sql
 
             return Source
                 .ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, _refreshInterval, _maxBufferSize,
-                    _throttlerRef))
+                    _throttlerRef, _throttlingEnabled))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("AllEvents");
         }
@@ -290,7 +295,7 @@ namespace Akka.Persistence.Query.Sql
             }
 
             return Source
-                .ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, null, _maxBufferSize, _throttlerRef))
+                .ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, null, _maxBufferSize, _throttlerRef, _throttlingEnabled))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentAllEvents");
         }

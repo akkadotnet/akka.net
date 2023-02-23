@@ -25,11 +25,11 @@ namespace Akka.Persistence.Query.Sql
             }
         }
 
-        public static Props Props(string tag, long fromOffset, long toOffset, TimeSpan? refreshInterval, int maxBufferSize, IActorRef writeJournal)
+        public static Props Props(string tag, long fromOffset, long toOffset, TimeSpan? refreshInterval, int maxBufferSize, IActorRef writeJournal, bool isThrottled)
         {
             return refreshInterval.HasValue
-                ? Actor.Props.Create(() => new LiveEventsByTagPublisher(tag, fromOffset, toOffset, refreshInterval.Value, maxBufferSize, writeJournal))
-                : Actor.Props.Create(() => new CurrentEventsByTagPublisher(tag, fromOffset, toOffset, maxBufferSize, writeJournal));
+                ? Actor.Props.Create(() => new LiveEventsByTagPublisher(tag, fromOffset, toOffset, refreshInterval.Value, maxBufferSize, writeJournal, isThrottled))
+                : Actor.Props.Create(() => new CurrentEventsByTagPublisher(tag, fromOffset, toOffset, maxBufferSize, writeJournal, isThrottled));
         }
     }
 
@@ -40,13 +40,15 @@ namespace Akka.Persistence.Query.Sql
         protected readonly DeliveryBuffer<EventEnvelope> Buffer;
         protected readonly IActorRef JournalRef;
         protected long CurrentOffset;
-        protected AbstractEventsByTagPublisher(string tag, long fromOffset, int maxBufferSize, IActorRef writeJournal)
+        private readonly bool _isThrottled;
+        protected AbstractEventsByTagPublisher(string tag, long fromOffset, int maxBufferSize, IActorRef writeJournal, bool isThrottled)
         {
             Tag = tag;
             CurrentOffset = FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
             JournalRef = writeJournal;
+            _isThrottled = isThrottled;
         }
 
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
@@ -101,7 +103,8 @@ namespace Akka.Persistence.Query.Sql
         {
             var limit = MaxBufferSize - Buffer.Length;
             Log.Debug("request replay for tag [{0}] from [{1}] to [{2}] limit [{3}]", Tag, CurrentOffset, ToOffset, limit);
-            JournalRef.Tell(new ReplayTaggedMessages(CurrentOffset, ToOffset, limit, Tag, Self));
+            // if we're throttling, messages need to go back to throttler, not ourselves
+            JournalRef.Tell(new ReplayTaggedMessages(CurrentOffset, ToOffset, limit, Tag, _isThrottled ? JournalRef : Self));
             Context.Become(Replaying(limit));
         }
 
@@ -155,8 +158,8 @@ namespace Akka.Persistence.Query.Sql
     internal sealed class LiveEventsByTagPublisher : AbstractEventsByTagPublisher
     {
         private readonly ICancelable _tickCancelable;
-        public LiveEventsByTagPublisher(string tag, long fromOffset, long toOffset, TimeSpan refreshInterval, int maxBufferSize, IActorRef writeJournal)
-            : base(tag, fromOffset, maxBufferSize, writeJournal)
+        public LiveEventsByTagPublisher(string tag, long fromOffset, long toOffset, TimeSpan refreshInterval, int maxBufferSize, IActorRef writeJournal, bool isThrottler)
+            : base(tag, fromOffset, maxBufferSize, writeJournal, isThrottler)
         {
             ToOffset = toOffset;
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByTagPublisher.Continue.Instance, Self);
@@ -194,8 +197,8 @@ namespace Akka.Persistence.Query.Sql
 
     internal sealed class CurrentEventsByTagPublisher : AbstractEventsByTagPublisher
     {
-        public CurrentEventsByTagPublisher(string tag, long fromOffset, long toOffset, int maxBufferSize, IActorRef writeJournal)
-            : base(tag, fromOffset, maxBufferSize, writeJournal)
+        public CurrentEventsByTagPublisher(string tag, long fromOffset, long toOffset, int maxBufferSize, IActorRef writeJournal, bool isThrottled)
+            : base(tag, fromOffset, maxBufferSize, writeJournal, isThrottled)
         {
             _toOffset = toOffset;
         }

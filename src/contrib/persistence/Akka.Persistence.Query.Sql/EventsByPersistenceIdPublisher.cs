@@ -24,11 +24,11 @@ namespace Akka.Persistence.Query.Sql
             }
         }
 
-        public static Props Props(string persistenceId, long fromSequenceNr, long toSequenceNr, TimeSpan? refreshDuration, int maxBufferSize, IActorRef writeJournal)
+        public static Props Props(string persistenceId, long fromSequenceNr, long toSequenceNr, TimeSpan? refreshDuration, int maxBufferSize, IActorRef writeJournal, bool isThrottled)
         {
             return refreshDuration.HasValue
-                ? Actor.Props.Create(() => new LiveEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, refreshDuration.Value))
-                : Actor.Props.Create(() => new CurrentEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal));
+                ? Actor.Props.Create(() => new LiveEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, refreshDuration.Value, isThrottled))
+                : Actor.Props.Create(() => new CurrentEventsByPersistenceIdPublisher(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, isThrottled));
         }
     }
 
@@ -39,14 +39,16 @@ namespace Akka.Persistence.Query.Sql
         protected DeliveryBuffer<EventEnvelope> Buffer;
         protected readonly IActorRef JournalRef;
         protected long CurrentSequenceNr;
+        private readonly bool _isThrottled;
 
-        protected AbstractEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef journalRef)
+        protected AbstractEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef journalRef, bool isThrottled)
         {
             PersistenceId = persistenceId;
             CurrentSequenceNr = FromSequenceNr = fromSequenceNr;
             ToSequenceNr = toSequenceNr;
             MaxBufferSize = maxBufferSize;
             JournalRef = journalRef;
+            _isThrottled = isThrottled;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
         }
 
@@ -107,7 +109,8 @@ namespace Akka.Persistence.Query.Sql
         {
             var limit = MaxBufferSize - Buffer.Length;
             Log.Debug("request replay for persistenceId [{0}] from [{1}] to [{2}] limit [{3}]", PersistenceId, CurrentSequenceNr, ToSequenceNr, limit);
-            JournalRef.Tell(new ReplayMessages(CurrentSequenceNr, ToSequenceNr, limit, PersistenceId, Self));
+            // if we're throttling, responses from journal need to be passed back to the throttler
+            JournalRef.Tell(new ReplayMessages(CurrentSequenceNr, ToSequenceNr, limit, PersistenceId, _isThrottled ? JournalRef : Self));
             Context.Become(Replaying(limit));
         }
 
@@ -165,8 +168,8 @@ namespace Akka.Persistence.Query.Sql
     {
         private readonly ICancelable _tickCancelable;
 
-        public LiveEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef writeJournal, TimeSpan refreshInterval)
-            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal)
+        public LiveEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef writeJournal, TimeSpan refreshInterval, bool isThrottled)
+            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, isThrottled)
         {
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByPersistenceIdPublisher.Continue.Instance, Self);
         }
@@ -201,8 +204,8 @@ namespace Akka.Persistence.Query.Sql
 
     internal sealed class CurrentEventsByPersistenceIdPublisher : AbstractEventsByPersistenceIdPublisher
     {
-        public CurrentEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef writeJournal)
-            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal)
+        public CurrentEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef writeJournal, bool isThrottled)
+            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournal, isThrottled)
         {
         }
 
