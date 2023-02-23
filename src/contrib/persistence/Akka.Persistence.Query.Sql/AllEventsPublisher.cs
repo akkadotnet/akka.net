@@ -25,11 +25,11 @@ namespace Akka.Persistence.Query.Sql
             private Continue() { }
         }
 
-        public static Props Props(long fromOffset, TimeSpan? refreshInterval, int maxBufferSize, IActorRef writeJournal, bool isThrottled)
+        public static Props Props(long fromOffset, TimeSpan? refreshInterval, int maxBufferSize, IActorRef writeJournal)
         {
             return refreshInterval.HasValue ?
-                Actor.Props.Create(() => new LiveAllEventsPublisher(fromOffset, refreshInterval.Value, maxBufferSize, writeJournal, isThrottled)) :
-                Actor.Props.Create(() => new CurrentAllEventsPublisher(fromOffset, maxBufferSize, writeJournal, isThrottled));
+                Actor.Props.Create(() => new LiveAllEventsPublisher(fromOffset, refreshInterval.Value, maxBufferSize, writeJournal)) :
+                Actor.Props.Create(() => new CurrentAllEventsPublisher(fromOffset, maxBufferSize, writeJournal));
         }
     }
 
@@ -37,15 +37,13 @@ namespace Akka.Persistence.Query.Sql
     {
 
         private ILoggingAdapter _log;
-        private bool _isThrottled;
         protected long CurrentOffset;
 
-        protected AbstractAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef journalRef, bool isThrottled)
+        protected AbstractAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef journalRef)
         {
             CurrentOffset = FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
             JournalRef = journalRef;
-            _isThrottled = isThrottled;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
         }
 
@@ -100,8 +98,7 @@ namespace Akka.Persistence.Query.Sql
         {
             var limit = MaxBufferSize - Buffer.Length;
             Log.Debug("replay all events request from [{0}] to [{1}], limit [{2}]", CurrentOffset, ToOffset, limit);
-            // if we're throttling, we need to let replies from the journal return to the throttler rather than to us.
-            JournalRef.Tell(new ReplayAllEvents(CurrentOffset, ToOffset, limit, _isThrottled ? JournalRef : Self));
+            JournalRef.Tell(new ReplayAllEvents(CurrentOffset, ToOffset, limit, Self));
             Context.Become(Replaying);
         }
 
@@ -151,8 +148,8 @@ namespace Akka.Persistence.Query.Sql
     internal sealed class LiveAllEventsPublisher : AbstractAllEventsPublisher
     {
         private readonly ICancelable _tickCancelable;
-        public LiveAllEventsPublisher(long fromOffset, TimeSpan refreshInterval, int maxBufferSize, IActorRef writeJournal, bool isThrottled)
-            : base(fromOffset, maxBufferSize, writeJournal, isThrottled)
+        public LiveAllEventsPublisher(long fromOffset, TimeSpan refreshInterval, int maxBufferSize, IActorRef writeJournal)
+            : base(fromOffset, maxBufferSize, writeJournal)
         {
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, AllEventsPublisher.Continue.Instance, Self);
         }
@@ -189,8 +186,8 @@ namespace Akka.Persistence.Query.Sql
 
     internal sealed class CurrentAllEventsPublisher : AbstractAllEventsPublisher
     {
-        public CurrentAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef writeJournal, bool isThrottled)
-            : base(fromOffset, maxBufferSize, writeJournal, isThrottled)
+        public CurrentAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef writeJournal)
+            : base(fromOffset, maxBufferSize, writeJournal)
         { }
 
         private long _toOffset = long.MaxValue;
