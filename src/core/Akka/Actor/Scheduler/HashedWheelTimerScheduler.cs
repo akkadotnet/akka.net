@@ -120,47 +120,14 @@ namespace Akka.Actor
 
         private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new();
 
-#if NET_STANDARD
-        private Thread _worker;
-
-        private void Start()
-        {
-            if (_workerState == WORKER_STATE_STARTED) { } // do nothing
-            else if (_workerState == WORKER_STATE_INIT)
-            {
-                _worker = new Thread(Run) { IsBackground = true };
-#pragma warning disable 420
-                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
-#pragma warning restore 420
-                    WORKER_STATE_INIT)
-                {
-                    _worker.Start();
-                }
-            }
-
-            else if (_workerState == WORKER_STATE_SHUTDOWN)
-            {
-                throw new SchedulerException("cannot enqueue after timer shutdown");
-            }
-            else
-            {
-                throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
-            }
-
-            while (_startTime == 0)
-            {
-                _workerInitialized.Wait();
-            }
-        }
-#else
+#if NET6_0_OR_GREATER
         private PeriodicTimer _timer;
         private readonly CancellationTokenSource _cts = new();
-        
+
         private void Start()
         {
             if (_workerState == WORKER_STATE_STARTED)
             {
-                
             } // do nothing
             else if (_workerState == WORKER_STATE_INIT)
             {
@@ -171,7 +138,9 @@ namespace Akka.Actor
 #pragma warning restore 420
                     WORKER_STATE_INIT)
                 {
-                    
+#pragma warning disable CS4014
+                    RunAsync(); // start the clock
+#pragma warning restore CS4014
                 }
             }
 
@@ -204,11 +173,6 @@ namespace Akka.Actor
 
             while (await _timer.WaitForNextTickAsync(_cts.Token))
             {
-                unchecked
-                {
-                    
-                
-                }
                 var deadline = _tickDuration * (_tick + 1);
                 var idx = (int)(_tick & _mask);
                 var bucket = _wheel[idx];
@@ -220,8 +184,40 @@ namespace Akka.Actor
                 ProcessReschedule();
             }
         }
-#endif
+#else
+private Thread _worker;
 
+        private void Start()
+        {
+            if (_workerState == WORKER_STATE_STARTED) { } // do nothing
+            else if (_workerState == WORKER_STATE_INIT)
+            {
+                _worker = new Thread(Run) { IsBackground = true };
+#pragma warning disable 420
+                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
+#pragma warning restore 420
+                    WORKER_STATE_INIT)
+                {
+                    _worker.Start();
+                }
+            }
+
+            else if (_workerState == WORKER_STATE_SHUTDOWN)
+            {
+                throw new SchedulerException("cannot enqueue after timer shutdown");
+            }
+            else
+            {
+                throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
+            }
+
+            while (_startTime == 0)
+            {
+                _workerInitialized.Wait();
+            }
+        }
+        
+        
         /// <summary>
         /// Scheduler thread entry method
         /// </summary>
@@ -267,20 +263,8 @@ namespace Akka.Actor
             // return the list of unprocessedRegistrations and signal that we're finished
             _stopped.Value.TrySetResult(_unprocessedRegistrations);
         }
-
-        private void ProcessReschedule()
-        {
-            foreach (var sched in _rescheduleRegistrations)
-            {
-                var nextDeadline = HighResMonotonicClock.Ticks - _startTime + sched.Offset;
-                sched.Deadline = nextDeadline;
-                PlaceInBucket(sched);
-            }
-
-            _rescheduleRegistrations.Clear();
-        }
-
-        private long WaitForNextTick()
+        
+          private long WaitForNextTick()
         {
             var deadline = _tickDuration * (_tick + 1);
             unchecked // just to avoid trouble with long-running applications
@@ -302,6 +286,21 @@ namespace Akka.Actor
                 }
             }
         }
+
+#endif
+
+        private void ProcessReschedule()
+        {
+            foreach (var sched in _rescheduleRegistrations)
+            {
+                var nextDeadline = HighResMonotonicClock.Ticks - _startTime + sched.Offset;
+                sched.Deadline = nextDeadline;
+                PlaceInBucket(sched);
+            }
+
+            _rescheduleRegistrations.Clear();
+        }
+
 
         private void TransferRegistrationsToBuckets()
         {
@@ -443,6 +442,9 @@ namespace Akka.Actor
                 WORKER_STATE_STARTED)
 #pragma warning restore 420
             {
+#if NET6_0_OR_GREATER
+                _cts.Cancel();
+#endif
                 // Let remaining work that is already being processed finished. The termination task will complete afterwards
                 return p.Task;
             }
@@ -482,6 +484,9 @@ namespace Akka.Actor
             }
 
             _unprocessedRegistrations.Clear();
+#if NET6_0_OR_GREATER
+            _timer.Dispose();
+#endif
         }
 
         /// <summary>
