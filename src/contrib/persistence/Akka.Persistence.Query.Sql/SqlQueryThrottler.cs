@@ -38,7 +38,7 @@ internal sealed class SqlQueryThrottler : ReceiveActor
     protected override void PreStart()
     {
         var materializer = Context.Materializer();
-        var (actor, source) = Source.ActorRef<(IJournalRequest req, IActorRef sender)>(20000, OverflowStrategy.DropHead)
+        var (actor, source) = Source.ActorRef<(IJournalRequest req, IActorRef sender)>(1_000_000, OverflowStrategy.DropHead)
             .PreMaterialize(materializer);
         _throttler = actor;
 
