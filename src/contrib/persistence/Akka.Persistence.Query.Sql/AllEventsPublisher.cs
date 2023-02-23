@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Sql.Common.Journal;
@@ -45,7 +43,6 @@ namespace Akka.Persistence.Query.Sql
         private readonly TimeSpan _backoffTime;
         private readonly TimeSpan _operationTimeout;
         
-        private ILoggingAdapter _log;
         protected long CurrentOffset;
 
         protected AbstractAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef journalRef, QuerySettings settings)
@@ -60,16 +57,18 @@ namespace Akka.Persistence.Query.Sql
             _maxBackoff = settings.MaxBackoff;
             _backoffMultiplier = settings.BackoffMultiplier;
             _backoffTime = settings.BackoffTime;
+
+            Log = Context.GetLogger();
         }
 
         public ITimerScheduler Timers { get; set; }
-        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
-        protected IActorRef JournalRef { get; }
+        private ILoggingAdapter Log { get; }
+        private IActorRef JournalRef { get; }
         protected DeliveryBuffer<EventEnvelope> Buffer { get; }
-        protected long FromOffset { get; }
+        private long FromOffset { get; }
         protected abstract long ToOffset { get; }
-        protected int MaxBufferSize { get; }
-        protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentOffset <= ToOffset);
+        private int MaxBufferSize { get; }
+        private bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentOffset <= ToOffset);
 
         protected abstract void ReceiveIdleRequest();
         protected abstract void ReceiveRecoverySuccess(long highestOrderingNr);
@@ -141,10 +140,11 @@ namespace Akka.Persistence.Query.Sql
             var limit = MaxBufferSize - Buffer.Length;
             Log.Debug("replay all events request from [{0}] to [{1}], limit [{2}]", CurrentOffset, ToOffset, limit);
             JournalRef.Tell(new ReplayAllEvents(CurrentOffset, ToOffset, limit, Self, _operationTimeout));
+            Timers.StartSingleTimer(_operationTimeoutKey, OperationTimedOut.Instance, _operationTimeout);
             Context.Become(Replaying);
         }
 
-        protected bool Replaying( object message )
+        private bool Replaying( object message )
         {
             switch (message)
             {

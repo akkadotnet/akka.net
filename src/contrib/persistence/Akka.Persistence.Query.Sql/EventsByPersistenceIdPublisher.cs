@@ -44,8 +44,8 @@ namespace Akka.Persistence.Query.Sql
         private readonly TimeSpan _backoffTime;
         private readonly TimeSpan _operationTimeout;
         
-        protected DeliveryBuffer<EventEnvelope> Buffer;
-        protected readonly IActorRef JournalRef;
+        protected readonly DeliveryBuffer<EventEnvelope> Buffer;
+        private readonly IActorRef _journalRef;
         protected long CurrentSequenceNr;
 
         protected AbstractEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef journalRef, QuerySettings settings)
@@ -54,7 +54,7 @@ namespace Akka.Persistence.Query.Sql
             CurrentSequenceNr = FromSequenceNr = fromSequenceNr;
             ToSequenceNr = toSequenceNr;
             MaxBufferSize = maxBufferSize;
-            JournalRef = journalRef;
+            _journalRef = journalRef;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
             
             _operationTimeout = settings.OperationTimeout;
@@ -67,13 +67,13 @@ namespace Akka.Persistence.Query.Sql
         }
 
         public ITimerScheduler Timers { get; set; }
-        protected ILoggingAdapter Log { get; }
-        protected string PersistenceId { get; }
+        private ILoggingAdapter Log { get; }
+        private string PersistenceId { get; }
         protected long FromSequenceNr { get; }
         protected long ToSequenceNr { get; set; }
-        protected int MaxBufferSize { get; }
+        private int MaxBufferSize { get; }
 
-        protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentSequenceNr <= ToSequenceNr);
+        private bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentSequenceNr <= ToSequenceNr);
 
         protected abstract void ReceiveIdleRequest();
         protected abstract void ReceiveRecoverySuccess(long highestSequenceNr);
@@ -143,7 +143,7 @@ namespace Akka.Persistence.Query.Sql
             var limit = MaxBufferSize - Buffer.Length;
             Log.Debug("request replay for persistenceId [{0}] from [{1}] to [{2}] limit [{3}]", 
                 PersistenceId, CurrentSequenceNr, ToSequenceNr, limit);
-            JournalRef.Tell(new ReplayMessages(CurrentSequenceNr, ToSequenceNr, limit, PersistenceId, Self, _operationTimeout));
+            _journalRef.Tell(new ReplayMessages(CurrentSequenceNr, ToSequenceNr, limit, PersistenceId, Self, _operationTimeout));
             Timers.StartSingleTimer(_operationTimeoutKey, OperationTimedOut.Instance, _operationTimeout);
             Context.Become(Replaying);
         }

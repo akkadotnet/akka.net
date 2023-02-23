@@ -50,7 +50,7 @@ namespace Akka.Persistence.Query.Sql
         private ILoggingAdapter _log;
 
         protected readonly DeliveryBuffer<EventEnvelope> Buffer;
-        protected readonly IActorRef JournalRef;
+        private readonly IActorRef _journalRef;
         protected long CurrentOffset;
 
         protected AbstractEventsByTagPublisher(
@@ -64,7 +64,7 @@ namespace Akka.Persistence.Query.Sql
             CurrentOffset = FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
-            JournalRef = writeJournal;
+            _journalRef = writeJournal;
             
             _operationTimeout = settings.OperationTimeout;
             _maxRetries = settings.MaxRetries;
@@ -75,13 +75,13 @@ namespace Akka.Persistence.Query.Sql
 
         public ITimerScheduler Timers { get; set; }
 
-        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
-        protected string Tag { get; }
-        protected long FromOffset { get; }
+        private ILoggingAdapter Log => _log ??= Context.GetLogger();
+        private string Tag { get; }
+        private long FromOffset { get; }
         protected abstract long ToOffset { get; }
-        protected int MaxBufferSize { get; }
+        private int MaxBufferSize { get; }
 
-        protected bool IsTimeForReplay =>
+        private bool IsTimeForReplay =>
             Buffer.Length <= MaxBufferSize / 2 && CurrentOffset <= ToOffset;
 
         protected abstract void ReceiveIdleRequest();
@@ -156,7 +156,7 @@ namespace Akka.Persistence.Query.Sql
             var limit = MaxBufferSize - Buffer.Length;
             Log.Debug("Request replay for tag [{0}] from [{1}] to [{2}] limit [{3}]", 
                 Tag, CurrentOffset, ToOffset, limit);
-            JournalRef.Tell(new ReplayTaggedMessages(CurrentOffset, ToOffset, limit, Tag, Self, _operationTimeout));
+            _journalRef.Tell(new ReplayTaggedMessages(CurrentOffset, ToOffset, limit, Tag, Self, _operationTimeout));
             Timers.StartSingleTimer(_operationTimeoutKey, OperationTimedOut.Instance, _operationTimeout);
             Context.Become(Replaying);
         }
