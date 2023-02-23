@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Akka.Util
 {
@@ -18,19 +19,26 @@ namespace Akka.Util
     /// <typeparam name="T">TBD</typeparam>
     public readonly struct Option<T>
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Option<T> Create(T value)
+#pragma warning disable CS0618
+            => value is null ? None : new Option<T>(value);
+#pragma warning restore CS0618
+
         /// <summary>
         /// None.
         /// </summary>
         public static readonly Option<T> None = new Option<T>();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="value">TBD</param>
+        // TODO: Change this to private constructor in the future
+        [Obsolete("Use Option<T>.Create() instead")] 
         public Option(T value)
         {
+            if (value is null)
+                throw new ArgumentNullException(nameof(value), "You can not create an Option<T> with null value. Either use Option<T>.None or use Option<T>.Create(null).");
+            
             Value = value;
-            HasValue = value != null;
+            HasValue = true;
         }
 
         /// <summary>
@@ -50,7 +58,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="value">The object to convert</param>
         /// <returns>The result of the conversion.</returns>
-        public static implicit operator Option<T>(T value) => new Option<T>(value);
+        public static implicit operator Option<T>(T value) => Create(value);
 
         /// <summary>
         /// Gets option value, if any, otherwise returns default value provided

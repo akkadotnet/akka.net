@@ -63,10 +63,7 @@ namespace Akka.Persistence.Journal
         /// </exception>
         public SetStore(IActorRef store)
         {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
-
-            Store = store;
+            Store = store ?? throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
         }
 
         /// <summary>
@@ -263,10 +260,7 @@ namespace Akka.Persistence.Journal
         private bool _isInitialized;
         private bool _isInitTimedOut;
         private IActorRef _store;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected AsyncWriteProxy()
         {
             _isInitialized = false;
@@ -298,7 +292,7 @@ namespace Akka.Persistence.Journal
         {
             if (_isInitialized)
             {
-                if (!(message is InitTimeout))
+                if (message is not InitTimeout)
                     return base.AroundReceive(receive, message);
             }
             else switch (message)

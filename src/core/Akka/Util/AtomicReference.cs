@@ -75,7 +75,6 @@ namespace Akka.Util
             return Interlocked.Exchange(ref atomicValue, newValue);
         }
 
-        #region Conversion operators
 
         /// <summary>
         /// Performs an implicit conversion from <see cref="AtomicReference{T}"/> to <typeparamref name="T"/>.
@@ -86,18 +85,6 @@ namespace Akka.Util
         {
             return atomicReference.Value;
         }
-
-        /// <summary>
-        /// Performs an implicit conversion from <typeparamref name="T"/> to <see cref="AtomicReference{T}"/>.
-        /// </summary>
-        /// <param name="value">The reference to convert</param>
-        /// <returns>The result of the conversion.</returns>
-        public static implicit operator AtomicReference<T>(T value)
-        {
-            return new AtomicReference<T>(value);
-        }
-
-        #endregion
     }
 }
 

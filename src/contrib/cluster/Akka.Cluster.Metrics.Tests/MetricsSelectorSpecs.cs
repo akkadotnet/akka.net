@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Cluster.Metrics.Serialization;
-using Akka.Util.Extensions;
 using FluentAssertions;
 using Xunit;
 using Address = Akka.Actor.Address;
