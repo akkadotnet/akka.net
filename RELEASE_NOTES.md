@@ -1,3 +1,20 @@
+#### 1.5.0-beta2 February 20th 2023 ####
+Version 1.5.0-beta2 contains **breaking API changes** and new API changes for Akka.NET.
+
+* [Akka.Event: Add K to the DateTime format string to include TZ information](https://github.com/akkadotnet/akka.net/pull/6419)
+* [Akka.TestKit: Reintroduce old code and mark them obsolete](https://github.com/akkadotnet/akka.net/pull/6420) - fixes major regression in Akka.TestKit.Xunit2 where we removed `IDipsoable` before. This PR reintroduces it for backwards compat.
+* [Akka.Cluster.Sharding: clean its internal cache if region/proxy died](https://github.com/akkadotnet/akka.net/pull/6424)
+* [Akka.Util: Harden `Option<T>` by disallowing null value](https://github.com/akkadotnet/akka.net/pull/6426)
+* [Akka.Util: move `DateTime` / `TimeSpan` extension APIs out of Akka.Util and into Akka.Cluster.Metrics](https://github.com/akkadotnet/akka.net/pull/6427)
+* [Akka.Util: Remove unsafe `implicit` conversion operators in `AtomicBoolean` and `AtomicReference<T>`](https://github.com/akkadotnet/akka.net/pull/6429)
+* [Akka: Standardize on C# 11.0](https://github.com/akkadotnet/akka.net/pull/6431)
+* [Akka.Persistence: improve `AsyncWriteJournal` and `PersistentActor` performance](https://github.com/akkadotnet/akka.net/pull/6432)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 260 | 942 | Aaron Stannard |
+| 5 | 169 | 60 | Gregorius Soedharmo |
+
 #### 1.5.0-beta1 February 20th 2023 ####
 Version 1.5.0-beta1 contains **breaking API changes** and new API changes for Akka.NET.
 
