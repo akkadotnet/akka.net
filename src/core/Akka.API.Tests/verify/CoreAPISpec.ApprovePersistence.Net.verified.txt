@@ -258,6 +258,10 @@ namespace Akka.Persistence
         Akka.Configuration.Config DefaultConfig { get; }
         string JournalPath { get; }
     }
+    public interface IJournalQueryRequest : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    {
+        System.DateTime Deadline { get; }
+    }
     public interface IJournalRequest : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
     public interface IJournalResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
     public interface IPendingHandlerInvocation
@@ -508,9 +512,10 @@ namespace Akka.Persistence
         public RecoveryTimedOutException(string message, System.Exception cause = null) { }
         public RecoveryTimedOutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
-    public sealed class ReplayMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessages>
+    public sealed class ReplayMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalQueryRequest, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessages>
     {
-        public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId, Akka.Actor.IActorRef persistentActor) { }
+        public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId, Akka.Actor.IActorRef persistentActor, System.Nullable<System.TimeSpan> timeout = null) { }
+        public System.DateTime Deadline { get; }
         public long FromSequenceNr { get; }
         public long Max { get; }
         public string PersistenceId { get; }

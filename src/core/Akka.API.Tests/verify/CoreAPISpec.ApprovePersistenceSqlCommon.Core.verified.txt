@@ -226,13 +226,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         public string FullMetaTableName { get; }
         public bool UseSequentialAccess { get; }
     }
-    public sealed class ReplayAllEvents : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    public sealed class ReplayAllEvents : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalQueryRequest, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
     {
         public readonly long FromOffset;
         public readonly long Max;
         public readonly Akka.Actor.IActorRef ReplyTo;
         public readonly long ToOffset;
-        public ReplayAllEvents(long fromOffset, long toOffset, long max, Akka.Actor.IActorRef replyTo) { }
+        public ReplayAllEvents(long fromOffset, long toOffset, long max, Akka.Actor.IActorRef replyTo, System.TimeSpan timeout) { }
+        public System.DateTime Deadline { get; }
     }
     public sealed class ReplayFilterSettings
     {
@@ -244,14 +245,15 @@ namespace Akka.Persistence.Sql.Common.Journal
         public ReplayFilterSettings(Akka.Persistence.Journal.ReplayFilterMode mode, int windowSize, int maxOldWriters, bool isDebug) { }
         public bool IsEnabled { get; }
     }
-    public sealed class ReplayTaggedMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    public sealed class ReplayTaggedMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalQueryRequest, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
     {
         public readonly long FromOffset;
         public readonly long Max;
         public readonly Akka.Actor.IActorRef ReplyTo;
         public readonly string Tag;
         public readonly long ToOffset;
-        public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, Akka.Actor.IActorRef replyTo) { }
+        public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, Akka.Actor.IActorRef replyTo, System.TimeSpan timeout) { }
+        public System.DateTime Deadline { get; }
     }
     public sealed class ReplayedEvent : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
     {
@@ -266,9 +268,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly string Tag;
         public ReplayedTaggedMessage(Akka.Persistence.IPersistentRepresentation persistent, string tag, long offset) { }
     }
-    public sealed class SelectCurrentPersistenceIds : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    public sealed class SelectCurrentPersistenceIds : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalQueryRequest, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
     {
-        public SelectCurrentPersistenceIds(long offset, Akka.Actor.IActorRef replyTo) { }
+        public SelectCurrentPersistenceIds(long offset, Akka.Actor.IActorRef replyTo, System.TimeSpan timeout) { }
+        public System.DateTime Deadline { get; }
         public long Offset { get; }
         public Akka.Actor.IActorRef ReplyTo { get; }
     }

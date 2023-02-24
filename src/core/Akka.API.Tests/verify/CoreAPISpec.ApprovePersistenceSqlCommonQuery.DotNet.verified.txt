@@ -4,6 +4,24 @@
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
 namespace Akka.Persistence.Query.Sql
 {
+    public sealed class OperationTimedOut
+    {
+        public static readonly Akka.Persistence.Query.Sql.OperationTimedOut Instance;
+    }
+    public sealed class QuerySettings
+    {
+        public QuerySettings(Akka.Configuration.Config config) { }
+        public QuerySettings(System.TimeSpan operationTimeout, int maxRetries, float backoffMultiplier, System.TimeSpan maxBackoff) { }
+        public float BackoffMultiplier { get; }
+        public System.TimeSpan BackoffTime { get; }
+        public System.TimeSpan MaxBackoff { get; }
+        public int MaxRetries { get; }
+        public System.TimeSpan OperationTimeout { get; }
+    }
+    public sealed class Retry
+    {
+        public static readonly Akka.Persistence.Query.Sql.Retry Instance;
+    }
     public class SqlReadJournal : Akka.Persistence.Query.IAllEventsQuery, Akka.Persistence.Query.ICurrentAllEventsQuery, Akka.Persistence.Query.ICurrentEventsByPersistenceIdQuery, Akka.Persistence.Query.ICurrentEventsByTagQuery, Akka.Persistence.Query.ICurrentPersistenceIdsQuery, Akka.Persistence.Query.IEventsByPersistenceIdQuery, Akka.Persistence.Query.IEventsByTagQuery, Akka.Persistence.Query.IPersistenceIdsQuery, Akka.Persistence.Query.IReadJournal
     {
         public const string Identifier = "akka.persistence.query.journal.sql";
