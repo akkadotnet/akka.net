@@ -107,7 +107,6 @@ namespace Akka.Persistence.Query.Sql
             {
                 case QueryStartGranted _:
                     Replay();
-                    Sender.Tell(ReturnQueryStart.Instance); // return token
                     return true;
                 case AllEventsPublisher.Continue _:
                     // ignore
@@ -158,6 +157,7 @@ namespace Akka.Persistence.Query.Sql
                     Log.Error(failure.Cause, "event replay failed, due to [{0}]", failure.Cause.Message);
                     Buffer.DeliverBuffer(TotalDemand);
                     OnErrorThenStop(failure.Cause);
+                    Sender.Tell(ReturnQueryStart.Instance); // return token to permitter
                     return true;
                 case Request _:
                     Buffer.DeliverBuffer(TotalDemand);
@@ -205,6 +205,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveRecoverySuccess(long highestOrderingNr)
         {
+            Sender.Tell(ReturnQueryStart.Instance); // return token
             Buffer.DeliverBuffer(TotalDemand);
             if (Buffer.IsEmpty && CurrentOffset > ToOffset)
                 OnCompleteThenStop();
@@ -238,6 +239,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveRecoverySuccess(long highestOrderingNr)
         {
+            Sender.Tell(ReturnQueryStart.Instance); // return token to permitter
             Buffer.DeliverBuffer(TotalDemand);
 
             if (highestOrderingNr < ToOffset)

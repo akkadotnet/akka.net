@@ -118,7 +118,6 @@ namespace Akka.Persistence.Query.Sql
             {
                 case QueryStartGranted _:
                     Replay();
-                    Sender.Tell(ReturnQueryStart.Instance); // return token
                     return true;
                 case EventsByTagPublisher.Continue _:
                     // ignore
@@ -222,6 +221,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveRecoverySuccess(long highestSequenceNr)
         {
+            Sender.Tell(ReturnQueryStart.Instance); // return token
             Buffer.DeliverBuffer(TotalDemand);
             if (Buffer.IsEmpty && CurrentOffset > ToOffset)
                 OnCompleteThenStop();
@@ -258,6 +258,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveRecoverySuccess(long highestSequenceNr)
         {
+            Sender.Tell(ReturnQueryStart.Instance); // return token
             Buffer.DeliverBuffer(TotalDemand);
             if (highestSequenceNr < ToOffset)
                 _toOffset = highestSequenceNr;

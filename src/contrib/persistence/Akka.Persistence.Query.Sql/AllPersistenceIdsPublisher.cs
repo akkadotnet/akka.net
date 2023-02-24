@@ -87,6 +87,7 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case CurrentPersistenceIds current:
+                    Sender.Tell(ReturnQueryStart.Instance); // return token
                     _buffer.AddRange(current.AllPersistenceIds);
                     _buffer.DeliverBuffer(TotalDemand);
 
@@ -226,7 +227,6 @@ namespace Akka.Persistence.Query.Sql
                     _journalRef
                         .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
                         .PipeTo(Self);
-                    Sender.Tell(ReturnQueryStart.Instance); // return token
                     return true;
                 
                 case Continue _:
@@ -255,6 +255,7 @@ namespace Akka.Persistence.Query.Sql
 
                     Become(Active);
                     Stash.UnstashAll();
+                    Sender.Tell(ReturnQueryStart.Instance); // return token
                     return true;
                 
                 case Continue _:
