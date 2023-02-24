@@ -142,17 +142,6 @@ namespace Akka.Cluster.Sharding
         /// <param name="numberOfInstances">TBD</param>
         /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
         /// <param name="settings">TBD</param>
-        [Obsolete("Use the overloaded one which accepts a stopMessage instead.")]
-        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, ShardedDaemonProcessSettings settings) =>
-            Init(name, numberOfInstances, propsFactory, settings, null);
-
-        /// <summary>
-        /// Start a specific number of actors, each with a unique numeric id in the set, that is then kept alive in the cluster.
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="numberOfInstances">TBD</param>
-        /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
-        /// <param name="settings">TBD</param>
         /// <param name="stopMessage">If defined sent to the actors when they need to stop because of a rebalance across the nodes of the cluster or cluster shutdown.</param>
         public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, ShardedDaemonProcessSettings settings, object stopMessage)
         {
