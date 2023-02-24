@@ -13,11 +13,16 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor
 {
     public class StashMailboxSpec : AkkaSpec
     {
+        public StashMailboxSpec(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         [Fact]
         public void When_creating_normal_actor_Then_a_normal_mailbox_is_created()
         {
@@ -35,7 +40,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void When_creating_actor_marked_with_WithBoundedStash_a_mailbox_which_supports_unbounded_stash_is_created()
+        public void When_creating_actor_marked_with_WithStash_a_mailbox_which_supports_unbounded_stash_is_created()
         {
             var actorRef = ActorOf<BoundedStashActor>();
             var intRef = (RepointableActorRef)actorRef;
@@ -46,7 +51,7 @@ namespace Akka.Tests.Actor
         {
             public IStash Stash { get; set; }
         }
-        private class BoundedStashActor : BlackHoleActor, IWithBoundedStash
+        private class BoundedStashActor : BlackHoleActor, IWithStash
         {
             public IStash Stash { get; set; }
         }

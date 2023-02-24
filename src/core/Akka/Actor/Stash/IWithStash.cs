@@ -30,7 +30,7 @@ namespace Akka.Actor
     /// that does not enforce any mailbox type see <see cref="IWithUnrestrictedStash"/>.
     /// </para>
     /// </summary>
-    public interface IWithStash : IWithUnrestrictedStash, IRequiresMessageQueue<IDequeBasedMessageQueueSemantics>
+    public interface IWithStash : IWithUnrestrictedStash, IRequiresMessageQueue<IBoundedDequeBasedMessageQueueSemantics>
     {
     }
 }
