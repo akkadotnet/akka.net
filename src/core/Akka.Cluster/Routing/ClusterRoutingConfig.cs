@@ -23,33 +23,6 @@ namespace Akka.Cluster.Routing
     public sealed class ClusterRouterGroupSettings : ClusterRouterSettingsBase
     {
         /// <summary>
-        /// Obsolete. This constructor is no longer applicable.
-        /// </summary>
-        /// <param name="totalInstances">N/A</param>
-        /// <param name="allowLocalRoutees">N/A</param>
-        /// <param name="routeesPaths">N/A</param>
-        [Obsolete("This method is deprecated [1.1.0]")]
-        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, IEnumerable<string> routeesPaths)
-            : this(totalInstances, routeesPaths, allowLocalRoutees, null)
-        {
-
-        }
-
-        /// <summary>
-        /// Obsolete. This constructor is no longer applicable.
-        /// </summary>
-        /// <param name="totalInstances">N/A</param>
-        /// <param name="allowLocalRoutees">N/A</param>
-        /// <param name="useRole">N/A</param>
-        /// <param name="routeesPaths">N/A</param>
-        [Obsolete("This method is deprecated [1.1.0]")]
-        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, string useRole, ImmutableHashSet<string> routeesPaths)
-            : this(totalInstances, routeesPaths, allowLocalRoutees, useRole)
-        {
-
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ClusterRouterGroupSettings"/> class.
         /// </summary>
         /// <param name="totalInstances">The total number of routees. Defaults to 10000.</param>
@@ -108,31 +81,6 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public sealed class ClusterRouterPoolSettings : ClusterRouterSettingsBase
     {
-        /// <summary>
-        /// Obsolete. This constructor is no longer applicable.
-        /// </summary>
-        /// <param name="totalInstances">N/A</param>
-        /// <param name="allowLocalRoutees">N/A</param>
-        /// <param name="maxInstancesPerNode">N/A</param>
-        [Obsolete("This method is deprecated [1.1.0]")]
-        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, int maxInstancesPerNode)
-            : this(totalInstances, maxInstancesPerNode, allowLocalRoutees)
-        {
-        }
-
-        /// <summary>
-        /// Obsolete. This constructor is no longer applicable.
-        /// </summary>
-        /// <param name="totalInstances">N/A</param>
-        /// <param name="allowLocalRoutees">N/A</param>
-        /// <param name="useRole">N/A</param>
-        /// <param name="maxInstancesPerNode">N/A</param>
-        [Obsolete("This method is deprecated [1.1.0]")]
-        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, string useRole, int maxInstancesPerNode) 
-            : this(totalInstances, maxInstancesPerNode, allowLocalRoutees, useRole)
-        {
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterRouterPoolSettings"/> class.
         /// </summary>
