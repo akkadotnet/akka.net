@@ -109,14 +109,14 @@ namespace Akka.Streams
 
         private static ActorSystem ActorSystemOf(IActorRefFactory context)
         {
-            if (context is ExtendedActorSystem)
-                return (ActorSystem)context;
-            if (context is IActorContext)
-                return ((IActorContext)context).System;
-            if (context == null)
-                throw new ArgumentNullException(nameof(context), "IActorRefFactory must be defined");
-
-            throw new ArgumentException($"ActorRefFactory context must be a ActorSystem or ActorContext, got [{context.GetType()}]");
+            return context switch
+            {
+                ExtendedActorSystem system => system,
+                IActorContext actorContext => actorContext.System,
+                null => throw new ArgumentNullException(nameof(context), "IActorRefFactory must be defined"),
+                _ => throw new ArgumentException(
+                    $"ActorRefFactory context must be a ActorSystem or ActorContext, got [{context.GetType()}]")
+            };
         }
 
         #endregion
