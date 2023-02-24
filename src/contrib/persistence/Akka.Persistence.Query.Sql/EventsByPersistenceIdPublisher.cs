@@ -174,7 +174,7 @@ namespace Akka.Persistence.Query.Sql
                         failure.Cause.Message);
                     Buffer.DeliverBuffer(TotalDemand);
                     OnErrorThenStop(failure.Cause);
-                    Sender.Tell(ReturnQueryStart.Instance); // return token
+                    QueryPermitter.Tell(ReturnQueryStart.Instance); // return token
                     return true;
 
                 case Request _:
@@ -227,7 +227,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveRecoverySuccess(long highestSequenceNr)
         {
-            Sender.Tell(ReturnQueryStart.Instance); // return token
+            QueryPermitter.Tell(ReturnQueryStart.Instance); // return token
             Buffer.DeliverBuffer(TotalDemand);
             if (Buffer.IsEmpty && CurrentSequenceNr > ToSequenceNr)
                 OnCompleteThenStop();
@@ -260,7 +260,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveRecoverySuccess(long highestSequenceNr)
         {
-            Sender.Tell(ReturnQueryStart.Instance); // return token
+            QueryPermitter.Tell(ReturnQueryStart.Instance); // return token
             Buffer.DeliverBuffer(TotalDemand);
             if (highestSequenceNr < ToSequenceNr)
                 ToSequenceNr = highestSequenceNr;

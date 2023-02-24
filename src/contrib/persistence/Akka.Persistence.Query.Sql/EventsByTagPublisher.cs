@@ -32,7 +32,8 @@ namespace Akka.Persistence.Query.Sql
                 ? Actor.Props.Create(() => new LiveEventsByTagPublisher(tag, fromOffset, toOffset,
                     refreshInterval.Value, maxBufferSize, writeJournal, queryPermitter))
                 : Actor.Props.Create(() =>
-                    new CurrentEventsByTagPublisher(tag, fromOffset, toOffset, maxBufferSize, writeJournal, queryPermitter));
+                    new CurrentEventsByTagPublisher(tag, fromOffset, toOffset, maxBufferSize, writeJournal,
+                        queryPermitter));
         }
     }
 
@@ -221,7 +222,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveRecoverySuccess(long highestSequenceNr)
         {
-            Sender.Tell(ReturnQueryStart.Instance); // return token
+            QueryPermitter.Tell(ReturnQueryStart.Instance); // return token
             Buffer.DeliverBuffer(TotalDemand);
             if (Buffer.IsEmpty && CurrentOffset > ToOffset)
                 OnCompleteThenStop();
@@ -258,7 +259,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveRecoverySuccess(long highestSequenceNr)
         {
-            Sender.Tell(ReturnQueryStart.Instance); // return token
+            QueryPermitter.Tell(ReturnQueryStart.Instance); // return token
             Buffer.DeliverBuffer(TotalDemand);
             if (highestSequenceNr < ToOffset)
                 _toOffset = highestSequenceNr;
