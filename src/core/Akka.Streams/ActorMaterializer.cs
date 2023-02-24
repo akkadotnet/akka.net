@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -42,18 +44,18 @@ namespace Akka.Streams
             => DefaultMaterializerConfig;
 
         #region static
-        
+
         /// <summary>
         /// Injecting the top-level Materializer HOCON configuration over and over again is expensive, so we want to avoid
         /// doing it each time a materializer is instantiated. This flag will be set to true once the configuration has been
         /// injected the first time.
         /// </summary>
-        private static volatile bool _injectedConfig = false;
+        private static readonly ConcurrentDictionary<ActorSystem, bool> InjectedConfig = new();
         
         /// <summary>
         /// Cache the default materializer settings so we don't constantly parse them
         /// </summary>
-        private static ActorMaterializerSettings _defaultSettings = null;
+        private static readonly ConcurrentDictionary<ActorSystem, ActorMaterializerSettings> DefaultSettings = new();
 
         /// <summary>
         /// <para>
@@ -87,16 +89,28 @@ namespace Akka.Streams
             var haveShutDown = new AtomicBoolean();
             var system = ActorSystemOf(context);
 
-            if(!_injectedConfig)
+            if(!InjectedConfig.TryGetValue(system, out _) && InjectedConfig.TryAdd(system, true))
             {
                 // Inject the top-level fallback config for the Materializer once, and only once.
                 // This is a performance optimization to avoid having to do this on every materialization.
                 system.Settings.InjectTopLevelFallback(DefaultConfig());
-                _injectedConfig = true;
+
+                static async Task CleanUp(ActorSystem sys)
+                {
+                    // remove ActorSystem from cache when it terminates so we don't leak memory
+                    await sys.WhenTerminated.ConfigureAwait(false);
+                    InjectedConfig.TryRemove(sys, out _);
+                    DefaultSettings.TryRemove(sys, out _);
+                }
+
+#pragma warning disable CS4014
+                CleanUp(system);
+#pragma warning restore CS4014
+
             }
 
             // use the default settings if none have been passed in
-            settings ??= (_defaultSettings ??= ActorMaterializerSettings.Create(system));
+            settings ??= DefaultSettings.GetOrAdd(system, ActorMaterializerSettings.Create);
 
             return new ActorMaterializerImpl(
                 system: system,
