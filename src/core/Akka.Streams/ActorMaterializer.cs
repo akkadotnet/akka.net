@@ -42,6 +42,18 @@ namespace Akka.Streams
             => DefaultMaterializerConfig;
 
         #region static
+        
+        /// <summary>
+        /// Injecting the top-level Materializer HOCON configuration over and over again is expensive, so we want to avoid
+        /// doing it each time a materializer is instantiated. This flag will be set to true once the configuration has been
+        /// injected the first time.
+        /// </summary>
+        private static volatile bool _injectedConfig = false;
+        
+        /// <summary>
+        /// Cache the default materializer settings so we don't constantly parse them
+        /// </summary>
+        private static ActorMaterializerSettings _defaultSettings = null;
 
         /// <summary>
         /// <para>
@@ -75,9 +87,16 @@ namespace Akka.Streams
             var haveShutDown = new AtomicBoolean();
             var system = ActorSystemOf(context);
 
-            system.Settings.InjectTopLevelFallback(DefaultConfig());
+            if(!_injectedConfig)
+            {
+                // Inject the top-level fallback config for the Materializer once, and only once.
+                // This is a performance optimization to avoid having to do this on every materialization.
+                system.Settings.InjectTopLevelFallback(DefaultConfig());
+                _injectedConfig = true;
+            }
 
-            settings = settings ?? ActorMaterializerSettings.Create(system);
+            // use the default settings if none have been passed in
+            settings ??= (_defaultSettings ??= ActorMaterializerSettings.Create(system));
 
             return new ActorMaterializerImpl(
                 system: system,
