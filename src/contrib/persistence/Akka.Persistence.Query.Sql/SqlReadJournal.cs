@@ -61,7 +61,7 @@ namespace Akka.Persistence.Query.Sql
             _persistenceIdsPublisher = null;
             _journalRef = Persistence.Instance.Apply(system).JournalFor(writeJournalPluginId);
             _throttlerRef =
-                system.SystemActorOf(Props.Create(() => new SqlQueryThrottler(_journalRef, _maxConcurrentQueries)),
+                system.SystemActorOf(Props.Create(() => new QueryThrottler(_maxConcurrentQueries)),
                     "sql-query-throttler-" + _idCounter.GetAndIncrement());
         }
 
@@ -267,7 +267,7 @@ namespace Akka.Persistence.Query.Sql
             }
 
             return Source
-                .ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, _refreshInterval, _maxBufferSize,
+                .ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, _refreshInterval, _maxBufferSize, _journalRef,
                     _throttlerRef))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("AllEvents");
@@ -290,7 +290,7 @@ namespace Akka.Persistence.Query.Sql
             }
 
             return Source
-                .ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, null, _maxBufferSize, _throttlerRef))
+                .ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, null, _maxBufferSize, _journalRef, _throttlerRef))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentAllEvents");
         }
