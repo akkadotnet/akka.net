@@ -308,35 +308,6 @@ namespace Akka.Serialization
         /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
         /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
         /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
-        /// <exception>Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
-        [Obsolete]
-        public HyperionSerializerSettings(bool preserveObjectReferences, bool versionTolerance, Type knownTypesProvider)
-            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, new List<Func<string, string>>(), new Surrogate[0], true, DisabledTypeFilter.Instance)
-        { }
-
-        /// <summary>
-        /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
-        /// </summary>
-        /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
-        /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
-        /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
-        /// <param name="packageNameOverrides">An array of package name overrides for cross platform compatibility</param>
-        /// <exception>Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
-        [Obsolete]
-        public HyperionSerializerSettings(
-            bool preserveObjectReferences, 
-            bool versionTolerance, 
-            Type knownTypesProvider, 
-            IEnumerable<Func<string, string>> packageNameOverrides)
-            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, new Surrogate[0], true, DisabledTypeFilter.Instance)
-        { }
-
-        /// <summary>
-        /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
-        /// </summary>
-        /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
-        /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
-        /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
         /// <param name="packageNameOverrides">An array of package name overrides for cross platform compatibility</param>
         /// <param name="surrogates">A list of Surrogate instances that are used to de/serialize complex objects into a much simpler serialized objects.</param>
         /// <exception>ArgumentException: Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
