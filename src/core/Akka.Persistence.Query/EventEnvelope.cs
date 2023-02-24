@@ -23,14 +23,6 @@ namespace Akka.Persistence.Query
         /// <summary>
         /// Initializes a new instance of the <see cref="EventEnvelope"/> class.
         /// </summary>
-        [Obsolete("For binary compatibility with previous releases")]
-        public EventEnvelope(Offset offset, string persistenceId, long sequenceNr, object @event)
-            : this(offset, persistenceId, sequenceNr, @event, 0L)
-        { }
-        
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EventEnvelope"/> class.
-        /// </summary>
         public EventEnvelope(Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp)
         {
             Offset = offset;
