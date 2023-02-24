@@ -39,7 +39,7 @@ namespace Akka.Persistence.Query.Sql
 
         private readonly TimeSpan _refreshInterval;
         private readonly int _maxBufferSize;
-        private readonly int _maxConcurrentQueries = 30; // TODO: make configurable
+        private readonly int _maxConcurrentQueries;
         private readonly ExtendedActorSystem _system;
 
         private readonly object _lock = new();
@@ -56,6 +56,7 @@ namespace Akka.Persistence.Query.Sql
             _refreshInterval = config.GetTimeSpan("refresh-interval", null);
             var writeJournalPluginId = config.GetString("write-plugin", null);
             _maxBufferSize = config.GetInt("max-buffer-size", 0);
+            _maxConcurrentQueries = config.GetInt("max-concurrent-queries", 50);
             _system = system;
 
             _persistenceIdsPublisher = null;
