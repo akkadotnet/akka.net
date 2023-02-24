@@ -157,7 +157,7 @@ namespace Akka.Persistence.Query.Sql
         public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr,
             long toSequenceNr) =>
             Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr,
-                    toSequenceNr, _refreshInterval, _maxBufferSize, _throttlerRef))
+                    toSequenceNr, _refreshInterval, _maxBufferSize, _journalRef, _throttlerRef))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("EventsByPersistenceId-" + persistenceId);
 
@@ -169,7 +169,7 @@ namespace Akka.Persistence.Query.Sql
         public Source<EventEnvelope, NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr,
             long toSequenceNr) =>
             Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr,
-                    toSequenceNr, null, _maxBufferSize, _throttlerRef))
+                    toSequenceNr, null, _maxBufferSize, _journalRef, _throttlerRef))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentEventsByPersistenceId-" + persistenceId);
 
@@ -214,12 +214,12 @@ namespace Akka.Persistence.Query.Sql
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset = null)
         {
-            offset = offset ?? new Sequence(0L);
+            offset ??= new Sequence(0L);
             switch (offset)
             {
                 case Sequence seq:
                     return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value,
-                            long.MaxValue, _refreshInterval, _maxBufferSize, _throttlerRef))
+                            long.MaxValue, _refreshInterval, _maxBufferSize, _journalRef, _throttlerRef))
                         .MapMaterializedValue(_ => NotUsed.Instance)
                         .Named($"EventsByTag-{tag}");
                 case NoOffset _:
@@ -236,12 +236,12 @@ namespace Akka.Persistence.Query.Sql
         /// </summary>
         public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset = null)
         {
-            offset = offset ?? new Sequence(0L);
+            offset ??= new Sequence(0L);
             switch (offset)
             {
                 case Sequence seq:
                     return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value,
-                            long.MaxValue, null, _maxBufferSize, _throttlerRef))
+                            long.MaxValue, null, _maxBufferSize, _journalRef, _throttlerRef))
                         .MapMaterializedValue(_ => NotUsed.Instance)
                         .Named($"CurrentEventsByTag-{tag}");
                 case NoOffset _:
