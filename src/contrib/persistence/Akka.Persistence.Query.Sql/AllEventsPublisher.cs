@@ -107,6 +107,7 @@ namespace Akka.Persistence.Query.Sql
             {
                 case QueryStartGranted _:
                     Replay();
+                    Sender.Tell(ReturnQueryStart.Instance); // return token
                     return true;
                 case AllEventsPublisher.Continue _:
                     // ignore

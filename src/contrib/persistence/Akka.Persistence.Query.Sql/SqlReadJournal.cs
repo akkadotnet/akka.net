@@ -95,6 +95,7 @@ namespace Akka.Persistence.Query.Sql
                         Source.ActorPublisher<string>(
                                 LivePersistenceIdsPublisher.Props(
                                     _refreshInterval,
+                                    _journalRef,
                                     _throttlerRef))
                             .ToMaterialized(
                                 Sink.DistinctRetainingFanOutPublisher<string>(PersistenceIdsShutdownCallback),
@@ -123,7 +124,7 @@ namespace Akka.Persistence.Query.Sql
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
         public Source<string, NotUsed> CurrentPersistenceIds()
-            => Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_throttlerRef))
+            => Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_journalRef, _throttlerRef))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentPersistenceIds");
 
