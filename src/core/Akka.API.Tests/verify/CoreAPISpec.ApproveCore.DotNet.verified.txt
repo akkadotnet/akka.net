@@ -113,8 +113,6 @@ namespace Akka.Actor
         protected bool SetChildrenTerminationReason(Akka.Actor.Internal.SuspendReason reason) { }
         public void SetReceiveTimeout(System.Nullable<System.TimeSpan> timeout = null) { }
         protected void SetTerminated() { }
-        [System.ObsoleteAttribute("Not used. Will be removed in Akka.NET v1.5.")]
-        public static Akka.Actor.NameAndUid SplitNameAndUid(string name) { }
         public virtual void Start() { }
         protected void Stash(Akka.Dispatch.SysMsg.SystemMessage msg) { }
         public void Stop(Akka.Actor.IActorRef child) { }
@@ -1356,14 +1354,6 @@ namespace Akka.Actor
         public override void Stop() { }
         public override void Suspend() { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
-    }
-    [System.ObsoleteAttribute("Not used. Will be removed in Akka.NET v1.5.")]
-    public class NameAndUid
-    {
-        public NameAndUid(string name, int uid) { }
-        public string Name { get; }
-        public int Uid { get; }
-        public override string ToString() { }
     }
     public sealed class Nobody : Akka.Actor.MinimalActorRef
     {
