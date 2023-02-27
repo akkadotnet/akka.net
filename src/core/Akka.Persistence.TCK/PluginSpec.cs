@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
@@ -65,8 +66,8 @@ namespace Akka.Persistence.TCK
             Sys.EventStream.Subscribe(subscriber, typeof (T));
         }
 
-        
-        public void Dispose()
+        [Obsolete("Dispose() is obsolete, please use DisposeAsync() instead")]
+        public override void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
@@ -77,7 +78,8 @@ namespace Akka.Persistence.TCK
         /// user's code. Managed and unmanaged resources will be disposed.<br />
         /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only
         /// unmanaged resources can be disposed.</param>
-        protected virtual void Dispose(bool disposing)
+        [Obsolete("Dispose(bool) is deprecated, please use DisposeAsync() instead")]
+        protected override void Dispose(bool disposing)
         {
             //if (disposing) FSMBase.Shutdown();
         }
