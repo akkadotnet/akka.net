@@ -171,19 +171,26 @@ namespace Akka.Actor
 
             _workerInitialized.Signal();
 
-            while (await _timer.WaitForNextTickAsync(_cts.Token))
+            try
             {
-                var deadline = _tickDuration * (_tick + 1);
-                var idx = (int)(_tick & _mask);
-                var bucket = _wheel[idx];
-                TransferRegistrationsToBuckets();
-                bucket.Execute(deadline);
-                _tick++; // it will take 2^64 * 10ms for this to overflow
+                while (await _timer.WaitForNextTickAsync(_cts.Token))
+                {
+                    var deadline = _tickDuration * (_tick + 1);
+                    var idx = (int)(_tick & _mask);
+                    var bucket = _wheel[idx];
+                    TransferRegistrationsToBuckets();
+                    bucket.Execute(deadline);
+                    _tick++; // it will take 2^64 * 10ms for this to overflow
 
-                bucket.ClearReschedule(_rescheduleRegistrations);
-                ProcessReschedule();
+                    bucket.ClearReschedule(_rescheduleRegistrations);
+                    ProcessReschedule();
+                }
             }
-            
+            catch (OperationCanceledException)
+            {
+                // ignore
+            }
+
             // empty all of the buckets
             foreach (var bucket in _wheel)
                 bucket.ClearRegistrations(_unprocessedRegistrations);
