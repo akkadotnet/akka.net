@@ -2807,9 +2807,6 @@ namespace Akka.Dispatch.MessageQueues
     }
     public class UnboundedPriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue, Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics
     {
-        [System.ObsoleteAttribute("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initia" +
-            "lCapacity) instead. [1.1.3]")]
-        public UnboundedPriorityMessageQueue(int initialCapacity) { }
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
         public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
@@ -3053,8 +3050,6 @@ namespace Akka.Event
     public class EventStream : Akka.Event.LoggingBus
     {
         public EventStream(bool debug) { }
-        [System.ObsoleteAttribute("Should be removed in 1.5")]
-        public bool InitUnsubscriber(Akka.Actor.IActorRef unsubscriber, Akka.Actor.ActorSystem system) { }
         public void StartUnsubscriber(Akka.Actor.Internal.ActorSystemImpl system) { }
         public override bool Subscribe(Akka.Actor.IActorRef subscriber, System.Type channel) { }
         public override bool Unsubscribe(Akka.Actor.IActorRef subscriber, System.Type channel) { }
@@ -4203,8 +4198,6 @@ namespace Akka.Routing
         public BroadcastGroup(Akka.Configuration.Config config) { }
         public BroadcastGroup(params string[] paths) { }
         public BroadcastGroup(System.Collections.Generic.IEnumerable<string> paths) { }
-        [System.ObsoleteAttribute("Use new BroadcastGroup(actorRefs.Select(c => c.Path.ToString())) instead [1.1.0]")]
-        public BroadcastGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees) { }
         public BroadcastGroup(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
@@ -4289,9 +4282,6 @@ namespace Akka.Routing
         public ConsistentHashingGroup(Akka.Configuration.Config config) { }
         public ConsistentHashingGroup(params string[] paths) { }
         public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths) { }
-        [System.ObsoleteAttribute("Use new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString())) instead " +
-            "[1.1.0]")]
-        public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees) { }
         public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths, Akka.Routing.ConsistentHashMapping hashMapping) { }
         public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths, int virtualNodesFactor, Akka.Routing.ConsistentHashMapping hashMapping, string routerDispatcher) { }
         public int VirtualNodesFactor { get; }
@@ -4406,8 +4396,6 @@ namespace Akka.Routing
     {
         protected readonly string[] InternalPaths;
         protected Group(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
-        [System.ObsoleteAttribute("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
-        public System.Collections.Generic.IEnumerable<string> Paths { get; }
         public override Akka.Actor.ActorBase CreateRouterActor() { }
         public bool Equals(Akka.Routing.Group other) { }
         public override bool Equals(object obj) { }
@@ -4541,8 +4529,6 @@ namespace Akka.Routing
         public RoundRobinGroup(Akka.Configuration.Config config) { }
         public RoundRobinGroup(params string[] paths) { }
         public RoundRobinGroup(System.Collections.Generic.IEnumerable<string> paths) { }
-        [System.ObsoleteAttribute("Use RoundRobinGroup constructor with IEnumerable<string> parameter [1.1.0]")]
-        public RoundRobinGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees) { }
         public RoundRobinGroup(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
@@ -4621,8 +4607,6 @@ namespace Akka.Routing
     {
         protected RouterConfig() { }
         protected RouterConfig(string routerDispatcher) { }
-        [System.ObsoleteAttribute("Use NoRouter.Instance instead [1.1.0]")]
-        public static Akka.Routing.RouterConfig NoRouter { get; }
         public virtual string RouterDispatcher { get; }
         public virtual bool StopRouterWhenAllRouteesRemoved { get; }
         public abstract Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system);
@@ -4659,9 +4643,6 @@ namespace Akka.Routing
         public ScatterGatherFirstCompletedGroup(Akka.Configuration.Config config) { }
         public ScatterGatherFirstCompletedGroup(System.TimeSpan within, params string[] paths) { }
         public ScatterGatherFirstCompletedGroup(System.Collections.Generic.IEnumerable<string> paths, System.TimeSpan within) { }
-        [System.ObsoleteAttribute("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString())" +
-            ", within) instead [1.1.0]")]
-        public ScatterGatherFirstCompletedGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees, System.TimeSpan within) { }
         public ScatterGatherFirstCompletedGroup(System.Collections.Generic.IEnumerable<string> paths, System.TimeSpan within, string routerDispatcher) { }
         public System.TimeSpan Within { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
