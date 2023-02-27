@@ -59,7 +59,7 @@ akka.cluster.sharding{
 #### Migrating to New Sharding Storage From Akka.Persistence
 
 > [!NOTE]
-> This section applies only to users who were using `akka.cluster.sharding.state-store-mode = persistence`. If you were using `akka.cluster.sharding.state-store-mode`
+> This section applies only to users who were using `akka.cluster.sharding.state-store-mode = persistence`. If you were using `akka.cluster.sharding.state-store-mode = ddata` before then there is no of legacy data in your case.
 
 Switching over to using `remember-entities-store = eventsourced` will cause an initial migration of data from the `ShardCoordinator`'s journal into separate event journals going forward.
 
