@@ -749,18 +749,6 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Obsolete. Use <c>GoTo(nextStateName).Using(stateData) instead.</c>
-        /// </summary>
-        /// <param name="nextStateName">N/A</param>
-        /// <param name="stateData">N/A</param>
-        /// <returns>N/A</returns>
-        [Obsolete("This method is obsoleted. Use GoTo(nextStateName).Using(newStateData) [1.2.0]")]
-        public State<TState, TData> GoTo(TState nextStateName, TData stateData)
-        {
-            return new State<TState, TData>(nextStateName, stateData);
-        }
-
-        /// <summary>
         /// Produce "empty" transition descriptor. Return this from a state function
         /// when no state change is to be effected.
         /// </summary>

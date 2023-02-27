@@ -113,8 +113,6 @@ namespace Akka.Actor
         protected bool SetChildrenTerminationReason(Akka.Actor.Internal.SuspendReason reason) { }
         public void SetReceiveTimeout(System.Nullable<System.TimeSpan> timeout = null) { }
         protected void SetTerminated() { }
-        [System.ObsoleteAttribute("Not used. Will be removed in Akka.NET v1.5.")]
-        public static Akka.Actor.NameAndUid SplitNameAndUid(string name) { }
         public virtual void Start() { }
         protected void Stash(Akka.Dispatch.SysMsg.SystemMessage msg) { }
         public void Stop(Akka.Actor.IActorRef child) { }
@@ -222,42 +220,6 @@ namespace Akka.Actor
             public override int GetHashCode() { }
         }
     }
-    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
-    public class ActorProducerPipeline : System.Collections.Generic.IEnumerable<Akka.Actor.IActorProducerPlugin>, System.Collections.IEnumerable
-    {
-        public ActorProducerPipeline(System.Lazy<Akka.Event.ILoggingAdapter> log, System.Collections.Generic.IEnumerable<Akka.Actor.IActorProducerPlugin> plugins) { }
-        public int Count { get; }
-        public void AfterActorIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public void BeforeActorIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public System.Collections.Generic.IEnumerator<Akka.Actor.IActorProducerPlugin> GetEnumerator() { }
-    }
-    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
-    public class ActorProducerPipelineResolver
-    {
-        public ActorProducerPipelineResolver(System.Func<Akka.Event.ILoggingAdapter> logBuilder) { }
-        public int TotalPluginCount { get; }
-        public bool Insert(int index, Akka.Actor.IActorProducerPlugin plugin) { }
-        public bool IsRegistered(Akka.Actor.IActorProducerPlugin plugin) { }
-        public bool Register(Akka.Actor.IActorProducerPlugin plugin) { }
-        public bool Unregister(Akka.Actor.IActorProducerPlugin plugin) { }
-    }
-    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
-    public abstract class ActorProducerPluginBase : Akka.Actor.IActorProducerPlugin
-    {
-        protected ActorProducerPluginBase() { }
-        public virtual void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public virtual void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public virtual bool CanBeAppliedTo(System.Type actorType) { }
-    }
-    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
-    public abstract class ActorProducerPluginBase<TActor> : Akka.Actor.IActorProducerPlugin
-        where TActor : Akka.Actor.ActorBase
-    {
-        protected ActorProducerPluginBase() { }
-        public virtual void AfterIncarnated(TActor actor, Akka.Actor.IActorContext context) { }
-        public virtual void BeforeIncarnated(TActor actor, Akka.Actor.IActorContext context) { }
-        public virtual bool CanBeAppliedTo(System.Type actorType) { }
-    }
     public abstract class ActorRefBase : Akka.Actor.IActorRef, Akka.Actor.ICanTell, Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.IActorRef>, System.IEquatable<Akka.Actor.IActorRef>
     {
         protected ActorRefBase() { }
@@ -349,13 +311,6 @@ namespace Akka.Actor
     {
         public System.Type ActorType { get; }
         public Akka.Actor.IActorRef Subject { get; }
-    }
-    public class ActorStashPlugin : Akka.Actor.ActorProducerPluginBase
-    {
-        public ActorStashPlugin() { }
-        public override void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public override void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public override bool CanBeAppliedTo(System.Type actorType) { }
     }
     public sealed class ActorStopped : Akka.Actor.IActorTelemetryEvent, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
     {
@@ -720,8 +675,6 @@ namespace Akka.Actor
     public abstract class ExtendedActorSystem : Akka.Actor.ActorSystem
     {
         protected ExtendedActorSystem() { }
-        [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
-        public abstract Akka.Actor.ActorProducerPipelineResolver ActorPipelineResolver { get; }
         public abstract Akka.Actor.IInternalActorRef Guardian { get; }
         public abstract Akka.Actor.IInternalActorRef LookupRoot { get; }
         public abstract Akka.Actor.IActorRefProvider Provider { get; }
@@ -847,8 +800,6 @@ namespace Akka.Actor
         public TState StateName { get; }
         public void CancelTimer(string name) { }
         public Akka.Actor.FSMBase.State<TState, TData> GoTo(TState nextStateName) { }
-        [System.ObsoleteAttribute("This method is obsoleted. Use GoTo(nextStateName).Using(newStateData) [1.2.0]")]
-        public Akka.Actor.FSMBase.State<TState, TData> GoTo(TState nextStateName, TData stateData) { }
         public void Initialize() { }
         public bool IsTimerActive(string name) { }
         protected virtual void LogTermination(Akka.Actor.FSMBase.Reason reason) { }
@@ -954,13 +905,6 @@ namespace Akka.Actor
         void SetReceiveTimeout(System.Nullable<System.TimeSpan> timeout);
         void Stop(Akka.Actor.IActorRef child);
         void UnbecomeStacked();
-    }
-    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
-    public interface IActorProducerPlugin
-    {
-        void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context);
-        void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context);
-        bool CanBeAppliedTo(System.Type actorType);
     }
     public interface IActorRef : Akka.Actor.ICanTell, Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.IActorRef>, System.IEquatable<Akka.Actor.IActorRef>
     {
@@ -1354,14 +1298,6 @@ namespace Akka.Actor
         public override void Stop() { }
         public override void Suspend() { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
-    }
-    [System.ObsoleteAttribute("Not used. Will be removed in Akka.NET v1.5.")]
-    public class NameAndUid
-    {
-        public NameAndUid(string name, int uid) { }
-        public string Name { get; }
-        public int Uid { get; }
-        public override string ToString() { }
     }
     public sealed class Nobody : Akka.Actor.MinimalActorRef
     {
@@ -1958,7 +1894,6 @@ namespace Akka.Actor.Internal
     {
         public ActorSystemImpl(string name) { }
         public ActorSystemImpl(string name, Akka.Configuration.Config config, Akka.Actor.Setup.ActorSystemSetup setup, System.Nullable<Akka.Util.Option<Akka.Actor.Props>> guardianProps = null) { }
-        public override Akka.Actor.ActorProducerPipelineResolver ActorPipelineResolver { get; }
         public override Akka.Actor.IActorRef DeadLetters { get; }
         public override Akka.Dispatch.Dispatchers Dispatchers { get; }
         public override Akka.Event.EventStream EventStream { get; }

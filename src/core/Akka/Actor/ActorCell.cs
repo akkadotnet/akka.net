@@ -353,10 +353,6 @@ namespace Akka.Actor
         {
             var actor = _props.NewActor();
 
-            // Apply default of custom behaviors to actor.
-            var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
-            pipeline.AfterActorIncarnated(actor, this);
-
             if (actor is IInitializableActor initializableActor)
             {
                 initializableActor.Init();
@@ -480,19 +476,6 @@ namespace Akka.Actor
         protected void SetActorFields(ActorBase actor)
         {
             actor?.Unclear();
-        }
-        /// <summary>
-        /// INTERNAL API
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Not used. Will be removed in Akka.NET v1.5.")]
-        public static NameAndUid SplitNameAndUid(string name)
-        {
-            var i = name.IndexOf('#');
-            return i < 0
-                ? new NameAndUid(name, UndefinedUid)
-                : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
         }
 
         /// <summary>

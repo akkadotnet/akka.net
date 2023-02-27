@@ -65,10 +65,6 @@ namespace Akka.Actor
                     {
                         // if the actor fails in preRestart, we can do nothing but log it: it’s best-effort
                         failedActor.AroundPreRestart(cause, optionalMessage);
-
-                        // run actor pre-incarnation plugin pipeline
-                        var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(failedActor.GetType());
-                        pipeline.BeforeActorIncarnated(failedActor, this);
                     }
                     catch (Exception e)
                     {
@@ -283,15 +279,8 @@ namespace Akka.Actor
             var a = _actor;
             try
             {
-                if (a != null)
-                {
-                    a.AroundPostStop();
+                a?.AroundPostStop();
 
-                    // run actor pre-incarnation plugin pipeline
-                    var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(a.GetType());
-                    pipeline.BeforeActorIncarnated(a, this);
-                }
-                
                 if(System.Settings.EmitActorTelemetry)
                     System.EventStream.Publish(new ActorStopped(Self, Props.Type));
             }

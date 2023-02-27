@@ -48,7 +48,6 @@ namespace Akka.Actor.Internal
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
         private IScheduler _scheduler;
-        private ActorProducerPipelineResolver _actorProducerPipelineResolver;
         private TerminationCallbacks _terminationCallbacks;
 
         /// <summary>
@@ -103,7 +102,6 @@ namespace Akka.Actor.Internal
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
-            ConfigureActorProducerPipeline();
         }
 
         /// <inheritdoc cref="ActorSystem"/>
@@ -138,9 +136,6 @@ namespace Akka.Actor.Internal
 
         /// <inheritdoc cref="ActorSystem"/>
         public override ILoggingAdapter Log { get { return _log; } }
-
-        /// <inheritdoc cref="ActorSystem"/>
-        public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
 
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
@@ -478,12 +473,6 @@ namespace Akka.Actor.Internal
                     Settings,
                     Mailboxes),
                 _log);
-        }
-
-        private void ConfigureActorProducerPipeline()
-        {
-            // we push Log in lazy manner since it may not be configured at point of pipeline initialization
-            _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
         }
 
         private void ConfigureTerminationCallbacks()
