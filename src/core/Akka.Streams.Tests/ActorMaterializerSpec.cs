@@ -89,5 +89,12 @@ namespace Akka.Streams.Tests
             sys.Terminate().Wait();
             m.IsShutdown.Should().BeTrue();
         }
+
+        [Fact]
+        public async Task CanMaterializeStreamsUsingActorSystem()
+        {
+            Func<Task> task = () => Source.Single(1).RunForeach(i => { }, Sys);
+            await task.Should().NotThrowAsync();
+        }
     }
 }
