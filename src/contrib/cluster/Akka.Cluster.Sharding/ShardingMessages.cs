@@ -427,12 +427,12 @@ namespace Akka.Cluster.Sharding
         /// Creates a new ShardRegionStats instance.
         /// </summary>
         /// <param name="stats">the region stats mapping of `ShardId` to number of entities</param>
-        [Obsolete]
+        [Obsolete("Use constructor with `failed` argument. Obsolete since 1.5.0-alpha1")]
         public ShardRegionStats(IImmutableDictionary<ShardId, int> stats)
             : this(stats, ImmutableHashSet<ShardId>.Empty)
         {
         }
-
+        
         /// <summary>
         /// Creates a new ShardRegionStats instance.
         /// </summary>
@@ -520,12 +520,12 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         /// <param name="shards">TBD</param>
-        [Obsolete]
+        [Obsolete("Use constructor with `failed` argument. Obsolete since 1.5.0-alpha1")]
         public CurrentShardRegionState(IImmutableSet<ShardState> shards)
             : this(shards, ImmutableHashSet<ShardId>.Empty)
         {
         }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
