@@ -345,13 +345,6 @@ namespace Akka.Tests.IO
         {
             public int OpenCalled { get; set; }
 
-
-            public override Socket Create()
-            {
-                OpenCalled += 1;
-                return base.Create();
-            }
-
             public override Socket Create(AddressFamily addressFamily)
             {
                 OpenCalled += 1;
