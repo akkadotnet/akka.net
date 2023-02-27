@@ -15,22 +15,24 @@ namespace Akka.Persistence.Query.Sql
 {
     internal sealed class CurrentPersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash
     {
-        public static Props Props(string writeJournalPluginId)
+        public static Props Props(IActorRef writeJournal, IActorRef queryPermitter)
         {
-            return Actor.Props.Create(() => new CurrentPersistenceIdsPublisher(writeJournalPluginId));
+            return Actor.Props.Create(() => new CurrentPersistenceIdsPublisher(writeJournal, queryPermitter));
         }
 
         private readonly IActorRef _journalRef;
+        private readonly IActorRef _queryPermitter;
 
         private readonly DeliveryBuffer<string> _buffer;
         private readonly ILoggingAdapter _log;
 
         public IStash Stash { get; set; }
 
-        public CurrentPersistenceIdsPublisher(string writeJournalPluginId)
+        public CurrentPersistenceIdsPublisher(IActorRef journalRef, IActorRef queryPermitter)
         {
+            _journalRef = journalRef;
+            _queryPermitter = queryPermitter;
             _buffer = new DeliveryBuffer<string>(OnNext);
-            _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
             _log = Context.GetLogger();
         }
 
@@ -39,10 +41,7 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case Request _:
-                    Become(Initializing);
-                    _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self))
-                        .PipeTo(Self);
+                    RequestQueryPermit();
                     return true;
                 
                 case Cancel _:
@@ -54,11 +53,40 @@ namespace Akka.Persistence.Query.Sql
             }
         }
 
+        private void RequestQueryPermit()
+        {
+            _log.Debug("Requesting query permit");
+            _queryPermitter.Tell(RequestQueryStart.Instance);
+            Become(WaitingForQueryPermit);
+        }
+
+        private bool WaitingForQueryPermit(object message)
+        {
+            switch (message)
+            {
+                case QueryStartGranted _:
+                    Become(Initializing);
+                    _journalRef
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self))
+                        .PipeTo(Self);
+                    return true;
+                case Request _:
+                    // ignore
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         private bool Initializing(object message)
         {
             switch (message)
             {
                 case CurrentPersistenceIds current:
+                    _queryPermitter.Tell(ReturnQueryStart.Instance); // return token
                     _buffer.AddRange(current.AllPersistenceIds);
                     _buffer.DeliverBuffer(TotalDemand);
 
@@ -86,9 +114,7 @@ namespace Akka.Persistence.Query.Sql
                         _log.Info(msg.Cause, "Current persistence id query failed, retrying");
                     }
                     
-                    _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(0, Self))
-                        .PipeTo(Self);
+                    RequestQueryPermit();
                     return true;
                     
                 default:
@@ -130,21 +156,24 @@ namespace Akka.Persistence.Query.Sql
             private Continue() { }
         }
 
-        public static Props Props(TimeSpan refreshInterval, string writeJournalPluginId)
+        public static Props Props(TimeSpan refreshInterval, IActorRef writeJournal, IActorRef queryPermitter)
         {
-            return Actor.Props.Create(() => new LivePersistenceIdsPublisher(refreshInterval, writeJournalPluginId));
+            return Actor.Props.Create(() => new LivePersistenceIdsPublisher(refreshInterval, writeJournal, queryPermitter));
         }
 
-        private long _lastOrderingOffset;
+        private long _lastOrderingOffset = 0L;
         private readonly ICancelable _tickCancelable;
         private readonly IActorRef _journalRef;
+        private readonly IActorRef _queryPermitter;
         private readonly DeliveryBuffer<string> _buffer;
         private readonly ILoggingAdapter _log;
 
         public IStash Stash { get; set; }
 
-        public LivePersistenceIdsPublisher(TimeSpan refreshInterval, string writeJournalPluginId)
+        public LivePersistenceIdsPublisher(TimeSpan refreshInterval, IActorRef journalRef, IActorRef queryPermitter)
         {
+            _journalRef = journalRef;
+            _queryPermitter = queryPermitter;
             _log = Context.GetLogger();
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
                 refreshInterval, 
@@ -153,7 +182,6 @@ namespace Akka.Persistence.Query.Sql
                 Continue.Instance, 
                 Self);
             _buffer = new DeliveryBuffer<string>(OnNext);
-            _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
         protected override void PostStop()
@@ -167,10 +195,7 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case Request _:
-                    Become(Waiting);
-                    _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
-                        .PipeTo(Self);
+                    RequestQueryPermit();
                     return true;
                 
                 case Continue _:
@@ -180,6 +205,39 @@ namespace Akka.Persistence.Query.Sql
                     Context.Stop(Self);
                     return true;
                 
+                default:
+                    return false;
+            }
+        }
+
+        private void RequestQueryPermit()
+        {
+            _log.Debug("Requesting query permit");
+            _queryPermitter.Tell(RequestQueryStart.Instance);
+            Become(WaitingForQueryPermit);
+        }
+
+        private bool WaitingForQueryPermit(object message)
+        {
+            switch (message)
+            {
+                case QueryStartGranted _:
+                    Become(Waiting);
+                    _journalRef
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
+                        .PipeTo(Self);
+                    return true;
+                
+                case Continue _:
+                    // ignore
+                    return true;
+                case Request _:
+                    _buffer.DeliverBuffer(TotalDemand); // deliver any buffered elements
+                    return true;
+                
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
                 default:
                     return false;
             }
@@ -196,6 +254,7 @@ namespace Akka.Persistence.Query.Sql
 
                     Become(Active);
                     Stash.UnstashAll();
+                    _queryPermitter.Tell(ReturnQueryStart.Instance); // return token
                     return true;
                 
                 case Continue _:
@@ -238,10 +297,7 @@ namespace Akka.Persistence.Query.Sql
                     return true;
                 
                 case Continue _:
-                    Become(Waiting);
-                    _journalRef
-                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
-                        .PipeTo(Self);
+                   RequestQueryPermit();
                     return true;
                 
                 case Cancel _:
