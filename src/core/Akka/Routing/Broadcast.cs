@@ -275,19 +275,6 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Obsolete. Use <see cref="BroadcastGroup(IEnumerable{System.String})"/> instead.
-        /// <code>
-        /// new BroadcastGroup(actorRefs.Select(c => c.Path.ToString()))
-        /// </code>
-        /// </summary>
-        /// <param name="routees">N/A</param>
-        [Obsolete("Use new BroadcastGroup(actorRefs.Select(c => c.Path.ToString())) instead [1.1.0]")]
-        public BroadcastGroup(IEnumerable<IActorRef> routees)
-            : this(routees.Select(c => c.Path.ToString()))
-        {
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="BroadcastGroup"/> class.
         /// </summary>
         /// <param name="paths">An enumeration of actor paths used by the group router.</param>
