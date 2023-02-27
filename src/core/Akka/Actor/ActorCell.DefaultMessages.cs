@@ -14,6 +14,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Debug = Akka.Event.Debug;
 using System.Globalization;
+using Akka.Actor.Scheduler;
 
 namespace Akka.Actor
 {
@@ -57,7 +58,7 @@ namespace Akka.Actor
         {
 
             var message = envelope.Message;
-            var influenceReceiveTimeout = !(message is INotInfluenceReceiveTimeout);
+            var influenceReceiveTimeout = message is not INotInfluenceReceiveTimeout;
 
             try
             {
@@ -72,6 +73,7 @@ namespace Akka.Actor
                 {
                     CancelReceiveTimeout();
                 }
+                
 
                 if (message is IAutoReceivedMessage)
                 {
@@ -105,24 +107,7 @@ namespace Akka.Actor
             var sender = envelope.Sender;
             return sender ?? System.DeadLetters;
         }
-
-
-        /*
- def autoReceiveMessage(msg: Envelope): Unit = {
-    if (system.settings.DebugAutoReceive)
-      publish(Debug(self.path.toString, clazz(actor), "received AutoReceiveMessage " + msg))
-
-    msg.message match {
-      case t: Terminated              ⇒ receivedTerminated(t)
-      case AddressTerminated(address) ⇒ addressTerminated(address)
-      case Kill                       ⇒ throw new ActorKilledException("Kill")
-      case PoisonPill                 ⇒ self.stop()
-      case sel: ActorSelectionMessage ⇒ receiveSelection(sel)
-      case Identify(messageId)        ⇒ sender() ! ActorIdentity(messageId, Some(self))
-    }
-  }
-         */
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -135,7 +120,7 @@ namespace Akka.Actor
             var message = envelope.Message;
 
             var actor = _actor;
-            var actorType = actor != null ? actor.GetType() : null;
+            var actorType = actor?.GetType();
 
             if (System.Settings.DebugAutoReceive)
                 Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));

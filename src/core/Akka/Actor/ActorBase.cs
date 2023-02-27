@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor.Internal;
+using Akka.Actor.Scheduler;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -178,9 +179,9 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected internal virtual bool AroundReceive(Receive receive, object message)
         {
-            if (message is Scheduler.TimerScheduler.ITimerMsg tm)
+            if (message is TimerScheduler.ITimerMsg tm)
             {
-                if (this is IWithTimers withTimers && withTimers.Timers is Scheduler.TimerScheduler timers)
+                if (this is IWithTimers { Timers: TimerScheduler timers })
                 {
                     switch (timers.InterceptTimerMsg(Context.System.Log, tm))
                     {
@@ -207,6 +208,29 @@ namespace Akka.Actor
                 {
                     // discard
                     return true;
+                }
+            }
+            else if(message is IScheduledTellMsg scheduled)
+            {
+                switch (scheduled.Message)
+                {
+                    case IAutoReceivedMessage m:
+                        ((ActorCell)Context).AutoReceiveMessage(new Envelope(m, Self));
+                        return true;
+
+                    case null:
+                        // discard
+                        return true;
+
+                    case var m:
+                        if (this is IActorStash)
+                        {
+                            var actorCell = (ActorCell)Context;
+                            // this is important for stash interaction, as stash will look directly at currentMessage #24557
+                            actorCell.CurrentMessage = m;
+                        }
+                        message = m;
+                        break;
                 }
             }
 
@@ -242,8 +266,7 @@ namespace Akka.Actor
         /// </exception>
         protected virtual void Unhandled(object message)
         {
-            var terminatedMessage = message as Terminated;
-            if (terminatedMessage != null)
+            if (message is Terminated terminatedMessage)
             {
                 throw new DeathPactException(terminatedMessage.ActorRef);
             }
