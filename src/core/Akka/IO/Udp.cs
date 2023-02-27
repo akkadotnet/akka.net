@@ -176,12 +176,6 @@ namespace Akka.IO
         /// </summary>
         public sealed class Send : Command
         {
-            [Obsolete("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(ByteString, EndPoint, Event)` instead.")]
-            public Send(IEnumerator<ByteBuffer> payload, EndPoint target, Event ack)
-                : this(ByteString.FromBuffers(payload), target, ack)
-            {
-            }
-
             /// <summary>
             /// Creates a new send request to be executed via UDP socket to a addressed to the provided endpoint.
             /// Once send completes, this request will acknowledged back on the sender side with an <paramref name="ack"/>
