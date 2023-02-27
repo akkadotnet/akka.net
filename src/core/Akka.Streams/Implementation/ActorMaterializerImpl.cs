@@ -124,49 +124,48 @@ namespace Akka.Streams.Implementation
                 if(IsDebug)
                     Console.WriteLine($"materializing {atomic}");
 
-                if (atomic is ISinkModule)
+                switch (atomic)
                 {
-                    var sink = (ISinkModule) atomic;
-                    object materialized;
-                    var subscriber = sink.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
-                    AssignPort(sink.Shape.Inlets.First(), subscriber);
-                    materializedValues.Add(atomic, materialized);
-                }
-                else if (atomic is ISourceModule)
-                {
-                    var source = (ISourceModule) atomic;
-                    object materialized;
-                    var publisher = source.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
-                    AssignPort(source.Shape.Outlets.First(), publisher);
-                    materializedValues.Add(atomic, materialized);
-                }
-                else if (atomic is IProcessorModule)
-                {
-                    var stage = atomic as IProcessorModule;
-                    var t = stage.CreateProcessor();
-                    var processor = t.Item1;
-                    var materialized = t.Item2;
+                    case ISinkModule sink:
+                    {
+                        var subscriber = sink.Create(CreateMaterializationContext(effectiveAttributes), out var materialized);
+                        AssignPort(sink.Shape.Inlets.First(), subscriber);
+                        materializedValues.Add(atomic, materialized);
+                        break;
+                    }
+                    case ISourceModule source:
+                    {
+                        var publisher = source.Create(CreateMaterializationContext(effectiveAttributes), out var materialized);
+                        AssignPort(source.Shape.Outlets.First(), publisher);
+                        materializedValues.Add(atomic, materialized);
+                        break;
+                    }
+                    case IProcessorModule module:
+                    {
+                        var t = module.CreateProcessor();
+                        var processor = t.Item1;
+                        var materialized = t.Item2;
 
-                    AssignPort(stage.In, UntypedSubscriber.FromTyped(processor));
-                    AssignPort(stage.Out, UntypedPublisher.FromTyped(processor));
-                    materializedValues.Add(atomic, materialized);
-                }
-                //else if (atomic is TlsModule)
-                //{
-                //})
-                else if (atomic is GraphModule)
-                {
-                    var graph = (GraphModule) atomic;
-                    MaterializeGraph(graph, effectiveAttributes, materializedValues);
-                }
-                else if (atomic is GraphStageModule)
-                {
-                    var stage = (GraphStageModule) atomic;
-                    var graph =
-                        new GraphModule(
-                            GraphAssembly.Create(stage.Shape.Inlets, stage.Shape.Outlets, new[] {stage.Stage}),
-                            stage.Shape, stage.Attributes, new IModule[] {stage});
-                    MaterializeGraph(graph, effectiveAttributes, materializedValues);
+                        AssignPort(module.In, UntypedSubscriber.FromTyped(processor));
+                        AssignPort(module.Out, UntypedPublisher.FromTyped(processor));
+                        materializedValues.Add(atomic, materialized);
+                        break;
+                    }
+                    //else if (atomic is TlsModule)
+                    //{
+                    //})
+                    case GraphModule graphModule:
+                        MaterializeGraph(graphModule, effectiveAttributes, materializedValues);
+                        break;
+                    case GraphStageModule stage:
+                    {
+                        var graph =
+                            new GraphModule(
+                                GraphAssembly.Create(stage.Shape.Inlets, stage.Shape.Outlets, new[] {stage.Stage}),
+                                stage.Shape, stage.Attributes, new IModule[] { stage });
+                        MaterializeGraph(graph, effectiveAttributes, materializedValues);
+                        break;
+                    }
                 }
 
                 return NotUsed.Instance;
