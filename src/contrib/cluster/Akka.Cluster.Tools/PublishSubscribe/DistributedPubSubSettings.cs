@@ -117,23 +117,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <param name="gossipInterval">The gossip interval for propagating topic/subscriber data to other mediators.</param>
         /// <param name="removedTimeToLive">The amount of time it takes to prune a deactivated subscriber from the network.</param>
         /// <param name="maxDeltaElements">The maximum number of delta elements that can be propagated in a single gossip tick.</param>
-        /// <exception cref="ArgumentException">Thrown if a user tries to use a <see cref="ConsistentHashingRoutingLogic"/> with routingLogic.</exception>
-        [Obsolete("Obsolete - please us the full constructor instead. This constructor only exists for backwards API compatibility.")]
-        public DistributedPubSubSettings(
-            string role,
-            RoutingLogic routingLogic,
-            TimeSpan gossipInterval,
-            TimeSpan removedTimeToLive,
-            int maxDeltaElements) : this(role, routingLogic, gossipInterval, removedTimeToLive, maxDeltaElements, true){ }
-
-        /// <summary>
-        /// Creates a new instance of the <see cref="DistributedPubSubSettings" />.
-        /// </summary>
-        /// <param name="role">The role that will host <see cref="DistributedPubSubMediator"/> instances.</param>
-        /// <param name="routingLogic">Optional. The routing logic used for distributing messages for topic groups.</param>
-        /// <param name="gossipInterval">The gossip interval for propagating topic/subscriber data to other mediators.</param>
-        /// <param name="removedTimeToLive">The amount of time it takes to prune a deactivated subscriber from the network.</param>
-        /// <param name="maxDeltaElements">The maximum number of delta elements that can be propagated in a single gossip tick.</param>
         /// <param name="sendToDeadLettersWhenNoSubscribers">When a message is published to a topic with no subscribers send it to the dead letters.</param>
         /// <exception cref="ArgumentException">Thrown if a user tries to use a <see cref="ConsistentHashingRoutingLogic"/> with routingLogic.</exception>
         public DistributedPubSubSettings(

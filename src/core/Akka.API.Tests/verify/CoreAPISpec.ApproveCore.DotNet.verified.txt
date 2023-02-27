@@ -1082,10 +1082,6 @@ namespace Akka.Actor
         T CreateExtension(Akka.Actor.ExtendedActorSystem system);
         T Get(Akka.Actor.ActorSystem system);
     }
-    public interface IHandle<in TMessage>
-    {
-        void Handle(TMessage message);
-    }
     public interface IInboxable : Akka.Actor.ICanWatch
     {
         Akka.Actor.IActorRef Receiver { get; }
@@ -1824,12 +1820,6 @@ namespace Akka.Actor
     {
         public TerminatedProps() { }
         public override Akka.Actor.ActorBase NewActor() { }
-    }
-    [System.ObsoleteAttribute("TypedActor in its current shape will be removed in v1.5")]
-    public abstract class TypedActor : Akka.Actor.ActorBase
-    {
-        protected TypedActor() { }
-        protected virtual bool Receive(object message) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public class UnstartedCell : Akka.Actor.ICell
