@@ -46,27 +46,6 @@ namespace Akka.IO
                 fileIoDispatcher: config.GetString("file-io-dispatcher", "akka.actor.default-dispatcher"));
         }
         
-        // directBufferSize and maxDirectBufferPoolSize parameter are byterot, remove this in v1.5
-        [Obsolete("Please the constructor without directBufferSize and maxDirectBufferPoolSize parameter")]
-        public UdpSettings(
-            string bufferPoolConfigPath, 
-            bool traceLogging,
-            int initialSocketAsyncEventArgs,
-            int directBufferSize,
-            int maxDirectBufferPoolSize,
-            int batchReceiveLimit,
-            string managementDispatcher,
-            string fileIoDispatcher) 
-            : this(
-                bufferPoolConfigPath,
-                traceLogging,
-                initialSocketAsyncEventArgs,
-                batchReceiveLimit,
-                managementDispatcher,
-                fileIoDispatcher)
-        {
-        }
-
         public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher)
         {
             BufferPoolConfigPath = bufferPoolConfigPath;
