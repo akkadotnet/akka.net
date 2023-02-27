@@ -417,7 +417,7 @@ namespace Akka.Actor
             public ScheduledTell(ICanTell receiver, object message, IActorRef sender)
             {
                 _receiver = receiver;
-                _message = message is INotInfluenceReceiveTimeout ? new ScheduledTellMsgNoInfluenceReceiveTimeout(message) : new ScheduledTellMsg(message));
+                _message = message is INotInfluenceReceiveTimeout ? new ScheduledTellMsgNoInfluenceReceiveTimeout(message) : new ScheduledTellMsg(message);
                 _sender = sender;
             }
 
