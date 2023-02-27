@@ -328,16 +328,6 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Obsolete. Use <see cref="RoundRobinGroup(IEnumerable{System.String})"/> instead.
-        /// </summary>
-        /// <param name="routees">N/A</param>
-        [Obsolete("Use RoundRobinGroup constructor with IEnumerable<string> parameter [1.1.0]")]
-        public RoundRobinGroup(IEnumerable<IActorRef> routees)
-            : this(routees.Select(c => c.Path.ToString()))
-        {
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="RoundRobinGroup"/> class.
         /// </summary>
         /// <param name="paths">A list of paths used by the group router.</param>
