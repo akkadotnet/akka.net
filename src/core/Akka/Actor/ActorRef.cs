@@ -434,14 +434,6 @@ namespace Akka.Actor
         void Suspend();
 
         /// <summary>
-        /// Obsolete. Use <see cref="SendSystemMessage(ISystemMessage)"/> instead.
-        /// </summary>
-        /// <param name="message">N/A</param>
-        /// <param name="sender">N/A</param>
-        [Obsolete("Use SendSystemMessage(message) [1.1.0]")]
-        void SendSystemMessage(ISystemMessage message, IActorRef sender);
-
-        /// <summary>
         /// Sends an <see cref="ISystemMessage"/> to the underlying actor.
         /// </summary>
         /// <param name="message">The system message we're sending.</param>
@@ -485,13 +477,6 @@ namespace Akka.Actor
 
         /// <inheritdoc cref="IInternalActorRef"/>
         public abstract bool IsLocal { get; }
-
-        /// <inheritdoc cref="IInternalActorRef"/>
-        [Obsolete("Use SendSystemMessage(message) instead [1.1.0]")]
-        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
-        {
-            SendSystemMessage(message);
-        }
 
         /// <inheritdoc cref="IInternalActorRef"/>
         public abstract void SendSystemMessage(ISystemMessage message);

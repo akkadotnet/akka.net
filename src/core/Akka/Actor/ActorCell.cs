@@ -228,17 +228,6 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// Obsolete. Use <see cref="TryGetChildStatsByName(string, out IChildStats)"/> instead.
-        /// </summary>
-        /// <param name="name">N/A</param>
-        /// <returns>N/A</returns>
-        [Obsolete("Use TryGetChildStatsByName [0.7.1]", true)]
-        public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
-        {
-            return GetSingleChild(name);
-        }
-
         IActorRef IActorContext.Child(string name)
         {
             if (TryGetChildStatsByName(name, out var child) && child is ChildRestartStats s)

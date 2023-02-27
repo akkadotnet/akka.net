@@ -89,7 +89,7 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        [Obsolete("Used ChildrenRefs instead [1.1.0]")]
+        // [Obsolete("Used ChildrenRefs instead [1.1.0]")] // ChildrenRefs was never implemented 
         IEnumerable<IInternalActorRef> GetChildren();    //TODO: Should be replaced by childrenRefs: ChildrenContainer
 
         /// <summary>
@@ -104,13 +104,6 @@ namespace Akka.Actor
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
         IInternalActorRef GetSingleChild(string name);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        IInternalActorRef GetChildByName(string name);
 
         /// <summary>
         /// Tries to get the stats for the child with the specified name. The stats can be either <see cref="ChildNameReserved"/> 
