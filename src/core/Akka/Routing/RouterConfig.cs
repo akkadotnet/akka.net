@@ -43,12 +43,6 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// A configuration that specifies that no router is to be used.
-        /// </summary>
-        [Obsolete("Use NoRouter.Instance instead [1.1.0]")]
-        public static RouterConfig NoRouter => Routing.NoRouter.Instance;
-
-        /// <summary>
         /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system"/>.
         /// </summary>
         /// <param name="system">The ActorSystem this router belongs to.</param>
@@ -160,12 +154,6 @@ namespace Akka.Routing
         /// Internal property for holding the supplied paths
         /// </summary>
         protected readonly string[] InternalPaths;
-
-        /// <summary>
-        /// Retrieves the paths of all routees declared on this router.
-        /// </summary>
-        [Obsolete("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
-        public IEnumerable<string> Paths => null;
 
         /// <summary>
         /// Retrieves the actor paths used by this router during routee selection.

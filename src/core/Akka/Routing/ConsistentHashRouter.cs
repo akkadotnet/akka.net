@@ -644,19 +644,6 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Obsolete. Use <see cref="ConsistentHashingGroup(IEnumerable{System.String})"/> instead.
-        /// <code>
-        /// new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString()))
-        /// </code>
-        /// </summary>
-        /// <param name="routees">N/A</param>
-        [Obsolete("Use new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString())) instead [1.1.0]")]
-        public ConsistentHashingGroup(IEnumerable<IActorRef> routees)
-            : this(routees.Select(c => c.Path.ToString()))
-        {
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
         /// </summary>
         /// <param name="paths">An enumeration of actor paths used by the group router.</param>
