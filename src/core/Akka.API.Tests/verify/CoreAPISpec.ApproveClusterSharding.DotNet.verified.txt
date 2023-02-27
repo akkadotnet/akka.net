@@ -92,6 +92,8 @@ namespace Akka.Cluster.Sharding
     {
         public readonly System.Collections.Immutable.IImmutableSet<string> Failed;
         public readonly System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> Shards;
+        [System.ObsoleteAttribute("Use constructor with `failed` argument. Obsolete since 1.5.0-alpha1")]
+        public CurrentShardRegionState(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> shards) { }
         public CurrentShardRegionState(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> shards, System.Collections.Immutable.IImmutableSet<string> failed) { }
         public override bool Equals(object obj) { }
         public bool Equals(Akka.Cluster.Sharding.CurrentShardRegionState other) { }
@@ -218,6 +220,8 @@ namespace Akka.Cluster.Sharding
     {
         public readonly System.Collections.Immutable.IImmutableSet<string> Failed;
         public readonly System.Collections.Immutable.IImmutableDictionary<string, int> Stats;
+        [System.ObsoleteAttribute("Use constructor with `failed` argument. Obsolete since 1.5.0-alpha1")]
+        public ShardRegionStats(System.Collections.Immutable.IImmutableDictionary<string, int> stats) { }
         public ShardRegionStats(System.Collections.Immutable.IImmutableDictionary<string, int> stats, System.Collections.Immutable.IImmutableSet<string> failed) { }
         public override bool Equals(object obj) { }
         public bool Equals(Akka.Cluster.Sharding.ShardRegionStats other) { }
