@@ -265,7 +265,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var tempMap = ActorMaterializer.Create(Sys);
+                var tempMap = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys)); // need to create a new materializer to be able to shutdown it
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue = Source.Queue<int>(1, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))

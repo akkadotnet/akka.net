@@ -824,7 +824,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _left = stage._count;
 
-                SetHandler(stage.Inlet, stage.Outlet, this);
+                SetHandlers(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush()

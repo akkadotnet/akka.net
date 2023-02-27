@@ -89,5 +89,23 @@ namespace Akka.Streams.Tests
             sys.Terminate().Wait();
             m.IsShutdown.Should().BeTrue();
         }
+
+        [Fact]
+        public async Task CanMaterializeStreamsUsingActorSystem()
+        {
+            Func<Task> task = () => Source.Single(1).RunForeach(i => { }, Sys);
+            await task.Should().NotThrowAsync();
+        }
+        
+        [Fact]
+        public void ShouldReturnSameMaterializerForActorSystem()
+        {
+            var mat1 = Sys.Materializer();
+            var mat2 = Sys.Materializer();
+            var mat3 = Sys.Materializer(namePrefix: "different");
+            
+            mat1.Should().Be(mat2);
+            mat1.Should().NotBe(mat3);
+        }
     }
 }

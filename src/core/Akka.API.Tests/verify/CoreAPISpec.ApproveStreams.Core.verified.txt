@@ -1619,6 +1619,7 @@ namespace Akka.Streams.Dsl
         Akka.Streams.Dsl.IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> func);
         Akka.Streams.Dsl.IRunnableGraph<TMat> Named(string name);
         TMat Run(Akka.Streams.IMaterializer materializer);
+        TMat Run(Akka.Actor.ActorSystem actorSystem);
         Akka.Streams.Dsl.IRunnableGraph<TMat> WithAttributes(Akka.Streams.Attributes attributes);
     }
     public interface IUnzipWithCreator<out TIn, in TOut, out T>
@@ -1924,6 +1925,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> func) { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat> Named(string name) { }
         public TMat Run(Akka.Streams.IMaterializer materializer) { }
+        public TMat Run(Akka.Actor.ActorSystem actorSystem) { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
     }
     public class Sample<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
@@ -2190,13 +2192,21 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.Source<TOut, TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> mapFunc) { }
         public Akka.Streams.Dsl.Source<TOut, TMat> Named(string name) { }
         public System.ValueTuple<TMat, Akka.Streams.Dsl.Source<TOut, Akka.NotUsed>> PreMaterialize(Akka.Streams.IMaterializer materializer) { }
+        public System.ValueTuple<TMat, Akka.Streams.Dsl.Source<TOut, Akka.NotUsed>> PreMaterialize(Akka.Actor.ActorSystem actorSystem) { }
         public System.Threading.Tasks.Task<TOut2> RunAggregate<TOut2>(TOut2 zero, System.Func<TOut2, TOut, TOut2> aggregate, Akka.Streams.IMaterializer materializer) { }
+        public System.Threading.Tasks.Task<TOut2> RunAggregate<TOut2>(TOut2 zero, System.Func<TOut2, TOut, TOut2> aggregate, Akka.Actor.ActorSystem materializer) { }
         public System.Threading.Tasks.Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, System.Func<TOut2, TOut, System.Threading.Tasks.Task<TOut2>> aggregate, Akka.Streams.IMaterializer materializer) { }
+        public System.Threading.Tasks.Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, System.Func<TOut2, TOut, System.Threading.Tasks.Task<TOut2>> aggregate, Akka.Actor.ActorSystem materializer) { }
         public System.Collections.Generic.IAsyncEnumerable<TOut> RunAsAsyncEnumerable(Akka.Streams.IMaterializer materializer) { }
+        public System.Collections.Generic.IAsyncEnumerable<TOut> RunAsAsyncEnumerable(Akka.Actor.ActorSystem materializer) { }
         public System.Collections.Generic.IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(Akka.Streams.IMaterializer materializer, int minBuffer = 4, int maxBuffer = 16) { }
+        public System.Collections.Generic.IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(Akka.Actor.ActorSystem materializer, int minBuffer = 4, int maxBuffer = 16) { }
         public System.Threading.Tasks.Task RunForeach(System.Action<TOut> action, Akka.Streams.IMaterializer materializer) { }
+        public System.Threading.Tasks.Task RunForeach(System.Action<TOut> action, Akka.Actor.ActorSystem materializer) { }
         public System.Threading.Tasks.Task<TOut> RunSum(System.Func<TOut, TOut, TOut> reduce, Akka.Streams.IMaterializer materializer) { }
+        public System.Threading.Tasks.Task<TOut> RunSum(System.Func<TOut, TOut, TOut> reduce, Akka.Actor.ActorSystem materializer) { }
         public TMat2 RunWith<TMat2>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> sink, Akka.Streams.IMaterializer materializer) { }
+        public TMat2 RunWith<TMat2>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> sink, Akka.Actor.ActorSystem materializer) { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat> To<TMat2>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> sink) { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat3> ToMaterialized<TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> sink, System.Func<TMat, TMat2, TMat3> combine) { }
         public override string ToString() { }
@@ -3637,7 +3647,7 @@ namespace Akka.Streams.Implementation
     }
     public class static StreamLayout
     {
-        public static readonly bool IsDebug;
+        public const bool IsDebug = false;
         public static void Validate(Akka.Streams.Implementation.IModule module, int level = 0, bool shouldPrint = False, System.Collections.Generic.IDictionary<object, int> idMap = null) { }
         public sealed class Atomic : Akka.Streams.Implementation.StreamLayout.IMaterializedValueNode
         {

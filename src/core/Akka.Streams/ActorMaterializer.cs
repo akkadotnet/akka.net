@@ -26,6 +26,53 @@ using Decider = Akka.Streams.Supervision.Decider;
 namespace Akka.Streams
 {
     /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class DefaultMaterializerExt : ExtensionIdProvider<DefaultMaterializer>
+    {
+        public override DefaultMaterializer CreateExtension(ExtendedActorSystem system)
+        {
+            return new DefaultMaterializer(system);
+        }
+    }
+    
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <remarks>
+    /// Caches a default materializer instance for each actor system. Prevents the need to create a new materializer
+    /// for trivial changes.
+    /// </remarks>
+    internal sealed class DefaultMaterializer : IExtension
+    {
+        public ActorMaterializer Materializer { get; }
+        
+        public DefaultMaterializer(ActorSystem system)
+        {
+            var haveShutDown = new AtomicBoolean();
+            
+            // Inject the top-level fallback config for the Materializer once, and only once.
+            // This is a performance optimization to avoid having to do this on every materialization.
+            system.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
+            
+            var settings = ActorMaterializerSettings.Create(system);
+            
+            Materializer = new ActorMaterializerImpl(
+                system: system,
+                settings: settings,
+                dispatchers: system.Dispatchers,
+                supervisor: system.ActorOf(StreamSupervisor.Props(settings, haveShutDown).WithDispatcher(settings.Dispatcher), StreamSupervisor.NextName()),
+                haveShutDown: haveShutDown,
+                flowNames: EnumerableActorName.Create("Flow"));
+        }
+        
+        public static DefaultMaterializer Get(ActorSystem system)
+        {
+            return system.WithExtension<DefaultMaterializer, DefaultMaterializerExt>();
+        }
+    }
+
+    /// <summary>
     /// A ActorMaterializer takes the list of transformations comprising a
     /// <see cref="IFlow{TOut,TMat}"/> and materializes them in the form of
     /// <see cref="IProcessor{T1,T2}"/> instances. How transformation
@@ -44,18 +91,6 @@ namespace Akka.Streams
             => DefaultMaterializerConfig;
 
         #region static
-
-        /// <summary>
-        /// Injecting the top-level Materializer HOCON configuration over and over again is expensive, so we want to avoid
-        /// doing it each time a materializer is instantiated. This flag will be set to true once the configuration has been
-        /// injected the first time.
-        /// </summary>
-        private static readonly ConcurrentDictionary<ActorSystem, bool> InjectedConfig = new();
-        
-        /// <summary>
-        /// Cache the default materializer settings so we don't constantly parse them
-        /// </summary>
-        private static readonly ConcurrentDictionary<ActorSystem, ActorMaterializerSettings> DefaultSettings = new();
 
         /// <summary>
         /// <para>
@@ -86,31 +121,21 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static ActorMaterializer Create(IActorRefFactory context, ActorMaterializerSettings settings = null, string namePrefix = null)
         {
-            var haveShutDown = new AtomicBoolean();
             var system = ActorSystemOf(context);
+            
+            // forces settings to get injected into the ActorSystem the first time we materialize
+            var defaultMaterializer = DefaultMaterializer.Get(system).Materializer;
 
-            if(!InjectedConfig.TryGetValue(system, out _) && InjectedConfig.TryAdd(system, true))
-            {
-                // Inject the top-level fallback config for the Materializer once, and only once.
-                // This is a performance optimization to avoid having to do this on every materialization.
-                system.Settings.InjectTopLevelFallback(DefaultConfig());
-
-                static async Task CleanUp(ActorSystem sys)
-                {
-                    // remove ActorSystem from cache when it terminates so we don't leak memory
-                    await sys.WhenTerminated.ConfigureAwait(false);
-                    InjectedConfig.TryRemove(sys, out _);
-                    DefaultSettings.TryRemove(sys, out _);
-                }
-
-#pragma warning disable CS4014
-                CleanUp(system);
-#pragma warning restore CS4014
-
-            }
+            // optimized paths for non-allocation
+            if (context.Equals(system) && settings == null && namePrefix == null)
+                return defaultMaterializer;
+            if (context.Equals(system) && settings == null && namePrefix != null)
+                return (ActorMaterializer)defaultMaterializer.WithNamePrefix(namePrefix);
 
             // use the default settings if none have been passed in
-            settings ??= DefaultSettings.GetOrAdd(system, ActorMaterializerSettings.Create);
+            settings ??= defaultMaterializer.Settings;
+            
+            var haveShutDown = new AtomicBoolean();
 
             return new ActorMaterializerImpl(
                 system: system,
@@ -243,8 +268,7 @@ namespace Akka.Streams
         internal static ActorMaterializer Downcast(IMaterializer materializer)
         {
             //FIXME this method is going to cause trouble for other Materializer implementations
-            var downcast = materializer as ActorMaterializer;
-            if (downcast != null)
+            if (materializer is ActorMaterializer downcast)
                 return downcast;
 
             throw new ArgumentException($"Expected {typeof(ActorMaterializer)} but got {materializer.GetType()}");
