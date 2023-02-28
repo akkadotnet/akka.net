@@ -8,6 +8,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Annotations;
 
 namespace Akka.Event
@@ -51,6 +52,13 @@ namespace Akka.Event
         /// <returns>An unformatted copy of the state string - used for debugging bad logging templates</returns>
         [InternalApi]
         public abstract string Unformatted();
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <returns>The unformatted log arguments - used during debugging and by third-party logging libraries</returns>
+        [InternalApi]
+        public abstract IEnumerable<object> Parameters();
     }
 
     /// <summary>
@@ -75,6 +83,8 @@ namespace Akka.Event
         {
             return Arg.ToString();
         }
+
+        public override IEnumerable<object> Parameters() => Arg;
     }
 
     /// <summary>
@@ -91,12 +101,17 @@ namespace Akka.Event
 
         public override string ToString()
         {
-            return Formatter.Format(Format, Args);
+            return Formatter.Format(Format, Parameters);
         }
 
         public override string Unformatted()
         {
-            return string.Join(",", Args);
+            return string.Join(",", Parameters);
+        }
+
+        public override IEnumerable<object> Parameters()
+        {
+            return Args;
         }
     }
 

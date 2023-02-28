@@ -72,7 +72,7 @@ namespace Akka.Configuration
         /// <returns>The configuration that contains default values for all options.</returns>
         public static Config Default()
         {
-            return FromResource("Akka.Configuration.Pigeon.conf");
+            return FromResource("Akka.Configuration.akka.conf");
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
-            Assembly assembly = typeof(ConfigurationFactory).GetTypeInfo().Assembly;
+            var assembly = typeof(ConfigurationFactory).GetTypeInfo().Assembly;
 
             return FromResource(resourceName, assembly);
         }
@@ -97,13 +97,10 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the assembly that contains the instanced object.</returns>
         public static Config FromResource(string resourceName, object instanceInAssembly)
         {
-            var type = instanceInAssembly as Type;
-            if (type != null)
+            if (instanceInAssembly is Type type)
                 return FromResource(resourceName, type.GetTypeInfo().Assembly);
             var assembly = instanceInAssembly as Assembly;
-            if (assembly != null)
-                return FromResource(resourceName, assembly);
-            return FromResource(resourceName, instanceInAssembly.GetType().GetTypeInfo().Assembly);
+            return FromResource(resourceName, assembly != null ? assembly : instanceInAssembly.GetType().GetTypeInfo().Assembly);
         }
 
         /// <summary>

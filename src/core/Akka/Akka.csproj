@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Configuration\Pigeon.conf" />
+    <EmbeddedResource Include="Configuration\akka.conf" />
   </ItemGroup>
 
   <ItemGroup>
