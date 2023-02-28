@@ -3114,6 +3114,8 @@ namespace Akka.Event
         public LogMessage(Akka.Event.ILogMessageFormatter formatter, string format) { }
         public string Format { get; }
         [Akka.Annotations.InternalApiAttribute()]
+        public abstract System.Collections.Generic.IEnumerable<object> Parameters();
+        [Akka.Annotations.InternalApiAttribute()]
         public abstract string Unformatted();
     }
     public class static LogMessageExtensions { }
