@@ -65,25 +65,6 @@ namespace Akka.Persistence.TCK
         {
             Sys.EventStream.Subscribe(subscriber, typeof (T));
         }
-
-        public override async Task DisposeAsync()
-        {
-            await base.DisposeAsync();
-#pragma warning disable CS0618
-            Dispose(true);
-#pragma warning restore CS0618
-        }
-
-        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a
-        /// user's code. Managed and unmanaged resources will be disposed.<br />
-        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only
-        /// unmanaged resources can be disposed.</param>
-        [Obsolete("Dispose(bool) is deprecated, please use DisposeAsync() instead")]
-        protected override void Dispose(bool disposing)
-        {
-            //if (disposing) FSMBase.Shutdown();
-        }
     }
 }
 
