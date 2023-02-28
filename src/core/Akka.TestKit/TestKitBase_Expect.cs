@@ -568,6 +568,15 @@ namespace Akka.TestKit
 
             return (T)o;
         }
+        
+        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(
+            params T[] messages)
+        {
+            // assert that there is at least one message in messages
+            _assertions.AssertTrue(messages.Length > 0, "ExpectMsgAllOf must be called with at least one message");
+            using var cts = new CancellationTokenSource(RemainingOrDefault);
+            return ExpectMsgAllOf(messages, cts.Token);
+        }
 
         /// <summary>
         /// Receive a number of messages from the test actor matching the given
