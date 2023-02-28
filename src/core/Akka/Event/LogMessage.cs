@@ -101,12 +101,12 @@ namespace Akka.Event
 
         public override string ToString()
         {
-            return Formatter.Format(Format, Parameters);
+            return Formatter.Format(Format, Args);
         }
 
         public override string Unformatted()
         {
-            return string.Join(",", Parameters);
+            return string.Join(",", Args);
         }
 
         public override IEnumerable<object> Parameters()
