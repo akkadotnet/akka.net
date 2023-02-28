@@ -40,19 +40,17 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Version 1.5.0-beta2 contains **breaking API changes** and new API changes for Akka.NET.
-[Akka.Event: Add K to the DateTime format string to include TZ information](https://github.com/akkadotnet/akka.net/pull/6419)
-[Akka.TestKit: Reintroduce old code and mark them obsolete](https://github.com/akkadotnet/akka.net/pull/6420) - fixes major regression in Akka.TestKit.Xunit2 where we removed `IDipsoable` before. This PR reintroduces it for backwards compat.
-[Akka.Cluster.Sharding: clean its internal cache if region/proxy died](https://github.com/akkadotnet/akka.net/pull/6424)
-[Akka.Util: Harden `Option&lt;T&gt;` by disallowing null value](https://github.com/akkadotnet/akka.net/pull/6426)
-[Akka.Util: move `DateTime` / `TimeSpan` extension APIs out of Akka.Util and into Akka.Cluster.Metrics](https://github.com/akkadotnet/akka.net/pull/6427)
-[Akka.Util: Remove unsafe `implicit` conversion operators in `AtomicBoolean` and `AtomicReference&lt;T&gt;`](https://github.com/akkadotnet/akka.net/pull/6429)
-[Akka: Standardize on C# 11.0](https://github.com/akkadotnet/akka.net/pull/6431)
-[Akka.Persistence: improve `AsyncWriteJournal` and `PersistentActor` performance](https://github.com/akkadotnet/akka.net/pull/6432)
+    <PackageReleaseNotes>Version 1.5.0-beta3 contains **breaking API changes** and new API changes for Akka.NET.
+Removed a number of `Obsolete` APIs that were generally not used much.
+[Akka.Actor: `ActorSystem.Create` throws `PlatformNotSupportedException` on net7.0-android](https://github.com/akkadotnet/akka.net/issues/6459)
+[Akka.Actor: Append message content to `DeadLetter` log messages](https://github.com/akkadotnet/akka.net/pull/6448)
+[Akka.Streams: Use `ActorSystem` for `Materializer`](https://github.com/akkadotnet/akka.net/pull/6453) - *massive* memory improvements for applications that materialize a large number of streams.
+[Akka.Persistence.Query.Sql: backpressure control for queries](https://github.com/akkadotnet/akka.net/pull/6436) - full details on this here: https://petabridge.com/blog/largescale-cqrs-akkadotnet-v1.5/
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 8 | 260 | 942 | Aaron Stannard |
-| 5 | 169 | 60 | Gregorius Soedharmo |</PackageReleaseNotes>
+| 14 | 68 | 794 | Gregorius Soedharmo |
+| 5 | 997 | 498 | Aaron Stannard |
+| 3 | 6 | 6 | dependabot[bot] |</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>

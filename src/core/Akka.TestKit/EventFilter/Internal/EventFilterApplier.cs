@@ -48,6 +48,27 @@ namespace Akka.TestKit.Internal
             ExpectOneAsync(async () => action(), cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
+        
+        /// <summary>
+        /// Async version of <see cref="ExpectOne(System.Action, CancellationToken)"/>
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="cancellationToken"></param>
+        /// <remarks>
+        /// This is for backwards compat.
+        /// </remarks>
+        [Obsolete("Only for backwards compat. Use ExpectOneAsync(Func<Task>, CancellationToken) instead beginning in Akka.NET v1.5")]
+        public async Task ExpectOneAsync(Action action, CancellationToken cancellationToken = default)
+        {
+            Task Wrapped()
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            await ExpectOneAsync(Wrapped, cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         /// <summary>
         /// Async version of <see cref="ExpectOne(System.Action, CancellationToken)"/>
@@ -179,6 +200,17 @@ namespace Akka.TestKit.Internal
                     timeout: timeout,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
+        }
+
+        public async Task ExpectAsync(int expectedCount, TimeSpan timeout, Action action, CancellationToken cancellationToken = default)
+        {
+            Task Wrapped()
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            await ExpectAsync(expectedCount, timeout, Wrapped, cancellationToken);
         }
 
         /// <summary>
@@ -375,6 +407,17 @@ namespace Akka.TestKit.Internal
                     matchedEventHandler: null,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
+        }
+
+        public async Task MuteAsync(Action action, CancellationToken cancellationToken = default)
+        {
+            Task Wrapped()
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            await MuteAsync(Wrapped, cancellationToken);
         }
 
         /// <summary>
