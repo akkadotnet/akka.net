@@ -282,26 +282,18 @@ namespace Akka.Cluster
 
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            
-            CancellationTokenSource timeoutCts = null;
-
-            // if user has a CTS, it is the single source of truth - no second-guessing.
-            if (token == default)
+            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeoutCts.CancelAfter(ComputeJoinTimeLimit());
+            timeoutCts.Token.Register(() =>
             {
-                timeoutCts = new CancellationTokenSource(ComputeJoinTimeLimit());
-                timeoutCts.CancelAfter(ComputeJoinTimeLimit());
-                timeoutCts.Token.Register(() =>
-                {
-                    timeoutCts.Dispose();
-                    completion.TrySetException(new ClusterJoinFailedException(
-                        $"Node has not managed to join the cluster using provided address: {address}"));
-                });
-            }
-
+                timeoutCts.Dispose();
+                completion.TrySetException(new ClusterJoinFailedException(
+                    $"Node has not managed to join the cluster using provided address: {address}"));
+            });
 
             RegisterOnMemberUp(() =>
             {
-                timeoutCts?.Dispose();
+                timeoutCts.Dispose();
                 completion.TrySetResult(NotUsed.Instance);
             });
             
@@ -367,24 +359,18 @@ namespace Akka.Cluster
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             var nodes = seedNodes.ToList();
             
-            CancellationTokenSource timeoutCts = null;
-
-            // if user has a CTS, it is the single source of truth - no second-guessing.
-            if (token == default)
+            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeoutCts.CancelAfter(ComputeJoinTimeLimit());
+            timeoutCts.Token.Register(() =>
             {
-                timeoutCts = new CancellationTokenSource(ComputeJoinTimeLimit());
-                timeoutCts.CancelAfter(ComputeJoinTimeLimit());
-                timeoutCts.Token.Register(() =>
-                {
-                    timeoutCts.Dispose();
-                    completion.TrySetException(new ClusterJoinFailedException(
-                        $"Node has not managed to join the cluster using provided addresses: [{string.Join(",", nodes)}]"));
-                });
-            }
+                timeoutCts.Dispose();
+                completion.TrySetException(new ClusterJoinFailedException(
+                    $"Node has not managed to join the cluster using provided addresses: [{string.Join(",", nodes)}]"));
+            });
             
             RegisterOnMemberUp(() =>
             {
-                timeoutCts?.Dispose();
+                timeoutCts.Dispose();
                 completion.TrySetResult(NotUsed.Instance);
             });
             
