@@ -581,6 +581,58 @@ namespace Akka.Remote.Transport
         public FailureInjectorProvider() { }
         public Akka.Remote.Transport.Transport Create(Akka.Remote.Transport.Transport wrappedTransport, Akka.Actor.ExtendedActorSystem system) { }
     }
+    public class FailureInjectorTransportAdapter : Akka.Remote.Transport.AbstractTransportAdapter, Akka.Remote.Transport.IAssociationEventListener
+    {
+        public readonly Akka.Actor.ExtendedActorSystem ExtendedActorSystem;
+        public const string FailureInjectorSchemeIdentifier = "gremlin";
+        protected int MaximumOverhead;
+        public FailureInjectorTransportAdapter(Akka.Remote.Transport.Transport wrappedTransport, Akka.Actor.ExtendedActorSystem extendedActorSystem) { }
+        protected override Akka.Remote.Transport.SchemeAugmenter SchemeAugmenter { get; }
+        protected override void InterceptAssociate(Akka.Actor.Address remoteAddress, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.AssociationHandle> statusPromise) { }
+        protected override System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> InterceptListen(Akka.Actor.Address listenAddress, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> listenerTask) { }
+        public override System.Threading.Tasks.Task<bool> ManagementCommand(object message) { }
+        public void Notify(Akka.Remote.Transport.IAssociationEvent ev) { }
+        public bool ShouldDropInbound(Akka.Actor.Address remoteAddress, object instance, string debugMessage) { }
+        public bool ShouldDropOutbound(Akka.Actor.Address remoteAddress, object instance, string debugMessage) { }
+        public sealed class All
+        {
+            public All(Akka.Remote.Transport.FailureInjectorTransportAdapter.IGremlinMode mode) { }
+            public Akka.Remote.Transport.FailureInjectorTransportAdapter.IGremlinMode Mode { get; }
+        }
+        public sealed class Drop : Akka.Remote.Transport.FailureInjectorTransportAdapter.IGremlinMode
+        {
+            public Drop(double outboundDropP, double inboundDropP) { }
+            public double InboundDropP { get; }
+            public double OutboundDropP { get; }
+        }
+        public interface IFailureInjectorCommand { }
+        public interface IGremlinMode { }
+        public sealed class One
+        {
+            public One(Akka.Actor.Address remoteAddress, Akka.Remote.Transport.FailureInjectorTransportAdapter.IGremlinMode mode) { }
+            public Akka.Remote.Transport.FailureInjectorTransportAdapter.IGremlinMode Mode { get; }
+            public Akka.Actor.Address RemoteAddress { get; }
+        }
+        public sealed class PassThru : Akka.Remote.Transport.FailureInjectorTransportAdapter.IGremlinMode
+        {
+            public static Akka.Remote.Transport.FailureInjectorTransportAdapter.PassThru Instance { get; }
+        }
+    }
+    public sealed class ForceDisassociate
+    {
+        public ForceDisassociate(Akka.Actor.Address address) { }
+        public Akka.Actor.Address Address { get; }
+    }
+    public sealed class ForceDisassociateAck
+    {
+        public static Akka.Remote.Transport.ForceDisassociateAck Instance { get; }
+    }
+    public sealed class ForceDisassociateExplicitly
+    {
+        public ForceDisassociateExplicitly(Akka.Actor.Address address, Akka.Remote.Transport.DisassociateInfo reason) { }
+        public Akka.Actor.Address Address { get; }
+        public Akka.Remote.Transport.DisassociateInfo Reason { get; }
+    }
     public interface IAssociationEvent : Akka.Actor.INoSerializationVerificationNeeded { }
     public interface IAssociationEventListener
     {
@@ -711,6 +763,16 @@ namespace Akka.Remote.Transport
     {
         public ThrottlerProvider() { }
         public Akka.Remote.Transport.Transport Create(Akka.Remote.Transport.Transport wrappedTransport, Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public sealed class TokenBucket : Akka.Remote.Transport.ThrottleMode
+    {
+        public TokenBucket(int capacity, double tokensPerSecond, long nanoTimeOfLastSend, int availableTokens) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override System.TimeSpan TimeToAvailable(long currentNanoTime, int tokens) { }
+        public override System.ValueTuple<Akka.Remote.Transport.ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens) { }
+        public static bool ==(Akka.Remote.Transport.TokenBucket left, Akka.Remote.Transport.TokenBucket right) { }
+        public static bool !=(Akka.Remote.Transport.TokenBucket left, Akka.Remote.Transport.TokenBucket right) { }
     }
     public abstract class Transport
     {
