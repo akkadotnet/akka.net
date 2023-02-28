@@ -1,3 +1,30 @@
+#### 1.5.0-beta4 February 28th 2023 ####
+Version 1.5.0-beta3 contains **breaking API changes** and new API changes for Akka.NET.
+
+* [Akka.Persistence.TCK: remove `IDisposable` from Akka.Persistence.TCK](https://github.com/akkadotnet/akka.net/pull/6465) - this hid methods from the `TestKit` base classes.
+* [Akka.Remote: Make transport adapter messages public](https://github.com/akkadotnet/akka.net/pull/6469) - adds back public APIs from v1.4.
+* [Akka.TestKit: fix accidental breaking changes in v1.5.0-beta3](https://github.com/akkadotnet/akka.net/issues/6466)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 110 | 37 | Aaron Stannard |
+| 1 | 253 | 7 | Gregorius Soedharmo |
+
+#### 1.5.0-beta3 February 27th 2023 ####
+Version 1.5.0-beta3 contains **breaking API changes** and new API changes for Akka.NET.
+
+* Removed a number of `Obsolete` APIs that were generally not used much.
+* [Akka.Actor: `ActorSystem.Create` throws `PlatformNotSupportedException` on net7.0-android](https://github.com/akkadotnet/akka.net/issues/6459)
+* [Akka.Actor: Append message content to `DeadLetter` log messages](https://github.com/akkadotnet/akka.net/pull/6448)
+* [Akka.Streams: Use `ActorSystem` for `Materializer`](https://github.com/akkadotnet/akka.net/pull/6453) - *massive* memory improvements for applications that materialize a large number of streams.
+* [Akka.Persistence.Query.Sql: backpressure control for queries](https://github.com/akkadotnet/akka.net/pull/6436) - full details on this here: https://petabridge.com/blog/largescale-cqrs-akkadotnet-v1.5/
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 14 | 68 | 794 | Gregorius Soedharmo |
+| 5 | 997 | 498 | Aaron Stannard |
+| 3 | 6 | 6 | dependabot[bot] |
+
 #### 1.5.0-beta2 February 20th 2023 ####
 Version 1.5.0-beta2 contains **breaking API changes** and new API changes for Akka.NET.
 
