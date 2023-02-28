@@ -244,6 +244,16 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// Want at least 10-20 seconds of leeway here.
+        /// </summary>
+        private TimeSpan ComputeJoinTimeLimit()
+        {
+            return TimeSpan.FromMilliseconds(Math.Max(
+                (Settings.RetryUnsuccessfulJoinAfter ?? TimeSpan.FromSeconds(10)).TotalMilliseconds,
+                TimeSpan.FromSeconds(10).TotalMilliseconds));
+        }
+
+        /// <summary>
         /// Try to asynchronously join this cluster node specified by <paramref name="address"/>.
         /// A <see cref="Join"/> command is sent to the node to join. Returned task will be completed
         /// once current cluster node will be moved into <see cref="MemberStatus.Up"/> state,
@@ -271,16 +281,16 @@ namespace Akka.Cluster
                 return Task.CompletedTask;
 
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
-            
+
             var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
+            timeoutCts.CancelAfter(ComputeJoinTimeLimit());
             timeoutCts.Token.Register(() =>
             {
                 timeoutCts.Dispose();
                 completion.TrySetException(new ClusterJoinFailedException(
                     $"Node has not managed to join the cluster using provided address: {address}"));
             });
-            
+
             RegisterOnMemberUp(() =>
             {
                 timeoutCts.Dispose();
@@ -350,12 +360,12 @@ namespace Akka.Cluster
             var nodes = seedNodes.ToList();
             
             var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
+            timeoutCts.CancelAfter(ComputeJoinTimeLimit());
             timeoutCts.Token.Register(() =>
             {
                 timeoutCts.Dispose();
                 completion.TrySetException(new ClusterJoinFailedException(
-                    $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", nodes)}."));
+                    $"Node has not managed to join the cluster using provided addresses: [{string.Join(",", nodes)}]"));
             });
             
             RegisterOnMemberUp(() =>
