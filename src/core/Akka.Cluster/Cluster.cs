@@ -248,9 +248,9 @@ namespace Akka.Cluster
         /// </summary>
         private TimeSpan ComputeJoinTimeLimit()
         {
-            return TimeSpan.FromSeconds(Math.Max(
-                (Settings.RetryUnsuccessfulJoinAfter ?? TimeSpan.FromSeconds(10)).TotalSeconds,
-                TimeSpan.FromSeconds(20).TotalSeconds));
+            return TimeSpan.FromMilliseconds(Math.Max(
+                (Settings.RetryUnsuccessfulJoinAfter ?? TimeSpan.FromSeconds(10)).TotalMilliseconds,
+                TimeSpan.FromSeconds(10).TotalMilliseconds));
         }
 
         /// <summary>
