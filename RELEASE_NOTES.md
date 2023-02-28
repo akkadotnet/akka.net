@@ -1,3 +1,15 @@
+#### 1.5.0-beta4 February 28th 2023 ####
+Version 1.5.0-beta4 contains **breaking API changes** and new API changes for Akka.NET.
+
+* [Akka.Persistence.TCK: remove `IDisposable` from Akka.Persistence.TCK](https://github.com/akkadotnet/akka.net/pull/6465) - this hid methods from the `TestKit` base classes.
+* [Akka.Remote: Make transport adapter messages public](https://github.com/akkadotnet/akka.net/pull/6469) - adds back public APIs from v1.4.
+* [Akka.TestKit: fix accidental breaking changes in v1.5.0-beta3](https://github.com/akkadotnet/akka.net/issues/6466)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 110 | 37 | Aaron Stannard |
+| 1 | 253 | 7 | Gregorius Soedharmo |
+
 #### 1.5.0-beta3 February 27th 2023 ####
 Version 1.5.0-beta3 contains **breaking API changes** and new API changes for Akka.NET.
 
