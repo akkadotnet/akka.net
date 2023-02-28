@@ -378,7 +378,7 @@ namespace Akka.Cluster
                 {
                     timeoutCts.Dispose();
                     completion.TrySetException(new ClusterJoinFailedException(
-                        $"Node has not managed to join the cluster using provided address: {address}"));
+                        $"Node has not managed to join the cluster using provided addresses: [{string.Join(",", nodes)}]"));
                 });
             }
             
