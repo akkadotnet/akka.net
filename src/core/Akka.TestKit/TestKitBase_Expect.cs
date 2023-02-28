@@ -568,6 +568,14 @@ namespace Akka.TestKit
 
             return (T)o;
         }
+        
+        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(
+            params T[] messages)
+        {
+            // assert that there is at least one message in messages
+            using var cts = new CancellationTokenSource(RemainingOrDefault);
+            return ExpectMsgAllOf(messages, cts.Token);
+        }
 
         /// <summary>
         /// Receive a number of messages from the test actor matching the given
@@ -605,6 +613,13 @@ namespace Akka.TestKit
             {
                 yield return item;
             }
+        }
+        
+        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(
+            TimeSpan max,
+            params T[] messages)
+        {
+            return ExpectMsgAllOf(max, messages, default(CancellationToken));
         }
 
         /// <summary>
@@ -668,7 +683,7 @@ namespace Akka.TestKit
             await foreach (var item in enumerable)
             {
                 // check that we can cast the returned object to T
-                if (!(item is T typed))
+                if (item is not T typed)
                 {
                     unexpected.Add(item);
                     continue;
