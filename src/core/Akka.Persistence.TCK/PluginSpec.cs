@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
@@ -63,23 +64,6 @@ namespace Akka.Persistence.TCK
         public void Subscribe<T>(IActorRef subscriber)
         {
             Sys.EventStream.Subscribe(subscriber, typeof (T));
-        }
-
-        
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a
-        /// user's code. Managed and unmanaged resources will be disposed.<br />
-        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only
-        /// unmanaged resources can be disposed.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            //if (disposing) FSMBase.Shutdown();
         }
     }
 }
