@@ -61,6 +61,10 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         Task ExpectOneAsync(TimeSpan timeout, Func<Task> action, CancellationToken cancellationToken = default);
 
+        [Obsolete(
+            "Only for backwards compat. Use ExpectOneAsync(Func<Task>, CancellationToken) instead beginning in Akka.NET v1.5")]
+        Task ExpectOneAsync(Action action, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Executes <paramref name="action"/> and expects the specified number
         /// of events to be logged during the execution.
@@ -123,6 +127,9 @@ namespace Akka.TestKit
         /// <param name="action">The action.</param>
         /// <param name="cancellationToken"></param>
         Task ExpectAsync(int expectedCount, TimeSpan timeout, Func<Task> action, CancellationToken cancellationToken = default);
+        
+        [Obsolete("Use ExpectAsync<T>(expectedCount, TimeSpan, Func<Task<T>>) instead. This method only exists to support backwards compatibility as of Akka.NET v1.5.")]
+        Task ExpectAsync(int expectedCount, TimeSpan timeout, Action action, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="func"/> and
@@ -268,6 +275,9 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="action"/>.</returns>
         Task MuteAsync(Func<Task> action, CancellationToken cancellationToken = default);
+        
+        [Obsolete("Use MuteAsync(Func<Task>) instead. This method only exists for backwards compatibility as of Akka.NET v1.5.0.")]
+        Task MuteAsync(Action action, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Prevents events from being logged from now on. To allow events to be logged again, call 
