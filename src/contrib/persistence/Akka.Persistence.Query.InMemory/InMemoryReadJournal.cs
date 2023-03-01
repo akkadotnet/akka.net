@@ -14,7 +14,9 @@ namespace Akka.Persistence.Query.InMemory
     public class InMemoryReadJournal :
         ICurrentPersistenceIdsQuery,
         ICurrentEventsByPersistenceIdQuery,
-        IEventsByPersistenceIdQuery
+        IEventsByPersistenceIdQuery,
+        ICurrentEventsByTagQuery,
+        IEventsByTagQuery
     {
         public const string Identifier = "akka.persistence.query.journal.inmem";
         private readonly string _writeJournalPluginId;
@@ -30,7 +32,7 @@ namespace Akka.Persistence.Query.InMemory
         {
             _writeJournalPluginId = config.GetString("write-plugin", null);
             _maxBufferSize = config.GetInt("max-buffer-size", 0);
-            _refreshInterval = config.GetTimeSpan("refresh-interval", null);
+            _refreshInterval = config.GetTimeSpan("refresh-interval", TimeSpan.FromSeconds(1));
         }
         
         public Source<string, NotUsed> CurrentPersistenceIds()
@@ -80,5 +82,43 @@ namespace Akka.Persistence.Query.InMemory
             Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("EventsByPersistenceId-" + persistenceId);
+
+        /// <summary>
+        /// Same type of query as <see cref="EventsByTag"/> but the event stream
+        /// is completed immediately when it reaches the end of the "result set". Events that are
+        /// stored after the query is completed are not included in the event stream.
+        /// </summary>
+        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset)
+        {
+            offset = offset ?? new Sequence(0L);
+            switch (offset)
+            {
+                case Sequence seq:
+                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value == 0 ? seq.Value : seq.Value + 1, long.MaxValue, null, _maxBufferSize, _writeJournalPluginId))
+                        .MapMaterializedValue(_ => NotUsed.Instance)
+                        .Named($"CurrentEventsByTag-{tag}");
+                case NoOffset _:
+                    return CurrentEventsByTag(tag, new Sequence(0L));
+                default:
+                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+            }
+        }
+
+        public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset)
+        {
+            offset = offset ?? new Sequence(0L);
+            switch (offset)
+            {
+                case Sequence seq:
+                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value == 0 ? seq.Value : seq.Value + 1, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+                        .MapMaterializedValue(_ => NotUsed.Instance)
+                        .Named($"EventsByTag-{tag}");
+                case NoOffset _:
+                    return EventsByTag(tag, new Sequence(0L));
+                default:
+                    throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
+            }
+
+        }
     }
 }

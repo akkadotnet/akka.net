@@ -69,7 +69,9 @@ namespace Akka.Persistence.Journal
     {
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
         private readonly ConcurrentDictionary<string, long> _meta = new ConcurrentDictionary<string, long>();
-
+        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
+        private ImmutableDictionary<string, IImmutableSet<IActorRef>> _tagSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -82,13 +84,39 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
+            var allTags = new HashSet<string>();
+            
             foreach (var w in messages)
             {
                 foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                 {
-                    Add(p.WithTimestamp(DateTime.UtcNow.Ticks));
+                    var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
+                    Add(persistentRepresentation);
+                    if (!(p.Payload is Tagged tagged)) continue;
+                    
+                    foreach (var tag in tagged.Tags)
+                    {
+                        allTags.UnionWith(tagged.Tags);
+                        _tagsToMessagesMapping.AddOrUpdate(
+                            tag,
+                            (k) => new LinkedList<IPersistentRepresentation>(new[] { persistentRepresentation }),
+                            (k, v) =>
+                            {
+                                v.AddLast(persistentRepresentation);
+                                return v;
+                            });
+                    }
                 }
             }
+            
+            if (!_tagSubscribers.IsEmpty && allTags.Count != 0)
+            {
+                foreach (var tag in allTags)
+                {
+                    NotifyTagChange(tag);
+                }
+            }
+            
             return Task.FromResult((IImmutableList<Exception>) null); // all good
         }
 
@@ -148,8 +176,75 @@ namespace Akka.Persistence.Journal
                         .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result));
                     return true;
                 
+                case ReplayTaggedMessages replay:
+                    ReplayTaggedMessagesAsync(replay)
+                        .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
+                    return true;
+                
+                case SubscribeTag subscribe:
+                    AddTagSubscriber(Sender, subscribe.Tag);
+                    Context.Watch(Sender);
+                    return true;
+                
+                case Terminated terminated:
+                    RemoveSubscriber(terminated.ActorRef);
+                    return true;
+                
                 default:
                     return false;
+            }
+        }
+        
+        /// <summary>
+        /// Replays all events with given tag withing provided boundaries from memory.
+        /// </summary>
+        /// <param name="replay">TBD</param>
+        /// <returns>TBD</returns>
+        protected async Task<long> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
+        {
+            if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
+                return 0;
+
+            int index = 0;
+            foreach (var persistence in _tagsToMessagesMapping[replay.Tag]
+                         .Skip((int)replay.FromOffset)
+                         .Take(replay.ToOffset > int.MaxValue ? int.MaxValue : (int)replay.ToOffset))
+            {
+                var payload = (Tagged)persistence.Payload;
+                replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence.WithPayload(payload.Payload), replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
+                index++;
+            }
+
+            return _tagsToMessagesMapping[replay.Tag].Count - 1;
+        }
+        
+        private void AddTagSubscriber(IActorRef subscriber, string tag)
+        {
+            if (!_tagSubscribers.TryGetValue(tag, out var subscriptions))
+            {
+                _tagSubscribers = _tagSubscribers.Add(tag, ImmutableHashSet.Create(subscriber));
+            }
+            else
+            {
+                _tagSubscribers = _tagSubscribers.SetItem(tag, subscriptions.Add(subscriber));
+            }
+        }
+        
+        public void RemoveSubscriber(IActorRef subscriber)
+        {
+            foreach (var key in _tagSubscribers.Keys)
+            {
+                _tagSubscribers[key].Remove(subscriber);
+            }
+        }
+        
+        private void NotifyTagChange(string tag)
+        {
+            if (_tagSubscribers.TryGetValue(tag, out var subscribers))
+            {
+                var changed = new TaggedEventAppended(tag);
+                foreach (var subscriber in subscribers)
+                    subscriber.Tell(changed);
             }
         }
 
@@ -188,6 +283,155 @@ namespace Akka.Persistence.Journal
             public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds)
             {
                 AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ReplayTaggedMessages : IJournalRequest
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly long FromOffset;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly long ToOffset;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly long Max;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly string Tag;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef ReplyTo;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ReplayTaggedMessages"/> class.
+            /// </summary>
+            /// <param name="fromOffset">TBD</param>
+            /// <param name="toOffset">TBD</param>
+            /// <param name="max">TBD</param>
+            /// <param name="tag">TBD</param>
+            /// <param name="replyTo">TBD</param>
+            /// <exception cref="ArgumentException">
+            /// This exception is thrown for a number of reasons. These include the following:
+            /// <ul>
+            /// <li>The specified <paramref name="fromOffset"/> is less than zero.</li>
+            /// <li>The specified <paramref name="toOffset"/> is less than or equal to zero.</li>
+            /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
+            /// </ul>
+            /// </exception>
+            /// <exception cref="ArgumentNullException">
+            /// This exception is thrown when the specified <paramref name="tag"/> is null or empty.
+            /// </exception>
+            public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, IActorRef replyTo)
+            {
+                if (fromOffset < 0)
+                    throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
+                if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
+                if (max <= 0)
+                    throw new ArgumentException("Maximum number of replayed messages must be a positive number",
+                        nameof(max));
+                if (string.IsNullOrEmpty(tag))
+                    throw new ArgumentNullException(nameof(tag),
+                        "Replay tagged messages require a tag value to be provided");
+
+                FromOffset = fromOffset;
+                ToOffset = toOffset;
+                Max = max;
+                Tag = tag;
+                ReplyTo = replyTo;
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IPersistentRepresentation Persistent;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly string Tag;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly long Offset;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="persistent">TBD</param>
+            /// <param name="tag">TBD</param>
+            /// <param name="offset">TBD</param>
+            public ReplayedTaggedMessage(IPersistentRepresentation persistent, string tag, long offset)
+            {
+                Persistent = persistent;
+                Tag = tag;
+                Offset = offset;
+            }
+        }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class TaggedEventAppended : IDeadLetterSuppression
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly string Tag;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="tag">TBD</param>
+            public TaggedEventAppended(string tag)
+            {
+                Tag = tag;
+            }
+        }
+        
+        /// <summary>
+        /// Subscribe the `sender` to changes (appended events) for a specific `tag`.
+        /// Used by query-side. The journal will send <see cref="TaggedEventAppended"/> messages to
+        /// the subscriber when `asyncWriteMessages` has been called.
+        /// Events are tagged by wrapping in <see cref="Tagged"/>
+        /// via an <see cref="IEventAdapter"/>.
+        /// </summary>
+        [Serializable]
+        public sealed class SubscribeTag
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly string Tag;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="tag">TBD</param>
+            public SubscribeTag(string tag)
+            {
+                Tag = tag;
             }
         }
 
