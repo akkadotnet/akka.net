@@ -1,3 +1,8 @@
+#### 1.5.0-beta6 March 1st 2023 ####
+Version 1.5.0-beta6 contains **breaking API changes** and new API changes for Akka.NET.
+
+* [Akka.TestKit.Xunit2: Remove IAsyncLifetime from TestKit](https://github.com/akkadotnet/akka.net/pull/6475)
+
 #### 1.5.0-beta5 February 28th 2023 ####
 Version 1.5.0-beta5 contains **breaking API changes** and new API changes for Akka.NET.
 
