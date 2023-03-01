@@ -1,3 +1,14 @@
+#### 1.5.0-beta5 February 28th 2023 ####
+Version 1.5.0-beta5 contains **breaking API changes** and new API changes for Akka.NET.
+
+* [Akka.Cluster: Remove `JoinAsync` and `JoinSeedNodesAsync` default timeout values](https://github.com/akkadotnet/akka.net/pull/6473)
+* [Akka.Event: expose `Args()` on `LogMessage`](https://github.com/akkadotnet/akka.net/pull/6472)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 50 | 28 | Aaron Stannard |
+| 1 | 22 | 32 | Gregorius Soedharmo |
+
 #### 1.5.0-beta4 February 28th 2023 ####
 Version 1.5.0-beta4 contains **breaking API changes** and new API changes for Akka.NET.
 
