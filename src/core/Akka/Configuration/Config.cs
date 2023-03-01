@@ -35,10 +35,7 @@ namespace Akka.Configuration
         /// <exception cref="ArgumentNullException">This exception is thrown if the given <paramref name="root"/> value is undefined.</exception>
         public Config(HoconRoot root)
         {
-            if (root.Value == null)
-                throw new ArgumentNullException(nameof(root), "The root value cannot be null.");
-
-            Value = root.Value;
+            Value = root.Value ?? throw new ArgumentNullException(nameof(root), "The root value cannot be null.");
             Root = root.Value;
             Substitutions = root.Substitutions;
         }
