@@ -16,7 +16,9 @@ namespace Akka.Persistence.Query.InMemory
         ICurrentEventsByPersistenceIdQuery,
         IEventsByPersistenceIdQuery,
         ICurrentEventsByTagQuery,
-        IEventsByTagQuery
+        IEventsByTagQuery,
+        ICurrentAllEventsQuery,
+        IAllEventsQuery
     {
         public const string Identifier = "akka.persistence.query.journal.inmem";
         private readonly string _writeJournalPluginId;
@@ -118,7 +120,48 @@ namespace Akka.Persistence.Query.InMemory
                 default:
                     throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
             }
+        }
+        
+        public Source<EventEnvelope, NotUsed> AllEvents(Offset offset = null)
+        {
+            Sequence seq;
+            switch (offset)
+            {
+                case null:
+                case NoOffset _:
+                    seq = new Sequence(0L);
+                    break;
+                case Sequence s:
+                    seq = s;
+                    break;
+                default:
+                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+            }
 
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value == 0 ? seq.Value : seq.Value + 1, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("AllEvents");
+        }
+
+        public Source<EventEnvelope, NotUsed> CurrentAllEvents(Offset offset)
+        {
+            Sequence seq;
+            switch (offset)
+            {
+                case null:
+                case NoOffset _:
+                    seq = new Sequence(0L);
+                    break;
+                case Sequence s:
+                    seq = s;
+                    break;
+                default:
+                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+            }
+
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value == 0 ? seq.Value : seq.Value + 1, null, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("CurrentAllEvents");
         }
     }
 }
