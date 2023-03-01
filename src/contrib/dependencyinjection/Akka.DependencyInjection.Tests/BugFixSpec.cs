@@ -60,18 +60,22 @@ namespace Akka.DependencyInjection.Tests
         }
         
         
-        public override async Task InitializeAsync()
+        public async Task InitializeAsync()
         {
             await _akkaService.StartAsync(default);
             InitializeLogger(_akkaService.ActorSystem);
-            await base.InitializeAsync();
         }
 
-        public override async Task DisposeAsync()
+        protected override void AfterAll()
         {
             var sys = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
-            await sys.Terminate();
-            await base.DisposeAsync();
+            Shutdown(sys);
+            base.AfterAll();
+        }
+
+        public Task DisposeAsync()
+        {
+            return Task.CompletedTask;
         }
         
         internal class AkkaService : IHostedService

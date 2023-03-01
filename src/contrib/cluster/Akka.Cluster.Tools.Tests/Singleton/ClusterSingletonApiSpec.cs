@@ -124,10 +124,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }, TimeSpan.FromSeconds(3));
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await _system2.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(3));
+            base.AfterAll();
+            Shutdown(_system2);
         }
     }
 }

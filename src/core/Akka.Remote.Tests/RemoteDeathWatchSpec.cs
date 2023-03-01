@@ -45,17 +45,16 @@ namespace Akka.Remote.Tests
                 ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port=2666").WithFallback(_config));
         }
 
-        protected override Task BeforeTerminationAsync()
+        protected override void BeforeTermination()
         {
             var mute = EventFilter.Warning(pattern: new Regex("received dead letter.*Disassociate")).Mute();
             Sys.EventStream.Publish(mute);
-            return Task.CompletedTask;
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(_other, verifySystemShutdown: true);
+            base.AfterAll();
+            Shutdown(_other, verifySystemShutdown: true);
         }
 
         [Fact]

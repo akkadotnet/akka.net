@@ -203,7 +203,7 @@ namespace Akka.Remote.Tests.Transport
 
         #region Cleanup
 
-        protected override async Task BeforeTerminationAsync()
+        protected override void BeforeTermination()
         {
             EventFilter.Warning(start: "received dead letter").Mute();
             EventFilter.Warning(new Regex("received dead letter.*(InboundPayload|Disassociate)")).Mute();
@@ -211,13 +211,13 @@ namespace Akka.Remote.Tests.Transport
                 new ErrorFilter(typeof(EndpointException)),
                 new ErrorFilter(new StartsWithString("AssociationError"))));
 
-            await base.BeforeTerminationAsync();
+            base.BeforeTermination();
         }
 
-        protected override async Task AfterTerminationAsync()
+        protected override void AfterAll()
         {
-            await ShutdownAsync(_systemB);
-            await base.AfterTerminationAsync();
+            Shutdown(_systemB);
+            base.AfterAll();
         }
 
         #endregion

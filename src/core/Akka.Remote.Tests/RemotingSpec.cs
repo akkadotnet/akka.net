@@ -31,6 +31,19 @@ namespace Akka.Remote.Tests
     {
         public RemotingSpec(ITestOutputHelper helper) : base(GetConfig(), helper)
         {
+            var c1 = ConfigurationFactory.ParseString(GetConfig());
+            var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+            var conf = c2.WithFallback(c1); //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+
+            _remoteSystem = ActorSystem.Create("remote-sys", conf);
+            InitializeLogger(_remoteSystem);
+            Deploy(Sys, new Deploy(@"/gonk", new RemoteScope(Addr(_remoteSystem, "tcp"))));
+            Deploy(Sys, new Deploy(@"/zagzag", new RemoteScope(Addr(_remoteSystem, "udp"))));
+
+            _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
+            _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
+
+            AtStartup();
         }
 
         private static string GetConfig()
@@ -133,31 +146,12 @@ namespace Akka.Remote.Tests
 
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
 
-        public override async Task InitializeAsync()
-        {
-            await base.InitializeAsync();
-
-            var c1 = ConfigurationFactory.ParseString(GetConfig());
-            var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
-            var conf = c2.WithFallback(c1); //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
-
-            _remoteSystem = ActorSystem.Create("remote-sys", conf);
-            InitializeLogger(_remoteSystem);
-            Deploy(Sys, new Deploy(@"/gonk", new RemoteScope(Addr(_remoteSystem, "tcp"))));
-            Deploy(Sys, new Deploy(@"/zagzag", new RemoteScope(Addr(_remoteSystem, "udp"))));
-
-            _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
-            _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
-
-            AtStartup();
-        }
-
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
             if (_remoteSystem != null)
-                await ShutdownAsync(_remoteSystem);
+                Shutdown(_remoteSystem);
             AssociationRegistry.Clear();
-            await base.AfterAllAsync();
+            base.AfterAll();
         }
 
         #region Tests
@@ -557,7 +551,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                await ShutdownAsync(thisSystem);
+                Shutdown(thisSystem);
             }
         }
 
@@ -642,7 +636,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                await ShutdownAsync(thisSystem);
+                Shutdown(thisSystem);
             }
         }
 

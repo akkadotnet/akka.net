@@ -314,7 +314,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 
@@ -375,7 +375,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys);
+                Shutdown(sys);
             }
         }
 
@@ -436,7 +436,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys);
+                Shutdown(sys);
             }
         }
 
@@ -482,7 +482,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 
@@ -519,7 +519,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 
@@ -553,7 +553,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 
@@ -586,7 +586,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys3);
+                Shutdown(sys3);
             }
         }
     }

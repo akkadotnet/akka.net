@@ -67,10 +67,10 @@ namespace Akka.Remote.Tests
         }
 
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(_client);
+            base.AfterAll();
+            Shutdown(_client);
         }
 
 

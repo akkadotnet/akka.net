@@ -111,7 +111,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
     }

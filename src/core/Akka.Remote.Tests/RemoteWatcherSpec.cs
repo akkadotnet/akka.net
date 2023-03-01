@@ -173,10 +173,10 @@ namespace Akka.Remote.Tests
             _heartbeatRspB = new RemoteWatcher.HeartbeatRsp(remoteAddressUid);
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await ShutdownAsync(_remoteSystem);
-            await base.AfterAllAsync();
+            Shutdown(_remoteSystem);
+            base.AfterAll();
         }
 
         private readonly ActorSystem _remoteSystem;

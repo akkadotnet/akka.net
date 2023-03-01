@@ -117,7 +117,7 @@ namespace Akka.Remote.Tests
                 }
                 finally
                 {
-                    await ShutdownAsync(remoteSystem);
+                    Shutdown(remoteSystem);
                 }
 
                 Assert.True(await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10)));
@@ -159,7 +159,7 @@ namespace Akka.Remote.Tests
                 }
                 finally
                 {
-                    await ShutdownAsync(remoteSystem);
+                    Shutdown(remoteSystem);
                 }
                 Assert.True(await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10)));
             }
@@ -184,7 +184,7 @@ namespace Akka.Remote.Tests
                 }
                 finally
                 {
-                    await ShutdownAsync(remoteSystem);
+                    Shutdown(remoteSystem);
                 }
 
                 await EventFilter.Warning(contains: "Association with remote system").ExpectOneAsync(async () =>
@@ -222,7 +222,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                await ShutdownAsync(idleRemoteSystem);
+                Shutdown(idleRemoteSystem);
             }
 
             await EventFilter.Warning(contains: "Association with remote system").ExpectOneAsync(async () =>

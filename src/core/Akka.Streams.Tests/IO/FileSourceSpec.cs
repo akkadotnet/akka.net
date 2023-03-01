@@ -364,12 +364,12 @@ namespace Akka.Streams.Tests.IO
             return f;
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
+            base.AfterAll();
             
             //give the system enough time to shutdown and release the file handle
-            await Task.Delay(500);
+            Thread.Sleep(500);
             _manyLinesPath?.Delete();
             _testFilePath?.Delete();
         }

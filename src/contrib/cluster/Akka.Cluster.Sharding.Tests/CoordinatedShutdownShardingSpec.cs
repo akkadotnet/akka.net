@@ -106,11 +106,11 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(_sys1);
-            await ShutdownAsync(_sys2);
+            base.AfterAll();
+            Shutdown(_sys1);
+            Shutdown(_sys2);
         }
 
         /// <summary>

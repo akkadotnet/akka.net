@@ -42,11 +42,11 @@ namespace Akka.Cluster.Tests
             system2 = ActorSystem.Create("sys2", Config);
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(system1);
-            await ShutdownAsync(system2);
+            base.AfterAll();
+            Shutdown(system1);
+            Shutdown(system2);
         }
 
         [Fact]

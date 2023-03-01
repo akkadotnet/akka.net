@@ -267,10 +267,10 @@ namespace Akka.Remote.Tests.Transport
 
         #region helper classes / methods
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await ShutdownAsync(_sys2, TimeSpan.FromSeconds(3));
-            await base.AfterAllAsync();
+            base.AfterAll();
+            Shutdown(_sys2, TimeSpan.FromSeconds(3));
         }
 
         private void InstallCert()

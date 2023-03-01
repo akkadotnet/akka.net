@@ -128,10 +128,10 @@ namespace Akka.Remote.Tests
                 .Replace("${port}", _port.ToString()));
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await ShutdownAsync(_masterSystem);
-            await base.AfterAllAsync();
+            Shutdown(_masterSystem);
+            base.AfterAll();
         }
 
         private async IAsyncEnumerable<ActorPath> CollectRouteePaths(TestProbe probe, IActorRef router, int n)
