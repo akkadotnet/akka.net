@@ -168,7 +168,7 @@ namespace Akka.TestKit.Xunit2
         /// has been called by the runtime from inside the finalizer and only unmanaged resources can
         ///  be disposed.
         /// </param>
-        public virtual void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing)
         {
             if (_disposing || _disposed)
                 return;
