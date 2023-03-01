@@ -34,7 +34,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public async Task AddressUidExtension_should_report_different_values_for_different_ActorSystems()
+        public void AddressUidExtension_should_report_different_values_for_different_ActorSystems()
         {
             var sys2 = ActorSystem.Create("Sys2");
             try
@@ -45,7 +45,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
     }

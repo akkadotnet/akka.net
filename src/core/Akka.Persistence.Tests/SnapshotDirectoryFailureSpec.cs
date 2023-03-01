@@ -67,10 +67,10 @@ namespace Akka.Persistence.Tests
             using (_file.Create()) {}
         }
 
-        protected override async Task AfterTerminationAsync()
+        protected override void AfterTermination()
         {
             _file.Delete();
-            await base.AfterTerminationAsync();
+            base.AfterTermination();
         }
 
         [Fact]

@@ -32,10 +32,10 @@ namespace Akka.Persistence.TCK.Tests
 
         protected override bool SupportsSerialization => true;
 
-        protected override void Dispose(bool disposing)
+        protected override void AfterAll()
         {
-            base.Dispose(disposing);
             Sys.DeleteStorageLocations(_path);
+            base.AfterAll();
         }
 
         [Fact]

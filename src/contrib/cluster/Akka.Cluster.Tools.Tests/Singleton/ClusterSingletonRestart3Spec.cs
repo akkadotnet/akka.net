@@ -114,11 +114,11 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(_sys2);
-            await ShutdownAsync(_sys3);
+            base.AfterAll();
+            Shutdown(_sys2);
+            Shutdown(_sys3);
         }
 
         public class Singleton : ReceiveActor

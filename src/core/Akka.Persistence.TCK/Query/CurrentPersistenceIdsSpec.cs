@@ -106,10 +106,10 @@ namespace Akka.Persistence.TCK.Query
             return pref;
         }
 
-        public override Task DisposeAsync()
+        protected override void AfterAll()
         {
             Materializer.Dispose();
-            return base.DisposeAsync();
+            base.AfterAll();
         }
     }
 }

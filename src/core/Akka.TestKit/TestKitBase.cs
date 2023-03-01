@@ -501,26 +501,8 @@ namespace Akka.TestKit
         /// <exception cref="TimeoutException">TBD</exception>
         public virtual void Shutdown(
             TimeSpan? duration = null,
-            bool verifySystemShutdown = false,
-            CancellationToken cancellationToken = default)
-            => ShutdownAsync(_testState.System, duration, verifySystemShutdown, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-
-        /// <summary>
-        /// Shuts down this system.
-        /// On failure debug output will be logged about the remaining actors in the system.
-        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
-        /// </summary>
-        /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
-        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
-        /// <exception cref="TimeoutException">TBD</exception>
-        public virtual async Task ShutdownAsync(
-            TimeSpan? duration = null,
-            bool verifySystemShutdown = false,
-            CancellationToken cancellationToken = default)
-            => await ShutdownAsync(_testState.System, duration, verifySystemShutdown, cancellationToken)
-                .ConfigureAwait(false);
+            bool verifySystemShutdown = false)
+            => Shutdown(_testState.System, duration, verifySystemShutdown);
 
         /// <summary>
         /// Shuts down the specified system.
@@ -535,32 +517,13 @@ namespace Akka.TestKit
         protected virtual void Shutdown(
             ActorSystem system,
             TimeSpan? duration = null,
-            bool verifySystemShutdown = false,
-            CancellationToken cancellationToken = default)
-            => ShutdownAsync(system, duration, verifySystemShutdown, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-
-        /// <summary>
-        /// Shuts down the specified system.
-        /// On failure debug output will be logged about the remaining actors in the system.
-        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
-        /// </summary>
-        /// <param name="system">The system to shutdown.</param>
-        /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
-        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
-        /// <exception cref="TimeoutException">TBD</exception>
-        protected virtual async Task ShutdownAsync(
-            ActorSystem system,
-            TimeSpan? duration = null,
-            bool verifySystemShutdown = false,
-            CancellationToken cancellationToken = default)
+            bool verifySystemShutdown = false)
         {
             system ??= _testState.System;
 
             var durationValue = duration.GetValueOrDefault(Dilated(TimeSpan.FromSeconds(5)).Min(TimeSpan.FromSeconds(10)));
 
-            var wasShutdownDuringWait = await system.Terminate().AwaitWithTimeout(durationValue, cancellationToken);
+            var wasShutdownDuringWait = system.Terminate().Wait(durationValue);
             if(!wasShutdownDuringWait)
             {
                 // Forcefully close the ActorSystem to make sure we exit the test cleanly

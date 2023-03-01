@@ -21,7 +21,7 @@ namespace Akka.TestKit.Xunit2
     /// This class represents an Akka.NET TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
     /// as its testing framework.
     /// </summary>
-    public class TestKit : TestKitBase, IAsyncLifetime, IDisposable
+    public class TestKit : TestKitBase, IDisposable
     {
         private class PrefixedOutput : ITestOutputHelper
         {
@@ -50,6 +50,9 @@ namespace Akka.TestKit.Xunit2
         /// </summary>
         protected readonly ITestOutputHelper Output;
 
+        private bool _disposed;
+        private bool _disposing;
+        
         /// <summary>
         /// <para>
         /// Initializes a new instance of the <see cref="TestKit"/> class.
@@ -124,24 +127,7 @@ namespace Akka.TestKit.Xunit2
 
         /// <summary>
         /// This method is called when a test ends.
-        ///
-        /// <remarks>
-        /// If you override this, then make sure you either call base.AfterAllAsync()
-        /// to shut down the system. Otherwise a memory leak will occur.
-        /// </remarks>
         /// </summary>
-        protected virtual async Task AfterAllAsync()
-        {
-#pragma warning disable CS0618
-            AfterAll();
-#pragma warning restore CS0618
-            await ShutdownAsync();
-        }
-        
-        /// <summary>
-        /// This method is called when a test ends.
-        /// </summary>
-        [Obsolete("AfterAll() is deprecated, please use AfterAllAsync() instead")]
         protected virtual void AfterAll()
         {
         }
@@ -172,18 +158,6 @@ namespace Akka.TestKit.Xunit2
                     .ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
-        public virtual Task InitializeAsync()
-        {
-            return Task.CompletedTask;
-        }
-
-        public virtual async Task DisposeAsync()
-        {
-            await AfterAllAsync();
-#pragma warning disable CS0618
-            Dispose();
-#pragma warning restore CS0618
-        }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -194,12 +168,23 @@ namespace Akka.TestKit.Xunit2
         /// has been called by the runtime from inside the finalizer and only unmanaged resources can
         ///  be disposed.
         /// </param>
-        [Obsolete("Dispose(bool) is deprecated, please use DisposeAsync() instead")]
-        protected virtual void Dispose(bool disposing)
+        public virtual void Dispose(bool disposing)
         {
+            if (_disposing || _disposed)
+                return;
+            
+            _disposing = true;
+            try
+            {
+                AfterAll();
+            }
+            finally
+            {
+                Shutdown();
+                _disposed = true;
+            }
         }
 
-        [Obsolete("Dispose() is obsolete, please use DisposeAsync() instead")]
         public void Dispose()
         {
             Dispose(true);

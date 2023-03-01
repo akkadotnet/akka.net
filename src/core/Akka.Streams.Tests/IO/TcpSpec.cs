@@ -517,7 +517,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             }
             finally
             {
-                await ShutdownAsync(system2);
+                Shutdown(system2);
             }
         }
 
@@ -544,7 +544,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 

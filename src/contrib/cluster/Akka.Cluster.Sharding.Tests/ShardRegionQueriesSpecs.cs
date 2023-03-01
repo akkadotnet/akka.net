@@ -47,10 +47,10 @@ namespace Akka.Cluster.Sharding.Tests
             AwaitAssert(() => { proxyCluster.SelfMember.Status.ShouldBe(MemberStatus.Up); });
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await ShutdownAsync(_proxySys);
-            await base.AfterAllAsync();
+            Shutdown(_proxySys);
+            base.AfterAll();
         }
 
         private Option<(string, object)> ExtractEntityId(object message)

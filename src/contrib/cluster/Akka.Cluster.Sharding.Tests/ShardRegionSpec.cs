@@ -95,13 +95,13 @@ namespace Akka.Cluster.Sharding.Tests
             region2 = StartShard(sysB);
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
             if(sysA != null)
-                await ShutdownAsync(sysA);
+                Shutdown(sysA);
             if(sysB != null)
-                await ShutdownAsync(sysB);
-            await base.AfterAllAsync();
+                Shutdown(sysB);
+            base.AfterAll();
         }
 
         private IActorRef StartShard(ActorSystem sys)

@@ -51,9 +51,9 @@ namespace Akka.Remote.Tests
             Sys.EventStream.Subscribe(listener, typeof (Info));
         }
 
-        protected override async Task AfterTerminationAsync()
+        protected override void AfterTermination()
         {
-            await ShutdownAsync(_client);
+            Shutdown(_client);
         }
 
 

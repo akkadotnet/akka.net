@@ -177,10 +177,10 @@ akka {
             return ((ExtendedActorSystem) system).Provider.DefaultAddress;
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(_remoteSystem);
+            base.AfterAll();
+            Shutdown(_remoteSystem);
         }
 
         [Fact]

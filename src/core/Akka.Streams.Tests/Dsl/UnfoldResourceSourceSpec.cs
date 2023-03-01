@@ -308,10 +308,10 @@ namespace Akka.Streams.Tests.Dsl
             closedCounter.Current.Should().Be(1);
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
             _manyLinesFile.Delete();
+            base.AfterAll();
         }
     }
 }
