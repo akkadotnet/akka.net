@@ -12,16 +12,18 @@ namespace Akka.Persistence.Query.InMemory
 {
     public class InMemoryReadJournalProvider : IReadJournalProvider
     {
+        private readonly ExtendedActorSystem _system;
         private readonly Config _config;
 
         public InMemoryReadJournalProvider(ExtendedActorSystem system, Config config)
         {
+            _system = system;
             _config = config;
         }
 
         public IReadJournal GetReadJournal()
         {
-            return new InMemoryReadJournal(_config);
+            return new InMemoryReadJournal(_system, _config);
         }
     }
 }

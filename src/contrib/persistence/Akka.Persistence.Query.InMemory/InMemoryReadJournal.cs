@@ -6,12 +6,16 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Actor;
 using Akka.Configuration;
+using Akka.Streams;
 using Akka.Streams.Dsl;
+using Reactive.Streams;
 
 namespace Akka.Persistence.Query.InMemory
 {
     public class InMemoryReadJournal :
+        IPersistenceIdsQuery,
         ICurrentPersistenceIdsQuery,
         ICurrentEventsByPersistenceIdQuery,
         IEventsByPersistenceIdQuery,
@@ -24,17 +28,71 @@ namespace Akka.Persistence.Query.InMemory
         private readonly string _writeJournalPluginId;
         private readonly int _maxBufferSize;
         private readonly TimeSpan _refreshInterval;
+        private readonly object _lock = new object();
+        private IPublisher<string> _persistenceIdsPublisher;
+        private readonly ExtendedActorSystem _system;
         
         public static Config DefaultConfiguration()
         {
             return ConfigurationFactory.FromResource<InMemoryReadJournal>("Akka.Persistence.Query.InMemory.reference.conf");
         }
         
-        public InMemoryReadJournal(Config config)
+        public InMemoryReadJournal(ExtendedActorSystem system, Config config)
         {
             _writeJournalPluginId = config.GetString("write-plugin", null);
             _maxBufferSize = config.GetInt("max-buffer-size", 0);
             _refreshInterval = config.GetTimeSpan("refresh-interval", TimeSpan.FromSeconds(1));
+            _system = system;
+        }
+        
+        /// <summary>
+        /// <para>
+        /// <see cref="PersistenceIds"/> is used for retrieving all `persistenceIds` of all
+        /// persistent actors.
+        /// </para>
+        /// The returned event stream is unordered and you can expect different order for multiple
+        /// executions of the query.
+        /// <para>
+        /// The stream is not completed when it reaches the end of the currently used `persistenceIds`,
+        /// but it continues to push new `persistenceIds` when new persistent actors are created.
+        /// Corresponding query that is completed when it reaches the end of the currently
+        /// currently used `persistenceIds` is provided by <see cref="CurrentPersistenceIds"/>.
+        /// </para>
+        /// The SQL write journal is notifying the query side as soon as new `persistenceIds` are
+        /// created and there is no periodic polling or batching involved in this query.
+        /// <para>
+        /// The stream is completed with failure if there is a failure in executing the query in the
+        /// backend journal.
+        /// </para>
+        /// </summary>
+        public Source<string, NotUsed> PersistenceIds()
+        {
+            lock (_lock)
+            {
+                if (_persistenceIdsPublisher is null)
+                {
+                    var graph =
+                        Source.ActorPublisher<string>(
+                                LivePersistenceIdsPublisher.Props(
+                                    _refreshInterval,
+                                    _writeJournalPluginId))
+                            .ToMaterialized(Sink.DistinctRetainingFanOutPublisher<string>(PersistenceIdsShutdownCallback), Keep.Right);
+
+                    _persistenceIdsPublisher = graph.Run(_system.Materializer());
+                }
+                return Source.FromPublisher(_persistenceIdsPublisher)
+                    .MapMaterializedValue(_ => NotUsed.Instance)
+                    .Named("AllPersistenceIds");
+            }
+
+        }
+
+        private void PersistenceIdsShutdownCallback()
+        {
+            lock (_lock)
+            {
+                _persistenceIdsPublisher = null;
+            }
         }
         
         public Source<string, NotUsed> CurrentPersistenceIds()

@@ -68,6 +68,7 @@ namespace Akka.Persistence.Journal
     public class MemoryJournal : AsyncWriteJournal
     {
         private readonly LinkedList<IPersistentRepresentation> _allMessages = new LinkedList<IPersistentRepresentation>();
+        private readonly LinkedList<string> _allPersistenceIds = new LinkedList<string>();
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
         private readonly ConcurrentDictionary<string, long> _meta = new ConcurrentDictionary<string, long>();
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
@@ -178,8 +179,8 @@ namespace Akka.Persistence.Journal
             switch (message)
             {
                 case SelectCurrentPersistenceIds request:
-                    Task.FromResult(Messages.Keys.ToArray())
-                        .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result));
+                    SelectAllPersistenceIdsAsync(request.Offset)
+                        .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result.Item1, result.LastOrdering));
                     return true;
                 
                 case ReplayTaggedMessages replay:
@@ -210,6 +211,11 @@ namespace Akka.Persistence.Journal
                 default:
                     return false;
             }
+        }
+        
+        private async Task<(IEnumerable<string> Ids, long LastOrdering)> SelectAllPersistenceIdsAsync(long offset)
+        {
+            return (_allPersistenceIds.Skip((int)offset), _allPersistenceIds.Count);
         }
         
         /// <summary>
@@ -300,16 +306,15 @@ namespace Akka.Persistence.Journal
         
         #region QueryAPI
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         [Serializable]
         public sealed class SelectCurrentPersistenceIds : IJournalRequest
         {
             public IActorRef ReplyTo { get; }
+            public long Offset { get; }
 
-            public SelectCurrentPersistenceIds(IActorRef replyTo)
+            public SelectCurrentPersistenceIds(long offset, IActorRef replyTo)
             {
+                Offset = offset;
                 ReplyTo = replyTo;
             }
         }
@@ -325,14 +330,17 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public readonly IEnumerable<string> AllPersistenceIds;
 
+            public readonly long HighestOrderingNumber;
+
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="allPersistenceIds">TBD</param>
             /// <param name="highestOrderingNumber">TBD</param>
-            public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds)
+            public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds, long highestOrderingNumber)
             {
                 AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();
+                HighestOrderingNumber = highestOrderingNumber;
             }
         }
 
@@ -665,6 +673,8 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public Messages Add(IPersistentRepresentation persistent)
         {
+            if (!Messages.ContainsKey(persistent.PersistenceId))
+                _allPersistenceIds.AddLast(persistent.PersistenceId);
             var list = Messages.GetOrAdd(persistent.PersistenceId, pid => new LinkedList<IPersistentRepresentation>());
             list.AddLast(persistent);
             return Messages;
