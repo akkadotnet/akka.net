@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inet.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,12 +76,6 @@ namespace Akka.IO
         /// </summary>
         public class DatagramChannelCreator : SocketOption
         {
-            [Obsolete(message:"Please use the method with AddressFamily parameter. Using this method will always return an IPv6 bound UDP endpoint.")]
-            public virtual Socket Create()
-            {
-                return new Socket(SocketType.Dgram, ProtocolType.Udp);
-            }
-            
             public virtual Socket Create(AddressFamily addressFamily)
             {
                 return new Socket(addressFamily, SocketType.Dgram, ProtocolType.Udp);

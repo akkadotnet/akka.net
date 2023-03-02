@@ -1,33 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\common.props" />
+    <Import Project="..\..\common.props"/>
 
-  <PropertyGroup>
-    <AssemblyTitle>Akka.FSharp</AssemblyTitle>
-    <Description>F# API support for Akka.NET</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
-    <PackageTags>$(AkkaPackageTags);F#;fsharp</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
-    <NoWarn></NoWarn>    
-  </PropertyGroup>
+    <PropertyGroup>
+        <AssemblyTitle>Akka.FSharp</AssemblyTitle>
+        <Description>F# API support for Akka.NET</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags);F#;fsharp</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+        <IsFsharp>true</IsFsharp>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Include="FsApi.fs" />
-    <Compile Include="Schedulers.fs" />
-  </ItemGroup>
+    <ItemGroup>
+        <Compile Include="FsApi.fs"/>
+        <Compile Include="Schedulers.fs"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Akka\Akka.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Akka\Akka.csproj"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FSharp.Quotations.Evaluator" Version="2.1.0" />
-    <PackageReference Include="FsPickler" Version="5.3.2" />
-    <PackageReference Include="FSharp.Core" Version="6.0.1" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="FSharp.Quotations.Evaluator" Version="2.1.0"/>
+        <PackageReference Include="FsPickler" Version="5.3.2"/>
+        <PackageReference Include="FSharp.Core" Version="7.0.200"/>
+    </ItemGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
 
 </Project>

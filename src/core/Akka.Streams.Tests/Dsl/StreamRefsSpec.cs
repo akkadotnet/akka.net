@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,6 +16,8 @@ using FluentAssertions;
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
@@ -225,8 +227,13 @@ namespace Akka.Streams.Tests
         protected override void BeforeTermination()
         {
             base.BeforeTermination();
-            RemoteSystem.Dispose();
             Materializer.Dispose();
+        }
+
+        protected override void AfterAll()
+        {
+            Shutdown(RemoteSystem);
+            base.AfterAll();
         }
 
         [Fact]
@@ -312,7 +319,7 @@ namespace Akka.Streams.Tests
             ex.Message.Should().Contain("has terminated unexpectedly");
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void SourceRef_must_not_receive_subscription_timeout_when_got_subscribed()
         {
             _remoteActor.Tell("give-subscribe-timeout");
@@ -406,7 +413,7 @@ namespace Akka.Streams.Tests
             probe.ExpectCancellation();
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void SinkRef_must_not_receive_timeout_if_subscribing_is_already_done_to_the_sink_ref()
         {
             _remoteActor.Tell("receive-subscribe-timeout");

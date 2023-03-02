@@ -1,14 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventFilterTestBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Threading.Tasks;
 using Akka.Event;
-using Akka.Testkit.Tests.TestEventListenerTests;
 
-namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
+namespace Akka.TestKit.Tests.TestEventListenerTests
 {
     public abstract class EventFilterTestBase : TestKit.Xunit2.TestKit
     {
@@ -23,7 +24,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             //We send a ForwardAllEventsTo containing message to the TestEventListenerToForwarder logger (configured as a logger above).
             //It should respond with an "OK" message when it has received the message.
             var initLoggerMessage = new ForwardAllEventsTestEventListener.ForwardAllEventsTo(TestActor);
-            // ReSharper disable once DoNotCallOverridableMethodsInConstructor
+            
             SendRawLogEventMessage(initLoggerMessage);
             ExpectMsg("OK");
             //From now on we know that all messages will be forwarded to TestActor
@@ -34,11 +35,21 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         protected override void AfterAll()
         {
             //After every test we make sure no uncatched messages have been logged
+            Exception exception = null;
             if(TestSuccessful)
             {
-                EnsureNoMoreLoggedMessages();
+                try
+                {
+                    EnsureNoMoreLoggedMessages();
+                }
+                catch (Exception e)
+                {
+                    exception = e;
+                }
             }
             base.AfterAll();
+            if (exception is { })
+                throw exception;
         }
 
         private void EnsureNoMoreLoggedMessages()

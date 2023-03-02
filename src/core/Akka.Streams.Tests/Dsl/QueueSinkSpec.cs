@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueueSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,7 +13,6 @@ using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;
@@ -45,10 +44,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var expected = new List<Option<int>>
                 {
-                    new Option<int>(1),
-                    new Option<int>(2),
-                    new Option<int>(3),
-                    new Option<int>()
+                    Option<int>.Create(1),
+                    Option<int>.Create(2),
+                    Option<int>.Create(3),
+                    Option<int>.None
                 };
                 var queue = Source.From(expected.Where(o => o.HasValue).Select(o => o.Value))
                     .RunWith(Sink.Queue<int>(), _materializer);
@@ -75,7 +74,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.SendNext(1);
                 future.PipeTo(TestActor);
-                ExpectMsg(new Option<int>(1));
+                ExpectMsg(Option<int>.Create(1));
 
                 sub.SendComplete();
                 queue.PullAsync();
@@ -95,7 +94,7 @@ namespace Akka.Streams.Tests.Dsl
                 ExpectNoMsg(_pause);
 
                 sub.SendNext(1);
-                ExpectMsg(new Option<int>(1));
+                ExpectMsg(Option<int>.Create(1));
                 sub.SendComplete();
                 queue.PullAsync();
             }, _materializer);
@@ -147,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
                 ExpectNoMsg(_pause);
 
                 sub.SendNext(1);
-                ExpectMsg(new Option<int>(1));
+                ExpectMsg(Option<int>.Create(1));
                 sub.SendComplete();
                 queue.PullAsync();
             }, _materializer);
@@ -164,7 +163,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 queue.PullAsync().PipeTo(TestActor);
                 sub.SendNext(1);
-                ExpectMsg(new Option<int>(1));
+                ExpectMsg(Option<int>.Create(1));
 
                 sub.SendComplete();
                 var result = queue.PullAsync().Result;
@@ -196,7 +195,7 @@ namespace Akka.Streams.Tests.Dsl
                 for (var i = 1; i <= streamElementCount; i++)
                 {
                     queue.PullAsync().PipeTo(TestActor);
-                    ExpectMsg(new Option<int>(i));
+                    ExpectMsg(Option<int>.Create(i));
                 }
                 queue.PullAsync().PipeTo(TestActor);
                 ExpectMsg(Option<int>.None);
@@ -215,12 +214,12 @@ namespace Akka.Streams.Tests.Dsl
 
                 queue.PullAsync().PipeTo(TestActor);
                 sub.SendNext(1); // should pull next element
-                ExpectMsg(new Option<int>(1));
+                ExpectMsg(Option<int>.Create(1));
 
                 queue.PullAsync().PipeTo(TestActor);
                 ExpectNoMsg(); // element requested but buffer empty
                 sub.SendNext(2);
-                ExpectMsg(new Option<int>(2));
+                ExpectMsg(Option<int>.Create(2));
 
                 sub.SendComplete();
                 var future = queue.PullAsync();

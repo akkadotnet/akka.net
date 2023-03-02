@@ -3,29 +3,24 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka</AssemblyTitle>
-    <Description>Akka.NET is a port of the popular Java/Scala framework Akka to .NET</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <Description>Canonical actor model implementation for .NET with local + distributed actors in C# and F#.</Description>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Configuration\Pigeon.conf" />
+    <EmbeddedResource Include="Configuration\akka.conf" />
   </ItemGroup>
 
   <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="5.0.5" />
+      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="7.0.3" />
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-    <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
-    <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-      <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
-      <PackageReference Include="System.Threading.Channels" Version="5.0.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
+      <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />     
+      <PackageReference Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
+      <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
       <PackageReference Include="System.Configuration.ConfigurationManager">
-          <Version>4.7.0</Version>
+          <Version>$(ConfigurationManagerVersion)</Version>
       </PackageReference>
   </ItemGroup>
 

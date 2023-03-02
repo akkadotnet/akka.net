@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AutoDownSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using FluentAssertions;
@@ -82,91 +83,91 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDown_must_down_unreachable_when_leader()
+        public async Task AutoDown_must_down_unreachable_when_leader()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB));
-            ExpectMsg(new DownCalled(MemberB.Address));
+            await ExpectMsgAsync(new DownCalled(MemberB.Address));
         }
 
         [Fact]
-        public void AutoDown_must_not_down_unreachable_when_not_leader()
+        public async Task AutoDown_must_not_down_unreachable_when_not_leader()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberC));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
-        public void AutoDown_must_down_unreachable_when_becoming_leader()
+        public async Task AutoDown_must_down_unreachable_when_becoming_leader()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberC));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
-            ExpectMsg(new DownCalled(MemberC.Address));
+            await ExpectMsgAsync(new DownCalled(MemberC.Address));
         }
 
         [Fact]
-        public void AutoDown_must_down_unreachable_after_specified_duration()
+        public async Task AutoDown_must_down_unreachable_after_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB));
-            ExpectNoMsg(1.Seconds());
-            ExpectMsg(new DownCalled(MemberB.Address));
+            await ExpectNoMsgAsync(1.Seconds());
+            await ExpectMsgAsync(new DownCalled(MemberB.Address));
         }
 
         [Fact]
-        public void AutoDown_must_down_unreachable_when_becoming_leader_inbetween_detection_and_specified_duration()
+        public async Task AutoDown_must_down_unreachable_when_becoming_leader_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberC));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
-            ExpectNoMsg(1.Seconds());
-            ExpectMsg(new DownCalled(MemberC.Address));
+            await ExpectNoMsgAsync(1.Seconds());
+            await ExpectMsgAsync(new DownCalled(MemberC.Address));
         }
 
         [Fact]
-        public void AutoDown_must_not_down_unreachable_when_loosing_leadership_inbetween_detection_and_specified_duration()
+        public async Task AutoDown_must_not_down_unreachable_when_loosing_leadership_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberC));
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
-            ExpectNoMsg(3.Seconds());
+            await ExpectNoMsgAsync(3.Seconds());
         }
 
         [Fact]
-        public void AutoDown_must_not_down_when_unreachable_become_reachable_inbetween_detection_and_specified_duration()
+        public async Task AutoDown_must_not_down_when_unreachable_become_reachable_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB));
             a.Tell(new ClusterEvent.ReachableMember(MemberB));
-            ExpectNoMsg(3.Seconds());
+            await ExpectNoMsgAsync(3.Seconds());
         }
 
         [Fact]
-        public void AutoDown_must_not_down_unreachable_is_removed_inbetween_detection_and_specified_duration()
+        public async Task AutoDown_must_not_down_unreachable_is_removed_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB));
             a.Tell(new ClusterEvent.MemberRemoved(MemberB.Copy(MemberStatus.Removed), MemberStatus.Exiting));
-            ExpectNoMsg(3.Seconds());
+            await ExpectNoMsgAsync(3.Seconds());
         }
 
         [Fact]
-        public void AutoDown_must_not_down_when_unreachable_is_already_down()
+        public async Task AutoDown_must_not_down_when_unreachable_is_already_down()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB.Copy(MemberStatus.Down)));
-            ExpectNoMsg(1.Seconds());
+            await ExpectNoMsgAsync(1.Seconds());
         }
     }
 }

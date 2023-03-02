@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IWithUnboundedStash.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,13 +10,10 @@ using Akka.Dispatch;
 namespace Akka.Actor
 {
     /// <summary>
-    /// Lets the <see cref="StashFactory"/> know that this Actor needs stash support
-    /// with unrestricted storage capacity.
-    /// You need to add the property:
-    /// <code>public IStash Stash { get; set; }</code>
+    /// The `IWithUnboundedStash` interface is a version of <see cref="IActorStash"/> that enforces an unbounded stash for you actor.
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface IWithUnboundedStash : IActorStash, IRequiresMessageQueue<IUnboundedDequeBasedMessageQueueSemantics>
+    public interface IWithUnboundedStash : IWithUnrestrictedStash, IRequiresMessageQueue<IUnboundedDequeBasedMessageQueueSemantics>
     {
     }
 }

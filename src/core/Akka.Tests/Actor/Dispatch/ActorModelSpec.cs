@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorModelSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -492,7 +492,7 @@ namespace Akka.Tests.Actor.Dispatch
         }
 
         [Fact]
-        public void A_dispatcher_must_handle_queuing_from_multiple_threads()
+        public async Task A_dispatcher_must_handle_queuing_from_multiple_threads()
         {
             var dispatcher = InterceptedDispatcher();
             var counter = new CountdownEvent(200);
@@ -517,7 +517,7 @@ namespace Akka.Tests.Actor.Dispatch
             }
             finally
             {
-                var stats = a.Ask<InterceptorStats>(GetStats.Instance).Result;
+                var stats = await a.Ask<InterceptorStats>(GetStats.Instance);
                 _testOutputHelper.WriteLine("Observed stats: {0}", stats);
 
                 Sys.Stop(a);

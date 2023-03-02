@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Recovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,10 +30,7 @@ namespace Akka.Persistence
 
         public override string ToString() => Name;
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public abstract partial class Eventsourced
     {
         /// <summary>
@@ -135,7 +132,7 @@ namespace Akka.Persistence
                             }
                             ReturnRecoveryPermit();
                             break;
-                        case RecoveryTick tick when tick.Snapshot:
+                        case RecoveryTick { Snapshot: true }:
                             try
                             {
                                 OnRecoveryFailure(
@@ -235,7 +232,7 @@ namespace Akka.Persistence
                             }
                             ReturnRecoveryPermit();
                             break;
-                        case RecoveryTick tick when !tick.Snapshot:
+                        case RecoveryTick { Snapshot: false }:
                             if (!eventSeenInInterval)
                             {
                                 timeoutCancelable.Cancel();
@@ -256,7 +253,7 @@ namespace Akka.Persistence
                                 eventSeenInInterval = false;
                             }
                             break;
-                        case RecoveryTick tick when tick.Snapshot:
+                        case RecoveryTick { Snapshot: true }:
                             // snapshot tick, ignore
                             break;
                         default:

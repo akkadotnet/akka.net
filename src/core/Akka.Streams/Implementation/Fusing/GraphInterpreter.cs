@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphInterpreter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -125,7 +125,7 @@ namespace Akka.Streams.Implementation.Fusing
 
 
         /// <summary>
-        /// TBD
+        /// Marker class that indicates that a port was failed with a given cause and a potential outstanding element
         /// </summary>
         public sealed class Failed
         {
@@ -147,6 +147,19 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 Reason = reason;
                 PreviousElement = previousElement;
+            }
+        }
+        
+        /// <summary>
+        /// Marker class that indicates that a port was cancelled with a given cause
+        /// </summary>
+        public sealed class Cancelled
+        {
+            public readonly Exception Cause;
+
+            public Cancelled(Exception cause)
+            {
+                Cause = cause;
             }
         }
 
@@ -253,12 +266,15 @@ namespace Akka.Streams.Implementation.Fusing
             public IOutHandler OutHandler { get; set; }
 
             /// <summary>
-            /// TBD
+            /// See <see cref="GraphInterpreter"/> about possible states
             /// </summary>
             public int PortState { get; set; } = InReady;
 
             /// <summary>
-            /// TBD
+            /// Can either be:
+            /// * An in-flight element
+            /// * A failure (with an optional in-flight element), if elem is an instance of <see cref="Failed"/>
+            /// * A cancellation cause, is elem is an instance of <see cref="Cancelled"/>
             /// </summary>
             public object Slot { get; set; } = Empty.Instance;
 
@@ -845,7 +861,9 @@ namespace Akka.Streams.Implementation.Fusing
                 if (IsDebug) Console.WriteLine($"{Name} CANCEL {InOwnerName(connection)} -> {OutOwnerName(connection)} ({connection.OutHandler}) [{OutLogicName(connection)}]");
                 connection.PortState |= OutClosed;
                 CompleteConnection(connection.OutOwnerId);
-                connection.OutHandler.OnDownstreamFinish();
+                var cause = ((Cancelled)connection.Slot).Cause;
+                connection.Slot = Empty.Instance;
+                connection.OutHandler.OnDownstreamFinish(cause);
             }
             else if ((code & (OutClosed | InClosed)) == OutClosed)
             {
@@ -1067,14 +1085,15 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="connection">TBD</param>
-        internal void Cancel(Connection connection)
+        /// <param name="cause"></param>
+        internal void Cancel(Connection connection, Exception cause)
         {
             var currentState = connection.PortState;
-            if (IsDebug) Console.WriteLine($"{Name}   Cancel({connection}) [{currentState}]");
+            if (IsDebug) Console.WriteLine($"{Name}   Cancel({connection}) [{currentState}] [{cause.Message}]");
             connection.PortState = currentState | InClosed;
             if ((currentState & OutClosed) == 0)
             {
-                connection.Slot = Empty.Instance;
+                connection.Slot = new Cancelled(cause);
                 if ((currentState & (Pulling | Pushing | InClosed)) == 0)
                     Enqueue(connection);
                 else if (_chasedPull == connection)

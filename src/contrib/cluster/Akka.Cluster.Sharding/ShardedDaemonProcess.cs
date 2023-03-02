@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardedDaemonProcess.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding
@@ -43,9 +44,10 @@ namespace Akka.Cluster.Sharding
         {
             base.PreStart();
 
-            Context.System.Log.Debug("Starting Sharded Daemon Process KeepAlivePinger for [{0}], with ping interval [{1}]");
-            Timers.StartPeriodicTimer("tick", Tick.Instance, Settings.KeepAliveInterval);
             TriggerStartAll();
+            Context.System.Log.Debug("Starting Sharded Daemon Process KeepAlivePinger for [{0}], with ping interval [{1}]", 
+                Name, Settings.KeepAliveInterval);
+            Timers.StartPeriodicTimer("tick", Tick.Instance, Settings.KeepAliveInterval);
         }
 
         protected override void OnReceive(object message)
@@ -140,17 +142,6 @@ namespace Akka.Cluster.Sharding
         /// <param name="numberOfInstances">TBD</param>
         /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
         /// <param name="settings">TBD</param>
-        [Obsolete("Use the overloaded one which accepts a stopMessage instead.")]
-        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, ShardedDaemonProcessSettings settings) =>
-            Init(name, numberOfInstances, propsFactory, settings, null);
-
-        /// <summary>
-        /// Start a specific number of actors, each with a unique numeric id in the set, that is then kept alive in the cluster.
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="numberOfInstances">TBD</param>
-        /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
-        /// <param name="settings">TBD</param>
         /// <param name="stopMessage">If defined sent to the actors when they need to stop because of a rebalance across the nodes of the cluster or cluster shutdown.</param>
         public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, ShardedDaemonProcessSettings settings, object stopMessage)
         {
@@ -158,7 +149,7 @@ namespace Akka.Cluster.Sharding
             var numberOfShards = numberOfInstances;
             var entityIds = Enumerable.Range(0, numberOfInstances).Select(i => i.ToString()).ToArray();
 
-            // Defaults in `akka.cluster.sharding` but allow overrides specifically for sharded-daemon-process 
+            // Defaults in `akka.cluster.sharding` but allow overrides specifically for sharded-daemon-process
             var shardingBaseSettings = settings.ShardingSettings;
             if (shardingBaseSettings == null)
             {
@@ -175,7 +166,8 @@ namespace Akka.Cluster.Sharding
                 TimeSpan.Zero, // passivation disabled
                 StateStoreMode.DData,
                 shardingBaseSettings.TuningParameters,
-                shardingBaseSettings.CoordinatorSingletonSettings);
+                shardingBaseSettings.CoordinatorSingletonSettings, 
+                shardingBaseSettings.LeaseSettings);
 
             if (string.IsNullOrEmpty(shardingSettings.Role) || Cluster.Get(_system).SelfRoles.Contains(shardingSettings.Role))
             {

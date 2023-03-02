@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Settings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ namespace Akka.Actor
     /// This class represents the overall <see cref="ActorSystem"/> settings which also provides a convenient
     /// access to the <see cref="Configuration.Config"/> object. For more detailed information about the
     /// different possible configuration options, look in the Akka.NET Documentation under Configuration
-    /// (http://getakka.net/docs/concepts/configuration).
+    /// (https://getakka.net/articles/configuration/config.html).
     /// </summary>
     public class Settings
     {
@@ -107,6 +107,7 @@ namespace Akka.Actor
 
             SerializeAllMessages = Config.GetBoolean("akka.actor.serialize-messages", false);
             SerializeAllCreators = Config.GetBoolean("akka.actor.serialize-creators", false);
+            EmitActorTelemetry = Config.GetBoolean("akka.actor.telemetry.enabled", false);
 
             LogLevel = Config.GetString("akka.loglevel", null);
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel", null);
@@ -140,8 +141,41 @@ namespace Akka.Actor
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
             LoggerAsyncStart = Config.GetBoolean("akka.logger-async-start", false);
 
+            var loggerFormatterName = Config.GetString("akka.logger-formatter", null);
+            if (string.IsNullOrWhiteSpace(loggerFormatterName))
+            {
+                LogFormatter = DefaultLogMessageFormatter.Instance;
+            }
+            else
+            {
+                var logFormatType = Type.GetType(loggerFormatterName);
+                if (logFormatType == null)
+                    throw new ArgumentException($"Could not load type of {loggerFormatterName} for ILogMessageFormatter.");
+                if(!typeof(ILogMessageFormatter).IsAssignableFrom(logFormatType))
+                    throw new ArgumentException("Log formatter type must inherit from the ILogMessageFormatter interface.");
+                
+                // SPECIAL CASE - check for the default log message formatter, which does not have an empty constructor (it's private)
+                if (logFormatType == typeof(DefaultLogMessageFormatter))
+                {
+                    LogFormatter = DefaultLogMessageFormatter.Instance;
+                }
+                else
+                {
+                    try
+                    {
+                        LogFormatter = (ILogMessageFormatter)Activator.CreateInstance(logFormatType);
+                    }
+                    catch (MissingMethodException)
+                    {
+                        throw new MissingMethodException(
+                            "Log message formatter must inherit from the ILogMessageFormatter and have an empty constructor.");
+                    }
+                }
+            }
+
             //handled
             LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start", false);
+            LogSerializerOverrideOnStart = Config.GetBoolean("akka.log-serializer-override-on-start", true);
             LogDeadLetters = 0;
             switch (Config.GetString("akka.log-dead-letters", null))
             {
@@ -242,6 +276,17 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [serialize all creators]; otherwise, <c>false</c>.</value>
         public bool SerializeAllCreators { get; private set; }
+        
+        /// <summary>
+        /// When set to <c>true</c>, all actors will emit <see cref="IActorTelemetryEvent"/>s when they are created, stopped, or restarted.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>false</c>.
+        /// </remarks>
+        /// <code>
+        /// akka.actor.telemetry.enabled = on
+        /// </code>
+        public bool EmitActorTelemetry { get; }
 
         /// <summary>
         ///     Gets the default timeout for <see cref="Futures.Ask(ICanTell, object, TimeSpan?)">Futures.Ask</see> calls.
@@ -307,6 +352,20 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [log configuration on start]; otherwise, <c>false</c>.</value>
         public bool LogConfigOnStart { get; private set; }
+
+        /// <summary>
+        /// The default formatter used by the <see cref="ILoggingAdapter"/>.
+        /// </summary>
+        /// <remarks>
+        /// Can be overridden on individual `Context.GetLogger()` calls.
+        /// </remarks>
+        public ILogMessageFormatter LogFormatter { get; }
+
+        /// <summary>
+        ///     Gets a value indicating whether [log serializer override on start].
+        /// </summary>
+        /// <value><c>true</c> if [log serializer override on start]; otherwise, <c>false</c>.</value>
+        public bool LogSerializerOverrideOnStart { get; private set; }
 
         /// <summary>
         ///     Gets the log dead letters.

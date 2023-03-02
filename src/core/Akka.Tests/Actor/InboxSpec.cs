@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InboxSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,8 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
+using Akka.Tests.Util;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -28,13 +30,13 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Inbox_support_watch()
+        public async Task Inbox_support_watch()
         {
             _inbox.Watch(TestActor);
 
             // check watch
             TestActor.Tell(PoisonPill.Instance);
-            var received = _inbox.Receive(TimeSpan.FromSeconds(1));
+            var received = await _inbox.ReceiveAsync(TimeSpan.FromSeconds(1));
 
             received.GetType().ShouldBe(typeof(Terminated));
             var terminated = (Terminated)received;
@@ -50,13 +52,13 @@ namespace Akka.Tests.Actor
                     Task.Factory.StartNew(() =>
                     {
                         Thread.Sleep(100);
-                        return _inbox.ReceiveWhere(x => x.ToString() == "world"); 
-                    }), 
+                        return _inbox.ReceiveWhere(x => x.ToString() == "world");
+                    }),
                     Task.Factory.StartNew(() =>
                     {
                         Thread.Sleep(200);
-                        return _inbox.ReceiveWhere(x => x.ToString() == "hello"); 
-                    }) 
+                        return _inbox.ReceiveWhere(x => x.ToString() == "hello");
+                    })
                 };
 
             _inbox.Receiver.Tell(42);
@@ -76,13 +78,13 @@ namespace Akka.Tests.Actor
             _inbox.Receiver.Tell("hello");
             _inbox.Receiver.Tell("world");
 
-            var selection = _inbox.ReceiveWhere(x => x.ToString() == "world");       
+            var selection = _inbox.ReceiveWhere(x => x.ToString() == "world");
             selection.ShouldBe("world");
             _inbox.Receive().ShouldBe("hello");
         }
 
         [Fact]
-        public void Inbox_have_maximum_queue_size()
+        public async Task Inbox_have_maximum_queue_size()
         {
             try
             {
@@ -90,14 +92,14 @@ namespace Akka.Tests.Actor
                 foreach (var zero in Enumerable.Repeat(0, 1000))
                     _inbox.Receiver.Tell(zero);
 
-                ExpectNoMsg(TimeSpan.FromSeconds(1));
+                await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
                 //The inbox is full. Sending another message should result in a Warning message
-                EventFilter.Warning(start:"Dropping message").ExpectOne(() => _inbox.Receiver.Tell(42));
+                await EventFilter.Warning(start: "Dropping message").ExpectOneAsync(async () => _inbox.Receiver.Tell(42));
 
                 //The inbox is still full. But since the warning message has already been sent, no more warnings should be sent
                 _inbox.Receiver.Tell(42);
-                ExpectNoMsg(TimeSpan.FromSeconds(1));
+                await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
                 //Receive all messages from the inbox
                 var gotit = Enumerable.Repeat(0, 1000).Select(_ => _inbox.Receive());
@@ -107,7 +109,7 @@ namespace Akka.Tests.Actor
                 }
 
                 //The inbox should be empty now, so receiving should result in a timeout
-                Intercept<TimeoutException>(() =>
+                Assert.Throws<TimeoutException>(() =>
                 {
                     var received = _inbox.Receive(TimeSpan.FromSeconds(1));
                     Log.Error("Received " + received);
@@ -120,25 +122,25 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Inbox_have_a_default_and_custom_timeouts()
+        public async Task Inbox_have_a_default_and_custom_timeouts()
         {
-            Within(TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(6), () =>
+            await WithinAsync(TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(6), () =>
             {
-                Intercept<TimeoutException>(() => _inbox.Receive());
-                return true;
+                Assert.Throws<TimeoutException>(() => _inbox.Receive());
+                return Task.CompletedTask;
             });
 
-            Within(TimeSpan.FromSeconds(1), () =>
+            await WithinAsync(TimeSpan.FromSeconds(1), () =>
             {
-                Intercept<TimeoutException>(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
-                return true;
+                Assert.Throws<TimeoutException>(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
+                return Task.CompletedTask;
             });
         }
 
         [Fact]
         public void Select_WithClient_should_update_Client_and_copy_the_rest_of_the_properties_BUG_427()
         {
-            var deadline = new TimeSpan(Sys.Scheduler.MonotonicClock.Ticks/2); //Some point in the past
+            var deadline = new TimeSpan(Sys.Scheduler.MonotonicClock.Ticks / 2); //Some point in the past
             Predicate<object> predicate = o => true;
             var actorRef = new EmptyLocalActorRef(((ActorSystemImpl)Sys).Provider, new RootActorPath(new Address("akka", "test")), Sys.EventStream);
             var select = new Select(deadline, predicate, actorRef);
@@ -152,11 +154,10 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Inbox_Receive_will_timeout_gracefully_if_timeout_is_already_expired()
+        public async Task Inbox_Receive_will_timeout_gracefully_if_timeout_is_already_expired()
         {
             var task = _inbox.ReceiveAsync(TimeSpan.FromSeconds(-1));
-
-            Assert.True(task.Wait(1000), "Receive did not complete in time.");
+            Assert.True(await task.AwaitWithTimeout(TimeSpan.FromMilliseconds(1000)), "Receive did not complete in time.");
             Assert.IsType<Status.Failure>(task.Result);
         }
     }

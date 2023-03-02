@@ -1,14 +1,16 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HyperionConfigTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using FluentAssertions;
@@ -208,7 +210,7 @@ namespace Akka.Serialization.Hyperion.Tests
 #elif NETCOREAPP3_1
                 Assert.Equal("dff", @override("def"));
                 Assert.Equal("efg", @override("efg"));
-#elif NET6_0
+#elif NET7_0
                 Assert.Equal("gii", @override("ghi"));
                 Assert.Equal("hij", @override("hij"));
 #else
@@ -246,6 +248,71 @@ namespace Akka.Serialization.Hyperion.Tests
                 FooHyperionSurrogate.Surrogated[0].Should().BeEquivalentTo(expected);
             }
         }
+        
+        [Fact]
+        public async Task CanDeserializeANaughtyTypeWhenAllowed()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+akka {
+    serialize-messages = on
+    actor {
+        serializers {
+            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+        }
+        serialization-bindings {
+            ""System.Object"" = hyperion
+        }
+        serialization-settings.hyperion.disallow-unsafe-type = false
+    }
+}");
+            var system = ActorSystem.Create("unsafeSystem", config);
+            
+            try
+            {
+                var serializer = system.Serialization.FindSerializerForType(typeof(DirectoryInfo));
+                var di = new DirectoryInfo(@"c:\");
+
+                var serialized = serializer.ToBinary(di);
+                var deserialized = serializer.FromBinary<DirectoryInfo>(serialized);
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+        
+        [Fact]
+        public async Task CantDeserializeANaughtyTypeByDefault()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+akka {
+    serialize-messages = on
+    actor {
+        serializers {
+            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+        }
+        serialization-bindings {
+            ""System.Object"" = hyperion
+        }
+    }
+}");
+            var system = ActorSystem.Create("unsafeSystem", config);
+            
+            try
+            {
+                var serializer = system.Serialization.FindSerializerForType(typeof(DirectoryInfo));
+                var di = new DirectoryInfo(@"c:\");
+                
+                var serialized = serializer.ToBinary(di);
+                var ex = Assert.Throws<SerializationException>(() => serializer.FromBinary<DirectoryInfo>(serialized));
+                ex.InnerException.Should().BeOfType<EvilDeserializationException>();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+                
 
         public static IEnumerable<object[]> TypeFilterObjectFactory()
         {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatorPruningSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,11 +10,11 @@ using Akka.Actor;
 using Akka.Cluster;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.DistributedData.Tests.MultiNode
 {
@@ -189,8 +189,11 @@ namespace Akka.DistributedData.Tests.MultiNode
             void UpdateAfterPruning(ulong expectedValue)
             {
                 // inject data from removed node to simulate bad data
-                _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty, new WriteAll(_timeout), x => x.Merge(oldCounter).Increment(_cluster, 1)));
-                ExpectMsg<UpdateSuccess>(msg =>
+                _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty,
+                    new WriteAll(_timeout), x => x.Merge(oldCounter).Increment(_cluster, 1)));
+                ExpectMsg<UpdateSuccess>();
+                
+                AwaitAssert(() =>
                 {
                     _replicator.Tell(Dsl.Get(_keyA, ReadLocal.Instance));
                     var retrieved = ExpectMsg<GetSuccess>().Get(_keyA);

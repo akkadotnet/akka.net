@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -103,6 +103,12 @@ namespace Akka.IO
         private CloseInformation _closedMessage;  // for ConnectionClosed message in postStop
 
         private IActorRef _watchedActor = Context.System.DeadLetters;
+
+        private readonly IOException droppingWriteBecauseWritingIsSuspendedException =
+            new IOException("Dropping write because writing is suspended");
+
+        private readonly IOException droppingWriteBecauseQueueIsFullException =
+            new IOException("Dropping write because queue is full");
 
         protected TcpConnection(TcpExt tcp, Socket socket, bool pullMode, Option<int> writeCommandsBufferMaxSize)
         {
@@ -328,7 +334,7 @@ namespace Akka.IO
                         if (HasStatus(ConnectionStatus.WritingSuspended))
                         {
                             if (_traceLogging) Log.Debug("Dropping write because writing is suspended");
-                            Sender.Tell(write.FailureMessage);
+                            Sender.Tell(write.FailureMessage.WithCause(droppingWriteBecauseWritingIsSuspendedException));
                         }
 
                         if (HasStatus(ConnectionStatus.Sending))
@@ -405,7 +411,7 @@ namespace Akka.IO
         private void DropWrite(ConnectionInfo info, WriteCommand write)
         {
             if (_traceLogging) Log.Debug("Dropping write because queue is full");
-            Sender.Tell(write.FailureMessage);
+            Sender.Tell(write.FailureMessage.WithCause(droppingWriteBecauseQueueIsFullException));
             if (info.UseResumeWriting) SetStatus(ConnectionStatus.WritingSuspended);
         }
 

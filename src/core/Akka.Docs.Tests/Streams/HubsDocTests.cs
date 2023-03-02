@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HubsDocTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace DocsExamples.Streams
 
             #region merge-hub
             // A simple consumer that will print to the console for now
-            Sink<string, Task> consumer = Sink.ForEach<string>(WriteLine);
+            Sink<string, Task<Done>> consumer = Sink.ForEach<string>(WriteLine);
 
             // Attach a MergeHub Source to the consumer. This will materialize to a
             // corresponding Sink.
@@ -54,7 +54,7 @@ namespace DocsExamples.Streams
             Source.Single("Hub!").RunWith(toConsumer, Materializer);
             #endregion
 
-            ExpectMsgAllOf("Hello!", "Hub!");
+            ExpectMsgAllOf(new []{ "Hello!", "Hub!"});
         }
 
         [Fact]

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterpreterSupervisionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -119,7 +119,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     downstream.RequestOne();
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
                     upstream.OnNext(0); // boom
-                    lastEvents().Should().BeEquivalentTo(new Cancel(), new OnError(TE()));
+                    lastEvents().Should().BeEquivalentTo(new Cancel(TE()), new OnError(TE()));
                 });
         }
 
@@ -141,7 +141,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     downstream.RequestOne();
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
                     upstream.OnNext(-1); // boom
-                    lastEvents().Should().BeEquivalentTo(new Cancel(), new OnError(TE()));
+                    lastEvents().Should().BeEquivalentTo(new Cancel(TE()), new OnError(TE()));
                 });
         }
 
@@ -244,7 +244,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new OnNext(-1));
 
                     upstream.OnNext(2); // boom
-                    lastEvents().Should().BeEquivalentTo(new OnError(TE()), new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new OnError(TE()), new Cancel(TE()));
                 });
         }
 
@@ -271,7 +271,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     downstream.RequestOne();
                     var events = lastEvents();
                     events.OfType<OnError>().Select(x => x.Cause.InnerException).Should().BeEquivalentTo(TE());
-                    events.OfType<Cancel>().Should().BeEquivalentTo(new Cancel());
+                    events.OfType<Cancel>().Should().BeEquivalentTo(new Cancel(new AggregateException(TE())));
                 });
         }
 

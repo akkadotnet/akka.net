@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="WriteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,10 +36,20 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequenceables)
         {
-            return resequenceables
-               .OfType<AtomicWrite>()
-               .Select(aw => new AtomicWrite(((IEnumerable<IPersistentRepresentation>)aw.Payload)
-                    .Select(p => AdaptToJournal(p.Update(p.SequenceNr, p.PersistenceId, p.IsDeleted, ActorRefs.NoSender, p.WriterGuid))).ToImmutableList()));
+            foreach (var resequenceable in resequenceables)
+            {
+                if (resequenceable is not AtomicWrite) continue;
+                
+                var result = ImmutableList.CreateBuilder<IPersistentRepresentation>();
+
+                foreach (var representation in (IEnumerable<IPersistentRepresentation>)resequenceable.Payload)
+                {
+                    var adapted = AdaptToJournal(representation.Update(representation.SequenceNr, representation.PersistenceId, representation.IsDeleted,
+                        ActorRefs.NoSender, representation.WriterGuid));
+                    result.Add(adapted);
+                }
+                yield return new AtomicWrite(result.ToImmutable());
+            }
         }
 
         /// <summary>

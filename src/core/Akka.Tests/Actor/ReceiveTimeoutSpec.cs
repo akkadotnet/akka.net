@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReceiveTimeoutSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.Event;
@@ -161,7 +162,7 @@ namespace Akka.Tests.Actor
             var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(timeoutLatch)));
 
-            Intercept<TimeoutException>(() => timeoutLatch.Ready(TestKitSettings.DefaultTimeout));
+            Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(TestKitSettings.DefaultTimeout));
             Sys.Stop(timeoutActor);
         }
 
@@ -170,19 +171,18 @@ namespace Akka.Tests.Actor
         {
             var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch, TimeSpan.FromSeconds(1))));
-
-            var cancellationToken = new CancellationTokenSource();
-            Sys.Scheduler.Schedule(
+            
+            var cancelable = Sys.Scheduler.Advanced.ScheduleRepeatedlyCancelable(
                 TimeSpan.FromMilliseconds(100),
                 TimeSpan.FromMilliseconds(100),
                 () =>
                 {
                     timeoutActor.Tell(new TransparentTick());
                     timeoutActor.Tell(new Identify(null));
-                }, cancellationToken.Token);
+                });
 
             timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
-            cancellationToken.Cancel();
+            cancelable.Cancel();
             Sys.Stop(timeoutActor);
         }
 
@@ -208,7 +208,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Issue469_An_actor_with_receive_timeout_must_cancel_receive_timeout_when_terminated()
+        public async Task Issue469_An_actor_with_receive_timeout_must_cancel_receive_timeout_when_terminated()
         {
             //This test verifies that bug #469 "ReceiveTimeout isn't cancelled when actor terminates" has been fixed
             var timeoutLatch = CreateTestLatch();
@@ -223,11 +223,11 @@ namespace Akka.Tests.Actor
 
             //Stop and wait for the actor to terminate
             Sys.Stop(timeoutActor);
-            ExpectTerminated(timeoutActor);
+            await ExpectTerminatedAsync(timeoutActor);
 
             //We should not get any messages now. If we get a message now, 
             //it's a DeadLetter with ReceiveTimeout, meaning the receivetimeout wasn't cancelled.
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
@@ -261,7 +261,7 @@ namespace Akka.Tests.Actor
             var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
             timeoutActor.Tell(new TransparentTick());
 
-            Intercept<TimeoutException>(() => timeoutLatch.Ready(1.Seconds()));
+            Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(1.Seconds()));
             Sys.Stop(timeoutActor);
         }
     }

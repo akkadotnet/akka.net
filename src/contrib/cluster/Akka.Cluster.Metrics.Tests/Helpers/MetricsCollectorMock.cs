@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MetricsCollectorMock.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ namespace Akka.Cluster.Metrics.Tests.Helpers
         /// <inheritdoc />
         public NodeMetrics Sample()
         {
-            return new NodeMetrics(new Address("akka", _system.Name), DateTime.UtcNow.ToTimestamp().Seconds, new []
+            return new NodeMetrics(new Address("akka", _system.Name), DateTime.UtcNow.ToTimestamp(), new []
             {
                 new NodeMetrics.Types.Metric("metric1", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.5)),
                 new NodeMetrics.Types.Metric("metric2", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.2)), 

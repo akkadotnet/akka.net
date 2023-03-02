@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -155,21 +155,23 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveRecover(object message)
             {
-                return message.Match()
-                    .With<IEvt>(evt =>
-                    {
-                        UpdateState(evt);
-                        if (ChaosSupportExtensions.ShouldFail(_replayProcessingFailureRate))
-                            throw new TestException(DebugMessage(string.Format("replay failed at event {0}", evt)));
-                        Log.Debug(DebugMessage(string.Format("replayed event {0}", evt)));
-                    }).WasHandled;
+                if (message is IEvt evt)
+                {
+                    UpdateState(evt);
+                    if (ChaosSupportExtensions.ShouldFail(_replayProcessingFailureRate))
+                        throw new TestException(DebugMessage(string.Format("replay failed at event {0}", evt)));
+                    Log.Debug(DebugMessage(string.Format("replayed event {0}", evt)));
+                    return true;
+                }
+
+                return false;
             }
 
             protected override bool ReceiveCommand(object message)
             {
-                return message.Match()
-                    .With<int>(i =>
-                    {
+                switch (message)
+                {
+                    case int i:
                         if (State.Contains(i))
                         {
                             Log.Debug(DebugMessage("ignored duplicate"));
@@ -180,15 +182,19 @@ namespace Akka.Persistence.Tests
                             {
                                 UpdateState(sent);
                                 if (ChaosSupportExtensions.ShouldFail(_liveProcessingFailureRate))
-                                    throw new TestException(DebugMessage(string.Format("failed at payload {0}", sent.I)));
-                                Log.Debug(DebugMessage(String.Format("processed payload {0}", sent.I)));
+                                    throw new TestException(DebugMessage($"failed at payload {sent.I}"));
+                                Log.Debug(DebugMessage($"processed payload {sent.I}"));
                             });
-                    })
-                    .With<Confirm>(confirm =>
-                    {
+
+                        return true;
+                    
+                    case Confirm confirm:
                         Persist(new MsgConfirmed(confirm.DeliveryId, confirm.I), x => UpdateState(x));
-                    })
-                    .WasHandled;
+                        return true;
+                    
+                    default:
+                        return false;
+                }
             }
 
             private void UpdateState(IEvt evt)

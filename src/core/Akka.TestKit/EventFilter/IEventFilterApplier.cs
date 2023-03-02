@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IEventFilterApplier.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.TestKit
@@ -24,18 +25,9 @@ namespace Akka.TestKit
         /// "akka.test.filter-leeway", see <see cref="TestKitSettings.TestEventFilterLeeway"/>.
         /// </summary>
         /// <param name="action">The action.</param>
-        void ExpectOne(Action action);
-        
-        /// <summary>
-        /// Executes <paramref name="action"/> and
-        /// expects one event to be logged during the execution.
-        /// This method fails and throws an exception if more than one event is logged,
-        /// or if a timeout occurs. The timeout is taken from the config value
-        /// "akka.test.filter-leeway", see <see cref="TestKitSettings.TestEventFilterLeeway"/>.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        Task ExpectOneAsync(Action action);
-        
+        /// <param name="cancellationToken"></param>
+        void ExpectOne(Action action, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Executes <paramref name="actionAsync"/> and
         /// expects one event to be logged during the execution.
@@ -44,7 +36,8 @@ namespace Akka.TestKit
         /// "akka.test.filter-leeway", see <see cref="TestKitSettings.TestEventFilterLeeway"/>.
         /// </summary>
         /// <param name="actionAsync">The action.</param>
-        Task ExpectOneAsync(Func<Task> actionAsync);
+        /// <param name="cancellationToken"></param>
+        Task ExpectOneAsync(Func<Task> actionAsync, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="action"/> and
@@ -54,8 +47,9 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="timeout">The time to wait for a log event after executing <paramref name="action"/></param>
         /// <param name="action">The action.</param>
-        void ExpectOne(TimeSpan timeout, Action action);
-        
+        /// <param name="cancellationToken"></param>
+        void ExpectOne(TimeSpan timeout, Action action, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Executes <paramref name="action"/> and
         /// expects one event to be logged during the execution.
@@ -64,8 +58,13 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="timeout">The time to wait for a log event after executing <paramref name="action"/></param>
         /// <param name="action">The action.</param>
-        Task ExpectOneAsync(TimeSpan timeout, Action action);
-        
+        /// <param name="cancellationToken"></param>
+        Task ExpectOneAsync(TimeSpan timeout, Func<Task> action, CancellationToken cancellationToken = default);
+
+        [Obsolete(
+            "Only for backwards compat. Use ExpectOneAsync(Func<Task>, CancellationToken) instead beginning in Akka.NET v1.5")]
+        Task ExpectOneAsync(Action action, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Executes <paramref name="action"/> and expects the specified number
         /// of events to be logged during the execution.
@@ -75,18 +74,8 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="action">The action.</param>
-        void Expect(int expectedCount, Action action);
-        
-        /// <summary>
-        /// Executes <paramref name="action"/> and expects the specified number
-        /// of events to be logged during the execution.
-        /// This method fails and throws an exception if more events than expected are logged,
-        /// or if a timeout occurs. The timeout is taken from the config value
-        /// "akka.test.filter-leeway", see <see cref="TestKitSettings.TestEventFilterLeeway"/>.
-        /// </summary>
-        /// <param name="expectedCount">The expected number of events</param>
-        /// <param name="action">The action.</param>
-        Task ExpectAsync(int expectedCount, Action action);
+        /// <param name="cancellationToken"></param>
+        void Expect(int expectedCount, Action action, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="actionAsync"/> task and expects the specified number
@@ -97,7 +86,8 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="actionAsync">The async action.</param>
-        Task ExpectAsync(int expectedCount, Func<Task> actionAsync);
+        /// <param name="cancellationToken"></param>
+        Task ExpectAsync(int expectedCount, Func<Task> actionAsync, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="actionAsync"/> task and expects the specified number
@@ -109,7 +99,8 @@ namespace Akka.TestKit
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="actionAsync">The async action.</param>
         /// <param name="timeout"></param>
-        Task ExpectAsync(int expectedCount, Func<Task> actionAsync, TimeSpan? timeout);
+        /// <param name="cancellationToken"></param>
+        Task ExpectAsync(int expectedCount, Func<Task> actionAsync, TimeSpan? timeout, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="action"/> and expects the specified number
@@ -121,8 +112,9 @@ namespace Akka.TestKit
         /// <param name="timeout">The time to wait for log events after executing <paramref name="action"/></param>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="action">The action.</param>
-        void Expect(int expectedCount, TimeSpan timeout, Action action);
-        
+        /// <param name="cancellationToken"></param>
+        void Expect(int expectedCount, TimeSpan timeout, Action action, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Executes <paramref name="action"/> and expects the specified number
         /// of events to be logged during the execution.
@@ -133,7 +125,11 @@ namespace Akka.TestKit
         /// <param name="timeout">The time to wait for log events after executing <paramref name="action"/></param>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="action">The action.</param>
-        Task ExpectAsync(int expectedCount, TimeSpan timeout, Action action);
+        /// <param name="cancellationToken"></param>
+        Task ExpectAsync(int expectedCount, TimeSpan timeout, Func<Task> action, CancellationToken cancellationToken = default);
+        
+        [Obsolete("Use ExpectAsync<T>(expectedCount, TimeSpan, Func<Task<T>>) instead. This method only exists to support backwards compatibility as of Akka.NET v1.5.")]
+        Task ExpectAsync(int expectedCount, TimeSpan timeout, Action action, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="func"/> and
@@ -144,9 +140,10 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="func">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        T ExpectOne<T>(Func<T> func);
-        
+        T ExpectOne<T>(Func<T> func, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Executes <paramref name="func"/> and
         /// expects one event to be logged during the execution.
@@ -156,8 +153,9 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="func">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        Task<T> ExpectOneAsync<T>(Func<T> func);
+        Task<T> ExpectOneAsync<T>(Func<Task<T>> func, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="func"/> and
@@ -168,9 +166,10 @@ namespace Akka.TestKit
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="timeout">The time to wait for a log event after executing <paramref name="func"/></param>
         /// <param name="func">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        T ExpectOne<T>(TimeSpan timeout, Func<T> func);
-        
+        T ExpectOne<T>(TimeSpan timeout, Func<T> func, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Executes <paramref name="func"/> and
         /// expects one event to be logged during the execution.
@@ -180,8 +179,9 @@ namespace Akka.TestKit
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="timeout">The time to wait for a log event after executing <paramref name="func"/></param>
         /// <param name="func">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        Task<T> ExpectOneAsync<T>(TimeSpan timeout, Func<T> func);
+        Task<T> ExpectOneAsync<T>(TimeSpan timeout, Func<Task<T>> func, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="func"/> and expects the specified number
@@ -193,8 +193,9 @@ namespace Akka.TestKit
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="func">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        T Expect<T>(int expectedCount, Func<T> func);
+        T Expect<T>(int expectedCount, Func<T> func, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="func"/> and expects the specified number
@@ -207,8 +208,9 @@ namespace Akka.TestKit
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="func">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        Task<T> ExpectAsync<T>(int expectedCount, Func<T> func);
+        Task<T> ExpectAsync<T>(int expectedCount, Func<Task<T>> func, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="func"/> and expects the specified number
@@ -221,9 +223,10 @@ namespace Akka.TestKit
         /// <param name="timeout">The time to wait for log events after executing <paramref name="func"/></param>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="func">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        T Expect<T>(int expectedCount, TimeSpan timeout, Func<T> func);
-        
+        T Expect<T>(int expectedCount, TimeSpan timeout, Func<T> func, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Executes <paramref name="func"/> and expects the specified number
         /// of events to be logged during the execution.
@@ -235,38 +238,46 @@ namespace Akka.TestKit
         /// <param name="timeout">The time to wait for log events after executing <paramref name="func"/></param>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="func">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        Task<T> ExpectAsync<T>(int expectedCount, TimeSpan timeout, Func<T> func);
+        Task<T> ExpectAsync<T>(int expectedCount, TimeSpan timeout, Func<Task<T>> func, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="func"/> and prevent events from being logged during the execution.
         /// </summary>
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="func">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        T Mute<T>(Func<T> func);
-        
+        T Mute<T>(Func<T> func, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Executes <paramref name="func"/> and prevent events from being logged during the execution.
         /// </summary>
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="func">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        Task<T> MuteAsync<T>(Func<T> func);
+        Task<T> MuteAsync<T>(Func<Task<T>> func, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes <paramref name="action"/> and prevent events from being logged during the execution.
         /// </summary>
         /// <param name="action">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="action"/>.</returns>
-        void Mute(Action action);
-        
+        void Mute(Action action, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Executes <paramref name="action"/> and prevent events from being logged during the execution.
         /// </summary>
         /// <param name="action">The function.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The returned value from <paramref name="action"/>.</returns>
-        Task MuteAsync(Action action);
+        Task MuteAsync(Func<Task> action, CancellationToken cancellationToken = default);
+        
+        [Obsolete("Use MuteAsync(Func<Task>) instead. This method only exists for backwards compatibility as of Akka.NET v1.5.0.")]
+        Task MuteAsync(Action action, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Prevents events from being logged from now on. To allow events to be logged again, call 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Bugfix4360Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,30 +22,30 @@ namespace Akka.Persistence.Sqlite.Tests
     {
         public static Config TestConf = @"
 akka.persistence {
-journal {
-plugin = ""akka.persistence.journal.sqlite""
-sqlite {
-class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
-plugin-dispatcher = ""akka.actor.default-dispatcher""
-connection-string = ""DataSource=AkkaJournalfxR16.db""
-connection-timeout = 25s
-table-name = event_journal
-auto-initialize = on
-}
-}
-snapshot-store {
-plugin = ""akka.persistence.snapshot-store.sqlite""
-sqlite {
-class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
-plugin-dispatcher = ""akka.actor.default-dispatcher""
-connection-string = ""DataSource=AkkaSnapShotfxR16.db""
-connection-timeout = 25s
-table-name = snapshot_store
-auto-initialize = on
-}
-}
-#end persistence
-}}";
+  journal {
+    plugin = ""akka.persistence.journal.sqlite""
+    sqlite {
+      class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
+      plugin-dispatcher = ""akka.actor.default-dispatcher""
+      connection-string = ""DataSource=AkkaJournalfxR16.db""
+      connection-timeout = 25s
+      table-name = event_journal
+      auto-initialize = on
+    }
+  }
+  snapshot-store {
+    plugin = ""akka.persistence.snapshot-store.sqlite""
+    sqlite {
+      class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
+      plugin-dispatcher = ""akka.actor.default-dispatcher""
+      connection-string = ""DataSource=AkkaSnapShotfxR16.db""
+      connection-timeout = 25s
+      table-name = snapshot_store
+      auto-initialize = on
+    }
+  }
+  #end persistence
+}";
 
         private class RecoverActor : UntypedPersistentActor
         {
@@ -129,7 +129,7 @@ auto-initialize = on
             recoveryActor.Tell("foo");
             recoveryActor.Tell("bar");
             recoveryActor.Tell(RecoverActor.DoSnapshot.Instance);
-            ExpectMsgAllOf("foo", "bar");
+            ExpectMsgAllOf(new []{ "foo", "bar" });
             ExpectMsg<SaveSnapshotSuccess>();
 
             Watch(recoveryActor);

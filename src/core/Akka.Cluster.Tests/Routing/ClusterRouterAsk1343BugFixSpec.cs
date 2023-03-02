@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterRouterAsk1343BugFixSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ namespace Akka.Cluster.Tests.Routing
         {
         }
 
-        
+
         [Fact]
         public async Task Should_Ask_Clustered_Pool_Router_and_forward_ask_to_routee()
         {
@@ -76,7 +76,7 @@ namespace Akka.Cluster.Tests.Routing
             Assert.IsType<RoutedActorRef>(router);
 
             var result = await router.Ask<string>("foo");
-            ExpectMsg<string>().ShouldBe(result);
+            (await ExpectMsgAsync<string>()).ShouldBe(result);
         }
 
         [Fact]
@@ -87,7 +87,7 @@ namespace Akka.Cluster.Tests.Routing
             Assert.IsType<RoutedActorRef>(router);
 
             var result = await router.Ask<string>("foo");
-            ExpectMsg<string>().ShouldBe(result);
+            (await ExpectMsgAsync<string>()).ShouldBe(result);
         }
 
         [Fact]

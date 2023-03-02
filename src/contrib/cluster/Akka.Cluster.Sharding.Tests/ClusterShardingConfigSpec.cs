@@ -1,17 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Configuration;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingConfigSpec : Akka.TestKit.Xunit2.TestKit
+    public class ClusterShardingConfigSpec : AkkaSpec
     {
         public ClusterShardingConfigSpec() : base(GetConfig())
         {
@@ -43,7 +44,8 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.Equal(string.Empty, config.GetString("journal-plugin-id"));
             Assert.Equal(string.Empty, config.GetString("snapshot-plugin-id"));
             Assert.Equal("persistence", config.GetString("state-store-mode"));
-            Assert.Equal(TimeSpan.FromSeconds(5), config.GetTimeSpan("waiting-for-state-timeout"));
+            Assert.Equal("ddata", config.GetString("remember-entities-store"));
+            Assert.Equal(TimeSpan.FromSeconds(2), config.GetTimeSpan("waiting-for-state-timeout"));
             Assert.Equal(TimeSpan.FromSeconds(5), config.GetTimeSpan("updating-state-timeout"));
             Assert.Equal("akka.cluster.singleton", config.GetString("coordinator-singleton"));
             Assert.Equal(string.Empty, config.GetString("use-dispatcher"));

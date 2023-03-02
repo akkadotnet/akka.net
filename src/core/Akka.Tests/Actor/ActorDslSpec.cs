@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorDslSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,17 +17,17 @@ namespace Akka.Tests.Actor
     public class ActorDslSpec : AkkaSpec
     {
         [Fact]
-        public void A_lightweight_creator_must_support_creating_regular_actors()
+        public async Task A_lightweight_creator_must_support_creating_regular_actors()
         {
             var a = Sys.ActorOf(Props.Create(() => new Act(c =>
                 c.Receive<string>(msg => msg == "hello", (msg, ctx) => TestActor.Tell("hi")))));
 
             a.Tell("hello");
-            ExpectMsg("hi");
+            await ExpectMsgAsync("hi");
         }
 
         [Fact]
-        public void A_lightweight_creator_must_support_become_stacked()
+        public async Task A_lightweight_creator_must_support_become_stacked()
         {
             var a = Sys.ActorOf(c => c.Become((msg, ctx) =>
             {
@@ -52,19 +52,19 @@ namespace Akka.Tests.Actor
             }));
 
             a.Tell("info");
-            ExpectMsg("A");
+            await ExpectMsgAsync("A");
 
             a.Tell("switch");
             a.Tell("info");
-            ExpectMsg("B");
+            await ExpectMsgAsync("B");
 
             a.Tell("switch");
             a.Tell("info");
-            ExpectMsg("A");
+            await ExpectMsgAsync("A");
         }
 
         [Fact]
-        public void A_lightweight_creator_must_support_actor_setup_and_teardown()
+        public async Task A_lightweight_creator_must_support_actor_setup_and_teardown()
         {
             const string started = "started";
             const string stopped = "stopped";
@@ -76,8 +76,8 @@ namespace Akka.Tests.Actor
             });
 
             Sys.Stop(a);
-            ExpectMsg(started);
-            ExpectMsg(stopped);
+            await ExpectMsgAsync(started);
+            await ExpectMsgAsync(stopped);
         }
 
         [Fact(Skip = "TODO: requires event filters")]
@@ -93,7 +93,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void A_lightweight_creator_must_support_nested_declarations()
+        public async Task A_lightweight_creator_must_support_nested_declarations()
         {
             var a = Sys.ActorOf(act =>
             {
@@ -104,7 +104,7 @@ namespace Akka.Tests.Actor
                 act.ReceiveAny((x, _) => TestActor.Tell(x));
             }, "fred");
 
-            ExpectMsg("hello from akka://" + Sys.Name + "/user/fred/barney");
+            await ExpectMsgAsync("hello from akka://" + Sys.Name + "/user/fred/barney");
             LastSender.ShouldBe(a);
         }
 
@@ -115,7 +115,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void A_lightweight_creator_must_support_actor_base_method_calls()
+        public async Task A_lightweight_creator_must_support_actor_base_method_calls()
         {
             var parent = Sys.ActorOf(act =>
             {
@@ -134,15 +134,15 @@ namespace Akka.Tests.Actor
             }, "parent");
             
             parent.Tell("ping");
-            ExpectMsg("pong");
+            await ExpectMsgAsync("pong");
 
             parent.Tell("crash");
-            ExpectMsg("restarting parent");
-            ExpectMsg("stopping child");
+            await ExpectMsgAsync("restarting parent");
+            await ExpectMsgAsync("stopping child");
         }
 
         [Fact]
-        public void A_lightweight_creator_must_support_async_receives()
+        public async Task A_lightweight_creator_must_support_async_receives()
         {
             var parent = Sys.ActorOf(act =>
             {
@@ -176,13 +176,13 @@ namespace Akka.Tests.Actor
             });
 
             parent.Tell("ping");
-            ExpectMsg("pong");
+            await ExpectMsgAsync("pong");
 
             parent.Tell("pong");
-            ExpectMsg("ping");
+            await ExpectMsgAsync("ping");
 
             parent.Tell("hi");
-            ExpectMsg("hello");
+            await ExpectMsgAsync("hello");
         }
     }
 }

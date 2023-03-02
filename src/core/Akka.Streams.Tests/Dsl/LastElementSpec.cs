@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LastElementSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ using System;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
 using Akka.Util;
 using FluentAssertions;
@@ -34,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectNext(1, 2, 3)
                 .ExpectComplete();
 
-            lastElement.AwaitResult(TimeSpan.FromSeconds(1)).Should().Be(new Option<int>(3));
+            lastElement.AwaitResult(TimeSpan.FromSeconds(1)).Should().Be(Option<int>.Create(3));
         }
 
         [Fact]
@@ -59,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var t = Source.UnfoldInfinite(1, n => n >= 3 ? throw new Exception() : (n + 1, n + 1))
                 .ViaMaterialized(new LastElement<int>(), Keep.Right)
-                .ToMaterialized(Sink.Aggregate<int, Option<int>>(Option<int>.None, (_, o) => new Option<int>(o)), Keep.Both)
+                .ToMaterialized(Sink.Aggregate<int, Option<int>>(Option<int>.None, (_, o) => Option<int>.Create(o)), Keep.Both)
                 .Run(Sys.Materializer());
 
             var lastElement = t.Item1;

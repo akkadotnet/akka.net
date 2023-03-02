@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ScatterGatherFirstCompleted.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -392,20 +392,6 @@ namespace Akka.Routing
             : this(paths, within, Dispatchers.DefaultDispatcherId)
         {
 
-        }
-
-        /// <summary>
-        /// Obsolete. Use <see cref="ScatterGatherFirstCompletedGroup(IEnumerable{System.String}, TimeSpan)"/> instead.
-        /// <code>
-        /// new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString()), within)
-        /// </code>
-        /// </summary>
-        /// <param name="routees">N/A</param>
-        /// <param name="within">N/A</param>
-        [Obsolete("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString()), within) instead [1.1.0]")]
-        public ScatterGatherFirstCompletedGroup(IEnumerable<IActorRef> routees, TimeSpan within)
-            : this(routees.Select(c => c.Path.ToString()), within, Dispatchers.DefaultDispatcherId)
-        {
         }
 
         /// <summary>

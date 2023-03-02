@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowTakeWithinSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ using System;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
@@ -46,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
             var demand3 = (int)pSub.ExpectRequest();
             var sentN = demand1 + demand2;
             Enumerable.Range(1, sentN).ForEach(n => c.ExpectNext(n));
-            Within(TimeSpan.FromSeconds(2), c.ExpectComplete);
+            Within(TimeSpan.FromSeconds(2), () => c.ExpectComplete());
             Enumerable.Range(1, demand3).ForEach(_ => pSub.SendNext(input++));
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
         }

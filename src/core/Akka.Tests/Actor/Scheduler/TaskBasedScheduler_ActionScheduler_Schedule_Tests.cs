@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TaskBasedScheduler_ActionScheduler_Schedule_Tests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -21,7 +22,7 @@ namespace Akka.Tests.Actor.Scheduler
     {
         [Theory]
         [InlineData(10, 1000)]
-        public void ScheduleRepeatedly_in_milliseconds_Tests_and_verify_the_interval(int initialDelay, int interval)
+        public async Task ScheduleRepeatedly_in_milliseconds_Tests_and_verify_the_interval(int initialDelay, int interval)
         {
             // Prepare, set up actions to be fired
             IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -48,7 +49,7 @@ namespace Akka.Tests.Actor.Scheduler
                 scheduler.ScheduleRepeatedly(initialDelay, interval, () => receiver.Tell(""), cancelable);
 
                 //Expect to get a list from receiver after it has received three messages
-                var dateTimeOffsets = ExpectMsg<List<DateTimeOffset>>();
+                var dateTimeOffsets = await ExpectMsgAsync<List<DateTimeOffset>>();
                 dateTimeOffsets.ShouldHaveCount(3);
                 Action<int, int> validate = (a, b) =>
                 {
@@ -76,7 +77,7 @@ namespace Akka.Tests.Actor.Scheduler
         [Theory]
         [InlineData(50, 50)]
         [InlineData(00, 50)]
-        public void ScheduleRepeatedly_in_milliseconds_Tests(int initialDelay, int interval)
+        public async Task ScheduleRepeatedly_in_milliseconds_Tests(int initialDelay, int interval)
         {
             // Prepare, set up actions to be fired
             IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -86,9 +87,9 @@ namespace Akka.Tests.Actor.Scheduler
                 testScheduler.ScheduleRepeatedly(initialDelay, interval, () => TestActor.Tell("Test"));
 
                 //Just check that we receives more than one message
-                ExpectMsg("Test");
-                ExpectMsg("Test");
-                ExpectMsg("Test");
+                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test");
             }
             finally
             {
@@ -99,7 +100,7 @@ namespace Akka.Tests.Actor.Scheduler
         [Theory]
         [InlineData(50, 50)]
         [InlineData(00, 50)]
-        public void ScheduleRepeatedly_in_TimeSpan_Tests(int initialDelay, int interval)
+        public async Task ScheduleRepeatedly_in_TimeSpan_Tests(int initialDelay, int interval)
         {
             // Prepare, set up actions to be fired
             IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -110,9 +111,9 @@ namespace Akka.Tests.Actor.Scheduler
                     TimeSpan.FromMilliseconds(interval), () => TestActor.Tell("Test"));
 
                 //Just check that we receives more than one message
-                ExpectMsg("Test");
-                ExpectMsg("Test");
-                ExpectMsg("Test");
+                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test");
             }
             finally
             {
@@ -122,7 +123,7 @@ namespace Akka.Tests.Actor.Scheduler
 
 
         [Fact]
-        public void ScheduleOnceTests()
+        public async Task ScheduleOnceTests()
         {
             // Prepare, set up actions to be fired
             IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -132,10 +133,10 @@ namespace Akka.Tests.Actor.Scheduler
                 testScheduler.ScheduleOnce(50, () => TestActor.Tell("Test1"));
                 testScheduler.ScheduleOnce(100, () => TestActor.Tell("Test2"));
 
-                ExpectMsg("Test1");
-                ExpectMsg("Test2");
+                await ExpectMsgAsync("Test1");
+                await ExpectMsgAsync("Test2");
 
-                ExpectNoMsg(100);
+                await ExpectNoMsgAsync(100);
             }
             finally
             {
@@ -147,7 +148,7 @@ namespace Akka.Tests.Actor.Scheduler
 
         [Theory]
         [InlineData(new int[] { 1, 1, 50, 50, 100, 100 })]
-        public void When_ScheduleOnce_many_at_the_same_time_Then_all_fires(int[] times)
+        public async Task When_ScheduleOnce_many_at_the_same_time_Then_all_fires(int[] times)
         {
             // Prepare, set up actions to be fired
             IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
@@ -161,13 +162,13 @@ namespace Akka.Tests.Actor.Scheduler
                 }
 
                 //Perform the test
-                ExpectMsg("Test1");
-                ExpectMsg("Test1");
-                ExpectMsg("Test50");
-                ExpectMsg("Test50");
-                ExpectMsg("Test100");
-                ExpectMsg("Test100");
-                ExpectNoMsg(50);
+                await ExpectMsgAsync("Test1");
+                await ExpectMsgAsync("Test1");
+                await ExpectMsgAsync("Test50");
+                await ExpectMsgAsync("Test50");
+                await ExpectMsgAsync("Test100");
+                await ExpectMsgAsync("Test100");
+                await ExpectNoMsgAsync(50);
             }
             finally
             {
@@ -273,7 +274,7 @@ namespace Akka.Tests.Actor.Scheduler
         }
 
         [Fact]
-        public void When_ScheduleRepeatedly_action_crashes_Then_no_more_calls_will_be_scheduled()
+        public async Task When_ScheduleRepeatedly_action_crashes_Then_no_more_calls_will_be_scheduled()
         {
             IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
 
@@ -285,8 +286,8 @@ namespace Akka.Tests.Actor.Scheduler
                     Interlocked.Increment(ref timesCalled);
                     throw new Exception("Crash");
                 });
-                AwaitCondition(() => timesCalled >= 1);
-                Thread.Sleep(200); //Allow any scheduled actions to be fired. 
+                await AwaitConditionAsync(async () => timesCalled >= 1);
+                await Task.Delay(200); //Allow any scheduled actions to be fired. 
 
                 //We expect only one of the scheduled actions to actually fire
                 timesCalled.ShouldBe(1);

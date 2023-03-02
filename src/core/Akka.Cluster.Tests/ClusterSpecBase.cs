@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSpecBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Configuration;
 using Akka.TestKit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests
 {
@@ -15,20 +16,23 @@ namespace Akka.Cluster.Tests
     /// </summary>
     public abstract class ClusterSpecBase : AkkaSpec
     {
-        protected ClusterSpecBase(Config config) : base(config.WithFallback(BaseConfig))
+        protected ClusterSpecBase(Config config, ITestOutputHelper output, bool useLegacyHeartbeat) 
+            : base(config.WithFallback(BaseConfig(useLegacyHeartbeat)), output)
         {
             
         }
 
-        protected ClusterSpecBase()
-            : base(BaseConfig)
+        protected ClusterSpecBase(ITestOutputHelper output, bool useLegacyHeartbeat)
+            : base(BaseConfig(useLegacyHeartbeat), output)
         {
 
         }
 
-        protected static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
-                            akka.actor.serialize-messages = on
-                            akka.actor.serialize-creators = on");
+        private static Config BaseConfig(bool useLegacyHeartbeat) => 
+            ConfigurationFactory.ParseString($@"
+                akka.actor.serialize-messages = on
+                akka.actor.serialize-creators = on
+                akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "false")}");
     }
 }
 

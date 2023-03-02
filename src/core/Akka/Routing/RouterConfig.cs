@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RouterConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,12 +41,6 @@ namespace Akka.Routing
         {
             RouterDispatcher = routerDispatcher ?? Dispatchers.DefaultDispatcherId;
         }
-
-        /// <summary>
-        /// A configuration that specifies that no router is to be used.
-        /// </summary>
-        [Obsolete("Use NoRouter.Instance instead [1.1.0]")]
-        public static RouterConfig NoRouter => Routing.NoRouter.Instance;
 
         /// <summary>
         /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system"/>.
@@ -160,12 +154,6 @@ namespace Akka.Routing
         /// Internal property for holding the supplied paths
         /// </summary>
         protected readonly string[] InternalPaths;
-
-        /// <summary>
-        /// Retrieves the paths of all routees declared on this router.
-        /// </summary>
-        [Obsolete("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
-        public IEnumerable<string> Paths => null;
 
         /// <summary>
         /// Retrieves the actor paths used by this router during routee selection.
@@ -354,15 +342,9 @@ namespace Akka.Routing
         /// <summary>
         /// TBD
         /// </summary>
-        public static SupervisorStrategy DefaultSupervisorStrategy
-        {
-            get
-            {
-                return new OneForOneStrategy(Decider.From(Directive.Escalate));
-            }
-        }
+        public static SupervisorStrategy DefaultSupervisorStrategy => SupervisorStrategy.DefaultStrategy;
 
-        
+
         public bool Equals(Pool other)
         {
             if (ReferenceEquals(null, other)) return false;

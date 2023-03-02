@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCellTests_SerializationOfUserMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Tests.TestUtils;
@@ -28,7 +29,7 @@ namespace Akka.Tests.Actor
         }
 
        [Fact]
-       public void Does_not_serializes_user_messages()
+       public async Task Does_not_serializes_user_messages()
        {
             var message = new SomeUserMessage
             {
@@ -38,7 +39,7 @@ namespace Akka.Tests.Actor
             };
             TestActor.Tell(message);
 
-            var result = ExpectMsg<SomeUserMessage>();
+            var result = await ExpectMsgAsync<SomeUserMessage>();
 
             Assert.False(Sys.Settings.SerializeAllMessages);
             Assert.Equal(message, result);
@@ -61,7 +62,7 @@ namespace Akka.Tests.Actor
         }
        
         [Fact]
-        public void Do_serialize_user_messages()
+        public async Task Do_serialize_user_messages()
         {
             var message = new SomeUserMessage
             {
@@ -71,7 +72,7 @@ namespace Akka.Tests.Actor
             };
             TestActor.Tell(message);
 
-            var result = ExpectMsg<SomeUserMessage>();
+            var result = await ExpectMsgAsync<SomeUserMessage>();
 
             Assert.True(Sys.Settings.SerializeAllMessages);
             Assert.Equal(message, result);

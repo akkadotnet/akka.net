@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
@@ -99,6 +100,7 @@ namespace Akka.Remote
         /// <param name="cmd">a Command message to send to the transport</param>
         /// <returns>A task that indicates when the message was successfully handled or dropped</returns>
         public abstract Task<bool> ManagementCommand(object cmd);
+        public abstract Task<bool> ManagementCommand(object cmd, CancellationToken cancellationToken);
 
         /// <summary>
         /// Resolves the correct local address to be used for contacting the given remote address

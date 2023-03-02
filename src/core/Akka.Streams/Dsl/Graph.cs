@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Graph.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -939,13 +939,13 @@ namespace Akka.Streams.Dsl
                         _pendingCount--;
                         TryPull();
                     },
-                    onDownstreamFinish: () =>
+                    onDownstreamFinish: cause =>
                     {
-                        if (stage._eagerCancel) CompleteStage();
+                        if (stage._eagerCancel) CancelStage(cause);
                         else
                         {
                             _downstreamsRunning--;
-                            if (_downstreamsRunning == 0) CompleteStage();
+                            if (_downstreamsRunning == 0) CancelStage(cause);
                             else if (_pending[i])
                             {
                                 _pending[i] = false;
@@ -1099,19 +1099,18 @@ namespace Akka.Streams.Dsl
                         }
                         else if (!HasBeenPulled(stage.In))
                             Pull(stage.In);
-                    }, onDownstreamFinish: () =>
+                    }, onDownstreamFinish: cause =>
                     {
                         downstreamRunning--;
                         if(downstreamRunning == 0)
-                            CompleteStage();
-                        else if (_outPendingElement != null)
+                            CancelStage(cause);
+                        else if (_outPendingElement != null && index == _outPendingIndex)
                         {
-                            if (index == _outPendingIndex)
-                            {
-                                _outPendingElement = null;
-                                if(!HasBeenPulled(stage.In))
-                                    Pull(stage.In);
-                            }
+                            _outPendingElement = null;
+                            if(IsClosed(stage.In))
+                                CancelStage(cause);
+                            else if(!HasBeenPulled(stage.In))
+                                Pull(stage.In);
                         }
                     });
                 }
@@ -1282,10 +1281,10 @@ namespace Akka.Streams.Dsl
                         }
                         else _pendingQueue.Enqueue(outlet);
                     },
-                    onDownstreamFinish: () =>
+                    onDownstreamFinish: cause =>
                     {
                         downstreamsRunning--;
-                        if (downstreamsRunning == 0) CompleteStage();
+                        if (downstreamsRunning == 0) CancelStage(cause);
                         else if (!hasPulled && needDownstreamPulls > 0)
                         {
                             needDownstreamPulls--;
@@ -1977,7 +1976,7 @@ namespace Akka.Streams.Dsl
                         _pendingTap = elem;
                 });
                 
-                SetHandler(stage.OutMain, () => Pull(stage.In), CompleteStage);
+                SetHandler(stage.OutMain, () => Pull(stage.In), CancelStage);
                 
                 // The 'tap' output can neither backpressure, nor cancel, the stage.
                 SetHandler(stage.OutTap, 
@@ -1992,7 +1991,7 @@ namespace Akka.Streams.Dsl
                         Push(stage.OutTap, _pendingTap.Value);
                         _pendingTap = Option<T>.None;
                     },
-                    () =>
+                    cause =>
                     {
                         SetHandler(stage.In, () => Push(stage.OutMain, Grab(stage.In)));
                         // Allow any outstanding element to be garbage-collected

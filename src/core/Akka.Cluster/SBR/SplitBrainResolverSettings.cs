@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SplitBrainResolverSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -166,18 +166,6 @@ namespace Akka.Cluster.SBR
 
     public sealed class LeaseMajoritySettings
     {
-        [Obsolete]
-        public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, string role)
-            : this(leaseImplementation, acquireLeaseDelayForMinority, role, null)
-        {
-        }
-
-        [Obsolete]
-        public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, string role, string leaseName)
-            : this(leaseImplementation, acquireLeaseDelayForMinority, TimeSpan.FromSeconds(40), role, leaseName)
-        {
-        }
-
         public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, TimeSpan releaseAfter, string role, string leaseName)
         {
             LeaseImplementation = leaseImplementation;

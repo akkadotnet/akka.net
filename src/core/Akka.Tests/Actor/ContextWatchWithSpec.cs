@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ContextWatchWithSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,13 +30,13 @@ namespace Akka.Tests.Actor
         }
         
         [Fact(Skip = "This test is used with Performance Profiler to check memory leaks")]
-        public void Context_WatchWith_Should_not_have_memory_leak()
+        public async Task Context_WatchWith_Should_not_have_memory_leak()
         {
             using (var actorSystem = ActorSystem.Create("repro"))
             {
                 actorSystem.ActorOf(Props.Create<LoadHandler>());
 
-                Thread.Sleep(60.Seconds());
+                await Task.Delay(60.Seconds());
             }
         }
         

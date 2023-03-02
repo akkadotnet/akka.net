@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtomicBoolean.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -71,8 +71,6 @@ namespace Akka.Util
             return Interlocked.Exchange(ref _value, newValue ? _trueValue : _falseValue) == _trueValue;
         }
 
-        #region Conversion operators
-
         /// <summary>
         /// Performs an implicit conversion from <see cref="AtomicBoolean"/> to <see cref="System.Boolean"/>.
         /// </summary>
@@ -82,18 +80,6 @@ namespace Akka.Util
         {
             return atomicBoolean.Value;
         }
-
-        /// <summary>
-        /// Performs an implicit conversion from <see cref="System.Boolean"/> to <see cref="AtomicBoolean"/>.
-        /// </summary>
-        /// <param name="value">The boolean to convert</param>
-        /// <returns>The result of the conversion.</returns>
-        public static implicit operator AtomicBoolean(bool value)
-        {
-            return new AtomicBoolean(value);
-        }
-
-        #endregion
     }
 }
 

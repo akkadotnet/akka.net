@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -28,7 +27,7 @@ namespace Akka.Streams.Tests.Dsl
             var settings = ActorMaterializerSettings.Create(Sys);
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
-        
+
         [Fact]
         public void A_ActorRefSource_must_emit_received_messages_to_the_stream()
         {
@@ -45,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
             actorRef.Tell(3);
             s.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
         }
-        
+
         [Fact]
         public void A_ActorRefSource_must_buffer_when_needed()
         {
@@ -119,21 +118,6 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_completes_the_stream_immediately_when_receiving_PoisonPill()
-        {
-            this.AssertAllStagesStopped(() =>
-            {
-                var s = this.CreateManualSubscriberProbe<int>();
-                var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
-                    .To(Sink.FromSubscriber(s))
-                    .Run(Materializer);
-                s.ExpectSubscription();
-                actorRef.Tell(PoisonPill.Instance);
-                s.ExpectComplete();
-            }, Materializer);
-        }
-
-        [Fact]
         public void A_ActorRefSource_must_signal_buffered_elements_and_complete_the_stream_after_receiving_Status_Success()
         {
             this.AssertAllStagesStopped(() =>
@@ -178,23 +162,15 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_after_receiving_Status_Success_allow_for_earlier_completion_with_PoisonPill()
+        public void A_ActorRefSource_must_complete_and_materialize_the_stream_after_receiving_Status_Success()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualSubscriberProbe<int>();
-                var actorRef = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
-                    .To(Sink.FromSubscriber(s))
+                var (actorRef, done) = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
+                    .ToMaterialized(Sink.Ignore<int>(), Keep.Both)
                     .Run(Materializer);
-                var sub = s.ExpectSubscription();
-                actorRef.Tell(1);
-                actorRef.Tell(2);
-                actorRef.Tell(3);
                 actorRef.Tell(new Status.Success("ok"));
-                sub.Request(2); // not all elements drained yet
-                s.ExpectNext(1, 2);
-                actorRef.Tell(PoisonPill.Instance);
-                s.ExpectComplete(); // element `3` not signaled
+                done.ContinueWith(_ => Done.Instance).Result.Should().Be(Done.Instance);
             }, Materializer);
         }
 

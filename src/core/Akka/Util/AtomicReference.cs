@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtomicReference.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -75,7 +75,6 @@ namespace Akka.Util
             return Interlocked.Exchange(ref atomicValue, newValue);
         }
 
-        #region Conversion operators
 
         /// <summary>
         /// Performs an implicit conversion from <see cref="AtomicReference{T}"/> to <typeparamref name="T"/>.
@@ -86,18 +85,6 @@ namespace Akka.Util
         {
             return atomicReference.Value;
         }
-
-        /// <summary>
-        /// Performs an implicit conversion from <typeparamref name="T"/> to <see cref="AtomicReference{T}"/>.
-        /// </summary>
-        /// <param name="value">The reference to convert</param>
-        /// <returns>The result of the conversion.</returns>
-        public static implicit operator AtomicReference<T>(T value)
-        {
-            return new AtomicReference<T>(value);
-        }
-
-        #endregion
     }
 }
 

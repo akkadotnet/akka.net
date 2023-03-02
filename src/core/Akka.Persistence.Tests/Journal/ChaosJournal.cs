@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ChaosJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -95,7 +95,7 @@ namespace Akka.Persistence.Tests.Journal
 
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
-            TaskCompletionSource<IImmutableList<Exception>> promise =
+            var promise =
                 new TaskCompletionSource<IImmutableList<Exception>>();
             if (ChaosSupportExtensions.ShouldFail(_writeFailureRate))
                 promise.SetException(new WriteFailedException(messages));

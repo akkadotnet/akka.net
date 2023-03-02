@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemSetupSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ namespace Akka.Tests.Actor.Setup
             var setup = new DummySetup("Ardbeg");
             var setups = ActorSystemSetup.Create(setup);
 
-            setups.Get<DummySetup>().Should().Be(new Option<DummySetup>(setup));
+            setups.Get<DummySetup>().Should().Be(Option<DummySetup>.Create(setup));
             setups.Get<DummySetup2>().Should().Be(Option<DummySetup2>.None);
         }
 
@@ -65,7 +65,7 @@ namespace Akka.Tests.Actor.Setup
             var setup2 = new DummySetup("Ledaig");
             var setups = ActorSystemSetup.Empty.WithSetup(setup1).WithSetup(setup2);
 
-            setups.Get<DummySetup>().Should().Be(new Option<DummySetup>(setup2));
+            setups.Get<DummySetup>().Should().Be(Option<DummySetup>.Create(setup2));
         }
 
         [Fact]
@@ -76,8 +76,8 @@ namespace Akka.Tests.Actor.Setup
             var setup3 = new DummySetup2("Blantons");
             var setups = setup1.And(setup2).And(setup3);
 
-            setups.Get<DummySetup>().Should().Be(new Option<DummySetup>(setup2));
-            setups.Get<DummySetup2>().Should().Be(new Option<DummySetup2>(setup3));
+            setups.Get<DummySetup>().Should().Be(Option<DummySetup>.Create(setup2));
+            setups.Get<DummySetup2>().Should().Be(Option<DummySetup2>.Create(setup3));
         }
 
         [Fact]
@@ -101,7 +101,7 @@ namespace Akka.Tests.Actor.Setup
                 var setup = new DummySetup("Eagle Rare");
                 system = ActorSystem.Create("name", ActorSystemSetup.Create(setup));
 
-                system.Settings.Setup.Get<DummySetup>().Should().Be(new Option<DummySetup>(setup));
+                system.Settings.Setup.Get<DummySetup>().Should().Be(Option<DummySetup>.Create(setup));
             }
             finally
             {

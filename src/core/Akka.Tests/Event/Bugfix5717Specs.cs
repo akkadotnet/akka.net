@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="Bugfix5717Specs.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="Bugfix5717Specs.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -35,14 +35,14 @@ namespace Akka.Tests.Event
             es.Subscribe(a2.Ref, typeof(string));
             es.Publish(tm1);
             es.Publish(tm2);
-            a1.ExpectMsg(tm1);
-            a2.ExpectMsg(tm1);
-            a2.ExpectMsg(tm2);
+            await a1.ExpectMsgAsync(tm1);
+            await a2.ExpectMsgAsync(tm1);
+            await a2.ExpectMsgAsync(tm2);
 
             // kill second test probe
             Watch(a2);
             Sys.Stop(a2);
-            ExpectTerminated(a2);
+            await ExpectTerminatedAsync(a2);
 
             /*
              * It's possible that the `Terminate` message may not have been processed by the
@@ -54,11 +54,11 @@ namespace Akka.Tests.Event
              */
             await AwaitAssertAsync(async () =>
             {
-                await EventFilter.DeadLetter().ExpectAsync(0, () =>
+                await EventFilter.DeadLetter().ExpectAsync(0, async () =>
                 {
                     es.Publish(tm1);
                     es.Publish(tm2);
-                    a1.ExpectMsg(tm1);
+                    await a1.ExpectMsgAsync(tm1);
                 });
             }, interval:TimeSpan.FromSeconds(250));
         }       

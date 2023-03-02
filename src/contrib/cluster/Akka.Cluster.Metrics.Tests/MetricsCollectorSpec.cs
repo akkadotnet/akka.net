@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MetricsCollectorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Cluster.Metrics.Tests.Base;
 using Akka.Cluster.Metrics.Tests.Helpers;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Extensions;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -88,8 +89,8 @@ namespace Akka.Cluster.Metrics.Tests
             });
         }
 
-        [Fact(Skip = "This performance really depends on current load - so while should work well with specified timeouts," +
-                     "let's disable it to avoid flaky failures in future")]
+        [LocalFact(SkipLocal = "This performance really depends on current load - so while should work well with " +
+                               "specified timeouts, let's disable it to avoid flaky failures in future")]
         public async Task MetricsCollector_should_collect_50_node_metrics_samples_in_an_acceptable_duration()
         {
             const int iterationsCount = 50;

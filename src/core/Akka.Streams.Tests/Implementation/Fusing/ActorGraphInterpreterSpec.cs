@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorGraphInterpreterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,7 +16,6 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Reactive.Streams;
@@ -267,7 +266,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             this.AssertAllStagesStopped(() =>
             {
-                var materializer = ActorMaterializer.Create(Sys);
+                // force the system to create a new materializer
+                var materializer = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys));
                 var gotStop = new TestLatch(1);
                 var downstream = this.CreateSubscriberProbe<string>();
 
@@ -346,11 +346,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     SetHandler(shape.Outlet1,
                         onPull: () => Pull(shape.Inlet1),
-                        onDownstreamFinish: () => Cancel(shape.Inlet1));
+                        onDownstreamFinish: cause => Cancel(shape.Inlet1, cause));
 
                     SetHandler(shape.Outlet2,
                         onPull: () => Pull(shape.Inlet2),
-                        onDownstreamFinish: () => Cancel(shape.Inlet2));
+                        onDownstreamFinish: cause => Cancel(shape.Inlet2, cause));
                 }
             }
 
@@ -395,11 +395,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     SetHandler(shape.Outlet1,
                         onPull: () => Pull(shape.Inlet2),
-                        onDownstreamFinish: () => Cancel(shape.Inlet2));
+                        onDownstreamFinish: cause => Cancel(shape.Inlet2, cause));
 
                     SetHandler(shape.Outlet2,
                         onPull: () => Pull(shape.Inlet1),
-                        onDownstreamFinish: () => Cancel(shape.Inlet1));
+                        onDownstreamFinish: cause => Cancel(shape.Inlet1, cause));
                 }
             }
 

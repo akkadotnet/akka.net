@@ -1,13 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AllEventsPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Sql.Common.Journal;
@@ -20,16 +18,16 @@ namespace Akka.Persistence.Query.Sql
         [Serializable]
         public sealed class Continue
         {
-            public static readonly Continue Instance = new Continue();
+            public static readonly Continue Instance = new();
 
             private Continue() { }
         }
 
-        public static Props Props(long fromOffset, TimeSpan? refreshInterval, int maxBufferSize, string writeJournalPluginId)
+        public static Props Props(long fromOffset, TimeSpan? refreshInterval, int maxBufferSize, IActorRef writeJournal, IActorRef queryPermitter)
         {
             return refreshInterval.HasValue ?
-                Actor.Props.Create(() => new LiveAllEventsPublisher(fromOffset, refreshInterval.Value, maxBufferSize, writeJournalPluginId)) :
-                Actor.Props.Create(() => new CurrentAllEventsPublisher(fromOffset, maxBufferSize, writeJournalPluginId));
+                Actor.Props.Create(() => new LiveAllEventsPublisher(fromOffset, refreshInterval.Value, maxBufferSize, writeJournal, queryPermitter)) :
+                Actor.Props.Create(() => new CurrentAllEventsPublisher(fromOffset, maxBufferSize, writeJournal, queryPermitter));
         }
     }
 
@@ -39,16 +37,18 @@ namespace Akka.Persistence.Query.Sql
         private ILoggingAdapter _log;
         protected long CurrentOffset;
 
-        protected AbstractAllEventsPublisher(long fromOffset, int maxBufferSize, string writeJournalPluginId)
+        protected AbstractAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef journalRef, IActorRef queryPermitter)
         {
             CurrentOffset = FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
+            JournalRef = journalRef;
+            QueryPermitter = queryPermitter;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
-            JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         protected IActorRef JournalRef { get; }
+        protected IActorRef QueryPermitter { get; }
         protected DeliveryBuffer<EventEnvelope> Buffer { get; }
         protected long FromOffset { get; }
         protected abstract long ToOffset { get; }
@@ -81,11 +81,38 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case AllEventsPublisher.Continue _:
-                case NewEventAppended _:
-                    if (IsTimeForReplay) Replay();
+                    if (IsTimeForReplay) RequestQueryPermit();
                     return true;
                 case Request _:
                     ReceiveIdleRequest();
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        protected void RequestQueryPermit()
+        {
+            Log.Debug("Requesting query permit");
+            QueryPermitter.Tell(RequestQueryStart.Instance);
+            Become(WaitingForQueryPermit);
+        }
+
+        protected bool WaitingForQueryPermit(object message)
+        {
+            switch (message)
+            {
+                case QueryStartGranted _:
+                    Replay();
+                    return true;
+                case AllEventsPublisher.Continue _:
+                    // ignore
+                    return true;
+                case Request _:
+                    ReceiveIdleRequest(); // can still handle idle requests while waiting for permit
                     return true;
                 case Cancel _:
                     Context.Stop(Self);
@@ -130,6 +157,7 @@ namespace Akka.Persistence.Query.Sql
                     Log.Error(failure.Cause, "event replay failed, due to [{0}]", failure.Cause.Message);
                     Buffer.DeliverBuffer(TotalDemand);
                     OnErrorThenStop(failure.Cause);
+                    QueryPermitter.Tell(ReturnQueryStart.Instance); // return token to permitter
                     return true;
                 case Request _:
                     Buffer.DeliverBuffer(TotalDemand);
@@ -138,7 +166,6 @@ namespace Akka.Persistence.Query.Sql
                     Context.Stop(Self);
                     return true;
                 case AllEventsPublisher.Continue _:
-                case NewEventAppended _:
                     return true;
                 default:
                     return false;
@@ -150,8 +177,8 @@ namespace Akka.Persistence.Query.Sql
     internal sealed class LiveAllEventsPublisher : AbstractAllEventsPublisher
     {
         private readonly ICancelable _tickCancelable;
-        public LiveAllEventsPublisher(long fromOffset, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
-            : base(fromOffset, maxBufferSize, writeJournalPluginId)
+        public LiveAllEventsPublisher(long fromOffset, TimeSpan refreshInterval, int maxBufferSize, IActorRef writeJournal, IActorRef queryPermitter)
+            : base(fromOffset, maxBufferSize, writeJournal, queryPermitter)
         {
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, AllEventsPublisher.Continue.Instance, Self);
         }
@@ -166,8 +193,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveInitialRequest()
         {
-            JournalRef.Tell(SubscribeNewEvents.Instance);
-            Replay();
+            RequestQueryPermit();
         }
 
         protected override void ReceiveIdleRequest()
@@ -179,6 +205,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveRecoverySuccess(long highestOrderingNr)
         {
+            QueryPermitter.Tell(ReturnQueryStart.Instance); // return token
             Buffer.DeliverBuffer(TotalDemand);
             if (Buffer.IsEmpty && CurrentOffset > ToOffset)
                 OnCompleteThenStop();
@@ -189,8 +216,8 @@ namespace Akka.Persistence.Query.Sql
 
     internal sealed class CurrentAllEventsPublisher : AbstractAllEventsPublisher
     {
-        public CurrentAllEventsPublisher(long fromOffset, int maxBufferSize, string writeJournalPluginId)
-            : base(fromOffset, maxBufferSize, writeJournalPluginId)
+        public CurrentAllEventsPublisher(long fromOffset, int maxBufferSize, IActorRef writeJournal, IActorRef queryPermitter)
+            : base(fromOffset, maxBufferSize, writeJournal, queryPermitter)
         { }
 
         private long _toOffset = long.MaxValue;
@@ -198,7 +225,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveInitialRequest()
         {
-            Replay();
+            RequestQueryPermit();
         }
 
         protected override void ReceiveIdleRequest()
@@ -212,6 +239,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected override void ReceiveRecoverySuccess(long highestOrderingNr)
         {
+            QueryPermitter.Tell(ReturnQueryStart.Instance); // return token to permitter
             Buffer.DeliverBuffer(TotalDemand);
 
             if (highestOrderingNr < ToOffset)

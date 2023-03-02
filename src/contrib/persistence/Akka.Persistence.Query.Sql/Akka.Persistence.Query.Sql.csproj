@@ -1,23 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\common.props" />
+    <Import Project="..\..\..\common.props" />
 
-  <PropertyGroup>
-    <AssemblyTitle>Akka.Persistence.Query.Sql</AssemblyTitle>
-    <Description>Akka.NET streams support for ADO.NET Persistence middleware.</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
-    <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+    <PropertyGroup>
+        <AssemblyTitle>Akka.Persistence.Query.Sql</AssemblyTitle>
+        <Description>Akka.NET streams support for ADO.NET Persistence middleware.</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="reference.conf" />
-    <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
-    <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="reference.conf" />
+        <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
+        <ProjectReference Include="..\..\..\core\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
+        <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
+    </ItemGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
 
 </Project>

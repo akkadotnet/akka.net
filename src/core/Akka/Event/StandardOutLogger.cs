@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StandardOutLogger.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,7 +72,6 @@ namespace Akka.Event
         /// Handles incoming log events by printing them to the console.
         /// </summary>
         /// <param name="message">The message to print</param>
-        /// <param name="sender">The actor that sent the message.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="message"/> is undefined.
         /// </exception>
@@ -166,7 +165,7 @@ namespace Akka.Event
                 switch (logEvent.Message)
                 {
                     case LogMessage formatted: // a parameterized log
-                        msg = " str=[" + formatted.Format + "], args=["+ string.Join(",", formatted.Args) +"]";
+                        msg = " str=[" + formatted.Format + "], args=["+ formatted.Unformatted() +"]";
                         break;
                     case string unformatted: // pre-formatted or non-parameterized log
                         msg = unformatted;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DefaultFailureDetectorRegistry.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,14 +31,14 @@ namespace Akka.Remote
 
         private readonly Func<FailureDetector> _factory;
 
-        private AtomicReference<ImmutableDictionary<T, FailureDetector>> _resourceToFailureDetector = new AtomicReference<ImmutableDictionary<T, FailureDetector>>(ImmutableDictionary<T, FailureDetector>.Empty);
+        private readonly AtomicReference<ImmutableDictionary<T, FailureDetector>> _resourceToFailureDetector = new AtomicReference<ImmutableDictionary<T, FailureDetector>>(ImmutableDictionary<T, FailureDetector>.Empty);
 
         private readonly object _failureDetectorCreationLock = new object();
 
         private ImmutableDictionary<T, FailureDetector> ResourceToFailureDetector
         {
-            get { return _resourceToFailureDetector; }
-            set { _resourceToFailureDetector = value; }
+            get { return _resourceToFailureDetector.Value; }
+            set { _resourceToFailureDetector.Value = value; }
         }
 
         #endregion

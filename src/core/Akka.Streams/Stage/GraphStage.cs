@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -565,7 +565,7 @@ namespace Akka.Streams.Stage
                 return result;
             }
 
-            public override void OnDownstreamFinish() => Previous.OnDownstreamFinish();
+            public override void OnDownstreamFinish(Exception cause) => Previous.OnDownstreamFinish(cause);
         }
 
         private sealed class EmittingSingle<T> : Emitting
@@ -699,14 +699,14 @@ namespace Akka.Streams.Stage
         protected sealed class LambdaOutHandler : OutHandler
         {
             private readonly Action _onPull;
-            private readonly Action _onDownstreamFinish;
+            private readonly Action<Exception> _onDownstreamFinish;
 
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="onPull">TBD</param>
             /// <param name="onDownstreamFinish">TBD</param>
-            public LambdaOutHandler(Action onPull, Action onDownstreamFinish = null)
+            public LambdaOutHandler(Action onPull, Action<Exception> onDownstreamFinish = null)
             {
                 _onPull = onPull;
                 _onDownstreamFinish = onDownstreamFinish;
@@ -720,12 +720,12 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// TBD
             /// </summary>
-            public override void OnDownstreamFinish()
+            public override void OnDownstreamFinish(Exception cause)
             {
                 if (_onDownstreamFinish != null)
-                    _onDownstreamFinish();
+                    _onDownstreamFinish(cause);
                 else
-                    base.OnDownstreamFinish();
+                    base.OnDownstreamFinish(cause);
             }
         }
 
@@ -962,7 +962,7 @@ namespace Akka.Streams.Stage
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="onPull"/> is undefined.
         /// </exception>
-        protected internal void SetHandler<T>(Outlet<T> outlet, Action onPull, Action onDownstreamFinish = null)
+        protected internal void SetHandler<T>(Outlet<T> outlet, Action onPull, Action<Exception> onDownstreamFinish = null)
         {
             if (onPull == null)
                 throw new ArgumentNullException(nameof(onPull), "GraphStageLogic onPull handler must be provided");
@@ -972,7 +972,14 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Inlet{T}"/> and <see cref="Outlet{T}"/>.
         /// </summary>
-        protected internal void SetHandler<TIn, TOut>(Inlet<TIn> inlet, Outlet<TOut> outlet, InAndOutGraphStageLogic handler)
+        [Obsolete("Use method `SetHandlers` instead. Will be removed in v1.5")]
+        protected internal void SetHandler<TIn, TOut>(Inlet<TIn> inlet, Outlet<TOut> outlet, InAndOutGraphStageLogic handler) =>
+            SetHandlers(inlet, outlet, handler);
+
+        /// <summary>
+        /// Assigns callbacks for the events for an <see cref="Inlet{T}"/> and <see cref="Outlet{T}"/>.
+        /// </summary>
+        protected internal void SetHandlers<TIn, TOut>(Inlet<TIn> inlet, Outlet<TOut> outlet, InAndOutGraphStageLogic handler)
         {
             SetHandler(inlet, handler);
             SetHandler(outlet, handler);
@@ -1062,7 +1069,9 @@ namespace Akka.Streams.Stage
         /// Requests to stop receiving events from a given input port. Cancelling clears any ungrabbed elements from the port.
         /// </summary>
         /// <param name="inlet">TBD</param>
-        protected void Cancel<T>(Inlet<T> inlet) => Interpreter.Cancel(GetConnection(inlet));
+        /// <param name="cause"></param>
+        protected void Cancel<T>(Inlet<T> inlet, Exception cause) => Interpreter.Cancel(GetConnection(inlet), cause);
+        protected void Cancel<T>(Inlet<T> inlet) => Interpreter.Cancel(GetConnection(inlet), SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
 
         /// <summary>
         /// Once the callback <see cref="InHandler.OnPush"/> for an input port has been invoked, the element that has been pushed
@@ -1082,23 +1091,29 @@ namespace Akka.Streams.Stage
             var connection = GetConnection(inlet);
             var element = connection.Slot;
 
-            if ((connection.PortState & (InReady | InFailed)) ==
-                InReady && !ReferenceEquals(element, Empty.Instance))
+            if ((connection.PortState & (InReady | InFailed | InClosed)) == InReady && !ReferenceEquals(element, Empty.Instance))
             {
                 // fast path
                 connection.Slot = Empty.Instance;
+                return (T)element;
             }
-            else
-            {
-                // slow path
-                if (!IsAvailable(inlet))
-                    throw new ArgumentException("Cannot get element from already empty input port");
-                var failed = (GraphInterpreter.Failed)element;
-                element = failed.PreviousElement;
-                connection.Slot = new GraphInterpreter.Failed(failed.Reason, Empty.Instance);
-            }
+            
+            // Slow path for grabbing element from already failed or completed connections
+            if (!IsAvailable(inlet))
+                throw new ArgumentException($"Cannot get element from already empty input port ({inlet})");
 
-            return (T)element;
+            if ((connection.PortState & (InReady | InFailed)) == (InReady | InFailed))
+            {
+                // failed
+                var failed = (GraphInterpreter.Failed)element;
+                connection.Slot = new GraphInterpreter.Failed(failed.Reason, Empty.Instance);
+                return (T)failed.PreviousElement;
+            }
+            
+            // Completed
+            var elem = (T) connection.Slot;
+            connection.Slot = Empty.Instance;
+            return elem;
         }
 
         /// <summary>
@@ -1141,7 +1156,7 @@ namespace Akka.Streams.Stage
         private bool IsAvailable(Inlet inlet)
         {
             var connection = GetConnection(inlet);
-            var normalArrived = (connection.PortState & (InReady | InFailed)) == InReady;
+            var normalArrived = (connection.PortState & (InReady | InFailed | InClosed)) == InReady;
 
             if (normalArrived)
             {
@@ -1150,11 +1165,23 @@ namespace Akka.Streams.Stage
             }
 
             // slow path on failure
+            if ((connection.PortState & (InReady | InClosed | InFailed)) == (InReady | InClosed))
+            {
+                return connection.Slot switch
+                {
+                    Empty _ => false, // cancelled (element is discarded when cancelled)
+                    Cancelled _ => false, // cancelled (element is discarded when cancelled)
+                    _ => true // completed but element still there to grab
+                };
+            }
+            
             if ((connection.PortState & (InReady | InFailed)) == (InReady | InFailed))
             {
-                // This can only be Empty actually (if a cancel was concurrent with a failure)
-                return connection.Slot is GraphInterpreter.Failed failed &&
-                       !ReferenceEquals(failed.PreviousElement, Empty.Instance);
+                return connection.Slot switch
+                {
+                    GraphInterpreter.Failed failed => !ReferenceEquals(failed.PreviousElement, Empty.Instance), // failed but element still there to grab
+                    _ => false
+                };
             }
 
             return false;
@@ -1257,26 +1284,51 @@ namespace Akka.Streams.Stage
         protected void Fail<T>(Outlet<T> outlet, Exception reason) => Interpreter.Fail(GetConnection(outlet), reason);
 
         /// <summary>
+        /// INTERNAL API
+        ///
+        /// Variable used from `OutHandler.onDownstreamFinish` to carry over cancellation cause in cases where
+        /// `OutHandler` implementations call `InternalOnDownstreamFinish()`.
+        /// </summary>
+        [InternalApi] private Exception _lastCancellationCause = null;
+
+        [InternalApi] 
+        public void InternalOnDownstreamFinish(Exception cause)
+        {
+            try
+            {
+                if (cause == null)
+                    throw new ArgumentException("Cancellation cause must not be null", nameof(cause));
+                if (_lastCancellationCause != null)
+                    throw new ArgumentException("OnDownstreamFinish must not be called recursively", nameof(cause));
+                _lastCancellationCause = cause;
+                CancelStage(_lastCancellationCause);
+            }
+            finally
+            {
+                _lastCancellationCause = null;
+            }
+        }
+        
+        public void CancelStage(Exception cause)
+        {
+            
+            switch (cause)
+            {
+                case SubscriptionWithCancelException.NonFailureCancellation _:
+                    InternalCompleteStage(cause, Option<Exception>.None);
+                    break;
+                default:
+                    InternalCompleteStage(cause, cause);
+                    break;
+            }
+        }
+        
+        /// <summary>
         /// Automatically invokes <see cref="Cancel"/> or <see cref="Complete"/> on all the input or output ports that have been called,
         /// then marks the stage as stopped.
         /// </summary>
-        public void CompleteStage()
-        {
-            for (var i = 0; i < PortToConn.Length; i++)
-            {
-                if (i < InCount)
-                    Interpreter.Cancel(PortToConn[i]);
-                else
-                {
-                    if (Handlers[i] is Emitting e)
-                        e.AddFollowUp(new EmittingCompletion(e.Out, e.Previous, this));
-                    else
-                        Interpreter.Complete(PortToConn[i]);
-                }
-            }
-
-            SetKeepGoing(false);
-        }
+        public void CompleteStage() 
+            => InternalCompleteStage(SubscriptionWithCancelException.StageWasCompleted.Instance, Option<Exception>.None);
 
         /// <summary>
         /// Automatically invokes <see cref="Cancel"/> or <see cref="Fail{T}"/> on all the input or output ports that have been called,
@@ -1284,13 +1336,27 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="reason">TBD</param>
         public void FailStage(Exception reason)
+            => InternalCompleteStage(reason, reason);
+
+        private void InternalCompleteStage(Exception cancelCause, Option<Exception> optionalFailureCause)
         {
             for (var i = 0; i < PortToConn.Length; i++)
             {
                 if (i < InCount)
-                    Interpreter.Cancel(PortToConn[i]);
+                {
+                    Interpreter.Cancel(PortToConn[i], cancelCause);
+                }
+                else if (optionalFailureCause.HasValue)
+                {
+                    Interpreter.Fail(PortToConn[i], optionalFailureCause.Value);
+                }
                 else
-                    Interpreter.Fail(PortToConn[i], reason);
+                {
+                    if (Handlers[i] is Emitting e)
+                        e.AddFollowUp(new EmittingCompletion(e.Out, e.Previous, this));
+                    else
+                        Interpreter.Complete(PortToConn[i]);
+                }
             }
 
             SetKeepGoing(false);
@@ -1791,10 +1857,15 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// TBD
             /// </summary>
-            public void Cancel()
+            public void Cancel() => Cancel(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
+            
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public void Cancel(Exception cause)
             {
                 _closed = true;
-                _sink.CancelSubstream();
+                _sink.CancelSubstream(cause);
             }
 
             /// <inheritdoc/>
@@ -1849,13 +1920,13 @@ namespace Akka.Streams.Stage
                             _handler.OnPull();
                         }
                     }
-                    else if (command is SubSink.Cancel)
+                    else if (command is SubSink.Cancel cancel)
                     {
                         if (!_closed)
                         {
                             _available = false;
                             _closed = true;
-                            _handler.OnDownstreamFinish();
+                            _handler.OnDownstreamFinish(SubscriptionWithCancelException.StageWasCompleted.Instance);
                         }
                     }
                 }));
@@ -1990,7 +2061,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
         /// </summary>
-        void OnDownstreamFinish();
+        void OnDownstreamFinish(Exception cause);
     }
 
     /// <summary>
@@ -2007,7 +2078,8 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnDownstreamFinish() => Current.ActiveStage.CompleteStage();
+        public virtual void OnDownstreamFinish(Exception cause) =>
+            Current.ActiveStage.InternalOnDownstreamFinish(cause);
     }
 
     /// <summary>
@@ -2042,7 +2114,8 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnDownstreamFinish() => Current.ActiveStage.CompleteStage();
+        public virtual void OnDownstreamFinish(Exception cause) =>
+            Current.ActiveStage.InternalOnDownstreamFinish(cause);
     }
 
     /// <summary>
@@ -2121,7 +2194,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnDownstreamFinish() => CompleteStage();
+        public virtual void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
     }
 
     /// <summary>
@@ -2177,7 +2250,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnDownstreamFinish() => CompleteStage();
+        public virtual void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
     }
 
     /// <summary>
@@ -2331,7 +2404,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        public override void OnDownstreamFinish() { }
+        public override void OnDownstreamFinish(Exception cause) { }
     }
 
     /// <summary>
@@ -2355,10 +2428,10 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        public override void OnDownstreamFinish()
+        public override void OnDownstreamFinish(Exception cause)
         {
             if (_predicate())
-                Current.ActiveStage.CompleteStage();
+                Current.ActiveStage.CancelStage(cause);
         }
     }
 

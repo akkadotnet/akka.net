@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RunnableGraph.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Actor;
 using Akka.Streams.Implementation;
 
 namespace Akka.Streams.Dsl
@@ -30,6 +31,13 @@ namespace Akka.Streams.Dsl
         /// <param name="materializer">TBD</param>
         /// <returns>TBD</returns>
         TMat Run(IMaterializer materializer);
+        
+        /// <summary>
+        /// Run this flow and return the materialized instance from the flow.
+        /// </summary>
+        /// <param name="actorSystem">The actorSystem</param>
+        /// <returns>TBD</returns>
+        TMat Run(ActorSystem actorSystem);
 
 
         /// <summary>
@@ -63,9 +71,9 @@ namespace Akka.Streams.Dsl
     }
 
     /// <summary>
-    /// TBD
+    /// A completed Akka.Streams graph that can be executed.
     /// </summary>
-    /// <typeparam name="TMat">TBD</typeparam>
+    /// <typeparam name="TMat">The type of materialized value.</typeparam>
     public sealed class RunnableGraph<TMat> : IRunnableGraph<TMat>
     {
         /// <summary>
@@ -140,11 +148,19 @@ namespace Akka.Streams.Dsl
             => new RunnableGraph<TMat2>(Module.TransformMaterializedValue(func));
 
         /// <summary>
-        /// TBD
+        /// Compiles the graph and executes it, returning the materialized value of the flow.
         /// </summary>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="materializer">A materializer instance.</param>
+        /// <returns>The materialized value.</returns>
         public TMat Run(IMaterializer materializer) => materializer.Materialize(this);
+
+        /// <summary>
+        /// Compiles the graph and executes it, returning the materialized value of the flow.
+        /// </summary>
+        /// <param name="actorSystem">The <see cref="ActorSystem"/>.</param>
+        /// <returns>The materialized value.</returns>
+        public TMat Run(ActorSystem actorSystem) =>
+            actorSystem.Materializer().Materialize(this);
     }
 
     /// <summary>

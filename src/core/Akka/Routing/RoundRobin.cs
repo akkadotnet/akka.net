@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RoundRobin.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -324,16 +324,6 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="paths">An enumeration of actor paths used by the group router.</param>
         public RoundRobinGroup(IEnumerable<string> paths) : this(paths, Dispatchers.DefaultDispatcherId)
-        {
-        }
-
-        /// <summary>
-        /// Obsolete. Use <see cref="RoundRobinGroup(IEnumerable{System.String})"/> instead.
-        /// </summary>
-        /// <param name="routees">N/A</param>
-        [Obsolete("Use RoundRobinGroup constructor with IEnumerable<string> parameter [1.1.0]")]
-        public RoundRobinGroup(IEnumerable<IActorRef> routees)
-            : this(routees.Select(c => c.Path.ToString()))
         {
         }
 

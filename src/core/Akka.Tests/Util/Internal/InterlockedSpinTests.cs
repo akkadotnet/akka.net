@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterlockedSpinTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Tests.Util.Internal
@@ -17,7 +19,7 @@ namespace Akka.Tests.Util.Internal
     public class InterlockedSpinTests
     {
         [Fact]
-        public void When_a_shared_variable_is_updated_on_another_thread_Then_the_update_method_is_rerun()
+        public async Task When_a_shared_variable_is_updated_on_another_thread_Then_the_update_method_is_rerun()
         {
             var sharedVariable = "";
             var hasEnteredUpdateMethod = new ManualResetEvent(false);
@@ -55,13 +57,13 @@ namespace Akka.Tests.Util.Internal
             hasEnteredUpdateMethod.WaitOne(TimeSpan.FromSeconds(2)); //Wait for THREAD 2 to enter updateWhenSignaled
             sharedVariable = "-";
             okToContinue.Set();	//Signal THREAD 1 it can continue in updateWhenSignaled
-            task.Wait(TimeSpan.FromSeconds(2));	//Wait for THREAD 1
+            await task.AwaitWithTimeout(2.Seconds()); //Wait for THREAD 1
 
             sharedVariable.ShouldBe("updated");
             numberOfCallsToUpdateWhenSignaled.ShouldBe(2);
         }
         [Fact]
-        public void When_a_shared_variable_is_updated_on_another_thread_Then_the_update_method_is_rerun_using_tuples()
+        public async Task When_a_shared_variable_is_updated_on_another_thread_Then_the_update_method_is_rerun_using_tuples()
         {
             var sharedVariable = "";
             var hasEnteredUpdateMethod = new ManualResetEvent(false);
@@ -100,14 +102,14 @@ namespace Akka.Tests.Util.Internal
             hasEnteredUpdateMethod.WaitOne(TimeSpan.FromSeconds(2)); //Wait for THREAD 2 to enter updateWhenSignaled
             sharedVariable = "-";
             okToContinue.Set();	//Signal THREAD 1 it can continue in updateWhenSignaled
-            task.Wait(TimeSpan.FromSeconds(2));	//Wait for THREAD 1
+            await task.AwaitWithTimeout(2.Seconds());	//Wait for THREAD 1
 
             sharedVariable.ShouldBe("updated");
             numberOfCallsToUpdateWhenSignaled.ShouldBe(2);
         }
 
         [Fact]
-        public void When_a_shared_variable_is_updated_on_another_thread_Then_the_update_method_is_rerun_but_as_the_break_condition_is_fulfilled_it_do_not_update()
+        public async Task When_a_shared_variable_is_updated_on_another_thread_Then_the_update_method_is_rerun_but_as_the_break_condition_is_fulfilled_it_do_not_update()
         {
             var sharedVariable = "";
             var hasEnteredUpdateMethod = new ManualResetEvent(false);
@@ -149,7 +151,7 @@ namespace Akka.Tests.Util.Internal
             hasEnteredUpdateMethod.WaitOne(TimeSpan.FromSeconds(2));
             sharedVariable = "-";
             okToContinue.Set();
-            task.Wait(TimeSpan.FromSeconds(2));
+            await task.AwaitWithTimeout(2.Seconds());
 
             sharedVariable.ShouldBe("-");
             numberOfCallsToUpdateWhenSignaled.ShouldBe(2);

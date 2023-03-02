@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SystemGuardianTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
@@ -26,29 +27,29 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Should_Send_Hook_When_UserGuardian_Terminated()
+        public async Task Should_Send_Hook_When_UserGuardian_Terminated()
         {
             _systemGuardian.Tell(RegisterTerminationHook.Instance);
             _userGuardian.Tell(PoisonPill.Instance);
             
-            ExpectMsg<TerminationHook>();
+            await ExpectMsgAsync<TerminationHook>();
         }
 
         [Fact]
-        public void Should_Terminate_When_Hooks_Complete()
+        public async Task Should_Terminate_When_Hooks_Complete()
         {
             var probe = CreateTestProbe();
             probe.Watch(_systemGuardian);
             _systemGuardian.Tell(RegisterTerminationHook.Instance);
             _userGuardian.Tell(PoisonPill.Instance);
 
-            ExpectMsg<TerminationHook>();
+            await ExpectMsgAsync<TerminationHook>();
             _systemGuardian.Tell(TerminationHookDone.Instance);
-            probe.ExpectTerminated(_systemGuardian);
+            await probe.ExpectTerminatedAsync(_systemGuardian);
         }
 
         [Fact]
-        public void Should_Remove_Registration_When_Registree_Terminates()
+        public async Task Should_Remove_Registration_When_Registree_Terminates()
         {
             var guardianWatcher = CreateTestProbe();
             guardianWatcher.Watch(_systemGuardian);
@@ -59,7 +60,7 @@ namespace Akka.Tests.Actor
 
             _userGuardian.Tell(PoisonPill.Instance);
 
-            guardianWatcher.ExpectTerminated(_systemGuardian);
+            await guardianWatcher.ExpectTerminatedAsync(_systemGuardian);
         }
     }
 }

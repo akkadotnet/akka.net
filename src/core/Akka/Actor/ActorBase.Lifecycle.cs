@@ -1,12 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorBase.Lifecycle.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using Akka.Util.Internal;
+
 namespace Akka.Actor
 {
     public abstract partial class ActorBase
@@ -62,7 +64,7 @@ namespace Akka.Actor
         /// <param name="message">optionally the current message the actor processed when failing, if applicable.</param>
         protected virtual void PreRestart(Exception reason, object message)
         {
-            Context.GetChildren().ToList().ForEach(c =>
+            Context.GetChildren().ForEach(c =>
             {
                 Context.Unwatch(c);
                 Context.Stop(c);

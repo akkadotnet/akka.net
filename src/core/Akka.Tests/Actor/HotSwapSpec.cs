@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HotSwapSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -14,91 +15,92 @@ namespace Akka.Tests.Actor {
     public class HotSwapSpec : AkkaSpec {
 
         [Fact]
-        public void Must_be_able_to_become_in_its_constructor() {
+        public async Task Must_be_able_to_become_in_its_constructor() 
+        {
             var a = Sys.ActorOf<ConstructorBecomer>();
 
             a.Tell("pigdog");
-            ExpectMsg("pigdog");
+            await ExpectMsgAsync("pigdog");
         }
 
         [Fact]
-        public void Must_be_able_to_become_multiple_times_in_its_constructor() {
+        public async Task Must_be_able_to_become_multiple_times_in_its_constructor() {
             var a = Sys.ActorOf<MultipleConstructorBecomer>();
 
             a.Tell("pigdog");
-            ExpectMsg("4:pigdog");
+            await ExpectMsgAsync("4:pigdog");
         }
 
         [Fact]
-        public void Must_be_able_to_become_with_stacking_in_its_constructor() {
+        public async Task Must_be_able_to_become_with_stacking_in_its_constructor() {
             var a = Sys.ActorOf<StackingConstructorBecomer>();
 
             a.Tell("pigdog");
-            ExpectMsg("pigdog:pigdog");
+            await ExpectMsgAsync("pigdog:pigdog");
             a.Tell("badass");
-            ExpectMsg("badass:badass");
+            await ExpectMsgAsync("badass:badass");
         }
 
         [Fact]
-        public void Must_be_able_to_become_with_stacking_multiple_times_in_its_constructor() {
+        public async Task Must_be_able_to_become_with_stacking_multiple_times_in_its_constructor() {
             var a = Sys.ActorOf<MultipleStackingConstructorBecomer>();
 
             a.Tell("pigdog");
             a.Tell("pigdog");
             a.Tell("pigdog");
             a.Tell("pigdog");
-            ExpectMsg("4:pigdog");
-            ExpectMsg("3:pigdog");
-            ExpectMsg("2:pigdog");
-            ExpectMsg("1:pigdog");
+            await ExpectMsgAsync("4:pigdog");
+            await ExpectMsgAsync("3:pigdog");
+            await ExpectMsgAsync("2:pigdog");
+            await ExpectMsgAsync("1:pigdog");
         }
 
         [Fact]
-        public void Must_be_to_hotswap_its_behaviour_with_become() {
+        public async Task Must_be_to_hotswap_its_behaviour_with_become() {
 
             var a = Sys.ActorOf<HotSwapWithBecome>();
 
             a.Tell("init");
-            ExpectMsg("init");
+            await ExpectMsgAsync("init");
             a.Tell("swap");
             a.Tell("swapped");
-            ExpectMsg("swapped");
+            await ExpectMsgAsync("swapped");
         }
 
         [Fact]
-        public void Must_be_able_to_revert_hotswap_its_behaviour_with_unbecome() {
+        public async Task Must_be_able_to_revert_hotswap_its_behaviour_with_unbecome() {
             var a = Sys.ActorOf<HotSwapRevertUnBecome>();
 
             a.Tell("init");
-            ExpectMsg("init");
+            await ExpectMsgAsync("init");
             a.Tell("swap");
             a.Tell("swapped");
-            ExpectMsg("swapped");
+            await ExpectMsgAsync("swapped");
 
             a.Tell("revert");
             a.Tell("init");
-            ExpectMsg("init");
+            await ExpectMsgAsync("init");
         }
 
         [Fact]
-        public void Must_be_able_to_revert_to_initial_state_on_restart() {
+        public async Task Must_be_able_to_revert_to_initial_state_on_restart() {
             var a = Sys.ActorOf<RevertToInitialState>();
 
             a.Tell("state");
-            ExpectMsg("0");
+            await ExpectMsgAsync("0");
 
             a.Tell("swap");
-            ExpectMsg("swapped");
+            await ExpectMsgAsync("swapped");
 
             a.Tell("state");
-            ExpectMsg("1");
+            await ExpectMsgAsync("1");
 
-            EventFilter.Exception<Exception>("Crash (expected)!").Expect(1, () => {
+            await EventFilter.Exception<Exception>("Crash (expected)!").ExpectAsync(1, async () => {
                 a.Tell("crash");
             });
 
             a.Tell("state");
-            ExpectMsg("0");
+            await ExpectMsgAsync("0");
 
         }
 

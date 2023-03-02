@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ExpressionExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -110,12 +110,11 @@ namespace Akka.Util.Reflection
                         }
                     }
                 }
-                catch (Exception exception)
+                catch (Exception)
                 {
                     //Fallback. Do the worst way and compile.
                     try
                     {
-                        object fallbackVal;
                         {
                             _jobArgs[i] = Expression.Lambda(
                                     Expression.Convert(theArg, _objectType)

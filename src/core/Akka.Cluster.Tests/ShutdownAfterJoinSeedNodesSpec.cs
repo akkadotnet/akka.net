@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShutdownAfterJoinSeedNodesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -37,12 +38,12 @@ namespace Akka.Cluster.Tests
             _ordinary1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
         }
 
-        protected override void AfterTermination()
+        protected override void AfterAll()
         {
-            base.AfterTermination();
             Shutdown(_seed1);
             Shutdown(_seed2);
             Shutdown(_ordinary1);
+            base.AfterAll();
         }
 
         [Fact]

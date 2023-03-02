@@ -1,577 +1,2315 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Actor;
-using Akka.Event;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.Cluster.Sharding
 {
     using ShardId = String;
 
-    internal interface IShardCoordinator
+    /// <summary>
+    /// Singleton coordinator that decides where to allocate shards.
+    /// </summary>
+    internal class ShardCoordinator
     {
-        PersistentShardCoordinator.State CurrentState { get; set; }
-        ClusterShardingSettings Settings { get; }
-        IShardAllocationStrategy AllocationStrategy { get; }
-        IActorContext Context { get; }
-        ICancelable RebalanceTask { get; }
-        Cluster Cluster { get; }
-        IActorRef Self { get; }
-        IActorRef Sender { get; }
-        ILoggingAdapter Log { get; }
-        ImmutableDictionary<string, ICancelable> UnAckedHostShards { get; set; }
-        ImmutableDictionary<string, ImmutableHashSet<IActorRef>> RebalanceInProgress { get; set; }
-        ImmutableHashSet<IActorRef> RebalanceWorkers { get; set; }
+        #region Message types internal
 
-        // regions that have requested handoff, for graceful shutdown
-        ImmutableHashSet<IActorRef> GracefullShutdownInProgress { get; set; }
-        ImmutableHashSet<IActorRef> AliveRegions { get; set; }
-        ImmutableHashSet<IActorRef> RegionTerminationInProgress { get; set; }
-        TimeSpan RemovalMargin { get; }
-        IActorRef IgnoreRef { get; }
-        void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : PersistentShardCoordinator.IDomainEvent;
-        bool HasAllRegionsRegistered();
-    }
-
-    internal static class ShardCoordinator
-    {
-        #region shared part
-
-        internal static void Cancel<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
+        /// <summary>
+        /// Used as a special termination message from <see cref="ClusterSharding"/>
+        /// </summary>
+        internal sealed class Terminate : IDeadLetterSuppression
         {
-            coordinator.RebalanceTask.Cancel();
-            coordinator.Cluster.Unsubscribe(coordinator.Self);
-        }
+            public static readonly Terminate Instance = new Terminate();
 
-        static bool IsMember<TCoordinator>(this TCoordinator coordinator, IActorRef region) where TCoordinator : IShardCoordinator
-        {
-            var addr = region.Path.Address;
-            return addr == coordinator.Self.Path.Address || coordinator.Cluster.ReadView.Members.Any(m => m.Address == addr && m.Status == MemberStatus.Up);
-        }
-
-        internal static bool Active<TCoordinator>(this TCoordinator coordinator, object message) where TCoordinator : IShardCoordinator
-        {
-            switch (message)
+            private Terminate()
             {
-                case PersistentShardCoordinator.Register msg: HandleRegister(coordinator, msg); return true;
-                case PersistentShardCoordinator.RegisterProxy msg: HandleRegisterProxy(coordinator, msg); return true;
-                case PersistentShardCoordinator.GetShardHome msg:
-                    {
-                        if (!HandleGetShardHome(coordinator, msg))
-                        {
-                            var shard = msg.Shard;
-                            // location not known, yet
-                            var activeRegions = coordinator.CurrentState.Regions.RemoveRange(coordinator.GracefullShutdownInProgress);
-                            if (activeRegions.Count != 0)
-                            {
-                                var getShardHomeSender = coordinator.Sender;
-                                var regionTask = coordinator.AllocationStrategy.AllocateShard(getShardHomeSender, shard, activeRegions);
-
-                                // if task completed immediately, just continue
-                                if (regionTask.IsCompleted && !regionTask.IsFaulted)
-                                    ContinueGetShardHome(coordinator, shard, regionTask.Result, getShardHomeSender);
-                                else
-                                    regionTask.PipeTo(coordinator.Self,
-                                        success: region => new PersistentShardCoordinator.AllocateShardResult(shard, region, getShardHomeSender),
-                                        failure: _ => new PersistentShardCoordinator.AllocateShardResult(shard, null, getShardHomeSender));
-                            }
-                        }
-                        return true;
-                    }
-                case PersistentShardCoordinator.AllocateShardResult msg: HandleAllocateShardResult(coordinator, msg); return true;
-                case PersistentShardCoordinator.ShardStarted msg: HandleShardStated(coordinator, msg); return true;
-                case ResendShardHost msg: HandleResendShardHost(coordinator, msg); return true;
-                case RebalanceTick _: HandleRebalanceTick(coordinator); return true;
-                case PersistentShardCoordinator.RebalanceResult msg: ContinueRebalance(coordinator, msg.Shards); return true;
-                case RebalanceDone msg: HandleRebalanceDone(coordinator, msg.Shard, msg.Ok); return true;
-                case PersistentShardCoordinator.GracefulShutdownRequest msg: HandleGracefulShutdownRequest(coordinator, msg); return true;
-                case GetClusterShardingStats msg: HandleGetClusterShardingStats(coordinator, msg); return true;
-                case ClusterEvent.ClusterShuttingDown msg:
-                    coordinator.Log.Debug("Shutting down shard coordinator");
-                    // can't stop because supervisor will start it again,
-                    // it will soon be stopped when singleton is stopped
-                    coordinator.Context.Become(ShuttingDown);
-                    return true;
-                case GetCurrentRegions _:
-                    var regions = coordinator.CurrentState.Regions.Keys
-                        .Select(region => string.IsNullOrEmpty(region.Path.Address.Host) ? coordinator.Cluster.SelfAddress : region.Path.Address)
-                        .ToImmutableHashSet();
-                    coordinator.Sender.Tell(new CurrentRegions(regions));
-                    return true;
-                case ClusterEvent.CurrentClusterState _:
-                    /* ignore */
-                    return true;
-
-                case Terminate _:
-                    coordinator.Log.Debug("Received termination message");
-                    coordinator.Context.Stop(coordinator.Self);
-                    return true;
-                default: return ReceiveTerminated(coordinator, message);
             }
         }
 
-        private static void AllocateShardHomesForRememberEntities<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
+        /// <summary>
+        /// Messages sent to the coordinator.
+        /// </summary>
+        internal interface ICoordinatorCommand : IClusterShardingSerializable { }
+
+        /// <summary>
+        /// Messages sent from the coordinator.
+        /// </summary>
+        internal interface ICoordinatorMessage : IClusterShardingSerializable { }
+
+        /// <summary>
+        /// <see cref="Sharding.ShardRegion"/> registers to <see cref="ShardCoordinator"/>, until it receives <see cref="RegisterAck"/>.
+        /// </summary>
+        [Serializable]
+        internal sealed class Register : ICoordinatorCommand, IDeadLetterSuppression, IEquatable<Register>
         {
-            if (coordinator.Settings.RememberEntities && coordinator.CurrentState.UnallocatedShards.Count > 0)
+            /// <summary>
+            /// Reference to a shard region actor.
+            /// </summary>
+            public readonly IActorRef ShardRegion;
+
+            /// <summary>
+            /// Creates a new <see cref="Register"/> request for a given <paramref name="shardRegion"/>.
+            /// </summary>
+            /// <param name="shardRegion">TBD</param>
+            public Register(IActorRef shardRegion)
             {
-                foreach (var unallocatedShard in coordinator.CurrentState.UnallocatedShards)
+                ShardRegion = shardRegion;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Register);
+            }
+
+            public bool Equals(Register other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return ShardRegion.Equals(other.ShardRegion);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return ShardRegion.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"Register({ShardRegion})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// <see cref="ShardRegion"/> in proxy only mode registers to <see cref="ShardCoordinator"/>, until it receives <see cref="RegisterAck"/>.
+        /// </summary>
+        [Serializable]
+        internal sealed class RegisterProxy : ICoordinatorCommand, IDeadLetterSuppression, IEquatable<RegisterProxy>
+        {
+            /// <summary>
+            /// Reference to a shard region proxy actor.
+            /// </summary>
+            public readonly IActorRef ShardRegionProxy;
+
+            /// <summary>
+            /// Creates a new <see cref="RegisterProxy"/> request for a given <paramref name="shardRegionProxy"/>.
+            /// </summary>
+            /// <param name="shardRegionProxy">TBD</param>
+            public RegisterProxy(IActorRef shardRegionProxy)
+            {
+                ShardRegionProxy = shardRegionProxy;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as RegisterProxy);
+            }
+
+            public bool Equals(RegisterProxy other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return ShardRegionProxy.Equals(other.ShardRegionProxy);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return ShardRegionProxy.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"RegisterProxy({ShardRegionProxy})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// Acknowledgement from <see cref="ShardCoordinator"/> that <see cref="Register"/> or <see cref="RegisterProxy"/> was successful.
+        /// </summary>
+        internal sealed class RegisterAck : ICoordinatorMessage, IEquatable<RegisterAck>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef Coordinator;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="coordinator">TBD</param>
+            public RegisterAck(IActorRef coordinator)
+            {
+                Coordinator = coordinator;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as RegisterAck);
+            }
+
+            public bool Equals(RegisterAck other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Coordinator.Equals(other.Coordinator);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Coordinator.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"RegisterAck({Coordinator})";
+
+            #endregion
+        }
+
+
+        /// <summary>
+        /// <see cref="ShardRegion"/> requests the location of a shard by sending this message
+        /// to the <see cref="ShardCoordinator"/>.
+        /// </summary>
+        [Serializable]
+        internal sealed class GetShardHome : ICoordinatorCommand, IDeadLetterSuppression, IEquatable<GetShardHome>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            public GetShardHome(ShardId shard)
+            {
+                Shard = shard;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as GetShardHome);
+            }
+
+            public bool Equals(GetShardHome other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shard.Equals(other.Shard);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Shard.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"GetShardHome({Shard})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// <see cref="ShardCoordinator"/> replies with this message for <see cref="GetShardHome"/> requests.
+        /// </summary>
+        [Serializable]
+        internal sealed class ShardHome : ICoordinatorMessage, IEquatable<ShardHome>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef Ref;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            /// <param name="ref">TBD</param>
+            public ShardHome(ShardId shard, IActorRef @ref)
+            {
+                Shard = shard;
+                Ref = @ref;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as ShardHome);
+            }
+
+            public bool Equals(ShardHome other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shard.Equals(other.Shard)
+                    && Ref.Equals(other.Ref);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                unchecked
                 {
-                    coordinator.Self.Tell(new PersistentShardCoordinator.GetShardHome(unallocatedShard), coordinator.IgnoreRef);
+                    int hashCode = Shard.GetHashCode();
+                    hashCode = (hashCode * 397) ^ Ref.GetHashCode();
+                    return hashCode;
                 }
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardHome(shardId:{Shard}, ref:{Ref})";
+
+            #endregion
         }
 
-        private static void SendHostShardMessage<TCoordinator>(this TCoordinator coordinator, String shard, IActorRef region) where TCoordinator : IShardCoordinator
+        /// <summary>
+        /// <see cref="ShardCoordinator"/> informs a <see cref="ShardRegion"/> that it is hosting this shard
+        /// </summary>
+        [Serializable]
+        internal sealed class HostShard : ICoordinatorMessage, IEquatable<HostShard>
         {
-            region.Tell(new PersistentShardCoordinator.HostShard(shard));
-            var cancel = coordinator.Context.System.Scheduler.ScheduleTellOnceCancelable(
-                coordinator.Settings.TuningParameters.ShardStartTimeout,
-                coordinator.Self,
-                new ResendShardHost(shard, region),
-                coordinator.Self);
-            coordinator.UnAckedHostShards = coordinator.UnAckedHostShards.SetItem(shard, cancel);
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            public HostShard(ShardId shard)
+            {
+                Shard = shard;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as HostShard);
+            }
+
+            public bool Equals(HostShard other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shard.Equals(other.Shard);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Shard.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"HostShard({Shard})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// <see cref="ShardRegion"/> replies with this message for <see cref="HostShard"/> requests which lead to it hosting the shard
+        /// </summary>
+        [Serializable]
+        internal sealed class ShardStarted : ICoordinatorMessage, IEquatable<ShardStarted>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            public ShardStarted(ShardId shard)
+            {
+                Shard = shard;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as ShardStarted);
+            }
+
+            public bool Equals(ShardStarted other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shard.Equals(other.Shard);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Shard.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardStarted({Shard})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// <see cref="ShardCoordinator" /> initiates rebalancing process by sending this message
+        /// to all registered <see cref="ShardRegion" /> actors (including proxy only). They are
+        /// supposed to discard their known location of the shard, i.e. start buffering
+        /// incoming messages for the shard. They reply with <see cref="BeginHandOffAck" />.
+        /// When all have replied the <see cref="ShardCoordinator" /> continues by sending
+        /// <see cref="HandOff" /> to the <see cref="ShardRegion" /> responsible for the shard.
+        /// </summary>
+        [Serializable]
+        internal sealed class BeginHandOff : ICoordinatorMessage, IEquatable<BeginHandOff>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            public BeginHandOff(ShardId shard)
+            {
+                Shard = shard;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as BeginHandOff);
+            }
+
+            public bool Equals(BeginHandOff other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shard.Equals(other.Shard);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Shard.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"BeginHandOff({Shard})";
+
+            #endregion
+        }
+
+
+        /// <summary>
+        /// Acknowledgement of <see cref="BeginHandOff"/>
+        /// </summary>
+        [Serializable]
+        internal sealed class BeginHandOffAck : ICoordinatorCommand, IEquatable<BeginHandOffAck>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            public BeginHandOffAck(ShardId shard)
+            {
+                Shard = shard;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as BeginHandOffAck);
+            }
+
+            public bool Equals(BeginHandOffAck other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shard.Equals(other.Shard);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Shard.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"BeginHandOffAck({Shard})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// When all <see cref="ShardRegion"/> actors have acknowledged the <see cref="BeginHandOff"/> the
+        /// <see cref="ShardCoordinator"/> sends this message to the <see cref="ShardRegion"/> responsible for the
+        /// shard. The <see cref="ShardRegion"/> is supposed to stop all entities in that shard and when
+        /// all entities have terminated reply with <see cref="ShardStopped"/> to the <see cref="ShardCoordinator"/>.
+        /// </summary>
+        [Serializable]
+        internal sealed class HandOff : ICoordinatorMessage, IEquatable<HandOff>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            public HandOff(ShardId shard)
+            {
+                Shard = shard;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as HandOff);
+            }
+
+            public bool Equals(HandOff other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shard.Equals(other.Shard);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Shard.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"HandOff({Shard})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// Reply to <see cref="HandOff"/> when all entities in the shard have been terminated.
+        /// </summary>
+        [Serializable]
+        internal sealed class ShardStopped : ICoordinatorCommand, IEquatable<ShardStopped>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            public ShardStopped(ShardId shard)
+            {
+                Shard = shard;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as ShardStopped);
+            }
+
+            public bool Equals(ShardStopped other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shard.Equals(other.Shard);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Shard.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardStopped({Shard})";
+
+            #endregion
+        }
+
+
+        /// <summary>
+        /// Notification when the entire shard region has stopped
+        /// </summary>
+        [Serializable]
+        internal sealed class RegionStopped : ICoordinatorCommand, IEquatable<RegionStopped>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public IActorRef ShardRegion { get; }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shardRegion">TBD</param>
+            public RegionStopped(IActorRef shardRegion)
+            {
+                ShardRegion = shardRegion;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as RegionStopped);
+            }
+
+            public bool Equals(RegionStopped other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return ShardRegion.Equals(other.ShardRegion);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return ShardRegion.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"RegionStopped({ShardRegion})";
+
+            #endregion
+        }
+
+
+        /// <summary>
+        /// <see cref="Sharding.ShardRegion"/> requests full handoff to be able to shutdown gracefully.
+        /// </summary>
+        [Serializable]
+        internal sealed class GracefulShutdownRequest : ICoordinatorCommand, IDeadLetterSuppression, IEquatable<GracefulShutdownRequest>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef ShardRegion;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shardRegion">TBD</param>
+            public GracefulShutdownRequest(IActorRef shardRegion)
+            {
+                ShardRegion = shardRegion;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as GracefulShutdownRequest);
+            }
+
+            public bool Equals(GracefulShutdownRequest other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return ShardRegion.Equals(other.ShardRegion);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return ShardRegion.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"GracefulShutdownRequest({ShardRegion})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// DomainEvents for the persistent state of the event sourced ShardCoordinator
+        /// </summary>
+        public interface IDomainEvent : IClusterShardingSerializable { }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ShardRegionRegistered : IDomainEvent, IEquatable<ShardRegionRegistered>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef Region;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="region">TBD</param>
+            public ShardRegionRegistered(IActorRef region)
+            {
+                Region = region;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as ShardRegionRegistered);
+            }
+
+            public bool Equals(ShardRegionRegistered other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Region.Equals(other.Region);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Region.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardRegionRegistered({Region})";
+
+            #endregion
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static void StateInitialized<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
+        [Serializable]
+        public sealed class ShardRegionProxyRegistered : IDomainEvent, IEquatable<ShardRegionProxyRegistered>
         {
-            foreach (var entry in coordinator.CurrentState.Shards)
-                SendHostShardMessage(coordinator, entry.Key, entry.Value);
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef RegionProxy;
 
-            AllocateShardHomesForRememberEntities(coordinator);
-        }
-
-        internal static void WatchStateActors<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
-        {
-            // Optimization:
-            // Consider regions that don't belong to the current cluster to be terminated.
-            // This is an optimization that makes it operational faster and reduces the
-            // amount of lost messages during startup.
-            var nodes = coordinator.Cluster.ReadView.Members.Select(x => x.Address).ToImmutableHashSet();
-
-            foreach (var entry in coordinator.CurrentState.Regions)
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="regionProxy">TBD</param>
+            public ShardRegionProxyRegistered(IActorRef regionProxy)
             {
-                var a = entry.Key.Path.Address;
-                if (a.HasLocalScope || nodes.Contains(a))
-                    coordinator.Context.Watch(entry.Key);
-                else
-                    RegionTerminated(coordinator, entry.Key);    // not part of the cluster
+                RegionProxy = regionProxy;
             }
 
-            foreach (var proxy in coordinator.CurrentState.RegionProxies)
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
             {
-                var a = proxy.Path.Address;
-                if (a.HasLocalScope || nodes.Contains(a))
-                    coordinator.Context.Watch(proxy);
+                return Equals(obj as ShardRegionProxyRegistered);
+            }
+
+            public bool Equals(ShardRegionProxyRegistered other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return RegionProxy.Equals(other.RegionProxy);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return RegionProxy.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardRegionProxyRegistered({RegionProxy})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ShardRegionTerminated : IDomainEvent, IEquatable<ShardRegionTerminated>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef Region;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="region">TBD</param>
+            public ShardRegionTerminated(IActorRef region)
+            {
+                Region = region;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as ShardRegionTerminated);
+            }
+
+            public bool Equals(ShardRegionTerminated other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Region.Equals(other.Region);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Region.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardRegionTerminated({Region})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ShardRegionProxyTerminated : IDomainEvent, IEquatable<ShardRegionProxyTerminated>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef RegionProxy;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="regionProxy">TBD</param>
+            public ShardRegionProxyTerminated(IActorRef regionProxy)
+            {
+                RegionProxy = regionProxy;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as ShardRegionProxyTerminated);
+            }
+
+            public bool Equals(ShardRegionProxyTerminated other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return RegionProxy.Equals(other.RegionProxy);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return RegionProxy.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardRegionProxyTerminated({RegionProxy})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ShardHomeAllocated : IDomainEvent, IEquatable<ShardHomeAllocated>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef Region;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            /// <param name="region">TBD</param>
+            public ShardHomeAllocated(ShardId shard, IActorRef region)
+            {
+                Shard = shard;
+                Region = region;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as ShardHomeAllocated);
+            }
+
+            public bool Equals(ShardHomeAllocated other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shard.Equals(other.Shard)
+                    && Region.Equals(other.Region);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = Shard.GetHashCode();
+                    hashCode = (hashCode * 397) ^ Region.GetHashCode();
+                    return hashCode;
+                }
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardHomeAllocated(shard:{Shard}, region:{Region})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ShardHomeDeallocated : IDomainEvent, IEquatable<ShardHomeDeallocated>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            public ShardHomeDeallocated(ShardId shard)
+            {
+                Shard = shard;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as ShardHomeDeallocated);
+            }
+
+            public bool Equals(ShardHomeDeallocated other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shard.Equals(other.Shard);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return Shard.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardHomeDeallocated({Shard})";
+
+            #endregion
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ShardCoordinatorInitialized : IDomainEvent, IEquatable<ShardCoordinatorInitialized>
+        {
+            public static readonly ShardCoordinatorInitialized Instance = new ShardCoordinatorInitialized();
+
+            private ShardCoordinatorInitialized()
+            {
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as ShardCoordinatorInitialized);
+            }
+
+            public bool Equals(ShardCoordinatorInitialized other)
+            {
+                if (other is null) return false;
+                return true;
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return 0;
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => "ShardCoordinatorInitialized";
+
+            #endregion
+        }
+
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        internal sealed class StateInitialized
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public static readonly StateInitialized Instance = new StateInitialized();
+
+            private StateInitialized() { }
+        }
+
+        /// <summary>
+        /// State of the shard coordinator.
+        /// Was also used as the persistent state in the old persistent coordinator.
+        /// </summary>
+        [Serializable]
+        internal sealed class CoordinatorState : IClusterShardingSerializable, IEquatable<CoordinatorState>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public static readonly CoordinatorState Empty = new CoordinatorState();
+
+            /// <summary>
+            /// Region for each shard.
+            /// </summary>
+            public readonly IImmutableDictionary<ShardId, IActorRef> Shards;
+
+            /// <summary>
+            /// Shards for each region.
+            /// </summary>
+            public readonly IImmutableDictionary<IActorRef, IImmutableList<ShardId>> Regions;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IImmutableSet<IActorRef> RegionProxies;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IImmutableSet<ShardId> UnallocatedShards;
+
+            public readonly bool RememberEntities;
+
+            private CoordinatorState() : this(
+                shards: ImmutableDictionary<ShardId, IActorRef>.Empty,
+                regions: ImmutableDictionary<IActorRef, IImmutableList<ShardId>>.Empty,
+                regionProxies: ImmutableHashSet<IActorRef>.Empty,
+                unallocatedShards: ImmutableHashSet<ShardId>.Empty,
+                rememberEntities: false)
+            { }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shards">TBD</param>
+            /// <param name="regions">TBD</param>
+            /// <param name="regionProxies">TBD</param>
+            /// <param name="unallocatedShards">TBD</param>
+            /// <param name="rememberEntities">TBD</param>
+            public CoordinatorState(
+                IImmutableDictionary<ShardId, IActorRef> shards,
+                IImmutableDictionary<IActorRef, IImmutableList<ShardId>> regions,
+                IImmutableSet<IActorRef> regionProxies,
+                IImmutableSet<ShardId> unallocatedShards,
+                bool rememberEntities = false)
+            {
+                Shards = shards;
+                Regions = regions;
+                RegionProxies = regionProxies;
+                UnallocatedShards = unallocatedShards;
+                RememberEntities = rememberEntities;
+            }
+
+            public CoordinatorState WithRememberEntities(bool enabled)
+            {
+                if (enabled)
+                    return Copy(rememberEntities: enabled);
                 else
-                    RegionProxyTerminated(coordinator, proxy);        // not part of the cluster
+                    return Copy(unallocatedShards: ImmutableHashSet<ShardId>.Empty, rememberEntities: enabled);
+            }
+
+            public bool IsEmpty
+            {
+                get
+                {
+                    return Shards.Count == 0 && Regions.Count == 0 && RegionProxies.Count == 0;
+                }
+            }
+
+            public IImmutableSet<ShardId> AllShards
+            {
+                get
+                {
+                    return Shards.Keys.Union(UnallocatedShards).ToImmutableHashSet();
+                }
+            }
+
+            public override string ToString()
+            {
+                return $"CoordinatorState({string.Join("", Shards.Select(i => $"[{i.Key}: {i.Value}]"))})";
+            }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="e">TBD</param>
+            /// <exception cref="ArgumentException">TBD</exception>
+            /// <returns>TBD</returns>
+            public CoordinatorState Updated(IDomainEvent e)
+            {
+                switch (e)
+                {
+                    case ShardRegionRegistered message:
+                        if (Regions.ContainsKey(message.Region))
+                            throw new ArgumentException($"Region {message.Region} already registered: {this}", nameof(e));
+
+                        return Copy(regions: Regions.SetItem(message.Region, ImmutableList<ShardId>.Empty));
+
+                    case ShardRegionProxyRegistered message:
+                        if (RegionProxies.Contains(message.RegionProxy))
+                            throw new ArgumentException($"Region proxy {message.RegionProxy} already registered: {this}", nameof(e));
+
+                        return Copy(regionProxies: RegionProxies.Add(message.RegionProxy));
+
+                    case ShardRegionTerminated message:
+                        {
+                            if (!Regions.TryGetValue(message.Region, out var shardRegions))
+                                throw new ArgumentException($"Terminated region {message.Region} not registered: {this}", nameof(e));
+
+                            var newUnallocatedShards = RememberEntities ? UnallocatedShards.Union(shardRegions) : UnallocatedShards;
+                            return Copy(
+                                regions: Regions.Remove(message.Region),
+                                shards: Shards.RemoveRange(shardRegions),
+                                unallocatedShards: newUnallocatedShards);
+                        }
+
+                    case ShardRegionProxyTerminated message:
+                        if (!RegionProxies.Contains(message.RegionProxy))
+                            throw new ArgumentException($"Terminated region proxy {message.RegionProxy} not registered: {this}", nameof(e));
+
+                        return Copy(regionProxies: RegionProxies.Remove(message.RegionProxy));
+
+                    case ShardHomeAllocated message:
+                        {
+                            if (!Regions.TryGetValue(message.Region, out var shardRegions))
+                                throw new ArgumentException($"Region {message.Region} not registered: {this}", nameof(e));
+                            if (Shards.ContainsKey(message.Shard))
+                                throw new ArgumentException($"Shard {message.Shard} already allocated: {this}", nameof(e));
+
+                            var newUnallocatedShards = RememberEntities ? UnallocatedShards.Remove(message.Shard) : UnallocatedShards;
+                            return Copy(
+                                shards: Shards.SetItem(message.Shard, message.Region),
+                                regions: Regions.SetItem(message.Region, shardRegions.Add(message.Shard)),
+                                unallocatedShards: newUnallocatedShards);
+                        }
+                    case ShardHomeDeallocated message:
+                        {
+                            if (!Shards.TryGetValue(message.Shard, out var region))
+                                throw new ArgumentException($"Shard {message.Shard} not allocated: {this}", nameof(e));
+                            if (!Regions.TryGetValue(region, out var shardRegions))
+                                throw new ArgumentException($"Region {region} for shard {message.Shard} not registered: {this}", nameof(e));
+
+                            var newUnallocatedShards = RememberEntities ? UnallocatedShards.Add(message.Shard) : UnallocatedShards;
+                            return Copy(
+                                shards: Shards.Remove(message.Shard),
+                                regions: Regions.SetItem(region, shardRegions.Where(s => s != message.Shard).ToImmutableList()),
+                                unallocatedShards: newUnallocatedShards);
+                        }
+                    case ShardCoordinatorInitialized _:
+                        return this;
+                }
+
+                return this;
+            }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shards">TBD</param>
+            /// <param name="regions">TBD</param>
+            /// <param name="regionProxies">TBD</param>
+            /// <param name="unallocatedShards">TBD</param>
+            /// <param name="rememberEntities">TBD</param>
+            /// <returns>TBD</returns>
+            public CoordinatorState Copy(
+                IImmutableDictionary<ShardId, IActorRef> shards = null,
+                IImmutableDictionary<IActorRef, IImmutableList<ShardId>> regions = null,
+                IImmutableSet<IActorRef> regionProxies = null,
+                IImmutableSet<ShardId> unallocatedShards = null,
+                bool? rememberEntities = null)
+            {
+                if (shards == null && regions == null && regionProxies == null && unallocatedShards == null && rememberEntities == null) return this;
+
+                return new CoordinatorState(
+                    shards ?? Shards,
+                    regions ?? Regions,
+                    regionProxies ?? RegionProxies,
+                    unallocatedShards ?? UnallocatedShards,
+                    rememberEntities ?? RememberEntities);
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as CoordinatorState);
+            }
+
+            public bool Equals(CoordinatorState other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shards.SequenceEqual(other.Shards)
+                    && Regions.Keys.SequenceEqual(other.Regions.Keys)
+                    && RegionProxies.SequenceEqual(other.RegionProxies)
+                    && UnallocatedShards.SequenceEqual(other.UnallocatedShards)
+                    && RememberEntities.Equals(other.RememberEntities);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = 13;
+
+                    foreach (var v in Shards)
+                        hashCode = (hashCode * 397) ^ v.Key.GetHashCode();
+
+                    foreach (var v in Regions)
+                        hashCode = (hashCode * 397) ^ v.Key.GetHashCode();
+
+                    foreach (var v in RegionProxies)
+                        hashCode = (hashCode * 397) ^ v.GetHashCode();
+
+                    foreach (var v in UnallocatedShards)
+                        hashCode = (hashCode * 397) ^ v.GetHashCode();
+
+                    return hashCode;
+                }
+            }
+
+            #endregion
+        }
+
+
+        #endregion
+
+        #region Message types
+
+        /// <summary>
+        /// Periodic message to trigger rebalance.
+        /// </summary>
+        private sealed class RebalanceTick
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public static readonly RebalanceTick Instance = new RebalanceTick();
+
+            private RebalanceTick() { }
+        }
+
+        /// <summary>
+        /// End of rebalance process performed by <see cref="RebalanceWorker"/>.
+        /// </summary>
+        private sealed class RebalanceDone
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly bool Ok;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            /// <param name="ok">TBD</param>
+            public RebalanceDone(ShardId shard, bool ok)
+            {
+                Shard = shard;
+                Ok = ok;
+            }
+        }
+
+        /// <summary>
+        /// Check if we've received a shard start request.
+        /// </summary>
+        [Serializable]
+        private sealed class ResendShardHost
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef Region;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            /// <param name="region">TBD</param>
+            public ResendShardHost(ShardId shard, IActorRef region)
+            {
+                Shard = shard;
+                Region = region;
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        private sealed class DelayedShardRegionTerminated
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef Region;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="region">TBD</param>
+            public DelayedShardRegionTerminated(IActorRef region)
+            {
+                Region = region;
+            }
+        }
+
+        /// <summary>
+        /// Result of <see cref="IShardAllocationStrategy.AllocateShard"/> is piped to self with this message.
+        /// </summary>
+        [Serializable]
+        private sealed class AllocateShardResult
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly ShardId Shard;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef ShardRegion;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef GetShardHomeSender;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            /// <param name="shardRegion">TBD</param>
+            /// <param name="getShardHomeSender">TBD</param>
+            public AllocateShardResult(ShardId shard, IActorRef shardRegion, IActorRef getShardHomeSender)
+            {
+                Shard = shard;
+                ShardRegion = shardRegion;
+                GetShardHomeSender = getShardHomeSender;
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"AllocateShardResult(shard:{Shard}, shardRegion:{ShardRegion}, sender:{GetShardHomeSender})";
+        }
+
+        /// <summary>
+        /// Result of <see cref="IShardAllocationStrategy.Rebalance"/> is piped to self with this message.
+        /// </summary>
+        [Serializable]
+        private sealed class RebalanceResult
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IImmutableSet<ShardId> Shards;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shards">TBD</param>
+            public RebalanceResult(IImmutableSet<ShardId> shards)
+            {
+                Shards = shards;
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"RebalanceResult({string.Join(", ", Shards)})";
+        }
+
+        #endregion
+
+        /// <summary>
+        /// INTERNAL API. Rebalancing process is performed by this actor.
+        /// It sends <see cref="BeginHandOff"/> to all <see cref="ShardRegion"/> actors followed
+        /// by <see cref="HandOff"/> to the <see cref="ShardRegion"/> responsible for
+        /// the shard. When the handoff is completed it sends <see cref="RebalanceDone"/> to its parent
+        /// <see cref="ShardCoordinator"/>. If the process takes longer than the `handOffTimeout` it
+        /// also sends <see cref="RebalanceDone"/>.
+        /// </summary>
+        internal class RebalanceWorker : ActorBase, IWithTimers
+        {
+            public sealed class ShardRegionTerminated
+            {
+                public ShardRegionTerminated(IActorRef region)
+                {
+                    Region = region;
+                }
+
+                public IActorRef Region { get; }
+            }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="typeName">TBD</param>
+            /// <param name="shard">TBD</param>
+            /// <param name="shardRegionFrom">TBD</param>
+            /// <param name="handOffTimeout">TBD</param>
+            /// <param name="regions">TBD</param>
+            /// <param name="isRebalance">TBD</param>
+            /// <returns>TBD</returns>
+            public static Props Props(
+                string typeName,
+                string shard,
+                IActorRef shardRegionFrom,
+                TimeSpan handOffTimeout,
+                IEnumerable<IActorRef> regions,
+                bool isRebalance) =>
+                Actor.Props.Create(() => new RebalanceWorker(typeName, shard, shardRegionFrom, handOffTimeout, regions, isRebalance));
+
+            private readonly string _typeName;
+            private readonly ShardId _shard;
+            private readonly IActorRef _shardRegionFrom;
+            private readonly ISet<IActorRef> _remaining;
+            private readonly bool _isRebalance;
+            private ILoggingAdapter _log;
+
+            private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+
+            public ITimerScheduler Timers { get; set; }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="typeName">TBD</param>
+            /// <param name="shard">TBD</param>
+            /// <param name="shardRegionFrom">TBD</param>
+            /// <param name="handOffTimeout">TBD</param>
+            /// <param name="regions">TBD</param>
+            /// <param name="isRebalance">TBD</param>
+            public RebalanceWorker(
+                string typeName,
+                string shard,
+                IActorRef shardRegionFrom,
+                TimeSpan handOffTimeout,
+                IEnumerable<IActorRef> regions,
+                bool isRebalance)
+            {
+                _typeName = typeName;
+                _shard = shard;
+                _shardRegionFrom = shardRegionFrom;
+                _isRebalance = isRebalance;
+
+                _remaining = new HashSet<IActorRef>(regions);
+                foreach (var region in _remaining)
+                {
+                    region.Tell(new BeginHandOff(shard));
+                }
+
+                if (isRebalance)
+                    Log.Debug("{0}: Rebalance [{1}] from [{2}] regions", typeName, shard, regions.Count());
+                else
+                    Log.Debug("{0}: Shutting down shard [{1}] from region [{2}]. Asking [{3}] region(s) to hand-off shard",
+                        _typeName,
+                        shard,
+                        shardRegionFrom,
+                        regions.Count());
+
+                Timers.StartSingleTimer("hand-off-timeout", ReceiveTimeout.Instance, handOffTimeout);
+            }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="message">TBD</param>
+            /// <returns>TBD</returns>
+            protected override bool Receive(object message)
+            {
+                switch (message)
+                {
+                    case BeginHandOffAck hoa when _shard == hoa.Shard:
+                        Log.Debug("{0}: BeginHandOffAck for shard [{1}] received from [{2}].", _typeName, _shard, Sender);
+                        Acked(Sender);
+                        return true;
+                    case ShardRegionTerminated t:
+                        if (_remaining.Contains(t.Region))
+                        {
+                            Log.Debug("{0}: ShardRegion [{1}] terminated while waiting for BeginHandOffAck for shard [{2}].", _typeName, t.Region, _shard);
+                        }
+                        Acked(t.Region);
+                        return true;
+                    case ReceiveTimeout _:
+                        if (_isRebalance)
+                            Log.Debug("{0}: Rebalance of [{1}] from [{2}] timed out", _typeName, _shard, _shardRegionFrom);
+                        else
+                            Log.Debug("{0}: Shutting down [{1}] shard from [{2}] timed out", _typeName, _shard, _shardRegionFrom);
+                        Done(false);
+                        return true;
+                }
+                return false;
+            }
+
+            private void Acked(IActorRef shardRegion)
+            {
+                _remaining.Remove(shardRegion);
+                if (_remaining.Count == 0)
+                {
+                    Log.Debug("{0}: All shard regions acked, handing off shard [{1}].", _typeName, _shard);
+                    _shardRegionFrom.Tell(new HandOff(_shard));
+                    Context.Become(StoppingShard);
+                }
+                else
+                {
+                    Log.Debug("{0}: Remaining shard regions for shard [{1}]: {2}", _typeName, _shard, _remaining.Count);
+                }
+            }
+
+            private bool StoppingShard(object message)
+            {
+                switch (message)
+                {
+                    case ShardStopped ms when _shard == ms.Shard:
+                        Done(true);
+                        return true;
+                    case ReceiveTimeout _:
+                        Done(false);
+                        return true;
+                    case ShardRegionTerminated t when t.Region.Equals(_shardRegionFrom):
+                        Log.Debug("{0}: ShardRegion [{1}] terminated while waiting for ShardStopped for shard [{2}].", _typeName, t.Region, _shard);
+                        Done(true);
+                        return true;
+                }
+                return false;
+            }
+
+            private void Done(bool ok)
+            {
+                Context.Parent.Tell(new RebalanceDone(_shard, ok));
+                Context.Stop(Self);
+            }
+        }
+
+        private readonly IActorContext _context;
+        private readonly Action<IDomainEvent, Action<IDomainEvent>> _update;
+        private readonly Action _unstashOneGetShardHomeRequest;
+
+        private readonly IActorRef _ignoreRef;
+        private readonly Cluster _cluster;
+        private readonly TimeSpan _removalMargin;
+        private readonly int _minMembers;
+        private bool _allRegionsRegistered = false;
+
+        // rebalanceInProgress for the ShardId keys, pending GetShardHome requests by the ActorRef values
+        private ImmutableDictionary<string, ImmutableHashSet<IActorRef>> _rebalanceInProgress = ImmutableDictionary<string, ImmutableHashSet<IActorRef>>.Empty;
+        private ImmutableHashSet<IActorRef> _rebalanceWorkers = ImmutableHashSet<IActorRef>.Empty;
+        private ImmutableDictionary<string, ICancelable> _unAckedHostShards = ImmutableDictionary<string, ICancelable>.Empty;
+        // regions that have requested handoff, for graceful shutdown
+        private ImmutableHashSet<IActorRef> _gracefulShutdownInProgress = ImmutableHashSet<IActorRef>.Empty;
+        private bool _waitingForLocalRegionToTerminate = false;
+        private ImmutableHashSet<IActorRef> _aliveRegions = ImmutableHashSet<IActorRef>.Empty;
+        private ImmutableHashSet<IActorRef> _regionTerminationInProgress = ImmutableHashSet<IActorRef>.Empty;
+        private readonly ICancelable _rebalanceTask;
+
+        internal string TypeName { get; }
+        internal ClusterShardingSettings Settings { get; }
+        internal IShardAllocationStrategy AllocationStrategy { get; }
+        internal ILoggingAdapter Log { get; }
+        internal bool VerboseDebug { get; }
+        internal CoordinatorState State { get; set; }
+
+
+        public ShardCoordinator(
+            string typeName,
+            ClusterShardingSettings settings,
+            IShardAllocationStrategy allocationStrategy,
+
+            IActorContext context,
+            ILoggingAdapter log,
+            bool verboseDebug,
+            Action<IDomainEvent, Action<IDomainEvent>> update,
+            Action unstashOneGetShardHomeRequest
+
+            )
+        {
+            TypeName = typeName;
+            Settings = settings;
+            AllocationStrategy = allocationStrategy;
+            _context = context;
+            Log = log;
+            VerboseDebug = verboseDebug;
+            _update = update;
+            _unstashOneGetShardHomeRequest = unstashOneGetShardHomeRequest;
+
+            _ignoreRef = context.System.IgnoreRef;
+
+            _cluster = Cluster.Get(context.System);
+            _removalMargin = _cluster.DowningProvider.DownRemovalMargin;
+
+            if (string.IsNullOrEmpty(settings.Role))
+                _minMembers = _cluster.Settings.MinNrOfMembers;
+            else
+                _minMembers = _cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, 1);
+
+            State = CoordinatorState.Empty.WithRememberEntities(settings.RememberEntities);
+
+            _rebalanceTask = context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RebalanceInterval, Settings.TuningParameters.RebalanceInterval, context.Self, RebalanceTick.Instance, ActorRefs.NoSender);
+
+            _cluster.Subscribe(context.Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
+        }
+
+
+        internal void PreStart()
+        {
+            switch (AllocationStrategy)
+            {
+                case IStartableAllocationStrategy strategy:
+                    strategy.Start();
+                    break;
+                case IActorSystemDependentAllocationStrategy strategy:
+                    strategy.Start(_context.System);
+                    break;
+            }
+        }
+
+        internal void PostStop()
+        {
+            _rebalanceTask.Cancel();
+            _cluster.Unsubscribe(_context.Self);
+        }
+
+        internal bool IsMember(IActorRef region)
+        {
+            var regionAddress = region.Path.Address;
+            return regionAddress.Equals(_context.Self.Path.Address) || _cluster.State.IsMemberUp(regionAddress);
+        }
+
+        internal bool Active(object message)
+        {
+            switch (message)
+            {
+                case Register m:
+                    if (IsMember(m.ShardRegion))
+                    {
+                        Log.Debug("{0}: ShardRegion registered: [{1}]", TypeName, m.ShardRegion);
+                        _aliveRegions = _aliveRegions.Add(m.ShardRegion);
+                        if (State.Regions.ContainsKey(m.ShardRegion))
+                        {
+                            m.ShardRegion.Tell(new RegisterAck(_context.Self));
+                            AllocateShardHomesForRememberEntities();
+                        }
+                        else
+                        {
+                            _gracefulShutdownInProgress = _gracefulShutdownInProgress.Remove(m.ShardRegion);
+                            Update(new ShardRegionRegistered(m.ShardRegion), evt =>
+                            {
+                                State = State.Updated(evt);
+                                _context.Watch(m.ShardRegion);
+                                m.ShardRegion.Tell(new RegisterAck(_context.Self));
+                                AllocateShardHomesForRememberEntities();
+                            });
+                        }
+                    }
+                    else
+                    {
+                        Log.Debug("{0}: ShardRegion [{1}] was not registered since the coordinator currently does not know about a node of that region",
+                            TypeName,
+                            m.ShardRegion);
+                    }
+                    return true;
+                case RegisterProxy m:
+                    if (IsMember(m.ShardRegionProxy))
+                    {
+                        Log.Debug("{0}: ShardRegion proxy registered: [{1}]", TypeName, m.ShardRegionProxy);
+                        if (State.RegionProxies.Contains(m.ShardRegionProxy))
+                            m.ShardRegionProxy.Tell(new RegisterAck(_context.Self));
+                        else
+                        {
+                            Update(new ShardRegionProxyRegistered(m.ShardRegionProxy), evt =>
+                            {
+                                State = State.Updated(evt);
+                                _context.Watch(m.ShardRegionProxy);
+                                m.ShardRegionProxy.Tell(new RegisterAck(_context.Self));
+                            });
+                        }
+                    }
+                    return true;
+                case GetShardHome m:
+                    if (!HandleGetShardHome(m.Shard))
+                    {
+                        // location not know, yet
+                        var activeRegions = State.Regions.RemoveRange(_gracefulShutdownInProgress).RemoveRange(_regionTerminationInProgress);
+                        if (activeRegions.Count > 0)
+                        {
+                            var getShardHomeSender = _context.Sender;
+                            var regionTask = AllocationStrategy.AllocateShard(getShardHomeSender, m.Shard, activeRegions);
+
+                            // if task completed immediately, just continue
+                            if (regionTask.IsCompleted && !regionTask.IsFaulted)
+                                ContinueGetShardHome(m.Shard, regionTask.Result, getShardHomeSender);
+                            else
+                            {
+                                regionTask.PipeTo(_context.Self,
+                                    success: region => new AllocateShardResult(m.Shard, region, getShardHomeSender),
+                                    failure: e =>
+                                    {
+                                        Log.Error(e, "{0}: Shard [{1}] allocation failed.", TypeName, m.Shard);
+                                        return new AllocateShardResult(m.Shard, null, getShardHomeSender);
+                                    });
+                            }
+                        }
+                    }
+                    return true;
+
+                case AllocateShardResult m when m.ShardRegion == null:
+                    Log.Debug("{0}: Shard [{1}] allocation failed. It will be retried.", TypeName, m.Shard);
+                    return true;
+
+                case AllocateShardResult m when m.ShardRegion != null:
+                    ContinueGetShardHome(m.Shard, m.ShardRegion, m.GetShardHomeSender);
+                    return true;
+
+                case ShardStarted m:
+                    if (_unAckedHostShards.TryGetValue(m.Shard, out var cancel))
+                    {
+                        cancel.Cancel();
+                        _unAckedHostShards = _unAckedHostShards.Remove(m.Shard);
+                    }
+                    return true;
+
+                case ResendShardHost m:
+                    {
+                        if (State.Shards.TryGetValue(m.Shard, out var region) && region.Equals(region))
+                            SendHostShardMsg(m.Shard, region);
+                        else
+                        {
+                            //Reallocated to another region
+                        }
+                    }
+                    return true;
+
+                case RebalanceTick _:
+                    // optimisation: don't rebalance with un-acked shards, will cause unnecessary rebalance
+                    if (State.Regions.Count > 0 && _unAckedHostShards.IsEmpty)
+                    {
+                        var shardsTask = AllocationStrategy.Rebalance(State.Regions, _rebalanceInProgress.Keys.ToImmutableHashSet());
+                        if (shardsTask.IsCompleted && !shardsTask.IsFaulted)
+                            ContinueRebalance(shardsTask.Result);
+                        else
+                        {
+                            shardsTask.PipeTo(_context.Self,
+                                success: shards => new RebalanceResult(shards),
+                                failure: e => new RebalanceResult(ImmutableHashSet<ShardId>.Empty));
+                        }
+                    }
+                    return true;
+
+                case RebalanceResult m:
+                    ContinueRebalance(m.Shards);
+                    return true;
+
+                case RebalanceDone m:
+                    _rebalanceWorkers = _rebalanceWorkers.Remove(_context.Sender);
+
+                    if (m.Ok)
+                    {
+                        Log.Debug("{0}: Shard [{1}] deallocation completed successfully.", TypeName, m.Shard);
+
+                        // The shard could have been removed by ShardRegionTerminated
+                        if (State.Shards.ContainsKey(m.Shard))
+                        {
+                            Update(new ShardHomeDeallocated(m.Shard), evt =>
+                            {
+                                Log.Debug("{0}: Shard [{1}] deallocated after", TypeName, m.Shard);
+                                State = State.Updated(evt);
+                                ClearRebalanceInProgress(m.Shard);
+                                AllocateShardHomesForRememberEntities();
+                                _context.Self.Tell(new GetShardHome(m.Shard), _ignoreRef);
+                            });
+                        }
+                        else
+                        {
+                            ClearRebalanceInProgress(m.Shard);
+                        }
+                    }
+                    else
+                    {
+                        Log.Warning("{0}: Shard [{1}] deallocation didn't complete within [{2}].",
+                            TypeName,
+                            m.Shard,
+                            Settings.TuningParameters.HandOffTimeout);
+
+                        // was that due to a graceful region shutdown?
+                        // if so, consider the region as still alive and let it retry to gracefully shutdown later
+                        if (State.Shards.TryGetValue(m.Shard, out var region))
+                        {
+                            _gracefulShutdownInProgress = _gracefulShutdownInProgress.Remove(region);
+                        }
+
+                        ClearRebalanceInProgress(m.Shard);
+                    }
+                    return true;
+
+                case GracefulShutdownRequest m:
+                    if (!_gracefulShutdownInProgress.Contains(m.ShardRegion))
+                    {
+                        if (State.Regions.TryGetValue(m.ShardRegion, out var shards))
+                        {
+                            if (Log.IsDebugEnabled)
+                            {
+                                if (VerboseDebug)
+                                    Log.Debug("{0}: Graceful shutdown of{1} region [{2}] with [{3}] shards [{4}] started",
+                                        TypeName,
+                                        m.ShardRegion.Path.Address.HasLocalScope ? " local" : "",
+                                        m.ShardRegion,
+                                        shards.Count,
+                                        string.Join(", ", shards));
+                                else
+                                    Log.Debug("{0}: Graceful shutdown of region [{1}] with [{2}] shards", TypeName, m.ShardRegion, shards.Count);
+                            }
+                            _gracefulShutdownInProgress = _gracefulShutdownInProgress.Add(m.ShardRegion);
+                            ShutdownShards(m.ShardRegion, shards.ToImmutableHashSet());
+                        }
+                        else
+                        {
+                            Log.Debug("{0}: Unknown region requested graceful shutdown [{1}]", TypeName, m.ShardRegion);
+                        }
+                    }
+                    return true;
+
+                case GetClusterShardingStats m:
+
+                    var tasks = _aliveRegions.Select(regionActor => (Region: regionActor, Task: regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, m.Timeout))).ToImmutableList();
+                    Task.WhenAll(tasks.Select(i => i.Task)).ContinueWith(ps =>
+                    {
+                        if (ps.IsFaulted || ps.IsCanceled)
+                            return new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty);
+
+                        var regions = tasks.Where(i => !i.Task.IsCanceled && !i.Task.IsFaulted).ToImmutableDictionary(i =>
+                        {
+                            Address regionAddress = i.Region.Path.Address;
+                            Address address = (regionAddress.HasLocalScope && regionAddress.System == _cluster.SelfAddress.System) ? _cluster.SelfAddress : regionAddress;
+                            return address;
+                        }, j => j.Task.Result);
+
+                        return new ClusterShardingStats(regions);
+                    }).PipeTo(_context.Sender);
+                    return true;
+
+                case ClusterEvent.ClusterShuttingDown _:
+                    Log.Debug("{0}: Shutting down ShardCoordinator", TypeName);
+                    // can't stop because supervisor will start it again,
+                    // it will soon be stopped when singleton is stopped
+                    _context.Become(ShuttingDown);
+                    return true;
+
+                case GetCurrentRegions _:
+                    var reply = new CurrentRegions(State.Regions.Keys.Select(r =>
+                        string.IsNullOrEmpty(r.Path.Address.Host) ? _cluster.SelfAddress : r.Path.Address).ToImmutableHashSet());
+                    _context.Sender.Tell(reply);
+                    return true;
+
+                case Terminate _:
+                    HandleTerminate();
+                    return true;
+            }
+
+            return ReceiveTerminated(message);
+        }
+
+        private void HandleTerminate()
+        {
+            if (_aliveRegions.Any(i => i.Path.Address.HasLocalScope) || _gracefulShutdownInProgress.Any(i => i.Path.Address.HasLocalScope))
+            {
+                foreach (var region in _aliveRegions.Where(i => i.Path.Address.HasLocalScope))
+                {
+                    // region will get this from taking part in coordinated shutdown, but for good measure
+                    region.Tell(GracefulShutdown.Instance);
+                }
+
+                Log.Debug("{0}: Deferring coordinator termination until local region has terminated", TypeName);
+                _waitingForLocalRegionToTerminate = true;
+            }
+            else
+            {
+                if (_rebalanceInProgress.Count == 0)
+                    Log.Debug("{0}: Received termination message.", TypeName);
+                else if (Log.IsDebugEnabled)
+                {
+                    if (VerboseDebug)
+                        Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards [{2}].",
+                            TypeName,
+                            _rebalanceInProgress.Count,
+                            string.Join(", ", _rebalanceInProgress.Keys));
+                    else
+                        Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards.",
+                            TypeName,
+                            _rebalanceInProgress.Count);
+                }
+                _context.Stop(_context.Self);
+            }
+        }
+
+        private void ClearRebalanceInProgress(string shard)
+        {
+            if (_rebalanceInProgress.TryGetValue(shard, out var pendingGetShardHome))
+            {
+                var msg = new GetShardHome(shard);
+                foreach (var getShardHomeSender in pendingGetShardHome)
+                {
+                    _context.Self.Tell(msg, getShardHomeSender);
+                }
+                _rebalanceInProgress = _rebalanceInProgress.Remove(shard);
+            }
+        }
+
+        private void DeferGetShardHomeRequest(ShardId shard, IActorRef from)
+        {
+            Log.Debug(
+                "{0}: GetShardHome [{1}] request from [{2}] deferred, because rebalance is in progress for this shard. " +
+                "It will be handled when rebalance is done.",
+                TypeName,
+                shard,
+                from);
+            _rebalanceInProgress = _rebalanceInProgress.SetItem(shard, _rebalanceInProgress.GetValueOrDefault(shard, ImmutableHashSet<IActorRef>.Empty).Add(from));
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="shard"></param>
+        /// <returns>`true` if the message could be handled without state update, i.e.
+        ///     the shard location was known or the request was deferred or ignored</returns>
+        internal bool HandleGetShardHome(ShardId shard)
+        {
+            if (_rebalanceInProgress.ContainsKey(shard))
+            {
+                DeferGetShardHomeRequest(shard, _context.Sender);
+                _unstashOneGetShardHomeRequest(); // continue unstashing
+                return true;
+            }
+            else if (!HasAllRegionsRegistered())
+            {
+                Log.Debug("{0}: GetShardHome [{1}] request from [{2}] ignored, because not all regions have registered yet.",
+                    TypeName,
+                    shard,
+                    _context.Sender);
+                return true;
+            }
+            else
+            {
+                if (State.Shards.TryGetValue(shard, out var shardRegionRef))
+                {
+                    if (_regionTerminationInProgress.Contains(shardRegionRef))
+                        Log.Debug("{0}: GetShardHome [{1}] request ignored, due to region [{2}] termination in progress.",
+                            TypeName,
+                            shard,
+                            shardRegionRef);
+                    else
+                        _context.Sender.Tell(new ShardHome(shard, shardRegionRef));
+
+                    _unstashOneGetShardHomeRequest(); // continue unstashing
+                    return true;
+                }
+                else
+                {
+                    return false; // location not known, yet, caller will handle allocation
+                }
+            }
+        }
+
+        internal bool ReceiveTerminated(object message)
+        {
+            switch (message)
+            {
+                case Terminated t:
+                    if (State.Regions.ContainsKey(t.ActorRef))
+                    {
+                        if (_removalMargin != TimeSpan.Zero && t.AddressTerminated && _aliveRegions.Contains(t.ActorRef))
+                        {
+                            _context.System.Scheduler.ScheduleTellOnce(_removalMargin, _context.Self, new DelayedShardRegionTerminated(t.ActorRef), ActorRefs.NoSender);
+                            _regionTerminationInProgress = _regionTerminationInProgress.Add(t.ActorRef);
+                        }
+                        else
+                            RegionTerminated(t.ActorRef);
+                    }
+                    else if (State.RegionProxies.Contains(t.ActorRef))
+                    {
+                        RegionProxyTerminated(t.ActorRef);
+                    }
+                    return true;
+
+                case RegionStopped s:
+                    Log.Debug("{0}: ShardRegion stopped: [{1}]", TypeName, s.ShardRegion);
+                    RegionTerminated(s.ShardRegion);
+                    return true;
+
+                case DelayedShardRegionTerminated t:
+                    RegionTerminated(t.Region);
+                    return true;
+            }
+            return false;
+        }
+
+        private void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
+        {
+            _update(e, evn => handler((TEvent)evn));
+        }
+
+        internal void WatchStateActors()
+        {
+
+            // Optimization:
+            // Consider regions that don't belong to the current cluster to be terminated.
+            // This is an optimization that makes it operationally faster and reduces the
+            // amount of lost messages during startup.
+            var nodes = _cluster.State.Members.Select(i => i.Address).ToImmutableHashSet();
+            foreach (var i in State.Regions)
+            {
+                //case (ref, _) =>
+                var a = i.Key.Path.Address;
+                if (a.HasLocalScope || nodes.Contains(a))
+                    _context.Watch(i.Key);
+                else
+                    RegionTerminated(i.Key); // not part of cluster
+            }
+            foreach (var @ref in State.RegionProxies)
+            {
+                var a = @ref.Path.Address;
+                if (a.HasLocalScope || nodes.Contains(a))
+                    _context.Watch(@ref);
+                else
+                    RegionProxyTerminated(@ref); // not part of cluster
             }
 
             // Let the quick (those not involving failure detection) Terminated messages
             // be processed before starting to reply to GetShardHome.
             // This is an optimization that makes it operational faster and reduces the
             // amount of lost messages during startup.
-            coordinator.Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(500), coordinator.Self, PersistentShardCoordinator.StateInitialized.Instance, ActorRefs.NoSender);
+            _context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(500), _context.Self, StateInitialized.Instance, ActorRefs.NoSender);
         }
 
-        internal static bool ReceiveTerminated<TCoordinator>(this TCoordinator coordinator, object message) where TCoordinator : IShardCoordinator
+        internal void ReceiveStateInitialized()
         {
-            switch (message)
+            foreach (var i in State.Shards)
+                SendHostShardMsg(i.Key, i.Value);
+            AllocateShardHomesForRememberEntities();
+        }
+
+        private bool HasAllRegionsRegistered()
+        {
+            // the check is only for startup, i.e. once all have registered we don't check more
+            if (_allRegionsRegistered)
+                return true;
+            else
             {
-                case Terminated terminated:
-                    var terminatedRef = terminated.ActorRef;
-                    if (coordinator.CurrentState.Regions.ContainsKey(terminatedRef))
+                _allRegionsRegistered = _aliveRegions.Count >= _minMembers;
+                return _allRegionsRegistered;
+            }
+        }
+
+        private void RegionTerminated(IActorRef @ref)
+        {
+            foreach (var rw in _rebalanceWorkers)
+                rw.Tell(new RebalanceWorker.ShardRegionTerminated(@ref));
+            if (State.Regions.TryGetValue(@ref, out var shards))
+            {
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug("{0}: ShardRegion terminated{1}: [{2}]",
+                        TypeName,
+                        _gracefulShutdownInProgress.Contains(@ref) ? " (gracefully)" : "",
+                        @ref);
+                }
+                _regionTerminationInProgress = _regionTerminationInProgress.Add(@ref);
+                foreach (var s in shards)
+                {
+                    _context.Self.Tell(new GetShardHome(s), _ignoreRef);
+                }
+
+                Update(new ShardRegionTerminated(@ref), evt =>
+                {
+                    State = State.Updated(evt);
+                    _gracefulShutdownInProgress = _gracefulShutdownInProgress.Remove(@ref);
+                    _regionTerminationInProgress = _regionTerminationInProgress.Remove(@ref);
+                    _aliveRegions = _aliveRegions.Remove(@ref);
+                    AllocateShardHomesForRememberEntities();
+
+                    if (@ref.Path.Address.HasLocalScope && _waitingForLocalRegionToTerminate)
                     {
-                        if (coordinator.RemovalMargin != TimeSpan.Zero && terminated.AddressTerminated &&
-                            coordinator.AliveRegions.Contains(terminatedRef))
-                        {
-                            coordinator.Context.System.Scheduler.ScheduleTellOnce(coordinator.RemovalMargin, coordinator.Self,
-                                new DelayedShardRegionTerminated(terminatedRef), coordinator.Self);
-                            coordinator.RegionTerminationInProgress = coordinator.RegionTerminationInProgress.Add(terminatedRef);
-                        }
-                        else
-                            RegionTerminated(coordinator, terminatedRef);
+                        // handoff optimization: singleton told coordinator to stop but we deferred stop until the local region
+                        // had completed the handoff
+                        Log.Debug("{0}: Local region stopped, terminating coordinator", TypeName);
+                        HandleTerminate();
                     }
-                    else if (coordinator.CurrentState.RegionProxies.Contains(terminatedRef))
-                        RegionProxyTerminated(coordinator, terminatedRef);
-                    return true;
-                case DelayedShardRegionTerminated msg:
-                    RegionTerminated(coordinator, msg.Region);
-                    return true;
-            }
-            return false;
-        }
-
-        private static void HandleGracefulShutdownRequest<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.GracefulShutdownRequest request) where TCoordinator : IShardCoordinator
-        {
-            if (!coordinator.GracefullShutdownInProgress.Contains(request.ShardRegion))
-            {
-                if (coordinator.CurrentState.Regions.TryGetValue(request.ShardRegion, out var shards))
-                {
-                    coordinator.Log.Debug("Graceful shutdown of region [{0}] with shards [{1}]", request.ShardRegion, string.Join(", ", shards));
-                    coordinator.GracefullShutdownInProgress = coordinator.GracefullShutdownInProgress.Add(request.ShardRegion);
-                    coordinator.ShutdownShards(request.ShardRegion, shards.ToImmutableHashSet());
-                }
-                else
-                {
-                    coordinator.Log.Debug("Unknown region requested graceful shutdown [{0}]", request.ShardRegion);
-                }
-            }
-        }
-
-        private static void HandleRebalanceDone<TCoordinator>(this TCoordinator coordinator, string shard, bool ok) where TCoordinator : IShardCoordinator
-        {
-            coordinator.RebalanceWorkers = coordinator.RebalanceWorkers.Remove(coordinator.Sender);
-
-            if (ok)
-            {
-                coordinator.Log.Debug("Shard [{0}] deallocation completed successfully.", shard);
-
-                // The shard could have been removed by ShardRegionTerminated
-                if (coordinator.CurrentState.Shards.TryGetValue(shard, out var region))
-                {
-                    coordinator.Update(new PersistentShardCoordinator.ShardHomeDeallocated(shard), e =>
-                    {
-                        coordinator.Log.Debug("Shard [{0}] deallocated after", shard);
-
-                        coordinator.CurrentState = coordinator.CurrentState.Updated(e);
-                        coordinator.ClearRebalanceInProgress(shard);
-                        AllocateShardHomesForRememberEntities(coordinator);
-                        coordinator.Self.Tell(new PersistentShardCoordinator.GetShardHome(shard), coordinator.IgnoreRef);
-                    });
-                }
-                else
-                {
-                    coordinator.ClearRebalanceInProgress(shard);
-                }
-            }
-            else
-            {
-                coordinator.Log.Warning("Shard [{0}] deallocation didn't complete within [{1}].", shard, coordinator.Settings.TuningParameters.HandOffTimeout);
-
-                // was that due to a graceful region shutdown?
-                // if so, consider the region as still alive and let it retry to gracefully shutdown later
-                foreach (var region in coordinator.CurrentState.Shards.Values)
-                    coordinator.GracefullShutdownInProgress = coordinator.GracefullShutdownInProgress.Remove(region);
-
-                coordinator.ClearRebalanceInProgress(shard);
-            }
-        }
-
-        private static void ClearRebalanceInProgress<TCoordinator>(this TCoordinator coordinator, string shard) where TCoordinator : IShardCoordinator
-        {
-            if (coordinator.RebalanceInProgress.TryGetValue(shard, out var pendingGetShardHome))
-            {
-                var msg = new PersistentShardCoordinator.GetShardHome(shard);
-                foreach (var sender in pendingGetShardHome)
-                {
-                    coordinator.Self.Tell(msg, sender);
-                }
-                coordinator.RebalanceInProgress = coordinator.RebalanceInProgress.Remove(shard);
-            }
-        }
-
-        private static void DeferGetShardHomeRequest<TCoordinator>(this TCoordinator coordinator, string shard, IActorRef from) where TCoordinator : IShardCoordinator
-        {
-            coordinator.Log.Debug("GetShardHome [{0}] request from [{1}] deferred, because rebalance is in progress for this shard. It will be handled when rebalance is done.", shard, from);
-            var pending = coordinator.RebalanceInProgress.TryGetValue(shard, out var prev)
-                ? prev
-                : ImmutableHashSet<IActorRef>.Empty;
-            coordinator.RebalanceInProgress = coordinator.RebalanceInProgress.SetItem(shard, pending.Add(from));
-        }
-
-        private static void HandleRebalanceTick<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
-        {
-            // don't rebalance with un-acked shards, will cause unnecessary rebalance
-            if (coordinator.CurrentState.Regions.Count != 0 && coordinator.UnAckedHostShards.IsEmpty)
-            {
-                var shardsTask = coordinator.AllocationStrategy.Rebalance(coordinator.CurrentState.Regions, coordinator.RebalanceInProgress.Keys.ToImmutableHashSet());
-                if (shardsTask.IsCompleted && !shardsTask.IsFaulted)
-                    ContinueRebalance(coordinator, shardsTask.Result);
-                else
-                    shardsTask.ContinueWith(t => !(t.IsFaulted || t.IsCanceled)
-                        ? new PersistentShardCoordinator.RebalanceResult(t.Result)
-                        : new PersistentShardCoordinator.RebalanceResult(ImmutableHashSet<ShardId>.Empty), TaskContinuationOptions.ExecuteSynchronously)
-                    .PipeTo(coordinator.Self);
-            }
-        }
-
-        private static void HandleResendShardHost<TCoordinator>(this TCoordinator coordinator, ResendShardHost resend) where TCoordinator : IShardCoordinator
-        {
-            if (coordinator.CurrentState.Shards.TryGetValue(resend.Shard, out var region) && region.Equals(resend.Region))
-                SendHostShardMessage(coordinator, resend.Shard, region);
-        }
-
-        private static void HandleShardStated<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.ShardStarted message) where TCoordinator : IShardCoordinator
-        {
-            var shard = message.Shard;
-            if (coordinator.UnAckedHostShards.TryGetValue(shard, out var cancel))
-            {
-                cancel.Cancel();
-                coordinator.UnAckedHostShards = coordinator.UnAckedHostShards.Remove(shard);
-            }
-        }
-
-        private static void HandleAllocateShardResult<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.AllocateShardResult allocateResult) where TCoordinator : IShardCoordinator
-        {
-            if (allocateResult.ShardRegion == null)
-                coordinator.Log.Debug("Shard [{0}] allocation failed. It will be retried", allocateResult.Shard);
-            else
-                ContinueGetShardHome(coordinator, allocateResult.Shard, allocateResult.ShardRegion, allocateResult.GetShardHomeSender);
-        }
-
-        internal static bool HandleGetShardHome<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.GetShardHome getShardHome) where TCoordinator : IShardCoordinator
-        {
-            var shard = getShardHome.Shard;
-
-            if (coordinator.RebalanceInProgress.ContainsKey(shard))
-            {
-                coordinator.DeferGetShardHomeRequest(shard, coordinator.Sender);
-                return true;
-            }
-            else if (!coordinator.HasAllRegionsRegistered())
-            {
-                coordinator.Log.Debug("GetShardHome [{0}] request ignored, because not all regions have registered yet.", shard);
-                return true;
-            }
-            else
-            {
-                if (coordinator.CurrentState.Shards.TryGetValue(shard, out var region))
-                {
-                    if (coordinator.RegionTerminationInProgress.Contains(region))
-                        coordinator.Log.Debug("GetShardHome [{0}] request ignored, due to region [{1}] termination in progress.", shard, region);
-                    else
-                        coordinator.Sender.Tell(new PersistentShardCoordinator.ShardHome(shard, region));
-
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-        }
-
-        private static void RegionTerminated<TCoordinator>(this TCoordinator coordinator, IActorRef terminatedRef) where TCoordinator : IShardCoordinator
-        {
-            foreach (var rebalanceWorker in coordinator.RebalanceWorkers)
-                rebalanceWorker.Tell(new RebalanceWorker.ShardRegionTerminated(terminatedRef));
-
-            if (coordinator.CurrentState.Regions.TryGetValue(terminatedRef, out var shards))
-            {
-                coordinator.Log.Debug("ShardRegion terminated: [{0}]", terminatedRef);
-                coordinator.RegionTerminationInProgress = coordinator.RegionTerminationInProgress.Add(terminatedRef);
-
-                foreach (var shard in shards)
-                    coordinator.Self.Tell(new PersistentShardCoordinator.GetShardHome(shard), coordinator.IgnoreRef);
-
-                coordinator.Update(new PersistentShardCoordinator.ShardRegionTerminated(terminatedRef), e =>
-                {
-                    coordinator.CurrentState = coordinator.CurrentState.Updated(e);
-                    coordinator.GracefullShutdownInProgress = coordinator.GracefullShutdownInProgress.Remove(terminatedRef);
-                    coordinator.RegionTerminationInProgress = coordinator.RegionTerminationInProgress.Remove(terminatedRef);
-                    coordinator.AliveRegions = coordinator.AliveRegions.Remove(terminatedRef);
-                    AllocateShardHomesForRememberEntities(coordinator);
                 });
             }
         }
 
-        private static void RegionProxyTerminated<TCoordinator>(this TCoordinator coordinator, IActorRef proxyRef) where TCoordinator : IShardCoordinator
+        private void RegionProxyTerminated(IActorRef @ref)
         {
-            if (coordinator.CurrentState.RegionProxies.Contains(proxyRef))
+            foreach (var rw in _rebalanceWorkers)
+                rw.Tell(new RebalanceWorker.ShardRegionTerminated(@ref));
+            if (State.RegionProxies.Contains(@ref))
             {
-                coordinator.Log.Debug("ShardRegion proxy terminated: [{0}]", proxyRef);
-                coordinator.Update(new PersistentShardCoordinator.ShardRegionProxyTerminated(proxyRef), e => coordinator.CurrentState = coordinator.CurrentState.Updated(e));
-            }
-        }
-
-        private static void HandleRegisterProxy<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.RegisterProxy registerProxy) where TCoordinator : IShardCoordinator
-        {
-            var proxy = registerProxy.ShardRegionProxy;
-            coordinator.Log.Debug("ShardRegion proxy registered: [{0}]", proxy);
-            if (coordinator.CurrentState.RegionProxies.Contains(proxy))
-                proxy.Tell(new PersistentShardCoordinator.RegisterAck(coordinator.Self));
-            else
-            {
-                var context = coordinator.Context;
-                var self = coordinator.Self;
-                coordinator.Update(new PersistentShardCoordinator.ShardRegionProxyRegistered(proxy), e =>
+                Log.Debug("{0}: ShardRegion proxy terminated: [{1}]", TypeName, @ref);
+                Update(new ShardRegionProxyTerminated(@ref), evt =>
                 {
-                    coordinator.CurrentState = coordinator.CurrentState.Updated(e);
-                    context.Watch(proxy);
-                    proxy.Tell(new PersistentShardCoordinator.RegisterAck(self));
+                    State = State.Updated(evt);
                 });
             }
         }
 
-        private static void HandleRegister<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.Register message) where TCoordinator : IShardCoordinator
-        {
-            var region = message.ShardRegion;
-            if (IsMember(coordinator, region))
-            {
-                coordinator.Log.Debug("ShardRegion registered: [{0}]", region);
-                coordinator.AliveRegions = coordinator.AliveRegions.Add(region);
-
-                if (coordinator.CurrentState.Regions.ContainsKey(region))
-                {
-                    region.Tell(new PersistentShardCoordinator.RegisterAck(coordinator.Self));
-                    AllocateShardHomesForRememberEntities(coordinator);
-                }
-                else
-                {
-                    var context = coordinator.Context;
-                    var self = coordinator.Self;
-
-                    coordinator.GracefullShutdownInProgress = coordinator.GracefullShutdownInProgress.Remove(region);
-                    coordinator.Update(new PersistentShardCoordinator.ShardRegionRegistered(region), e =>
-                    {
-                        coordinator.CurrentState = coordinator.CurrentState.Updated(e);
-                        context.Watch(region);
-                        region.Tell(new PersistentShardCoordinator.RegisterAck(self));
-
-                        AllocateShardHomesForRememberEntities(coordinator);
-                    });
-                }
-            }
-            else coordinator.Log.Debug("ShardRegion [{0}] was not registered since the coordinator currently does not know about a node of that region", region);
-        }
-
-        private static void HandleGetClusterShardingStats<TCoordinator>(this TCoordinator coordinator, GetClusterShardingStats message) where TCoordinator : IShardCoordinator
-        {
-            var sender = coordinator.Sender;
-            Task.WhenAll(
-                coordinator.AliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => (regionActor, r.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion))
-                ).ContinueWith(allRegionStats =>
-                {
-                    if (allRegionStats.IsCanceled)
-                        return new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty);
-
-                    if (allRegionStats.IsFaulted)
-                        throw allRegionStats.Exception; //TODO check if this is the right way
-
-                    var regions = allRegionStats.Result.ToImmutableDictionary(i =>
-                    {
-                        Address regionAddress = i.Item1.Path.Address;
-                        Address address = (regionAddress.HasLocalScope && regionAddress.System == coordinator.Cluster.SelfAddress.System) ? coordinator.Cluster.SelfAddress : regionAddress;
-                        return address;
-                    }, j => j.Item2);
-
-                    return new ClusterShardingStats(regions);
-                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(sender);
-        }
-
-        private static bool ShuttingDown(object message)
+        private bool ShuttingDown(object message)
         {
             // ignore all
             return true;
+        }
+
+        private void SendHostShardMsg(ShardId shard, IActorRef region)
+        {
+            region.Tell(new HostShard(shard));
+            var cancel = _context.System.Scheduler.ScheduleTellOnceCancelable(Settings.TuningParameters.ShardStartTimeout, _context.Self, new ResendShardHost(shard, region), ActorRefs.NoSender);
+            _unAckedHostShards = _unAckedHostShards.SetItem(shard, cancel);
+        }
+
+        internal void AllocateShardHomesForRememberEntities()
+        {
+            if (Settings.RememberEntities && State.UnallocatedShards.Count > 0)
+            {
+                foreach (var shard in State.UnallocatedShards)
+                {
+                    _context.Self.Tell(new GetShardHome(shard), _ignoreRef);
+                }
+            }
+        }
+
+        private void ContinueGetShardHome(ShardId shard, IActorRef region, IActorRef getShardHomeSender)
+        {
+            if (_rebalanceInProgress.ContainsKey(shard))
+            {
+                DeferGetShardHomeRequest(shard, getShardHomeSender);
+            }
+            else
+            {
+                if (State.Shards.TryGetValue(shard, out var @ref))
+                {
+                    getShardHomeSender.Tell(new ShardHome(shard, @ref));
+                }
+                else
+                {
+                    if (State.Regions.ContainsKey(region) && !_gracefulShutdownInProgress.Contains(region) && !_regionTerminationInProgress.Contains(region))
+                    {
+                        Update(new ShardHomeAllocated(shard, region), evt =>
+                        {
+                            State = State.Updated(evt);
+                            Log.Debug("{0}: Shard [{1}] allocated at [{2}]",
+                              TypeName,
+                              evt.Shard,
+                              evt.Region);
+
+                            SendHostShardMsg(evt.Shard, evt.Region);
+                            getShardHomeSender.Tell(new ShardHome(evt.Shard, evt.Region));
+                        });
+                    }
+                    else
+                    {
+                        if (VerboseDebug)
+                            Log.Debug("{0}: Allocated region [{1}] for shard [{2}] is not (any longer) one of the registered regions: {3}",
+                                TypeName,
+                                region,
+                                shard,
+                                State);
+                        else
+                            Log.Debug("{0}: Allocated region [{1}] for shard [{2}] is not (any longer) one of the registered regions.",
+                              TypeName,
+                              region,
+                              shard);
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// Start a RebalanceWorker to manage the shard rebalance.
         /// Does nothing if the shard is already in the process of being rebalanced.
         /// </summary>
-        /// <typeparam name="TCoordinator">TBD</typeparam>
-        /// <param name="coordinator">TBD</param>
-        /// <param name="shard">TBD</param>
-        /// <param name="from">TBD</param>
-        /// <param name="isRebalance">TBD</param>
-        private static void StartShardRebalanceIfNeeded<TCoordinator>(
-            this TCoordinator coordinator,
+        /// <param name="shard"></param>
+        /// <param name="from"></param>
+        /// <param name="handOffTimeout"></param>
+        /// <param name="isRebalance"></param>
+        private void StartShardRebalanceIfNeeded(
             ShardId shard,
             IActorRef from,
+            TimeSpan handOffTimeout,
             bool isRebalance)
-            where TCoordinator : IShardCoordinator
         {
-            if (!coordinator.RebalanceInProgress.ContainsKey(shard))
+            if (!_rebalanceInProgress.ContainsKey(shard))
             {
-                coordinator.RebalanceInProgress = coordinator.RebalanceInProgress.SetItem(shard, ImmutableHashSet<IActorRef>.Empty);
-
-                var regions = coordinator.CurrentState.Regions.Keys.Union(coordinator.CurrentState.RegionProxies);
-                coordinator.RebalanceWorkers = coordinator.RebalanceWorkers.Add(coordinator.Context.ActorOf(
-                    RebalanceWorker.Props(shard, from, coordinator.Settings.TuningParameters.HandOffTimeout, regions, isRebalance)
-                    .WithDispatcher(coordinator.Context.Props.Dispatcher)));
+                _rebalanceInProgress = _rebalanceInProgress.SetItem(shard, ImmutableHashSet<IActorRef>.Empty);
+                _rebalanceWorkers = _rebalanceWorkers.Add(_context.ActorOf(
+                    RebalanceWorker.Props(
+                        TypeName,
+                        shard,
+                        from,
+                        handOffTimeout,
+                        State.Regions.Keys.Union(State.RegionProxies),
+                        isRebalance: isRebalance)
+                    .WithDispatcher(_context.Props.Dispatcher)));
             }
         }
 
-        private static void ContinueRebalance<TCoordinator>(this TCoordinator coordinator, IImmutableSet<ShardId> shards) where TCoordinator : IShardCoordinator
+        private void ContinueRebalance(IImmutableSet<ShardId> shards)
         {
-            if (coordinator.Log.IsInfoEnabled && (shards.Count > 0 || !coordinator.RebalanceInProgress.IsEmpty))
+            if (Log.IsInfoEnabled && (shards.Count > 0 || _rebalanceInProgress.Count > 0))
             {
-                coordinator.Log.Info("Starting rebalance for shards [{0}]. Current shards rebalancing: [{1}]",
-                    string.Join(",", shards),
-                    string.Join(",", coordinator.RebalanceInProgress.Keys));
+                Log.Info("{0}: Starting rebalance for shards [{1}]. Current shards rebalancing: [{2}]",
+                    TypeName,
+                    string.Join(", ", shards),
+                    string.Join(", ", _rebalanceInProgress.Keys));
             }
-
             foreach (var shard in shards)
             {
                 // optimisation: check if not already in progress before fetching region
-                if (!coordinator.RebalanceInProgress.ContainsKey(shard))
+                if (!_rebalanceInProgress.ContainsKey(shard))
                 {
-                    if (coordinator.CurrentState.Shards.TryGetValue(shard, out var rebalanceFromRegion))
+                    if (State.Shards.TryGetValue(shard, out var region))
                     {
-                        coordinator.Log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
-                        coordinator.StartShardRebalanceIfNeeded(shard, rebalanceFromRegion, isRebalance: true);
+                        Log.Debug("{0}: Rebalance shard [{1}] from [{2}]", TypeName, shard, region);
+                        StartShardRebalanceIfNeeded(shard, region, Settings.TuningParameters.HandOffTimeout, isRebalance: true);
                     }
                     else
-                        coordinator.Log.Debug("Rebalance of non-existing shard [{0}] is ignored", shard);
+                    {
+                        Log.Debug("{0}: Rebalance of non-existing shard [{1}] is ignored", TypeName, shard);
+                    }
                 }
             }
         }
 
-
-        private static void ShutdownShards<TCoordinator>(this TCoordinator coordinator, IActorRef shuttingDownRegion, IImmutableSet<ShardId> shards)
-            where TCoordinator : IShardCoordinator
+        private void ShutdownShards(IActorRef shuttingDownRegion, IImmutableSet<ShardId> shards)
         {
-            if (coordinator.Log.IsInfoEnabled && shards.Count > 0)
-                coordinator.Log.Info("Starting shutting down shards [{0}] due to region shutting down.", string.Join(", ", shards));
+            if (Log.IsInfoEnabled && shards.Count > 0)
+            {
+                Log.Info("{0}: Starting shutting down shards [{1}] due to region shutting down.",
+                    TypeName, string.Join(", ", shards));
+            }
             foreach (var shard in shards)
             {
-                coordinator.StartShardRebalanceIfNeeded(shard, shuttingDownRegion, isRebalance: false);
+                StartShardRebalanceIfNeeded(shard, shuttingDownRegion, Settings.TuningParameters.HandOffTimeout, isRebalance: false);
             }
         }
-
-        private static void ContinueGetShardHome<TCoordinator>(this TCoordinator coordinator, string shard, IActorRef region, IActorRef getShardHomeSender) where TCoordinator : IShardCoordinator
-        {
-            if (!coordinator.RebalanceInProgress.ContainsKey(shard))
-            {
-                if (coordinator.CurrentState.Shards.TryGetValue(shard, out var aref))
-                {
-                    getShardHomeSender.Tell(new PersistentShardCoordinator.ShardHome(shard, aref));
-                }
-                else
-                {
-                    if (coordinator.CurrentState.Regions.ContainsKey(region) && !coordinator.GracefullShutdownInProgress.Contains(region))
-                    {
-                        coordinator.Update(new PersistentShardCoordinator.ShardHomeAllocated(shard, region), e =>
-                        {
-                            coordinator.CurrentState = coordinator.CurrentState.Updated(e);
-                            coordinator.Log.Debug("Shard [{0}] allocated at [{1}]", e.Shard, e.Region);
-
-                            SendHostShardMessage(coordinator, e.Shard, e.Region);
-                            getShardHomeSender.Tell(new PersistentShardCoordinator.ShardHome(e.Shard, e.Region));
-                        });
-                    }
-                    else
-                        coordinator.Log.Debug("Allocated region {0} for shard [{1}] is not (any longer) one of the registered regions", region, shard);
-                }
-            }
-            else
-            {
-                coordinator.DeferGetShardHomeRequest(shard, getShardHomeSender);
-            }
-        }
-
-        #endregion
-
     }
 }

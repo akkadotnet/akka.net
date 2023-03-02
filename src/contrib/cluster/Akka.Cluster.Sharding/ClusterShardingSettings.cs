@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -81,6 +81,9 @@ namespace Akka.Cluster.Sharding
         public readonly TimeSpan EntityRecoveryConstantRateStrategyFrequency;
         public readonly int EntityRecoveryConstantRateStrategyNumberOfEntities;
 
+        public readonly int CoordinatorStateWriteMajorityPlus;
+        public readonly int CoordinatorStateReadMajorityPlus;
+
         public readonly int LeastShardAllocationAbsoluteLimit;
         public readonly double LeastShardAllocationRelativeLimit;
 
@@ -104,6 +107,8 @@ namespace Akka.Cluster.Sharding
         /// <param name="entityRecoveryStrategy">TBD</param>
         /// <param name="entityRecoveryConstantRateStrategyFrequency">TBD</param>
         /// <param name="entityRecoveryConstantRateStrategyNumberOfEntities">TBD</param>
+        /// <param name="coordinatorStateWriteMajorityPlus">TBD</param>
+        /// <param name="coordinatorStateReadMajorityPlus">TBD</param>
         /// <param name="leastShardAllocationAbsoluteLimit">TBD</param>
         /// <param name="leastShardAllocationRelativeLimit">TBD</param>
         /// <exception cref="ArgumentException">
@@ -128,6 +133,8 @@ namespace Akka.Cluster.Sharding
             string entityRecoveryStrategy,
             TimeSpan entityRecoveryConstantRateStrategyFrequency,
             int entityRecoveryConstantRateStrategyNumberOfEntities,
+            int coordinatorStateWriteMajorityPlus,
+            int coordinatorStateReadMajorityPlus,
             int leastShardAllocationAbsoluteLimit,
             double leastShardAllocationRelativeLimit
             )
@@ -152,15 +159,122 @@ namespace Akka.Cluster.Sharding
             EntityRecoveryStrategy = entityRecoveryStrategy;
             EntityRecoveryConstantRateStrategyFrequency = entityRecoveryConstantRateStrategyFrequency;
             EntityRecoveryConstantRateStrategyNumberOfEntities = entityRecoveryConstantRateStrategyNumberOfEntities;
+            CoordinatorStateWriteMajorityPlus = coordinatorStateWriteMajorityPlus;
+            CoordinatorStateReadMajorityPlus = coordinatorStateReadMajorityPlus;
             LeastShardAllocationAbsoluteLimit = leastShardAllocationAbsoluteLimit;
             LeastShardAllocationRelativeLimit = leastShardAllocationRelativeLimit;
         }
+
+        public TuningParameters WithCoordinatorFailureBackoff(TimeSpan coordinatorFailureBackoff) 
+            => Copy(coordinatorFailureBackoff: coordinatorFailureBackoff); 
+        public TuningParameters WithRetryInterval(TimeSpan retryInterval) 
+            => Copy(retryInterval: retryInterval); 
+        public TuningParameters WithBufferSize(int bufferSize) 
+            => Copy(bufferSize: bufferSize); 
+        public TuningParameters WithHandOffTimeout(TimeSpan handOffTimeout) 
+            => Copy(handOffTimeout: handOffTimeout); 
+        public TuningParameters WithShardStartTimeout(TimeSpan shardStartTimeout)
+            => Copy(shardStartTimeout: shardStartTimeout); 
+        public TuningParameters WithShardFailureBackoff(TimeSpan shardFailureBackoff) 
+            => Copy(shardFailureBackoff: shardFailureBackoff); 
+        public TuningParameters WithEntityRestartBackoff(TimeSpan entityRestartBackoff) 
+            => Copy(entityRestartBackoff: entityRestartBackoff); 
+        public TuningParameters WithRebalanceInterval(TimeSpan rebalanceInterval) 
+            => Copy(rebalanceInterval: rebalanceInterval); 
+        public TuningParameters WithSnapshotAfter(int snapshotAfter) 
+            => Copy(snapshotAfter: snapshotAfter); 
+        public TuningParameters WithKeepNrOfBatches(int keepNrOfBatches) 
+            => Copy(keepNrOfBatches: keepNrOfBatches); 
+        public TuningParameters WithLeastShardAllocationRebalanceThreshold(int leastShardAllocationRebalanceThreshold)
+            => Copy(leastShardAllocationRebalanceThreshold: leastShardAllocationRebalanceThreshold); 
+        public TuningParameters WithLeastShardAllocationMaxSimultaneousRebalance(int leastShardAllocationMaxSimultaneousRebalance) 
+            => Copy(leastShardAllocationMaxSimultaneousRebalance: leastShardAllocationMaxSimultaneousRebalance); 
+        public TuningParameters WithWaitingForStateTimeout(TimeSpan waitingForStateTimeout) 
+            => Copy(waitingForStateTimeout: waitingForStateTimeout); 
+        public TuningParameters WithUpdatingStateTimeout(TimeSpan updatingStateTimeout) 
+            => Copy(updatingStateTimeout: updatingStateTimeout); 
+        public TuningParameters WithEntityRecoveryStrategy(string entityRecoveryStrategy)
+            => Copy(entityRecoveryStrategy: entityRecoveryStrategy); 
+        public TuningParameters WithEntityRecoveryConstantRateStrategyFrequency(TimeSpan entityRecoveryConstantRateStrategyFrequency) 
+            => Copy(entityRecoveryConstantRateStrategyFrequency: entityRecoveryConstantRateStrategyFrequency); 
+        public TuningParameters WithEntityRecoveryConstantRateStrategyNumberOfEntities(int entityRecoveryConstantRateStrategyNumberOfEntities) 
+            => Copy(entityRecoveryConstantRateStrategyNumberOfEntities: entityRecoveryConstantRateStrategyNumberOfEntities); 
+        public TuningParameters WithCoordinatorStateWriteMajorityPlus(int coordinatorStateWriteMajorityPlus) 
+            => Copy(coordinatorStateWriteMajorityPlus: coordinatorStateWriteMajorityPlus); 
+        public TuningParameters WithCoordinatorStateReadMajorityPlus(int coordinatorStateReadMajorityPlus) 
+            => Copy(coordinatorStateReadMajorityPlus: coordinatorStateReadMajorityPlus); 
+        public TuningParameters WithLeastShardAllocationAbsoluteLimit(int leastShardAllocationAbsoluteLimit) 
+            => Copy(leastShardAllocationAbsoluteLimit: leastShardAllocationAbsoluteLimit); 
+        public TuningParameters WithLeastShardAllocationRelativeLimit(double leastShardAllocationRelativeLimit) 
+            => Copy(leastShardAllocationRelativeLimit: leastShardAllocationRelativeLimit); 
+        
+        private TuningParameters Copy(
+            TimeSpan? coordinatorFailureBackoff = null,
+            TimeSpan? retryInterval = null,
+            int? bufferSize = null,
+            TimeSpan? handOffTimeout = null,
+            TimeSpan? shardStartTimeout = null,
+            TimeSpan? shardFailureBackoff = null,
+            TimeSpan? entityRestartBackoff = null,
+            TimeSpan? rebalanceInterval = null,
+            int? snapshotAfter = null,
+            int? keepNrOfBatches = null,
+            int? leastShardAllocationRebalanceThreshold = null,
+            int? leastShardAllocationMaxSimultaneousRebalance = null,
+            TimeSpan? waitingForStateTimeout = null,
+            TimeSpan? updatingStateTimeout = null,
+            string entityRecoveryStrategy = null,
+            TimeSpan? entityRecoveryConstantRateStrategyFrequency = null,
+            int? entityRecoveryConstantRateStrategyNumberOfEntities = null,
+            int? coordinatorStateWriteMajorityPlus = null,
+            int? coordinatorStateReadMajorityPlus = null,
+            int? leastShardAllocationAbsoluteLimit = null,
+            double? leastShardAllocationRelativeLimit = null)
+            => new TuningParameters(
+                coordinatorFailureBackoff: coordinatorFailureBackoff ?? CoordinatorFailureBackoff,
+                retryInterval: retryInterval ?? RetryInterval,
+                bufferSize: bufferSize ?? BufferSize,
+                handOffTimeout: handOffTimeout ?? HandOffTimeout,
+                shardStartTimeout: shardStartTimeout ?? ShardStartTimeout,
+                shardFailureBackoff: shardFailureBackoff ?? ShardFailureBackoff,
+                entityRestartBackoff: entityRestartBackoff ?? EntityRestartBackoff,
+                rebalanceInterval: rebalanceInterval ?? RebalanceInterval,
+                snapshotAfter: snapshotAfter ?? SnapshotAfter,
+                keepNrOfBatches: keepNrOfBatches ?? KeepNrOfBatches,
+                leastShardAllocationRebalanceThreshold: leastShardAllocationRebalanceThreshold ?? LeastShardAllocationRebalanceThreshold,
+                leastShardAllocationMaxSimultaneousRebalance: leastShardAllocationMaxSimultaneousRebalance ?? LeastShardAllocationMaxSimultaneousRebalance,
+                waitingForStateTimeout: waitingForStateTimeout ?? WaitingForStateTimeout,
+                updatingStateTimeout: updatingStateTimeout ?? UpdatingStateTimeout,
+                entityRecoveryStrategy: entityRecoveryStrategy ?? EntityRecoveryStrategy,
+                entityRecoveryConstantRateStrategyFrequency: entityRecoveryConstantRateStrategyFrequency ?? EntityRecoveryConstantRateStrategyFrequency,
+                entityRecoveryConstantRateStrategyNumberOfEntities:
+                entityRecoveryConstantRateStrategyNumberOfEntities ?? EntityRecoveryConstantRateStrategyNumberOfEntities,
+                coordinatorStateWriteMajorityPlus: coordinatorStateWriteMajorityPlus ?? CoordinatorStateWriteMajorityPlus,
+                coordinatorStateReadMajorityPlus: coordinatorStateReadMajorityPlus ?? CoordinatorStateReadMajorityPlus,
+                leastShardAllocationAbsoluteLimit: leastShardAllocationAbsoluteLimit ?? LeastShardAllocationAbsoluteLimit,
+                leastShardAllocationRelativeLimit: leastShardAllocationRelativeLimit ?? LeastShardAllocationRelativeLimit
+            );
     }
 
     public enum StateStoreMode
     {
         Persistence,
-        DData
+        DData,
+        /// <summary>
+        /// Only for testing
+        /// </summary>
+        Custom
+    }
+
+    public enum RememberEntitiesStore
+    {
+        DData,
+        Eventsourced,
+
+        /// <summary>
+        /// Only for testing
+        /// </summary>
+        Custom
     }
 
     /// <summary>
@@ -169,9 +283,6 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class ClusterShardingSettings : INoSerializationVerificationNeeded
     {
-        public const string StateStoreModePersistence = "Persistence";
-        public const string StateStoreModeDData = "DData";
-
         /// <summary>
         /// Specifies that this entity type requires cluster nodes with a specific role.
         /// If the role is not specified all nodes in the cluster are used.
@@ -198,6 +309,12 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public readonly string SnapshotPluginId;
 
+        public readonly StateStoreMode StateStoreMode;
+
+        public readonly RememberEntitiesStore RememberEntitiesStore;
+
+        public readonly TimeSpan ShardRegionQueryTimeout;
+
         /// <summary>
         /// Passivate entities that have not received any message in this interval.
         /// Note that only messages sent through sharding are counted, so direct messages
@@ -205,8 +322,6 @@ namespace Akka.Cluster.Sharding
         /// Use 0 to disable automatic passivation. It is always disabled if `RememberEntities` is enabled.
         /// </summary>
         public readonly TimeSpan PassivateIdleEntityAfter;
-
-        public readonly StateStoreMode StateStoreMode;
 
         /// <summary>
         /// Additional tuning parameters, see descriptions in reference.conf
@@ -250,6 +365,15 @@ namespace Akka.Cluster.Sharding
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterShardingSettings>();
 
+
+            int ConfigMajorityPlus(string p)
+            {
+                if (config.GetString(p)?.ToLowerInvariant() == "all")
+                    return int.MaxValue;
+                else
+                    return config.GetInt(p);
+            }
+
             var tuningParameters = new TuningParameters(
                 coordinatorFailureBackoff: config.GetTimeSpan("coordinator-failure-backoff"),
                 retryInterval: config.GetTimeSpan("retry-interval"),
@@ -268,8 +392,10 @@ namespace Akka.Cluster.Sharding
                 entityRecoveryStrategy: config.GetString("entity-recovery-strategy"),
                 entityRecoveryConstantRateStrategyFrequency: config.GetTimeSpan("entity-recovery-constant-rate-strategy.frequency"),
                 entityRecoveryConstantRateStrategyNumberOfEntities: config.GetInt("entity-recovery-constant-rate-strategy.number-of-entities"),
+                coordinatorStateWriteMajorityPlus: ConfigMajorityPlus("coordinator-state.write-majority-plus"),
+                coordinatorStateReadMajorityPlus: ConfigMajorityPlus("coordinator-state.read-majority-plus"),
                 leastShardAllocationAbsoluteLimit: config.GetInt("least-shard-allocation-strategy.rebalance-absolute-limit"),
-                leastShardAllocationRelativeLimit : config.GetDouble("least-shard-allocation-strategy.rebalance-relative-limit"));
+                leastShardAllocationRelativeLimit: config.GetDouble("least-shard-allocation-strategy.rebalance-relative-limit"));
 
             var coordinatorSingletonSettings = ClusterSingletonManagerSettings.Create(singletonConfig);
             var role = config.GetString("role", null);
@@ -295,6 +421,8 @@ namespace Akka.Cluster.Sharding
                 snapshotPluginId: config.GetString("snapshot-plugin-id"),
                 passivateIdleEntityAfter: passivateIdleAfter,
                 stateStoreMode: (StateStoreMode)Enum.Parse(typeof(StateStoreMode), config.GetString("state-store-mode"), ignoreCase: true),
+                rememberEntitiesStore: (RememberEntitiesStore)Enum.Parse(typeof(RememberEntitiesStore), config.GetString("remember-entities-store"), ignoreCase: true),
+                shardRegionQueryTimeout: config.GetTimeSpan("shard-region-query-timeout"),
                 tuningParameters: tuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings,
                 leaseSettings: lease);
@@ -320,7 +448,7 @@ namespace Akka.Cluster.Sharding
             StateStoreMode stateStoreMode,
             TuningParameters tuningParameters,
             ClusterSingletonManagerSettings coordinatorSingletonSettings)
-            : this(role, rememberEntities, journalPluginId, snapshotPluginId, passivateIdleEntityAfter, stateStoreMode, tuningParameters, coordinatorSingletonSettings, null)
+            : this(role, rememberEntities, journalPluginId, snapshotPluginId, passivateIdleEntityAfter, stateStoreMode, RememberEntitiesStore.DData, TimeSpan.FromSeconds(3), tuningParameters, coordinatorSingletonSettings, null)
         {
         }
 
@@ -346,6 +474,36 @@ namespace Akka.Cluster.Sharding
             TuningParameters tuningParameters,
             ClusterSingletonManagerSettings coordinatorSingletonSettings,
             LeaseUsageSettings leaseSettings)
+            : this(role, rememberEntities, journalPluginId, snapshotPluginId, passivateIdleEntityAfter, stateStoreMode, RememberEntitiesStore.DData, TimeSpan.FromSeconds(3), tuningParameters, coordinatorSingletonSettings, leaseSettings)
+        {
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <param name="rememberEntities">TBD</param>
+        /// <param name="journalPluginId">TBD</param>
+        /// <param name="snapshotPluginId">TBD</param>
+        /// <param name="passivateIdleEntityAfter">TBD</param>
+        /// <param name="stateStoreMode">TBD</param>
+        /// <param name="rememberEntitiesStore">TBD</param>
+        /// <param name="shardRegionQueryTimeout">TBD</param>
+        /// <param name="tuningParameters">TBD</param>
+        /// <param name="coordinatorSingletonSettings">TBD</param>
+        /// <param name="leaseSettings">TBD</param>
+        public ClusterShardingSettings(
+            string role,
+            bool rememberEntities,
+            string journalPluginId,
+            string snapshotPluginId,
+            TimeSpan passivateIdleEntityAfter,
+            StateStoreMode stateStoreMode,
+            RememberEntitiesStore rememberEntitiesStore,
+            TimeSpan shardRegionQueryTimeout,
+            TuningParameters tuningParameters,
+            ClusterSingletonManagerSettings coordinatorSingletonSettings,
+            LeaseUsageSettings leaseSettings)
         {
             Role = role;
             RememberEntities = rememberEntities;
@@ -353,6 +511,8 @@ namespace Akka.Cluster.Sharding
             SnapshotPluginId = snapshotPluginId;
             PassivateIdleEntityAfter = passivateIdleEntityAfter;
             StateStoreMode = stateStoreMode;
+            RememberEntitiesStore = rememberEntitiesStore;
+            ShardRegionQueryTimeout = shardRegionQueryTimeout;
             TuningParameters = tuningParameters;
             CoordinatorSingletonSettings = coordinatorSingletonSettings;
             LeaseSettings = leaseSettings;
@@ -467,6 +627,8 @@ namespace Akka.Cluster.Sharding
             string snapshotPluginId = null,
             TimeSpan? passivateIdleAfter = null,
             StateStoreMode? stateStoreMode = null,
+            RememberEntitiesStore? rememberEntitiesStore = null,
+            TimeSpan? shardRegionQueryTimeout = null,
             TuningParameters tuningParameters = null,
             ClusterSingletonManagerSettings coordinatorSingletonSettings = null,
             Option<LeaseUsageSettings> leaseSettings = default)
@@ -478,6 +640,8 @@ namespace Akka.Cluster.Sharding
                 snapshotPluginId: snapshotPluginId ?? SnapshotPluginId,
                 passivateIdleEntityAfter: passivateIdleAfter ?? PassivateIdleEntityAfter,
                 stateStoreMode: stateStoreMode ?? StateStoreMode,
+                rememberEntitiesStore: rememberEntitiesStore ?? RememberEntitiesStore,
+                shardRegionQueryTimeout: shardRegionQueryTimeout ?? ShardRegionQueryTimeout,
                 tuningParameters: tuningParameters ?? TuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings ?? CoordinatorSingletonSettings,
                 leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings);

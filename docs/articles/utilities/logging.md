@@ -1,11 +1,12 @@
 ---
 uid: logging
-title: Logging
+title: Logging in Akka.NET
 ---
 
 # Logging
 
-For more info see real Akka's documentation: <http://doc.akka.io/docs/akka/2.0/scala/logging.html>
+> ![NOTE]
+> For information on how to use Serilog with Akka.NET, we have a dedicated page for that: "[Using Serilog for Akka.NET Logging](xref:serilog)."
 
 ## How to Log
 
@@ -52,13 +53,13 @@ name into the `akka.stdout-logger-class` HOCON settings.
 > Note that `MinimalLogger` are __NOT__ interchangeable with other Akka.NET loggers and there can
 > only be one `MinimalLogger` registered with the `ActorSystem` in the HOCON settings.
 
-## Contrib Loggers
+## Third Party Loggers
 
 These loggers are also available as separate nuget packages
 
-* __Akka.Logger.slf4net__ which logs using [slf4net](https://github.com/englishtown/slf4net)
 * __Akka.Logger.Serilog__ which logs using [serilog](http://serilog.net/). See [Detailed instructions on using Serilog](xref:serilog).
 * __Akka.Logger.NLog__  which logs using [NLog](http://nlog-project.org/)
+* __Microsoft.Extensions.Logging__ - which is [built into Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting#microsoftextensionslogging-integration).
 
 Note that you need to modify the config as explained below.
 
@@ -83,6 +84,62 @@ akka {
     loggers = ["NameSpace.ClassName, AssemblyName"]
 }
 ```
+
+Or using [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting), you can configure loggers programmatically using strongly typed references to the underlying logging classes:
+
+```csharp
+builder.Services.AddAkka("MyActorSystem", configurationBuilder =>
+{
+    configurationBuilder
+        .ConfigureLoggers(setup =>
+        {
+            // Example: This sets the minimum log level
+            setup.LogLevel = LogLevel.DebugLevel;
+            
+            // Example: Clear all loggers
+            setup.ClearLoggers();
+            
+            // Example: Add the default logger
+            // NOTE: You can also use setup.AddLogger<DefaultLogger>();
+            setup.AddDefaultLogger();
+            
+            // Example: Add the ILoggerFactory logger
+            // NOTE:
+            //   - You can also use setup.AddLogger<LoggerFactoryLogger>();
+            //   - To use a specific ILoggerFactory instance, you can use setup.AddLoggerFactory(myILoggerFactory);
+            setup.AddLoggerFactory();
+            
+            // Example: Adding a serilog logger
+            setup.AddLogger<SerilogLogger>();
+        })
+        .WithActors((system, registry) =>
+        {
+            var echo = system.ActorOf(act =>
+            {
+                act.ReceiveAny((o, context) =>
+                {
+                    Logging.GetLogger(context.System, "echo").Info($"Actor received {o}");
+                    context.Sender.Tell($"{context.Self} rcv {o}");
+                });
+            }, "echo");
+            registry.TryRegister<Echo>(echo); // register for DI
+        });
+});
+```
+
+### Customizing the `ILogMessageFormatter`
+
+A new feature introduced in [Akka.NET v1.5](xref:akkadotnet-v15-whats-new), you now have the ability to customize the `ILogMessageFormatter` - the component responsible for formatting output written to all `Logger` implementations in Akka.NET.
+
+The primary use case for this is supporting semantic logging across the board in your user-defined actors, which is something that [Akka.Logger.Serilog](xref:serilog) supports quite well.
+
+However, maybe there are certain pieces of data you want to have injected into all of the log messages produced by Akka.NET internally - that's the sort of thing you can accomplish by customizing the `ILogMessageFormatter`:
+
+[!code-csharp[CustomLogMessageFormatter](../../../src/core/Akka.Tests/Loggers/CustomLogFormatterSpec.cs?name=CustomLogFormatter)]
+
+This class will be responsible for formatting all log messages when they're written out to your configured sinks - once we configure it in HOCON using the `akka.logger-formatter` setting:
+
+[!code-csharp[CustomLogMessageFormatter](../../../src/core/Akka.Tests/Loggers/CustomLogFormatterSpec.cs?name=CustomLogFormatterConfig)]
 
 ## Logging Unhandled Messages
 
@@ -112,3 +169,28 @@ akka {
   }
 }
 ```
+
+## Logging All Received Messages
+
+It is possible to log all Receive'd messages, usually for debug purposes. This can be achieved by implementing the ILogReceive interface:
+
+```c#
+public class MyActor : ReceiveActor, ILogReceive
+{
+    public MyActor()
+    {
+        Receive<string>(s => Sender.Tell("ok"));
+    }
+}
+
+...
+
+// send a MyActor instance a string message
+myActor.Tell("hello");
+```
+
+In your log, expect to see a line such as:
+
+`[DEBUG]... received handled message hello from akka://test/deadLetters`
+
+This logging can be toggled by configuring `akka.actor.debug.receive`.

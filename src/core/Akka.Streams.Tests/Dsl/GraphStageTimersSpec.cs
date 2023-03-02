@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphStageTimersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,8 +12,8 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -45,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
             return channel;
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task GraphStage_timer_support_must_receive_single_shot_timer()
         {
             var driver = SetupIsolatedStage();
@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
             driver.StopStage();
         }
 
-        [Fact(Skip ="Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void GraphStage_timer_support_must_resubmit_single_shot_timer()
         {
             var driver = SetupIsolatedStage();
@@ -245,18 +245,25 @@ namespace Akka.Streams.Tests.Dsl
 
                 private void OnTestEvent(object message)
                 {
-                    message.Match()
-                        .With<TestSingleTimer>(() => ScheduleOnce(TestSingleTimerKey, Dilated(500)))
-                        .With<TestSingleTimerResubmit>(() => ScheduleOnce(TestSingleTimerResubmitKey, Dilated(500)))
-                        .With<TestCancelTimer>(() =>
-                        {
+                    switch (message)
+                    {
+                        case TestSingleTimer _:
+                            ScheduleOnce(TestSingleTimerKey, Dilated(500));
+                            break;
+                        case TestSingleTimerResubmit _:
+                            ScheduleOnce(TestSingleTimerResubmitKey, Dilated(500));
+                            break;
+                        case TestCancelTimer _:
                             ScheduleOnce(TestCancelTimerKey, Dilated(1));
                             // Likely in mailbox but we cannot guarantee
                             CancelTimer(TestCancelTimerKey);
                             _stage._probe.Tell(TestCancelTimerAck.Instance);
                             ScheduleOnce(TestCancelTimerKey, Dilated(500));
-                        })
-                        .With<TestRepeatedTimer>(() => ScheduleRepeatedly(TestRepeatedTimerKey, Dilated(100)));
+                            break;
+                        case TestRepeatedTimer _:
+                            ScheduleRepeatedly(TestRepeatedTimerKey, Dilated(100));
+                            break;
+                    }
                 }
 
                 private TimeSpan Dilated(int milliseconds)
@@ -305,7 +312,7 @@ namespace Akka.Streams.Tests.Dsl
                         onUpstreamFailure: FailStage);
 
 
-                    SetHandler(stage.Outlet, onPull: DoNothing, onDownstreamFinish: CompleteStage);
+                    SetHandler(stage.Outlet, onPull: DoNothing, onDownstreamFinish: cause => CompleteStage());
                 }
 
                 public override void PreStart() => ScheduleRepeatedly(TimerKey, TimeSpan.FromMilliseconds(100));

@@ -28,7 +28,7 @@ let outputMultiNode = outputTests @@ "multinode"
 let outputFailedMultiNode = outputTests @@ "multinode" @@ "FAILED_SPECS_LOGS"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard2.0"
-let outputBinariesNet = outputBinaries @@ "net6.0"
+let outputBinariesNet = outputBinaries @@ "net7.0"
 
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
 let hasTeamCity = (not (buildNumber = "0")) // check if we have the TeamCity environment variable for build # set
@@ -57,7 +57,7 @@ let incrementalistReport = output @@ "incrementalist.txt"
 // Configuration values for tests
 let testNetFrameworkVersion = "net471"
 let testNetCoreVersion = "netcoreapp3.1"
-let testNetVersion = "net6.0"
+let testNetVersion = "net7.0"
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -250,8 +250,8 @@ Target "RunTests" (fun _ ->
     let runSingleProject project =
         let arguments =
             match (hasTeamCity) with
-            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
-            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetFrameworkVersion outputTests)
+            | true -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 30s --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
+            | false -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 30s --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetFrameworkVersion outputTests)
 
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
@@ -280,8 +280,8 @@ Target "RunTestsNetCore" (fun _ ->
         let runSingleProject project =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetCoreVersion outputTests)
-                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetCoreVersion outputTests)
+                | true -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 30s --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetCoreVersion outputTests)
+                | false -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 30s --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetCoreVersion outputTests)
 
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
@@ -310,8 +310,8 @@ Target "RunTestsNet" (fun _ ->
         let runSingleProject project =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetVersion outputTests)
-                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetVersion outputTests)
+                | true -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 30s --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetVersion outputTests)
+                | false -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 30s --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetVersion outputTests)
 
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
@@ -342,13 +342,13 @@ Target "MultiNodeTestsNetCore" (fun _ ->
         let runSingleProject projectDll =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -teamcity" projectDll testNetCoreVersion outputMultiNode)
-                | false -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\"" projectDll testNetCoreVersion outputMultiNode)
+                | true -> (sprintf "test \"%s\" -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -teamcity" projectDll testNetCoreVersion outputMultiNode)
+                | false -> (sprintf "test \"%s\" -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\"" projectDll testNetCoreVersion outputMultiNode)
 
             let resultPath = (directory projectDll)
             File.WriteAllText(
                 (resultPath @@ "xunit.multinode.runner.json"),
-                (sprintf "{\"outputDirectory\":\"%s\"}" outputMultiNode).Replace("\\", "\\\\"))
+                (sprintf "{\"outputDirectory\":\"%s\", \"useBuiltInTrxReporter\":true}" outputMultiNode).Replace("\\", "\\\\"))
             
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
@@ -381,13 +381,13 @@ Target "MultiNodeTestsNet" (fun _ ->
         let runSingleProject projectDll =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -teamcity" projectDll testNetVersion outputMultiNode)
-                | false -> (sprintf "test \"%s\" -l:trx -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\"" projectDll testNetVersion outputMultiNode)
+                | true -> (sprintf "test \"%s\" -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\" -- -teamcity" projectDll testNetVersion outputMultiNode)
+                | false -> (sprintf "test \"%s\" -l:\"console;verbosity=detailed\" --framework %s --results-directory \"%s\"" projectDll testNetVersion outputMultiNode)
 
             let resultPath = (directory projectDll)
             File.WriteAllText(
                 (resultPath @@ "xunit.multinode.runner.json"),
-                (sprintf "{\"outputDirectory\":\"%s\"}" outputMultiNode).Replace("\\", "\\\\"))
+                (sprintf "{\"outputDirectory\":\"%s\", \"useBuiltInTrxReporter\":true}" outputMultiNode).Replace("\\", "\\\\"))
             
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
@@ -462,77 +462,6 @@ Target "CreateNuget" (fun _ ->
                         OutputPath = "\"" + outputNuGet + "\"" })
 
         projects |> Seq.iter (runSingleProject)
-)
-
-Target "PublishMntr" (fun _ ->
-    if not skipBuild.Value then
-        let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
-
-        // Windows .NET 4.5.2
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Restore
-                (fun p ->
-                    { p with
-                        Project = project
-                        AdditionalArgs = ["-r win10-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
-        )
-
-        // Windows .NET 4.5.2
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Publish
-                (fun p ->
-                    { p with
-                        Project = project
-                        Configuration = configuration
-                        Runtime = "win10-x64"
-                        Framework = testNetFrameworkVersion
-                        VersionSuffix = versionSuffix }))
-
-        // Windows .NET 5
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Publish
-                (fun p ->
-                    { p with
-                        Project = project
-                        Configuration = configuration
-                        Runtime = "win10-x64"
-                        Framework = testNetVersion
-                        VersionSuffix = versionSuffix }))
-
-        // Windows .NET Core
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Publish
-                (fun p ->
-                    { p with
-                        Project = project
-                        Configuration = configuration
-                        Runtime = "win10-x64"
-                        Framework = testNetCoreVersion
-                        VersionSuffix = versionSuffix }))
-)
-
-Target "CreateMntrNuget" (fun _ ->
-    if not skipBuild.Value then
-        // uses the template file to create a temporary .nuspec file with the correct version
-        CopyFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec.template"
-        let commonPropsVersionPrefix = XMLRead true "./src/common.props" "" "" "//Project/PropertyGroup/VersionPrefix" |> Seq.head
-        let versionReplacement = List.ofSeq [ "@version@", commonPropsVersionPrefix + (if (not (versionSuffix = "")) then ("-" + versionSuffix) else "") ]
-        TemplateHelper.processTemplates versionReplacement [ "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" ]
-
-        let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
-
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Pack
-                (fun p ->
-                    { p with
-                        Project = project
-                        Configuration = configuration
-                        AdditionalArgs = ["--include-symbols"]
-                        VersionSuffix = versionSuffix
-                        OutputPath = "\"" + outputNuGet + "\"" } )
-        )
-
-        DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
 )
 
 Target "PublishNuget" (fun _ ->
@@ -716,7 +645,7 @@ Target "RunTestsNetCoreFull" DoNothing
 
 // build dependencies
 "Clean" ==> "AssemblyInfo" ==> "Build"
-"Build" ==> "PublishMntr" ==> "BuildRelease"
+"Build" ==> "BuildRelease"
 "ComputeIncrementalChanges" ==> "Build" // compute incremental changes
 
 // tests dependencies
@@ -729,7 +658,7 @@ Target "RunTestsNetCoreFull" DoNothing
 "BuildRelease" ==> "MultiNodeTestsNet"
 
 // nuget dependencies
-"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
+"BuildRelease" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
 "BuildRelease" ==> "Docfx"

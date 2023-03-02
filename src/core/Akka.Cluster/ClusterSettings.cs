@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,8 +34,8 @@ namespace Akka.Cluster
         {
             //TODO: Requiring!
             var clusterConfig = config.GetConfig("akka.cluster");
-            if (clusterConfig.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<ClusterSettings>("akka.cluster");
+            if (clusterConfig?.GetConfig("failure-detector") == null)
+                throw new ConfigurationException($"Failed to instantiate {nameof(ClusterSettings)}: Configuration does not contain `akka.cluster` node. Did you forgot to set the 'akka.cluster.provider' HOCON property to 'cluster'?");
 
             LogInfoVerbose = clusterConfig.GetBoolean("log-info-verbose", false);
             LogInfo = LogInfoVerbose || clusterConfig.GetBoolean("log-info", false);
@@ -118,6 +118,7 @@ namespace Akka.Cluster
 
             WeaklyUpAfter = GetWeaklyUpDuration();
 
+            UseLegacyHeartbeatMessage = clusterConfig.GetBoolean("use-legacy-heartbeat-message", false);
         }
 
         /// <summary>
@@ -255,11 +256,7 @@ namespace Akka.Cluster
         /// </summary>
         public ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
 
-        /// <summary>
-        /// Obsolete. Use <see cref="P:Cluster.DowningProvider.DownRemovalMargin"/>.
-        /// </summary>
-        [Obsolete("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
-        public TimeSpan DownRemovalMargin { get; }
+        internal TimeSpan DownRemovalMargin { get; }
 
         /// <summary>
         /// Determine whether or not to log heartbeat message in verbose mode.
@@ -300,6 +297,13 @@ namespace Akka.Cluster
         /// The leader will move <see cref="MemberStatus.WeaklyUp"/> members to <see cref="MemberStatus.Up"/> status once convergence has been reached.
         /// </summary>
         public TimeSpan WeaklyUpAfter { get; }
+        
+        /// <summary>
+        /// Enable/disable legacy pre-1.4.19 <see cref="ClusterHeartbeatSender.Heartbeat"/> and
+        /// <see cref="ClusterHeartbeatSender.HeartbeatRsp"/> wire format serialization support.
+        /// Set this to true if you're doing a rolling update from Akka.NET version older than 1.4.19.
+        /// </summary>
+        public bool UseLegacyHeartbeatMessage { get; }
     }
 }
 

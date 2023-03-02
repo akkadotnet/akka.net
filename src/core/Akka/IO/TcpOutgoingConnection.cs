@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpOutgoingConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,12 +12,15 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
+using Akka.Annotations;
+using Akka.Event;
 using Akka.Util;
 
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// An actor handling the connection state machine for an outgoing connection
+    /// to be established.
     /// </summary>
     internal sealed class TcpOutgoingConnection : TcpConnection
     {
@@ -25,6 +28,9 @@ namespace Akka.IO
         private readonly Tcp.Connect _connect;
 
         private SocketAsyncEventArgs _connectArgs;
+
+        private readonly ConnectException finishConnectNeverReturnedTrueException =
+            new ConnectException("Could not establish connection because finishConnect never returned true");
 
         public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
             : base(
@@ -61,11 +67,11 @@ namespace Akka.IO
             }
         }
 
-        private void Stop()
+        private void Stop(Exception cause)
         {
             ReleaseConnectionSocketArgs();
 
-            StopWith(new CloseInformation(new HashSet<IActorRef>(new[] {_commander}), _connect.FailureMessage));
+            StopWith(new CloseInformation(new HashSet<IActorRef>(new[] {_commander}), _connect.FailureMessage.WithCause(cause)));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -77,8 +83,8 @@ namespace Akka.IO
             }
             catch (Exception e)
             {
-                Log.Error(e, "Could not establish connection to [{0}].", _connect.RemoteAddress);
-                Stop();
+                Log.Debug(e, "Could not establish connection to [{0}] due to {1}", _connect.RemoteAddress, e.Message);
+                Stop(e);
             }
         }
         
@@ -86,21 +92,20 @@ namespace Akka.IO
         {
             ReportConnectFailure(() =>
             {
-                if (_connect.RemoteAddress is DnsEndPoint)
+                if (_connect.RemoteAddress is DnsEndPoint remoteAddress)
                 {
-                    var remoteAddress = (DnsEndPoint) _connect.RemoteAddress;
                     Log.Debug("Resolving {0} before connecting", remoteAddress.Host);
                     var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
                     if (resolved == null)
                         Become(Resolving(remoteAddress));
-                    else if(resolved.Ipv4.Any() && resolved.Ipv6.Any()) // one of both families
+                    else if (resolved.Ipv4.Any() && resolved.Ipv6.Any()) // one of both families
                         Register(new IPEndPoint(resolved.Ipv4.FirstOrDefault(), remoteAddress.Port), new IPEndPoint(resolved.Ipv6.FirstOrDefault(), remoteAddress.Port));
                     else // one or the other
                         Register(new IPEndPoint(resolved.Addr, remoteAddress.Port), null);
                 }
-                else if(_connect.RemoteAddress is IPEndPoint)
+                else if (_connect.RemoteAddress is IPEndPoint point)
                 {
-                    Register((IPEndPoint)_connect.RemoteAddress, null);
+                    Register(point, null);
                 }
                 else throw new NotSupportedException($"Couldn't connect to [{_connect.RemoteAddress}]: only IP and DNS-based endpoints are supported");
             });
@@ -123,8 +128,7 @@ namespace Akka.IO
         {
             return message =>
             {
-                var resolved = message as Dns.Resolved;
-                if (resolved != null)
+                if (message is Dns.Resolved resolved)
                 {
                     if (resolved.Ipv4.Any() && resolved.Ipv6.Any()) // multiple addresses
                     {
@@ -143,7 +147,6 @@ namespace Akka.IO
                 return false;
             };
         }
-
 
         private void Register(IPEndPoint address, IPEndPoint fallbackAddress)
         {
@@ -165,7 +168,7 @@ namespace Akka.IO
         {
             return message =>
             {
-                if (message is IO.Tcp.SocketConnected)
+                if (message is Tcp.SocketConnected)
                 {
                     if (args.SocketError == SocketError.Success)
                     {
@@ -202,19 +205,27 @@ namespace Akka.IO
                     else
                     {
                         Log.Debug("Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
-                        Stop();
+                        Stop(finishConnectNeverReturnedTrueException);
                     }
                     return true;
                 }
                 if (message is ReceiveTimeout)
                 {
                     if (_connect.Timeout.HasValue) Context.SetReceiveTimeout(null);  // Clear the timeout
-                    Log.Error("Connect timeout expired, could not establish connection to [{0}]", _connect.RemoteAddress);
-                    Stop();
+                    Log.Debug("Connect timeout expired, could not establish connection to [{0}]", _connect.RemoteAddress);
+                    Stop(new ConnectException($"Connect timeout of {_connect.Timeout} expired"));
                     return true;
                 }
                 return false;
             };
         }
+    }
+
+    [InternalApi]
+    public class ConnectException : Exception
+    {
+        public ConnectException(string message) 
+            : base(message)
+        { }
     }
 }

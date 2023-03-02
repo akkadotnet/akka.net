@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonLeavingSpeedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,9 +10,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
@@ -96,24 +98,24 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
 
         [Fact]
-        public void ClusterSingleton_that_is_leaving_must()
+        public async Task ClusterSingleton_that_is_leaving_must()
         {
-            ClusterSingleton_that_is_leaving_must_join_cluster();
-            ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest();
+            await ClusterSingleton_that_is_leaving_must_join_cluster();
+            await ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest();
         }
 
-        private void ClusterSingleton_that_is_leaving_must_join_cluster()
+        private async Task ClusterSingleton_that_is_leaving_must_join_cluster()
         {
-            for (int i = 0; i < _systems.Length; i++)
+            for (var i = 0; i < _systems.Length; i++)
                 Join(_systems[i], _systems[0], _probes[i]);
 
             // leader is most likely on system, lowest port
             Join(Sys, _systems[0], TestActor);
 
-            _probes[0].ExpectMsg("started");
+            await _probes[0].ExpectMsgAsync("started");
         }
 
-        private void ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest()
+        private async Task ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest()
         {
             var durations = new List<(TimeSpan stoppedDuration, TimeSpan startDuration)>();
             var sw = new Stopwatch();
@@ -121,20 +123,21 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             for (var i = 0; i < _systems.Length; i++)
             {
                 var leaveAddress = Cluster.Get(_systems[i]).SelfAddress;
-                CoordinatedShutdown.Get(_systems[i]).Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
-                _probes[i].ExpectMsg("stopped", TimeSpan.FromSeconds(10));
+                await CoordinatedShutdown.Get(_systems[i]).Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
+                
+                await _probes[i].ExpectMsgAsync("stopped", TimeSpan.FromSeconds(10));
                 var stoppedDuration = sw.Elapsed;
 
                 if (i != _systems.Length - 1)
-                    _probes[i + 1].ExpectMsg("started", TimeSpan.FromSeconds(30));
+                    await _probes[i + 1].ExpectMsgAsync("started", TimeSpan.FromSeconds(30));
                 else
-                    ExpectMsg("started", TimeSpan.FromSeconds(30));
+                    await ExpectMsgAsync("started", TimeSpan.FromSeconds(30));
 
                 var startedDuration = sw.Elapsed;
 
-                Within(TimeSpan.FromSeconds(15), () =>
+                await WithinAsync(TimeSpan.FromSeconds(15), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Cluster.Get(_systems[i]).IsTerminated.Should().BeTrue();
                         Cluster.Get(Sys).State.Members.Select(m => m.Address).Should().NotContain(leaveAddress);
@@ -158,8 +161,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }
         }
 
-        protected override void AfterTermination()
+        protected override void AfterAll()
         {
+            base.AfterAll();
             foreach (var s in _systems)
                 Shutdown(s);
         }

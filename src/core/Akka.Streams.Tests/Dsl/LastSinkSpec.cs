@@ -1,17 +1,21 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LastSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -26,75 +30,69 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_Sink_Last_must_yield_the_last_value()
+        public async Task A_Flow_with_Sink_Last_must_yield_the_last_value()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var task = Source.From(Enumerable.Range(1,42)).Select(x=>x).RunWith(Sink.Last<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                task.Result.Should().Be(42);
+                var result = await Source.From(Enumerable.Range(1,42)).Select(x=>x)
+                    .RunWith(Sink.Last<int>(), Materializer)
+                    .ShouldCompleteWithin(3.Seconds());
+                result.Should().Be(42);
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_Sink_Last_must_yield_the_first_error()
+        public async Task A_Flow_with_Sink_Last_must_yield_the_first_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                Source.Failed<int>(new Exception("ex"))
-                    .Invoking(s => s.RunWith(Sink.Last<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
-                    .Should().Throw<AggregateException>()
-                    .WithInnerException<Exception>()
-                    .WithMessage("ex");
+                (await Source.Failed<int>(new Exception("ex")).RunWith(Sink.Last<int>(), Materializer)
+                    .ShouldThrowWithin<Exception>(1.Seconds())).Message.Should().Be("ex");
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_Sink_Last_must_yield_NoSuchElementException_for_empty_stream()
+        public async Task A_Flow_with_Sink_Last_must_yield_NoSuchElementException_for_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                Source.Empty<int>()
-                    .Invoking(s => s.RunWith(Sink.Last<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
-                    .Should().Throw<AggregateException>()
-                    .WithInnerException<NoSuchElementException>()
-                    .WithMessage("Last of empty stream");
-            }, Materializer);
-        }
-
-
-        [Fact]
-        public void A_Flow_with_Sink_LastOption_must_yield_the_last_value()
-        {
-            this.AssertAllStagesStopped(() =>
-            {
-                var task = Source.From(Enumerable.Range(1, 42)).Select(x => x).RunWith(Sink.LastOrDefault<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                task.Result.Should().Be(42);
+                (await Source.Empty<int>().RunWith(Sink.Last<int>(), Materializer)
+                    .ShouldThrowWithin<NoSuchElementException>(1.Seconds()))
+                    .Message.Should().Be("Last of empty stream");
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_Sink_LastOption_must_yield_the_first_error()
+        public async Task A_Flow_with_Sink_LastOption_must_yield_the_last_value()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                Source.Failed<int>(new Exception("ex"))
-                    .Invoking(s => s.RunWith(Sink.LastOrDefault<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
-                    .Should().Throw<AggregateException>()
-                    .WithInnerException<Exception>()
-                    .WithMessage("ex");
+                var result = await Source.From(Enumerable.Range(1, 42)).Select(x => x)
+                    .RunWith(Sink.LastOrDefault<int>(), Materializer)
+                    .ShouldCompleteWithin(1.Seconds());
+                result.Should().Be(42);
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_Sink_LastOption_must_yield_default_for_empty_stream()
+        public async Task A_Flow_with_Sink_LastOption_must_yield_the_first_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var task = Source.Empty<int>().RunWith(Sink.LastOrDefault<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                task.Result.Should().Be(0);
+                (await Source.Failed<int>(new Exception("ex")).RunWith(Sink.LastOrDefault<int>(), Materializer)
+                    .ShouldThrowWithin<Exception>(1.Seconds())).Message.Should().Be("ex");
+            }, Materializer);
+        }
+
+        [Fact]
+        public async Task A_Flow_with_Sink_LastOption_must_yield_default_for_empty_stream()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var result = await Source.Empty<int>()
+                    .RunWith(Sink.LastOrDefault<int>(), Materializer)
+                    .ShouldCompleteWithin(1.Seconds());
+                result.Should().Be(0);
             }, Materializer);
         }
     }

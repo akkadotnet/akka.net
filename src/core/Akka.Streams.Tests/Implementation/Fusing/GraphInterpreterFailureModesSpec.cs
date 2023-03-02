@@ -1,14 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphInterpreterFailureModesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using Akka.Streams.Stage;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new Cancel(upstream), new OnError(downstream, testException()), new PostStop(stage.Value));
+                .BeEquivalentTo(new Cancel(upstream, testException()), new OnError(downstream, testException()), new PostStop(stage.Value));
         }
 
         [Fact]
@@ -74,7 +74,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new Cancel(upstream), new OnError(downstream, testException()), new PostStop(stage.Value));
+                .BeEquivalentTo(new Cancel(upstream, testException()), new OnError(downstream, testException()), new PostStop(stage.Value));
         }
 
         [Fact]
@@ -89,7 +89,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new Cancel(upstream), new PostStop(stage.Value));
+                .BeEquivalentTo(new Cancel(upstream, testException()), new PostStop(stage.Value));
         }
 
         [Fact]
@@ -149,7 +149,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             lastEvents()
                 .Should()
-                .BeEquivalentTo(new Cancel(upstream), new PostStop(stage.Value));
+                .BeEquivalentTo(new Cancel(upstream, testException()), new PostStop(stage.Value));
         }
 
         [Fact]
@@ -161,8 +161,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             setup.LastEvents()
                 .Should()
-                .BeEquivalentTo(new Cancel(setup.Upstream), new OnError(setup.Downstream, setup.TestException()),
-                    new PostStop(setup.Stage.Value));
+                .BeEquivalentTo(new Cancel(setup.Upstream, setup.TestException()), 
+                    new OnError(setup.Downstream, setup.TestException()), new PostStop(setup.Stage.Value));
         }
 
         [Fact]

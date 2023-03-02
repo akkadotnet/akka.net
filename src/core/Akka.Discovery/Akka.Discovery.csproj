@@ -1,29 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\common.props" />
+    <Import Project="..\..\common.props"/>
 
-  <PropertyGroup>
-    <AssemblyTitle>Akka.Discovery</AssemblyTitle>
-    <Description>Service Discovery for Akka.NET</Description>
-    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
-    <PackageTags>$(AkkaPackageTags)</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <LangVersion>8</LangVersion>
-  </PropertyGroup>
+    <PropertyGroup>
+        <AssemblyTitle>Akka.Discovery</AssemblyTitle>
+        <Description>Service Discovery for Akka.NET</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags)</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="Resources\reference.conf" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Remove="Resources\reference.conf"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\reference.conf" />
-  </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="Resources\reference.conf"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Akka\Akka.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Akka\Akka.csproj"/>
+    </ItemGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
 
 </Project>

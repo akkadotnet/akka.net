@@ -1,14 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowRecoverSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;
@@ -41,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
                         throw Ex;
                     return x;
                 })
-                    .Recover(_ => new Option<int>(0))
+                    .Recover(_ => Option<int>.Create(0))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .RequestNext(1)
                     .RequestNext(2)
@@ -78,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 Source.From(Enumerable.Range(1, 3))
                     .Select(x => x)
-                    .Recover(_ => new Option<int>(0))
+                    .Recover(_ => Option<int>.Create(0))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
                     .ExpectNext(1, 2, 3)
@@ -93,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 Source.Empty<int>()
                     .Select(x => x)
-                    .Recover(_ => new Option<int>(0))
+                    .Recover(_ => Option<int>.Create(0))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(1)
                     .ExpectComplete();

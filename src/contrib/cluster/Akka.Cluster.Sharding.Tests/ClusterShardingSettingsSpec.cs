@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSettingsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,27 +10,28 @@ using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingSettingsSpec : Akka.TestKit.Xunit2.TestKit
+    public class ClusterShardingSettingsSpec : AkkaSpec
     {
-        public ClusterShardingSettingsSpec() 
-            : base(GetConfig())
-        { }
-
-        public static Config GetConfig()
-        {
-            return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
+        private static Config SpecConfig =>
+            ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0")
                 .WithFallback(ClusterSharding.DefaultConfig())
                 .WithFallback(ClusterSingletonManager.DefaultConfig());
-        }
+
+        public ClusterShardingSettingsSpec(ITestOutputHelper helper)
+            : base(SpecConfig, helper)
+        { }
+
 
         [Fact]
         public void ClusterShardingSettingsSpec_must_passivate_idle_entities_if_RememberEntities_and_PassivateIdleEntityAfter_are_the_defaults()
         {
-            ClusterShardingSettings.Create(Sys).ShouldPassivateIdleEntities.ShouldBe(true);
+            ClusterShardingSettings.Create(Sys)
+                .ShouldPassivateIdleEntities.ShouldBe(true);
         }
 
         [Fact]
@@ -49,11 +50,13 @@ namespace Akka.Cluster.Sharding.Tests
                 .WithPassivateIdleAfter(TimeSpan.Zero)
                 .ShouldPassivateIdleEntities.ShouldBe(false);
         }
-        
+
         [Fact]
         public void ClusterShardingSettingsSpec_should_disable_passivation_if_RememberEntities_is_the_default_and_PassivateIdleEntityAfter_is_0_or_off()
         {
-            ClusterShardingSettings.Create(Sys).WithPassivateIdleAfter(TimeSpan.Zero).ShouldPassivateIdleEntities.ShouldBe(false);
+            ClusterShardingSettings.Create(Sys)
+                .WithPassivateIdleAfter(TimeSpan.Zero)
+                .ShouldPassivateIdleEntities.ShouldBe(false);
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowLogSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ using System.Linq;
 using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Log_on_source_must_allow_passing_in_custom_LoggingAdapter()
         {
-            var log = new BusLogging(Sys.EventStream, "com.example.ImportantLogger", LogType, new DefaultLogMessageFormatter());
+            var log = new BusLogging(Sys.EventStream, "com.example.ImportantLogger", LogType, DefaultLogMessageFormatter.Instance);
 
             Source.Single(42)
                 .Log("flow-5", log: log)
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Ignore<int>(), Materializer);
 
             var error = LogProbe.ExpectMsg<Debug>();
-            error.Message.ToString().Should().Be("[flow-6e] Upstream failed, cause: Akka.Streams.TestKit.Tests.TestException test");
+            error.Message.ToString().Should().Be("[flow-6e] Upstream failed, cause: Akka.Streams.TestKit.TestException test");
         }
 
         [Fact]

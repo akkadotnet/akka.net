@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Timers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -75,7 +75,7 @@ namespace Akka.Streams.Implementation
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -149,7 +149,7 @@ namespace Akka.Streams.Implementation
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
                 => FailStage(new TimeoutException($"The stream has not been completed in {_stage.Timeout}."));
@@ -227,7 +227,7 @@ namespace Akka.Streams.Implementation
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -315,7 +315,7 @@ namespace Akka.Streams.Implementation
                 Pull(_stage.Inlet);
             }
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -394,7 +394,7 @@ namespace Akka.Streams.Implementation
 
                 SetHandler(_stage.Out2,
                     onPull: () => Pull(_stage.In2),
-                    onDownstreamFinish: () => Cancel(_stage.In2));
+                    onDownstreamFinish: cause => Cancel(_stage.In2, cause));
             }
 
             public void OnPush()
@@ -409,7 +409,7 @@ namespace Akka.Streams.Implementation
 
             public void OnPull() => Pull(_stage.In1);
 
-            public void OnDownstreamFinish() => Cancel(_stage.In1);
+            public void OnDownstreamFinish(Exception cause) => Cancel(_stage.In1, cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -514,7 +514,7 @@ namespace Akka.Streams.Implementation
                     Pull(_stage.Inlet);
             }
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -634,7 +634,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {

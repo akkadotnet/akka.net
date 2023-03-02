@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpConnected.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -165,12 +165,6 @@ namespace Akka.IO
         /// </summary>
         public sealed class Send : Command
         {
-            [Obsolete("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(ByteString, EndPoint, Event)` instead.")]
-            public Send(IEnumerator<ByteBuffer> payload, Event ack)
-                : this(ByteString.FromBuffers(payload), ack)
-            {
-            }
-
             /// <summary>
             /// Creates a new send request to be executed via UDP socket to a addressed to an endpoint known by the connected UDP actor.
             /// Once send completes, this request will acknowledged back on the sender side with an <paramref name="ack"/>

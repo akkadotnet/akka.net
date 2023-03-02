@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JournalProtocol.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -280,19 +280,6 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class WriteMessagesFailed : IJournalResponse, IEquatable<WriteMessagesFailed>
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="WriteMessagesFailed"/> class.
-        /// </summary>
-        /// <param name="cause">The cause of the failed <see cref="WriteMessages"/> request.</param>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
-        /// </exception>
-        [Obsolete("Deprecated since Akka 1.4.11, use the overloaded one which accepts the number of failed atomic writes instead.")]
-        public WriteMessagesFailed(Exception cause)
-        {
-            Cause = cause ?? throw new ArgumentNullException(nameof(cause), "WriteMessagesFailed cause exception cannot be null");
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="WriteMessagesFailed"/> class.
         /// </summary>

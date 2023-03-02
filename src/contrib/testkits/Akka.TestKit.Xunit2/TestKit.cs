@@ -1,16 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Xunit2.Internals;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.TestKit.Xunit2
@@ -19,15 +21,38 @@ namespace Akka.TestKit.Xunit2
     /// This class represents an Akka.NET TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
     /// as its testing framework.
     /// </summary>
-    public class TestKit : TestKitBase , IDisposable
+    public class TestKit : TestKitBase, IDisposable
     {
-        private bool _isDisposed; //Automatically initialized to false;
+        private class PrefixedOutput : ITestOutputHelper
+        {
+            private readonly ITestOutputHelper output;
+            private readonly string prefix;
+
+            public PrefixedOutput(ITestOutputHelper output, string prefix)
+            {
+                this.output = output;
+                this.prefix = prefix;
+            }
+
+            public void WriteLine(string message)
+            {
+                output.WriteLine(prefix + message);
+            }
+
+            public void WriteLine(string format, params object[] args)
+            {
+                output.WriteLine(prefix + format, args);
+            }
+        }
 
         /// <summary>
         /// The provider used to write test output.
         /// </summary>
         protected readonly ITestOutputHelper Output;
 
+        private bool _disposed;
+        private bool _disposing;
+        
         /// <summary>
         /// <para>
         /// Initializes a new instance of the <see cref="TestKit"/> class.
@@ -102,16 +127,9 @@ namespace Akka.TestKit.Xunit2
 
         /// <summary>
         /// This method is called when a test ends.
-        /// 
-        /// <remarks>
-        /// If you override this, then make sure you either call base.AfterTest() or
-        /// <see cref="TestKitBase.Shutdown(System.Nullable{System.TimeSpan},bool)">TestKitBase.Shutdown</see>
-        /// to shut down the system. Otherwise a memory leak will occur.
-        /// </remarks>
         /// </summary>
         protected virtual void AfterAll()
         {
-            Shutdown();
         }
 
         /// <summary>
@@ -124,17 +142,21 @@ namespace Akka.TestKit.Xunit2
             {
                 var extSystem = (ExtendedActorSystem)system;
                 var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
-                logger.Tell(new InitializeLogger(system.EventStream));
+                logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TimeSpan.FromSeconds(3))
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
 
-       
-        public void Dispose()
+        protected void InitializeLogger(ActorSystem system, string prefix)
         {
-            Dispose(true);
-            //Take this object off the finalization queue and prevent finalization code for this object
-            //from executing a second time.
-            GC.SuppressFinalize(this);
+            if (Output != null)
+            {
+                var extSystem = (ExtendedActorSystem)system;
+                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(
+                    string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))), "log-test");
+                logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TimeSpan.FromSeconds(3))
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+            }
         }
 
         /// <summary>
@@ -148,22 +170,24 @@ namespace Akka.TestKit.Xunit2
         /// </param>
         protected virtual void Dispose(bool disposing)
         {
-            // If disposing equals false, the method has been called by the
-            // runtime from inside the finalizer and you should not reference
-            // other objects. Only unmanaged resources can be disposed.
-
+            if (_disposing || _disposed)
+                return;
+            
+            _disposing = true;
             try
             {
-                //Make sure Dispose does not get called more than once, by checking the disposed field
-                if(!_isDisposed && disposing)
-                {
-                    AfterAll();
-                }
-                _isDisposed = true;
+                AfterAll();
             }
             finally
             {
+                Shutdown();
+                _disposed = true;
             }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
         }
     }
 }

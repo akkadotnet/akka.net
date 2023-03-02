@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnboundedPriorityMessageQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,16 +20,6 @@ namespace Akka.Dispatch.MessageQueues
         private readonly ListPriorityQueue _prioQueue;
         // doesn't need to be threadsafe - only called from within actor
         private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
-
-        /// <summary>
-        /// DEPRECATED. Use <see cref="UnboundedPriorityMessageQueue(Func{object,int}, int)"/> instead.
-        /// </summary>
-        /// <param name="initialCapacity">The initial capacity of the priority queue.</param>
-        [Obsolete("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initialCapacity) instead. [1.1.3]")]
-        public UnboundedPriorityMessageQueue(int initialCapacity) : this(ListPriorityQueue.DefaultPriorityCalculator, initialCapacity)
-        {
-
-        }
 
         /// <summary>
         /// Creates a new unbounded priority message queue.

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestEventListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ namespace Akka.TestKit
                 }
                 case Mute mute:
                 {
-                    foreach(var filter in mute.Filters)
+                    foreach (var filter in mute.Filters)
                     {
                         AddFilter(filter);
                     }
@@ -64,7 +64,7 @@ namespace Akka.TestKit
                 }
                 case LogEvent logEvent:
                 {
-                    if(!ShouldFilter(logEvent))
+                    if (!ShouldFilter(logEvent))
                     {
                         Print(logEvent);
                     }
@@ -78,9 +78,9 @@ namespace Akka.TestKit
                 case UnhandledMessage un:
                 {
                     var rcp = un.Recipient;
-                    var warning = new Warning(rcp.Path.ToString(), rcp.GetType(), "Unhandled message from " + un.Sender + ": " + un.Message);
-                    if(!ShouldFilter(warning))
-                        Print(warning);
+                    var info = new Info(rcp.Path.ToString(), rcp.GetType(), "Unhandled message from " + un.Sender + ": " + un.Message);
+                    if (!ShouldFilter(info))
+                        Print(info);
                     break;
                 }
                 
@@ -97,23 +97,19 @@ namespace Akka.TestKit
             var msg = message.Message;
             var rcp = message.Recipient;
             var snd = message.Sender;
-            if(!(msg is Terminate))
+            if (!(msg is Terminate))
             {
                 var recipientPath = rcp.Path.ToString();
                 var recipientType = rcp.GetType();
                 var warning = new Warning(recipientPath, recipientType, message);
-                if(!ShouldFilter(warning))
+                if (!ShouldFilter(warning))
                 {
                     var msgStr = (msg is ISystemMessage)
                         ? "Received dead system message: " + msg
                         : "Received dead letter from " + snd + ": " + msg;
-                    var warning2 = new Warning(recipientPath, recipientType, new DeadLetter(msgStr,snd,rcp));
-                    if(!ShouldFilter(warning2))
-                    {
-                        Print(warning2);
-                    }
+                    var warning2 = new Warning(recipientPath, recipientType, new DeadLetter(msgStr, snd, rcp));
+                    Print(warning2);
                 }
-
             }
         }
 
@@ -129,11 +125,11 @@ namespace Akka.TestKit
 
         private bool ShouldFilter(LogEvent message)
         {
-            foreach(var filter in _filters)
+            foreach (var filter in _filters)
             {
                 try
                 {
-                    if(filter.Apply(message))
+                    if (filter.Apply(message))
                         return true;
                 }
                 // ReSharper disable once EmptyGeneralCatchClause
@@ -141,8 +137,8 @@ namespace Akka.TestKit
                 {
                 }
             }
-            return false;
 
+            return false;
         }
     }
 }

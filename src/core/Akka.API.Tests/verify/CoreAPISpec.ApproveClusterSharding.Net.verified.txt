@@ -1,0 +1,468 @@
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests.MultiNode")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+[assembly: System.Runtime.InteropServices.GuidAttribute("a05c31e8-0246-46a1-b3bc-4d6fe7a9aa49")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
+namespace Akka.Cluster.Sharding
+{
+    public class ClusterSharding : Akka.Actor.IExtension
+    {
+        public ClusterSharding(Akka.Actor.ExtendedActorSystem system) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings Settings { get; }
+        public System.Collections.Immutable.ImmutableHashSet<string> ShardTypeNames { get; }
+        public static Akka.Configuration.Config DefaultConfig() { }
+        public Akka.Cluster.Sharding.IShardAllocationStrategy DefaultShardAllocationStrategy(Akka.Cluster.Sharding.ClusterShardingSettings settings) { }
+        public static Akka.Cluster.Sharding.ClusterSharding Get(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.IActorRef ShardRegion(string typeName) { }
+        public Akka.Actor.IActorRef ShardRegionProxy(string typeName) { }
+        public Akka.Actor.IActorRef Start(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        public Akka.Actor.IActorRef Start(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
+        public Akka.Actor.IActorRef Start(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        public Akka.Actor.IActorRef Start(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        public Akka.Actor.IActorRef Start(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        public Akka.Actor.IActorRef Start(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
+        public Akka.Actor.IActorRef Start(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        public Akka.Actor.IActorRef Start(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        public Akka.Actor.IActorRef StartProxy(string typeName, string role, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
+        public Akka.Actor.IActorRef StartProxy(string typeName, string role, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartProxyAsync(string typeName, string role, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartProxyAsync(string typeName, string role, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+    }
+    public class ClusterShardingExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.ClusterSharding>
+    {
+        public ClusterShardingExtensionProvider() { }
+        public override Akka.Cluster.Sharding.ClusterSharding CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public sealed class ClusterShardingSettings : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        public readonly Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings CoordinatorSingletonSettings;
+        public readonly string JournalPluginId;
+        public readonly Akka.Coordination.LeaseUsageSettings LeaseSettings;
+        public readonly System.TimeSpan PassivateIdleEntityAfter;
+        public readonly bool RememberEntities;
+        public readonly Akka.Cluster.Sharding.RememberEntitiesStore RememberEntitiesStore;
+        public readonly string Role;
+        public readonly System.TimeSpan ShardRegionQueryTimeout;
+        public readonly string SnapshotPluginId;
+        public readonly Akka.Cluster.Sharding.StateStoreMode StateStoreMode;
+        public readonly Akka.Cluster.Sharding.TuningParameters TuningParameters;
+        public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.TuningParameters tuningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings) { }
+        public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.TuningParameters tuningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
+        public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.RememberEntitiesStore rememberEntitiesStore, System.TimeSpan shardRegionQueryTimeout, Akka.Cluster.Sharding.TuningParameters tuningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
+        public static Akka.Cluster.Sharding.ClusterShardingSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.Cluster.Sharding.ClusterShardingSettings Create(Akka.Configuration.Config config, Akka.Configuration.Config singletonConfig) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithCoordinatorSingletonSettings(Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithJournalPluginId(string journalPluginId) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithLeaseSettings(Akka.Coordination.LeaseUsageSettings leaseSettings) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithPassivateIdleAfter(System.TimeSpan duration) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithRememberEntities(bool rememberEntities) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithRole(string role) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithSnapshotPluginId(string snapshotPluginId) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithStateStoreMode(Akka.Cluster.Sharding.StateStoreMode mode) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithTuningParameters(Akka.Cluster.Sharding.TuningParameters tuningParameters) { }
+    }
+    public sealed class ClusterShardingStats : Akka.Cluster.Sharding.IClusterShardingSerializable, System.IEquatable<Akka.Cluster.Sharding.ClusterShardingStats>
+    {
+        public readonly System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, Akka.Cluster.Sharding.ShardRegionStats> Regions;
+        public ClusterShardingStats(System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, Akka.Cluster.Sharding.ShardRegionStats> regions) { }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.Cluster.Sharding.ClusterShardingStats other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class CurrentRegions : Akka.Cluster.Sharding.IClusterShardingSerializable, System.IEquatable<Akka.Cluster.Sharding.CurrentRegions>
+    {
+        public readonly System.Collections.Immutable.IImmutableSet<Akka.Actor.Address> Regions;
+        public CurrentRegions(System.Collections.Immutable.IImmutableSet<Akka.Actor.Address> regions) { }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.Cluster.Sharding.CurrentRegions other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class CurrentShardRegionState : Akka.Cluster.Sharding.IClusterShardingSerializable, System.IEquatable<Akka.Cluster.Sharding.CurrentShardRegionState>
+    {
+        public readonly System.Collections.Immutable.IImmutableSet<string> Failed;
+        public readonly System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> Shards;
+        [System.ObsoleteAttribute("Use constructor with `failed` argument. Obsolete since 1.5.0-alpha1")]
+        public CurrentShardRegionState(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> shards) { }
+        public CurrentShardRegionState(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> shards, System.Collections.Immutable.IImmutableSet<string> failed) { }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.Cluster.Sharding.CurrentShardRegionState other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class EntityLocation
+    {
+        public EntityLocation(string entityId, string shardId, Akka.Actor.Address shardRegion, Akka.Util.Option<Akka.Actor.IActorRef> entityRef) { }
+        public string EntityId { get; }
+        public Akka.Util.Option<Akka.Actor.IActorRef> EntityRef { get; }
+        public string ShardId { get; }
+        public Akka.Actor.Address ShardRegion { get; }
+    }
+    public class static EnumerableExtensions
+    {
+        public static System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> Grouped<T>(this System.Collections.Generic.IEnumerable<T> items, int size) { }
+    }
+    public delegate Akka.Util.Option<System.ValueTuple<string, object>> ExtractEntityId(object message);
+    public delegate string ExtractShardId(object message);
+    public sealed class GetClusterShardingStats : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery, System.IEquatable<Akka.Cluster.Sharding.GetClusterShardingStats>
+    {
+        public readonly System.TimeSpan Timeout;
+        public GetClusterShardingStats(System.TimeSpan timeout) { }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.Cluster.Sharding.GetClusterShardingStats other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class GetCurrentRegions : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
+    {
+        public static readonly Akka.Cluster.Sharding.GetCurrentRegions Instance;
+        public override string ToString() { }
+    }
+    public sealed class GetEntityLocation : Akka.Cluster.Sharding.IShardRegionQuery
+    {
+        public GetEntityLocation(string entityId, System.TimeSpan timeout) { }
+        public string EntityId { get; }
+        public System.TimeSpan Timeout { get; }
+    }
+    public sealed class GetShardRegionState : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
+    {
+        public static readonly Akka.Cluster.Sharding.GetShardRegionState Instance;
+        public override string ToString() { }
+    }
+    public sealed class GetShardRegionStats : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
+    {
+        public static readonly Akka.Cluster.Sharding.GetShardRegionStats Instance;
+        public override string ToString() { }
+    }
+    public sealed class GracefulShutdown : Akka.Cluster.Sharding.IShardRegionCommand
+    {
+        public static readonly Akka.Cluster.Sharding.GracefulShutdown Instance;
+    }
+    public abstract class HashCodeMessageExtractor : Akka.Cluster.Sharding.IMessageExtractor
+    {
+        public readonly int MaxNumberOfShards;
+        protected HashCodeMessageExtractor(int maxNumberOfShards) { }
+        public static Akka.Cluster.Sharding.HashCodeMessageExtractor Create(int maxNumberOfShards, System.Func<object, string> entityIdExtractor, System.Func<object, object> messageExtractor = null) { }
+        public abstract string EntityId(object message);
+        public virtual object EntityMessage(object message) { }
+        public virtual string ShardId(object message) { }
+    }
+    public interface IActorSystemDependentAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded, Akka.Cluster.Sharding.IShardAllocationStrategy
+    {
+        void Start(Akka.Actor.ActorSystem system);
+    }
+    public interface IClusterShardingSerializable { }
+    public interface IMessageExtractor
+    {
+        string EntityId(object message);
+        object EntityMessage(object message);
+        string ShardId(object message);
+    }
+    public interface IShardAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        System.Threading.Tasks.Task<Akka.Actor.IActorRef> AllocateShard(Akka.Actor.IActorRef requester, string shardId, System.Collections.Immutable.IImmutableDictionary<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> currentShardAllocations);
+        System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableSet<string>> Rebalance(System.Collections.Immutable.IImmutableDictionary<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> currentShardAllocations, System.Collections.Immutable.IImmutableSet<string> rebalanceInProgress);
+    }
+    public interface IShardRegionCommand { }
+    public interface IShardRegionQuery { }
+    public interface IStartableAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded, Akka.Cluster.Sharding.IShardAllocationStrategy
+    {
+        void Start();
+    }
+    public class LeastShardAllocationStrategy : Akka.Cluster.Sharding.Internal.AbstractLeastShardAllocationStrategy
+    {
+        public LeastShardAllocationStrategy(int rebalanceThreshold, int maxSimultaneousRebalance) { }
+        public override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableSet<string>> Rebalance(System.Collections.Immutable.IImmutableDictionary<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> currentShardAllocations, System.Collections.Immutable.IImmutableSet<string> rebalanceInProgress) { }
+    }
+    public sealed class Passivate : Akka.Cluster.Sharding.IShardRegionCommand
+    {
+        public Passivate(object stopMessage) { }
+        public object StopMessage { get; }
+    }
+    public enum RememberEntitiesStore
+    {
+        DData = 0,
+        Eventsourced = 1,
+        Custom = 2,
+    }
+    public class static ShardAllocationStrategy
+    {
+        public static Akka.Cluster.Sharding.IShardAllocationStrategy LeastShardAllocationStrategy(int absoluteLimit, double relativeLimit) { }
+    }
+    public sealed class ShardRegion : Akka.Actor.ActorBase, Akka.Actor.IWithTimers
+    {
+        public ShardRegion(string typeName, System.Func<string, Akka.Actor.Props> entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, string coordinatorPath, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, object handOffStopMessage, Akka.Cluster.Sharding.Internal.IRememberEntitiesProvider rememberEntitiesProvider) { }
+        public Akka.Actor.ITimerScheduler Timers { get; set; }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        protected override bool Receive(object message) { }
+        public sealed class StartEntity : Akka.Cluster.Sharding.IClusterShardingSerializable, System.IEquatable<Akka.Cluster.Sharding.ShardRegion.StartEntity>
+        {
+            public readonly string EntityId;
+            public StartEntity(string entityId) { }
+            public override bool Equals(object obj) { }
+            public bool Equals(Akka.Cluster.Sharding.ShardRegion.StartEntity other) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+    }
+    public sealed class ShardRegionStats : Akka.Cluster.Sharding.IClusterShardingSerializable, System.IEquatable<Akka.Cluster.Sharding.ShardRegionStats>
+    {
+        public readonly System.Collections.Immutable.IImmutableSet<string> Failed;
+        public readonly System.Collections.Immutable.IImmutableDictionary<string, int> Stats;
+        [System.ObsoleteAttribute("Use constructor with `failed` argument. Obsolete since 1.5.0-alpha1")]
+        public ShardRegionStats(System.Collections.Immutable.IImmutableDictionary<string, int> stats) { }
+        public ShardRegionStats(System.Collections.Immutable.IImmutableDictionary<string, int> stats, System.Collections.Immutable.IImmutableSet<string> failed) { }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.Cluster.Sharding.ShardRegionStats other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class ShardState : Akka.Cluster.Sharding.IClusterShardingSerializable, System.IEquatable<Akka.Cluster.Sharding.ShardState>
+    {
+        public readonly System.Collections.Immutable.IImmutableSet<string> EntityIds;
+        public readonly string ShardId;
+        public ShardState(string shardId, System.Collections.Immutable.IImmutableSet<string> entityIds) { }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.Cluster.Sharding.ShardState other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    [Akka.Annotations.ApiMayChangeAttribute()]
+    [Akka.Annotations.DoNotInheritAttribute()]
+    public class ShardedDaemonProcess : Akka.Actor.IExtension
+    {
+        public ShardedDaemonProcess(Akka.Actor.ExtendedActorSystem system) { }
+        public static Akka.Cluster.Sharding.ShardedDaemonProcess Get(Akka.Actor.ActorSystem system) { }
+        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory) { }
+        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, object stopMessage) { }
+        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, Akka.Cluster.Sharding.ShardedDaemonProcessSettings settings, object stopMessage) { }
+    }
+    public class ShardedDaemonProcessExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.ShardedDaemonProcess>
+    {
+        public ShardedDaemonProcessExtensionProvider() { }
+        public override Akka.Cluster.Sharding.ShardedDaemonProcess CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    [Akka.Annotations.ApiMayChangeAttribute()]
+    public sealed class ShardedDaemonProcessSettings
+    {
+        public readonly System.TimeSpan KeepAliveInterval;
+        public readonly string Role;
+        public readonly Akka.Cluster.Sharding.ClusterShardingSettings ShardingSettings;
+        public static Akka.Cluster.Sharding.ShardedDaemonProcessSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.Cluster.Sharding.ShardedDaemonProcessSettings FromConfig(Akka.Configuration.Config config) { }
+        public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithKeepAliveInterval(System.TimeSpan keepAliveInterval) { }
+        public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithRole(string role) { }
+        public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithShardingSettings(Akka.Cluster.Sharding.ClusterShardingSettings shardingSettings) { }
+    }
+    public sealed class ShardingEnvelope : Akka.Actor.IWrappedMessage
+    {
+        public ShardingEnvelope(string entityId, object message) { }
+        public string EntityId { get; }
+        public object Message { get; }
+    }
+    public enum StateStoreMode
+    {
+        Persistence = 0,
+        DData = 1,
+        Custom = 2,
+    }
+    public class TuningParameters
+    {
+        public readonly int BufferSize;
+        public readonly System.TimeSpan CoordinatorFailureBackoff;
+        public readonly int CoordinatorStateReadMajorityPlus;
+        public readonly int CoordinatorStateWriteMajorityPlus;
+        public readonly System.TimeSpan EntityRecoveryConstantRateStrategyFrequency;
+        public readonly int EntityRecoveryConstantRateStrategyNumberOfEntities;
+        public readonly string EntityRecoveryStrategy;
+        public readonly System.TimeSpan EntityRestartBackoff;
+        public readonly System.TimeSpan HandOffTimeout;
+        public readonly int KeepNrOfBatches;
+        public readonly int LeastShardAllocationAbsoluteLimit;
+        public readonly int LeastShardAllocationMaxSimultaneousRebalance;
+        public readonly int LeastShardAllocationRebalanceThreshold;
+        public readonly double LeastShardAllocationRelativeLimit;
+        public readonly System.TimeSpan RebalanceInterval;
+        public readonly System.TimeSpan RetryInterval;
+        public readonly System.TimeSpan ShardFailureBackoff;
+        public readonly System.TimeSpan ShardStartTimeout;
+        public readonly int SnapshotAfter;
+        public readonly System.TimeSpan UpdatingStateTimeout;
+        public readonly System.TimeSpan WaitingForStateTimeout;
+        public TuningParameters(
+                    System.TimeSpan coordinatorFailureBackoff, 
+                    System.TimeSpan retryInterval, 
+                    int bufferSize, 
+                    System.TimeSpan handOffTimeout, 
+                    System.TimeSpan shardStartTimeout, 
+                    System.TimeSpan shardFailureBackoff, 
+                    System.TimeSpan entityRestartBackoff, 
+                    System.TimeSpan rebalanceInterval, 
+                    int snapshotAfter, 
+                    int keepNrOfBatches, 
+                    int leastShardAllocationRebalanceThreshold, 
+                    int leastShardAllocationMaxSimultaneousRebalance, 
+                    System.TimeSpan waitingForStateTimeout, 
+                    System.TimeSpan updatingStateTimeout, 
+                    string entityRecoveryStrategy, 
+                    System.TimeSpan entityRecoveryConstantRateStrategyFrequency, 
+                    int entityRecoveryConstantRateStrategyNumberOfEntities, 
+                    int coordinatorStateWriteMajorityPlus, 
+                    int coordinatorStateReadMajorityPlus, 
+                    int leastShardAllocationAbsoluteLimit, 
+                    double leastShardAllocationRelativeLimit) { }
+        public Akka.Cluster.Sharding.TuningParameters WithBufferSize(int bufferSize) { }
+        public Akka.Cluster.Sharding.TuningParameters WithCoordinatorFailureBackoff(System.TimeSpan coordinatorFailureBackoff) { }
+        public Akka.Cluster.Sharding.TuningParameters WithCoordinatorStateReadMajorityPlus(int coordinatorStateReadMajorityPlus) { }
+        public Akka.Cluster.Sharding.TuningParameters WithCoordinatorStateWriteMajorityPlus(int coordinatorStateWriteMajorityPlus) { }
+        public Akka.Cluster.Sharding.TuningParameters WithEntityRecoveryConstantRateStrategyFrequency(System.TimeSpan entityRecoveryConstantRateStrategyFrequency) { }
+        public Akka.Cluster.Sharding.TuningParameters WithEntityRecoveryConstantRateStrategyNumberOfEntities(int entityRecoveryConstantRateStrategyNumberOfEntities) { }
+        public Akka.Cluster.Sharding.TuningParameters WithEntityRecoveryStrategy(string entityRecoveryStrategy) { }
+        public Akka.Cluster.Sharding.TuningParameters WithEntityRestartBackoff(System.TimeSpan entityRestartBackoff) { }
+        public Akka.Cluster.Sharding.TuningParameters WithHandOffTimeout(System.TimeSpan handOffTimeout) { }
+        public Akka.Cluster.Sharding.TuningParameters WithKeepNrOfBatches(int keepNrOfBatches) { }
+        public Akka.Cluster.Sharding.TuningParameters WithLeastShardAllocationAbsoluteLimit(int leastShardAllocationAbsoluteLimit) { }
+        public Akka.Cluster.Sharding.TuningParameters WithLeastShardAllocationMaxSimultaneousRebalance(int leastShardAllocationMaxSimultaneousRebalance) { }
+        public Akka.Cluster.Sharding.TuningParameters WithLeastShardAllocationRebalanceThreshold(int leastShardAllocationRebalanceThreshold) { }
+        public Akka.Cluster.Sharding.TuningParameters WithLeastShardAllocationRelativeLimit(double leastShardAllocationRelativeLimit) { }
+        public Akka.Cluster.Sharding.TuningParameters WithRebalanceInterval(System.TimeSpan rebalanceInterval) { }
+        public Akka.Cluster.Sharding.TuningParameters WithRetryInterval(System.TimeSpan retryInterval) { }
+        public Akka.Cluster.Sharding.TuningParameters WithShardFailureBackoff(System.TimeSpan shardFailureBackoff) { }
+        public Akka.Cluster.Sharding.TuningParameters WithShardStartTimeout(System.TimeSpan shardStartTimeout) { }
+        public Akka.Cluster.Sharding.TuningParameters WithSnapshotAfter(int snapshotAfter) { }
+        public Akka.Cluster.Sharding.TuningParameters WithUpdatingStateTimeout(System.TimeSpan updatingStateTimeout) { }
+        public Akka.Cluster.Sharding.TuningParameters WithWaitingForStateTimeout(System.TimeSpan waitingForStateTimeout) { }
+    }
+}
+namespace Akka.Cluster.Sharding.External
+{
+    public class ClientTimeoutException : System.Exception
+    {
+        public ClientTimeoutException(string message) { }
+        public ClientTimeoutException(string message, System.Exception innerEx) { }
+        protected ClientTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public sealed class ExternalShardAllocation : Akka.Actor.IExtension
+    {
+        public ExternalShardAllocation(Akka.Actor.ExtendedActorSystem system) { }
+        public Akka.Cluster.Sharding.External.IExternalShardAllocationClient ClientFor(string typeName) { }
+        public static Akka.Cluster.Sharding.External.ExternalShardAllocation Get(Akka.Actor.ActorSystem system) { }
+    }
+    public class ExternalShardAllocationExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.External.ExternalShardAllocation>
+    {
+        public ExternalShardAllocationExtensionProvider() { }
+        public override Akka.Cluster.Sharding.External.ExternalShardAllocation CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public class ExternalShardAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded, Akka.Cluster.Sharding.IShardAllocationStrategy, Akka.Cluster.Sharding.IStartableAllocationStrategy
+    {
+        public ExternalShardAllocationStrategy(Akka.Actor.ActorSystem system, string typeName) { }
+        protected virtual System.TimeSpan Timeout { get; }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> AllocateShard(Akka.Actor.IActorRef requester, string shardId, System.Collections.Immutable.IImmutableDictionary<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> currentShardAllocations) { }
+        protected virtual Akka.Actor.IActorRef CreateShardStateActor() { }
+        public System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableSet<string>> Rebalance(System.Collections.Immutable.IImmutableDictionary<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> currentShardAllocations, System.Collections.Immutable.IImmutableSet<string> rebalanceInProgress) { }
+        public void Start() { }
+        public sealed class GetShardLocation : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocation>
+        {
+            public GetShardLocation(string shard) { }
+            public string Shard { get; }
+            public override bool Equals(object obj) { }
+            public bool Equals(Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocation other) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class GetShardLocationResponse : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocationResponse>
+        {
+            public GetShardLocationResponse(Akka.Actor.Address address) { }
+            public Akka.Actor.Address Address { get; }
+            public override bool Equals(object obj) { }
+            public bool Equals(Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocationResponse other) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class GetShardLocations : Akka.Actor.INoSerializationVerificationNeeded
+        {
+            public static readonly Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocations Instance;
+            public override string ToString() { }
+        }
+        public sealed class GetShardLocationsResponse : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocationsResponse>
+        {
+            public GetShardLocationsResponse(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Address> desiredAllocations) { }
+            public System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Address> DesiredAllocations { get; }
+            public override bool Equals(object obj) { }
+            public bool Equals(Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocationsResponse other) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class ShardLocation : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.ShardLocation>
+        {
+            public ShardLocation(Akka.Actor.Address address) { }
+            public Akka.Actor.Address Address { get; }
+            public override bool Equals(object obj) { }
+            public bool Equals(Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.ShardLocation other) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+    }
+    public interface IExternalShardAllocationClient
+    {
+        System.Threading.Tasks.Task<Akka.Cluster.Sharding.External.ShardLocations> ShardLocations();
+        System.Threading.Tasks.Task<Akka.Done> UpdateShardLocation(string shard, Akka.Actor.Address location);
+        System.Threading.Tasks.Task<Akka.Done> UpdateShardLocations(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Address> locations);
+    }
+    public sealed class ShardLocations
+    {
+        public ShardLocations(System.Collections.Immutable.IImmutableDictionary<string, Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.ShardLocation> locations) { }
+        public System.Collections.Immutable.IImmutableDictionary<string, Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.ShardLocation> Locations { get; }
+    }
+}
+namespace Akka.Cluster.Sharding.Internal
+{
+    public abstract class AbstractLeastShardAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded, Akka.Cluster.Sharding.IActorSystemDependentAllocationStrategy, Akka.Cluster.Sharding.IShardAllocationStrategy
+    {
+        protected AbstractLeastShardAllocationStrategy() { }
+        protected virtual Akka.Cluster.ClusterEvent.CurrentClusterState ClusterState { get; }
+        protected virtual Akka.Cluster.Member SelfMember { get; }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> AllocateShard(Akka.Actor.IActorRef requester, string shardId, System.Collections.Immutable.IImmutableDictionary<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> currentShardAllocations) { }
+        protected bool IsAGoodTimeToRebalance(System.Collections.Generic.IEnumerable<Akka.Cluster.Sharding.Internal.AbstractLeastShardAllocationStrategy.RegionEntry> regionEntries) { }
+        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
+                "Region",
+                "Shards"})]
+        protected System.ValueTuple<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> MostSuitableRegion(System.Collections.Generic.IEnumerable<Akka.Cluster.Sharding.Internal.AbstractLeastShardAllocationStrategy.RegionEntry> regionEntries) { }
+        public abstract System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableSet<string>> Rebalance(System.Collections.Immutable.IImmutableDictionary<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> currentShardAllocations, System.Collections.Immutable.IImmutableSet<string> rebalanceInProgress);
+        protected System.Collections.Immutable.ImmutableList<Akka.Cluster.Sharding.Internal.AbstractLeastShardAllocationStrategy.RegionEntry> RegionEntriesFor(System.Collections.Immutable.IImmutableDictionary<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> currentShardAllocations) { }
+        public void Start(Akka.Actor.ActorSystem system) { }
+        public sealed class RegionEntry
+        {
+            public RegionEntry(Akka.Actor.IActorRef region, Akka.Cluster.Member member, System.Collections.Immutable.IImmutableList<string> shardIds) { }
+            public Akka.Cluster.Member Member { get; }
+            public Akka.Actor.IActorRef Region { get; }
+            public System.Collections.Immutable.IImmutableList<string> ShardIds { get; }
+        }
+    }
+    public interface IRememberEntitiesProvider
+    {
+        Akka.Actor.Props CoordinatorStoreProps();
+        Akka.Actor.Props ShardStoreProps(string shardId);
+    }
+}
+namespace Akka.Cluster.Sharding.Serialization
+{
+    public class ClusterShardingMessageSerializer : Akka.Serialization.SerializerWithStringManifest
+    {
+        public ClusterShardingMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object o) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+}

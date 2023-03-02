@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Persistent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -122,8 +122,11 @@ namespace Akka.Persistence
                 throw new ArgumentException("Payload of AtomicWrite must not be empty.", nameof(payload));
 
             var firstMessage = payload[0];
-            if (payload.Count > 1 && !payload.Skip(1).All(m => m.PersistenceId.Equals(firstMessage.PersistenceId)))
-                throw new ArgumentException($"AtomicWrite must contain messages for the same persistenceId, yet difference persistenceIds found: {payload.Select(m => m.PersistenceId).Distinct()}.", nameof(payload));
+            for (var i = 1; i < payload.Count; i++)
+            {
+                if (!payload[i].PersistenceId.Equals(firstMessage.PersistenceId))
+                    throw new ArgumentException($"AtomicWrite must contain messages for the same persistenceId, yet difference persistenceIds found: {payload.Select(m => m.PersistenceId).Distinct()}.", nameof(payload));
+            }
 
             Payload = payload;
             Sender = ActorRefs.NoSender;

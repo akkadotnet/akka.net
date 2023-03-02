@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RoutedActorCell.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -164,14 +164,14 @@ namespace Akka.Routing
             {
                 // must not use group.paths(system) for old (not re-compiled) custom routers
                 // for binary backwards compatibility reasons
-                var deprecatedPaths = group.Paths;
+                var deprecatedPaths = group.GetPaths(System);
 
                 var paths = deprecatedPaths == null
                         ? group.GetPaths(System)?.ToArray()
                         : deprecatedPaths.ToArray();
 
                 if (paths.NonEmpty())
-                    AddRoutees(paths.Select(p => group.RouteeFor(p, this)).ToList());
+                    AddRoutees(paths!.Select(p => group.RouteeFor(p, this)).ToList());
             }
 
             PreSuperStart();

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowAskSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,9 +13,9 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -243,19 +243,18 @@ namespace Akka.Streams.Tests.Dsl
                 .Should().BeOfType<AskTimeoutException>();
         }, _materializer);
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [Fact]
         public void Flow_with_ask_must_signal_ask_failure() => this.AssertAllStagesStopped(() =>
         {
             var failsOn = ReplierFailOn(1);
             var c = this.CreateManualSubscriberProbe<Reply>();
 
             var p = Source.From(Enumerable.Range(1, 5))
-                .Ask<Reply>(failsOn, _timeout, 4)
+                .Ask<Reply>(failsOn, _timeout, 1)
                 .RunWith(Sink.FromSubscriber(c), _materializer);
 
-            c.ExpectSubscription().Request(10);
-            var error = c.ExpectError().As<AggregateException>();
-            error.Flatten().InnerException.Message.Should().Be("Booming for 1!");
+            var error = (AggregateException) c.ExpectSubscriptionAndError();
+            error.InnerException.Message.Should().Be("Booming for 1!");
         }, _materializer);
 
         [Fact]

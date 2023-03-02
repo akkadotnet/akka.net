@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Futures.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -126,7 +126,7 @@ namespace Akka.Actor
             var result = TaskEx.NonBlockingTaskCompletionSource<T>();
 
             CancellationTokenSource timeoutCancellation = null;
-            timeout = timeout ?? provider.Settings.AskTimeout;
+            timeout ??= provider.Settings.AskTimeout;
 
             CancellationTokenRegistration? ctr1 = null;
             CancellationTokenRegistration? ctr2 = null;
@@ -164,7 +164,7 @@ namespace Akka.Actor
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
             var message = messageFactory(future);
-            self.Tell(message, future);
+            future.DeliverAsk(message, self);
 
             return result.Task;
         }
@@ -176,16 +176,21 @@ namespace Akka.Actor
         /// <returns>Provider used for Ask pattern implementation</returns>
         internal static IActorRefProvider ResolveProvider(ICanTell self)
         {
-            if (self is ActorSelection selection)
-                return ResolveProvider(selection.Anchor);
+            while (true)
+            {
+                switch (self)
+                {
+                    case ActorSelection selection:
+                        self = selection.Anchor;
+                        continue;
+                    case IInternalActorRef actorRef:
+                        return actorRef.Provider;
+                }
 
-            if (self is IInternalActorRef actorRef)
-                return actorRef.Provider;
+                if (ActorCell.Current is { } cell) return cell.SystemImpl.Provider;
 
-            if (ActorCell.Current is ActorCell cell)
-                return cell.SystemImpl.Provider;
-
-            return null;
+                return null;
+            }
         }
     }
 
@@ -198,7 +203,7 @@ namespace Akka.Actor
     internal sealed class PromiseActorRef : MinimalActorRef
     {
         /// <summary>
-        /// Can't access constructor directly - use <see cref="Apply"/> instead.
+        /// Can't access constructor directly - use PromiseActorRef.Apply instead.
         /// </summary>
         private PromiseActorRef(IActorRefProvider provider, TaskCompletionSource<object> promise, string mcn)
         {
@@ -244,12 +249,11 @@ namespace Akka.Actor
         {
             private Registering() { }
             // ReSharper disable once InconsistentNaming
-            private static readonly Registering _instance = new Registering();
 
             /// <summary>
             /// TBD
             /// </summary>
-            public static Registering Instance { get { return _instance; } }
+            public static Registering Instance { get; } = new Registering();
         }
 
         /// <summary>
@@ -259,12 +263,11 @@ namespace Akka.Actor
         {
             private Stopped() { }
             // ReSharper disable once InconsistentNaming
-            private static readonly Stopped _instance = new Stopped();
 
             /// <summary>
-            /// TBD
+            /// Singleton instance.
             /// </summary>
-            public static Stopped Instance { get { return _instance; } }
+            public static Stopped Instance { get; } = new Stopped();
         }
 
         /// <summary>
@@ -284,7 +287,7 @@ namespace Akka.Actor
             /// <summary>
             /// TBD
             /// </summary>
-            public ActorPath Path { get; private set; }
+            public ActorPath Path { get; }
 
             #region Equality
 
@@ -301,7 +304,7 @@ namespace Akka.Actor
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is StoppedWithPath && Equals((StoppedWithPath)obj);
+                return obj is StoppedWithPath path && Equals(path);
             }
 
             /// <inheritdoc/>
@@ -326,6 +329,46 @@ namespace Akka.Actor
         /// Creates a new <see cref="PromiseActorRef"/>
         /// </summary>
         /// <param name="provider">The current actor ref provider.</param>
+        /// <param name="messageClassName">The name of the message class.</param>
+        /// <param name="cancellationToken">An external cancellation token.</param>
+        /// <returns>A new <see cref="PromiseActorRef"/></returns>
+        /// <remarks>
+        /// API is used by WatchAsync.
+        /// </remarks>
+        public static PromiseActorRef Apply(IActorRefProvider provider,
+            string messageClassName, CancellationToken cancellationToken = default)
+        {
+            var result = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var a = new PromiseActorRef(provider, result, messageClassName);
+
+            if (cancellationToken != default)
+            {
+                cancellationToken.Register(CancelAction, result);
+            }
+            
+            async Task ExecPromise()
+            {
+                try
+                {
+                    await result.Task;
+                }
+                finally
+                {
+                    a.Stop();
+                }
+            }
+
+#pragma warning disable CS4014
+            ExecPromise(); // need this to run as a detached task
+#pragma warning restore CS4014
+
+            return a;
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="PromiseActorRef"/>
+        /// </summary>
+        /// <param name="provider">The current actor ref provider.</param>
         /// <param name="timeout">The timeout on the promise.</param>
         /// <param name="targetName">The target of the object / actor</param>
         /// <param name="messageClassName">The name of the message class.</param>
@@ -334,31 +377,39 @@ namespace Akka.Actor
         public static PromiseActorRef Apply(IActorRefProvider provider, TimeSpan timeout, object targetName,
             string messageClassName, IActorRef sender = null)
         {
-            sender = sender ?? ActorRefs.NoSender;
-            var result = new TaskCompletionSource<object>();
-            var a = new PromiseActorRef(provider, result, messageClassName);
-            var cancellationSource = new CancellationTokenSource();
-            cancellationSource.Token.Register(CancelAction, result);
-            cancellationSource.CancelAfter(timeout);
+            CancellationTokenSource cancellationSource = default;
 
-            //var scheduler = provider.Guardian.Underlying.System.Scheduler.Advanced;
-            //var c = new Cancelable(scheduler, timeout);
-            //scheduler.ScheduleOnce(timeout, () => result.TrySetResult(new Status.Failure(new AskTimeoutException(
-            //    string.Format("Ask timed out on [{0}] after [{1} ms]. Sender[{2}] sent message of type {3}.", targetName, timeout.TotalMilliseconds, sender, messageClassName)))),
-            //    c);
-
-            result.Task.ContinueWith(r =>
+            if (timeout != TimeSpan.Zero)
             {
-                a.Stop();
-            }, TaskContinuationOptions.ExecuteSynchronously);
+                // avoid CTS + delegate allocation if timeouts aren't needed
+                cancellationSource = new CancellationTokenSource();
+                cancellationSource.CancelAfter(timeout);
+            }
 
-            return a;
+            var p = Apply(provider, messageClassName, cancellationSource?.Token ?? default);
+            
+            // need to dispose CTS afterwards
+            async Task ExecPromise()
+            {
+                try
+                {
+                    await p._promise.Task;
+                }
+                finally
+                {
+                    cancellationSource?.Dispose();
+                }
+            }
+
+#pragma warning disable CS4014
+            ExecPromise();
+#pragma warning restore CS4014
+
+            return p;
         }
 
         #endregion
-
-        //TODO: ActorCell.emptyActorRefSet ?
-        // Aaronontheweb: using the ImmutableHashSet.Empty for now
+        
         private readonly AtomicReference<ImmutableHashSet<IActorRef>> _watchedByDoNotCallMeDirectly = new AtomicReference<ImmutableHashSet<IActorRef>>(ImmutableHashSet<IActorRef>.Empty);
 
         private ImmutableHashSet<IActorRef> WatchedBy
@@ -390,19 +441,26 @@ namespace Akka.Actor
 
         private void RemoveWatcher(IActorRef watcher)
         {
-            if (!WatchedBy.Contains(watcher))
+            while (true)
             {
-                return;
+                if (!WatchedBy.Contains(watcher))
+                {
+                    return;
+                }
+
+                if (!UpdateWatchedBy(WatchedBy, WatchedBy.Remove(watcher))) continue;
+                break;
             }
-            if (!UpdateWatchedBy(WatchedBy, WatchedBy.Remove(watcher))) RemoveWatcher(watcher);
         }
 
         private ImmutableHashSet<IActorRef> ClearWatchers()
         {
-            //TODO: ActorCell.emptyActorRefSet ?
-            if (WatchedBy == null || WatchedBy.IsEmpty) return ImmutableHashSet<IActorRef>.Empty;
-            if (!UpdateWatchedBy(WatchedBy, null)) return ClearWatchers();
-            else return WatchedBy;
+            while (true)
+            {
+                if (WatchedBy == null || WatchedBy.IsEmpty) return ImmutableHashSet<IActorRef>.Empty;
+                if (!UpdateWatchedBy(WatchedBy, null)) continue;
+                return WatchedBy;
+            }
         }
 
         private object State
@@ -438,9 +496,9 @@ namespace Akka.Actor
         {
             while (true)
             {
-                if (State == null)
+                switch (State)
                 {
-                    if (UpdateState(null, Registering.Instance))
+                    case null when UpdateState(null, Registering.Instance):
                     {
                         ActorPath p = null;
                         try
@@ -454,28 +512,26 @@ namespace Akka.Actor
                             State = p;
                         }
                     }
-                    continue;
+                    case null:
+                        continue;
+                    case ActorPath _:
+                        return State as ActorPath;
+                    case StoppedWithPath stoppedWithPath:
+                        return stoppedWithPath.Path;
+                    case Stopped _:
+                        //even if we are already stopped we still need to produce a proper path
+                        UpdateState(Stopped.Instance, new StoppedWithPath(Provider.TempPath()));
+                        continue;
+                    case Registering _:
+                        continue;
                 }
-
-                if (State is ActorPath)
-                    return State as ActorPath;
-                if (State is StoppedWithPath)
-                    return State.AsInstanceOf<StoppedWithPath>().Path;
-                if (State is Stopped)
-                {
-                    //even if we are already stopped we still need to produce a proper path
-                    UpdateState(Stopped.Instance, new StoppedWithPath(Provider.TempPath()));
-                    continue;
-                }
-                if (State is Registering)
-                    continue;
             }
         }
 
         /// <inheritdoc cref="ActorRefBase.TellInternal">InternalActorRefBase.TellInternal</inheritdoc>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (State is Stopped || State is StoppedWithPath) Provider.DeadLetters.Tell(message);
+            if (State is Stopped or StoppedWithPath) Provider.DeadLetters.Tell(message);
             else
             {
                 if (message == null) throw new InvalidMessageException("Message is null");
@@ -493,35 +549,39 @@ namespace Akka.Actor
         /// <inheritdoc cref="InternalActorRefBase.SendSystemMessage(ISystemMessage)"/>
         public override void SendSystemMessage(ISystemMessage message)
         {
-            if (message is Terminate) Stop();
-            else if (message is DeathWatchNotification)
+            switch (message)
             {
-                var dw = message as DeathWatchNotification;
-                Tell(new Terminated(dw.Actor, dw.ExistenceConfirmed, dw.AddressTerminated), this);
-            }
-            else if (message is Watch)
-            {
-                var watch = message as Watch;
-                if (Equals(watch.Watchee, this))
+                case Terminate _:
+                    Stop();
+                    break;
+                case DeathWatchNotification dw:
+                    Tell(new Terminated(dw.Actor, dw.ExistenceConfirmed, dw.AddressTerminated), this);
+                    break;
+                case Watch watch:
                 {
-                    if (!AddWatcher(watch.Watcher))
+                    if (Equals(watch.Watchee, this))
                     {
-                        // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
-                        watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, existenceConfirmed: true,
-                            addressTerminated: false));
+                        if (!AddWatcher(watch.Watcher))
+                        {
+                            // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
+                            watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, existenceConfirmed: true,
+                                addressTerminated: false));
+                        }
+                        else
+                        {
+                            //TODO: find a way to get access to logger?
+                            Console.WriteLine("BUG: illegal Watch({0},{1}) for {2}", watch.Watchee, watch.Watcher, this);
+                        }
                     }
-                    else
-                    {
-                        //TODO: find a way to get access to logger?
-                        Console.WriteLine("BUG: illegal Watch({0},{1}) for {2}", watch.Watchee, watch.Watcher, this);
-                    }
+
+                    break;
                 }
-            }
-            else if (message is Unwatch)
-            {
-                var unwatch = message as Unwatch;
-                if (Equals(unwatch.Watchee, this) && !Equals(unwatch.Watcher, this)) RemoveWatcher(unwatch.Watcher);
-                else Console.WriteLine("BUG: illegal Unwatch({0},{1}) for {2}", unwatch.Watchee, unwatch.Watcher, this);
+                case Unwatch unwatch when Equals(unwatch.Watchee, this) && !Equals(unwatch.Watcher, this):
+                    RemoveWatcher(unwatch.Watcher);
+                    break;
+                case Unwatch unwatch:
+                    Console.WriteLine("BUG: illegal Unwatch({0},{1}) for {2}", unwatch.Watchee, unwatch.Watcher, this);
+                    break;
             }
         }
 
@@ -539,9 +599,8 @@ namespace Akka.Actor
                     if (UpdateState(null, Stopped.Instance)) StopEnsureCompleted();
                     else continue;
                 }
-                else if (state is ActorPath)
+                else if (state is ActorPath p)
                 {
-                    var p = state as ActorPath;
                     if (UpdateState(p, new StoppedWithPath(p)))
                     {
                         try
@@ -558,7 +617,7 @@ namespace Akka.Actor
                         continue;
                     }
                 }
-                else if (state is Stopped || state is StoppedWithPath)
+                else if (state is Stopped or StoppedWithPath)
                 {
                     //already stopped
                 }

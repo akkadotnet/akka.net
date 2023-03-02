@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StressSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
@@ -28,7 +29,6 @@ using Akka.Util;
 using FluentAssertions;
 using Google.Protobuf.WellKnownTypes;
 using Environment = System.Environment;
-using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -458,7 +458,7 @@ akka.remote.default-remote-dispatcher {
                             _log.Warning("Detected phi value of infinity for [{0}] - ", node);
                             var (history, time) = _cluster.FailureDetector.GetFailureDetector(node) switch
                             {
-                                PhiAccrualFailureDetector fd => (fd.state.History, fd.state.TimeStamp),
+                                PhiAccrualFailureDetector fd => (fd.State.History, fd.State.TimeStamp),
                                 _ => (HeartbeatHistory.Apply(1), null)
                             };
                             _log.Warning("PhiValues: (Timestamp={0}, Mean={1}, Variance={2}, StdDeviation={3}, Intervals=[{4}])",time, 
@@ -813,7 +813,7 @@ akka.remote.default-remote-dispatcher {
         {
             Sys.ActorSelection(new RootActorPath(GetAddress(Roles.First())) / "user" / ("result" + Step))
                 .Tell(new Identify(Step), IdentifyProbe.Ref);
-            return new Option<IActorRef>(IdentifyProbe.ExpectMsg<ActorIdentity>().Subject);
+            return Option<IActorRef>.Create(IdentifyProbe.ExpectMsg<ActorIdentity>().Subject);
         }
 
         public void CreateResultAggregator(string title, int expectedResults, bool includeInHistory)
@@ -826,7 +826,7 @@ akka.remote.default-remote-dispatcher {
 
                     if (includeInHistory && Settings.Infolog)
                     {
-                        aggregator.Tell(new ReportTo(new Option<IActorRef>(ClusterResultHistory.Value)));
+                        aggregator.Tell(new ReportTo(Option<IActorRef>.Create(ClusterResultHistory.Value)));
                     }
                     else
                     {
@@ -1180,7 +1180,7 @@ akka.remote.default-remote-dispatcher {
                             var sys = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
                             MuteLog(sys);
                             Akka.Cluster.Cluster.Get(sys).JoinSeedNodes(SeedNodes.Select(x => GetAddress(x)));
-                            nextAs = new Option<ActorSystem>(sys);
+                            nextAs = Option<ActorSystem>.Create(sys);
                         }
                         else
                         {

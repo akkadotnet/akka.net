@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLetterSuspensionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -80,38 +81,38 @@ namespace Akka.Tests.Actor
 
 
         [Fact]
-        public void Must_suspend_dead_letters_logging_when_reaching_akka_log_dead_letters_and_then_re_enable()
+        public async Task Must_suspend_dead_letters_logging_when_reaching_akka_log_dead_letters_and_then_re_enable()
         {
-            EventFilter
+            await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(1))
-                .Expect(1, () => _deadActor.Tell(1));
+                .ExpectAsync(1, async () => _deadActor.Tell(1));
 
-            EventFilter
+            await EventFilter
                 .Info(start: ExpectedDroppedLogMessage(2))
-                .Expect(1, () => _droppingActor.Tell(2));
+                .ExpectAsync(1, async () => _droppingActor.Tell(2));
 
-            EventFilter
+            await EventFilter
                 .Info(start: ExpectedUnhandledLogMessage(3))
-                .Expect(1, () => _unhandledActor.Tell(3));
+                .ExpectAsync(1, async () => _unhandledActor.Tell(3));
 
-            EventFilter
+            await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(4) + ", no more dead letters will be logged in next")
-                .Expect(1, () => _deadActor.Tell(4));
+                .ExpectAsync(1, async () => _deadActor.Tell(4));
             _deadActor.Tell(5);
             _droppingActor.Tell(6);
 
             // let suspend-duration elapse
-            Thread.Sleep(2050);
+            await Task.Delay(2050);
 
             // re-enabled
-            EventFilter
+            await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(7) + ", of which 2 were not logged")
-                .Expect(1, () => _deadActor.Tell(7));
+                .ExpectAsync(1, async () => _deadActor.Tell(7));
 
             // reset count
-            EventFilter
+            await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(1))
-                .Expect(1, () => _deadActor.Tell(8));
+                .ExpectAsync(1, async () => _deadActor.Tell(8));
         }
     }
 }

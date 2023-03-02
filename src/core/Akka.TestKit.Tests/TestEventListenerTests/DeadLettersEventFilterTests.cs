@@ -1,22 +1,23 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLettersEventFilterTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit.TestActors;
 using Xunit;
 
-namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
+namespace Akka.TestKit.Tests.TestEventListenerTests
 {
     public abstract class DeadLettersEventFilterTestsBase : EventFilterTestBase
     {
         private readonly IActorRef _deadActor;
 
-        // ReSharper disable ConvertToLambdaExpression
         protected DeadLettersEventFilterTestsBase() : base("akka.loglevel=ERROR")
         {
             _deadActor = Sys.ActorOf(BlackHoleActor.Props, "dead-actor");
@@ -33,17 +34,34 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         protected abstract EventFilterFactory CreateTestingEventFilter();
 
         [Fact]
-        public void Should_be_able_to_filter_dead_letters()
+        public async Task Should_be_able_to_filter_dead_letters()
         {
             var eventFilter = CreateTestingEventFilter();
-            eventFilter.DeadLetter().ExpectOne(() =>
+            await eventFilter.DeadLetter().ExpectOneAsync(async () =>
             {
                 _deadActor.Tell("whatever");
             });
         }
+        
+        [Fact]
+        public async Task Should_check_properly_type_parameters()
+        {
+            await EventFilter.DeadLetter<int>().And.DeadLetter<double>().ExpectAsync(2, async () =>
+            {
+                _deadActor.Tell(5);
+                _deadActor.Tell(1.2);
+            });
+        }
 
-
-        // ReSharper restore ConvertToLambdaExpression
+        [Fact]
+        public async Task Should_check_properly_type_parameters_when_one_of_them_string()
+        {
+            await EventFilter.DeadLetter<string>().And.DeadLetter<double>().ExpectAsync(2, async () =>
+            {
+                _deadActor.Tell("asd");
+                _deadActor.Tell(1.2);
+            });
+        }
     }
 
     public class DeadLettersEventFilterTests : DeadLettersEventFilterTestsBase

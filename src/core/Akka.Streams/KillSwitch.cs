@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="KillSwitch.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -254,7 +254,7 @@ namespace Akka.Streams
 
                     SetHandler(killSwitch.Out2,
                         onPull: () => Pull(killSwitch.In2),
-                        onDownstreamFinish: () => Cancel(killSwitch.In2));
+                        onDownstreamFinish: cause => Cancel(killSwitch.In2, cause));
                 }
 
                 public override void OnPush() => Push(_killSwitch.Out1, Grab(_killSwitch.In1));
@@ -265,7 +265,7 @@ namespace Akka.Streams
 
                 public override void OnPull() => Pull(_killSwitch.In1);
 
-                public override void OnDownstreamFinish() => Cancel(_killSwitch.In1);
+                public override void OnDownstreamFinish(Exception cause) => Cancel(_killSwitch.In1, cause);
             }
 
             #endregion

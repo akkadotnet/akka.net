@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMessageSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,15 +15,35 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using Akka.Util;
+using Akka.Util.Internal;
 using Google.Protobuf;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests.Serialization
 {
-    public class ClusterMessageSerializerSpec : AkkaSpec
+    public class ClusterMessageSerializerSpec: ClusterMessageSerializerBase
     {
-        public ClusterMessageSerializerSpec()
-            : base(@"akka.actor.provider = cluster")
+        public ClusterMessageSerializerSpec(ITestOutputHelper output) : base(output, false)
         {
+        }
+    }
+    
+    public class ClusterMessageSerializerLegacySpec: ClusterMessageSerializerBase
+    {
+        public ClusterMessageSerializerLegacySpec(ITestOutputHelper output) : base(output, true)
+        {
+        }
+    }
+    
+    public abstract class ClusterMessageSerializerBase : AkkaSpec
+    {
+        private readonly bool _useLegacyHeartbeat;
+        public ClusterMessageSerializerBase(ITestOutputHelper output, bool useLegacyHeartbeat)
+            : base($@"
+akka.actor.provider = cluster
+akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "false")}", output)
+        {
+            _useLegacyHeartbeat = useLegacyHeartbeat;
         }
 
         private static readonly Member a1 = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Joining, appVersion: AppVersion.Create("1.0.0"));
@@ -36,22 +56,11 @@ namespace Akka.Cluster.Tests.Serialization
         public void Can_serialize_Heartbeat()
         {
             var address = new Address("akka.tcp", "system", "some.host.org", 4711);
-            var message = new ClusterHeartbeatSender.Heartbeat(address, -1, -1);
-            AssertEqual(message);
-        }
-
-        [Fact]
-        public void Can_serialize_Hearbeatv1419_later()
-        {
-            var hb = new Akka.Cluster.Serialization.Proto.Msg.Heartbeat()
-            {
-                From = Akka.Cluster.Serialization.ClusterMessageSerializer.AddressToProto(a1.Address),
-                CreationTime = 2,
-                SequenceNr = 1
-            }.ToByteArray();
-
-            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerForType(typeof(ClusterHeartbeatSender.Heartbeat));
-            serializer.FromBinary(hb, Akka.Cluster.Serialization.ClusterMessageSerializer.HeartBeatManifest);
+            var legacyMessage = new ClusterHeartbeatSender.Heartbeat(address, -1, -1);
+            var message =  new ClusterHeartbeatSender.Heartbeat(address, 10, 3);
+            
+            // Legacy heartbeat serializer will replace the sequence number and creation date with -1 and -1 respectively
+            AssertEqual(message, _useLegacyHeartbeat ? legacyMessage : message);
         }
 
         [Fact]
@@ -59,22 +68,11 @@ namespace Akka.Cluster.Tests.Serialization
         {
             var address = new Address("akka.tcp", "system", "some.host.org", 4711);
             var uniqueAddress = new UniqueAddress(address, 17);
-            var message = new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress, -1, -1);
-            AssertEqual(message);
-        }
-
-        [Fact]
-        public void Can_serialize_HearbeatRspv1419_later()
-        {
-            var hb = new Akka.Cluster.Serialization.Proto.Msg.HeartBeatResponse()
-            {
-                From = Akka.Cluster.Serialization.ClusterMessageSerializer.UniqueAddressToProto(a1.UniqueAddress),
-                CreationTime = 2,
-                SequenceNr = 1
-            }.ToByteArray();
-
-            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerForType(typeof(ClusterHeartbeatSender.Heartbeat));
-            serializer.FromBinary(hb, Akka.Cluster.Serialization.ClusterMessageSerializer.HeartBeatRspManifest);
+            var legacyMessage = new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress, -1, -1);
+            var message = new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress, 10, 3);
+            
+            // Legacy heartbeat serializer will replace the sequence number and creation date with -1 and -1 respectively
+            AssertEqual(message, _useLegacyHeartbeat ? legacyMessage : message);
         }
 
         [Fact]
@@ -220,16 +218,18 @@ namespace Akka.Cluster.Tests.Serialization
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            var serialized = serializer.ToBinary(message);
+            var serializer = (SerializerWithStringManifest) Sys.Serialization.FindSerializerFor(message);
             serializer.Should().BeOfType<ClusterMessageSerializer>();
-            return serializer.FromBinary<T>(serialized);
+            
+            var serialized = serializer.ToBinary(message);
+            var manifest = serializer.Manifest(message);
+            return (T) serializer.FromBinary(serialized, manifest);
         }
 
-        private void AssertEqual<T>(T message)
+        private void AssertEqual<T>(T message, T newMessage = null) where T : class
         {
             var deserialized = AssertAndReturn(message);
-            Assert.Equal(message, deserialized);
+            Assert.Equal(newMessage ?? message, deserialized);
         }
     }
 }

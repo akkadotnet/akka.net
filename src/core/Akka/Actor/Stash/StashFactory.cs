@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StashFactory.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ namespace Akka.Actor
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="context">TBD</param>
         /// <returns>TBD</returns>
-        public static IStash CreateStash<T>(this IActorContext context) where T:ActorBase
+        public static IStash CreateStash<T>(this IActorContext context) where T : ActorBase
         {
             var actorType = typeof(T);
             return CreateStash(context, actorType);
@@ -34,10 +34,8 @@ namespace Akka.Actor
         /// <param name="context">TBD</param>
         /// <param name="actorInstance">TBD</param>
         /// <returns>TBD</returns>
-        public static IStash CreateStash(this IActorContext context, IActorStash actorInstance)
-        {
-            return CreateStash(context, actorInstance.GetType());
-        }
+        public static IStash CreateStash(this IActorContext context, IActorStash actorInstance) =>
+            CreateStash(context, actorInstance.GetType());
 
         /// <summary>
         /// TBD
@@ -50,15 +48,14 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static IStash CreateStash(this IActorContext context, Type actorType)
         {
-            if(actorType.Implements<IWithBoundedStash>())
-            {
+            if (actorType.Implements<IWithBoundedStash>())
                 return new BoundedStashImpl(context);
-            }
 
-            if(actorType.Implements<IWithUnboundedStash>())
-            {
+            if (actorType.Implements<IWithUnboundedStash>())
                 return new UnboundedStashImpl(context);
-            }
+
+            if (actorType.Implements<IWithUnrestrictedStash>())
+                return new UnrestrictedStashImpl(context);
 
             throw new ArgumentException($"Actor {actorType} implements an unrecognized subclass of {typeof(IActorStash)} - cannot instantiate", nameof(actorType));
         }

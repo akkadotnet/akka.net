@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ThrottleModeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,7 +14,7 @@ using TokenBucket = Akka.Remote.Transport.TokenBucket;
 
 namespace Akka.Remote.Tests.Transport
 {
-    public class ThrottleModeSpec : AkkaSpec
+    public class ThrottleModeSpec 
     {
         static readonly long HalfSecond = TimeSpan.FromSeconds(0.5).Ticks.ToNanos();
 

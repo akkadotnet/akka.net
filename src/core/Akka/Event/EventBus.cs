@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventBus.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,11 +20,9 @@ namespace Akka.Event
     /// <typeparam name="TSubscriber">The type of the subscriber that listens for events.</typeparam>
     public abstract class EventBus<TEvent, TClassifier, TSubscriber>
     {
-        private readonly Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> _classifiers =
-            new Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>>();
+        private readonly Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> _classifiers = new();
 
-        private volatile ConcurrentDictionary<TClassifier, List<TSubscriber>> _cache =
-            new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
+        private volatile ConcurrentDictionary<TClassifier, List<TSubscriber>> _cache = new();
 
         /// <summary>
         /// Retrieves the simplified type name (the class name without the namespace) of a given object.

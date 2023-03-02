@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoordinatedShutdown.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -333,7 +333,7 @@ namespace Akka.Actor
         /// <param name="hook">A task that will be executed during shutdown.</param>
         internal void AddClrShutdownHook(Func<Task<Done>> hook)
         {
-            if (!_clrHooksStarted)
+            if (!_clrHooksStarted.Value)
             {
                 _clrShutdownTasks.TryAdd(hook);
             }

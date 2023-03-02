@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCellSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,54 +22,55 @@ namespace Akka.Tests.Actor
     {
         public class DummyActor : ReceiveActor
         {
-            public DummyActor(AutoResetEvent autoResetEvent)
+            public DummyActor()
             {
-                ReceiveAny(m => autoResetEvent.Set());
+                ReceiveAny(m => Sender.Tell(m));
             }
         }
 
         public class DummyAsyncActor : ReceiveActor
         {
-            public DummyAsyncActor(AutoResetEvent autoResetEvent)
+            public DummyAsyncActor()
             {
                 ReceiveAsync<string>(async m =>
                 {
-                    await Task.Delay(500);
-                    autoResetEvent.Set();
+                    await Task.Delay(5);
+                    Sender.Tell(m);
                 });
             }
         }
 
         [Fact]
-        public void Cell_should_clear_current_message_after_receive()
+        public async Task Cell_should_clear_current_message_after_receive()
         {
-            AutoResetEvent autoResetEvent = new AutoResetEvent(false);
-            var actor = Sys.ActorOf(Props.Create(() => new DummyActor(autoResetEvent)));
-            actor.Tell("hello");
-            //ensure the message was received
-            autoResetEvent.WaitOne();
-            var refCell = actor as ActorRefWithCell;
-            var cell = refCell.Underlying as ActorCell;
+            // arrange
+            var actor = Sys.ActorOf(Props.Create(() => new DummyActor()));
+            
+            // act
+            await actor.Ask<string>("hello", RemainingOrDefault);
+            
+            // assert
+            var refCell = (ActorRefWithCell)actor;
             //wait while current message is not null (that is, receive is not yet completed/exited)
-            SpinWait.SpinUntil(() => cell.CurrentMessage == null, TimeSpan.FromSeconds(2));
 
-            cell.CurrentMessage.ShouldBe(null);
+            AwaitCondition(() => refCell.Underlying is ActorCell { CurrentMessage: null });
         }
 
         [Fact]
-        public void Cell_should_clear_current_message_after_async_receive()
+        public async Task Cell_should_clear_current_message_after_async_receive()
         {
-            AutoResetEvent autoResetEvent = new AutoResetEvent(false);
-            var actor = Sys.ActorOf(Props.Create(() => new DummyAsyncActor(autoResetEvent)));
-            actor.Tell("hello");
-            //ensure the message was received
-            Assert.True(autoResetEvent.WaitOne(TimeSpan.FromSeconds(3)), "Timed out while waiting for autoreset event");
-            var refCell = actor as ActorRefWithCell;
-            var cell = refCell.Underlying as ActorCell;
-            //wait while current message is not null (that is, receive is not yet completed/exited)
-            SpinWait.SpinUntil(() => cell.CurrentMessage == null, TimeSpan.FromSeconds(2));
+            // arrange
+            var actor = Sys.ActorOf(Props.Create(() => new DummyAsyncActor()));
+            
+            // act
+            await actor.Ask<string>("hello", RemainingOrDefault);
 
-            cell.CurrentMessage.ShouldBe(null);
+            // assert
+            
+            var refCell = (ActorRefWithCell)actor;
+            //wait while current message is not null (that is, receive is not yet completed/exited)
+
+            AwaitCondition(() => refCell.Underlying is ActorCell { CurrentMessage: null });
         }
     }
 }

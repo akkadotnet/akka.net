@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemSetup.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ namespace Akka.Actor.Setup
 
         public Option<T> Get<T>() where T:Setup
         {
-            return _setups.ContainsKey(typeof(T)) ? new Option<T>((T)_setups[typeof(T)]) : Option<T>.None;
+            return _setups.ContainsKey(typeof(T)) ? Option<T>.Create((T)_setups[typeof(T)]) : Option<T>.None;
         }
         
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SourceWithContextSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -69,6 +69,19 @@ namespace Akka.Streams.Tests.Dsl
                 .AsSourceWithContext(x => x.Offset)
                 .ToMaterialized(this.SinkProbe<(Message, long)>(), Keep.Right)
                 .Run(Materializer)
+                .Request(1)
+                .ExpectNext((msg, 1L))
+                .ExpectComplete();
+        }
+
+        [Fact]
+        public void SourceWithContext_must_get_created_from_a_source_of_tuple2()
+        {
+            var msg = new Message("a", 1L);
+
+            SourceWithContext.FromTuples(Source.From(new[] { (msg, msg.Offset) }))
+                .AsSource()
+                .RunWith(this.SinkProbe<(Message, long)>(), Materializer)
                 .Request(1)
                 .ExpectNext((msg, 1L))
                 .ExpectComplete();

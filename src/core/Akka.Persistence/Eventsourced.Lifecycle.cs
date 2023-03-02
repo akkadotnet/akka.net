@@ -1,25 +1,23 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Lifecycle.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.Persistence
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
     public partial class Eventsourced
     {
         /// <summary>
-        /// TBD
+        /// Function used to filter out messages that should not be unstashed during recovery.
         /// </summary>
         public static readonly Func<Envelope, bool> UnstashFilterPredicate =
-            envelope => !(envelope.Message is WriteMessageSuccess || envelope.Message is ReplayedMessage);
+            envelope => envelope.Message is not (WriteMessageSuccess or ReplayedMessage);
 
         private void StartRecovery(Recovery recovery)
         {
@@ -133,7 +131,7 @@ namespace Akka.Persistence
                 case DeleteMessagesFailure failure:
                 {
                     if (Log.IsWarningEnabled)
-                        Log.Warning("Failed to DeleteMessages ToSequenceNr [{0}] for PersistenceId [{1}] due to: [{2}: {3}]", failure.ToSequenceNr, PersistenceId, failure.Cause, failure.Cause.Message);
+                        Log.Warning(failure.Cause, "Failed to DeleteMessages ToSequenceNr [{0}] for PersistenceId [{1}] due to: {2}", failure.ToSequenceNr, PersistenceId, failure.Cause.Message);
                     break;
                 }
             }

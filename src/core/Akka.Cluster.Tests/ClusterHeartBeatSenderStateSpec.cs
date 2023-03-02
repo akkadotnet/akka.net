@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterHeartBeatSenderStateSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,12 +17,28 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests
 {
-    public class ClusterHeartBeatSenderStateSpec : ClusterSpecBase
+    public class ClusterHeartBeatSenderStateSpec : ClusterHeartBeatSenderStateBase
     {
-        public ClusterHeartBeatSenderStateSpec()
+        public ClusterHeartBeatSenderStateSpec(ITestOutputHelper output) : base(output, false)
+        {
+        }
+    }
+    
+    public class ClusterHeartBeatSenderStateLegacySpec : ClusterHeartBeatSenderStateBase
+    {
+        public ClusterHeartBeatSenderStateLegacySpec(ITestOutputHelper output) : base(output, true)
+        {
+        }
+    }
+    
+    public abstract class ClusterHeartBeatSenderStateBase : ClusterSpecBase
+    {
+        protected ClusterHeartBeatSenderStateBase(ITestOutputHelper output, bool useLegacyMessage)
+            : base(output, useLegacyMessage)
         {
             _emptyState = EmptyState(aa);
         }

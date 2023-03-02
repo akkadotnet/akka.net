@@ -2,8 +2,6 @@
   href: architecture.md
 - name: Event sourcing
   href: event-sourcing.md
-- name: Persistence Views
-  href: persistent-views.md
 - name: Snapshots
   href: snapshots.md
 - name: At-Least-Once Delivery

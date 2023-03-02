@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqlJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -515,21 +515,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected BatchingSqlJournalSetup Setup { get; }
 
         /// <summary>
-        /// Flag determining if current journal has any subscribers for <see cref="EventAppended"/> events.
-        /// </summary>
-        protected bool HasPersistenceIdSubscribers => _persistenceIdSubscribers.Count != 0;
-
-        /// <summary>
-        /// Flag determining if current journal has any subscribers for <see cref="TaggedEventAppended"/> events.
-        /// </summary>
-        protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
-
-        /// <summary>
-        /// Flag determining if current journal has any subscribers for <see cref="NewEventAppended"/> and 
-        /// </summary>
-        protected bool HasNewEventsSubscribers => _newEventSubscriber.Count != 0;
-
-        /// <summary>
         /// Flag determining if incoming journal requests should be published in current actor system event stream.
         /// Useful mostly for tests.
         /// </summary>
@@ -559,10 +544,6 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private readonly AtomicCounterLong _bufferIdCounter;
 
-        private readonly Dictionary<string, HashSet<IActorRef>> _persistenceIdSubscribers;
-        private readonly Dictionary<string, HashSet<IActorRef>> _tagSubscribers;
-        private readonly HashSet<IActorRef> _newEventSubscriber;
-
         private readonly Akka.Serialization.Serialization _serialization;
         private readonly CircuitBreaker _circuitBreaker;
         private int _remainingOperations;
@@ -575,11 +556,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             Setup = setup;
             CanPublish = Persistence.Instance.Apply(Context.System).Settings.Internal.PublishPluginCommands;      
-            TimestampProvider = TimestampProviderProvider.GetTimestampProvider(setup.TimestampProviderTypeName, Context);      
-
-            _persistenceIdSubscribers = new Dictionary<string, HashSet<IActorRef>>();
-            _tagSubscribers = new Dictionary<string, HashSet<IActorRef>>();
-            _newEventSubscriber = new HashSet<IActorRef>();
+            TimestampProvider = TimestampProviderProvider.GetTimestampProvider(setup.TimestampProviderTypeName, Context);
 
             _remainingOperations = Setup.MaxConcurrentOperations;
             _buffers = new[]
@@ -739,18 +716,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                 case BatchComplete msg:
                     CompleteBatch(msg);
                     return true;
-                case SubscribePersistenceId msg:
-                    AddPersistenceIdSubscriber(msg);
-                    return true;
-                case SubscribeTag msg:
-                    AddTagSubscriber(msg);
-                    return true;
-                case SubscribeNewEvents msg:
-                    AddNewEventsSubscriber(msg);
-                    return true;
-                case Terminated msg:
-                    RemoveSubscriber(msg.ActorRef);
-                    return true;
                 case ChunkExecutionFailure msg:
                     FailChunkExecution(msg);
                     return true;
@@ -762,7 +727,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         private void FailChunkExecution(ChunkExecutionFailure message)
         {
             _remainingOperations++;
-            var cause = message.Cause;
+
+            var cause = message.Cause is AggregateException aggregateException
+                ? aggregateException.Flatten().InnerExceptions.OfType<DbException>().FirstOrDefault()
+                    ?? aggregateException.Flatten().InnerExceptions[0]
+                : message.Cause;
+
             Log.Error(cause, "An error occurred during event batch processing. ChunkId: [{0}], batched requests: [{1}]", message.ChunkId, message.Requests.Length);
             
             foreach (var request in message.Requests)
@@ -828,68 +798,6 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             TryProcess();
         }
-
-        #region subscriptions
-        private void RemoveSubscriber(IActorRef subscriberRef)
-        {
-            _persistenceIdSubscribers.RemoveItem(subscriberRef);
-            _tagSubscribers.RemoveItem(subscriberRef);
-            _newEventSubscriber.Remove(subscriberRef);
-        }
-
-        private void AddNewEventsSubscriber(SubscribeNewEvents message)
-        {
-            var subscriber = Sender;
-            _newEventSubscriber.Add(subscriber);
-            Context.Watch(subscriber);
-        }
-
-        private void AddTagSubscriber(SubscribeTag message)
-        {
-            var subscriber = Sender;
-            _tagSubscribers.AddItem(message.Tag, subscriber);
-            Context.Watch(subscriber);
-        }
-
-        private void AddPersistenceIdSubscriber(SubscribePersistenceId message)
-        {
-            var subscriber = Sender;
-            _persistenceIdSubscribers.AddItem(message.PersistenceId, subscriber);
-            Context.Watch(subscriber);
-        }
-
-        private void NotifyNewEventAppended()
-        {
-            if (HasNewEventsSubscribers)
-            {
-                foreach (var subscriber in _newEventSubscriber)
-                {
-                    subscriber.Tell(NewEventAppended.Instance);
-                }
-            }
-        }
-
-        private void NotifyTagChanged(string tag)
-        {
-            if (_tagSubscribers.TryGetValue(tag, out var bucket))
-            {
-                var changed = new TaggedEventAppended(tag);
-                foreach (var subscriber in bucket)
-                    subscriber.Tell(changed);
-            }
-        }
-
-        private void NotifyPersistenceIdChanged(string persistenceId)
-        {
-            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out var bucket))
-            {
-                var changed = new EventAppended(persistenceId);
-                foreach (var subscriber in bucket)
-                    subscriber.Tell(changed);
-            }
-        }
-
-        #endregion
 
         /// <summary>
         /// Tries to add incoming <paramref name="message"/> to <see cref="Buffer"/>.
@@ -974,7 +882,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 using (var tx = connection.BeginTransaction(Setup.IsolationLevel))
                 using (var command = (TCommand)connection.CreateCommand())
                 {
-                    command.CommandTimeout = (int)Setup.ConnectionTimeout.TotalMilliseconds;
+                    command.CommandTimeout = (int)Setup.ConnectionTimeout.TotalSeconds;
                     command.Transaction = tx;
                     try
                     {
@@ -1500,28 +1408,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                         aRef.Tell(new WriteMessageSuccess(unadapted, actorInstanceId), unadapted.Sender);
                     }
                 }
-
-                if (journal.HasTagSubscribers && _tags.Count != 0)
-                {
-                    foreach (var tag in _tags)
-                    {
-                        journal.NotifyTagChanged(tag);
-                    }
-                }
-
-                if (journal.HasPersistenceIdSubscribers)
-                {
-                    foreach (var persistenceId in _persistenceIds)
-                    {
-                        journal.NotifyPersistenceIdChanged(persistenceId);
-                    }
-                }
-
-                if (journal.HasNewEventsSubscribers)
-                {
-                    journal.NotifyNewEventAppended();
-                }
-
             }
         }
     }
