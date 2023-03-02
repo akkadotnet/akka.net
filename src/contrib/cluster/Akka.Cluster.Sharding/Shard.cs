@@ -1117,7 +1117,7 @@ namespace Akka.Cluster.Sharding
                 Timers.StartSingleTimer(
                     RememberEntityTimeoutKey,
                     new RememberEntityTimeout(RememberEntitiesShardStore.GetEntities.Instance),
-                    _settings.TuningParameters.WaitingForStateTimeout);
+                    _settings.TuningParameters.UpdatingStateTimeout);
                 Context.Become(AwaitingRememberedEntities);
             }
             else
@@ -1254,7 +1254,7 @@ namespace Akka.Cluster.Sharding
             Timers.StartSingleTimer(
                 RememberEntityTimeoutKey,
                 new RememberEntityTimeout(update),
-                _settings.TuningParameters.UpdatingStateTimeout);
+                _settings.TuningParameters.WaitingForStateTimeout);
 
             Context.Become(WaitingForRememberEntitiesStore(update, startTime));
         }
