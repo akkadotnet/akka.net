@@ -109,7 +109,6 @@ With these HOCON settings in-place the following will happen:
 2. Old `Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent` will be upgraded to a new storage format via the `coordinator-migration` Akka.Persistence event adapter; and
 3. No more data will be persisted by the `ShardCoordinator` - instead it will all be replicated on the fly by DData, which is vastly preferable.
 
-
 > [!IMPORTANT]
 > This migration is irreversible once completed.
 
