@@ -59,14 +59,14 @@ akka.cluster.sharding{
 #### Migrating to New Sharding Storage From Akka.Persistence
 
 > [!NOTE]
-> This section applies only to users who were using `akka.cluster.sharding.state-store-mode = persistence` and `remember-entities=on`. If you were using `akka.cluster.sharding.state-store-mode = ddata` or not using `remember-entities` before then there is no migration of legacy data in your case.
+> This section applies to users who are using `remember-entities=on` and want to migrate to using the low-latency event-sourced based storage. All other users should just migrate to `state-store-mode=ddata`.
 
 Switching over to using `remember-entities-store = eventsourced` will cause an initial migration of data from the `ShardCoordinator`'s journal into separate event journals going forward.
 
 Upgrading to Akka.NET v1.5 will **cause an irreversible migration of Akka.Cluster.Sharding data** for users who were previously running `akka.cluster.state-store-mode=persistence`, so follow the steps below carefully:
 
 > [!IMPORTANT]
-> This migration is intended to be performed via upgrading Akka.NET to v1.5 and applying HOCON configuration changes - it requires no downtime.
+> This migration is intended to be performed via upgrading Akka.NET to v1.5 and applying the recommended configuration changes below - **it will require a full restart of your cluster any time you change the `state-store-mode` setting**.
 
 #### Upgrade to Akka.NET v1.5 Sharding
 
