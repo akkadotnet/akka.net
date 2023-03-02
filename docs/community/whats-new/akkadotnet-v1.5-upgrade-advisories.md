@@ -93,6 +93,13 @@ akka.cluster.sharding {
 }
 ```
 
+To deploy this upgrade:
+
+1. Take your cluster offline and
+2. Roll out the changes with the new version of Akka.NET installed and these HOCON changes.
+
+It should less than 10 seconds to fully migrate over to the new format and the Akka.Cluster.Sharding system will continue to start normally while it takes place.
+
 > [!NOTE]
 > If you don't run Akka.Cluster.Sharding with `remember-entities=on` normally then _there is no need to turn it on here_.
 
@@ -102,7 +109,6 @@ With these HOCON settings in-place the following will happen:
 2. Old `Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent` will be upgraded to a new storage format via the `coordinator-migration` Akka.Persistence event adapter; and
 3. No more data will be persisted by the `ShardCoordinator` - instead it will all be replicated on the fly by DData, which is vastly preferable.
 
-It should take less than 120 seconds to fully migrate over to the new format and the Akka.Cluster.Sharding system will continue to operate normally while it takes place.
 
 > [!IMPORTANT]
 > This migration is irreversible once completed.
