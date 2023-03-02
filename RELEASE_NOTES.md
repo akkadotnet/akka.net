@@ -1,7 +1,34 @@
-#### 1.5.0-beta6 March 1st 2023 ####
-Version 1.5.0-beta6 contains **breaking API changes** and new API changes for Akka.NET.
+#### 1.5.0 March 2nd 2023 ####
+Version 1.5.0 is a major new release of Akka.NET that is now marked as stable and ready for production use.
 
-* [Akka.TestKit.Xunit2: Remove IAsyncLifetime from TestKit](https://github.com/akkadotnet/akka.net/pull/6475)
+You can read the [full notes about what's changed in Akka.NET v1.5 here](https://getakka.net/community/whats-new/akkadotnet-v1.5.html). We also encourage you to watch our video: "[Akka NET v1.5 New Features and Upgrade Guide](https://www.youtube.com/watch?v=-UPestlIw4k)"
+
+If you want to see the [full set of changes made in Akka.NET v1.5.0 so far, click here](https://github.com/akkadotnet/akka.net/milestone/7).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 95 | 25041 | 24976 | Gregorius Soedharmo |
+| 85 | 89784 | 18362 | Aaron Stannard |
+| 76 | 95 | 95 | dependabot[bot] |
+| 18 | 3201 | 908 | Ismael Hamed |
+| 5 | 230 | 251 | Sergey Popov |
+| 2 | 77 | 7 | Vagif Abilov |
+| 2 | 38 | 8 | Brah McDude |
+| 1 | 92 | 92 | nabond251 |
+| 1 | 843 | 0 | Drew |
+| 1 | 7 | 6 | Tjaart Blignaut |
+| 1 | 5 | 4 | Sean Killeen |
+| 1 | 32 | 1 | JonnyII |
+| 1 | 26 | 4 | Thomas Stegemann |
+| 1 | 203 | 5 | Ebere Abanonu |
+| 1 | 2 | 2 | Popov Sergey |
+| 1 | 2 | 2 | Denis |
+| 1 | 16 | 0 | Damian |
+| 1 | 11 | 2 | Nicolai Davies |
+| 1 | 101 | 3 | aminchenkov |
+| 1 | 1 | 1 | zbynek001 |
+| 1 | 1 | 1 | Michel van Os |
+| 1 | 1 | 1 | Adrian D. Alvarez |
 
 #### 1.5.0-beta5 February 28th 2023 ####
 Version 1.5.0-beta5 contains **breaking API changes** and new API changes for Akka.NET.
