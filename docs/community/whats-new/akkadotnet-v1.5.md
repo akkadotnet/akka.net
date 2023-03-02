@@ -29,8 +29,8 @@ Scaling Akka.Persistence.Query to 100k+ Concurrent Queries for Large-Scale CQRS]
 We have many more features planned over the v1.5 lifecycle - such as:
 
 * Continuing our work on making CQRS a first-class citizen with Akka.NET;
-* Introducing better, easier to use methods for making actor-to-actor message delivery more reliable; 
-* Leveraging more .NET 6 APIs for improved performance; 
+* Introducing better, easier to use methods for making actor-to-actor message delivery more reliable;
+* Leveraging more .NET 6 APIs for improved performance;
 * Retooling all of our examples and documentation to incorporate Akka.NET best practices, such as Akka.Hosting;
 * Addressing structural issues with Akka.Remote, serialization, and more.
 
