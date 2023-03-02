@@ -56,10 +56,12 @@ akka.cluster.sharding{
 }
 ```
 
-#### Migrating to New Sharding Storage From Akka.Persistence
+> [!WARNING]
+> `state-store-mode=persistence` will be deprecated and `state-store-mode=ddata` will eventually be made the default. Make plans to migrate off of persistence _urgently_.
 
-> [!NOTE]
-> This section applies to users who are using `remember-entities=on` and want to migrate to using the low-latency event-sourced based storage. All other users should just migrate to `state-store-mode=ddata`.
+#### Migrating to DData From Akka.Persistence with Remember Entities
+
+This section applies to users who are using `remember-entities=on` and want to migrate to using the low-latency event-sourced based storage. All other users should just migrate to `state-store-mode=ddata`.
 
 Switching over to using `remember-entities-store = eventsourced` will cause an initial migration of data from the `ShardCoordinator`'s journal into separate event journals going forward.
 
@@ -67,8 +69,6 @@ Upgrading to Akka.NET v1.5 will **cause an irreversible migration of Akka.Cluste
 
 > [!IMPORTANT]
 > This migration is intended to be performed via upgrading Akka.NET to v1.5 and applying the recommended configuration changes below - **it will require a full restart of your cluster any time you change the `state-store-mode` setting**.
-
-#### Upgrade to Akka.NET v1.5 Sharding
 
 Update your Akka.Cluster.Sharding HOCON to look like the following (adjust as necessary for your custom settings):
 
@@ -92,6 +92,22 @@ akka.cluster.sharding {
     }
 }
 ```
+
+#### Migrating to DData From Akka.Persistence without Remember Entities
+
+If you're migrating from `state-store-mode=persistence` to `state-store-mode=ddata` and don't use `remember-entities=on`, then all you have to configure is the following:
+
+```hocon
+akka.cluster.sharding {
+    state-store-mode = ddata
+}
+
+```
+
+#### Executing Migration
+
+> [!IMPORTANT]
+> This section only applies to users migrating from `state-store-mode=persistence` to `state-store-mode=ddata`. For all other users there is no need to plan a special deployment - the transition to Akka.NET v1.5 sharding will be seamless. It's only the changing of `state-store-mode` settings that requires a restart of the cluster.
 
 To deploy this upgrade:
 
