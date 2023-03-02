@@ -59,7 +59,7 @@ akka.cluster.sharding{
 #### Migrating to New Sharding Storage From Akka.Persistence
 
 > [!NOTE]
-> This section applies only to users who were using `akka.cluster.sharding.state-store-mode = persistence`. If you were using `akka.cluster.sharding.state-store-mode = ddata` before then there is no of legacy data in your case.
+> This section applies only to users who were using `akka.cluster.sharding.state-store-mode = persistence` and `remember-entities=on`. If you were using `akka.cluster.sharding.state-store-mode = ddata` or not using `remember-entities` before then there is no migration of legacy data in your case.
 
 Switching over to using `remember-entities-store = eventsourced` will cause an initial migration of data from the `ShardCoordinator`'s journal into separate event journals going forward.
 
@@ -68,15 +68,15 @@ Upgrading to Akka.NET v1.5 will **cause an irreversible migration of Akka.Cluste
 > [!IMPORTANT]
 > This migration is intended to be performed via upgrading Akka.NET to v1.5 and applying HOCON configuration changes - it requires no downtime.
 
-##### Step 1 - Upgrade to Akka.NET v1.5 With Updated Persistence HOCON
+#### Upgrade to Akka.NET v1.5 Sharding
 
 Update your Akka.Cluster.Sharding HOCON to look like the following (adjust as necessary for your custom settings):
 
 ```hocon
 akka.cluster.sharding {
     remember-entities = on
-    remember-entities-store = "eventsourced"
-    state-store-mode = "persistence"
+    remember-entities-store = eventsourced
+    state-store-mode = ddata
 
     # fail if upgrade doesn't succeed
     fail-on-invalid-entity-state-transition = on
@@ -100,64 +100,12 @@ With these HOCON settings in-place the following will happen:
 
 1. The old `PersitentShardCoordinator` state will be broken up - `remember-entities=on` data will be distributed to each of the `PersistentShard` actors, who will now use the new `remember-entities-store = "eventsourced"` setting going forward;
 2. Old `Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent` will be upgraded to a new storage format via the `coordinator-migration` Akka.Persistence event adapter; and
-3. The `PersistentShardCoordinator` will migrate its journal to the new format as well.
+3. No more data will be persisted by the `ShardCoordinator` - instead it will all be replicated on the fly by DData, which is vastly preferable.
 
-##### Step 2 - Migrating Away From Persistence to DData
+It should take less than 120 seconds to fully migrate over to the new format and the Akka.Cluster.Sharding system will continue to operate normally while it takes place.
 
-Once your cluster has successfully booted up with these settings, you can now optionally move to using `DData` as your `akka.cluster.sharding.state-store-mode` by deploying a second time with the following HOCON:
-
-```hocon
-akka.cluster.sharding {
-    remember-entities = on
-    remember-entities-store = "eventsourced"
-    state-store-mode = "ddata"
-
-    # fail if upgrade doesn't succeed
-    fail-on-invalid-entity-state-transition = on
-}
-
- akka.persistence.journal.{your-journal-implementation} {
-    event-adapters {
-        coordinator-migration = ""Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter, Akka.Cluster.Sharding""
-    }
-
-    event-adapter-bindings {
-        ""Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent, Akka.Cluster.Sharding"" = coordinator-migration
-    }
-}
-```
-
-Now you'll be running Akka.Cluster.Sharding with the recommended settings.
-
-#### Migrating to New Sharding Storage From Akka.DistributedData
-
-The migration process onto Akka.NET v1.5's new Cluster.Sharding storage system is less involved for users who were already using `akka.cluster.sharding.state-store-mode=ddata`.
-
-All these users need to do this:
-
-1. Setup an `akka.persistence.journal` and `akka.persistence.snapshot-store` to use with `akka.cluster.sharding.remember-entities-store = eventsourced`;
-2. Deploy using the following HOCON:
-
-```hocon
-akka.cluster.sharding {
-    remember-entities = on
-    remember-entities-store = "eventsourced"
-    state-store-mode = "ddata"
-
-    # fail if upgrade doesn't succeed
-    fail-on-invalid-entity-state-transition = on
-}
-
- akka.persistence.journal.{your-journal-implementation} {
-    event-adapters {
-        coordinator-migration = ""Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter, Akka.Cluster.Sharding""
-    }
-
-    event-adapter-bindings {
-        ""Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent, Akka.Cluster.Sharding"" = coordinator-migration
-    }
-}
-```
+> [!IMPORTANT]
+> This migration is irreversible once completed.
 
 If you run into any trouble upgrading, [please file an issue with Akka.NET](https://github.com/akkadotnet/akka.net/issues/new/choose).
 
