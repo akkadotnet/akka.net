@@ -417,4 +417,6 @@ After you've gone live with Akka.Cluster.Sharding, one day you might decide it'd
 
 Migrating between storage modes requires a **full restart of your Akka.Cluster** as it's a significant, far-reaching change. You can see a demonstration of how to perform this upgrade in our ["Akka NET v1.5 New Features and Upgrade Guide" video beginning at 12:53](https://youtu.be/-UPestlIw4k?t=773).
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/-UPestlIw4k" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
