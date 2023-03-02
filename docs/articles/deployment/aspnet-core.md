@@ -5,6 +5,10 @@ title: ASP.NET Core
 
 # ASP.NET Core
 
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/_BVC9Is8Tnk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
+
 ## The Bridge
 
 When deploying Akka.NET in ASP.NET Core, one major concern is how to expose `actor` in an ASP.NET Core controllers. We will design an `interface` for this!

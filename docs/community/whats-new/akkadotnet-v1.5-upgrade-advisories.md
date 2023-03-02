@@ -7,7 +7,19 @@ title: Akka.NET v1.5 Upgrade Advisories
 
 This document contains specific upgrade suggestions, warnings, and notices that you will want to pay attention to when upgrading between versions within the Akka.NET v1.5 roadmap.
 
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/-UPestlIw4k" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
+
 ## Upgrading From Akka.NET v1.4 to v1.5
+
+In case you need help upgrading:
+
+* [Akka.NET Discord](https://discord.gg/GSCfPwhbWP)
+* [Akka.NET GitHub Discussions](https://github.com/akkadotnet/akka.net/discussions)
+* [Akka.NET Commercial Support](https://petabridge.com/services/support/)
+
+But first: review this document!
 
 ### Akka.Cluster.Sharding State Storage
 
