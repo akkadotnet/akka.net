@@ -113,8 +113,6 @@ namespace Akka.Actor
         protected bool SetChildrenTerminationReason(Akka.Actor.Internal.SuspendReason reason) { }
         public void SetReceiveTimeout(System.Nullable<System.TimeSpan> timeout = null) { }
         protected void SetTerminated() { }
-        [System.ObsoleteAttribute("Not used. Will be removed in Akka.NET v1.5.")]
-        public static Akka.Actor.NameAndUid SplitNameAndUid(string name) { }
         public virtual void Start() { }
         protected void Stash(Akka.Dispatch.SysMsg.SystemMessage msg) { }
         public void Stop(Akka.Actor.IActorRef child) { }
@@ -1082,10 +1080,6 @@ namespace Akka.Actor
         T CreateExtension(Akka.Actor.ExtendedActorSystem system);
         T Get(Akka.Actor.ActorSystem system);
     }
-    public interface IHandle<in TMessage>
-    {
-        void Handle(TMessage message);
-    }
     public interface IInboxable : Akka.Actor.ICanWatch
     {
         Akka.Actor.IActorRef Receiver { get; }
@@ -1360,14 +1354,6 @@ namespace Akka.Actor
         public override void Stop() { }
         public override void Suspend() { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
-    }
-    [System.ObsoleteAttribute("Not used. Will be removed in Akka.NET v1.5.")]
-    public class NameAndUid
-    {
-        public NameAndUid(string name, int uid) { }
-        public string Name { get; }
-        public int Uid { get; }
-        public override string ToString() { }
     }
     public sealed class Nobody : Akka.Actor.MinimalActorRef
     {
@@ -1722,6 +1708,7 @@ namespace Akka.Actor
         public int LogDeadLetters { get; }
         public bool LogDeadLettersDuringShutdown { get; }
         public System.TimeSpan LogDeadLettersSuspendDuration { get; }
+        public Akka.Event.ILogMessageFormatter LogFormatter { get; }
         public string LogLevel { get; }
         public bool LogSerializerOverrideOnStart { get; }
         public bool LoggerAsyncStart { get; }
@@ -1823,12 +1810,6 @@ namespace Akka.Actor
     {
         public TerminatedProps() { }
         public override Akka.Actor.ActorBase NewActor() { }
-    }
-    [System.ObsoleteAttribute("TypedActor in its current shape will be removed in v1.5")]
-    public abstract class TypedActor : Akka.Actor.ActorBase
-    {
-        protected TypedActor() { }
-        protected virtual bool Receive(object message) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public class UnstartedCell : Akka.Actor.ICell
@@ -2831,9 +2812,6 @@ namespace Akka.Dispatch.MessageQueues
     }
     public class UnboundedPriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue, Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics
     {
-        [System.ObsoleteAttribute("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initia" +
-            "lCapacity) instead. [1.1.3]")]
-        public UnboundedPriorityMessageQueue(int initialCapacity) { }
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
         public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
@@ -3005,7 +2983,7 @@ namespace Akka.Event
         public Akka.Actor.IActorRef Sender { get; }
         public override string ToString() { }
     }
-    public class BusLogging : Akka.Event.LoggingAdapterBase
+    public sealed class BusLogging : Akka.Event.LoggingAdapterBase
     {
         public BusLogging(Akka.Event.LoggingBus bus, string logSource, System.Type logClass, Akka.Event.ILogMessageFormatter logMessageFormatter) { }
         public override bool IsDebugEnabled { get; }
@@ -3077,8 +3055,6 @@ namespace Akka.Event
     public class EventStream : Akka.Event.LoggingBus
     {
         public EventStream(bool debug) { }
-        [System.ObsoleteAttribute("Should be removed in 1.5")]
-        public bool InitUnsubscriber(Akka.Actor.IActorRef unsubscriber, Akka.Actor.ActorSystem system) { }
         public void StartUnsubscriber(Akka.Actor.Internal.ActorSystemImpl system) { }
         public override bool Subscribe(Akka.Actor.IActorRef subscriber, System.Type channel) { }
         public override bool Unsubscribe(Akka.Actor.IActorRef subscriber, System.Type channel) { }
@@ -3142,6 +3118,8 @@ namespace Akka.Event
         protected readonly Akka.Event.ILogMessageFormatter Formatter;
         public LogMessage(Akka.Event.ILogMessageFormatter formatter, string format) { }
         public string Format { get; }
+        [Akka.Annotations.InternalApiAttribute()]
+        public abstract System.Collections.Generic.IEnumerable<object> Parameters();
         [Akka.Annotations.InternalApiAttribute()]
         public abstract string Unformatted();
     }
@@ -3507,9 +3485,6 @@ namespace Akka.IO
         public class DatagramChannelCreator : Akka.IO.Inet.SocketOption
         {
             public DatagramChannelCreator() { }
-            [System.ObsoleteAttribute("Please use the method with AddressFamily parameter. Using this method will always" +
-                " return an IPv6 bound UDP endpoint.")]
-            public virtual System.Net.Sockets.Socket Create() { }
             public virtual System.Net.Sockets.Socket Create(System.Net.Sockets.AddressFamily addressFamily) { }
         }
         public class static SO
@@ -3902,9 +3877,6 @@ namespace Akka.IO
         }
         public sealed class Send : Akka.IO.Udp.Command
         {
-            [System.ObsoleteAttribute("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(Byt" +
-                "eString, EndPoint, Event)` instead.")]
-            public Send(System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> payload, System.Net.EndPoint target, Akka.IO.Udp.Event ack) { }
             public Send(Akka.IO.ByteString payload, System.Net.EndPoint target, Akka.IO.Udp.Event ack) { }
             public Akka.IO.Udp.Event Ack { get; }
             public Akka.IO.ByteString Payload { get; }
@@ -3996,9 +3968,6 @@ namespace Akka.IO
         }
         public sealed class Send : Akka.IO.UdpConnected.Command
         {
-            [System.ObsoleteAttribute("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(Byt" +
-                "eString, EndPoint, Event)` instead.")]
-            public Send(System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> payload, Akka.IO.UdpConnected.Event ack) { }
             public Send(Akka.IO.ByteString payload, object ack) { }
             public object Ack { get; }
             public Akka.IO.ByteString Payload { get; }
@@ -4028,9 +3997,6 @@ namespace Akka.IO
     }
     public class UdpSettings
     {
-        [System.ObsoleteAttribute("Please the constructor without directBufferSize and maxDirectBufferPoolSize param" +
-            "eter")]
-        public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int directBufferSize, int maxDirectBufferPoolSize, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher) { }
         public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher) { }
         public int BatchReceiveLimit { get; }
         public string BufferPoolConfigPath { get; }
@@ -4229,8 +4195,6 @@ namespace Akka.Routing
         public BroadcastGroup(Akka.Configuration.Config config) { }
         public BroadcastGroup(params string[] paths) { }
         public BroadcastGroup(System.Collections.Generic.IEnumerable<string> paths) { }
-        [System.ObsoleteAttribute("Use new BroadcastGroup(actorRefs.Select(c => c.Path.ToString())) instead [1.1.0]")]
-        public BroadcastGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees) { }
         public BroadcastGroup(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
@@ -4315,9 +4279,6 @@ namespace Akka.Routing
         public ConsistentHashingGroup(Akka.Configuration.Config config) { }
         public ConsistentHashingGroup(params string[] paths) { }
         public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths) { }
-        [System.ObsoleteAttribute("Use new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString())) instead " +
-            "[1.1.0]")]
-        public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees) { }
         public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths, Akka.Routing.ConsistentHashMapping hashMapping) { }
         public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths, int virtualNodesFactor, Akka.Routing.ConsistentHashMapping hashMapping, string routerDispatcher) { }
         public int VirtualNodesFactor { get; }
@@ -4432,8 +4393,6 @@ namespace Akka.Routing
     {
         protected readonly string[] InternalPaths;
         protected Group(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
-        [System.ObsoleteAttribute("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
-        public System.Collections.Generic.IEnumerable<string> Paths { get; }
         public override Akka.Actor.ActorBase CreateRouterActor() { }
         public bool Equals(Akka.Routing.Group other) { }
         public override bool Equals(object obj) { }
@@ -4567,8 +4526,6 @@ namespace Akka.Routing
         public RoundRobinGroup(Akka.Configuration.Config config) { }
         public RoundRobinGroup(params string[] paths) { }
         public RoundRobinGroup(System.Collections.Generic.IEnumerable<string> paths) { }
-        [System.ObsoleteAttribute("Use RoundRobinGroup constructor with IEnumerable<string> parameter [1.1.0]")]
-        public RoundRobinGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees) { }
         public RoundRobinGroup(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
@@ -4647,8 +4604,6 @@ namespace Akka.Routing
     {
         protected RouterConfig() { }
         protected RouterConfig(string routerDispatcher) { }
-        [System.ObsoleteAttribute("Use NoRouter.Instance instead [1.1.0]")]
-        public static Akka.Routing.RouterConfig NoRouter { get; }
         public virtual string RouterDispatcher { get; }
         public virtual bool StopRouterWhenAllRouteesRemoved { get; }
         public abstract Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system);
@@ -4685,9 +4640,6 @@ namespace Akka.Routing
         public ScatterGatherFirstCompletedGroup(Akka.Configuration.Config config) { }
         public ScatterGatherFirstCompletedGroup(System.TimeSpan within, params string[] paths) { }
         public ScatterGatherFirstCompletedGroup(System.Collections.Generic.IEnumerable<string> paths, System.TimeSpan within) { }
-        [System.ObsoleteAttribute("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString())" +
-            ", within) instead [1.1.0]")]
-        public ScatterGatherFirstCompletedGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees, System.TimeSpan within) { }
         public ScatterGatherFirstCompletedGroup(System.Collections.Generic.IEnumerable<string> paths, System.TimeSpan within, string routerDispatcher) { }
         public System.TimeSpan Within { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
@@ -4964,7 +4916,6 @@ namespace Akka.Util
         public bool CompareAndSet(bool expected, bool newValue) { }
         public bool GetAndSet(bool newValue) { }
         public static bool op_Implicit(Akka.Util.AtomicBoolean atomicBoolean) { }
-        public static Akka.Util.AtomicBoolean op_Implicit(bool value) { }
     }
     public class AtomicReference<T>
         where T :  class
@@ -4976,15 +4927,6 @@ namespace Akka.Util
         public bool CompareAndSet(T expected, T newValue) { }
         public T GetAndSet(T newValue) { }
         public static T op_Implicit(Akka.Util.AtomicReference<T> atomicReference) { }
-        public static Akka.Util.AtomicReference<T> op_Implicit(T value) { }
-    }
-    public class static Base64Encoding
-    {
-        public const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
-        public static string Base64Encode(this long value) { }
-        [System.ObsoleteAttribute("Do not use. Pass in prefix as a string instead.")]
-        public static System.Text.StringBuilder Base64Encode(this long value, System.Text.StringBuilder sb) { }
-        public static string Base64Encode(this string s) { }
     }
     public class static BitArrayHelpers
     {
@@ -5050,10 +4992,6 @@ namespace Akka.Util
         public FastLazy(System.Func<S, T> producer, S state) { }
         public bool IsValueCreated { get; }
         public T Value { get; }
-    }
-    public interface IResolver
-    {
-        T Resolve<T>(object[] args);
     }
     public interface ISurrogate
     {
@@ -5121,10 +5059,12 @@ namespace Akka.Util
     public struct Option<T>
     {
         public static readonly Akka.Util.Option<T> None;
+        [System.ObsoleteAttribute("Use Option<T>.Create() instead")]
         public Option(T value) { }
         public bool HasValue { get; }
         public bool IsEmpty { get; }
         public T Value { get; }
+        public static Akka.Util.Option<T> Create(T value) { }
         public bool Equals(Akka.Util.Option<T> other) { }
         public override bool Equals(object obj) { }
         public Akka.Util.Option<TNew> FlatSelect<TNew>(System.Func<T, Akka.Util.Option<TNew>> mapper) { }
@@ -5136,23 +5076,6 @@ namespace Akka.Util
         public static bool ==(Akka.Util.Option<T> left, Akka.Util.Option<T> right) { }
         public static Akka.Util.Option<T> op_Implicit(T value) { }
         public static bool !=(Akka.Util.Option<T> left, Akka.Util.Option<T> right) { }
-    }
-    public abstract class Resolve : Akka.Actor.IIndirectActorProducer
-    {
-        protected Resolve() { }
-        public abstract System.Type ActorType { get; }
-        protected static Akka.Util.IResolver Resolver { get; }
-        public abstract Akka.Actor.ActorBase Produce();
-        public void Release(Akka.Actor.ActorBase actor) { }
-        public static void SetResolver(Akka.Util.IResolver resolver) { }
-    }
-    public class Resolve<TActor> : Akka.Util.Resolve
-        where TActor : Akka.Actor.ActorBase
-    {
-        public Resolve(params object[] args) { }
-        public override System.Type ActorType { get; }
-        public object[] Arguments { get; }
-        public override Akka.Actor.ActorBase Produce() { }
     }
     public class static Result
     {
@@ -5279,18 +5202,9 @@ namespace Akka.Util
 }
 namespace Akka.Util.Extensions
 {
-    public class static DateTimeExtensions
-    {
-        public static long ToTimestamp(this System.DateTime dateTime) { }
-    }
     public class static ObjectExtensions
     {
         public static Akka.Util.Option<T> AsOption<T>(this T obj) { }
-    }
-    public class static TimeSpanExtensions
-    {
-        public static System.TimeSpan Multiply(this System.TimeSpan multiplicand, int multiplier) { }
-        public static System.TimeSpan Multiply(this System.TimeSpan multiplicand, double multiplier) { }
     }
 }
 namespace Akka.Util.Internal

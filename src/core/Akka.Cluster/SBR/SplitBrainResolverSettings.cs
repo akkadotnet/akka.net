@@ -166,18 +166,6 @@ namespace Akka.Cluster.SBR
 
     public sealed class LeaseMajoritySettings
     {
-        [Obsolete]
-        public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, string role)
-            : this(leaseImplementation, acquireLeaseDelayForMinority, role, null)
-        {
-        }
-
-        [Obsolete]
-        public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, string role, string leaseName)
-            : this(leaseImplementation, acquireLeaseDelayForMinority, TimeSpan.FromSeconds(40), role, leaseName)
-        {
-        }
-
         public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, TimeSpan releaseAfter, string role, string leaseName)
         {
             LeaseImplementation = leaseImplementation;

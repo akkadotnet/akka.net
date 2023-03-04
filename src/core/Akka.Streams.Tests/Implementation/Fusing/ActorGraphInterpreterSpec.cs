@@ -266,7 +266,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             this.AssertAllStagesStopped(() =>
             {
-                var materializer = ActorMaterializer.Create(Sys);
+                // force the system to create a new materializer
+                var materializer = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys));
                 var gotStop = new TestLatch(1);
                 var downstream = this.CreateSubscriberProbe<string>();
 

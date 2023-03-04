@@ -634,7 +634,7 @@ namespace Akka.Cluster
             {
                 if (_myReceivers.IsEmpty)
                 {
-                    _myReceivers = new Option<IImmutableSet<UniqueAddress>>(Receivers(SelfAddress));
+                    _myReceivers = Option<IImmutableSet<UniqueAddress>>.Create(Receivers(SelfAddress));
                 }
 
                 return _myReceivers;

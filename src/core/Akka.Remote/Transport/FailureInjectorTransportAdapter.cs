@@ -67,7 +67,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal class FailureInjectorTransportAdapter : AbstractTransportAdapter, IAssociationEventListener
+    public class FailureInjectorTransportAdapter : AbstractTransportAdapter, IAssociationEventListener
     {
 #region Internal message classes
 

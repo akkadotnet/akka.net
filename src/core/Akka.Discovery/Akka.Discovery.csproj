@@ -7,7 +7,6 @@
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags)</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <LangVersion>8</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>

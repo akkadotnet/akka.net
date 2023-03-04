@@ -14,8 +14,6 @@ using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.Routing;
 using Akka.TestKit;
-using Akka.TestKit.TestEvent;
-using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Google.Protobuf;
@@ -23,7 +21,6 @@ using Xunit;
 using Xunit.Abstractions;
 using Nito.AsyncEx;
 using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
-using Akka.Remote.Serialization;
 using Akka.TestKit.Extensions;
 using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions.Extensions;
@@ -34,6 +31,19 @@ namespace Akka.Remote.Tests
     {
         public RemotingSpec(ITestOutputHelper helper) : base(GetConfig(), helper)
         {
+            var c1 = ConfigurationFactory.ParseString(GetConfig());
+            var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+            var conf = c2.WithFallback(c1); //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+
+            _remoteSystem = ActorSystem.Create("remote-sys", conf);
+            InitializeLogger(_remoteSystem);
+            Deploy(Sys, new Deploy(@"/gonk", new RemoteScope(Addr(_remoteSystem, "tcp"))));
+            Deploy(Sys, new Deploy(@"/zagzag", new RemoteScope(Addr(_remoteSystem, "udp"))));
+
+            _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
+            _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
+
+            AtStartup();
         }
 
         private static string GetConfig()
@@ -136,35 +146,15 @@ namespace Akka.Remote.Tests
 
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
 
-        public override async Task InitializeAsync()
+        protected override void AfterAll()
         {
-            await base.InitializeAsync();
-            
-            var c1 = ConfigurationFactory.ParseString(GetConfig());
-            var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
-            var conf = c2.WithFallback(c1);  //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
-
-            _remoteSystem = ActorSystem.Create("remote-sys", conf);
-            InitializeLogger(_remoteSystem);
-            Deploy(Sys, new Deploy(@"/gonk", new RemoteScope(Addr(_remoteSystem, "tcp"))));
-            Deploy(Sys, new Deploy(@"/zagzag", new RemoteScope(Addr(_remoteSystem, "udp"))));
-
-            _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
-            _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
-
-            AtStartup();
-        }
-
-        protected override async Task AfterAllAsync()
-        {
-            if(_remoteSystem != null)
-                await ShutdownAsync(_remoteSystem);
+            if (_remoteSystem != null)
+                Shutdown(_remoteSystem);
             AssociationRegistry.Clear();
-            await base.AfterAllAsync();
+            base.AfterAll();
         }
 
         #region Tests
-
 
         [Fact]
         public async Task Remoting_must_support_remote_lookups()
@@ -183,7 +173,7 @@ namespace Akka.Remote.Tests
             Assert.Equal("pong", msg);
             Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
         }
-        
+
         [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task Ask_does_not_deadlock()
         {
@@ -197,13 +187,14 @@ namespace Akka.Remote.Tests
             var msg2 = _here.Ask<(string, IActorRef)>("ping", DefaultTimeout).Result;
             Assert.Equal("pong", msg2.Item1);
         }
-        
+
         [Fact]
         public async Task Resolve_does_not_deadlock()
         {
             // here is really an ActorSelection
             var actorSelection = (ActorSelection)_here;
-            Assert.True(await actorSelection.ResolveOne(10.Seconds()).AwaitWithTimeout(10.2.Seconds()), "ResolveOne failed to resolve within 10 seconds");
+            Assert.True(await actorSelection.ResolveOne(10.Seconds()).AwaitWithTimeout(10.2.Seconds()),
+                "ResolveOne failed to resolve within 10 seconds");
             // the only test is that the ResolveOne works, so if we got here, the test passes
         }
 
@@ -274,7 +265,8 @@ namespace Akka.Remote.Tests
             grandchild.Tell(43);
             await ExpectMsgAsync(43);
             var myRef = await Sys.ActorSelection("/user/looker/child/grandchild").ResolveOne(TimeSpan.FromSeconds(3));
-            (myRef is LocalActorRef).ShouldBeTrue(); // due to a difference in how ActorFor and ActorSelection are implemented, this will return a LocalActorRef
+            (myRef is LocalActorRef)
+                .ShouldBeTrue(); // due to a difference in how ActorFor and ActorSelection are implemented, this will return a LocalActorRef
             myRef.Tell(44);
             await ExpectMsgAsync(44);
             LastSender.ShouldBe(grandchild);
@@ -284,7 +276,8 @@ namespace Akka.Remote.Tests
             var cRef = await Sys.ActorSelection("/user/looker/child").ResolveOne(TimeSpan.FromSeconds(3));
             cRef.ShouldBe(child);
             (await l.Ask<IActorRef>("child/..", TimeSpan.FromSeconds(3))).ShouldBe(l);
-            var selection = await Sys.ActorSelection("/user/looker/child").Ask<ActorSelection>(new ActorSelReq(".."), TimeSpan.FromSeconds(3));
+            var selection = await Sys.ActorSelection("/user/looker/child")
+                .Ask<ActorSelection>(new ActorSelReq(".."), TimeSpan.FromSeconds(3));
             var resolved = await selection.ResolveOne(TimeSpan.FromSeconds(3));
             resolved.ShouldBe(l);
 
@@ -296,12 +289,12 @@ namespace Akka.Remote.Tests
             var child2 = ExpectMsg<IActorRef>();
             child2.Tell(45);
             await ExpectMsgAsync(45);
-            
+
             // msg to old IActorRef (different uid) should not get through
             child2.Path.Uid.ShouldNotBe(child.Path.Uid);
             child.Tell(46);
             await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-            
+
             Sys.ActorSelection("user/looker/child").Tell(47);
             await ExpectMsgAsync(47);
         }
@@ -319,31 +312,31 @@ namespace Akka.Remote.Tests
             // child is configured to be deployed on remoteSystem
             l.Tell((Props.Create<Echo1>(), "child"));
             var child = await ExpectMsgAsync<IActorRef>();
-            
+
             // grandchild is configured to be deployed on RemotingSpec (system)
             child.Tell((Props.Create<Echo1>(), "grandchild"));
             var grandchild = await ExpectMsgAsync<IActorRef>();
             ((IActorRefScope)grandchild).IsLocal.ShouldBeTrue();
             grandchild.Tell(53);
             await ExpectMsgAsync(53);
-            
+
             var myself = Sys.ActorSelection("user/looker/child/grandchild");
             myself.Tell(54);
             await ExpectMsgAsync(54);
             LastSender.ShouldBe(grandchild);
             LastSender.ShouldBeSame(grandchild);
-            
+
             myself.Tell(new Identify(myself));
             var grandchild2 = (await ExpectMsgAsync<ActorIdentity>()).Subject;
             grandchild2.ShouldBe(grandchild);
-            
+
             Sys.ActorSelection("user/looker/child").Tell(new Identify(null));
             (await ExpectMsgAsync<ActorIdentity>()).Subject.ShouldBe(child);
-            
+
             l.Tell(new ActorSelReq("child/.."));
             (await ExpectMsgAsync<ActorSelection>()).Tell(new Identify(null));
             (await ExpectMsgAsync<ActorIdentity>()).Subject.ShouldBeSame(l);
-            
+
             Sys.ActorSelection("user/looker/child").Tell(new ActorSelReq(".."));
             (await ExpectMsgAsync<ActorSelection>()).Tell(new Identify(null));
             (await ExpectMsgAsync<ActorIdentity>()).Subject.ShouldBeSame(l);
@@ -354,7 +347,7 @@ namespace Akka.Remote.Tests
             Sys.ActorSelection("/user/looker/child").Tell(new Identify("idReq1"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq1")))
                 .Subject.ShouldBe(child);
-            
+
             Sys.ActorSelection(child.Path).Tell(new Identify("idReq2"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq2")))
                 .Subject.ShouldBe(child);
@@ -365,27 +358,27 @@ namespace Akka.Remote.Tests
             Sys.ActorSelection("/user/looker/child/grandchild").Tell(new Identify("idReq4"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq4")))
                 .Subject.ShouldBe(grandchild);
-            
+
             Sys.ActorSelection(child.Path / "grandchild").Tell(new Identify("idReq5"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq5"))).Subject.ShouldBe(grandchild);
             Sys.ActorSelection("/user/looker/*/grandchild").Tell(new Identify("idReq6"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq6"))).Subject.ShouldBe(grandchild);
             Sys.ActorSelection("/user/looker/child/*").Tell(new Identify("idReq7"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq7"))).Subject.ShouldBe(grandchild);
-            
+
             Sys.ActorSelection(child.Path / "*").Tell(new Identify("idReq8"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq8"))).Subject.ShouldBe(grandchild);
 
             Sys.ActorSelection("/user/looker/child/grandchild/grandgrandchild").Tell(new Identify("idReq9"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq9"))).Subject.ShouldBe(grandgrandchild);
-            
+
             Sys.ActorSelection(child.Path / "grandchild" / "grandgrandchild").Tell(new Identify("idReq10"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq10"))).Subject.ShouldBe(grandgrandchild);
             Sys.ActorSelection("/user/looker/child/*/grandgrandchild").Tell(new Identify("idReq11"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq11"))).Subject.ShouldBe(grandgrandchild);
             Sys.ActorSelection("/user/looker/child/*/*").Tell(new Identify("idReq12"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq12"))).Subject.ShouldBe(grandgrandchild);
-            
+
             Sys.ActorSelection(child.Path / "*" / "grandgrandchild").Tell(new Identify("idReq13"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq13"))).Subject.ShouldBe(grandgrandchild);
 
@@ -404,7 +397,7 @@ namespace Akka.Remote.Tests
             var child2 = await ExpectMsgAsync<IActorRef>();
             child2.Tell(new Identify("idReq15"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq15"))).Subject.ShouldBe(child2);
-            
+
             Sys.ActorSelection(child.Path).Tell(new Identify("idReq16"));
             (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq16"))).Subject.ShouldBe(child2);
             child.Tell(new Identify("idReq17"));
@@ -424,37 +417,29 @@ namespace Akka.Remote.Tests
         public void Remoting_must_create_and_supervise_children_on_remote_Node()
         {
             var r = Sys.ActorOf<Echo1>("blub");
-            Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/blub", r.Path.ToString());
+            Assert.Equal(
+                "akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/blub",
+                r.Path.ToString());
         }
 
         [Fact]
         public void Remoting_must_create_by_IndirectActorProducer()
         {
-            try
-            {
-                var r = Sys.ActorOf(Props.CreateBy(new TestResolver<Echo2>()), "echo");
-                Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
-            }
-            finally
-            {
-                Resolve.SetResolver(null);
-            }
+            var r = Sys.ActorOf(Props.CreateBy(new TestResolver<Echo2>()), "echo");
+            Assert.Equal(
+                "akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo",
+                r.Path.ToString());
         }
 
         [Fact]
         public async Task Remoting_must_create_by_IndirectActorProducer_and_ping()
         {
-            try
-            {
-                var r = Sys.ActorOf(Props.CreateBy(new TestResolver<Echo2>()), "echo");
-                Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
-                r.Tell("ping", TestActor);
-                await ExpectMsgAsync(("pong", TestActor), TimeSpan.FromSeconds(1.5));
-            }
-            finally
-            {
-                Resolve.SetResolver(null);
-            }
+            var r = Sys.ActorOf(Props.CreateBy(new TestResolver<Echo2>()), "echo");
+            Assert.Equal(
+                "akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo",
+                r.Path.ToString());
+            r.Tell("ping", TestActor);
+            await ExpectMsgAsync(("pong", TestActor), TimeSpan.FromSeconds(1.5));
         }
 
         [Fact()]
@@ -529,17 +514,20 @@ namespace Akka.Remote.Tests
                 var dummySelection = thisSystem.ActorSelection(ActorPath.Parse(remoteAddress + "/user/noonethere"));
                 dummySelection.Tell("ping", Sys.DeadLetters);
 
-                var remoteHandle = await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4));
+                var remoteHandle =
+                    await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4));
                 remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(ev => { }));
 
                 // Now we initiate an emulated inbound connection to the real system
                 var inboundHandleProbe = CreateTestProbe();
-                var inboundHandle = await remoteTransport.Associate(rawLocalAddress).WithTimeout(TimeSpan.FromSeconds(3));
+                var inboundHandle =
+                    await remoteTransport.Associate(rawLocalAddress).WithTimeout(TimeSpan.FromSeconds(3));
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(inboundHandleProbe));
 
                 await AwaitAssertAsync(() =>
                 {
-                    registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should().NotBeNull();
+                    registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should()
+                        .NotBeNull();
                 });
 
                 var pduCodec = new AkkaPduProtobuffCodec(Sys);
@@ -563,7 +551,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                await ShutdownAsync(thisSystem);
+                Shutdown(thisSystem);
             }
         }
 
@@ -609,18 +597,21 @@ namespace Akka.Remote.Tests
                 var dummySelection = thisSystem.ActorSelection(ActorPath.Parse(remoteAddress + "/user/noonethere"));
                 dummySelection.Tell("ping", Sys.DeadLetters);
 
-                var remoteHandle = await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4));
-                remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(ev => {}));
+                var remoteHandle =
+                    await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4));
+                remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(ev => { }));
 
                 // Now we initiate an emulated inbound connection to the real system
                 var inboundHandleProbe = CreateTestProbe();
-                
-                var inboundHandle = await remoteTransport.Associate(rawLocalAddress).WithTimeout(TimeSpan.FromSeconds(3));
+
+                var inboundHandle =
+                    await remoteTransport.Associate(rawLocalAddress).WithTimeout(TimeSpan.FromSeconds(3));
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(inboundHandleProbe));
 
                 await AwaitAssertAsync(() =>
                 {
-                    registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should().NotBeNull();
+                    registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should()
+                        .NotBeNull();
                 });
 
                 var pduCodec = new AkkaPduProtobuffCodec(Sys);
@@ -645,7 +636,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                await ShutdownAsync(thisSystem);
+                Shutdown(thisSystem);
             }
         }
 
@@ -656,10 +647,7 @@ namespace Akka.Remote.Tests
             await EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload sent to ")
                 .ExpectOneAsync(async () =>
                 {
-                    await VerifySendAsync(oversized, async () =>
-                    {
-                        await ExpectNoMsgAsync();
-                    });
+                    await VerifySendAsync(oversized, async () => { await ExpectNoMsgAsync(); });
                 });
         }
 
@@ -669,10 +657,7 @@ namespace Akka.Remote.Tests
             await EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload received")
                 .ExpectOneAsync(async () =>
                 {
-                    await VerifySendAsync(MaxPayloadBytes + 1, async () =>
-                    {
-                        await ExpectNoMsgAsync();
-                    });
+                    await VerifySendAsync(MaxPayloadBytes + 1, async () => { await ExpectNoMsgAsync(); });
                 });
         }
 
@@ -742,7 +727,8 @@ namespace Akka.Remote.Tests
 
             var bigBounceHere =
                 Sys.ActorSelection($"akka.test://remote-sys@localhost:12346/user/{bigBounceId}");
-            var eventForwarder = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)).WithDeploy(Actor.Deploy.Local));
+            var eventForwarder =
+                Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)).WithDeploy(Actor.Deploy.Local));
             Sys.EventStream.Subscribe(eventForwarder, typeof(AssociationErrorEvent));
             Sys.EventStream.Subscribe(eventForwarder, typeof(DisassociatedEvent));
             try
@@ -759,7 +745,7 @@ namespace Akka.Remote.Tests
                 bigBounceOther.Tell(PoisonPill.Instance);
             }
         }
-        
+
         /// <summary>
         /// Have to hide other method otherwise we get an NRE due to base class
         /// constructor being called first.
@@ -781,7 +767,8 @@ namespace Akka.Remote.Tests
 
         private Address Addr(ActorSystem system, string proto)
         {
-            return ((ExtendedActorSystem)system).Provider.GetExternalAddressFor(new Address($"akka.{proto}", "", "", 0));
+            return ((ExtendedActorSystem)system).Provider.GetExternalAddressFor(new Address($"akka.{proto}", "", "",
+                0));
         }
 
         private int Port(ActorSystem system, string proto)
@@ -829,7 +816,9 @@ namespace Akka.Remote.Tests
             private readonly Props _reporterProps;
             private IActorRef _reporterActorRef;
 
-            public class GetNestedReporter { }
+            public class GetNestedReporter
+            {
+            }
 
             public NestedDeployer(Props reporterProps)
             {
@@ -857,6 +846,7 @@ namespace Akka.Remote.Tests
         private class Echo1 : UntypedActor
         {
             private IActorRef _target = Context.System.DeadLetters;
+
             protected override void OnReceive(object message)
             {
                 switch (message)
@@ -876,18 +866,23 @@ namespace Akka.Remote.Tests
                 }
             }
 
-            protected override void PreStart() { }
+            protected override void PreStart()
+            {
+            }
+
             protected override void PreRestart(Exception reason, object message)
             {
                 _target.Tell("preRestart");
             }
 
-            protected override void PostRestart(Exception reason) { }
+            protected override void PostRestart(Exception reason)
+            {
+            }
+
             protected override void PostStop()
             {
                 _target.Tell("postStop");
             }
-
         }
 
         private class Echo2 : UntypedActor
@@ -909,6 +904,7 @@ namespace Akka.Remote.Tests
                                 actorTuple.Item2.Tell(("pong", Sender.Path.ToSerializationFormat()));
                                 break;
                         }
+
                         break;
                     default:
                         Sender.Tell(message);
@@ -935,7 +931,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        private class TestResolver<TActor> : IIndirectActorProducer where TActor:ActorBase
+        private class TestResolver<TActor> : IIndirectActorProducer where TActor : ActorBase
         {
             public Type ActorType => typeof(TActor);
             private readonly object[] _args;
@@ -952,7 +948,6 @@ namespace Akka.Remote.Tests
 
             public void Release(ActorBase actor)
             {
-                
             }
         }
 
@@ -960,7 +955,9 @@ namespace Akka.Remote.Tests
         {
             private readonly Action<IHandleEvent> _handler;
 
-            public ActionHandleEventListener() : this(ev => { }) { }
+            public ActionHandleEventListener() : this(ev => { })
+            {
+            }
 
             public ActionHandleEventListener(Action<IHandleEvent> handler)
             {
@@ -973,8 +970,6 @@ namespace Akka.Remote.Tests
             }
         }
 
-
         #endregion
     }
 }
-

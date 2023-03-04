@@ -4,7 +4,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Tests.MultiNode</AssemblyTitle>
     <TargetFrameworks>$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

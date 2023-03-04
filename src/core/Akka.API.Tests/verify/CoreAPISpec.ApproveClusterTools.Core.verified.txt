@@ -205,9 +205,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     }
     public sealed class DistributedPubSubSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
-        [System.ObsoleteAttribute("Obsolete - please us the full constructor instead. This constructor only exists f" +
-            "or backwards API compatibility.")]
-        public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements) { }
         public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers) { }
         public System.TimeSpan GossipInterval { get; }
         public int MaxDeltaElements { get; }
@@ -397,8 +394,6 @@ namespace Akka.Cluster.Tools.Singleton
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Configuration.Config config, bool considerAppVersion) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithRole(string role) { }
-        [System.ObsoleteAttribute("For compatibility reasons only. Use method with TimeSpan parameter instead")]
-        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(System.TimeSpan singletonIdentificationInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonName(string singletonName) { }
     }

@@ -824,7 +824,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _left = stage._count;
 
-                SetHandler(stage.Inlet, stage.Outlet, this);
+                SetHandlers(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush()
@@ -2949,7 +2949,7 @@ namespace Akka.Streams.Implementation.Fusing
                     try
                     {
                         var materializer = ActorMaterializerHelper.Downcast(Materializer);
-                        _log = new BusLogging(materializer.System.EventStream, _stage._name, GetType(), DefaultLogMessageFormatter.Instance);
+                        _log = new BusLogging(materializer.System.EventStream, _stage._name, GetType(), materializer.System.Settings.LogFormatter);
                     }
                     catch (Exception ex)
                     {

@@ -194,7 +194,7 @@ namespace Akka.Streams.Dsl
                     switch (reply)
                     {
                         case TOut2 a: return a;
-                        case Status.Success s when s.Status is TOut2 a: return a;
+                        case Status.Success { Status: TOut2 a }: return a;
                         case Status.Failure f:
                             ExceptionDispatchInfo.Capture(f.Cause).Throw();
                             return default(TOut2);
@@ -292,6 +292,18 @@ namespace Akka.Streams.Dsl
             var tup = ToMaterialized(Sink.AsPublisher<TOut>(fanout: true), Keep.Both).Run(materializer);
             return (tup.Item1, Source.FromPublisher(tup.Item2));
         }
+        
+        /// <summary>
+        ///  Materializes this Source immediately.
+        /// </summary>
+        /// <param name="actorSystem">The ActorSystem.</param>
+        /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Source"/>
+        ///  that can be used to consume elements from the newly materialized <see cref="Source"/>.</returns>
+        public (TMat, Source<TOut, NotUsed>) PreMaterialize(ActorSystem actorSystem)
+        {
+            var tup = ToMaterialized(Sink.AsPublisher<TOut>(fanout: true), Keep.Both).Run(actorSystem);
+            return (tup.Item1, Source.FromPublisher(tup.Item2));
+        }
 
         /// <summary>
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
@@ -302,6 +314,17 @@ namespace Akka.Streams.Dsl
         /// <param name="materializer">TBD</param>
         /// <returns>TBD</returns>
         public TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
+            => ToMaterialized(sink, Keep.Right).Run(materializer);
+        
+        /// <summary>
+        /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
+        /// of the <see cref="Sink{TIn,TMat}"/> , e.g. the <see cref="IPublisher{TIn}"/> of a <see cref="Sink.Publisher{TIn}"/>.
+        /// </summary>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <param name="sink">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
+        public TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, ActorSystem materializer)
             => ToMaterialized(sink, Keep.Right).Run(materializer);
 
         /// <summary>
@@ -319,6 +342,22 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
             => RunWith(Sink.Aggregate(zero, aggregate), materializer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a fold function.
+        /// The given function is invoked for every received element, giving it its previous
+        /// output (or the given <paramref name="zero"/> value) and the element as input.
+        /// The returned <see cref="Task{TOut2}"/> will be completed with value of the final
+        /// function evaluation when the input stream ends, or completed with Failure
+        /// if there is a failure signaled in the stream.
+        /// </summary>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <param name="zero">TBD</param>
+        /// <param name="aggregate">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
+        public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, ActorSystem materializer)
+            => RunWith(Sink.Aggregate(zero, aggregate), materializer);
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a async <paramref name="aggregate"/> function.
@@ -335,6 +374,22 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, Func<TOut2, TOut, Task<TOut2>> aggregate, IMaterializer materializer)
             => RunWith(Sink.AggregateAsync(zero, aggregate), materializer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a async <paramref name="aggregate"/> function.
+        /// The given function is invoked for every received element, giving it its previous
+        /// output (or the given <paramref name="zero"/> value) and the element as input.
+        /// The returned <see cref="Task{TOut2}"/> will be completed with value of the final
+        /// function evaluation when the input stream ends, or completed with Failure
+        /// if there is a failure signaled in the stream.
+        /// </summary>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <param name="zero">TBD</param>
+        /// <param name="aggregate">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
+        public Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, Func<TOut2, TOut, Task<TOut2>> aggregate, ActorSystem materializer)
+            => RunWith(Sink.AggregateAsync(zero, aggregate), materializer);
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a reduce function.
@@ -349,6 +404,21 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Task<TOut> RunSum(Func<TOut, TOut, TOut> reduce, IMaterializer materializer)
             => RunWith(Sink.Sum(reduce), materializer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a reduce function.
+        /// The given function is invoked for every received element, giving it its previous
+        /// output (from the second element) and the element as input.
+        /// The returned <see cref="Task{TOut}"/> will be completed with value of the final
+        /// function evaluation when the input stream ends, or completed with Failure
+        /// if there is a failure signaled in the stream.
+        /// </summary>
+        /// <param name="reduce">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
+        public Task<TOut> RunSum(Func<TOut, TOut, TOut> reduce, ActorSystem materializer)
+            => RunWith(Sink.Sum(reduce), materializer);
+
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a foreach procedure. The given procedure is invoked
@@ -362,6 +432,19 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Task RunForeach(Action<TOut> action, IMaterializer materializer)
             => RunWith(Sink.ForEach(action), materializer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a foreach procedure. The given procedure is invoked
+        /// for each received element.
+        /// The returned <see cref="Task"/> will be completed with Success when reaching the
+        /// normal end of the stream, or completed with Failure if there is a failure signaled in
+        /// the stream.
+        /// </summary>
+        /// <param name="action">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
+        public Task RunForeach(Action<TOut> action, ActorSystem materializer)
+            => RunWith(Sink.ForEach(action), materializer);
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
@@ -374,6 +457,19 @@ namespace Akka.Streams.Dsl
         public IAsyncEnumerable<TOut> RunAsAsyncEnumerable(
             IMaterializer materializer) =>
             new StreamsAsyncEnumerableRerunnable<TOut,TMat>(this, materializer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
+        /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
+        /// This is implemented using a SourceQueue and will buffer elements based on configured stream defaults.
+        /// For custom buffers Please use <see cref="RunAsAsyncEnumerableBuffer"/>
+        /// </summary>
+        /// <param name="materializer">The materializer to use for each enumeration</param>
+        /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
+        public IAsyncEnumerable<TOut> RunAsAsyncEnumerable(
+            ActorSystem materializer) =>
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(this, materializer.Materializer());
+
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
@@ -390,6 +486,22 @@ namespace Akka.Streams.Dsl
             int maxBuffer = 16) =>
             new StreamsAsyncEnumerableRerunnable<TOut,TMat>(
                 this, materializer,minBuffer,maxBuffer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
+        /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
+        /// This is implemented using a SourceQueue and will buffer elements and/or backpressure,
+        /// based on the buffer values provided.
+        /// </summary>
+        /// <param name="materializer">The materializer to use for each enumeration</param>
+        /// <param name="minBuffer">The minimum input buffer size</param>
+        /// <param name="maxBuffer">The Max input buffer size.</param>
+        /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
+        public IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(
+            ActorSystem materializer, int minBuffer = 4,
+            int maxBuffer = 16) =>
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(
+                this, materializer.Materializer(),minBuffer,maxBuffer);
         
 
         /// <summary>

@@ -38,7 +38,7 @@ namespace Akka.Persistence.Journal
         {
             foreach (var resequenceable in resequenceables)
             {
-                if (!(resequenceable is AtomicWrite)) continue;
+                if (resequenceable is not AtomicWrite) continue;
                 
                 var result = ImmutableList.CreateBuilder<IPersistentRepresentation>();
 

@@ -166,38 +166,7 @@ namespace Akka.DistributedData
         /// </summary>
         public bool VerboseDebugLogging { get; }
 
-        [Obsolete]
-        public ReplicatorSettings(string role,
-                                  TimeSpan gossipInterval,
-                                  TimeSpan notifySubscribersInterval,
-                                  int maxDeltaElements,
-                                  string dispatcher,
-                                  TimeSpan pruningInterval,
-                                  TimeSpan maxPruningDissemination,
-                                  IImmutableSet<string> durableKeys,
-                                  Props durableStoreProps,
-                                  TimeSpan pruningMarkerTimeToLive,
-                                  TimeSpan durablePruningMarkerTimeToLive,
-                                  int maxDeltaSize)
-            : this(
-                  role,
-                  gossipInterval,
-                  notifySubscribersInterval,
-                  maxDeltaElements,
-                  dispatcher,
-                  pruningInterval,
-                  maxPruningDissemination,
-                  durableKeys,
-                  durableStoreProps,
-                  pruningMarkerTimeToLive,
-                  durablePruningMarkerTimeToLive,
-                  maxDeltaSize,
-                  false
-                 )
-        {
-        }
-
-        [Obsolete]
+        [Obsolete("Use constructor with `verboseDebugLogging` argument. Obsolete since v1.5.0-alpha2")]
         public ReplicatorSettings(string role,
             TimeSpan gossipInterval,
             TimeSpan notifySubscribersInterval,
@@ -210,61 +179,27 @@ namespace Akka.DistributedData
             TimeSpan pruningMarkerTimeToLive,
             TimeSpan durablePruningMarkerTimeToLive,
             int maxDeltaSize,
-            bool restartReplicatorOnFailure)
-            : this(
-                  role,
-                  gossipInterval,
-                  notifySubscribersInterval,
-                  maxDeltaElements,
-                  dispatcher,
-                  pruningInterval,
-                  maxPruningDissemination,
-                  durableKeys,
-                  durableStoreProps,
-                  pruningMarkerTimeToLive,
-                  durablePruningMarkerTimeToLive,
-                  maxDeltaSize,
-                  false,
-                  false,
-                  false
-                 )
+            bool restartReplicatorOnFailure,
+            bool preferOldest) : this(
+            role,
+            gossipInterval,
+            notifySubscribersInterval,
+            maxDeltaElements,
+            dispatcher,
+            pruningInterval,
+            maxPruningDissemination,
+            durableKeys,
+            durableStoreProps,
+            pruningMarkerTimeToLive,
+            durablePruningMarkerTimeToLive,
+            maxDeltaSize,
+            restartReplicatorOnFailure,
+            preferOldest,
+            false
+        )
         {
         }
         
-        [Obsolete]
-         public ReplicatorSettings(string role,
-                    TimeSpan gossipInterval,
-                    TimeSpan notifySubscribersInterval,
-                    int maxDeltaElements,
-                    string dispatcher,
-                    TimeSpan pruningInterval,
-                    TimeSpan maxPruningDissemination,
-                    IImmutableSet<string> durableKeys,
-                    Props durableStoreProps,
-                    TimeSpan pruningMarkerTimeToLive,
-                    TimeSpan durablePruningMarkerTimeToLive,
-                    int maxDeltaSize,
-                    bool restartReplicatorOnFailure,
-                    bool preferOldest) : this(
-                                                           role,
-                                                           gossipInterval,
-                                                           notifySubscribersInterval,
-                                                           maxDeltaElements,
-                                                           dispatcher,
-                                                           pruningInterval,
-                                                           maxPruningDissemination,
-                                                           durableKeys,
-                                                           durableStoreProps,
-                                                           pruningMarkerTimeToLive,
-                                                           durablePruningMarkerTimeToLive,
-                                                           maxDeltaSize,
-                                                           restartReplicatorOnFailure,
-                                                           preferOldest,
-                                                           false
-                                                          )
-                {
-                }
-
         public ReplicatorSettings(string role,
             TimeSpan gossipInterval,
             TimeSpan notifySubscribersInterval,

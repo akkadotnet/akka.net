@@ -1,9 +1,9 @@
 ---
 uid: serilog
-title: Serilog
+title: Using Serilog for Akka.NET Logging
 ---
 
-# Using Serilog
+# Using Serilog for Akka.NET Logging
 
 ## Setup
 
@@ -87,7 +87,28 @@ var log = Context.GetLogger();
 log.Info("The value is {Counter}", counter);
 ```
 
-## Extensions
+## Enabling Semantic Logging in Akka.NET v1.5+
+
+In order for logging statements like below to be parsed correctly:
+
+```csharp
+var log = Context.GetLogger();
+...
+log.Info("The value is {Counter}", counter);
+```
+
+You need to enable the `Akka.Logger.Serilog.SerilogLogMessageFormatter` across your entire `ActorSystem` - this will replace Akka.NET's default `ILogMessageFormatter` with Serilog's.
+
+You can accomplish this by setting the `akka.logger-formatter` setting like below:
+
+```hocon
+akka.logger-formatter="Akka.Logger.Serilog.SerilogLogMessageFormatter, Akka.Logger.Serilog"
+```
+
+## Extensions for Akka.NET v1.4 and Older
+
+> ![IMPORTANT]
+> This methodology is obsolete as of [Akka.NET v1.5](xref:akkadotnet-v15-whats-new), but we're leaving it documented for legacy purposes.
 
 The package __Akka.Logger.Serilog__ also includes the extension method `ForContext()` for `ILoggingAdapter` (the object returned by `Context.GetLogger()`). This is analogous to Serilog's `ForContext()` but instead of returning a Serilog `ILogger` it returns an Akka.NET `ILoggingAdapter`. This instance acts as contextual logger that will attach a property to all events logged through it.
 
@@ -133,26 +154,14 @@ There are few properties that one can use in their `OutputTemplate` for logger c
 
 ## HOCON Configuration
 
-In order to be able to change log level without the need to recompile, we need to employ some sort of application configuration.  To use Serilog via HOCON configuration, add the following to the __App.config__ of the project.
+In order to be able to change log level without the need to recompile, we need to employ some sort of application configuration.  To use Serilog via HOCON configuration, add the following to the HOCON of the project.
 
-```xml
-<configSections>    
-    <section name="akka" type="Akka.Configuration.Hocon.AkkaConfigurationSection, Akka" />
-</configSections>
-
-...
-
-<akka>
-    <hocon>
-      <![CDATA[
-      akka { 
-        loglevel=INFO,
-        loggers=["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
-      }
-    ]]>
-    </hocon>
-  </akka>
-
+```hocon
+akka { 
+    loglevel=INFO,
+    loggers=["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
+    logger-formatter="Akka.Logger.Serilog.SerilogLogMessageFormatter, Akka.Logger.Serilog"
+}
 ```
 
 The code can then be updated as follows removing the inline HOCON from the actor system creation code.  Note in the following example, if a minimum level is not specified, Information level events and higher will be processed.  Please read the documentation for [Serilog](https://serilog.net/) configuration for more details on this.  It is also possible to move serilog configuration to the application configuration, for example if using a rolling log file sink, again, browsing the serilog documentation is the best place for details on that feature.  

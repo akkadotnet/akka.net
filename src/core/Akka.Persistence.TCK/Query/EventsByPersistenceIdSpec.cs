@@ -127,10 +127,10 @@ namespace Akka.Persistence.TCK.Query
             return Sys.ActorOf(Query.TestActor.Props(persistenceId));
         }
 
-        public override Task DisposeAsync()
+        protected override void AfterAll()
         {
             Materializer.Dispose();
-            return base.DisposeAsync();
+            base.AfterAll();
         }
     }
 }

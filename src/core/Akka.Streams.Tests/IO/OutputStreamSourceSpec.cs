@@ -203,7 +203,7 @@ namespace Akka.Streams.Tests.IO
             }
             finally
             {
-                await ShutdownAsync(sys);
+                Shutdown(sys);
             }
         }
 

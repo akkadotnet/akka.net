@@ -264,26 +264,25 @@ namespace Akka.Cluster
         /// <returns>Task which completes, once current cluster node reaches <see cref="MemberStatus.Up"/> state.</returns>
         public Task JoinAsync(Address address, CancellationToken token = default)
         {
-            if (_isTerminated)
+            if (_isTerminated.Value)
                 throw new ClusterJoinFailedException("Cluster has already been terminated");
             
             if (IsUp)
                 return Task.CompletedTask;
 
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
-            
-            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
-            timeoutCts.Token.Register(() =>
+
+            if (token != default)
             {
-                timeoutCts.Dispose();
-                completion.TrySetException(new ClusterJoinFailedException(
-                    $"Node has not managed to join the cluster using provided address: {address}"));
-            });
+                token.Register(() =>
+                {
+                    completion.TrySetException(new ClusterJoinFailedException(
+                        $"Node has not managed to join the cluster using provided address: {address}"));
+                });
+            }
             
             RegisterOnMemberUp(() =>
             {
-                timeoutCts.Dispose();
                 completion.TrySetResult(NotUsed.Instance);
             });
             
@@ -340,7 +339,7 @@ namespace Akka.Cluster
         /// <param name="token">TBD</param>
         public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default)
         {
-            if (_isTerminated)
+            if (_isTerminated.Value)
                 throw new ClusterJoinFailedException("Cluster has already been terminated");
             
             if (IsUp)
@@ -348,19 +347,18 @@ namespace Akka.Cluster
             
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             var nodes = seedNodes.ToList();
-            
-            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
-            timeoutCts.Token.Register(() =>
+
+            if (token != default)
             {
-                timeoutCts.Dispose();
-                completion.TrySetException(new ClusterJoinFailedException(
-                    $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", nodes)}."));
-            });
+                token.Register(() =>
+                {
+                    completion.TrySetException(new ClusterJoinFailedException(
+                        $"Node has not managed to join the cluster using provided addresses: [{string.Join(",", nodes)}]"));
+                });
+            }
             
             RegisterOnMemberUp(() =>
             {
-                timeoutCts.Dispose();
                 completion.TrySetResult(NotUsed.Instance);
             });
             

@@ -36,11 +36,11 @@ namespace Akka.Remote.Tests
         
         public RemotingTerminatorSpecs(ITestOutputHelper output) : base(RemoteConfig, output) { }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
+            base.AfterAll();
             if (_sys2 != null)
-                await ShutdownAsync(_sys2);
+                Shutdown(_sys2);
         }
 
         [Fact]

@@ -190,7 +190,6 @@ namespace Akka.Actor
                 if (ActorCell.Current is { } cell) return cell.SystemImpl.Provider;
 
                 return null;
-                break;
             }
         }
     }
@@ -204,7 +203,7 @@ namespace Akka.Actor
     internal sealed class PromiseActorRef : MinimalActorRef
     {
         /// <summary>
-        /// Can't access constructor directly - use <see cref="Apply"/> instead.
+        /// Can't access constructor directly - use PromiseActorRef.Apply instead.
         /// </summary>
         private PromiseActorRef(IActorRefProvider provider, TaskCompletionSource<object> promise, string mcn)
         {

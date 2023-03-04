@@ -31,12 +31,6 @@ namespace Akka.Remote.Tests.Transport
             : base("akka.actor.provider = \"Akka.Remote.RemoteActorRefProvider, Akka.Remote\" ")
         {
             _withAkkaProtocol = withAkkaProtocol;
-        }
-
-        public override async Task InitializeAsync()
-        {
-            await base.InitializeAsync();
-            
             _addressA = _addressATest.WithProtocol($"{SchemeIdentifier}.{_addressATest.Protocol}");
             _addressB = _addressBTest.WithProtocol($"{SchemeIdentifier}.{_addressBTest.Protocol}");
             _nonExistingAddress = new Address(SchemeIdentifier + ".test", "nosystem", "nohost", 0);

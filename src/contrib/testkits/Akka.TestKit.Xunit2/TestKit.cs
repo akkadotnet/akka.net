@@ -21,7 +21,7 @@ namespace Akka.TestKit.Xunit2
     /// This class represents an Akka.NET TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
     /// as its testing framework.
     /// </summary>
-    public class TestKit : TestKitBase, IAsyncLifetime
+    public class TestKit : TestKitBase, IDisposable
     {
         private class PrefixedOutput : ITestOutputHelper
         {
@@ -50,6 +50,9 @@ namespace Akka.TestKit.Xunit2
         /// </summary>
         protected readonly ITestOutputHelper Output;
 
+        private bool _disposed;
+        private bool _disposing;
+        
         /// <summary>
         /// <para>
         /// Initializes a new instance of the <see cref="TestKit"/> class.
@@ -124,15 +127,9 @@ namespace Akka.TestKit.Xunit2
 
         /// <summary>
         /// This method is called when a test ends.
-        ///
-        /// <remarks>
-        /// If you override this, then make sure you either call base.AfterAllAsync()
-        /// to shut down the system. Otherwise a memory leak will occur.
-        /// </remarks>
         /// </summary>
-        protected virtual async Task AfterAllAsync()
+        protected virtual void AfterAll()
         {
-            await ShutdownAsync();
         }
 
         /// <summary>
@@ -161,14 +158,36 @@ namespace Akka.TestKit.Xunit2
                     .ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
-        public virtual Task InitializeAsync()
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        /// <param name="disposing">
+        /// if set to <c>true</c> the method has been called directly or indirectly by a  user's code.
+        /// Managed and unmanaged resources will be disposed.<br /> if set to <c>false</c> the method
+        /// has been called by the runtime from inside the finalizer and only unmanaged resources can
+        ///  be disposed.
+        /// </param>
+        protected virtual void Dispose(bool disposing)
         {
-            return Task.CompletedTask;
+            if (_disposing || _disposed)
+                return;
+            
+            _disposing = true;
+            try
+            {
+                AfterAll();
+            }
+            finally
+            {
+                Shutdown();
+                _disposed = true;
+            }
         }
 
-        public virtual async Task DisposeAsync()
+        public void Dispose()
         {
-            await AfterAllAsync();
+            Dispose(true);
         }
     }
 }

@@ -128,25 +128,31 @@ namespace Akka.Cluster.Sharding.Tests
         {
             if (_isInitialized)
             {
-                if (!(message is InitTimeout))
+                if (message is not InitTimeout)
                     return base.AroundReceive(receive, message);
             }
-            else if (message is SetStore msg)
+            else switch (message)
             {
-                _store = msg.Store;
-                Stash.UnstashAll();
-                _isInitialized = true;
+                case SetStore msg:
+                    _store = msg.Store;
+                    Stash.UnstashAll();
+                    _isInitialized = true;
+                    break;
+                case InitTimeout:
+                    _isInitTimedOut = true;
+                    Stash.UnstashAll(); // will trigger appropriate failures
+                    break;
+                default:
+                {
+                    if (_isInitTimedOut)
+                    {
+                        return base.AroundReceive(receive, message);
+                    }
+                    else Stash.Stash();
+
+                    break;
+                }
             }
-            else if (message is InitTimeout)
-            {
-                _isInitTimedOut = true;
-                Stash.UnstashAll(); // will trigger appropriate failures
-            }
-            else if (_isInitTimedOut)
-            {
-                return base.AroundReceive(receive, message);
-            }
-            else Stash.Stash();
             return true;
         }
 
@@ -162,26 +168,25 @@ namespace Akka.Cluster.Sharding.Tests
         /// <returns>TBD</returns>
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
+            var trueMsgs = messages.ToArray();
+            
             if (_store == null)
                 return StoreNotInitialized<IImmutableList<Exception>>();
 
-            return _store.Ask<object>(sender => new WriteMessages(messages, sender, 1), Timeout, CancellationToken.None)
+            return _store.Ask<object>(sender => new WriteMessages(trueMsgs, sender, 1), Timeout, CancellationToken.None)
                 .ContinueWith(r =>
                 {
                     if (r.IsCanceled)
-                        return (IImmutableList<Exception>)messages.Select(i => (Exception)new TimeoutException()).ToImmutableList();
+                        return (IImmutableList<Exception>)trueMsgs.Select(i => (Exception)new TimeoutException()).ToImmutableList();
                     if (r.IsFaulted)
-                        return messages.Select(i => (Exception)r.Exception).ToImmutableList();
+                        return trueMsgs.Select(i => (Exception)r.Exception).ToImmutableList();
 
-                    if (r.Result is WriteMessageSuccess wms)
+                    return r.Result switch
                     {
-                        return messages.Select(i => (Exception)null).ToImmutableList();
-                    }
-                    if (r.Result is WriteMessageFailure wmf)
-                    {
-                        return messages.Select(i => wmf.Cause).ToImmutableList();
-                    }
-                    return null;
+                        WriteMessageSuccess wms => trueMsgs.Select(i => (Exception)null).ToImmutableList(),
+                        WriteMessageFailure wmf => trueMsgs.Select(i => wmf.Cause).ToImmutableList(),
+                        _ => null
+                    };
                 }, TaskContinuationOptions.ExecuteSynchronously);
         }
 

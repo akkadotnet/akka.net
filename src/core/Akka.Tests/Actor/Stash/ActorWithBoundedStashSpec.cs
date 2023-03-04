@@ -129,10 +129,10 @@ namespace Akka.Tests.Actor.Stash
             Sys.EventStream.Publish(EventFilter.Warning(pattern: new Regex(".*Received dead letter from.*hello.*")).Mute());
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
             Sys.EventStream.Unsubscribe(TestActor, typeof(DeadLetter));
+            base.AfterAll();
         }
 
         private void TestDeadLetters(IActorRef stasher)

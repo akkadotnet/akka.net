@@ -170,16 +170,16 @@ namespace Akka.Streams.Tests
         private readonly TestProbe _probe;
         private readonly IActorRef _remoteActor;
 
-        protected override async Task BeforeTerminationAsync()
+        protected override void BeforeTermination()
         {
-            await base.BeforeTerminationAsync();
             Materializer.Dispose();
+            base.BeforeTermination();
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(RemoteSystem);
+            Shutdown(RemoteSystem);
+            base.AfterAll();
         }
 
         [Fact]

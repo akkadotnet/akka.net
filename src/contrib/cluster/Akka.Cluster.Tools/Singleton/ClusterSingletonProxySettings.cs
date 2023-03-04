@@ -166,20 +166,6 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         /// <param name="singletonIdentificationInterval">The identification level of the singleton proxy.</param>
         /// <returns>A new setting with the provided <paramref name="singletonIdentificationInterval" />.</returns>
-        [Obsolete("For compatibility reasons only. Use method with TimeSpan parameter instead")]
-        public ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval)
-        {
-            return this;
-        }
-
-        /// <summary>
-        /// Creates a new <see cref="ClusterSingletonProxySettings" /> setting with the specified <paramref name="singletonIdentificationInterval"/>.
-        /// <note>
-        /// This method is immutable and returns a new instance of the setting.
-        /// </note>
-        /// </summary>
-        /// <param name="singletonIdentificationInterval">The identification level of the singleton proxy.</param>
-        /// <returns>A new setting with the provided <paramref name="singletonIdentificationInterval" />.</returns>
         public ClusterSingletonProxySettings WithSingletonIdentificationInterval(TimeSpan singletonIdentificationInterval)
         {
             return Copy(singletonIdentificationInterval: singletonIdentificationInterval);

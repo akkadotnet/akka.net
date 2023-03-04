@@ -1,4 +1,143 @@
-#### 1.5.0-alpha4 February 1st 2022 ####
+#### 1.5.0 March 2nd 2023 ####
+Version 1.5.0 is a major new release of Akka.NET that is now marked as stable and ready for production use.
+
+You can read the [full notes about what's changed in Akka.NET v1.5 here](https://getakka.net/community/whats-new/akkadotnet-v1.5.html). We also encourage you to watch our video: "[Akka NET v1.5 New Features and Upgrade Guide](https://www.youtube.com/watch?v=-UPestlIw4k)"
+
+If you want to see the [full set of changes made in Akka.NET v1.5.0 so far, click here](https://github.com/akkadotnet/akka.net/milestone/7).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 95 | 25041 | 24976 | Gregorius Soedharmo |
+| 85 | 89784 | 18362 | Aaron Stannard |
+| 76 | 95 | 95 | dependabot[bot] |
+| 18 | 3201 | 908 | Ismael Hamed |
+| 5 | 230 | 251 | Sergey Popov |
+| 2 | 77 | 7 | Vagif Abilov |
+| 2 | 38 | 8 | Brah McDude |
+| 1 | 92 | 92 | nabond251 |
+| 1 | 843 | 0 | Drew |
+| 1 | 7 | 6 | Tjaart Blignaut |
+| 1 | 5 | 4 | Sean Killeen |
+| 1 | 32 | 1 | JonnyII |
+| 1 | 26 | 4 | Thomas Stegemann |
+| 1 | 203 | 5 | Ebere Abanonu |
+| 1 | 2 | 2 | Popov Sergey |
+| 1 | 2 | 2 | Denis |
+| 1 | 16 | 0 | Damian |
+| 1 | 11 | 2 | Nicolai Davies |
+| 1 | 101 | 3 | aminchenkov |
+| 1 | 1 | 1 | zbynek001 |
+| 1 | 1 | 1 | Michel van Os |
+| 1 | 1 | 1 | Adrian D. Alvarez |
+
+#### 1.5.0-beta5 February 28th 2023 ####
+Version 1.5.0-beta5 contains **breaking API changes** and new API changes for Akka.NET.
+
+* [Akka.Cluster: Remove `JoinAsync` and `JoinSeedNodesAsync` default timeout values](https://github.com/akkadotnet/akka.net/pull/6473)
+* [Akka.Event: expose `Args()` on `LogMessage`](https://github.com/akkadotnet/akka.net/pull/6472)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 50 | 28 | Aaron Stannard |
+| 1 | 22 | 32 | Gregorius Soedharmo |
+
+#### 1.5.0-beta4 February 28th 2023 ####
+Version 1.5.0-beta4 contains **breaking API changes** and new API changes for Akka.NET.
+
+* [Akka.Persistence.TCK: remove `IDisposable` from Akka.Persistence.TCK](https://github.com/akkadotnet/akka.net/pull/6465) - this hid methods from the `TestKit` base classes.
+* [Akka.Remote: Make transport adapter messages public](https://github.com/akkadotnet/akka.net/pull/6469) - adds back public APIs from v1.4.
+* [Akka.TestKit: fix accidental breaking changes in v1.5.0-beta3](https://github.com/akkadotnet/akka.net/issues/6466)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 110 | 37 | Aaron Stannard |
+| 1 | 253 | 7 | Gregorius Soedharmo |
+
+#### 1.5.0-beta3 February 27th 2023 ####
+Version 1.5.0-beta3 contains **breaking API changes** and new API changes for Akka.NET.
+
+* Removed a number of `Obsolete` APIs that were generally not used much.
+* [Akka.Actor: `ActorSystem.Create` throws `PlatformNotSupportedException` on net7.0-android](https://github.com/akkadotnet/akka.net/issues/6459)
+* [Akka.Actor: Append message content to `DeadLetter` log messages](https://github.com/akkadotnet/akka.net/pull/6448)
+* [Akka.Streams: Use `ActorSystem` for `Materializer`](https://github.com/akkadotnet/akka.net/pull/6453) - *massive* memory improvements for applications that materialize a large number of streams.
+* [Akka.Persistence.Query.Sql: backpressure control for queries](https://github.com/akkadotnet/akka.net/pull/6436) - full details on this here: https://petabridge.com/blog/largescale-cqrs-akkadotnet-v1.5/
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 14 | 68 | 794 | Gregorius Soedharmo |
+| 5 | 997 | 498 | Aaron Stannard |
+| 3 | 6 | 6 | dependabot[bot] |
+
+#### 1.5.0-beta2 February 20th 2023 ####
+Version 1.5.0-beta2 contains **breaking API changes** and new API changes for Akka.NET.
+
+* [Akka.Event: Add K to the DateTime format string to include TZ information](https://github.com/akkadotnet/akka.net/pull/6419)
+* [Akka.TestKit: Reintroduce old code and mark them obsolete](https://github.com/akkadotnet/akka.net/pull/6420) - fixes major regression in Akka.TestKit.Xunit2 where we removed `IDipsoable` before. This PR reintroduces it for backwards compat.
+* [Akka.Cluster.Sharding: clean its internal cache if region/proxy died](https://github.com/akkadotnet/akka.net/pull/6424)
+* [Akka.Util: Harden `Option<T>` by disallowing null value](https://github.com/akkadotnet/akka.net/pull/6426)
+* [Akka.Util: move `DateTime` / `TimeSpan` extension APIs out of Akka.Util and into Akka.Cluster.Metrics](https://github.com/akkadotnet/akka.net/pull/6427)
+* [Akka.Util: Remove unsafe `implicit` conversion operators in `AtomicBoolean` and `AtomicReference<T>`](https://github.com/akkadotnet/akka.net/pull/6429)
+* [Akka: Standardize on C# 11.0](https://github.com/akkadotnet/akka.net/pull/6431)
+* [Akka.Persistence: improve `AsyncWriteJournal` and `PersistentActor` performance](https://github.com/akkadotnet/akka.net/pull/6432)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 260 | 942 | Aaron Stannard |
+| 5 | 169 | 60 | Gregorius Soedharmo |
+
+#### 1.5.0-beta1 February 20th 2023 ####
+Version 1.5.0-beta1 contains **breaking API changes** and new API changes for Akka.NET.
+
+**Breaking Changes: Logging**
+
+In [https://github.com/akkadotnet/akka.net/pull/6408](https://github.com/akkadotnet/akka.net/pull/6408) the entire `ILoggingAdapter` interface was rewritten in order to improve extensibility and performance (logging is now 30-40% faster in all cases and allocates ~50% fewer objects for large format strings).
+
+All of the changes made here are _source compatible_, but not _binary compatible_ - meaning that users and package authors will need to do the following:
+
+* Add `using Akka.Event` in all files that used the `ILoggingAdapter` and
+* Recompile.
+
+> NOTE: you can use a [`global using Akka.Event` directive](https://devblogs.microsoft.com/dotnet/welcome-to-csharp-10/#global-using-directives) to do this solution / project-wide if your project supports C# 10 and / or .NET 6.
+
+In addition to improving the performance of the `ILoggingAdapter` system, we've also made it more extensible - for instance, you can now globally configure the `ILogMessageFormatter` via the following HOCON:
+
+```
+akka { 
+    loglevel=INFO,
+    loggers=["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
+    logger-formatter="Akka.Logger.Serilog.SerilogLogMessageFormatter, Akka.Logger.Serilog"
+}
+```
+
+That will allow users to use the `SerilogLogMessageFormatter` globally throughout their applications - no more annoying calls like this inside individual actors that want to use semantic logging:
+
+```csharp
+private readonly ILoggingAdapter _logger = Context.GetLogger<SerilogLoggingAdapter>();
+```
+
+**Breaking Changes: Akka.Persistence.Sql.Common**
+
+This is a breaking change that should effect almost no users, but [we deleted some old, bad ideas from the API surface](https://github.com/akkadotnet/akka.net/pull/6412) and it might require all Akka.Persistence.Sql* plugins to be recompiled.
+
+For what it's worth, [Akka.Persistence.Sql.Common's performance has been improved significantly](https://github.com/akkadotnet/akka.net/pull/6384) and we'll continue working on that with some additional API changes this week.
+
+**Other Changes and Additions**
+
+* [Akka.Actor: New API - `IActorRef.WatchAsync`](https://github.com/akkadotnet/akka.net/pull/6102) - adds a new extension method to `IActorRef` which allows users to subscribe to actor lifecycle notifications outside of the `ActorSystem`.
+* [Akka.Actor: Suppress `System.Object` warning for serializer configuration changes](https://github.com/akkadotnet/akka.net/issues/6377)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.0 so far, click here](https://github.com/akkadotnet/akka.net/milestone/7?closed=1).
+
+                                        
+| COMMITS | LOC+ | LOC- | AUTHOR |      
+| --- | --- | --- | --- |               
+| 12 | 15 | 15 | dependabot[bot] |      
+| 11 | 1930 | 1278 | Aaron Stannard |   
+| 2 | 143 | 73 | Sergey Popov |         
+| 1 | 26 | 4 | Thomas Stegemann |       
+| 1 | 1 | 1 | Michel van Os |           
+
+#### 1.5.0-alpha4 February 1st 2023 ####
 Version 1.5.0-alpha3 contains several bug fixes and new features to Akka.NET
 
 * [Akka.TestKit: Remove Akka.Tests.Shared.Internal dependency](https://github.com/akkadotnet/akka.net/pull/6258)

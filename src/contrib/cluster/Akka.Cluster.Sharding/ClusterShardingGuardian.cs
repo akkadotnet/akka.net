@@ -6,10 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Tools.Singleton;
+using Akka.Dispatch.SysMsg;
 using Akka.DistributedData;
 using Akka.Pattern;
 
@@ -169,11 +171,20 @@ namespace Akka.Cluster.Sharding
         private readonly int _majorityMinCap = Context.System.Settings.Config.GetInt("akka.cluster.sharding.distributed-data.majority-min-cap", 0);
         private ImmutableDictionary<string, IActorRef> _replicatorsByRole = ImmutableDictionary<string, IActorRef>.Empty;
 
+        private readonly ConcurrentDictionary<string, IActorRef> _regions;
+        private readonly ConcurrentDictionary<string, IActorRef> _proxies;
+        private readonly ConcurrentDictionary<IActorRef, string> _typeLookup = new ConcurrentDictionary<IActorRef, string>();
+
         /// <summary>
         /// TBD
         /// </summary>
-        public ClusterShardingGuardian()
+        public ClusterShardingGuardian(
+            ConcurrentDictionary<string, IActorRef> regions,
+            ConcurrentDictionary<string, IActorRef> proxies)
         {
+            _regions = regions;
+            _proxies = proxies;
+            
             Receive<Start>(start =>
             {
                 try
@@ -244,6 +255,9 @@ namespace Akka.Cluster.Sharding
                             .WithDispatcher(Context.Props.Dispatcher), encName);
                     });
 
+                    _regions.TryAdd(start.TypeName, shardRegion);
+                    _typeLookup.TryAdd(shardRegion, start.TypeName);
+                    Context.Watch(shardRegion);
                     Sender.Tell(new Started(shardRegion));
                 }
                 catch (Exception ex)
@@ -271,6 +285,9 @@ namespace Akka.Cluster.Sharding
                         extractShardId: startProxy.ExtractShardId)
                         .WithDispatcher(Context.Props.Dispatcher), encName));
 
+                    _proxies.TryAdd(startProxy.TypeName, shardRegion);
+                    _typeLookup.TryAdd(shardRegion, startProxy.TypeName);
+                    Context.Watch(shardRegion);
                     Sender.Tell(new Started(shardRegion));
                 }
                 catch (Exception ex)
@@ -280,6 +297,23 @@ namespace Akka.Cluster.Sharding
                     // could be InvalidActorNameException if it has already been started
                     Sender.Tell(new Status.Failure(ex));
                 }
+            });
+
+            Receive<Terminated>(msg =>
+            {
+                if (!_typeLookup.TryGetValue(msg.ActorRef, out var typeName)) 
+                    return;
+                
+                _typeLookup.TryRemove(msg.ActorRef, out _);
+
+                if (_regions.TryGetValue(typeName, out var regionActor) && regionActor.Equals(msg.ActorRef))
+                {
+                    _regions.TryRemove(typeName, out _);
+                    return;
+                }
+                
+                if(_proxies.TryGetValue(typeName, out var proxyActor) && proxyActor.Equals(msg.ActorRef))
+                    _proxies.TryRemove(typeName, out _);
             });
         }
 

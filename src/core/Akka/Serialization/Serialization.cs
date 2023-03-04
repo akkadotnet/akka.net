@@ -96,7 +96,7 @@ namespace Akka.Serialization
             {
                 case SerializerWithStringManifest s2:
                     return s2.Manifest(msg);
-                case Serializer s3 when s3.IncludeManifest:
+                case Serializer { IncludeManifest: true }:
                     return msg.GetType().TypeQualifiedName();
                 default:
                     return string.Empty;

@@ -314,7 +314,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 
@@ -364,8 +364,9 @@ namespace Akka.Cluster.Tests
             {
                 await Awaiting(async () =>
                     {
+                        using var cts = new CancellationTokenSource(10.Seconds());
                         var nonExisting = Address.Parse($"akka.tcp://{selfAddress.System}@127.0.0.1:9999/");
-                        var task = cluster.JoinAsync(nonExisting);
+                        var task = cluster.JoinAsync(nonExisting, cts.Token);
                         LeaderActions();
                         await task;
                     })
@@ -374,7 +375,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys);
+                Shutdown(sys);
             }
         }
 
@@ -424,8 +425,9 @@ namespace Akka.Cluster.Tests
             {
                 await Awaiting(async () =>
                     {
+                        using var cts = new CancellationTokenSource(10.Seconds());
                         var nonExisting = Address.Parse($"akka.tcp://{selfAddress.System}@127.0.0.1:9999/");
-                        var task = cluster.JoinSeedNodesAsync(new[] { nonExisting });
+                        var task = cluster.JoinSeedNodesAsync(new[] { nonExisting }, cts.Token);
                         LeaderActions();
                         await task;
                     })
@@ -434,7 +436,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys);
+                Shutdown(sys);
             }
         }
 
@@ -480,7 +482,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 
@@ -517,7 +519,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 
@@ -536,7 +538,7 @@ namespace Akka.Cluster.Tests
                 var probe = CreateTestProbe(sys2);
                 Cluster.Get(sys2).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
                 await probe.ExpectMsgAsync<ClusterEvent.CurrentClusterState>();
-                await Cluster.Get(sys2).JoinAsync(Cluster.Get(sys2).SelfAddress);
+                await Cluster.Get(sys2).JoinAsync(Cluster.Get(sys2).SelfAddress).ShouldCompleteWithin(10.Seconds());
                 await probe.ExpectMsgAsync<ClusterEvent.MemberUp>();
 
                 Cluster.Get(sys2).Leave(Cluster.Get(sys2).SelfAddress);
@@ -551,7 +553,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 
@@ -571,7 +573,7 @@ namespace Akka.Cluster.Tests
                 var probe = CreateTestProbe(sys3);
                 Cluster.Get(sys3).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
                 await probe.ExpectMsgAsync<ClusterEvent.CurrentClusterState>();
-                await Cluster.Get(sys3).JoinAsync(Cluster.Get(sys3).SelfAddress);
+                await Cluster.Get(sys3).JoinAsync(Cluster.Get(sys3).SelfAddress).ShouldCompleteWithin(10.Seconds());
                 await probe.ExpectMsgAsync<ClusterEvent.MemberUp>();
 
                 Cluster.Get(sys3).Down(Cluster.Get(sys3).SelfAddress);
@@ -584,7 +586,7 @@ namespace Akka.Cluster.Tests
             }
             finally
             {
-                await ShutdownAsync(sys3);
+                Shutdown(sys3);
             }
         }
     }

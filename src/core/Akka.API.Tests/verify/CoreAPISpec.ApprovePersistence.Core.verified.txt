@@ -716,9 +716,6 @@ namespace Akka.Persistence
     }
     public sealed class WriteMessagesFailed : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessagesFailed>
     {
-        [System.ObsoleteAttribute("Deprecated since Akka 1.4.11, use the overloaded one which accepts the number of " +
-            "failed atomic writes instead.")]
-        public WriteMessagesFailed(System.Exception cause) { }
         public WriteMessagesFailed(System.Exception cause, int writeCount) { }
         public System.Exception Cause { get; }
         public int WriteCount { get; }
@@ -841,7 +838,7 @@ namespace Akka.Persistence.Journal
         protected virtual bool ReceivePluginInternal(object message) { }
         protected bool ReceiveWriteJournal(object message) { }
         public abstract System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback);
-        protected System.Exception TryUnwrapException(System.Exception e) { }
+        protected static System.Exception TryUnwrapException(System.Exception e) { }
         protected abstract System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages);
     }
     public abstract class AsyncWriteProxy : Akka.Persistence.Journal.AsyncWriteJournal, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>

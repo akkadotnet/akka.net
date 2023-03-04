@@ -86,23 +86,21 @@ namespace Akka.TestKit
             AtStartup();
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await BeforeTerminationAsync();
-            await base.AfterAllAsync();
-            await AfterTerminationAsync();
+            BeforeTermination();
+            base.AfterAll();
+            AfterTermination();
         }
 
         protected virtual void AtStartup() { }
 
-        protected virtual Task BeforeTerminationAsync()
+        protected virtual void BeforeTermination()
         {
-            return Task.CompletedTask;
         }
 
-        protected virtual Task AfterTerminationAsync()
+        protected virtual void AfterTermination()
         {
-            return Task.CompletedTask;
         }
 
         private static string GetCallerName()

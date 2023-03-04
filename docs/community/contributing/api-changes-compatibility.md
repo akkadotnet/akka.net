@@ -96,6 +96,6 @@ How do these resolve some of the frustrating problems around versioning?
 
 What does this look like in practice?
 
-1. Old, no-longer-recommended methods still function but are marked with an `Obsolete` attribute;
+1. Old, no-longer-recommended methods still function but are marked with an `Obsolete` attribute. This `Obsolete` attribute argument has to contain the string "Obsolete since v{current-akka-version}";
 2. New methods are made opt-in if their behavior differs significantly from previous implementations; and
 3. We add new overloads when we need to pass in new values or parameters, rather than change existing method signatures.

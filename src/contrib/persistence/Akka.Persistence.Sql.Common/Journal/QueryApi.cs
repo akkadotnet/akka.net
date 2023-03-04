@@ -15,9 +15,7 @@ using Akka.Persistence.Journal;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
+    [Obsolete("Query is not implemented.")]
     public interface ISubscriptionCommand { }
 
     /// <summary>
@@ -26,6 +24,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// the subscriber when <see cref="AsyncWriteJournal.WriteMessagesAsync"/> has been called.
     /// </summary>
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class SubscribePersistenceId : ISubscriptionCommand
     {
         /// <summary>
@@ -47,6 +46,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// TBD
     /// </summary>
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class EventAppended : IDeadLetterSuppression
     {
         /// <summary>
@@ -108,6 +108,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// the subscriber when `asyncWriteMessages` has been called.
     /// </summary>
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class SubscribeNewEvents : ISubscriptionCommand
     {
         public static SubscribeNewEvents Instance = new SubscribeNewEvents();
@@ -116,6 +117,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class NewEventAppended : IDeadLetterSuppression
     {
         public static NewEventAppended Instance = new NewEventAppended();
@@ -131,6 +133,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// via an <see cref="IEventAdapter"/>.
     /// </summary>
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class SubscribeTag : ISubscriptionCommand
     {
         /// <summary>
@@ -152,6 +155,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// TBD
     /// </summary>
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class TaggedEventAppended : IDeadLetterSuppression
     {
         /// <summary>

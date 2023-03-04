@@ -35,10 +35,7 @@ namespace Akka.Configuration
         /// <exception cref="ArgumentNullException">This exception is thrown if the given <paramref name="root"/> value is undefined.</exception>
         public Config(HoconRoot root)
         {
-            if (root.Value == null)
-                throw new ArgumentNullException(nameof(root), "The root value cannot be null.");
-
-            Value = root.Value;
+            Value = root.Value ?? throw new ArgumentNullException(nameof(root), "The root value cannot be null.");
             Root = root.Value;
             Substitutions = root.Substitutions;
         }
@@ -343,7 +340,6 @@ namespace Akka.Configuration
         /// Retrieves a list of string values from the specified path in the configuration.
         /// </summary>
         /// <param name="path">The path that contains the values to retrieve.</param>
-        /// <param name="strings"></param>
         /// <exception cref="InvalidOperationException">This exception is thrown if the current node is undefined.</exception>
         /// <returns>The list of string values defined in the specified path.</returns>
         public virtual IList<string> GetStringList(string path)

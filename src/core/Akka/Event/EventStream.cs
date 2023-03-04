@@ -148,13 +148,6 @@ namespace Akka.Event
             }
         }
 
-        [Obsolete("Should be removed in 1.5")]
-        public bool InitUnsubscriber(IActorRef unsubscriber, ActorSystem system)
-        {
-            StartUnsubscriber((ActorSystemImpl)system);
-            return true;
-        }
-
         private void RegisterWithUnsubscriber(IActorRef subscriber)
         {
             if (_unsubscriber.Value.IsNobody())

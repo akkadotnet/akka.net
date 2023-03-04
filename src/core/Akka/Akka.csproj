@@ -7,11 +7,10 @@
     <Description>Canonical actor model implementation for .NET with local + distributed actors in C# and F#.</Description>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <LangVersion>9</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Configuration\Pigeon.conf" />
+    <EmbeddedResource Include="Configuration\akka.conf" />
   </ItemGroup>
 
   <ItemGroup>

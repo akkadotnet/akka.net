@@ -716,7 +716,7 @@ namespace Akka.Streams.Implementation
             {
                 _stage = stage;
                 _maxBuffer = maxBuffer;
-                _currentRequest = new Option<TaskCompletionSource<Option<T>>>();
+                _currentRequest = Option<TaskCompletionSource<Option<T>>>.None;
 
                 SetHandler(stage.In, this);
             }

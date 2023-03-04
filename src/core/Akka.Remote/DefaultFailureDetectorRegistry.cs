@@ -31,14 +31,14 @@ namespace Akka.Remote
 
         private readonly Func<FailureDetector> _factory;
 
-        private AtomicReference<ImmutableDictionary<T, FailureDetector>> _resourceToFailureDetector = new AtomicReference<ImmutableDictionary<T, FailureDetector>>(ImmutableDictionary<T, FailureDetector>.Empty);
+        private readonly AtomicReference<ImmutableDictionary<T, FailureDetector>> _resourceToFailureDetector = new AtomicReference<ImmutableDictionary<T, FailureDetector>>(ImmutableDictionary<T, FailureDetector>.Empty);
 
         private readonly object _failureDetectorCreationLock = new object();
 
         private ImmutableDictionary<T, FailureDetector> ResourceToFailureDetector
         {
-            get { return _resourceToFailureDetector; }
-            set { _resourceToFailureDetector = value; }
+            get { return _resourceToFailureDetector.Value; }
+            set { _resourceToFailureDetector.Value = value; }
         }
 
         #endregion

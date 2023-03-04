@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Copyright>Copyright © 2013-2021 Akka.NET Team</Copyright>
+    <Copyright>Copyright © 2013-2023 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
     <VersionPrefix>1.5.0</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
@@ -9,14 +9,18 @@
     <NoWarn>$(NoWarn);CS1591;xUnit1013</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+  <!-- Set the language version for C# if we're not inside an F# project -->
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <LangVersion>11.0</LangVersion>
+  </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.4.2</XunitVersion>
     <XunitRunnerVersion>2.4.2</XunitRunnerVersion>
-    <TestSdkVersion>17.4.1</TestSdkVersion>
+    <TestSdkVersion>17.5.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.21.12</ProtobufVersion>
+    <ProtobufVersion>3.22.0</ProtobufVersion>
     <BenchmarkDotNetVersion>0.13.2</BenchmarkDotNetVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetTestVersion>net7.0</NetTestVersion>
@@ -28,7 +32,7 @@
     <FsCheckVersion>2.16.5</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
-    <MultiNodeAdapterVersion>1.1.1</MultiNodeAdapterVersion>
+    <MultiNodeAdapterVersion>1.5.0</MultiNodeAdapterVersion>
     <MicrosoftLibVersion>5.0.0</MicrosoftLibVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
@@ -36,22 +40,14 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.0-alpha2 is a maintenance release for Akka.NET v1.5 that contains numerous performance improvements in critical areas, including core actor message processing and Akka.Remote.
-Performance Fixes**
-[remove delegate allocation from `ForkJoinDispatcher` and `DedicatedThreadPool`](https://github.com/akkadotnet/akka.net/pull/6162)
-[eliminate `Mailbox` delegate allocations](https://github.com/akkadotnet/akka.net/pull/6162)
-[Reduce `FSM&lt;TState, TData&gt;` allocations](https://github.com/akkadotnet/akka.net/pull/6162)
-[removed boxing allocations inside `FSM.State.Equals`](https://github.com/akkadotnet/akka.net/pull/6196)
-[Eliminate `DefaultLogMessageFormatter` allocations](https://github.com/akkadotnet/akka.net/pull/6166)
-In sum you should expect to see total memory consumption, garbage collection, and throughput improve when you upgrade to Akka.NET v1.5.0-alpha2.
-Other Features and Improvements**
-[DData: Suppress gossip message from showing up in debug log unless verbose debug logging is turned on](https://github.com/akkadotnet/akka.net/pull/6089)
-[TestKit: TestKit automatically injects the default TestKit default configuration if an ActorSystem is passed into its constructor](https://github.com/akkadotnet/akka.net/pull/6092)
-[Sharding: Added a new `GetEntityLocation` query message to retrieve an entity address location in the shard region](https://github.com/akkadotnet/akka.net/pull/6107)
-[Sharding: Fixed `GetEntityLocation` uses wrong actor path](https://github.com/akkadotnet/akka.net/pull/6121)
-[Akka.Cluster and Akka.Cluster.Sharding: should throw human-friendly exception when accessing cluster / sharding plugins when clustering is not running](https://github.com/akkadotnet/akka.net/pull/6169)
-[Akka.Cluster.Sharding: Add `HashCodeMessageExtractor` factory](https://github.com/akkadotnet/akka.net/pull/6173)
-[Akka.Persistence.Sql.Common: Fix `DbCommand.CommandTimeout` in `BatchingSqlJournal`](https://github.com/akkadotnet/akka.net/pull/6175)</PackageReleaseNotes>
+    <PackageReleaseNotes>Version 1.5.0-beta4 contains **breaking API changes** and new API changes for Akka.NET.
+[Akka.Persistence.TCK: remove `IDisposable` from Akka.Persistence.TCK](https://github.com/akkadotnet/akka.net/pull/6465) - this hid methods from the `TestKit` base classes.
+[Akka.Remote: Make transport adapter messages public](https://github.com/akkadotnet/akka.net/pull/6469) - adds back public APIs from v1.4.
+[Akka.TestKit: fix accidental breaking changes in v1.5.0-beta3](https://github.com/akkadotnet/akka.net/issues/6466)
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 110 | 37 | Aaron Stannard |
+| 1 | 253 | 7 | Gregorius Soedharmo |</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>

@@ -21,15 +21,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         protected DeadLettersEventFilterTestsBase() : base("akka.loglevel=ERROR")
         {
             _deadActor = Sys.ActorOf(BlackHoleActor.Props, "dead-actor");
-        }
-
-        public override async Task InitializeAsync()
-        {
-            await base.InitializeAsync();
-            
             Watch(_deadActor);
             Sys.Stop(_deadActor);
-            await ExpectTerminatedAsync(_deadActor);
+            ExpectTerminated(_deadActor);
         }
 
         protected override void SendRawLogEventMessage(object message)

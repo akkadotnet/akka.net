@@ -52,7 +52,7 @@ namespace Akka.Streams.Dsl
             var pageSource =
                 Source.UnfoldAsync
                 (
-                    new Option<TKey>(firstKey),
+                    Option<TKey>.Create(firstKey),
                     async key =>
                     {
                         var page = key.HasValue ? await pageFactory(key.Value) : new Page<T, TKey>(Enumerable.Empty<T>(), Option<TKey>.None);

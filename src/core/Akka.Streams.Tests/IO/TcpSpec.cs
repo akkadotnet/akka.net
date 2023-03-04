@@ -496,17 +496,28 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 // get initialized, otherwise Kill command may run into the void
                 await Task.Delay(500);
 
-                // Getting rid of existing connection actors by using a blunt instrument
-                system2.ActorSelection(system2.Tcp().Path / "$a" / "*").Tell(Kill.Instance);
-
-                await Awaiting(() => result.ShouldCompleteWithin(3.Seconds()))
+                await Awaiting(async () =>
+                    {
+                        await WithinAsync(TimeSpan.FromSeconds(15), async () =>
+                        {
+                            await AwaitAssertAsync(async () =>
+                            {
+                                // Getting rid of existing connection actors by using a blunt instrument
+                                system2.ActorSelection(system2.Tcp().Path / "$a" / "*").Tell(Kill.Instance);
+                            
+                                await result.ShouldCompleteWithin(3.Seconds());
+                            }, interval:TimeSpan.FromSeconds(4));
+                        });
+                        
+                        
+                    })
                     .Should().ThrowAsync<StreamTcpException>();
 
                 await binding.Result.Unbind().ShouldCompleteWithin(3.Seconds());
             }
             finally
             {
-                await ShutdownAsync(system2);
+                Shutdown(system2);
             }
         }
 
@@ -533,7 +544,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 

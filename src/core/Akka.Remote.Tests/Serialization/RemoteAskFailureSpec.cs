@@ -36,20 +36,15 @@ akka.remote.dot-netty.tcp.port = {port}";
         
         public RemoteAskFailureSpec(ITestOutputHelper output) : base(Config(12552), nameof(RemoteAskFailureSpec), output)
         {
-        }
-
-        public override Task InitializeAsync()
-        {
             _sys1 = Sys;
             _sys2 = ActorSystem.Create(Sys.Name, Config(19999));
             InitializeLogger(_sys2);
-            return Task.CompletedTask;
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await ShutdownAsync(_sys2);
-            await base.AfterAllAsync();
+            Shutdown(_sys2);
+            base.AfterAll();
         }
 
         [Fact(DisplayName = "Ask operation using selector to a remote actor that expects Status.Failure should return Status.Failure")]

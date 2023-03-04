@@ -47,12 +47,11 @@ namespace Akka.Remote.Tests.BugFixes
             InitializeLogger(Sys2);
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await Task.WhenAll(
-                base.AfterAllAsync(),
-                ShutdownAsync(Sys1),
-                ShutdownAsync(Sys2));
+            base.AfterAll();
+            Shutdown(Sys1);
+            Shutdown(Sys2);
         }
 
         [Fact]

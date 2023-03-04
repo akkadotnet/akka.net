@@ -91,9 +91,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string ByPersistenceIdSql { get; }
         protected virtual string ByTagSql { get; }
         protected virtual string DeleteBatchSql { get; }
-        protected bool HasNewEventsSubscribers { get; }
-        protected bool HasPersistenceIdSubscribers { get; }
-        protected bool HasTagSubscribers { get; }
         protected virtual string HighestOrderingSql { get; }
         protected virtual string HighestSequenceNrSql { get; }
         protected abstract System.Collections.Immutable.ImmutableDictionary<string, string> Initializers { get; }
@@ -137,6 +134,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public DefaultTimestampProvider() { }
         public long GenerateTimestamp(Akka.Persistence.IPersistentRepresentation message) { }
     }
+    [System.ObsoleteAttribute("Query is not implemented.", true)]
     public sealed class EventAppended : Akka.Event.IDeadLetterSuppression
     {
         public readonly string PersistenceId;
@@ -180,6 +178,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         System.Threading.Tasks.Task<long> SelectHighestSequenceNrAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId);
         System.Threading.Tasks.Task<long> SelectHighestSequenceNrAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken);
     }
+    [System.ObsoleteAttribute("Query is not implemented.")]
     public interface ISubscriptionCommand { }
     public interface ITimestampProvider
     {
@@ -201,6 +200,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly System.DateTime Timestamp;
         public JournalEntry(string persistenceId, long sequenceNr, bool isDeleted, string manifest, System.DateTime timestamp, object payload) { }
     }
+    [System.ObsoleteAttribute("Query is not implemented.", true)]
     public sealed class NewEventAppended : Akka.Event.IDeadLetterSuppression
     {
         public static Akka.Persistence.Sql.Common.Journal.NewEventAppended Instance;
@@ -275,16 +275,10 @@ namespace Akka.Persistence.Sql.Common.Journal
     public abstract class SqlJournal : Akka.Persistence.Journal.AsyncWriteJournal, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
     {
         protected SqlJournal(Akka.Configuration.Config journalConfig) { }
-        protected bool HasNewEventSubscribers { get; }
-        protected bool HasPersistenceIdSubscribers { get; }
-        protected bool HasTagSubscribers { get; }
         protected abstract string JournalConfigPath { get; }
         protected Akka.Event.ILoggingAdapter Log { get; }
         public abstract Akka.Persistence.Sql.Common.Journal.IJournalQueryExecutor QueryExecutor { get; }
         public Akka.Actor.IStash Stash { get; set; }
-        public void AddNewEventsSubscriber(Akka.Actor.IActorRef subscriber) { }
-        public void AddPersistenceIdSubscriber(Akka.Actor.IActorRef subscriber, string persistenceId) { }
-        public void AddTagSubscriber(Akka.Actor.IActorRef subscriber, string tag) { }
         protected abstract System.Data.Common.DbConnection CreateDbConnection(string connectionString);
         public System.Data.Common.DbConnection CreateDbConnection() { }
         protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr) { }
@@ -294,7 +288,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected override void PreStart() { }
         public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr) { }
         protected override bool ReceivePluginInternal(object message) { }
-        public void RemoveSubscriber(Akka.Actor.IActorRef subscriber) { }
         protected virtual System.Threading.Tasks.Task<long> ReplayAllEventsAsync(Akka.Persistence.Sql.Common.Journal.ReplayAllEvents replay) { }
         public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
         protected virtual System.Threading.Tasks.Task<long> ReplayTaggedMessagesAsync(Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages replay) { }
@@ -305,20 +298,24 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected bool WaitingForInitialization(object message) { }
         protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages) { }
     }
+    [System.ObsoleteAttribute("Query is not implemented.", true)]
     public sealed class SubscribeNewEvents : Akka.Persistence.Sql.Common.Journal.ISubscriptionCommand
     {
         public static Akka.Persistence.Sql.Common.Journal.SubscribeNewEvents Instance;
     }
+    [System.ObsoleteAttribute("Query is not implemented.", true)]
     public sealed class SubscribePersistenceId : Akka.Persistence.Sql.Common.Journal.ISubscriptionCommand
     {
         public readonly string PersistenceId;
         public SubscribePersistenceId(string persistenceId) { }
     }
+    [System.ObsoleteAttribute("Query is not implemented.", true)]
     public sealed class SubscribeTag : Akka.Persistence.Sql.Common.Journal.ISubscriptionCommand
     {
         public readonly string Tag;
         public SubscribeTag(string tag) { }
     }
+    [System.ObsoleteAttribute("Query is not implemented.", true)]
     public sealed class TaggedEventAppended : Akka.Event.IDeadLetterSuppression
     {
         public readonly string Tag;
