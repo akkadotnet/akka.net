@@ -95,6 +95,11 @@ namespace Akka.Persistence.Query.InMemory
             }
         }
         
+        /// <summary>
+        /// Same type of query as <see cref="PersistenceIds"/> but the stream
+        /// is completed immediately when it reaches the end of the "result set". Persistent
+        /// actors that are created after the query is completed are not included in the stream.
+        /// </summary>
         public Source<string, NotUsed> CurrentPersistenceIds()
         {
             return Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_writeJournalPluginId))
@@ -160,10 +165,49 @@ namespace Akka.Persistence.Query.InMemory
                 case NoOffset _:
                     return CurrentEventsByTag(tag, new Sequence(0L));
                 default:
-                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+                    throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
             }
         }
 
+                /// <summary>
+        /// <see cref="EventsByTag"/> is used for retrieving events that were marked with
+        /// a given tag, e.g. all events of an Aggregate Root type.
+        /// <para></para>
+        /// To tag events you create an <see cref="IEventAdapter"/> that wraps the events
+        /// in a <see cref="Tagged"/> with the given `tags`.
+        /// <para></para>
+        /// You can use <see cref="NoOffset"/> to retrieve all events with a given tag or retrieve a subset of all
+        /// events by specifying a <see cref="Sequence"/>. The `offset` corresponds to an ordered sequence number for
+        /// the specific tag. Note that the corresponding offset of each event is provided in the
+        /// <see cref="EventEnvelope"/>, which makes it possible to resume the
+        /// stream at a later point from a given offset.
+        /// <para></para>
+        /// The `offset` is exclusive, i.e. the event with the exact same sequence number will not be included
+        /// in the returned stream.This means that you can use the offset that is returned in <see cref="EventEnvelope"/>
+        /// as the `offset` parameter in a subsequent query.
+        /// <para></para>
+        /// In addition to the <paramref name="offset"/> the <see cref="EventEnvelope"/> also provides `persistenceId` and `sequenceNr`
+        /// for each event. The `sequenceNr` is the sequence number for the persistent actor with the
+        /// `persistenceId` that persisted the event. The `persistenceId` + `sequenceNr` is an unique
+        /// identifier for the event.
+        /// <para></para>
+        /// The returned event stream is ordered by the offset (tag sequence number), which corresponds
+        /// to the same order as the write journal stored the events. The same stream elements (in same order)
+        /// are returned for multiple executions of the query. Deleted events are not deleted from the
+        /// tagged event stream.
+        /// <para></para>
+        /// The stream is not completed when it reaches the end of the currently stored events,
+        /// but it continues to push new events when new events are persisted.
+        /// Corresponding query that is completed when it reaches the end of the currently
+        /// stored events is provided by <see cref="CurrentEventsByTag"/>.
+        /// <para></para>
+        /// The SQL write journal is notifying the query side as soon as tagged events are persisted, but for
+        /// efficiency reasons the query side retrieves the events in batches that sometimes can
+        /// be delayed up to the configured `refresh-interval`.
+        /// <para></para>
+        /// The stream is completed with failure if there is a failure in executing the query in the
+        /// backend journal.
+        /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset)
         {
             offset = offset ?? new Sequence(0L);
@@ -193,7 +237,7 @@ namespace Akka.Persistence.Query.InMemory
                     seq = s;
                     break;
                 default:
-                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+                    throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
             }
 
             return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value == 0 ? seq.Value : seq.Value + 1, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
@@ -214,7 +258,7 @@ namespace Akka.Persistence.Query.InMemory
                     seq = s;
                     break;
                 default:
-                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+                    throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
             }
 
             return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value == 0 ? seq.Value : seq.Value + 1, null, _maxBufferSize, _writeJournalPluginId))

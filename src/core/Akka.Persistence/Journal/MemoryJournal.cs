@@ -67,13 +67,13 @@ namespace Akka.Persistence.Journal
     /// </summary>
     public class MemoryJournal : AsyncWriteJournal
     {
-        private readonly LinkedList<IPersistentRepresentation> _allMessages = new LinkedList<IPersistentRepresentation>();
-        private readonly LinkedList<string> _allPersistenceIds = new LinkedList<string>();
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
-        private readonly ConcurrentDictionary<string, long> _meta = new ConcurrentDictionary<string, long>();
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
+        private readonly LinkedList<IPersistentRepresentation> _allMessages = new();
+        private readonly LinkedList<string> _allPersistenceIds = new();
+        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
+        private readonly ConcurrentDictionary<string, long> _meta = new();
+        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
         private ImmutableDictionary<string, IImmutableSet<IActorRef>> _tagSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
-        private readonly HashSet<IActorRef> _newEventsSubscriber = new HashSet<IActorRef>();
+        private readonly HashSet<IActorRef> _newEventsSubscriber = new();
         
         /// <summary>
         /// TBD
@@ -223,7 +223,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="replay">TBD</param>
         /// <returns>TBD</returns>
-        protected async Task<long> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
+        private async Task<long> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
             if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
                 return 0;
@@ -253,7 +253,7 @@ namespace Akka.Persistence.Journal
             }
         }
         
-        public void RemoveSubscriber(IActorRef subscriber)
+        private void RemoveSubscriber(IActorRef subscriber)
         {
             foreach (var key in _tagSubscribers.Keys)
             {
@@ -263,7 +263,7 @@ namespace Akka.Persistence.Journal
             _newEventsSubscriber.Remove(subscriber);
         }
         
-        public void AddNewEventsSubscriber(IActorRef subscriber)
+        private void AddNewEventsSubscriber(IActorRef subscriber)
         {
             _newEventsSubscriber.Add(subscriber);
         }
@@ -652,7 +652,6 @@ namespace Akka.Persistence.Journal
 
             private SubscribeNewEvents() { }
         }
-        
         
         [Serializable]
         public sealed class NewEventAppended : IDeadLetterSuppression
