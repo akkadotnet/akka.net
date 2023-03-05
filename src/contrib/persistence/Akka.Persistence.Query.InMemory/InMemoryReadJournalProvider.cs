@@ -23,7 +23,7 @@ namespace Akka.Persistence.Query.InMemory
 
         public IReadJournal GetReadJournal()
         {
-            return new InMemoryReadJournal(_system, _config);
+            return new InMemoryReadJournal(_config);
         }
     }
 }

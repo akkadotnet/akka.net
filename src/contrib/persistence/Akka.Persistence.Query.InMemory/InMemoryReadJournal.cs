@@ -6,12 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
-using Akka.Streams;
 using Akka.Streams.Dsl;
-using Reactive.Streams;
 
 namespace Akka.Persistence.Query.InMemory
 {
@@ -29,21 +26,17 @@ namespace Akka.Persistence.Query.InMemory
         private readonly string _writeJournalPluginId;
         private readonly int _maxBufferSize;
         private readonly TimeSpan _refreshInterval;
-        private readonly object _lock = new object();
-        private IPublisher<string> _persistenceIdsPublisher;
-        private readonly ExtendedActorSystem _system;
-        
+
         public static Config DefaultConfiguration()
         {
             return ConfigurationFactory.FromResource<InMemoryReadJournal>("Akka.Persistence.Query.InMemory.reference.conf");
         }
         
-        public InMemoryReadJournal(ExtendedActorSystem system, Config config)
+        public InMemoryReadJournal(Config config)
         {
             _writeJournalPluginId = config.GetString("write-plugin", null);
             _maxBufferSize = config.GetInt("max-buffer-size", 0);
             _refreshInterval = config.GetTimeSpan("refresh-interval", TimeSpan.FromSeconds(1));
-            _system = system;
         }
         
         /// <summary>
@@ -68,34 +61,11 @@ namespace Akka.Persistence.Query.InMemory
         /// </summary>
         public Source<string, NotUsed> PersistenceIds()
         {
-            lock (_lock)
-            {
-                if (_persistenceIdsPublisher is null)
-                {
-                    var graph =
-                        Source.ActorPublisher<string>(
-                                LivePersistenceIdsPublisher.Props(
-                                    _refreshInterval,
-                                    _writeJournalPluginId))
-                            .ToMaterialized(Sink.DistinctRetainingFanOutPublisher<string>(PersistenceIdsShutdownCallback), Keep.Right);
-
-                    _persistenceIdsPublisher = graph.Run(_system.Materializer());
-                }
-                return Source.FromPublisher(_persistenceIdsPublisher)
-                    .MapMaterializedValue(_ => NotUsed.Instance)
-                    .Named("AllPersistenceIds");
-            }
-
+            return Source.ActorPublisher<string>(LivePersistenceIdsPublisher.Props(_refreshInterval, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("AllPersistenceIds");
         }
 
-        private void PersistenceIdsShutdownCallback()
-        {
-            lock (_lock)
-            {
-                _persistenceIdsPublisher = null;
-            }
-        }
-        
         /// <summary>
         /// Same type of query as <see cref="PersistenceIds"/> but the stream
         /// is completed immediately when it reaches the end of the "result set". Persistent
@@ -137,7 +107,7 @@ namespace Akka.Persistence.Query.InMemory
         /// Corresponding query that is completed when it reaches the end of the currently
         /// stored events is provided by <see cref="CurrentEventsByPersistenceId"/>.
         /// </para>
-        /// The SQLite write journal is notifying the query side as soon as events are persisted, but for
+        /// The InMemory write journal is notifying the query side as soon as events are persisted, but for
         /// efficiency reasons the query side retrieves the events in batches that sometimes can
         /// be delayed up to the configured `refresh-interval`.
         /// <para></para>
@@ -209,7 +179,7 @@ namespace Akka.Persistence.Query.InMemory
         /// Corresponding query that is completed when it reaches the end of the currently
         /// stored events is provided by <see cref="CurrentEventsByTag"/>.
         /// <para></para>
-        /// The SQL write journal is notifying the query side as soon as tagged events are persisted, but for
+        /// The InMemory write journal is notifying the query side as soon as tagged events are persisted, but for
         /// efficiency reasons the query side retrieves the events in batches that sometimes can
         /// be delayed up to the configured `refresh-interval`.
         /// <para></para>
