@@ -341,7 +341,7 @@ namespace Akka.Persistence.Journal
              */
             var self = Self;
             _resequencerCounter += message.Messages.Aggregate(1, (acc, m) => acc + m.Size);
-            var atomicWriteCount = message.Messages.OfType<AtomicWrite>().Count();
+            var atomicWriteCount = message.Messages.Count(x => x is AtomicWrite);
             
             // Using an async local function instead of ContinueWith
 #pragma warning disable CS4014

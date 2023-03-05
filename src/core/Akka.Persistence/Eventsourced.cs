@@ -303,7 +303,7 @@ namespace Akka.Persistence
 
             _pendingStashingPersistInvocations++;
             _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, o => handler((TEvent)o)));
-            _eventBatch.AddFirst(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
+            _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
                 sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
         }
 
@@ -335,7 +335,7 @@ namespace Akka.Persistence
             }
 
             if (persistents.Count > 0)
-                _eventBatch.AddFirst(new AtomicWrite(persistents.ToImmutable()));
+                _eventBatch.AddLast(new AtomicWrite(persistents.ToImmutable()));
         }
 
         /// <summary>
@@ -374,7 +374,7 @@ namespace Akka.Persistence
             }
 
             _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, o => handler((TEvent)o)));
-            _eventBatch.AddFirst(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
+            _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
                 sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
         }
 
@@ -400,7 +400,7 @@ namespace Akka.Persistence
                 _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, Inv));
             }
 
-            _eventBatch.AddFirst(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+            _eventBatch.AddLast(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
                     sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
                 .ToImmutableList<IPersistentRepresentation>()));
         }
@@ -440,7 +440,7 @@ namespace Akka.Persistence
             else
             {
                 _pendingInvocations.AddLast(new AsyncHandlerInvocation(evt, o => handler((TEvent)o)));
-                _eventBatch.AddFirst(new NonPersistentMessage(evt, Sender));
+                _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
             }
         }
 
