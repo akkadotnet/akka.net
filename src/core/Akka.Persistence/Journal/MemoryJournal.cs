@@ -213,9 +213,9 @@ namespace Akka.Persistence.Journal
             }
         }
         
-        private async Task<(IEnumerable<string> Ids, long LastOrdering)> SelectAllPersistenceIdsAsync(long offset)
+        private async Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            return (_allPersistenceIds.Skip((int)offset), _allPersistenceIds.Count);
+            return (_allPersistenceIds.Skip(offset), _allPersistenceIds.Count);
         }
         
         /// <summary>
@@ -308,9 +308,9 @@ namespace Akka.Persistence.Journal
         public sealed class SelectCurrentPersistenceIds : IJournalRequest
         {
             public IActorRef ReplyTo { get; }
-            public long Offset { get; }
+            public int Offset { get; }
 
-            public SelectCurrentPersistenceIds(long offset, IActorRef replyTo)
+            public SelectCurrentPersistenceIds(int offset, IActorRef replyTo)
             {
                 Offset = offset;
                 ReplyTo = replyTo;
@@ -328,14 +328,14 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public readonly IEnumerable<string> AllPersistenceIds;
 
-            public readonly long HighestOrderingNumber;
+            public readonly int HighestOrderingNumber;
 
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="allPersistenceIds">TBD</param>
             /// <param name="highestOrderingNumber">TBD</param>
-            public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds, long highestOrderingNumber)
+            public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds, int highestOrderingNumber)
             {
                 AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();
                 HighestOrderingNumber = highestOrderingNumber;

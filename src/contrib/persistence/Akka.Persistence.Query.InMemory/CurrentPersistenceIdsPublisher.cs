@@ -135,7 +135,7 @@ namespace Akka.Persistence.Query.InMemory
             return Actor.Props.Create(() => new LivePersistenceIdsPublisher(refreshInterval, writeJournalPluginId));
         }
 
-        private long _lastOrderingOffset;
+        private int _lastOrderingOffset;
         private readonly ICancelable _tickCancelable;
         private readonly IActorRef _journalRef;
         private readonly DeliveryBuffer<string> _buffer;
