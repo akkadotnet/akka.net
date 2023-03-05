@@ -185,7 +185,7 @@ namespace Akka.Persistence.Journal
                 
                 case ReplayTaggedMessages replay:
                     ReplayTaggedMessagesAsync(replay)
-                        .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
+                        .PipeTo(replay.ReplyTo, success: h => new ReplayTaggedMessagesSuccess(h), failure: e => new ReplayMessagesFailure(e));
                     return true;
                 
                 case SubscribeTag subscribe:
@@ -223,15 +223,15 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="replay">TBD</param>
         /// <returns>TBD</returns>
-        private async Task<long> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
+        private async Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
             if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
                 return 0;
 
             int index = 0;
             foreach (var persistence in _tagsToMessagesMapping[replay.Tag]
-                         .Skip((int)replay.FromOffset)
-                         .Take(replay.ToOffset > int.MaxValue ? int.MaxValue : (int)replay.ToOffset))
+                         .Skip(replay.FromOffset)
+                         .Take(replay.ToOffset))
             {
                 var payload = (Tagged)persistence.Payload;
                 replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence.WithPayload(payload.Payload), replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
@@ -351,17 +351,17 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly long FromOffset;
+            public readonly int FromOffset;
 
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly long ToOffset;
+            public readonly int ToOffset;
 
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly long Max;
+            public readonly int Max;
 
             /// <summary>
             /// TBD
@@ -392,7 +392,7 @@ namespace Akka.Persistence.Journal
             /// <exception cref="ArgumentNullException">
             /// This exception is thrown when the specified <paramref name="tag"/> is null or empty.
             /// </exception>
-            public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, IActorRef replyTo)
+            public ReplayTaggedMessages(int fromOffset, int toOffset, int max, string tag, IActorRef replyTo)
             {
                 if (fromOffset < 0)
                     throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
@@ -429,7 +429,7 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly long Offset;
+            public readonly int Offset;
 
             /// <summary>
             /// TBD
@@ -437,7 +437,7 @@ namespace Akka.Persistence.Journal
             /// <param name="persistent">TBD</param>
             /// <param name="tag">TBD</param>
             /// <param name="offset">TBD</param>
-            public ReplayedTaggedMessage(IPersistentRepresentation persistent, string tag, long offset)
+            public ReplayedTaggedMessage(IPersistentRepresentation persistent, string tag, int offset)
             {
                 Persistent = persistent;
                 Tag = tag;
@@ -569,7 +569,28 @@ namespace Akka.Persistence.Journal
                 Offset = offset;
             }
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ReplayTaggedMessagesSuccess
+        {
+            public ReplayTaggedMessagesSuccess(int highestSequenceNr)
+            {
+                HighestSequenceNr = highestSequenceNr;
+            }
+
+            /// <summary>
+            /// Highest stored sequence number.
+            /// </summary>
+            public int HighestSequenceNr { get; }
+        }
         
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
         public sealed class EventReplaySuccess
         {
             public EventReplaySuccess(int highestSequenceNr)
@@ -590,17 +611,14 @@ namespace Akka.Persistence.Journal
                 return Equals(HighestSequenceNr, other.HighestSequenceNr);
             }
 
-        
             public override bool Equals(object obj)
             {
                 if (!(obj is EventReplaySuccess evt)) return false;
                 return Equals(evt);
             }
 
-        
             public override int GetHashCode() => HighestSequenceNr.GetHashCode();
 
-        
             public override string ToString() => $"EventReplaySuccess<highestSequenceNr: {HighestSequenceNr}>";
         }
 

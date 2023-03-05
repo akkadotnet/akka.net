@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Persistence.Journal;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Reactive.Streams;
@@ -58,7 +59,7 @@ namespace Akka.Persistence.Query.InMemory
         /// Corresponding query that is completed when it reaches the end of the currently
         /// currently used `persistenceIds` is provided by <see cref="CurrentPersistenceIds"/>.
         /// </para>
-        /// The SQL write journal is notifying the query side as soon as new `persistenceIds` are
+        /// The inmemory write journal is notifying the query side as soon as new `persistenceIds` are
         /// created and there is no periodic polling or batching involved in this query.
         /// <para>
         /// The stream is completed with failure if there is a failure in executing the query in the
@@ -155,21 +156,28 @@ namespace Akka.Persistence.Query.InMemory
         /// </summary>
         public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset)
         {
-            offset = offset ?? new Sequence(0L);
+            Sequence seq;
             switch (offset)
             {
-                case Sequence seq:
-                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value == 0 ? seq.Value : seq.Value + 1, long.MaxValue, null, _maxBufferSize, _writeJournalPluginId))
-                        .MapMaterializedValue(_ => NotUsed.Instance)
-                        .Named($"CurrentEventsByTag-{tag}");
                 case NoOffset _:
-                    return CurrentEventsByTag(tag, new Sequence(0L));
+                case Sequence s when s.Value == 0:
+                    seq = new Sequence(0L);
+                    break;
+                case Sequence s:
+                    seq = new Sequence(s.Value > int.MaxValue ? 
+                        int.MaxValue :
+                        s.Value + 1); // since offset is exclusive
+                    break;
                 default:
                     throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
             }
+            
+            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, (int)seq.Value, int.MaxValue, null, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named($"CurrentEventsByTag-{tag}");
         }
 
-                /// <summary>
+        /// <summary>
         /// <see cref="EventsByTag"/> is used for retrieving events that were marked with
         /// a given tag, e.g. all events of an Aggregate Root type.
         /// <para></para>
@@ -210,18 +218,25 @@ namespace Akka.Persistence.Query.InMemory
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset)
         {
-            offset = offset ?? new Sequence(0L);
+            Sequence seq;
             switch (offset)
             {
-                case Sequence seq:
-                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value == 0 ? seq.Value : seq.Value + 1, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
-                        .MapMaterializedValue(_ => NotUsed.Instance)
-                        .Named($"EventsByTag-{tag}");
                 case NoOffset _:
-                    return EventsByTag(tag, new Sequence(0L));
+                case Sequence s when s.Value == 0:
+                    seq = new Sequence(0L);
+                    break;
+                case Sequence s:
+                    seq = new Sequence(s.Value > int.MaxValue ? 
+                        int.MaxValue :
+                        s.Value + 1); // since offset is exclusive
+                    break;
                 default:
                     throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
             }
+            
+            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, (int)seq.Value, int.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named($"EventsByTag-{tag}");
         }
         
         public Source<EventEnvelope, NotUsed> AllEvents(Offset offset = null)

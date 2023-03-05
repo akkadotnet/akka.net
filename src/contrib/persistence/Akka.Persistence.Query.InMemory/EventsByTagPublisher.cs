@@ -25,7 +25,7 @@ namespace Akka.Persistence.Query.InMemory
             }
         }
 
-        public static Props Props(string tag, long fromOffset, long toOffset, TimeSpan? refreshInterval, int maxBufferSize, string writeJournalPluginId)
+        public static Props Props(string tag, int fromOffset, int toOffset, TimeSpan? refreshInterval, int maxBufferSize, string writeJournalPluginId)
         {
             return refreshInterval.HasValue
                 ? Actor.Props.Create(() => new LiveEventsByTagPublisher(tag, fromOffset, toOffset, refreshInterval.Value, maxBufferSize, writeJournalPluginId))
@@ -39,8 +39,9 @@ namespace Akka.Persistence.Query.InMemory
 
         protected readonly DeliveryBuffer<EventEnvelope> Buffer;
         protected readonly IActorRef JournalRef;
-        protected long CurrentOffset;
-        protected AbstractEventsByTagPublisher(string tag, long fromOffset, int maxBufferSize, string writeJournalPluginId)
+        protected int CurrentOffset;
+        
+        protected AbstractEventsByTagPublisher(string tag, int fromOffset, int maxBufferSize, string writeJournalPluginId)
         {
             Tag = tag;
             CurrentOffset = FromOffset = fromOffset;
@@ -52,8 +53,8 @@ namespace Akka.Persistence.Query.InMemory
 
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
         protected string Tag { get; }
-        protected long FromOffset { get; }
-        protected abstract long ToOffset { get; }
+        protected int FromOffset { get; }
+        protected abstract int ToOffset { get; }
         protected int MaxBufferSize { get; }
         protected string WriteJournalPluginId { get; }
 
@@ -61,7 +62,7 @@ namespace Akka.Persistence.Query.InMemory
 
         protected abstract void ReceiveInitialRequest();
         protected abstract void ReceiveIdleRequest();
-        protected abstract void ReceiveRecoverySuccess(long highestSequenceNr);
+        protected abstract void ReceiveRecoverySuccess(int highestSequenceNr);
 
         protected override bool Receive(object message)
         {
@@ -128,7 +129,7 @@ namespace Akka.Persistence.Query.InMemory
                         Buffer.DeliverBuffer(TotalDemand);
                         return true;
                     
-                    case RecoverySuccess success:
+                    case MemoryJournal.ReplayTaggedMessagesSuccess success:
                         Log.Debug("replay completed for tag [{0}], currOffset [{1}]", Tag, CurrentOffset);
                         ReceiveRecoverySuccess(success.HighestSequenceNr);
                         return true;
@@ -165,14 +166,14 @@ namespace Akka.Persistence.Query.InMemory
     internal sealed class LiveEventsByTagPublisher : AbstractEventsByTagPublisher
     {
         private readonly ICancelable _tickCancelable;
-        public LiveEventsByTagPublisher(string tag, long fromOffset, long toOffset, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
+        public LiveEventsByTagPublisher(string tag, int fromOffset, int toOffset, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
             : base(tag, fromOffset, maxBufferSize, writeJournalPluginId)
         {
             ToOffset = toOffset;
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByTagPublisher.Continue.Instance, Self);
         }
 
-        protected override long ToOffset { get; }
+        protected override int ToOffset { get; }
 
         protected override void PostStop()
         {
@@ -193,7 +194,7 @@ namespace Akka.Persistence.Query.InMemory
                 OnCompleteThenStop();
         }
 
-        protected override void ReceiveRecoverySuccess(long highestSequenceNr)
+        protected override void ReceiveRecoverySuccess(int highestSequenceNr)
         {
             Buffer.DeliverBuffer(TotalDemand);
             if (Buffer.IsEmpty && CurrentOffset > ToOffset)
@@ -205,14 +206,14 @@ namespace Akka.Persistence.Query.InMemory
 
     internal sealed class CurrentEventsByTagPublisher : AbstractEventsByTagPublisher
     {
-        public CurrentEventsByTagPublisher(string tag, long fromOffset, long toOffset, int maxBufferSize, string writeJournalPluginId)
+        public CurrentEventsByTagPublisher(string tag, int fromOffset, int toOffset, int maxBufferSize, string writeJournalPluginId)
             : base(tag, fromOffset, maxBufferSize, writeJournalPluginId)
         {
             _toOffset = toOffset;
         }
 
-        private long _toOffset;
-        protected override long ToOffset => _toOffset;
+        private int _toOffset;
+        protected override int ToOffset => _toOffset;
         protected override void ReceiveInitialRequest()
         {
             Replay();
@@ -227,7 +228,7 @@ namespace Akka.Persistence.Query.InMemory
                 Self.Tell(EventsByTagPublisher.Continue.Instance);
         }
 
-        protected override void ReceiveRecoverySuccess(long highestSequenceNr)
+        protected override void ReceiveRecoverySuccess(int highestSequenceNr)
         {
             Buffer.DeliverBuffer(TotalDemand);
             if (highestSequenceNr < ToOffset)
