@@ -13,7 +13,7 @@ using Akka.Streams.Actors;
 
 namespace Akka.Persistence.Query.InMemory
 {
-     internal static class AllEventsPublisher
+    internal static class AllEventsPublisher
     {
         [Serializable]
         public sealed class Continue
@@ -23,7 +23,7 @@ namespace Akka.Persistence.Query.InMemory
             private Continue() { }
         }
 
-        public static Props Props(long fromOffset, TimeSpan? refreshInterval, int maxBufferSize, string writeJournalPluginId)
+        public static Props Props(int fromOffset, TimeSpan? refreshInterval, int maxBufferSize, string writeJournalPluginId)
         {
             return refreshInterval.HasValue ?
                 Actor.Props.Create(() => new LiveAllEventsPublisher(fromOffset, refreshInterval.Value, maxBufferSize, writeJournalPluginId)) :
@@ -34,9 +34,9 @@ namespace Akka.Persistence.Query.InMemory
     internal abstract class AbstractAllEventsPublisher : ActorPublisher<EventEnvelope>
     {
         private ILoggingAdapter _log;
-        protected long CurrentOffset;
+        protected int CurrentOffset;
 
-        protected AbstractAllEventsPublisher(long fromOffset, int maxBufferSize, string writeJournalPluginId)
+        protected AbstractAllEventsPublisher(int fromOffset, int maxBufferSize, string writeJournalPluginId)
         {
             CurrentOffset = FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
@@ -47,14 +47,14 @@ namespace Akka.Persistence.Query.InMemory
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
         protected IActorRef JournalRef { get; }
         protected DeliveryBuffer<EventEnvelope> Buffer { get; }
-        protected long FromOffset { get; }
-        protected abstract long ToOffset { get; }
+        protected int FromOffset { get; }
+        protected abstract int ToOffset { get; }
         protected int MaxBufferSize { get; }
         protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentOffset <= ToOffset);
 
         protected abstract void ReceiveInitialRequest();
         protected abstract void ReceiveIdleRequest();
-        protected abstract void ReceiveRecoverySuccess(long highestOrderingNr);
+        protected abstract void ReceiveRecoverySuccess(int highestOrderingNr);
 
         protected override bool Receive(object message)
         {
@@ -146,13 +146,13 @@ namespace Akka.Persistence.Query.InMemory
     internal sealed class LiveAllEventsPublisher : AbstractAllEventsPublisher
     {
         private readonly ICancelable _tickCancelable;
-        public LiveAllEventsPublisher(long fromOffset, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
+        public LiveAllEventsPublisher(int fromOffset, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
             : base(fromOffset, maxBufferSize, writeJournalPluginId)
         {
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, AllEventsPublisher.Continue.Instance, Self);
         }
 
-        protected override long ToOffset => long.MaxValue;
+        protected override int ToOffset => int.MaxValue;
 
         protected override void PostStop()
         {
@@ -173,7 +173,7 @@ namespace Akka.Persistence.Query.InMemory
                 OnCompleteThenStop();
         }
 
-        protected override void ReceiveRecoverySuccess(long highestOrderingNr)
+        protected override void ReceiveRecoverySuccess(int highestOrderingNr)
         {
             Buffer.DeliverBuffer(TotalDemand);
             if (Buffer.IsEmpty && CurrentOffset > ToOffset)
@@ -185,12 +185,12 @@ namespace Akka.Persistence.Query.InMemory
 
     internal sealed class CurrentAllEventsPublisher : AbstractAllEventsPublisher
     {
-        public CurrentAllEventsPublisher(long fromOffset, int maxBufferSize, string writeJournalPluginId)
+        public CurrentAllEventsPublisher(int fromOffset, int maxBufferSize, string writeJournalPluginId)
             : base(fromOffset, maxBufferSize, writeJournalPluginId)
         { }
 
-        private long _toOffset = long.MaxValue;
-        protected override long ToOffset => _toOffset;
+        private int _toOffset = int.MaxValue;
+        protected override int ToOffset => _toOffset;
 
         protected override void ReceiveInitialRequest()
         {
@@ -206,7 +206,7 @@ namespace Akka.Persistence.Query.InMemory
                 Self.Tell(AllEventsPublisher.Continue.Instance);
         }
 
-        protected override void ReceiveRecoverySuccess(long highestOrderingNr)
+        protected override void ReceiveRecoverySuccess(int highestOrderingNr)
         {
             Buffer.DeliverBuffer(TotalDemand);
 

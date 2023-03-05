@@ -234,13 +234,15 @@ namespace Akka.Persistence.Query.InMemory
                     seq = new Sequence(0L);
                     break;
                 case Sequence s:
-                    seq = s;
+                    seq = new Sequence(s.Value > int.MaxValue ? 
+                        int.MaxValue :
+                        s.Value + 1); // since offset is exclusive
                     break;
                 default:
                     throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
             }
 
-            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value == 0 ? seq.Value : seq.Value + 1, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props((int)seq.Value, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("AllEvents");
         }
@@ -255,13 +257,15 @@ namespace Akka.Persistence.Query.InMemory
                     seq = new Sequence(0L);
                     break;
                 case Sequence s:
-                    seq = s;
+                    seq = new Sequence(s.Value > int.MaxValue ? 
+                        int.MaxValue :
+                        s.Value + 1); // since offset is exclusive
                     break;
                 default:
                     throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
             }
 
-            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value == 0 ? seq.Value : seq.Value + 1, null, _maxBufferSize, _writeJournalPluginId))
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props((int)seq.Value, null, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentAllEvents");
         }

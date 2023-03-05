@@ -286,14 +286,12 @@ namespace Akka.Persistence.Journal
             }
         }
         
-        private async Task<long> ReplayAllEventsAsync(ReplayAllEvents replay)
+        private async Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
             int index = 0;
             var replayed = _allMessages
-                .Skip((int)replay.FromOffset)
-                .Take((int)(replay.ToOffset > int.MaxValue
-                    ? int.MaxValue - replay.FromOffset
-                    : replay.ToOffset - replay.FromOffset))
+                .Skip(replay.FromOffset)
+                .Take(replay.ToOffset - replay.FromOffset)
                 .ToArray();
             foreach (var message in replayed)
             {
@@ -502,11 +500,11 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly long FromOffset;
+            public readonly int FromOffset;
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly long ToOffset;
+            public readonly int ToOffset;
             /// <summary>
             /// TBD
             /// </summary>
@@ -531,7 +529,7 @@ namespace Akka.Persistence.Journal
             /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
             /// </ul>
             /// </exception>
-            public ReplayAllEvents(long fromOffset, long toOffset, long max, IActorRef replyTo)
+            public ReplayAllEvents(int fromOffset, int toOffset, long max, IActorRef replyTo)
             {
                 if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
                 if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
@@ -557,7 +555,7 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly long Offset;
+            public readonly int Offset;
 
             /// <summary>
             /// TBD
@@ -565,7 +563,7 @@ namespace Akka.Persistence.Journal
             /// <param name="persistent">TBD</param>
             /// <param name="tag">TBD</param>
             /// <param name="offset">TBD</param>
-            public ReplayedEvent(IPersistentRepresentation persistent, long offset)
+            public ReplayedEvent(IPersistentRepresentation persistent, int offset)
             {
                 Persistent = persistent;
                 Offset = offset;
@@ -574,7 +572,7 @@ namespace Akka.Persistence.Journal
         
         public sealed class EventReplaySuccess
         {
-            public EventReplaySuccess(long highestSequenceNr)
+            public EventReplaySuccess(int highestSequenceNr)
             {
                 HighestSequenceNr = highestSequenceNr;
             }
@@ -582,7 +580,7 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// Highest stored sequence number.
             /// </summary>
-            public long HighestSequenceNr { get; }
+            public int HighestSequenceNr { get; }
 
             public bool Equals(EventReplaySuccess other)
             {
