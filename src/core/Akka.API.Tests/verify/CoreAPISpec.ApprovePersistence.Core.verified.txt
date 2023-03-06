@@ -980,12 +980,85 @@ namespace Akka.Persistence.Journal
         public sealed class CurrentPersistenceIds : Akka.Event.IDeadLetterSuppression
         {
             public readonly System.Collections.Generic.IEnumerable<string> AllPersistenceIds;
-            public CurrentPersistenceIds(System.Collections.Generic.IEnumerable<string> allPersistenceIds) { }
+            public readonly int HighestOrderingNumber;
+            public CurrentPersistenceIds(System.Collections.Generic.IEnumerable<string> allPersistenceIds, int highestOrderingNumber) { }
+        }
+        public sealed class EventReplayFailure
+        {
+            public EventReplayFailure(System.Exception cause) { }
+            public System.Exception Cause { get; }
+            public bool Equals(Akka.Persistence.Journal.MemoryJournal.EventReplayFailure other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class EventReplaySuccess
+        {
+            public EventReplaySuccess(int highestSequenceNr) { }
+            public int HighestSequenceNr { get; }
+            public bool Equals(Akka.Persistence.Journal.MemoryJournal.EventReplaySuccess other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class NewEventAppended : Akka.Event.IDeadLetterSuppression
+        {
+            public static Akka.Persistence.Journal.MemoryJournal.NewEventAppended Instance;
+        }
+        public sealed class ReplayAllEvents : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+        {
+            public readonly int FromOffset;
+            public readonly long Max;
+            public readonly Akka.Actor.IActorRef ReplyTo;
+            public readonly int ToOffset;
+            public ReplayAllEvents(int fromOffset, int toOffset, long max, Akka.Actor.IActorRef replyTo) { }
+        }
+        public sealed class ReplayTaggedMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+        {
+            public readonly int FromOffset;
+            public readonly int Max;
+            public readonly Akka.Actor.IActorRef ReplyTo;
+            public readonly string Tag;
+            public readonly int ToOffset;
+            public ReplayTaggedMessages(int fromOffset, int toOffset, int max, string tag, Akka.Actor.IActorRef replyTo) { }
+        }
+        public sealed class ReplayTaggedMessagesSuccess
+        {
+            public ReplayTaggedMessagesSuccess(int highestSequenceNr) { }
+            public int HighestSequenceNr { get; }
+        }
+        public sealed class ReplayedEvent : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+        {
+            public readonly int Offset;
+            public readonly Akka.Persistence.IPersistentRepresentation Persistent;
+            public ReplayedEvent(Akka.Persistence.IPersistentRepresentation persistent, int offset) { }
+        }
+        public sealed class ReplayedTaggedMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+        {
+            public readonly int Offset;
+            public readonly Akka.Persistence.IPersistentRepresentation Persistent;
+            public readonly string Tag;
+            public ReplayedTaggedMessage(Akka.Persistence.IPersistentRepresentation persistent, string tag, int offset) { }
         }
         public sealed class SelectCurrentPersistenceIds : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
         {
-            public SelectCurrentPersistenceIds(Akka.Actor.IActorRef replyTo) { }
+            public SelectCurrentPersistenceIds(int offset, Akka.Actor.IActorRef replyTo) { }
+            public int Offset { get; }
             public Akka.Actor.IActorRef ReplyTo { get; }
+        }
+        public sealed class SubscribeNewEvents
+        {
+            public static Akka.Persistence.Journal.MemoryJournal.SubscribeNewEvents Instance;
+        }
+        public sealed class SubscribeTag
+        {
+            public readonly string Tag;
+            public SubscribeTag(string tag) { }
+        }
+        public sealed class TaggedEventAppended : Akka.Event.IDeadLetterSuppression
+        {
+            public readonly string Tag;
+            public TaggedEventAppended(string tag) { }
         }
     }
     public class PersistencePluginProxy : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
