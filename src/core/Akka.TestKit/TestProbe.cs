@@ -82,9 +82,7 @@ namespace Akka.TestKit
             Sender.Tell(message,TestActor);
         }
 
-        //warning CS0809: Obsolete member 'TestProbe.CreateTestProbe(string)'
-        //overrides non-obsolete member
-#pragma warning disable CS0809
+
         /// <summary>
         /// N/A
         /// </summary>
@@ -94,7 +92,9 @@ namespace Akka.TestKit
         /// </exception>
         /// <returns>N/A</returns>
         [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
+#pragma warning disable CS0809
         public override TestProbe CreateTestProbe(string name=null)
+#pragma warning restore CS0809
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }

@@ -94,15 +94,13 @@ namespace Akka.Remote
 
         private IRemoteActorRefProvider RemoteProvider => Provider as IRemoteActorRefProvider;
 
-        //warning CS0809: Obsolete member 'RemoteActorRef.IsTerminated'
-        //overrides non-obsolete member 
-#pragma warning disable CS0809
         /// <summary>
         /// Obsolete. Use <see cref="Watch"/> or <see cref="ReceiveActor.Receive{T}(Action{T}, Predicate{T})">Receive&lt;<see cref="Akka.Actor.Terminated"/>&gt;</see>
         /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
+#pragma warning disable CS0809
         public override bool IsTerminated => false;
-
+#pragma warning restore CS0809
 
         /// <summary>
         /// Gets the child.

@@ -42,17 +42,15 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public override IActorRefProvider Provider { get { return _provider; } }
+        public override IActorRefProvider Provider { get { return _provider; } }        
 
-        //warning CS0809: Obsolete member 'EmptyLocalActorRef.IsTerminated'
-        //overrides non-obsolete member
-#pragma warning disable CS0809
         /// <summary>
         /// TBD
         /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
+#pragma warning disable CS0809
         public override bool IsTerminated { get { return true; } }
-
+#pragma warning restore CS0809
         /// <summary>
         /// TBD
         /// </summary>
