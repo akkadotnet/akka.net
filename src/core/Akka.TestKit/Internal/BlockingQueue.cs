@@ -107,7 +107,9 @@ namespace Akka.TestKit.Internal
             if(_collection.TryTake(out var p))
             {
                 item = p.Value;
+#pragma warning disable CS0618
                 AddFirst(item);
+#pragma warning restore CS0618
                 return true;
             }
             item = default;
@@ -119,7 +121,9 @@ namespace Akka.TestKit.Internal
             if(_collection.TryTake(out var p))
             {
                 var item = p.Value;
+#pragma warning disable CS0618
                 AddFirst(item);
+#pragma warning restore CS0618
                 return (true, item);
             }
             return (false, default);
@@ -130,7 +134,9 @@ namespace Akka.TestKit.Internal
             if(_collection.TryTake(out var p, millisecondsTimeout, cancellationToken))
             {
                 item = p.Value;
+#pragma warning disable CS0618
                 AddFirst(item);
+#pragma warning restore CS0618
                 return true;
             }
             item = default;
@@ -142,7 +148,9 @@ namespace Akka.TestKit.Internal
             if(_collection.TryTake(out var p, millisecondsTimeout, cancellationToken))
             {
                 var item = p.Value;
+#pragma warning disable CS0618
                 AddFirst(item);
+#pragma warning restore CS0618
                 return (true, item);
             }
             return (false, default);
@@ -151,14 +159,18 @@ namespace Akka.TestKit.Internal
         public T Peek(CancellationToken cancellationToken)
         {
             var p = _collection.Take(cancellationToken);
+#pragma warning disable CS0618
             AddFirst(p.Value);
+#pragma warning restore CS0618
             return p.Value;
         }
 
         public async ValueTask<T> PeekAsync(CancellationToken cancellationToken)
         {
             var val = _collection.Take(cancellationToken).Value;
+#pragma warning disable CS0618
             AddFirst(val);
+#pragma warning restore CS0618
             return val;
         }
         #endregion

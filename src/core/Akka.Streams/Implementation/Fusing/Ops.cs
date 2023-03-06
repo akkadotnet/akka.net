@@ -47,8 +47,9 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
-
+#pragma warning disable CS0618
                 SetHandler(stage.In, stage.Out, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush()
@@ -605,8 +606,9 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(Recover<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-
+#pragma warning disable CS0618
                 SetHandler(stage.Inlet, stage.Outlet, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
@@ -699,7 +701,9 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(SelectError<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
+#pragma warning disable CS0618
                 SetHandler(stage.Inlet, stage.Outlet, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
@@ -745,8 +749,9 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
                 _left = stage._count;
-
+#pragma warning disable CS0618
                 SetHandler(stage.Inlet, stage.Outlet, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush()
@@ -925,8 +930,9 @@ namespace Akka.Streams.Implementation.Fusing
                         }
                     }
                 };
-
+#pragma warning disable CS0618
                 SetHandler(stage.In, stage.Out, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush()
@@ -1214,8 +1220,9 @@ namespace Akka.Streams.Implementation.Fusing
 
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
-
+#pragma warning disable CS0618
                 SetHandler(stage.In, stage.Out, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush()
@@ -1382,8 +1389,9 @@ namespace Akka.Streams.Implementation.Fusing
                         }
                     }
                 });
-
+#pragma warning disable CS0618
                 SetHandler(stage.In, stage.Out, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush()
@@ -1624,8 +1632,9 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _buffer = new List<T>(stage._count);
                 _left = stage._count;
-
+#pragma warning disable CS0618
                 SetHandler(stage.In, stage.Out, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush()
@@ -1833,8 +1842,9 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
                 _buffer = ImmutableList<T>.Empty;
-
+#pragma warning disable CS0618
                 SetHandler(stage.In, stage.Out, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush()
@@ -2108,7 +2118,9 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(OnCompleted<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
+#pragma warning disable CS0618
                 SetHandler(stage.In, stage.Out, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush() => Pull(_stage.In);
@@ -2184,8 +2196,9 @@ namespace Akka.Streams.Implementation.Fusing
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
                 _left = stage._max;
-
+#pragma warning disable CS0618
                 SetHandler(_shape.Inlet, _shape.Outlet, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush()
@@ -2403,8 +2416,9 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
                 _iterator = new IteratorAdapter<TOut>(Enumerable.Empty<TOut>().GetEnumerator());
-
+#pragma warning disable CS0618
                 SetHandler(stage.In, stage.Out, this);
+#pragma warning restore CS0618
             }
 
             public override void PreStart() => Pull(_stage.In);
@@ -2565,8 +2579,9 @@ namespace Akka.Streams.Implementation.Fusing
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
                 _taskCallback = GetAsyncCallback<Holder<TOut>>(HolderCompleted);
-
+#pragma warning disable CS0618
                 SetHandler(stage.In, stage.Out, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush()

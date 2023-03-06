@@ -440,10 +440,12 @@ namespace Akka.Remote.Transport
         /// </summary>
         public override void Disassociate()
         {
+#pragma warning disable CS0618
             WrappedHandle.Disassociate();
+#pragma warning restore CS0618
         }
 
-#region IHandleEventListener members
+        #region IHandleEventListener members
 
         /// <summary>
         /// TBD

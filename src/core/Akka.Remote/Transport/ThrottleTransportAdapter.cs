@@ -432,26 +432,28 @@ namespace Akka.Remote.Transport
                     foreach (var handle in _handleTable)
                     {
                         if (handle.Item1 == naked)
-                            handle.Item2.Disassociate();
-                    }
+#pragma warning disable CS0618
+                                handle.Item2.Disassociate();
+#pragma warning restore CS0618
+                        }
 
-                    /*
-                     * NOTE: Important difference between Akka.NET and Akka here.
-                     * In canonical Akka, ThrottleHandlers are never removed from
-                     * the _handleTable. The reason is because Ask-ing a terminated ActorRef
-                     * doesn't cause any exceptions to be thrown upstream - it just times out
-                     * and propagates a failed Future.
-                     * 
-                     * In the CLR, a CancellationException gets thrown and causes all
-                     * parent tasks chaining back to the EndPointManager to fail due
-                     * to an Ask timeout.
-                     * 
-                     * So in order to avoid this problem, we remove any disassociated handles
-                     * from the _handleTable.
-                     * 
-                     * Questions? Ask @Aaronontheweb
-                     */
-                    _handleTable.RemoveAll(tuple => tuple.Item1 == naked);
+                        /*
+                         * NOTE: Important difference between Akka.NET and Akka here.
+                         * In canonical Akka, ThrottleHandlers are never removed from
+                         * the _handleTable. The reason is because Ask-ing a terminated ActorRef
+                         * doesn't cause any exceptions to be thrown upstream - it just times out
+                         * and propagates a failed Future.
+                         * 
+                         * In the CLR, a CancellationException gets thrown and causes all
+                         * parent tasks chaining back to the EndPointManager to fail due
+                         * to an Ask timeout.
+                         * 
+                         * So in order to avoid this problem, we remove any disassociated handles
+                         * from the _handleTable.
+                         * 
+                         * Questions? Ask @Aaronontheweb
+                         */
+                        _handleTable.RemoveAll(tuple => tuple.Item1 == naked);
                     Sender.Tell(ForceDisassociateAck.Instance);
                     return;
                 }
@@ -1162,7 +1164,9 @@ namespace Akka.Remote.Transport
                         if (mode is Blackhole)
                         {
                             ThrottledMessages = new Queue<ByteString>();
+#pragma warning disable CS0618
                             exposedHandle.Disassociate();
+#pragma warning restore CS0618
                             return Stop();
                         }
                         else

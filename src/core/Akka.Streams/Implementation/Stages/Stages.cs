@@ -479,7 +479,9 @@ namespace Akka.Streams.Implementation.Stages
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+#pragma warning disable CS0618
     public interface ISymbolicStage<in TIn, out TOut> : IStage<TIn, TOut>
+#pragma warning restore CS0618
     {
         /// <summary>
         /// TBD
@@ -491,7 +493,9 @@ namespace Akka.Streams.Implementation.Stages
         /// </summary>
         /// <param name="effectiveAttributes">TBD</param>
         /// <returns>TBD</returns>
+#pragma warning disable CS0618
         IStage<TIn, TOut> Create(Attributes effectiveAttributes);
+#pragma warning restore CS0618
     }
 
     /// <summary>
@@ -520,8 +524,9 @@ namespace Akka.Streams.Implementation.Stages
         /// </summary>
         /// <param name="effectiveAttributes">TBD</param>
         /// <returns>TBD</returns>
+#pragma warning disable CS0618
         public abstract IStage<TIn, TOut> Create(Attributes effectiveAttributes);
-
+#pragma warning restore CS0618
         /// <summary>
         /// TBD
         /// </summary>

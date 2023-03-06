@@ -191,7 +191,9 @@ namespace Akka.Streams.Implementation.Fusing
     /// <typeparam name="TOut">TBD</typeparam>
     internal sealed class EnumeratorInterpreter<TIn, TOut> : IEnumerable<TOut>
     {
+#pragma warning disable CS0618
         private readonly IEnumerable<PushPullStage<TIn, TOut>> _ops;
+#pragma warning restore CS0618
         private readonly EnumeratorInterpreter.EnumeratorUpstream<TIn> _upstream;
         private readonly EnumeratorInterpreter.EnumeratorDownstream<TOut> _downstream = new EnumeratorInterpreter.EnumeratorDownstream<TOut>();
         /// <summary>
@@ -199,7 +201,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="input">TBD</param>
         /// <param name="ops">TBD</param>
+#pragma warning disable CS0618
         public EnumeratorInterpreter(IEnumerator<TIn> input, IEnumerable<PushPullStage<TIn, TOut>> ops)
+#pragma warning restore CS0618
         {
             _ops = ops;
             _upstream = new EnumeratorInterpreter.EnumeratorUpstream<TIn>(input);

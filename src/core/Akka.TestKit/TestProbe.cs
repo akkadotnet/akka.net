@@ -124,8 +124,9 @@ namespace Akka.TestKit
 
         IActorRefProvider IInternalActorRef.Provider { get { return ((IInternalActorRef)TestActor).Provider; } }
 
+#pragma warning disable CS0618
         bool IInternalActorRef.IsTerminated { get { return ((IInternalActorRef)TestActor).IsTerminated; } }
-
+#pragma warning restore CS0618
         IActorRef IInternalActorRef.GetChild(IReadOnlyList<string> name)
         {
             return ((IInternalActorRef)TestActor).GetChild(name);

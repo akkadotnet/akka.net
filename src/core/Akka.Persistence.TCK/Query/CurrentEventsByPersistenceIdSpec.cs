@@ -46,8 +46,10 @@ namespace Akka.Persistence.TCK.Query
 
             var src = queries.CurrentEventsByPersistenceId("a", 0, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
+#pragma warning disable CS0618
             probe.Request(2)
                 .ExpectNext("a-1", "a-2")
+#pragma warning restore CS0618
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             probe.Request(2)
                 .ExpectNext("a-3")
@@ -60,9 +62,11 @@ namespace Akka.Persistence.TCK.Query
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("b");
             var src = queries.CurrentEventsByPersistenceId("b", 0L, 2L);
+#pragma warning disable CS0618
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
                 .Request(5)
                 .ExpectNext("b-1", "b-2")
+#pragma warning restore CS0618
                 .ExpectComplete();
         }
 
@@ -73,8 +77,10 @@ namespace Akka.Persistence.TCK.Query
             var pref = Setup("f");
             var src = queries.CurrentEventsByPersistenceId("f", 0L, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
+#pragma warning disable CS0618
             probe.Request(2)
                 .ExpectNext("f-1", "f-2")
+#pragma warning restore CS0618
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             pref.Tell("f-4");

@@ -48,8 +48,6 @@ namespace Akka.Actor.Internal
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
         private IScheduler _scheduler;
-        //warning CS0618: 'ActorProducerPipelineResolver' is obsolete:
-        //'Actor producer pipeline API will be removed in v1.5.' 
 #pragma warning disable CS0618
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
 #pragma warning restore CS0618
@@ -143,11 +141,10 @@ namespace Akka.Actor.Internal
         /// <inheritdoc cref="ActorSystem"/>
         public override ILoggingAdapter Log { get { return _log; } }
 
-        //warning CS0618: 'ActorProducerPipelineResolver' is obsolete:
-        //'Actor producer pipeline API will be removed in v1.5.'
-#pragma warning disable CS0618
         /// <inheritdoc cref="ActorSystem"/>
+#pragma warning disable CS0618
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
+#pragma warning restore CS0618
 
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
@@ -487,7 +484,9 @@ namespace Akka.Actor.Internal
         private void ConfigureActorProducerPipeline()
         {
             // we push Log in lazy manner since it may not be configured at point of pipeline initialization
+#pragma warning disable CS0618
             _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
+#pragma warning restore CS0618
         }
 
         private void ConfigureTerminationCallbacks()

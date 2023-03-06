@@ -49,8 +49,10 @@ namespace Akka.Persistence.TCK.Query
             var source = queries.CurrentPersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
             probe.Within(TimeSpan.FromSeconds(10), () =>
+#pragma warning disable CS0618
                 probe.Request(4)
                     .ExpectNextUnordered("a", "b", "c")
+#pragma warning restore CS0618
                     .ExpectComplete());
         }
 

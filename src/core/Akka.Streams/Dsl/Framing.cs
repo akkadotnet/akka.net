@@ -214,8 +214,9 @@ namespace Akka.Streams.Dsl
                 public Logic(SimpleFramingProtocolEncoderStage stage) : base(stage.Shape)
                 {
                     _stage = stage;
-
+#pragma warning disable CS0618
                     SetHandler(stage.Inlet, stage.Outlet, this);
+#pragma warning restore CS0618
                 }
 
                 public override void OnPush()
@@ -270,8 +271,9 @@ namespace Akka.Streams.Dsl
                 {
                     _stage = stage;
                     _firstSeparatorByte = stage._separatorBytes[0];
-
+#pragma warning disable CS0618
                     SetHandler(stage.Inlet, stage.Outlet, this);
+#pragma warning restore CS0618
                 }
 
                 public override void OnPush()
@@ -395,8 +397,9 @@ namespace Akka.Streams.Dsl
                 public Logic(LengthFieldFramingStage stage) : base(stage.Shape)
                 {
                     _stage = stage;
-
+#pragma warning disable CS0618
                     SetHandler(stage.Inlet, stage.Outlet, this);
+#pragma warning restore CS0618
                 }
 
                 public override void OnPush()

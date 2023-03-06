@@ -18,7 +18,9 @@ namespace Akka.Streams.Stage
     /// <typeparam name="TOut">TBD</typeparam>
     internal class PushPullGraphLogic<TIn, TOut> : GraphStageLogic, IDetachedContext<TOut>
     {
+#pragma warning disable CS0618
         private AbstractStage<TIn, TOut> _currentStage;
+#pragma warning restore CS0618
         private readonly FlowShape<TIn, TOut> _shape;
 
         /// <summary>
@@ -30,7 +32,9 @@ namespace Akka.Streams.Stage
         public PushPullGraphLogic(
             FlowShape<TIn, TOut> shape,
             Attributes attributes,
+#pragma warning disable CS0618
             AbstractStage<TIn, TOut> stage)
+#pragma warning restore CS0618
             : base(shape)
         {
             Attributes = attributes;
@@ -59,8 +63,9 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
+       #pragma warning disable CS0618
         public AbstractStage<TIn, TOut> Stage { get; }
-
+       #pragma warning restore CS0618
         IMaterializer ILifecycleContext.Materializer => Materializer;
 
         /// <summary>
@@ -316,14 +321,17 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
+#pragma warning disable CS0618
         public readonly Func<Attributes, (IStage<TIn, TOut>, TMat)> Factory;
-
+#pragma warning restore CS0618
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="factory">TBD</param>
         /// <param name="stageAttributes">TBD</param>
+#pragma warning disable CS0618
         public PushPullGraphStageWithMaterializedValue(Func<Attributes, (IStage<TIn, TOut>, TMat)> factory, Attributes stageAttributes)
+#pragma warning restore CS0618
         {
             InitialAttributes = stageAttributes;
             Factory = factory;
@@ -376,7 +384,9 @@ namespace Akka.Streams.Stage
         /// <param name="factory">TBD</param>
         /// <param name="stageAttributes">TBD</param>
         /// <returns>TBD</returns>
+#pragma warning disable CS0618
         public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes) : base(attributes => (factory(attributes), NotUsed.Instance), stageAttributes)
+#pragma warning restore CS0618
         {
         }
     }

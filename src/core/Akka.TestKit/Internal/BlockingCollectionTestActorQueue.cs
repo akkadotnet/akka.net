@@ -44,9 +44,11 @@ namespace Akka.TestKit.Internal
         /// <returns>A <see cref="List{T}"/> for the <see cref="BlockingCollectionTestActorQueue{T}"/> items</returns>
         public List<T> ToList()
         {
+#pragma warning disable CS0618
             return _queue.ToList();
+#pragma warning restore CS0618
         }
-        
+
         /// <summary>
         /// <para>
         /// Retrieves all items from the queue.

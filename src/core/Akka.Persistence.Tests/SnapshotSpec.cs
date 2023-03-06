@@ -394,7 +394,7 @@ namespace Akka.Persistence.Tests
 
             // recover persistentActor and the delete first three (= all) snapshots
             pref.Tell(new DeleteMany(new SnapshotSelectionCriteria(4, DateTime.MaxValue)));
-
+#pragma warning disable CS0618
             ExpectMsgPf("offer", o =>
             {
                 var offer = o as SnapshotOffer;
@@ -410,7 +410,7 @@ namespace Akka.Persistence.Tests
                 }
                 else return null;
             });
-
+#pragma warning restore CS0618
             ExpectMsg<RecoveryCompleted>();
             delProbe.ExpectMsg<DeleteSnapshots>();
             ExpectMsg<DeleteSnapshotsSuccess>();

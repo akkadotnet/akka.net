@@ -389,7 +389,9 @@ channel-executor.priority = normal");
                     Console.WriteLine("{0} inhabitants {1}", dispatcher, dispatcher.Inhabitants);
                     foreach (var actor in a)
                     {
+#pragma warning disable CS0618
                         var status = actor.IsTerminated ? "(terminated)" : "(active)";
+#pragma warning restore CS0618
                         var messages = actor is ActorRefWithCell
                             ? " " + actor.AsInstanceOf<ActorRefWithCell>().Underlying.NumberOfMessages + " messages"
                             : " " + actor.GetType();

@@ -174,7 +174,9 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(Identity<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
+#pragma warning disable CS0618
                 SetHandler(stage.Inlet, stage.Outlet, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
@@ -220,8 +222,9 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(Detacher<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-
+#pragma warning disable CS0618
                 SetHandler(stage.Inlet, stage.Outlet, this);
+#pragma warning restore CS0618
             }
 
             public override void PreStart() => TryPull(_stage.Inlet);
@@ -435,8 +438,9 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
                 _monitor = monitor;
-
+#pragma warning disable CS0618
                 SetHandler(stage.In, stage.Out, this);
+#pragma warning restore CS0618
             }
 
             public override void OnPush()

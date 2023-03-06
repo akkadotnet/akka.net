@@ -42,11 +42,13 @@ namespace Akka.Streams.Dsl
         public static FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> Collect<TIn, TCtx, TOut, TOut2, TMat>(
             this FlowWithContext<TIn, TCtx, TOut, TCtx, TMat> flow, Func<TOut, TOut2> fn) where TOut2 : class
         {
+#pragma warning disable CS0618
             var stage = new Collect<(TOut, TCtx), (TOut2, TCtx)>(func: x =>
             {
                 var result = fn(x.Item1);
                 return ReferenceEquals(result, null) ? default((TOut2, TCtx)) : (result, x.Item2);
             });
+#pragma warning restore CS0618
             return flow.Via(Flow.FromGraph(stage));
         }
 
@@ -184,11 +186,13 @@ namespace Akka.Streams.Dsl
         public static SourceWithContext<TOut2, TCtx, TMat> Collect<TOut, TCtx, TOut2, TMat>(
             this SourceWithContext<TOut, TCtx, TMat> flow, Func<TOut, TOut2> fn) where TOut2 : class
         {
+#pragma warning disable CS0618
             var stage = new Collect<(TOut, TCtx), (TOut2, TCtx)>(func: x =>
             {
                 var result = fn(x.Item1);
                 return ReferenceEquals(result, null) ? default((TOut2, TCtx)) : (result, x.Item2);
             });
+#pragma warning restore CS0618
             return flow.Via(Flow.FromGraph(stage));
         }
 

@@ -83,7 +83,9 @@ namespace Akka.Serialization
         /// <returns>TBD</returns>
         public byte[] ToBinaryWithAddress(Address address, object obj)
         {
+#pragma warning disable CS0618
             return Serialization.WithTransport(system, address, () => ToBinary(obj));
+#pragma warning restore CS0618
         }
 
         /// <summary>

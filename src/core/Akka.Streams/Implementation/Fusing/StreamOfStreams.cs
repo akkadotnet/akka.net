@@ -49,8 +49,9 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_q.NonEmpty && IsAvailable(_stage._out))
                         PushOut();
                 };
-
+#pragma warning disable CS0618
                 SetHandler(stage._in, stage._out, this);
+#pragma warning restore CS0618
             }
             public override void OnPush()
             {
