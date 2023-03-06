@@ -560,7 +560,9 @@ namespace Akka.Actor
         {
             get { return true; }
         }
-
+        //warning CS0809: Obsolete member 'MinimalActorRef.IsTerminated'
+        //overrides non-obsolete member 'InternalActorRefBase.IsTerminated'
+#pragma warning disable CS0809
         /// <inheritdoc cref="InternalActorRefBase"/>
         [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get { return false; } }

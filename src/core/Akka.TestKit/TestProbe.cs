@@ -82,6 +82,9 @@ namespace Akka.TestKit
             Sender.Tell(message,TestActor);
         }
 
+        //warning CS0809: Obsolete member 'TestProbe.CreateTestProbe(string)'
+        //overrides non-obsolete member
+#pragma warning disable CS0809
         /// <summary>
         /// N/A
         /// </summary>

@@ -44,6 +44,9 @@ namespace Akka.Actor
         /// </summary>
         public override IActorRefProvider Provider { get { return _provider; } }
 
+        //warning CS0809: Obsolete member 'EmptyLocalActorRef.IsTerminated'
+        //overrides non-obsolete member
+#pragma warning disable CS0809
         /// <summary>
         /// TBD
         /// </summary>
