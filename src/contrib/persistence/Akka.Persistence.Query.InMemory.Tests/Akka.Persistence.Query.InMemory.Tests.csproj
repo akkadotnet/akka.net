@@ -5,7 +5,7 @@
     <PropertyGroup>
         <AssemblyTitle>Akka.Persistence.Query.InMemory.Tests</AssemblyTitle>
         <Description>Akka.NET Persistence Query implementation for InMemory Journal.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion);$(NetTestVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
@@ -17,6 +17,9 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+      <PackageReference Include="xunit" Version="$(XunitVersion)" />
+      <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
+      <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
     </ItemGroup>
 
 </Project>

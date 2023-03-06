@@ -102,12 +102,9 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
 
-            var first = Guid.NewGuid().ToString();
-            var second = Guid.NewGuid().ToString();
-            var third = Guid.NewGuid().ToString();
-            WriteSnapshot(first, 2);
-            WriteSnapshot(second, 2);
-            WriteSnapshot(third, 2);
+            WriteSnapshot("a", 2);
+            WriteSnapshot("b", 2);
+            WriteSnapshot("c", 2);
             Setup("d", 2);
             Setup("e", 2);
             Setup("f", 2);
@@ -115,7 +112,7 @@ namespace Akka.Persistence.TCK.Query
             var source = queries.PersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
 
-            var expectedUniqueList = new List<string>(){first, second, third, "d", "e", "f"};
+            var expectedUniqueList = new List<string>(){"a", "b", "c", "d", "e", "f"};
 
             probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(3)
                 .ExpectNextWithinSet(expectedUniqueList)

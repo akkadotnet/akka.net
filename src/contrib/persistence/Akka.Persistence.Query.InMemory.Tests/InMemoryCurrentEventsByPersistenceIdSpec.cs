@@ -15,7 +15,8 @@ namespace Akka.Persistence.Query.InMemory.Tests
     {
         private static Config Config() => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
-            akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""")
+            akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
+            akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""")
             .WithFallback(InMemoryReadJournal.DefaultConfiguration());
 
         public InMemoryCurrentEventsByPersistenceIdSpec(ITestOutputHelper output) : 
