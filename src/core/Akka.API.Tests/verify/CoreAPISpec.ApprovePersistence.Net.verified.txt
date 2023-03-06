@@ -1001,10 +1001,6 @@ namespace Akka.Persistence.Journal
             public override int GetHashCode() { }
             public override string ToString() { }
         }
-        public sealed class NewEventAppended : Akka.Event.IDeadLetterSuppression
-        {
-            public static Akka.Persistence.Journal.MemoryJournal.NewEventAppended Instance;
-        }
         public sealed class ReplayAllEvents : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
         {
             public readonly int FromOffset;
@@ -1045,20 +1041,6 @@ namespace Akka.Persistence.Journal
             public SelectCurrentPersistenceIds(int offset, Akka.Actor.IActorRef replyTo) { }
             public int Offset { get; }
             public Akka.Actor.IActorRef ReplyTo { get; }
-        }
-        public sealed class SubscribeNewEvents
-        {
-            public static Akka.Persistence.Journal.MemoryJournal.SubscribeNewEvents Instance;
-        }
-        public sealed class SubscribeTag
-        {
-            public readonly string Tag;
-            public SubscribeTag(string tag) { }
-        }
-        public sealed class TaggedEventAppended : Akka.Event.IDeadLetterSuppression
-        {
-            public readonly string Tag;
-            public TaggedEventAppended(string tag) { }
         }
     }
     public class PersistencePluginProxy : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>

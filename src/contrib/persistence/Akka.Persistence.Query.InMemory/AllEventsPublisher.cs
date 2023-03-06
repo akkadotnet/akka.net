@@ -78,7 +78,6 @@ namespace Akka.Persistence.Query.InMemory
             switch (message)
             {
                 case AllEventsPublisher.Continue _:
-                case MemoryJournal.NewEventAppended _:
                     if (IsTimeForReplay) Replay();
                     return true;
                 case Request _:
@@ -135,7 +134,6 @@ namespace Akka.Persistence.Query.InMemory
                     Context.Stop(Self);
                     return true;
                 case AllEventsPublisher.Continue _:
-                case MemoryJournal.NewEventAppended _:
                     return true;
                 default:
                     return false;
@@ -162,7 +160,6 @@ namespace Akka.Persistence.Query.InMemory
 
         protected override void ReceiveInitialRequest()
         {
-            JournalRef.Tell(MemoryJournal.SubscribeNewEvents.Instance);
             Replay();
         }
 

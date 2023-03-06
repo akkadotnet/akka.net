@@ -89,9 +89,6 @@ namespace Akka.Persistence.Query.InMemory
                 case EventsByTagPublisher.Continue _:
                     if (IsTimeForReplay) Replay();
                     return true;
-                case MemoryJournal.TaggedEventAppended _:
-                    if (IsTimeForReplay) Replay();
-                    return true;
                 case Request _:
                     ReceiveIdleRequest();
                     return true;
@@ -148,10 +145,6 @@ namespace Akka.Persistence.Query.InMemory
                         // no-op
                         return true;
                     
-                    case  MemoryJournal.TaggedEventAppended _:
-                        // no-op
-                        return true;
-                    
                     case Cancel _:
                         Context.Stop(Self);
                         return true;
@@ -183,7 +176,6 @@ namespace Akka.Persistence.Query.InMemory
 
         protected override void ReceiveInitialRequest()
         {
-            JournalRef.Tell(new MemoryJournal.SubscribeTag(Tag));
             Replay();
         }
 

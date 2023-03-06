@@ -68,12 +68,9 @@ namespace Akka.Persistence.Journal
     public class MemoryJournal : AsyncWriteJournal
     {
         private readonly LinkedList<IPersistentRepresentation> _allMessages = new();
-        private readonly LinkedList<string> _allPersistenceIds = new();
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
         private readonly ConcurrentDictionary<string, long> _meta = new();
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
-        private ImmutableDictionary<string, IImmutableSet<IActorRef>> _tagSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
-        private readonly HashSet<IActorRef> _newEventsSubscriber = new();
         
         /// <summary>
         /// TBD
@@ -87,8 +84,6 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
-            var allTags = new HashSet<string>();
-            
             foreach (var w in messages)
             {
                 foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
@@ -100,7 +95,6 @@ namespace Akka.Persistence.Journal
                     
                     foreach (var tag in tagged.Tags)
                     {
-                        allTags.UnionWith(tagged.Tags);
                         _tagsToMessagesMapping.AddOrUpdate(
                             tag,
                             (k) => new LinkedList<IPersistentRepresentation>(new[] { persistentRepresentation }),
@@ -112,17 +106,6 @@ namespace Akka.Persistence.Journal
                     }
                 }
             }
-            
-            if (!_tagSubscribers.IsEmpty && allTags.Count != 0)
-            {
-                foreach (var tag in allTags)
-                {
-                    NotifyTagChange(tag);
-                }
-            }
-            
-            if (_newEventsSubscriber.Count != 0)
-                NotifyNewEventAppended();
             
             return Task.FromResult((IImmutableList<Exception>) null); // all good
         }
@@ -188,24 +171,10 @@ namespace Akka.Persistence.Journal
                         .PipeTo(replay.ReplyTo, success: h => new ReplayTaggedMessagesSuccess(h), failure: e => new ReplayMessagesFailure(e));
                     return true;
                 
-                case SubscribeTag subscribe:
-                    AddTagSubscriber(Sender, subscribe.Tag);
-                    Context.Watch(Sender);
-                    return true;
-                
                 case ReplayAllEvents replay:
                     ReplayAllEventsAsync(replay)
                         .PipeTo(replay.ReplyTo, success: h => new EventReplaySuccess(h),
                             failure: e => new EventReplayFailure(e));
-                    return true;
-                
-                case Terminated terminated:
-                    RemoveSubscriber(terminated.ActorRef);
-                    return true;
-                
-                case SubscribeNewEvents _:
-                    AddNewEventsSubscriber(Sender);
-                    Context.Watch(Sender);
                     return true;
                 
                 default:
@@ -215,7 +184,7 @@ namespace Akka.Persistence.Journal
         
         private async Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            return (_allPersistenceIds.Skip(offset), _allPersistenceIds.Count);
+            return (new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count); 
         }
         
         /// <summary>
@@ -239,51 +208,6 @@ namespace Akka.Persistence.Journal
             }
 
             return _tagsToMessagesMapping[replay.Tag].Count - 1;
-        }
-        
-        private void AddTagSubscriber(IActorRef subscriber, string tag)
-        {
-            if (!_tagSubscribers.TryGetValue(tag, out var subscriptions))
-            {
-                _tagSubscribers = _tagSubscribers.Add(tag, ImmutableHashSet.Create(subscriber));
-            }
-            else
-            {
-                _tagSubscribers = _tagSubscribers.SetItem(tag, subscriptions.Add(subscriber));
-            }
-        }
-        
-        private void RemoveSubscriber(IActorRef subscriber)
-        {
-            foreach (var key in _tagSubscribers.Keys)
-            {
-                _tagSubscribers[key].Remove(subscriber);
-            }
-            
-            _newEventsSubscriber.Remove(subscriber);
-        }
-        
-        private void AddNewEventsSubscriber(IActorRef subscriber)
-        {
-            _newEventsSubscriber.Add(subscriber);
-        }
-
-        private void NotifyTagChange(string tag)
-        {
-            if (_tagSubscribers.TryGetValue(tag, out var subscribers))
-            {
-                var changed = new TaggedEventAppended(tag);
-                foreach (var subscriber in subscribers)
-                    subscriber.Tell(changed);
-            }
-        }
-
-        private void NotifyNewEventAppended()
-        {
-            foreach (var subscriber in _newEventsSubscriber)
-            {
-                subscriber.Tell(NewEventAppended.Instance);
-            }
         }
         
         private async Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
@@ -449,52 +373,6 @@ namespace Akka.Persistence.Journal
         /// TBD
         /// </summary>
         [Serializable]
-        public sealed class TaggedEventAppended : IDeadLetterSuppression
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly string Tag;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="tag">TBD</param>
-            public TaggedEventAppended(string tag)
-            {
-                Tag = tag;
-            }
-        }
-        
-        /// <summary>
-        /// Subscribe the `sender` to changes (appended events) for a specific `tag`.
-        /// Used by query-side. The journal will send <see cref="TaggedEventAppended"/> messages to
-        /// the subscriber when `asyncWriteMessages` has been called.
-        /// Events are tagged by wrapping in <see cref="Tagged"/>
-        /// via an <see cref="IEventAdapter"/>.
-        /// </summary>
-        [Serializable]
-        public sealed class SubscribeTag
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly string Tag;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="tag">TBD</param>
-            public SubscribeTag(string tag)
-            {
-                Tag = tag;
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        [Serializable]
         public sealed class ReplayAllEvents : IJournalRequest
         {
             /// <summary>
@@ -656,27 +534,6 @@ namespace Akka.Persistence.Journal
             public override string ToString() => $"EventReplayFailure<cause: {Cause.Message}>";
         }
 
-        /// <summary>
-        /// Subscribe the `sender` to new appended events.
-        /// Used by query-side. The journal will send <see cref="NewEventAppended"/> messages to
-        /// the subscriber when `asyncWriteMessages` has been called.
-        /// </summary>
-        [Serializable]
-        public sealed class SubscribeNewEvents
-        {
-            public static SubscribeNewEvents Instance = new SubscribeNewEvents();
-
-            private SubscribeNewEvents() { }
-        }
-        
-        [Serializable]
-        public sealed class NewEventAppended : IDeadLetterSuppression
-        {
-            public static NewEventAppended Instance = new NewEventAppended();
-
-            private NewEventAppended() { }
-        }
-        
         #endregion
         
         #region IMemoryMessages implementation
@@ -688,8 +545,6 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public Messages Add(IPersistentRepresentation persistent)
         {
-            if (!Messages.ContainsKey(persistent.PersistenceId))
-                _allPersistenceIds.AddLast(persistent.PersistenceId);
             var list = Messages.GetOrAdd(persistent.PersistenceId, pid => new LinkedList<IPersistentRepresentation>());
             list.AddLast(persistent);
             return Messages;
