@@ -4,10 +4,8 @@
 
     <PropertyGroup>
         <AssemblyTitle>Akka.Persistence.Query.InMemory.Tests</AssemblyTitle>
-        <Description>Akka.NET Persistence Query implementation for InMemory Journal.</Description>
         <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion);$(NetTestVersion)</TargetFrameworks>
-        <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
