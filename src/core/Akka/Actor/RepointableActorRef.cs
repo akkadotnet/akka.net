@@ -326,7 +326,9 @@ namespace Akka.Actor
         /// </summary>
         public override IEnumerable<IActorRef> Children
         {
+#pragma warning disable CS0618
             get { return Lookup.GetChildren(); }
+#pragma warning restore CS0618
         }
 
     }

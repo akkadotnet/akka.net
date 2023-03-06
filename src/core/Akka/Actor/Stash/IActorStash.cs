@@ -26,11 +26,15 @@ namespace Akka.Actor
         IStash Stash { get; set; }
     }
 
+    //warning CS0618: 'ActorProducerPluginBase' is obsolete:
+    //'Actor producer pipeline API will be removed in v1.5.'
+#pragma warning disable CS0618
     /// <summary>
     /// TBD
     /// </summary>
     public class ActorStashPlugin : ActorProducerPluginBase
     {
+#pragma warning restore CS0618
         /// <summary>
         /// Stash plugin is applied to all actors implementing <see cref="IActorStash"/> interface.
         /// </summary>
