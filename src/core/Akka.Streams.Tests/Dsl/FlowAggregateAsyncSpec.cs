@@ -58,20 +58,22 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_AggregateAsync_must_work_when_using_Source_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var task = AggregateSource.RunWith(Sink.First<int>(), Materializer);
-                task.AwaitResult().Should().Be(Expected);
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Be(Expected);
             }, Materializer);
         }
 
         [Fact]
         public void A_AggregateAsync_must_work_when_using_Sink_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var task = InputSource.RunWith(AggregateSink, Materializer);
-                task.AwaitResult().Should().Be(Expected);
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Be(Expected);
             }, Materializer);
         }
 
@@ -79,20 +81,22 @@ namespace Akka.Streams.Tests.Dsl
         public void A_AggregateAsync_must_work_when_using_Flow_AggregateAsync()
         {
             var flowTimeout = TimeSpan.FromMilliseconds(FlowDelayInMs*Input.Count()) + TimeSpan.FromSeconds(3);
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var task = InputSource.Via(AggregateFlow).RunWith(Sink.First<int>(), Materializer);
-                task.AwaitResult(flowTimeout).Should().Be(Expected);
+                var complete = await task.ShouldCompleteWithin(flowTimeout);
+                complete.Should().Be(Expected);
             }, Materializer);
         }
 
         [Fact]
         public void A_AggregateAsync_must_work_when_using_Source_AggregateAsync_and_Flow_AggregateAsync_and_Sink_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var task = AggregateSource.Via(AggregateFlow).RunWith(AggregateSink, Materializer);
-                task.AwaitResult().Should().Be(Expected);
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Be(Expected);
             }, Materializer);
         }
 
@@ -279,9 +283,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_AggregateAsync_must_finish_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
-                Source.From(Enumerable.Range(1, 3)).AggregateAsync(1, (_, n) => Task.Run(() =>
+                var complete = Source.From(Enumerable.Range(1, 3)).AggregateAsync(1, (_, n) => Task.Run(() =>
                     {
                         if (n == 3)
                             throw new Exception("err3b");
@@ -290,7 +294,8 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
-                    .AwaitResult().Should().BeEquivalentTo(2);
+                    .ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(2);
             }, Materializer);
         }
 
@@ -417,22 +422,24 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_AggregateAsync_must_complete_task_and_return_zero_given_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var task = Source.From(Enumerable.Empty<int>())
                     .RunAggregateAsync(0, (acc, element) => Task.FromResult(acc + element), Materializer);
-                task.AwaitResult(RemainingOrDefault).ShouldBe(0);
+                var complete = await task.ShouldCompleteWithin(RemainingOrDefault);
+                complete.ShouldBe(0);
             }, Materializer);
         }
 
         [Fact]
         public void A_AggregateAsync_must_complete_task_and_return_zero_and_item_given_a_stream_of_one_item()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var task = Source.Single(100)
                     .RunAggregateAsync(5, (acc, element) => Task.FromResult(acc + element), Materializer);
-                task.AwaitResult(RemainingOrDefault).ShouldBe(105);
+                var complete = await task.ShouldCompleteWithin(RemainingOrDefault);
+                complete.ShouldBe(105);
             }, Materializer);
         }
     }
