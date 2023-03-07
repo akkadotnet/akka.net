@@ -560,10 +560,12 @@ namespace Akka.Actor
         {
             get { return true; }
         }
-
+        
         /// <inheritdoc cref="InternalActorRefBase"/>
         [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
+#pragma warning disable CS0809
         public override bool IsTerminated { get { return false; } }
+#pragma warning restore CS0809
     }
 
 
