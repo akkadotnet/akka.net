@@ -410,7 +410,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async ValueTask Cycle_Source_must_continuously_generate_the_same_sequence()
+        public async Task Cycle_Source_must_continuously_generate_the_same_sequence()
         {
             var expected = new[] {1, 2, 3, 1, 2, 3, 1, 2, 3};
             var complete = await Source.Cycle(() => new[] {1, 2, 3}.AsEnumerable().GetEnumerator())
@@ -452,7 +452,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async ValueTask A_ZipN_Source_must_properly_ZipN()
+        public async Task A_ZipN_Source_must_properly_ZipN()
         {
             var sources = new[]
             {
@@ -474,7 +474,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async ValueTask A_ZipWithN_Source_must_properly_ZipWithN()
+        public async Task A_ZipWithN_Source_must_properly_ZipWithN()
         {
             var sources = new[]
             {
