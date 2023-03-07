@@ -200,12 +200,19 @@ namespace Akka.Event
                     $"If this is not an expected behavior then {d.Recipient} may have terminated unexpectedly. ";
                     break;
             }
-            _eventStream.Publish(new Info(
-                d.Recipient.Path.ToString(),
-                d.Recipient.GetType(),
-                logMessage +
+
+            logMessage +=
                 "This logging can be turned off or adjusted with configuration settings 'akka.log-dead-letters' " +
-                "and 'akka.log-dead-letters-during-shutdown'."));
+                "and 'akka.log-dead-letters-during-shutdown'.";
+
+            // Check that unwrapped object has an overriden ToString() method
+            var content = unwrapped?.ToString() ?? "null";
+            if (!content.Equals(messageStr))
+            {
+                logMessage += $" Message content: {content}";
+            }
+            
+            _eventStream.Publish(new Info(d.Recipient.Path.ToString(), d.Recipient.GetType(), logMessage));
         }
 
         private bool IsReal(IActorRef snd)
