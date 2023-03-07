@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
                     _stage = stage;
                     _buffer = ByteString.Empty;
 
-                    SetHandler(stage.Inlet, stage.Outlet, this);
+                    SetHandlers(stage.Inlet, stage.Outlet, this);
                 }
 
                 public override void OnPush()
