@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor;
 using Akka.Persistence.Internal;
 
@@ -334,11 +332,11 @@ namespace Akka.Persistence
         {
             if (_eventBatch.Count > 0)
             {
-                foreach (var p in _eventBatch.Reverse())
+                foreach (var p in _eventBatch)
                 {
                     _journalBatch.Add(p);
                 }
-                _eventBatch = new LinkedList<IPersistentEnvelope>();
+                _eventBatch.Clear();
             }
 
             FlushJournalBatch();

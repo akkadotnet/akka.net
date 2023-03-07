@@ -16,6 +16,7 @@ using Akka.Persistence.Query;
 using static PublicApiGenerator.ApiGenerator;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Metrics;
+using Akka.Persistence.Query.InMemory;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams;
@@ -75,6 +76,12 @@ namespace Akka.API.Tests
         public Task ApprovePersistenceSqlCommonQuery()
         {
             return VerifyAssembly<SqlReadJournal>();
+        }
+        
+        [Fact]
+        public Task ApprovePersistenceInMemoryQuery()
+        {
+            return VerifyAssembly<InMemoryReadJournal>();
         }
 
         [Fact]
