@@ -215,7 +215,7 @@ namespace Akka.Streams.Dsl
                 {
                     _stage = stage;
 
-                    SetHandler(stage.Inlet, stage.Outlet, this);
+                    SetHandlers(stage.Inlet, stage.Outlet, this);
                 }
 
                 public override void OnPush()
@@ -271,7 +271,7 @@ namespace Akka.Streams.Dsl
                     _stage = stage;
                     _firstSeparatorByte = stage._separatorBytes[0];
 
-                    SetHandler(stage.Inlet, stage.Outlet, this);
+                    SetHandlers(stage.Inlet, stage.Outlet, this);
                 }
 
                 public override void OnPush()
@@ -396,7 +396,7 @@ namespace Akka.Streams.Dsl
                 {
                     _stage = stage;
 
-                    SetHandler(stage.Inlet, stage.Outlet, this);
+                    SetHandlers(stage.Inlet, stage.Outlet, this);
                 }
 
                 public override void OnPush()
