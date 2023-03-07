@@ -48,7 +48,9 @@ namespace Akka.Actor.Internal
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
         private IScheduler _scheduler;
+#pragma warning disable CS0618
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
+#pragma warning restore CS0618
         private TerminationCallbacks _terminationCallbacks;
 
         /// <summary>
@@ -140,8 +142,9 @@ namespace Akka.Actor.Internal
         public override ILoggingAdapter Log { get { return _log; } }
 
         /// <inheritdoc cref="ActorSystem"/>
+#pragma warning disable CS0618
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
-
+#pragma warning restore CS0618
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
 
@@ -480,7 +483,9 @@ namespace Akka.Actor.Internal
         private void ConfigureActorProducerPipeline()
         {
             // we push Log in lazy manner since it may not be configured at point of pipeline initialization
+#pragma warning disable CS0618
             _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
+#pragma warning restore CS0618
         }
 
         private void ConfigureTerminationCallbacks()

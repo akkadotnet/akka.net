@@ -29,7 +29,9 @@ namespace Akka.Actor
     /// <summary>
     /// TBD
     /// </summary>
+#pragma warning disable CS0618
     public class ActorStashPlugin : ActorProducerPluginBase
+#pragma warning restore CS0618
     {
         /// <summary>
         /// Stash plugin is applied to all actors implementing <see cref="IActorStash"/> interface.
