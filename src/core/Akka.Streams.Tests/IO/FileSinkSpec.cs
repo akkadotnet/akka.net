@@ -24,6 +24,7 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.IO
 {
@@ -221,10 +222,10 @@ namespace Akka.Streams.Tests.IO
                             _materializer);
 
                     var completion1 = Write(_testLines, 0);
-                    await completion1.ShouldCompleteWithin(Remaining);
+                    await completion1.ShouldCompleteWithin(2.Seconds());
 
                     var completion2 = Write(testLinesPart2, startPosition);
-                    var result2 = await completion2.ShouldCompleteWithin(Remaining);
+                    var result2 = await completion2.ShouldCompleteWithin(2.Seconds());
 
                     f.Length.ShouldBe(startPosition + result2.Count);
 
