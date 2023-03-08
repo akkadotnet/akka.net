@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Util.Internal;
 
 namespace Akka.Persistence.Journal
@@ -66,9 +67,11 @@ namespace Akka.Persistence.Journal
     /// </summary>
     public class MemoryJournal : AsyncWriteJournal
     {
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
-        private readonly ConcurrentDictionary<string, long> _meta = new ConcurrentDictionary<string, long>();
-
+        private readonly LinkedList<IPersistentRepresentation> _allMessages = new();
+        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
+        private readonly ConcurrentDictionary<string, long> _meta = new();
+        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -85,9 +88,25 @@ namespace Akka.Persistence.Journal
             {
                 foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                 {
-                    Add(p);
+                    var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
+                    Add(persistentRepresentation);
+                    _allMessages.AddLast(persistentRepresentation);
+                    if (!(p.Payload is Tagged tagged)) continue;
+                    
+                    foreach (var tag in tagged.Tags)
+                    {
+                        _tagsToMessagesMapping.AddOrUpdate(
+                            tag,
+                            (k) => new LinkedList<IPersistentRepresentation>(new[] { persistentRepresentation }),
+                            (k, v) =>
+                            {
+                                v.AddLast(persistentRepresentation);
+                                return v;
+                            });
+                    }
                 }
             }
+            
             return Task.FromResult((IImmutableList<Exception>) null); // all good
         }
 
@@ -138,6 +157,385 @@ namespace Akka.Persistence.Journal
             return Task.FromResult(new object());
         }
 
+        protected override bool ReceivePluginInternal(object message)
+        {
+            switch (message)
+            {
+                case SelectCurrentPersistenceIds request:
+                    SelectAllPersistenceIdsAsync(request.Offset)
+                        .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result.Item1, result.LastOrdering));
+                    return true;
+                
+                case ReplayTaggedMessages replay:
+                    ReplayTaggedMessagesAsync(replay)
+                        .PipeTo(replay.ReplyTo, success: h => new ReplayTaggedMessagesSuccess(h), failure: e => new ReplayMessagesFailure(e));
+                    return true;
+                
+                case ReplayAllEvents replay:
+                    ReplayAllEventsAsync(replay)
+                        .PipeTo(replay.ReplyTo, success: h => new EventReplaySuccess(h),
+                            failure: e => new EventReplayFailure(e));
+                    return true;
+                
+                default:
+                    return false;
+            }
+        }
+        
+        private async Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
+        {
+            return (new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count); 
+        }
+        
+        /// <summary>
+        /// Replays all events with given tag withing provided boundaries from memory.
+        /// </summary>
+        /// <param name="replay">TBD</param>
+        /// <returns>TBD</returns>
+        private async Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
+        {
+            if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
+                return 0;
+
+            int index = 0;
+            foreach (var persistence in _tagsToMessagesMapping[replay.Tag]
+                         .Skip(replay.FromOffset)
+                         .Take(replay.ToOffset))
+            {
+                var payload = (Tagged)persistence.Payload;
+                replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence.WithPayload(payload.Payload), replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
+                index++;
+            }
+
+            return _tagsToMessagesMapping[replay.Tag].Count - 1;
+        }
+        
+        private async Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
+        {
+            int index = 0;
+            var replayed = _allMessages
+                .Skip(replay.FromOffset)
+                .Take(replay.ToOffset - replay.FromOffset)
+                .ToArray();
+            foreach (var message in replayed)
+            {
+                replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
+                index++;
+            }
+
+            return _allMessages.Count - 1;
+        }
+        
+        #region QueryAPI
+
+        [Serializable]
+        public sealed class SelectCurrentPersistenceIds : IJournalRequest
+        {
+            public IActorRef ReplyTo { get; }
+            public int Offset { get; }
+
+            public SelectCurrentPersistenceIds(int offset, IActorRef replyTo)
+            {
+                Offset = offset;
+                ReplyTo = replyTo;
+            }
+        }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class CurrentPersistenceIds : IDeadLetterSuppression
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IEnumerable<string> AllPersistenceIds;
+
+            public readonly int HighestOrderingNumber;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="allPersistenceIds">TBD</param>
+            /// <param name="highestOrderingNumber">TBD</param>
+            public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds, int highestOrderingNumber)
+            {
+                AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();
+                HighestOrderingNumber = highestOrderingNumber;
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ReplayTaggedMessages : IJournalRequest
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly int FromOffset;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly int ToOffset;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly int Max;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly string Tag;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef ReplyTo;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ReplayTaggedMessages"/> class.
+            /// </summary>
+            /// <param name="fromOffset">TBD</param>
+            /// <param name="toOffset">TBD</param>
+            /// <param name="max">TBD</param>
+            /// <param name="tag">TBD</param>
+            /// <param name="replyTo">TBD</param>
+            /// <exception cref="ArgumentException">
+            /// This exception is thrown for a number of reasons. These include the following:
+            /// <ul>
+            /// <li>The specified <paramref name="fromOffset"/> is less than zero.</li>
+            /// <li>The specified <paramref name="toOffset"/> is less than or equal to zero.</li>
+            /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
+            /// </ul>
+            /// </exception>
+            /// <exception cref="ArgumentNullException">
+            /// This exception is thrown when the specified <paramref name="tag"/> is null or empty.
+            /// </exception>
+            public ReplayTaggedMessages(int fromOffset, int toOffset, int max, string tag, IActorRef replyTo)
+            {
+                if (fromOffset < 0)
+                    throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
+                if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
+                if (max <= 0)
+                    throw new ArgumentException("Maximum number of replayed messages must be a positive number",
+                        nameof(max));
+                if (string.IsNullOrEmpty(tag))
+                    throw new ArgumentNullException(nameof(tag),
+                        "Replay tagged messages require a tag value to be provided");
+
+                FromOffset = fromOffset;
+                ToOffset = toOffset;
+                Max = max;
+                Tag = tag;
+                ReplyTo = replyTo;
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IPersistentRepresentation Persistent;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly string Tag;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly int Offset;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="persistent">TBD</param>
+            /// <param name="tag">TBD</param>
+            /// <param name="offset">TBD</param>
+            public ReplayedTaggedMessage(IPersistentRepresentation persistent, string tag, int offset)
+            {
+                Persistent = persistent;
+                Tag = tag;
+                Offset = offset;
+            }
+        }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ReplayAllEvents : IJournalRequest
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly int FromOffset;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly int ToOffset;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly long Max;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IActorRef ReplyTo;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ReplayAllEvents"/> class.
+            /// </summary>
+            /// <param name="fromOffset">TBD</param>
+            /// <param name="toOffset">TBD</param>
+            /// <param name="max">TBD</param>
+            /// <param name="replyTo">TBD</param>
+            /// <exception cref="ArgumentException">
+            /// This exception is thrown for a number of reasons. These include the following:
+            /// <ul>
+            /// <li>The specified <paramref name="fromOffset"/> is less than zero.</li>
+            /// <li>The specified <paramref name="toOffset"/> is less than or equal to zero.</li>
+            /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
+            /// </ul>
+            /// </exception>
+            public ReplayAllEvents(int fromOffset, int toOffset, long max, IActorRef replyTo)
+            {
+                if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
+                if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
+                if (max <= 0) throw new ArgumentException("Maximum number of replayed messages must be a positive number", nameof(max));
+
+                FromOffset = fromOffset;
+                ToOffset = toOffset;
+                Max = max;
+                ReplyTo = replyTo;
+            }
+        }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ReplayedEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IPersistentRepresentation Persistent;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly int Offset;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="persistent">TBD</param>
+            /// <param name="tag">TBD</param>
+            /// <param name="offset">TBD</param>
+            public ReplayedEvent(IPersistentRepresentation persistent, int offset)
+            {
+                Persistent = persistent;
+                Offset = offset;
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class ReplayTaggedMessagesSuccess
+        {
+            public ReplayTaggedMessagesSuccess(int highestSequenceNr)
+            {
+                HighestSequenceNr = highestSequenceNr;
+            }
+
+            /// <summary>
+            /// Highest stored sequence number.
+            /// </summary>
+            public int HighestSequenceNr { get; }
+        }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Serializable]
+        public sealed class EventReplaySuccess
+        {
+            public EventReplaySuccess(int highestSequenceNr)
+            {
+                HighestSequenceNr = highestSequenceNr;
+            }
+
+            /// <summary>
+            /// Highest stored sequence number.
+            /// </summary>
+            public int HighestSequenceNr { get; }
+
+            public bool Equals(EventReplaySuccess other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+
+                return Equals(HighestSequenceNr, other.HighestSequenceNr);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (!(obj is EventReplaySuccess evt)) return false;
+                return Equals(evt);
+            }
+
+            public override int GetHashCode() => HighestSequenceNr.GetHashCode();
+
+            public override string ToString() => $"EventReplaySuccess<highestSequenceNr: {HighestSequenceNr}>";
+        }
+
+        public sealed class EventReplayFailure
+        {
+            public EventReplayFailure(Exception cause)
+            {
+                Cause = cause;
+            }
+
+            /// <summary>
+            /// Highest stored sequence number.
+            /// </summary>
+            public Exception Cause { get; }
+
+            public bool Equals(EventReplayFailure other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+
+                return Equals(Cause, other.Cause);
+            }
+
+        
+            public override bool Equals(object obj)
+            {
+                if (!(obj is EventReplayFailure f)) return false;
+                return Equals(f);
+            }
+
+        
+            public override int GetHashCode() => Cause.GetHashCode();
+
+        
+            public override string ToString() => $"EventReplayFailure<cause: {Cause.Message}>";
+        }
+
+        #endregion
+        
         #region IMemoryMessages implementation
 
         /// <summary>
