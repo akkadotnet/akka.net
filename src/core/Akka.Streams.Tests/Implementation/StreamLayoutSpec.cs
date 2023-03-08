@@ -14,9 +14,11 @@ using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Reactive.Streams;
+using Akka.TestKit.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using Fuse = Akka.Streams.Implementation.Fusing.Fusing;
+using System.Threading.Tasks;
 
 namespace Akka.Streams.Tests.Implementation
 {
@@ -251,14 +253,14 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()
+        public async Task StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()
         {
             var g = Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -266,14 +268,14 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Flow()
+        public async Task StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Flow()
         {
             var g = Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
             var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
             var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -281,14 +283,14 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_using_Via()
+        public async Task StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_using_Via()
         {
             var g = Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -296,7 +298,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()
+        public async Task StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()
         {
             var g = Source.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
@@ -304,7 +306,7 @@ namespace Akka.Streams.Tests.Implementation
             var m = g.ToMaterialized(Sink.Seq<int>(), Keep.Both);
             var t = m.Run(_materializer);
             var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -312,14 +314,14 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Flow()
+        public async Task StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Flow()
         {
             var g = Flow.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
             var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
             var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -327,14 +329,14 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_using_Via()
+        public async Task StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_using_Via()
         {
             var g = Source.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);

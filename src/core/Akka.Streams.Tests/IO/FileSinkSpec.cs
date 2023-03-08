@@ -18,6 +18,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.IO;
 using Akka.Streams.IO;
 using Akka.Streams.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -58,13 +59,12 @@ namespace Akka.Streams.Tests.IO
         {
             Within(_expectTimeout, () => 
                 {
-                    TargetFile(f =>
+                    TargetFile(async f =>
                     {
                         var completion = Source.From(_testByteStrings)
                             .RunWith(FileIO.ToFile(f), _materializer);
-
-                        completion.AwaitResult(Remaining);
-                        var result = completion.Result;
+                        
+                        var result = await completion.ShouldCompleteWithin(Remaining); ;
                         result.Count.Should().Be(6006);
 
                         AwaitAssert(
@@ -79,13 +79,12 @@ namespace Akka.Streams.Tests.IO
         {
             Within(_expectTimeout, () =>
             {
-                TargetFile(f =>
+                TargetFile( async f =>
                 {
                     var completion = Source.From(_testByteStrings)
                         .RunWith(FileIO.ToFile(f), _materializer);
-
-                    completion.AwaitResult(Remaining);
-                    var result = completion.Result;
+                    
+                    var result = await completion.ShouldCompleteWithin(Remaining);
                     result.Count.Should().Be(6006);
                     AwaitAssert(
                         () => CheckFileContent(f, _testLines.Aggregate((s, s1) => s + s1)),
@@ -99,22 +98,22 @@ namespace Akka.Streams.Tests.IO
         {
             Within(_expectTimeout, () =>
             {
-                TargetFile(f =>
+                TargetFile(async f =>
                 {
                     Task<IOResult> Write(IEnumerable<string> lines) => Source.From(lines)
                         .Select(ByteString.FromString)
                         .RunWith(FileIO.ToFile(f, FileMode.OpenOrCreate), _materializer);
 
                     var completion1 = Write(_testLines);
-                    completion1.AwaitResult(Remaining);
+                    await completion1.ShouldCompleteWithin(Remaining);
 
                     var lastWrite = new string[100];
                     for (var i = 0; i < 100; i++)
                         lastWrite[i] = "x";
 
                     var completion2 = Write(lastWrite);
-                    completion2.AwaitResult(Remaining);
-                    var result = completion2.Result;
+                    
+                    var result = await completion2.ShouldCompleteWithin(Remaining); 
 
                     var lastWriteString = new string(lastWrite.SelectMany(x => x).ToArray());
                     result.Count.Should().Be(lastWriteString.Length);
@@ -132,18 +131,18 @@ namespace Akka.Streams.Tests.IO
         {
             Within(_expectTimeout, () =>
             {
-                TargetFile(f =>
+                TargetFile(async f =>
                 {
                     Task<IOResult> Write(List<string> lines) =>
                         Source.From(lines).Select(ByteString.FromString)
                             .RunWith(FileIO.ToFile(f), _materializer);
 
                     var task1 = Write(_testLines);
-                    task1.AwaitResult(Remaining);
+                    await task1.ShouldCompleteWithin(Remaining);
                     var lastWrite = Enumerable.Range(0, 100).Select(_ => "x").ToList();
 
                     var task2 = Write(lastWrite);
-                    var result = task2.AwaitResult(Remaining);
+                    var result = await task2.ShouldCompleteWithin(Remaining);
 
                     result.Count.Should().Be(lastWrite.Count);
 
@@ -159,23 +158,23 @@ namespace Akka.Streams.Tests.IO
         {
             Within(_expectTimeout, () =>
             {
-                TargetFile(f =>
+                TargetFile(async f =>
                 {
                     Task<IOResult> Write(List<string> lines) => Source.From(lines)
                         .Select(ByteString.FromString)
                         .RunWith(FileIO.ToFile(f, fileMode: FileMode.Append), _materializer);
 
                     var completion1 = Write(_testLines);
-                    completion1.AwaitResult(Remaining);
-                    var result1 = completion1.Result;
+                    
+                    var result1 = await completion1.ShouldCompleteWithin(Remaining); ;
 
                     var lastWrite = new List<string>();
                     for (var i = 0; i < 100; i++)
                         lastWrite.Add("x");
 
                     var completion2 = Write(lastWrite);
-                    completion2.AwaitResult(Remaining);
-                    var result2 = completion2.Result;
+                    
+                    var result2 = await completion2.ShouldCompleteWithin(Remaining);
 
                     var lastWriteString = new string(lastWrite.SelectMany(x => x).ToArray());
                     var testLinesString = new string(_testLines.SelectMany(x => x).ToArray());
@@ -196,7 +195,7 @@ namespace Akka.Streams.Tests.IO
         {
             Within(_expectTimeout, () =>
             {
-                TargetFile(f => 
+                TargetFile(async f => 
                 {
                     var testLinesCommon = new List<string>
                     {
@@ -222,10 +221,10 @@ namespace Akka.Streams.Tests.IO
                             _materializer);
 
                     var completion1 = Write(_testLines, 0);
-                    completion1.AwaitResult(Remaining);
+                    await completion1.ShouldCompleteWithin(Remaining);
 
                     var completion2 = Write(testLinesPart2, startPosition);
-                    var result2 = completion2.AwaitResult(Remaining);
+                    var result2 = await completion2.ShouldCompleteWithin(Remaining);
 
                     f.Length.ShouldBe(startPosition + result2.Count);
 
@@ -311,7 +310,7 @@ namespace Akka.Streams.Tests.IO
             Within(_expectTimeout, () =>
             {
                 // LazySink must wait for result of initialization even if got UpstreamComplete
-                TargetFile(f => 
+                TargetFile(async f => 
                 {
                     var lazySink = Sink.LazyInitAsync(async () => FileIO.ToFile(f))
                         // map a Task<Option<Task<IOResult>>> into a Task<IOResult>
@@ -320,7 +319,7 @@ namespace Akka.Streams.Tests.IO
                     var completion = Source.From(new []{_testByteStrings.Head()})
                         .RunWith(lazySink, _materializer);
 
-                    completion.AwaitResult(Remaining);
+                    await completion.ShouldCompleteWithin(Remaining);
                     AwaitAssert(
                         () => CheckFileContent(f, _testLines.Head()),
                         Remaining);
@@ -364,7 +363,7 @@ namespace Akka.Streams.Tests.IO
         {
             Within(TimeSpan.FromSeconds(10), () =>
             {
-                TargetFile(f => 
+                TargetFile(async f => 
                 {
                     var (actor, task) = Source.ActorRef<string>(64, OverflowStrategy.DropNew)
                         .Select(ByteString.FromString)
@@ -389,7 +388,7 @@ namespace Akka.Streams.Tests.IO
 
                     // We still have to wait for the task to complete, because the signal
                     // came from the FileSink actor, not the source actor.
-                    task.AwaitResult(Remaining);
+                    await task.ShouldCompleteWithin(Remaining);
                     ExpectTerminated(actor, Remaining);
 
                     f.Length.ShouldBe(8);
