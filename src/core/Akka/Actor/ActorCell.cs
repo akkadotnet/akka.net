@@ -354,9 +354,8 @@ namespace Akka.Actor
             var actor = _props.NewActor();
 
             // Apply default of custom behaviors to actor.
-#pragma warning disable CS0618
             var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
-#pragma warning restore CS0618
+
             pipeline.AfterActorIncarnated(actor, this);
 
             if (actor is IInitializableActor initializableActor)

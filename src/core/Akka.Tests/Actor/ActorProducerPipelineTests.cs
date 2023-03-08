@@ -43,27 +43,21 @@ namespace Akka.Tests.Actor
 
         internal class PlugActorA : PlugActor { }
         internal class PlugActorB : PlugActor { }
-#pragma warning disable CS0618
         internal class GenericPlugin<T> : ActorProducerPluginBase<T> where T : PlugActor
-#pragma warning restore CS0618
         {
             public override void AfterIncarnated(T actor, IActorContext context)
             {
                 actor.PluginMessages.Add(typeof(T).ToString());
             }
         }
-#pragma warning disable CS0618
         internal class WorkingPlugin : ActorProducerPluginBase<PlugActor>
-#pragma warning restore CS0618
         {
             public override void AfterIncarnated(PlugActor actor, IActorContext context)
             {
                 actor.PluginMessages.Add("working plugin");
             }
         }
-#pragma warning disable CS0618
         internal class FailingPlugin : ActorProducerPluginBase<PlugActor>
-#pragma warning restore CS0618
         {
             public override void AfterIncarnated(PlugActor actor, IActorContext context)
             {
@@ -71,9 +65,7 @@ namespace Akka.Tests.Actor
                 throw new TestException("plugin failed");
             }
         }
-#pragma warning disable CS0618
         internal class OrderedPlugin : ActorProducerPluginBase<PlugActor>
-#pragma warning restore CS0618
         {
             private readonly int _index;
 
@@ -121,15 +113,15 @@ namespace Akka.Tests.Actor
         }
 
         #endregion
-#pragma warning disable CS0618
+
         private ActorProducerPipelineResolver _resolver;
-#pragma warning restore CS0618
+
         public ActorProducerPipelineTests()
         {
             var extendedSystem = (ExtendedActorSystem)Sys;
-#pragma warning disable CS0618
+
             _resolver = extendedSystem.ActorPipelineResolver;
-#pragma warning restore CS0618
+
         }
 
         [Fact]
