@@ -43,7 +43,6 @@ namespace Akka.Tests.Actor
 
         internal class PlugActorA : PlugActor { }
         internal class PlugActorB : PlugActor { }
-
         internal class GenericPlugin<T> : ActorProducerPluginBase<T> where T : PlugActor
         {
             public override void AfterIncarnated(T actor, IActorContext context)
@@ -51,7 +50,6 @@ namespace Akka.Tests.Actor
                 actor.PluginMessages.Add(typeof(T).ToString());
             }
         }
-
         internal class WorkingPlugin : ActorProducerPluginBase<PlugActor>
         {
             public override void AfterIncarnated(PlugActor actor, IActorContext context)
@@ -59,7 +57,6 @@ namespace Akka.Tests.Actor
                 actor.PluginMessages.Add("working plugin");
             }
         }
-
         internal class FailingPlugin : ActorProducerPluginBase<PlugActor>
         {
             public override void AfterIncarnated(PlugActor actor, IActorContext context)
@@ -68,7 +65,6 @@ namespace Akka.Tests.Actor
                 throw new TestException("plugin failed");
             }
         }
-
         internal class OrderedPlugin : ActorProducerPluginBase<PlugActor>
         {
             private readonly int _index;
@@ -123,7 +119,9 @@ namespace Akka.Tests.Actor
         public ActorProducerPipelineTests()
         {
             var extendedSystem = (ExtendedActorSystem)Sys;
+
             _resolver = extendedSystem.ActorPipelineResolver;
+
         }
 
         [Fact]

@@ -355,6 +355,7 @@ namespace Akka.Actor
 
             // Apply default of custom behaviors to actor.
             var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
+
             pipeline.AfterActorIncarnated(actor, this);
 
             if (actor is IInitializableActor initializableActor)

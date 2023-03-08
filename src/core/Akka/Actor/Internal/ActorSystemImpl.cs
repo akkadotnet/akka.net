@@ -140,6 +140,7 @@ namespace Akka.Actor.Internal
         public override ILoggingAdapter Log { get { return _log; } }
 
         /// <inheritdoc cref="ActorSystem"/>
+
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
 
         /// <inheritdoc cref="ActorSystem"/>
@@ -480,7 +481,9 @@ namespace Akka.Actor.Internal
         private void ConfigureActorProducerPipeline()
         {
             // we push Log in lazy manner since it may not be configured at point of pipeline initialization
+
             _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
+
         }
 
         private void ConfigureTerminationCallbacks()
