@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -21,6 +22,7 @@ using Akka.TestKit.TestActors;
 using Akka.Util;
 using Akka.Util.Reflection;
 using FluentAssertions;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Akka.Tests.Serialization
@@ -608,6 +610,26 @@ namespace Akka.Tests.Serialization
                 .Where(ex => ex.Message.Contains("Serializer Id [101] is not one of the internal Akka.NET serializer."));
         }
 
+        [Fact(DisplayName = "Should be able to serialize object property with JObject")]
+        public void ObjectPropertyTest()
+        {
+            var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerForType(typeof(object));
+            var obj = JObject.FromObject(new
+            {
+                FormattedMessage = "We are apple 20 points above value 10.01 ms",
+                Message = "We are {0} {1} points above value {2} ms",
+                Parameters = new List<object> { "apple", 20, 10.01 },
+                MessageType = 200
+            });
+            var instance = new ObjectTestClass { MyObject = obj};
+
+            var serialized = serializer.ToBinary(instance);
+            
+            // Stack overflowed in the original bug
+            var deserialized = serializer.FromBinary<ObjectTestClass>(serialized);
+            deserialized.Should().BeEquivalentTo(instance);
+        }
+
         public SerializationSpec():base(GetConfig())
         {
         }
@@ -707,6 +729,11 @@ namespace Akka.Tests.Serialization
             {
                 public string Value { get; set; }
             }
+        }
+        
+        public sealed class ObjectTestClass
+        {
+            public object MyObject { get; set; }
         }
     }
 }
