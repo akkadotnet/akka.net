@@ -31,7 +31,7 @@ namespace Akka.Util
         {
             // 11 is the number of characters it takes to represent long.MaxValue
             // so we will never need a larger size for encoding longs
-            Span<char> sb = stackalloc char[11 + prefix?.Length ?? 0];
+            Span<char> sb = stackalloc char[11 + (prefix?.Length ?? 0)];
             var spanIndex = 0;
             if (!string.IsNullOrWhiteSpace(prefix) && prefix.Length > 0)
             {
