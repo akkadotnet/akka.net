@@ -15,6 +15,7 @@ using FluentAssertions;
 using Xunit;
 using Akka.TestKit.Extensions;
 using FluentAssertions.Extensions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -146,7 +147,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Closed_Valve_should_emit_nothing_when_the_source_is_failing()
+        public async Task Closed_Valve_should_emit_nothing_when_the_source_is_failing()
         {
             var ex = new Exception();
             var t = Source.Failed<int>(ex)
@@ -156,7 +157,11 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            seq.Invoking(async x => await x.ShouldCompleteWithin(3.Seconds())).Should().Throw<Exception>().And.Should().Be(ex);
+            var resultException = await Awaiting(async () => await seq)
+               .Should().ThrowAsync<Exception>()
+               .ShouldCompleteWithin(3.Seconds());
+
+            resultException.Should().Be(ex);
         }
 
         [Fact]
@@ -269,7 +274,7 @@ namespace Akka.Streams.Tests.Dsl
             complete.Should().BeFalse();
 
             var complete1 = await valveSwitch.Flip(SwitchMode.Open).ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeFalse();
+            complete1.Should().BeFalse();
         }
 
         [Fact]
@@ -301,7 +306,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Open_Valve_should_emit_nothing_when_the_source_is_failing()
+        public async Task Open_Valve_should_emit_nothing_when_the_source_is_failing()
         {
             var ex = new Exception();
 
@@ -312,7 +317,11 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            seq.Invoking(async x => await x.ShouldCompleteWithin(3.Seconds())).Should().Throw<Exception>().And.Should().Be(ex);
+            var resultException = await Awaiting(async () => await seq)
+                .Should().ThrowAsync<Exception>()
+                .ShouldCompleteWithin(3.Seconds());
+
+            resultException.Should().Be(ex);
         }
 
         [Fact]

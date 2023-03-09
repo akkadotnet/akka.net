@@ -337,15 +337,15 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
+        public async Task A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
-            this.AssertAllStagesStopped(async() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
                 var queue = new BlockingQueue<(TaskCompletionSource<int>, long)>();
                 var cancellation = new CancellationTokenSource();
-                await Task.Run(() =>
+                Task.Run(() =>
                 {
                     var delay = 500; // 50000 nanoseconds
                     var count = 0;

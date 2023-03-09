@@ -56,9 +56,9 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void A_AggregateAsync_must_work_when_using_Source_AggregateAsync()
+        public async Task A_AggregateAsync_must_work_when_using_Source_AggregateAsync()
         {
-            this.AssertAllStagesStopped(async() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = AggregateSource.RunWith(Sink.First<int>(), Materializer);
                 var complete = await task.ShouldCompleteWithin(3.Seconds());

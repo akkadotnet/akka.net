@@ -23,6 +23,7 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions.Extensions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -428,7 +429,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Length_field_based_framing_must_fail_the_stage_on_negative_length_field_values()
+        public async Task Length_field_based_framing_must_fail_the_stage_on_negative_length_field_values()
         {
             // A 4-byte message containing only an Int specifying the length of the payload
             // The issue shows itself if length in message is less than or equal
@@ -439,9 +440,10 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(Flow.Create<ByteString>().Via(Framing.LengthField(4, 1000)))
                 .RunWith(Sink.Seq<ByteString>(), Materializer);
 
-            result.Invoking(async t => await t.ShouldCompleteWithin(3.Seconds()))
-                .Should().Throw<Framing.FramingException>()
-                .WithMessage("Decoded frame header reported negative size -4");
+            await Awaiting(async () => await result)
+                .Should().ThrowAsync<Framing.FramingException>()
+                .WithMessage("Decoded frame header reported negative size -4")
+                .ShouldCompleteWithin(3.Seconds());
         }
         
         [Fact]
@@ -462,7 +464,7 @@ namespace Akka.Streams.Tests.Dsl
         }
         
         [Fact]
-        public void Length_field_based_framing_must_fail_the_stage_on_computeFrameSize_values_less_than_minimum_chunk_size()
+        public async Task Length_field_based_framing_must_fail_the_stage_on_computeFrameSize_values_less_than_minimum_chunk_size()
         {
             int ComputeFrameSize(IReadOnlyList<byte> offset, int length) => 3;
 
@@ -473,9 +475,10 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(Flow.Create<ByteString>().Via(Framing.LengthField(4, 0, 1000, ByteOrder.LittleEndian, ComputeFrameSize)))
                 .RunWith(Sink.Seq<ByteString>(), Materializer);
 
-            result.Invoking(async t => await t.ShouldCompleteWithin(3.Seconds()))
-                .Should().Throw<Framing.FramingException>()
-                .WithMessage("Computed frame size 3 is less than minimum chunk size 4");
+            await Awaiting(async () => await result)
+                .Should().ThrowAsync<Framing.FramingException>()
+                .WithMessage("Computed frame size 3 is less than minimum chunk size 4")
+                .ShouldCompleteWithin(3.Seconds());
         }
 
         [Fact]
