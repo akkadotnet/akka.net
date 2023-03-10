@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -21,6 +22,7 @@ using Akka.TestKit.TestActors;
 using Akka.Util;
 using Akka.Util.Reflection;
 using FluentAssertions;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Akka.Tests.Serialization
@@ -608,6 +610,26 @@ namespace Akka.Tests.Serialization
                 .Where(ex => ex.Message.Contains("Serializer Id [101] is not one of the internal Akka.NET serializer."));
         }
 
+        [Fact(DisplayName = "Can serialize JsonExtensionData tagged properties")]
+        public void CanSerializeComplexObject()
+        {
+            var payload = new ExtensionDataObject
+            {
+                CustomProperties = new Dictionary<string, object> { ["CustomProperty1"] = 5 }
+            };
+            var serializer = Sys.Serialization.FindSerializerFor(payload);
+            var serialized = serializer.ToBinary(payload);
+            var deserialized = serializer.FromBinary<ExtensionDataObject>(serialized);
+            deserialized.CustomProperties["CustomProperty1"].Should().NotBeOfType<JObject>("FromBinary() should convert JObject inside JsonExtensionData model back to value type");
+            deserialized.CustomProperties["CustomProperty1"].Should().Be(5);
+        }
+
+        internal class ExtensionDataObject
+        {
+            [Newtonsoft.Json.JsonExtensionData]
+            public Dictionary<string, object> CustomProperties { get; set; }
+        }
+        
         public SerializationSpec():base(GetConfig())
         {
         }
