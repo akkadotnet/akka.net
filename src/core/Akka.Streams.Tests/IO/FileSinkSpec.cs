@@ -459,7 +459,7 @@ namespace Akka.Streams.Tests.IO
             {
                 // this is the proverbial stream kill switch, make sure that all streams
                 // are dead so that the file handle would be released
-                this.AssertAllStagesStopped(() => { }, materializer);
+                await this.AssertAllStagesStoppedAsync(async() => { }, materializer);
 
                 //give the system enough time to shutdown and release the file handle
                 await Task.Delay(500);
