@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
@@ -80,7 +81,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
-                    .ExpectNext(1, 3)
+                    .ExpectNext(CancellationToken.None, 1, 3)
                     .ExpectComplete();
             }, Materializer);
         }

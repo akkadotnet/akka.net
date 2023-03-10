@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -55,7 +56,7 @@ namespace Akka.Streams.Tests.Dsl
                 c1.ExpectNext(1).ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                 sub2.Request(2);
-                c2.ExpectNext(2, 3);
+                c2.ExpectNext(CancellationToken.None, 2, 3);
                 c1.ExpectComplete();
                 c2.ExpectComplete();
             }, Materializer);
@@ -92,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub2.Request(2);
                 s1.ExpectNext(1);
-                s2.ExpectNext(2, 3);
+                s2.ExpectNext(CancellationToken.None, 2, 3);
                 s1.ExpectComplete();
                 s2.ExpectComplete();
             }, Materializer);
@@ -140,7 +141,7 @@ namespace Akka.Streams.Tests.Dsl
                 sub3.Cancel();
 
                 s1.ExpectNext(1);
-                s2.ExpectNext(2, 3);
+                s2.ExpectNext(CancellationToken.None, 2, 3);
                 s1.ExpectComplete();
                 s2.ExpectComplete();
             }, Materializer);
@@ -283,7 +284,7 @@ namespace Akka.Streams.Tests.Dsl
                 sub1.Cancel();
                 var sub2 = c2.ExpectSubscription();
                 sub2.Request(3);
-                c2.ExpectNext(1, 2, 3);
+                c2.ExpectNext(CancellationToken.None, 1, 2, 3);
                 c2.ExpectComplete();
             }, Materializer);
         }
@@ -310,7 +311,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sub2 = c2.ExpectSubscription();
                 sub2.Cancel();
                 sub1.Request(3);
-                c1.ExpectNext(1, 2, 3);
+                c1.ExpectNext(CancellationToken.None, 1, 2, 3);
                 c1.ExpectComplete();
             }, Materializer);
         }

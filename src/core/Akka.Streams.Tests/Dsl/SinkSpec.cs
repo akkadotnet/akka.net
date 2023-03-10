@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -147,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
             subscriptions.ForEach(s=>s.Request(2));
             probes.ForEach(p =>
             {
-                p.ExpectNext(1, 2);
+                p.ExpectNext(CancellationToken.None, 1, 2);
                 p.ExpectComplete();
             });
         }
@@ -167,7 +168,7 @@ namespace Akka.Streams.Tests.Dsl
             subscriptions.ForEach(s => s.Request(2));
             probes.ForEach(p =>
             {
-                p.ExpectNext(1, 2);
+                p.ExpectNext(CancellationToken.None, 1, 2);
                 p.ExpectComplete();
             });
         }

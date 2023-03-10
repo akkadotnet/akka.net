@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
@@ -238,7 +239,7 @@ namespace Akka.Streams.Tests.Dsl
                 queue.Complete();
 
                 probe.Request(6)
-                    .ExpectNext(2, 3, 4, 5, 6)
+                    .ExpectNext(CancellationToken.None, 2, 3, 4, 5, 6)
                     .ExpectComplete();
             }, _materializer);
         }

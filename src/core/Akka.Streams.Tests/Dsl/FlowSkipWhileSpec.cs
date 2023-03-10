@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
@@ -35,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
                     .SkipWhile(x => x < 3)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(2)
-                    .ExpectNext(3, 4)
+                    .ExpectNext(CancellationToken.None, 3, 4)
                     .ExpectComplete();
             }, Materializer);
         }

@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -132,7 +133,7 @@ namespace Akka.Streams.Tests.Dsl
                 actorRef.Tell(3);
                 actorRef.Tell(new Status.Success("ok"));
                 sub.Request(10);
-                s.ExpectNext(1, 2, 3);
+                s.ExpectNext(CancellationToken.None, 1, 2, 3);
                 s.ExpectComplete();
             }, Materializer);
         }
@@ -155,7 +156,7 @@ namespace Akka.Streams.Tests.Dsl
                 actorRef.Tell(100);
                 actorRef.Tell(100);
                 sub.Request(10);
-                s.ExpectNext(1, 2, 3);
+                s.ExpectNext(CancellationToken.None, 1, 2, 3);
                 s.ExpectComplete();
 
             }, Materializer);

@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -75,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
             })).Run(Materializer);
             
             sub.ExpectSubscription().Request(10);
-            sub.ExpectNext(1, 2, 3);
+            sub.ExpectNext(CancellationToken.None, 1, 2, 3);
             sub.ExpectComplete();
         }
 

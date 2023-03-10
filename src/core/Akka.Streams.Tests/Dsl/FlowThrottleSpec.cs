@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -53,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 0, ThrottleMode.Shaping)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(5)
-                    .ExpectNext(1, 2, 3, 4, 5)
+                    .ExpectNext(CancellationToken.None, 1, 2, 3, 4, 5)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -67,7 +68,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(1, TimeSpan.FromTicks(1), 0, ThrottleMode.Shaping)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(5)
-                    .ExpectNext(1, 2, 3, 4, 5)
+                    .ExpectNext(CancellationToken.None, 1, 2, 3, 4, 5)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -308,7 +309,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(5)
-                    .ExpectNext(1, 2, 3, 4, 5)
+                    .ExpectNext(CancellationToken.None, 1, 2, 3, 4, 5)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -324,7 +325,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 0, _ => 1, ThrottleMode.Shaping)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(5)
-                    .ExpectNext(1, 2, 3, 4, 5)
+                    .ExpectNext(CancellationToken.None, 1, 2, 3, 4, 5)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -511,7 +512,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(5)
-                    .ExpectNext(1, 2, 3, 4, 5)
+                    .ExpectNext(CancellationToken.None, 1, 2, 3, 4, 5)
                     .ExpectComplete();
             }, Materializer);
         }

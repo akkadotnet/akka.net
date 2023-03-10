@@ -53,10 +53,10 @@ namespace Akka.Streams.Tests.Dsl
             var flip = valveSwitch.Flip(SwitchMode.Open);
             flip.AwaitResult().Should().BeTrue();
 
-            probe.ExpectNext(1, 2);
+            probe.ExpectNext(CancellationToken.None, 1, 2);
 
             probe.Request(3);
-            probe.ExpectNext(3, 4, 5);
+            probe.ExpectNext(CancellationToken.None, 3, 4, 5);
 
             probe.ExpectComplete();
         }
@@ -99,7 +99,7 @@ namespace Akka.Streams.Tests.Dsl
             sourceProbe.SendNext(3);
             sourceProbe.SendComplete();
 
-            sinkProbe.ExpectNext(2, 3);
+            sinkProbe.ExpectNext(CancellationToken.None, 2, 3);
 
             sinkProbe.ExpectComplete();
         }
@@ -232,7 +232,7 @@ namespace Akka.Streams.Tests.Dsl
             sourceProbe.SendNext(3);
             sourceProbe.SendComplete();
 
-            sinkProbe.ExpectNext(2, 3);
+            sinkProbe.ExpectNext(CancellationToken.None, 2, 3);
 
             sinkProbe.ExpectComplete();
         }

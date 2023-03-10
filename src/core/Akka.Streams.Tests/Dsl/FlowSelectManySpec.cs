@@ -90,7 +90,7 @@ namespace Akka.Streams.Tests.Dsl
                 })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(4).ExpectNext(1, 2, 4, 5)
+                .Request(4).ExpectNext(CancellationToken.None, 1, 2, 4, 5)
                 .ExpectComplete();
         }
     }
