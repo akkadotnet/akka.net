@@ -234,11 +234,11 @@ namespace Akka.Cluster.Metrics.Tests
             var g1 = MetricsGossip.Empty + m1 + m2;
             var g2 = MetricsGossip.Empty + m3 + m2Updated;
             
-            g1.Nodes.Select(n => n.Address).Should().BeEquivalentTo(m1.Address, m2.Address);
+            g1.Nodes.Select(n => n.Address).Should().BeEquivalentTo(new []{m1.Address, m2.Address});
             
             // should contain nodes 1,3, and the most recent version of 2
             var mergedGossip = g1.Merge(g2);
-            mergedGossip.Nodes.Select(n => n.Address).Should().BeEquivalentTo(m1.Address, m2.Address, m3.Address);
+            mergedGossip.Nodes.Select(n => n.Address).Should().BeEquivalentTo(new []{m1.Address, m2.Address, m3.Address});
             mergedGossip.NodeMetricsFor(m1.Address).Value.Metrics.Should().BeEquivalentTo(m1.Metrics);
             mergedGossip.NodeMetricsFor(m2.Address).Value.Metrics.Should().BeEquivalentTo(m2Updated.Metrics);
             mergedGossip.NodeMetricsFor(m3.Address).Value.Metrics.Should().BeEquivalentTo(m3.Metrics);

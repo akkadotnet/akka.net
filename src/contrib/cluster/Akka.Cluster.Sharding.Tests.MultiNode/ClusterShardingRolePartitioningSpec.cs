@@ -232,7 +232,7 @@ namespace Akka.Cluster.Sharding.Tests
                 region.Tell(new GetClusterShardingStats(TimeSpan.FromSeconds(10)));
                 var stats = ExpectMsg<ClusterShardingStats>();
 
-                stats.Regions.Keys.Should().BeEquivalentTo(fourthAddress, fifthAddress);
+                stats.Regions.Keys.Should().BeEquivalentTo(new []{fourthAddress, fifthAddress});
                 stats.Regions.Values.SelectMany(i => i.Stats.Values).Count().Should().Be(20);
             }, config.First);
             EnterBarrier("proxy-node-other-role-to-shard");

@@ -153,7 +153,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                 {
                     AwaitAssert(() =>
                     {
-                        cluster.State.Members.Select(i => i.Address).Should().BeEquivalentTo(Node(_config.Node1).Address);
+                        cluster.State.Members.Select(i => i.Address).Should().BeEquivalentTo(new [] { Node(_config.Node1).Address });
                         foreach (var m in cluster.State.Members)
                         {
                             m.Status.Should().Be(MemberStatus.Up);

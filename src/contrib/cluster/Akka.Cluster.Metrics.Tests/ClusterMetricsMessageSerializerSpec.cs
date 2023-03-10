@@ -81,7 +81,7 @@ namespace Akka.Cluster.Metrics.Tests
         {
             var blob = _serializer.ToBinary(obj);
             var @ref = _serializer.FromBinary(blob, _serializer.Manifest(obj));
-            @ref.Should().BeEquivalentTo(obj);
+            @ref.Should().BeEquivalentTo(new []{obj});
         }
     }
 }

@@ -104,7 +104,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 Sys.ActorOf(Props.Create<StatsService>(), "statsService");
 
                 ReceiveN(3).Select(m => (m as ClusterEvent.MemberUp).Member.Address).Distinct()
-                    .Should().BeEquivalentTo(firstAddress, secondAddress, thirdAddress);
+                    .Should().BeEquivalentTo(new []{firstAddress, secondAddress, thirdAddress});
                 
                 cluster.Unsubscribe(TestActor);
                 

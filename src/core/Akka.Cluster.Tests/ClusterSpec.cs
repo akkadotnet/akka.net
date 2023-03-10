@@ -204,7 +204,7 @@ namespace Akka.Cluster.Tests
             await probe.ExpectMsgAsync<ClusterEvent.MemberLeft>();
             // MemberExited might not be published before MemberRemoved
             var removed = (ClusterEvent.MemberRemoved)await probe.FishForMessageAsync(m => m is ClusterEvent.MemberRemoved);
-            removed.PreviousStatus.Should().BeEquivalentTo(MemberStatus.Exiting);
+            removed.PreviousStatus.Should().Be(MemberStatus.Exiting);
 
             await leaveTask.ShouldCompleteWithin(RemainingOrDefault);
 
@@ -476,7 +476,7 @@ namespace Akka.Cluster.Tests
                 await probe.ExpectMsgAsync<ClusterEvent.MemberLeft>();
                 // MemberExited might not be published before MemberRemoved
                 var removed = (ClusterEvent.MemberRemoved)await probe.FishForMessageAsync(m => m is ClusterEvent.MemberRemoved);
-                removed.PreviousStatus.Should().BeEquivalentTo(MemberStatus.Exiting);
+                removed.PreviousStatus.Should().Be(MemberStatus.Exiting);
                 
                 await task.ShouldCompleteWithin(3.Seconds());
             }
@@ -546,7 +546,7 @@ namespace Akka.Cluster.Tests
                 await probe.ExpectMsgAsync<ClusterEvent.MemberLeft>();
                 // MemberExited might not be published before MemberRemoved
                 var removed = (ClusterEvent.MemberRemoved)await probe.FishForMessageAsync(m => m is ClusterEvent.MemberRemoved);
-                removed.PreviousStatus.Should().BeEquivalentTo(MemberStatus.Exiting);
+                removed.PreviousStatus.Should().Be(MemberStatus.Exiting);
                 await sys2.WhenTerminated.ShouldCompleteWithin(10.Seconds());
                 Cluster.Get(sys2).IsTerminated.Should().BeTrue();
                 CoordinatedShutdown.Get(sys2).ShutdownReason.Should().BeOfType<CoordinatedShutdown.ClusterLeavingReason>();

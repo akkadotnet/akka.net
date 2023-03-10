@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 await task.ShouldCompleteWithin(3.Seconds());
                 task.Result.OrderBy(e => e.First())
-                    .Should().BeEquivalentTo(new[] { "Aaa", "Abb" }, new[] { "Bcc" }, new[] { "Cdd", "Cee" });
+                    .Should().BeEquivalentTo(new [] { new[] { "Aaa", "Abb" }, new[] { "Bcc" }, new[] { "Cdd", "Cee" } });
             }, Materializer);
         }
 

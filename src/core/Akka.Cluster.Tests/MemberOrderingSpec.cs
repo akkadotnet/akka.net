@@ -187,9 +187,10 @@ namespace Akka.Cluster.Tests
                     TestMember.Create(address1, MemberStatus.Exiting))
                 .Remove(
                     TestMember.Create(address1, MemberStatus.Removed))
-                .Should().BeEquivalentTo(
+                .Should().BeEquivalentTo(new [] {
                     TestMember.Create(address2, MemberStatus.Up),
-                    TestMember.Create(address3, MemberStatus.Joining));
+                    TestMember.Create(address3, MemberStatus.Joining)
+                });
         }
 
         [Fact]

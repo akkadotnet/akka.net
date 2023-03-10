@@ -289,7 +289,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                     r.Count().Should().Be(9);
                 });
                 var routees = await GetCurrentRoutees(router3);
-                routees.Select(r => FullAddress((r as ActorRefRoutee).Actor)).Distinct().Should().BeEquivalentTo(Node(_config.Node1).Address);
+                routees.Select(r => FullAddress((r as ActorRefRoutee).Actor)).Distinct().Should().BeEquivalentTo(new []{Node(_config.Node1).Address});
             }, _config.Node1);
             
             EnterBarrier("after-4");
@@ -310,7 +310,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 routees
                     .Select(r => FullAddress((r as ActorRefRoutee).Actor)).Distinct()
                     .Should()
-                    .BeEquivalentTo(Node(_config.Node1).Address, Node(_config.Node2).Address, Node(_config.Node3).Address);
+                    .BeEquivalentTo(new []{Node(_config.Node1).Address, Node(_config.Node2).Address, Node(_config.Node3).Address});
             }, _config.Node1);
             
             EnterBarrier("after-5");

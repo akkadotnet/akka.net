@@ -131,7 +131,7 @@ namespace Akka.Cluster.Tests.MultiNode
                         .Wait();
                     var thirdAddress = GetAddress(_config.Third);
                     AwaitAssert(() => ClusterView.UnreachableMembers.Select(c => c.Address)
-                        .Should().BeEquivalentTo(thirdAddress));
+                        .Should().BeEquivalentTo(new [] { thirdAddress }));
                 }, _config.First);
                 EnterBarrier("third-unreachable");
 

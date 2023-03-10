@@ -40,10 +40,10 @@ namespace Akka.DistributedData.Tests
             merged.Data.As<GCounter>().Value.Should().Be(1);
 
             var d3 = d2.AddSeen(node3.Address);
-            ((PruningInitialized)d3.Pruning[node1]).Seen.Should().BeEquivalentTo(node3.Address);
+            ((PruningInitialized)d3.Pruning[node1]).Seen.Should().BeEquivalentTo(new []{node3.Address});
 
             var d4 = d3.Prune(node1, new PruningPerformed(obsoleteTimeInFuture));
-            ((GCounter)d4.Data).ModifiedByNodes.Should().BeEquivalentTo(node2);
+            ((GCounter)d4.Data).ModifiedByNodes.Should().BeEquivalentTo(new []{node2});
 
             // bug check for https://github.com/akkadotnet/akka.net/issues/4200
             var merged2 = d2.Merge(d4);
@@ -62,16 +62,16 @@ namespace Akka.DistributedData.Tests
 
             var d3 = d1.Merge(d2);
             ((GCounter)d3.Data).Value.Should().Be(3);
-            ((GCounter)d3.Data).ModifiedByNodes.Should().BeEquivalentTo(node1, node2);
+            ((GCounter)d3.Data).ModifiedByNodes.Should().BeEquivalentTo(new []{node1, node2});
             var d4 = d3.InitRemovedNodePruning(node1, node2);
             var d5 = d4.Prune(node1, new PruningPerformed(obsoleteTimeInFuture));
-            ((GCounter)d5.Data).ModifiedByNodes.Should().BeEquivalentTo(node2);
+            ((GCounter)d5.Data).ModifiedByNodes.Should().BeEquivalentTo(new []{node2});
 
             // late update from node 1
             var g11 = g1.Increment(node1, 10);
             var d6 = d5.Merge(new DataEnvelope(g11));
             ((GCounter)d6.Data).Value.Should().Be(3);
-            ((GCounter)d6.Data).ModifiedByNodes.Should().BeEquivalentTo(node2);
+            ((GCounter)d6.Data).ModifiedByNodes.Should().BeEquivalentTo(new []{node2});
 
             // remove obsolete
             var d7 = new DataEnvelope(d5.Data, d5.Pruning.SetItem(node1, new PruningPerformed(obsoleteTime)), d5.DeltaVersions);

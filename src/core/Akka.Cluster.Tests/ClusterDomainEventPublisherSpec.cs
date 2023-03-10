@@ -161,11 +161,13 @@ namespace Akka.Cluster.Tests
             _publisher.Tell(new InternalClusterAction.PublishChanges(state8));
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, ImmutableHashSet.Create(typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.ReachabilityEvent))));
 
-            (await subscriber.ReceiveNAsync(4).ToListAsync()).Should().BeEquivalentTo(
-                new ClusterEvent.MemberUp(aUp),
-                new ClusterEvent.MemberUp(cUp),
-                new ClusterEvent.MemberUp(dUp),
-                new ClusterEvent.MemberExited(bExiting));
+            (await subscriber.ReceiveNAsync(4).ToListAsync()).Should().BeEquivalentTo( 
+                new ClusterEvent.MemberStatusChange[] {
+                    new ClusterEvent.MemberUp(aUp),
+                    new ClusterEvent.MemberUp(cUp),
+                    new ClusterEvent.MemberUp(dUp),
+                    new ClusterEvent.MemberExited(bExiting)
+                });
 
             await subscriber.ExpectMsgAsync(new ClusterEvent.UnreachableMember(dUp));
             await subscriber.ExpectNoMsgAsync(500.Milliseconds());
