@@ -58,7 +58,9 @@ namespace Akka.Streams.Dsl
             internal TShape Add<TShape, TMat, TMat2>(IGraph<TShape, TMat> graph, Func<TMat, TMat2> transform) where TShape : Shape
             {
                 if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                     StreamLayout.Validate(graph.Module);
+#pragma warning restore CS0162 // Unreachable code detected
 
                 var copy = graph.Module.CarbonCopy();
                 _moduleInProgress = _moduleInProgress.Compose<TMat,TMat2,TMat2>(copy.TransformMaterializedValue(transform), Keep.Right);
@@ -80,7 +82,9 @@ namespace Akka.Streams.Dsl
             internal TShape Add<TShape, TMat1, TMat2, TMat3>(IGraph<TShape> graph, Func<TMat1, TMat2, TMat3> combine) where TShape : Shape
             {
                 if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                     StreamLayout.Validate(graph.Module);
+#pragma warning restore CS0162 // Unreachable code detected
 
                 var copy = graph.Module.CarbonCopy();
                 _moduleInProgress = _moduleInProgress.Compose(copy, combine);
@@ -101,7 +105,9 @@ namespace Akka.Streams.Dsl
                 where TShape : Shape
             {
                 if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                     StreamLayout.Validate(graph.Module);
+#pragma warning restore CS0162 // Unreachable code detected
 
                 var copy = graph.Module.CarbonCopy();
                 _moduleInProgress = _moduleInProgress.Compose<object, TMat, object>(copy, Keep.Left);
