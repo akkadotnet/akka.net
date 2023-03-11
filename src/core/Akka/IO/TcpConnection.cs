@@ -52,13 +52,13 @@ namespace Akka.IO
         enum ConnectionStatus
         {
             /// <summary>
-            /// Marks that connection has invoked <see cref="Socket.ReceiveAsync"/> and that 
+            /// Marks that connection has invoked <see cref="Socket.ReceiveAsync(ByteBuffer, SocketFlags)"/> and that 
             /// <see cref="TcpConnection.ReceiveArgs"/> are currently trying to receive data.
             /// </summary>
             Receiving = 1,
 
             /// <summary>
-            /// Marks that connection has invoked <see cref="Socket.SendAsync"/> and that 
+            /// Marks that connection has invoked <see cref="Socket.SendAsync(ByteBuffer, SocketFlags)"/> and that 
             /// <see cref="TcpConnection.SendArgs"/> are currently sending data. It's important as 
             /// <see cref="SocketAsyncEventArgs"/> will throw exception if another socket operations will
             /// be called over it as it's performing send request. For that reason we cannot release send args

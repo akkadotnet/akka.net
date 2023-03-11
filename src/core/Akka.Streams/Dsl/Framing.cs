@@ -107,7 +107,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Returns a BidiFlow that implements a simple framing protocol. This is a convenience wrapper over <see cref="LengthField"/>
+        /// Returns a BidiFlow that implements a simple framing protocol. This is a convenience wrapper over <see cref="LengthField(int, int, int, ByteOrder)"/>
         /// and simply attaches a length field header of four bytes (using big endian encoding) to outgoing messages, and decodes
         /// such messages in the inbound direction. The decoded messages do not contain the header.
         /// 

@@ -1324,14 +1324,14 @@ namespace Akka.Streams.Stage
         }
         
         /// <summary>
-        /// Automatically invokes <see cref="Cancel"/> or <see cref="Complete"/> on all the input or output ports that have been called,
+        /// Automatically invokes <see cref="Cancel{T}(Inlet{T}, Exception)"/> or <see cref="Complete"/> on all the input or output ports that have been called,
         /// then marks the stage as stopped.
         /// </summary>
         public void CompleteStage() 
             => InternalCompleteStage(SubscriptionWithCancelException.StageWasCompleted.Instance, Option<Exception>.None);
 
         /// <summary>
-        /// Automatically invokes <see cref="Cancel"/> or <see cref="Fail{T}"/> on all the input or output ports that have been called,
+        /// Automatically invokes <see cref="Cancel{T}(Inlet{T}, Exception)"/> or <see cref="Fail{T}"/> on all the input or output ports that have been called,
         /// then marks the stage as stopped.
         /// </summary>
         /// <param name="reason">TBD</param>
