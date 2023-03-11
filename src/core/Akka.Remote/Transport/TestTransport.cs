@@ -821,7 +821,9 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
+#pragma warning disable CS0672
         public override void Disassociate()
+#pragma warning restore CS0672
         {
             _transport.Disassociate(this);
         }
