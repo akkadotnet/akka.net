@@ -184,7 +184,8 @@ namespace Akka.Persistence.Journal
         
         private async Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            return (new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count); 
+            return await Task.FromResult((new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count));
+            //return (new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count); 
         }
         
         /// <summary>
@@ -207,7 +208,8 @@ namespace Akka.Persistence.Journal
                 index++;
             }
 
-            return _tagsToMessagesMapping[replay.Tag].Count - 1;
+            return await Task.FromResult(_tagsToMessagesMapping[replay.Tag].Count - 1);
+            //return _tagsToMessagesMapping[replay.Tag].Count - 1;
         }
         
         private async Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
@@ -222,8 +224,8 @@ namespace Akka.Persistence.Journal
                 replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
                 index++;
             }
-
-            return _allMessages.Count - 1;
+            return await Task.FromResult(_allMessages.Count - 1);
+            //return _allMessages.Count - 1;
         }
         
         #region QueryAPI
@@ -439,7 +441,6 @@ namespace Akka.Persistence.Journal
             /// TBD
             /// </summary>
             /// <param name="persistent">TBD</param>
-            /// <param name="tag">TBD</param>
             /// <param name="offset">TBD</param>
             public ReplayedEvent(IPersistentRepresentation persistent, int offset)
             {
