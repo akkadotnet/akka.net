@@ -610,15 +610,15 @@ namespace Akka.Tests.Serialization
                 .Where(ex => ex.Message.Contains("Serializer Id [101] is not one of the internal Akka.NET serializer."));
         }
 
-        [Fact(DisplayName = "Should be able to serialize object property with JObject")]
-        public void ObjectPropertyTest()
+        [Fact(DisplayName = "Should be able to serialize object property with JObject value")]
+        public void ObjectPropertyJObjectTest()
         {
             var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerForType(typeof(object));
             var obj = JObject.FromObject(new
             {
                 FormattedMessage = "We are apple 20 points above value 10.01 ms",
                 Message = "We are {0} {1} points above value {2} ms",
-                Parameters = new List<object> { "apple", 20, 10.01 },
+                Parameters = new List<object> { "apple", 20, 10.01F, 50L, (decimal) 9.9 },
                 MessageType = 200
             });
             var instance = new ObjectTestClass { MyObject = obj};
@@ -627,9 +627,43 @@ namespace Akka.Tests.Serialization
             
             // Stack overflowed in the original bug
             var deserialized = serializer.FromBinary<ObjectTestClass>(serialized);
-            deserialized.Should().BeEquivalentTo(instance);
+            deserialized.MyObject.Should().BeOfType<JObject>();
+            var jObj = (JObject) deserialized.MyObject;
+            
+            ((JValue)jObj["FormattedMessage"])!.Value.Should().Be("We are apple 20 points above value 10.01 ms");
+            ((JValue)jObj["Message"])!.Value.Should().Be("We are {0} {1} points above value {2} ms");
+            var arr = ((JArray)jObj["Parameters"]);
+            ((JValue)arr![0]).Value.Should().Be("apple");
+            ((JValue)arr[1]).Value.Should().BeOfType<int>();
+            ((JValue)arr[1]).Value.Should().Be(20);
+            ((JValue)arr[2]).Value.Should().BeOfType<float>();
+            ((JValue)arr[2]).Value.Should().Be(10.01F);
+            ((JValue)arr[3]).Value.Should().BeOfType<long>();
+            ((JValue)arr[3]).Value.Should().Be(50L);
+            ((JValue)arr[4]).Value.Should().BeOfType<decimal>();
+            ((JValue)arr[4]).Value.Should().Be((decimal)9.9);
+            ((JValue)jObj["MessageType"])!.Value.Should().Be(200);
         }
 
+        [Fact(DisplayName = "Should be able to serialize object property with anonymous type value")]
+        public void ObjectPropertyObjectTest()
+        {
+            var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerForType(typeof(object));
+            var obj = new
+            {
+                FormattedMessage = "We are apple 20 points above value 10.01 ms",
+                Message = "We are {0} {1} points above value {2} ms",
+                Parameters = new List<object> { "apple", 20, 10.01F, 50L, (decimal) 9.9 },
+                MessageType = 200
+            };
+            var instance = new ObjectTestClass { MyObject = obj};
+
+            var serialized = serializer.ToBinary(instance);
+            
+            var deserialized = serializer.FromBinary<ObjectTestClass>(serialized);
+            deserialized.MyObject.Should().BeEquivalentTo(obj);
+        }
+        
         public SerializationSpec():base(GetConfig())
         {
         }
