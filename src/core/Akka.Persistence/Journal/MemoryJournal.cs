@@ -182,10 +182,9 @@ namespace Akka.Persistence.Journal
             }
         }
         
-        private async Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
+        private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            return await Task.FromResult((new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count));
-            //return (new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count); 
+            return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count)); 
         }
         
         /// <summary>
@@ -193,10 +192,10 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="replay">TBD</param>
         /// <returns>TBD</returns>
-        private async Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
+        private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
             if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
-                return 0;
+                return Task.FromResult(0);
 
             int index = 0;
             foreach (var persistence in _tagsToMessagesMapping[replay.Tag]
@@ -208,11 +207,10 @@ namespace Akka.Persistence.Journal
                 index++;
             }
 
-            return await Task.FromResult(_tagsToMessagesMapping[replay.Tag].Count - 1);
-            //return _tagsToMessagesMapping[replay.Tag].Count - 1;
+            return Task.FromResult(_tagsToMessagesMapping[replay.Tag].Count - 1);
         }
         
-        private async Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
+        private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
             int index = 0;
             var replayed = _allMessages
@@ -224,8 +222,7 @@ namespace Akka.Persistence.Journal
                 replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
                 index++;
             }
-            return await Task.FromResult(_allMessages.Count - 1);
-            //return _allMessages.Count - 1;
+            return Task.FromResult(_allMessages.Count - 1);
         }
         
         #region QueryAPI
