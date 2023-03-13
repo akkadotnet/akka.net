@@ -74,7 +74,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, CancellationToken cancellationToken = default)
         {
-            AwaitConditionAsync(async () => conditionIsFulfilled(), max, cancellationToken)
+            AwaitConditionAsync(() => Task.FromResult(conditionIsFulfilled()), max, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
         
@@ -280,7 +280,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         protected static bool InternalAwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval, Action<string, object[]> fail, ILoggingAdapter logger, CancellationToken cancellationToken = default)
         {
-            return InternalAwaitConditionAsync(async () => conditionIsFulfilled(), max, interval, fail, logger, cancellationToken)
+            return InternalAwaitConditionAsync(() => Task.FromResult(conditionIsFulfilled()), max, interval, fail, logger, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
             
         }
