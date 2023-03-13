@@ -436,10 +436,10 @@ namespace Akka.Tests.Actor
             latches.TransitionCallBackLatch.Ready(timeout);
             latches.LockedLatch.Ready(timeout);
 
-            await EventFilter.Warning("unhandled event").ExpectOneAsync(async () =>
-            {
+            await EventFilter.Warning("unhandled event").ExpectOneAsync(() => {
                 lockFsm.Tell("not_handled");
                 latches.UnhandledLatch.Ready(timeout);
+                return Task.CompletedTask;
             });
 
             var answerLatch = new TestLatch();

@@ -52,7 +52,7 @@ namespace Akka.Tests.Actor
                 var timeout = Dilated(TimeSpan.FromSeconds(5));
                 var address = "new-actor" + i;
                 var actors = Enumerable.Range(0, 4)
-                    .Select(async x => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address)).ToArray();
+                    .Select(x => Task.FromResult(Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address))).ToArray();
                 // Use WhenAll with empty ContinueWith to swallow all exceptions, so we can inspect the tasks afterwards.
                 await Task.WhenAll(actors).ContinueWith(a => { }).AwaitWithTimeout(timeout);
                 Assert.True(actors.Any(x => x.Status == TaskStatus.RanToCompletion && x.Result != null), "Failed to create any Actors");
@@ -64,10 +64,10 @@ namespace Akka.Tests.Actor
         public async Task An_ActorRefFactory_must_only_create_one_instance_of_an_actor_from_within_the_same_message_invocation()
         {
             var supervisor = Sys.ActorOf(Props.Create<ActorWithDuplicateChild>());
-            await EventFilter.Exception<InvalidActorNameException>(message: "Actor name \"duplicate\" is not unique!").ExpectOneAsync(async () =>
-                {
-                    supervisor.Tell("");
-                });
+            await EventFilter.Exception<InvalidActorNameException>(message: "Actor name \"duplicate\" is not unique!").ExpectOneAsync(() => {
+                supervisor.Tell("");
+                return Task.CompletedTask;
+            });
         }
 
         [Theory]

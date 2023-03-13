@@ -109,11 +109,11 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 MetricsView.ClusterMetrics.Count.Should().Be(Roles.Count);
             }, TimeSpan.FromSeconds(30));
             
-            await WithinAsync(10.Seconds(), async () =>
-            {
+            await WithinAsync(10.Seconds(), () => {
                 var collector = new MetricsCollectorBuilder().Build(Cluster.System);
                 collector.Sample().Metrics.Count.Should().BeGreaterThan(3);
                 EnterBarrier("after");
+                return Task.CompletedTask;
             });
         }
 
