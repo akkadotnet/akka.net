@@ -576,11 +576,13 @@ namespace Akka.Persistence.Tests
                 {
                     var sender = Sender;
                     var self = Self;
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     Task.Run(() =>
                     {
                         Thread.Sleep(10);
                         return msg;
                     }).PipeTo(sender, self); 
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
                     await Task.Delay(3000);
                 });
@@ -600,12 +602,14 @@ namespace Akka.Persistence.Tests
                 CommandAsync<string>(async msg =>
                 {
                     var sender = Sender;
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     Task.Run(() =>
                     {
                         //Sleep to make sure the task is not completed when ContinueWith is called
                         Thread.Sleep(100);
                         return msg;
                     }).ContinueWith(_ => sender.Tell(msg)); // ContinueWith will schedule with the implicit ActorTaskScheduler
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
                     Thread.Sleep(3000);
                 });
