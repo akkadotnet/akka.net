@@ -48,7 +48,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static IStash CreateStash(this IActorContext context, Type actorType)
         {
-            if (actorType.Implements<IWithBoundedStash>())
+            if (actorType.Implements<IWithStash>())
                 return new BoundedStashImpl(context);
 
             if (actorType.Implements<IWithUnboundedStash>())
