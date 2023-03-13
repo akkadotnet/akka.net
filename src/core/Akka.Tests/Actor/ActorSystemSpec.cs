@@ -189,11 +189,13 @@ namespace Akka.Tests.Actor
                 callbackWasRun = true;
             });
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             new TaskFactory().StartNew(() =>
             {
                 Task.Delay(Dilated(TimeSpan.FromMilliseconds(200))).Wait();
                 actorSystem.Terminate();
             });
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(5));
             Assert.True(callbackWasRun);

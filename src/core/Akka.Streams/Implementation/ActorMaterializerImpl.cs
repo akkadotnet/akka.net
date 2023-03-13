@@ -369,7 +369,9 @@ namespace Akka.Streams.Implementation
                 throw new IllegalStateException("Attempted to call Materialize() after the ActorMaterializer has been shut down.");
 
             if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                 StreamLayout.Validate(runnableGraph.Module);
+#pragma warning restore CS0162 // Unreachable code detected
 
             var session = new ActorMaterializerSession(this, runnableGraph.Module, initialAttributes, subFlowFuser);
 

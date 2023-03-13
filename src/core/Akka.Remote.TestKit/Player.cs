@@ -667,7 +667,9 @@ namespace Akka.Remote.TestKit
             Task.Factory.StartNew(() =>
             {
                 RemoteConnection.Shutdown(context.Channel);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 RemoteConnection.ReleaseAll(); // yep, let it run asynchronously.
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
             context.FireChannelInactive();
         }
