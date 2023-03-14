@@ -500,6 +500,7 @@ namespace Akka.Tests.Actor.Dispatch
 
             foreach (var i in Enumerable.Range(1, 10))
             {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 Task.Run(() =>
                 {
                     foreach (var c in Enumerable.Range(1, 20))
@@ -507,6 +508,7 @@ namespace Akka.Tests.Actor.Dispatch
                         a.Tell(new CountDown(counter));
                     }
                 });
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
             try

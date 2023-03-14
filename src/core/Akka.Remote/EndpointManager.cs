@@ -791,7 +791,9 @@ namespace Akka.Remote
                     // Side-effecting here
                     if (drop)
                     {
+#pragma warning disable CS0618
                         x.Value.Disassociate();
+#pragma warning restore CS0618
                         Context.Stop(x.Key);
                     }
                     return !drop;
@@ -805,7 +807,9 @@ namespace Akka.Remote
                         var handle = assoc.Association.AsInstanceOf<AkkaProtocolHandle>();
                         var drop = MatchesQuarantine(handle);
                         if (drop)
+#pragma warning disable CS0618
                             handle.Disassociate();
+#pragma warning restore CS0618
                         return !drop;
                     }).ToList();
                     return new KeyValuePair<IActorRef, List<InboundAssociation>>(x.Key, associations);

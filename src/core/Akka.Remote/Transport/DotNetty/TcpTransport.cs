@@ -184,8 +184,9 @@ namespace Akka.Remote.Transport.DotNetty
             var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
             return buffer;
         }
-
+#pragma warning disable CS0672
         public override void Disassociate()
+#pragma warning restore CS0672
         {
             _channel.CloseAsync();
         }

@@ -450,7 +450,7 @@ namespace Akka.Streams.Dsl
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
         /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
         /// This is implemented using a SourceQueue and will buffer elements based on configured stream defaults.
-        /// For custom buffers Please use <see cref="RunAsAsyncEnumerableBuffer"/>
+        /// For custom buffers Please use <see cref="RunAsAsyncEnumerableBuffer(IMaterializer, int, int)"/>
         /// </summary>
         /// <param name="materializer">The materializer to use for each enumeration</param>
         /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
@@ -462,7 +462,7 @@ namespace Akka.Streams.Dsl
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
         /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
         /// This is implemented using a SourceQueue and will buffer elements based on configured stream defaults.
-        /// For custom buffers Please use <see cref="RunAsAsyncEnumerableBuffer"/>
+        /// For custom buffers Please use <see cref="RunAsAsyncEnumerableBuffer(IMaterializer, int, int)"/>
         /// </summary>
         /// <param name="materializer">The materializer to use for each enumeration</param>
         /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
