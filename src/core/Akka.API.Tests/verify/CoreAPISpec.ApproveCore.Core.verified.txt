@@ -1166,7 +1166,6 @@ namespace Akka.Actor
         void Become(Akka.Actor.UntypedReceive receive);
         void BecomeStacked(Akka.Actor.UntypedReceive receive);
     }
-    [System.ObsoleteAttribute("Use `IWithStash` with a configured BoundedDeque-based mailbox instead.")]
     public interface IWithBoundedStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IBoundedDequeBasedMessageQueueSemantics> { }
     public interface IWithStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IDequeBasedMessageQueueSemantics> { }
     public interface IWithTimers
