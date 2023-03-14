@@ -648,7 +648,9 @@ namespace Akka.Streams.Implementation
         public virtual IModule Wire(OutPort from, InPort to)
         {
             if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                 StreamLayout.Validate(this);
+#pragma warning restore CS0162 // Unreachable code detected
 
             if (!OutPorts.Contains(from))
             {
@@ -687,7 +689,9 @@ namespace Akka.Streams.Implementation
         public virtual IModule TransformMaterializedValue<TMat, TMat2>(Func<TMat, TMat2> mapFunc)
         {
             if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                 StreamLayout.Validate(this);
+#pragma warning restore CS0162 // Unreachable code detected
 
             return new CompositeModule(
                 subModules: IsSealed ? ImmutableArray.Create(this as IModule) : SubModules,
@@ -720,7 +724,9 @@ namespace Akka.Streams.Implementation
         public virtual IModule Compose<T1, T2, T3>(IModule other, Func<T1, T2, T3> matFunc)
         {
             if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                 StreamLayout.Validate(this);
+#pragma warning restore CS0162 // Unreachable code detected
 
             if (Equals(other, this))
                 throw new ArgumentException(
@@ -787,7 +793,9 @@ namespace Akka.Streams.Implementation
         public IModule ComposeNoMaterialized(IModule that)
         {
             if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                 StreamLayout.Validate(this);
+#pragma warning restore CS0162 // Unreachable code detected
 
             if (ReferenceEquals(this, that))
                 throw new ArgumentException(
