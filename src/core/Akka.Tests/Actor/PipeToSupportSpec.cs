@@ -42,7 +42,9 @@ namespace Akka.Tests.Actor
         public async Task Should_immediately_PipeTo_completed_Task()
         {
             var task = Task.FromResult("foo");
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             task.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             await ExpectMsgAsync("foo");
         }
 
@@ -50,14 +52,18 @@ namespace Akka.Tests.Actor
         public async Task ValueTask_Should_immediately_PipeTo_completed_Task()
         {
             var task = new ValueTask<string>("foo");
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             task.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             await ExpectMsgAsync("foo");
         }
 
         [Fact]
         public async Task Should_by_default_send_task_result_as_message()
         {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _task.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("Hello");
             await ExpectMsgAsync("Hello");
         }
@@ -65,7 +71,9 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task ValueTask_Should_by_default_send_task_result_as_message()
         {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _valueTask.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("Hello");
             await ExpectMsgAsync("Hello");
         }
@@ -73,7 +81,9 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task Should_by_default_not_send_a_success_message_if_the_task_does_not_produce_a_result()
         {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskWithoutResult.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("Hello");
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
@@ -81,7 +91,9 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task ValueTask_Should_by_default_not_send_a_success_message_if_the_task_does_not_produce_a_result()
         {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _valueTaskWithoutResult.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("Hello");
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
@@ -89,8 +101,12 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task Should_by_default_send_task_exception_as_status_failure_message()
         {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _task.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskWithoutResult.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetException(new Exception("Boom"));
             await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom");
             await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom");
@@ -99,8 +115,12 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task ValueTask_Should_by_default_send_task_exception_as_status_failure_message()
         {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _valueTask.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _valueTaskWithoutResult.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetException(new Exception("Boom"));
             await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom");
             await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom");
@@ -109,8 +129,12 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task Should_use_success_handling_to_transform_task_result()
         {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _task.PipeTo(TestActor, success: x => "Hello " + x);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskWithoutResult.PipeTo(TestActor, success: () => "Hello");
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("World");
             var pipeTo = await ReceiveNAsync(2, default).Cast<string>().ToListAsync();
             pipeTo.Should().Contain("Hello");
@@ -120,8 +144,12 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task ValueTask_Should_use_success_handling_to_transform_task_result()
         {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _valueTask.PipeTo(TestActor, success: x => "Hello " + x);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _valueTaskWithoutResult.PipeTo(TestActor, success: () => "Hello");
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("World");
             var pipeTo = await ReceiveNAsync(2, default).Cast<string>().ToListAsync();
             pipeTo.Should().Contain("Hello");
@@ -131,8 +159,12 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task Should_use_failure_handling_to_transform_task_exception()
         {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _task.PipeTo(TestActor, failure: e => "Such a " + e.Message);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskWithoutResult.PipeTo(TestActor, failure: e => "Such a " + e.Message);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetException(new Exception("failure..."));
             await ExpectMsgAsync("Such a failure...");
             await ExpectMsgAsync("Such a failure...");
@@ -141,8 +173,12 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task ValueTask_Should_use_failure_handling_to_transform_task_exception()
         {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _valueTask.PipeTo(TestActor, failure: e => "Such a " + e.Message);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _valueTaskWithoutResult.PipeTo(TestActor, failure: e => "Such a " + e.Message);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetException(new Exception("failure..."));
             await ExpectMsgAsync("Such a failure...");
             await ExpectMsgAsync("Such a failure...");
