@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Dsl
                 leftSubscription.Request(2);
                 rightSubscription.Request(1);
 
-                leftProbe.ExpectNext(CancellationToken.None, 2, 4);
+                leftProbe.ExpectNext( 2, 4);
                 leftProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                 rightProbe.ExpectNext("1+1");
@@ -114,7 +114,7 @@ namespace Akka.Streams.Tests.Dsl
                 leftProbe.ExpectNext(6);
                 leftProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-                rightProbe.ExpectNext(CancellationToken.None, "2+2", "3+3");
+                rightProbe.ExpectNext( "2+2", "3+3");
                 rightProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                 leftSubscription.Request(1);

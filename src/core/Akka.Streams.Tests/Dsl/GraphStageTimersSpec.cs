@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(5);
-                downstream.ExpectNext(CancellationToken.None, 1, 2, 3);
+                downstream.ExpectNext( 1, 2, 3);
 
                 downstream.ExpectNoMsg(TimeSpan.FromSeconds(1));
 

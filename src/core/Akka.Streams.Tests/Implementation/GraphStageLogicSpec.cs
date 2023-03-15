@@ -281,7 +281,7 @@ namespace Akka.Streams.Tests.Implementation
                 .Via(new ReadNEmitN(2))
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .Request(10)
-                .ExpectNext(CancellationToken.None, 1, 2)
+                .ExpectNext( 1, 2)
                 .ExpectComplete();
             }, Materializer);
         }
@@ -328,7 +328,7 @@ namespace Akka.Streams.Tests.Implementation
                     .Via(new ReadNEmitRestOnComplete(6))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(10)
-                    .ExpectNext(CancellationToken.None, 1, 2, 3, 4, 5)
+                    .ExpectNext( 1, 2, 3, 4, 5)
                     .ExpectComplete();
             }, Materializer);
         }

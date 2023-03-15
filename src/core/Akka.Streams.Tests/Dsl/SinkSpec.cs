@@ -148,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
             subscriptions.ForEach(s=>s.Request(2));
             probes.ForEach(p =>
             {
-                p.ExpectNext(CancellationToken.None, 1, 2);
+                p.ExpectNext( 1, 2);
                 p.ExpectComplete();
             });
         }
@@ -168,7 +168,7 @@ namespace Akka.Streams.Tests.Dsl
             subscriptions.ForEach(s => s.Request(2));
             probes.ForEach(p =>
             {
-                p.ExpectNext(CancellationToken.None, 1, 2);
+                p.ExpectNext( 1, 2);
                 p.ExpectComplete();
             });
         }

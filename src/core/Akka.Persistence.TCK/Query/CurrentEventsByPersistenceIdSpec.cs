@@ -48,7 +48,7 @@ namespace Akka.Persistence.TCK.Query
             var src = queries.CurrentEventsByPersistenceId("a", 0, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
             probe.Request(2)
-                .ExpectNext(CancellationToken.None, "a-1", "a-2")
+                .ExpectNext( "a-1", "a-2")
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             probe.Request(2)
                 .ExpectNext("a-3")
@@ -63,7 +63,7 @@ namespace Akka.Persistence.TCK.Query
             var src = queries.CurrentEventsByPersistenceId("b", 0L, 2L);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
                 .Request(5)
-                .ExpectNext(CancellationToken.None, "b-1", "b-2")
+                .ExpectNext( "b-1", "b-2")
                 .ExpectComplete();
         }
 
@@ -75,7 +75,7 @@ namespace Akka.Persistence.TCK.Query
             var src = queries.CurrentEventsByPersistenceId("f", 0L, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
             probe.Request(2)
-                .ExpectNext(CancellationToken.None, "f-1", "f-2")
+                .ExpectNext( "f-1", "f-2")
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             pref.Tell("f-4");

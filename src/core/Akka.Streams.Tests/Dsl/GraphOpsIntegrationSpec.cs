@@ -228,7 +228,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sub = s.ExpectSubscription();
             sub.Request(10);
-            s.ExpectNext(CancellationToken.None, 1 *2, 2*2, 3*2).ExpectComplete();
+            s.ExpectNext( 1 *2, 2*2, 3*2).ExpectComplete();
         }
 
         [Fact]

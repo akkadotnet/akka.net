@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
                     .SkipWhile(x => x < 3)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(2)
-                    .ExpectNext(CancellationToken.None, 3, 4)
+                    .ExpectNext( 3, 4)
                     .ExpectComplete();
             }, Materializer);
         }

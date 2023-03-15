@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
                 tps.Request(2);
                 mps.RequestNext(1);
                 mps.RequestNext(2);
-                tps.ExpectNext(CancellationToken.None, 1, 2);
+                tps.ExpectNext( 1, 2);
                 mps.ExpectComplete();
                 tps.ExpectComplete();
             }, Materializer);
@@ -56,12 +56,12 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(Materializer);
 
                 mps.Request(3);
-                mps.ExpectNext(CancellationToken.None, 1, 2, 3);
+                mps.ExpectNext( 1, 2, 3);
                 tps.Request(4);
                 mps.RequestNext(4);
                 mps.RequestNext(5);
                 mps.RequestNext(6);
-                tps.ExpectNext(CancellationToken.None, 3, 4, 5, 6);
+                tps.ExpectNext( 3, 4, 5, 6);
                 mps.ExpectComplete();
                 tps.ExpectComplete();
             }, Materializer);
@@ -95,7 +95,7 @@ namespace Akka.Streams.Tests.Dsl
                 
                 tps.Cancel();
                 mps.Request(6);
-                mps.ExpectNext(CancellationToken.None, 1, 2, 3, 4, 5, 6);
+                mps.ExpectNext( 1, 2, 3, 4, 5, 6);
                 mps.ExpectComplete();
             }, Materializer);
         }

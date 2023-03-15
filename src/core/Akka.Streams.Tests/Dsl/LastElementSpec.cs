@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
             var probe = t.Item2;
 
             probe.Request(3)
-                .ExpectNext(CancellationToken.None, 1, 2, 3)
+                .ExpectNext( 1, 2, 3)
                 .ExpectComplete();
 
             lastElement.AwaitResult(TimeSpan.FromSeconds(1)).Should().Be(Option<int>.Create(3));

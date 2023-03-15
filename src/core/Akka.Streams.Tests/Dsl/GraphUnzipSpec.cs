@@ -64,10 +64,10 @@ namespace Akka.Streams.Tests.Dsl
                 sub2.Request(2);
                 c1.ExpectNext(1*2);
                 c1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                c2.ExpectNext(CancellationToken.None, "a", "b");
+                c2.ExpectNext( "a", "b");
                 c2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
                 sub1.Request(3);
-                c1.ExpectNext(CancellationToken.None, 2*2, 3*2);
+                c1.ExpectNext( 2*2, 3*2);
                 c1.ExpectComplete();
                 sub2.Request(3);
                 c2.ExpectNext("c");
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub1.Cancel();
                 sub2.Request(3);
-                c2.ExpectNext(CancellationToken.None, "a", "b", "c");
+                c2.ExpectNext( "a", "b", "c");
                 c2.ExpectComplete();
             }, Materializer);
         }
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub2.Cancel();
                 sub1.Request(3);
-                c1.ExpectNext(CancellationToken.None, 1, 2, 3);
+                c1.ExpectNext( 1, 2, 3);
                 c1.ExpectComplete();
             }, Materializer);
         }
@@ -175,7 +175,7 @@ namespace Akka.Streams.Tests.Dsl
             sub2.Request(3);
             sub1.Request(3);
             sub2.Cancel();
-            c1.ExpectNext(CancellationToken.None, 1,2,3);
+            c1.ExpectNext( 1,2,3);
             c1.ExpectComplete();
         }
 
@@ -206,7 +206,7 @@ namespace Akka.Streams.Tests.Dsl
             sub2.Request(3);
             sub2.Cancel();
             sub1.Request(3);
-            c1.ExpectNext(CancellationToken.None, 1, 2, 3);
+            c1.ExpectNext( 1, 2, 3);
             c1.ExpectComplete();
         }
 

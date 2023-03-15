@@ -92,8 +92,8 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                 .RunWith(this.SinkProbe<int>(), Materializer);
 
-            probe.Request(2).ExpectNext(CancellationToken.None, 1, 1);
-            probe.Request(4).ExpectNext(CancellationToken.None, 1, 1, 1, 1);
+            probe.Request(2).ExpectNext( 1, 1);
+            probe.Request(4).ExpectNext( 1, 1, 1, 1);
             probe.ExpectComplete();
         }
 
@@ -123,9 +123,9 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(this.SinkProbe<int>(), Materializer);
 
-            probe.Request(2).ExpectNext(CancellationToken.None, 1, 1);
+            probe.Request(2).ExpectNext( 1, 1);
             probe.RequestNext(4);
-            probe.Request(4).ExpectNext(CancellationToken.None, 1, 1, 1, 1);
+            probe.Request(4).ExpectNext( 1, 1, 1, 1);
             probe.ExpectComplete();
         }
     }

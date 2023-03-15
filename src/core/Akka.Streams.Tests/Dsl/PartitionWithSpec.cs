@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
             source.SendNext(1);
             source.SendNext(2);
             source.SendNext(3);
-            sink.ExpectNext(CancellationToken.None, 2, 1, 8);
+            sink.ExpectNext( 2, 1, 8);
             source.SendComplete();
             sink.ExpectComplete();
         }

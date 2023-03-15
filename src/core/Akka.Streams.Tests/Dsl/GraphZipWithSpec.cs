@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription = probe.ExpectSubscription();
 
                 subscription.Request(2);
-                probe.ExpectNext(CancellationToken.None, 11, 22);
+                probe.ExpectNext( 11, 22);
 
                 subscription.Request(1);
                 probe.ExpectNext(33);
@@ -146,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription = probe.ExpectSubscription();
 
                 subscription.Request(2);
-                probe.ExpectNext(CancellationToken.None, 1/-2, 2/-1);
+                probe.ExpectNext( 1/-2, 2/-1);
                 EventFilter.Exception<DivideByZeroException>().ExpectOne(() => subscription.Request(2));
                 probe.ExpectError().Should().BeOfType<DivideByZeroException>();
                 probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));

@@ -86,13 +86,13 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription1 = subscriber1.ExpectSubscription();
 
                 subscription1.Request(5);
-                subscriber1.ExpectNext(CancellationToken.None, 1, 2, 3, 4).ExpectComplete();
+                subscriber1.ExpectNext( 1, 2, 3, 4).ExpectComplete();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
                 var subscription2 = subscriber2.ExpectSubscription();
 
                 subscription2.Request(5);
-                subscriber2.ExpectNext(CancellationToken.None, 1, 2, 3, 4).ExpectComplete();
+                subscriber2.ExpectNext( 1, 2, 3, 4).ExpectComplete();
             }, Materializer);
         }
 
@@ -105,13 +105,13 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription1 = subscriber1.ExpectSubscription();
 
                 subscription1.Request(5);
-                subscriber1.ExpectNext(CancellationToken.None, 1, 2, 3, 4).ExpectComplete();
+                subscriber1.ExpectNext( 1, 2, 3, 4).ExpectComplete();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
                 var subscription2 = subscriber2.ExpectSubscription();
 
                 subscription2.Request(5);
-                subscriber2.ExpectNext(CancellationToken.None, 1, 2, 3, 4).ExpectComplete();
+                subscriber2.ExpectNext( 1, 2, 3, 4).ExpectComplete();
             }, Materializer);
         }
 
@@ -193,7 +193,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var subscription = subscriber.ExpectSubscription();
                 subscription.Request(4);
-                subscriber.ExpectNext(CancellationToken.None, 1, 2, 3);
+                subscriber.ExpectNext( 1, 2, 3);
                 promise.SetException(TestException());
                 subscriber.ExpectError().Should().Be(TestException());
             }, Materializer);

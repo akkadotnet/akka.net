@@ -220,7 +220,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 downstream2.Request(2);
                 upstream2.SendNext("A").SendNext("B");
-                downstream2.ExpectNext(CancellationToken.None, "A", "B");
+                downstream2.ExpectNext( "A", "B");
 
                 killSwitch.Shutdown();
 
@@ -258,7 +258,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 downstream2.Request(2);
                 upstream2.SendNext("A").SendNext("B");
-                downstream2.ExpectNext(CancellationToken.None, "A", "B");
+                downstream2.ExpectNext( "A", "B");
 
                 var testException = new TestException("Abort");
                 killSwitch.Abort(testException);
@@ -591,7 +591,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 downstream2.Request(2);
                 upstream2.SendNext("A").SendNext("B");
-                downstream2.ExpectNext(CancellationToken.None, "A", "B");
+                downstream2.ExpectNext( "A", "B");
 
                 cancel.Cancel();
 
@@ -629,7 +629,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 downstream2.Request(2);
                 upstream2.SendNext("A").SendNext("B");
-                downstream2.ExpectNext(CancellationToken.None, "A", "B");
+                downstream2.ExpectNext( "A", "B");
 
                 cancel.Cancel();
                 upstream1.ExpectCancellation();

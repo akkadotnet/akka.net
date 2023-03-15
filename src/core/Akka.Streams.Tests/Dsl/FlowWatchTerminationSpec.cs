@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
                 var future = t.Item1;
                 var p = t.Item2;
 
-                p.Request(4).ExpectNext(CancellationToken.None, 1, 2, 3, 4);
+                p.Request(4).ExpectNext( 1, 2, 3, 4);
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 p.ExpectComplete();
             }, Materializer);
@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
                 var future = t.Item1;
                 var p = t.Item2;
 
-                p.Request(3).ExpectNext(CancellationToken.None, 1, 2, 3);
+                p.Request(3).ExpectNext( 1, 2, 3);
                 p.Cancel();
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             }, Materializer);

@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Dsl
                 c1.Request(1);
                 c2.Request(4);
                 c1.ExpectNext("another");
-                c2.ExpectNext(CancellationToken.None, "this", "is", "just", "test");
+                c2.ExpectNext( "this", "is", "just", "test");
                 c1.ExpectComplete();
                 c2.ExpectComplete();
             }, Materializer);
