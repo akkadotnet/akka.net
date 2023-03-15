@@ -45,7 +45,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task Single_message_is_intercepted()
         {
             await _testingEventFilter.ForLogLevel(LogLevel)
-                .ExpectOneAsync(async () => LogMessage("whatever"));
+                .ExpectOneAsync(() => { LogMessage("whatever"); return Task.CompletedTask; });
             TestSuccessful = true;
         }
 
@@ -54,17 +54,17 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task Can_intercept_messages_when_start_is_specified()
         {
             await _testingEventFilter.ForLogLevel(LogLevel, start: "what")
-                .ExpectOneAsync(async () => LogMessage("whatever"));
+                .ExpectOneAsync(() => { LogMessage("whatever"); return Task.CompletedTask; });
             TestSuccessful = true;
         }
 
         [Fact]
         public async Task Do_not_intercept_messages_when_start_does_not_match()
         {
-            await _testingEventFilter.ForLogLevel(LogLevel, start: "what").ExpectOneAsync(async () =>
-            {
+            await _testingEventFilter.ForLogLevel(LogLevel, start: "what").ExpectOneAsync(() => {
                 LogMessage("let-me-thru");
                 LogMessage("whatever");
+                return Task.CompletedTask;
             });
             await ExpectMsgAsync<TLogEvent>(err => (string)err.Message == "let-me-thru");
             TestSuccessful = true;
@@ -74,17 +74,17 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task Can_intercept_messages_when_message_is_specified()
         {
             await _testingEventFilter.ForLogLevel(LogLevel, message: "whatever")
-                .ExpectOneAsync(async () => LogMessage("whatever"));
+                .ExpectOneAsync(() => { LogMessage("whatever"); return Task.CompletedTask; });
             TestSuccessful = true;
         }
 
         [Fact]
         public async Task Do_not_intercept_messages_when_message_does_not_match()
         {
-            await EventFilter.ForLogLevel(LogLevel, message: "whatever").ExpectOneAsync(async () =>
-            {
+            await EventFilter.ForLogLevel(LogLevel, message: "whatever").ExpectOneAsync(() => {
                 LogMessage("let-me-thru");
                 LogMessage("whatever");
+                return Task.CompletedTask;
             });
             await ExpectMsgAsync<TLogEvent>(err => (string)err.Message == "let-me-thru");
             TestSuccessful = true;
@@ -94,17 +94,17 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task Can_intercept_messages_when_contains_is_specified()
         {
             await _testingEventFilter.ForLogLevel(LogLevel, contains: "ate")
-                .ExpectOneAsync(async () => LogMessage("whatever"));
+                .ExpectOneAsync(() => { LogMessage("whatever"); return Task.CompletedTask; });
             TestSuccessful = true;
         }
 
         [Fact]
         public async Task Do_not_intercept_messages_when_contains_does_not_match()
         {
-            await _testingEventFilter.ForLogLevel(LogLevel, contains: "eve").ExpectOneAsync(async () =>
-            {
+            await _testingEventFilter.ForLogLevel(LogLevel, contains: "eve").ExpectOneAsync(() => {
                 LogMessage("let-me-thru");
                 LogMessage("whatever");
+                return Task.CompletedTask;
             });
             ExpectMsg<TLogEvent>(err => (string)err.Message == "let-me-thru");
             TestSuccessful = true;
@@ -115,17 +115,17 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task Can_intercept_messages_when_source_is_specified()
         {
             await _testingEventFilter.ForLogLevel(LogLevel, source: LogSource.FromType(GetType(), Sys))
-                .ExpectOneAsync(async () => LogMessage("whatever"));
+                .ExpectOneAsync(() => { LogMessage("whatever"); return Task.CompletedTask; });
             TestSuccessful = true;
         }
 
         [Fact]
         public async Task Do_not_intercept_messages_when_source_does_not_match()
         {
-            await _testingEventFilter.ForLogLevel(LogLevel, source: "expected-source").ExpectOneAsync(async () =>
-            {
+            await _testingEventFilter.ForLogLevel(LogLevel, source: "expected-source").ExpectOneAsync(() => {
                 PublishMessage("message", source: "expected-source");
                 PublishMessage("message", source: "let-me-thru");
+                return Task.CompletedTask;
             });
             await ExpectMsgAsync<TLogEvent>(err => err.LogSource == "let-me-thru");
             TestSuccessful = true;
@@ -134,10 +134,10 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         [Fact]
         public async Task Specified_numbers_of_messages_can_be_intercepted()
         {
-            await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(2, async () =>
-            {
+            await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(2, () => {
                 LogMessage("whatever");
                 LogMessage("whatever");
+                return Task.CompletedTask;
             });
             TestSuccessful = true;
         }
@@ -147,9 +147,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
             await Awaiting(async () =>
             {
-                await EventFilter.Error().ExpectAsync(0, async () =>
-                {
+                await EventFilter.Error().ExpectAsync(0, () => {
                     Log.Error("something");
+                    return Task.CompletedTask;
                 });
             }).Should().ThrowAsync<Exception>("Expected 0 events");
         }
@@ -198,10 +198,10 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         [Fact]
         public async Task Messages_can_be_muted()
         {
-            await _testingEventFilter.ForLogLevel(LogLevel).MuteAsync(async () =>
-            {
+            await _testingEventFilter.ForLogLevel(LogLevel).MuteAsync(() => {
                 LogMessage("whatever");
                 LogMessage("whatever");
+                return Task.CompletedTask;
             });
             TestSuccessful = true;
         }
@@ -232,11 +232,10 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         [Fact]
         public async Task Make_sure_async_works()
         {
-            await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(1, TimeSpan.FromSeconds(2), async () =>
-            {
+            await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(1, TimeSpan.FromSeconds(2), () => {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 Task.Delay(TimeSpan.FromMilliseconds(10)).ContinueWith(t => { LogMessage("whatever"); });
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                return Task.CompletedTask;
             });
         }
 
@@ -246,12 +245,11 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             await _testingEventFilter
                 .ForLogLevel(LogLevel,message:"Message 1").And
                 .ForLogLevel(LogLevel,message:"Message 3")
-                .ExpectAsync(2, async () =>
-                {
+                .ExpectAsync(2, () => {
                     LogMessage("Message 1");
                     LogMessage("Message 2");
                     LogMessage("Message 3");
-
+                    return Task.CompletedTask;
                 });
             await ExpectMsgAsync<TLogEvent>(m => (string) m.Message == "Message 2");
         }
@@ -262,9 +260,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
             await Awaiting(async () =>
             {
-                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(2, TimeSpan.FromMilliseconds(50), async () =>
-                {
+                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(2, TimeSpan.FromMilliseconds(50), () => {
                     LogMessage("whatever");
+                    return Task.CompletedTask;
                 });
             }).Should().ThrowAsync<TrueException>().WithMessage("Timeout (*");
         }

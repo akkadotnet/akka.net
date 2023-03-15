@@ -197,10 +197,11 @@ namespace Akka.Tests.Actor
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");
             await ExpectMsgAsync("pong");
-            await EventFilter.Warning("expected").ExpectOneAsync(async () => //expected exception is thrown by the boss when it crashes
-            {
-                middle.Tell("fail");    //Throws an exception, and then it's resumed
-            });
+            await EventFilter.Warning("expected").ExpectOneAsync(() => //expected exception is thrown by the boss when it crashes
+{
+    middle.Tell("fail");    //Throws an exception, and then it's resumed
+    return Task.CompletedTask;
+});
 
             //verify that middle answers
             middle.Tell("ping");
