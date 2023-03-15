@@ -1,3 +1,22 @@
+#### 1.5.0 March 15th 2023 ####
+
+* [Akka.Persistence: Improve memory allocation](https://github.com/akkadotnet/akka.net/pull/6487)
+* [Akka.Persistence: Implement persistence query in InMemory journal](https://github.com/akkadotnet/akka.net/pull/6409)
+* [Akka: Fix bugs reported by PVS-Studio static analysis](https://github.com/akkadotnet/akka.net/pull/6497)
+* [Akka: Bump Google.Protobuf to 3.22.1](https://github.com/akkadotnet/akka.net/pull/6500)
+* [Akka.Persistence.Sqlite: Bump Microsoft.Data.SQLite to 7.0.4](https://github.com/akkadotnet/akka.net/pull/6516)
+* [Akka: Fix StackOverflow exception in NewtonSoftSerializer](https://github.com/akkadotnet/akka.net/pull/6503)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.1, click here](https://github.com/akkadotnet/akka.net/milestone/82?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 9       | 425  | 331  | Ebere Abanonu       |
+| 5       | 6    | 6    | dependabot[bot]     |
+| 3       | 2399 | 109  | Sergey Popov        |
+| 1       | 97   | 4    | Gregorius Soedharmo |
+| 1       | 2    | 2    | Aaron Stannard      |
+
 #### 1.5.0 March 2nd 2023 ####
 Version 1.5.0 is a major new release of Akka.NET that is now marked as stable and ready for production use.
 
