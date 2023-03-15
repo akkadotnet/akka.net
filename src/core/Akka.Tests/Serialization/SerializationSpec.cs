@@ -630,10 +630,10 @@ namespace Akka.Tests.Serialization
             deserialized.MyObject.Should().BeOfType<JObject>();
             var jObj = (JObject) deserialized.MyObject;
             
-            ((JValue)jObj["FormattedMessage"])!.Value.Should().Be("We are apple 20 points above value 10.01 ms");
-            ((JValue)jObj["Message"])!.Value.Should().Be("We are {0} {1} points above value {2} ms");
+            ((JValue)jObj["FormattedMessage"]).Value.Should().Be("We are apple 20 points above value 10.01 ms");
+            ((JValue)jObj["Message"]).Value.Should().Be("We are {0} {1} points above value {2} ms");
             var arr = ((JArray)jObj["Parameters"]);
-            ((JValue)arr![0]).Value.Should().Be("apple");
+            ((JValue)arr[0]).Value.Should().Be("apple");
             ((JValue)arr[1]).Value.Should().BeOfType<int>();
             ((JValue)arr[1]).Value.Should().Be(20);
             ((JValue)arr[2]).Value.Should().BeOfType<float>();
@@ -642,7 +642,7 @@ namespace Akka.Tests.Serialization
             ((JValue)arr[3]).Value.Should().Be(50L);
             ((JValue)arr[4]).Value.Should().BeOfType<decimal>();
             ((JValue)arr[4]).Value.Should().Be((decimal)9.9);
-            ((JValue)jObj["MessageType"])!.Value.Should().Be(200);
+            ((JValue)jObj["MessageType"]).Value.Should().Be(200);
         }
 
         [Fact(DisplayName = "Should be able to serialize object property with anonymous type value")]
