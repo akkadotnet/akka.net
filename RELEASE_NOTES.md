@@ -1,4 +1,4 @@
-#### 1.5.0 March 15th 2023 ####
+#### 1.5.1 March 15th 2023 ####
 
 * [Akka.Persistence: Improve memory allocation](https://github.com/akkadotnet/akka.net/pull/6487)
 * [Akka.Persistence: Implement persistence query in InMemory journal](https://github.com/akkadotnet/akka.net/pull/6409)
