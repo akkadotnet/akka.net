@@ -33,9 +33,10 @@ namespace Akka.TestKit.Internal
                 throw new InvalidOperationException("Failed to enqueue item into the queue.");
         }
 
-        public async ValueTask EnqueueAsync(T item)
+        public ValueTask EnqueueAsync(T item)
         {
             Enqueue(item);
+            return new ValueTask();
         }
 
         [Obsolete("This method will be removed from the public API in the future")] 
@@ -50,9 +51,9 @@ namespace Akka.TestKit.Internal
             return _collection.TryAdd(new Positioned(item), millisecondsTimeout, cancellationToken);
         }
 
-        public async ValueTask<bool> TryEnqueueAsync(T item, int millisecondsTimeout, CancellationToken cancellationToken)
+        public ValueTask<bool> TryEnqueueAsync(T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            return TryEnqueue(item, millisecondsTimeout, cancellationToken);
+            return new ValueTask<bool>(TryEnqueue(item, millisecondsTimeout, cancellationToken));
         }
 
         public bool TryTake(out T item, CancellationToken cancellationToken = default)
@@ -66,10 +67,10 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
-        public async ValueTask<(bool success, T item)> TryTakeAsync(CancellationToken cancellationToken)
+        public ValueTask<(bool success, T item)> TryTakeAsync(CancellationToken cancellationToken)
         {
             var result = TryTake(out var item);
-            return (result, item);
+            return new ValueTask<(bool success, T item)>((result, item));
         }
 
         public bool TryTake(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
@@ -83,10 +84,10 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
-        public async ValueTask<(bool success, T item)> TryTakeAsync(int millisecondsTimeout, CancellationToken cancellationToken)
+        public ValueTask<(bool success, T item)> TryTakeAsync(int millisecondsTimeout, CancellationToken cancellationToken)
         {
             var result = TryTake(out var item, millisecondsTimeout, cancellationToken);
-            return (result, item);
+            return new ValueTask<(bool success, T item)>((result, item));
         }
 
         public T Take(CancellationToken cancellationToken)
@@ -95,9 +96,9 @@ namespace Akka.TestKit.Internal
             return p.Value;
         }
 
-        public async ValueTask<T> TakeAsync(CancellationToken cancellationToken)
+        public ValueTask<T> TakeAsync(CancellationToken cancellationToken)
         {
-            return _collection.Take(cancellationToken).Value;
+            return new ValueTask<T>(_collection.Take(cancellationToken).Value);
         }
 
         #region Peek methods
@@ -116,7 +117,7 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
-        public async ValueTask<(bool success, T item)> TryPeekAsync(CancellationToken cancellationToken)
+        public ValueTask<(bool success, T item)> TryPeekAsync(CancellationToken cancellationToken)
         {
             if(_collection.TryTake(out var p))
             {
@@ -124,9 +125,9 @@ namespace Akka.TestKit.Internal
 #pragma warning disable CS0618
                 AddFirst(item);
 #pragma warning restore CS0618                
-                return (true, item);
+                return new ValueTask<(bool success, T item)>((true, item));
             }
-            return (false, default);
+            return new ValueTask<(bool success, T item)>((false, default));
         }
 
         public bool TryPeek(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
@@ -143,7 +144,7 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
-        public async ValueTask<(bool success, T item)> TryPeekAsync(int millisecondsTimeout, CancellationToken cancellationToken)
+        public ValueTask<(bool success, T item)> TryPeekAsync(int millisecondsTimeout, CancellationToken cancellationToken)
         {
             if(_collection.TryTake(out var p, millisecondsTimeout, cancellationToken))
             {
@@ -151,9 +152,9 @@ namespace Akka.TestKit.Internal
 #pragma warning disable CS0618
                 AddFirst(item);
 #pragma warning restore CS0618
-                return (true, item);
+                return new ValueTask<(bool success, T item)>((true, item));
             }
-            return (false, default);
+            return new ValueTask<(bool success, T item)>((false, default));
         }
         
         public T Peek(CancellationToken cancellationToken)
@@ -165,13 +166,13 @@ namespace Akka.TestKit.Internal
             return p.Value;
         }
 
-        public async ValueTask<T> PeekAsync(CancellationToken cancellationToken)
+        public ValueTask<T> PeekAsync(CancellationToken cancellationToken)
         {
             var val = _collection.Take(cancellationToken).Value;
 #pragma warning disable CS0618
             AddFirst(val);
 #pragma warning restore CS0618            
-            return val;
+            return new ValueTask<T>(val);
         }
         #endregion
         

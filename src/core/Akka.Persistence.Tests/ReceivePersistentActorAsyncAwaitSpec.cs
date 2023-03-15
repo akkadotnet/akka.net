@@ -533,9 +533,9 @@ namespace Akka.Persistence.Tests
 
                 RecoverAny(o => { });
 
-                CommandAsync<string>(async m =>
-                {
+                CommandAsync<string>(m => {
                     ThrowException();
+                    return Task.CompletedTask;
                 });
             }
 
@@ -599,8 +599,7 @@ namespace Akka.Persistence.Tests
 
                 RecoverAny(o => { });
 
-                CommandAsync<string>(async msg =>
-                {
+                CommandAsync<string>(msg => {
                     var sender = Sender;
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     Task.Run(() =>
@@ -612,6 +611,7 @@ namespace Akka.Persistence.Tests
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
                     Thread.Sleep(3000);
+                    return Task.CompletedTask;
                 });
             }
         }
@@ -635,7 +635,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public async Task Actor_receiveasync_overloads_should_work()
+        public Task Actor_receiveasync_overloads_should_work()
         {
             var actor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor("pid")));
 
@@ -647,8 +647,7 @@ namespace Akka.Persistence.Tests
 
             actor.Tell(1.0);
             ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000));
-
-
+            return Task.CompletedTask;
         }
     }
 }

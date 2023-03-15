@@ -173,7 +173,7 @@ namespace Akka.DistributedData.Tests
             await ReplicatorDuplicatePublish();
         }
 
-        private async Task ReplicatorDuplicatePublish()
+        private Task ReplicatorDuplicatePublish()
         {
             var p1 = CreateTestProbe(_sys1);
             var p2 = CreateTestProbe(_sys2);
@@ -205,6 +205,7 @@ namespace Akka.DistributedData.Tests
 
             // no probe should receive an update
             p2.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -217,7 +218,7 @@ namespace Akka.DistributedData.Tests
             await PNCounterDictionary_Should_Merge();
         }
 
-        private async Task PNCounterDictionary_Should_Merge()
+        private Task PNCounterDictionary_Should_Merge()
         {
             var p1 = CreateTestProbe(_sys1);
             var p2 = CreateTestProbe(_sys2);
@@ -262,6 +263,7 @@ namespace Akka.DistributedData.Tests
             });
 
             Sys.Log.Info("Done");
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -366,7 +368,7 @@ namespace Akka.DistributedData.Tests
             await ORMultiValueDictionary_Should_Merge();
         }
 
-        private async Task ORMultiValueDictionary_Should_Merge()
+        private Task ORMultiValueDictionary_Should_Merge()
         {
             var changedProbe = CreateTestProbe(_sys2);
 
@@ -475,6 +477,7 @@ namespace Akka.DistributedData.Tests
                         changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries);
                 });
             });
+            return Task.CompletedTask;
         }
 
         private void VerifyMultiValueDictionaryEntries(

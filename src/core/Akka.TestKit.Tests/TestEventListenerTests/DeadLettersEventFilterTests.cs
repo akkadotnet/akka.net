@@ -37,29 +37,29 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task Should_be_able_to_filter_dead_letters()
         {
             var eventFilter = CreateTestingEventFilter();
-            await eventFilter.DeadLetter().ExpectOneAsync(async () =>
-            {
+            await eventFilter.DeadLetter().ExpectOneAsync(() => {
                 _deadActor.Tell("whatever");
+                return Task.CompletedTask;
             });
         }
         
         [Fact]
         public async Task Should_check_properly_type_parameters()
         {
-            await EventFilter.DeadLetter<int>().And.DeadLetter<double>().ExpectAsync(2, async () =>
-            {
+            await EventFilter.DeadLetter<int>().And.DeadLetter<double>().ExpectAsync(2, () => {
                 _deadActor.Tell(5);
                 _deadActor.Tell(1.2);
+                return Task.CompletedTask;
             });
         }
 
         [Fact]
         public async Task Should_check_properly_type_parameters_when_one_of_them_string()
         {
-            await EventFilter.DeadLetter<string>().And.DeadLetter<double>().ExpectAsync(2, async () =>
-            {
+            await EventFilter.DeadLetter<string>().And.DeadLetter<double>().ExpectAsync(2, () => {
                 _deadActor.Tell("asd");
                 _deadActor.Tell(1.2);
+                return Task.CompletedTask;
             });
         }
     }

@@ -88,8 +88,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
 
         private async Task Should_startup_cluster()
         {
-            await WithinAsync(15.Seconds(), async () =>
-            {
+            await WithinAsync(15.Seconds(), () => {
                 var cluster = Cluster.Get(Sys);
                 cluster.Subscribe(TestActor, typeof(ClusterEvent.MemberUp));
                 ExpectMsg<ClusterEvent.CurrentClusterState>();
@@ -97,7 +96,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 var firstAddress = Node(_config.First).Address;
                 var secondAddress = Node(_config.Second).Address;
                 var thirdAddress = Node(_config.Third).Address;
-                
+
                 cluster.Join(firstAddress);
 
                 Sys.ActorOf(Props.Create<StatsWorker>(), "statsWorker");
@@ -105,10 +104,11 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
 
                 ReceiveN(3).Select(m => (m as ClusterEvent.MemberUp).Member.Address).Distinct()
                     .Should().BeEquivalentTo(firstAddress, secondAddress, thirdAddress);
-                
+
                 cluster.Unsubscribe(TestActor);
-                
+
                 EnterBarrier("all-up");
+                return Task.CompletedTask;
             });
         }
 

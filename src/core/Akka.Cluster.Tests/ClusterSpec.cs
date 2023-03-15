@@ -80,7 +80,7 @@ namespace Akka.Cluster.Tests
             ClusterView.Members.Count.Should().Be(0);
             _cluster.Join(_selfAddress);
             LeaderActions(); // Joining -> Up
-            await AwaitConditionAsync(async () => ClusterView.IsSingletonCluster);
+            await AwaitConditionAsync(() => Task.FromResult(ClusterView.IsSingletonCluster));
             ClusterView.Self.Address.Should().Be(_selfAddress);
             ClusterView.Members.Select(m => m.Address).ToImmutableHashSet()
                 .Should().BeEquivalentTo(ImmutableHashSet.Create(_selfAddress));
@@ -259,7 +259,7 @@ namespace Akka.Cluster.Tests
 
             // Cancelling the first task
             cts.Cancel();
-            await AwaitConditionAsync(async () => task1.IsCanceled, null, "Task should be cancelled");
+            await AwaitConditionAsync(() => Task.FromResult(task1.IsCanceled), null, "Task should be cancelled");
 
             await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
@@ -274,12 +274,12 @@ namespace Akka.Cluster.Tests
                 ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
 
                 // Second task should complete (not cancelled)
-                await AwaitConditionAsync(async () => task2.IsCompleted && !task2.IsCanceled, null, "Task should be completed, but not cancelled.");
+                await AwaitConditionAsync(() => Task.FromResult(task2.IsCompleted && !task2.IsCanceled), null, "Task should be completed, but not cancelled.");
             }, cancellationToken: cts.Token);
 
             // Subsequent LeaveAsync() tasks expected to complete immediately (not cancelled)
             var task3 = _cluster.LeaveAsync();
-            await AwaitConditionAsync(async () => task3.IsCompleted && !task3.IsCanceled, null, "Task should be completed, but not cancelled.");
+            await AwaitConditionAsync(() => Task.FromResult(task3.IsCompleted && !task3.IsCanceled), null, "Task should be completed, but not cancelled.");
         }
 
         [Fact]

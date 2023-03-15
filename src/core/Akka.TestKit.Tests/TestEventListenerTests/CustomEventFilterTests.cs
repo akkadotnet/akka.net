@@ -27,9 +27,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
             var eventFilter = CreateTestingEventFilter();
             await eventFilter.Custom(logEvent => logEvent is Error && (string) logEvent.Message == "whatever")
-                .ExpectOneAsync(async () =>
-                {
+                .ExpectOneAsync(() => {
                     Log.Error("whatever");
+                    return Task.CompletedTask;
                 });
         }
 
@@ -38,9 +38,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
             var eventFilter = CreateTestingEventFilter();
             await eventFilter.Custom<Error>(logEvent => (string)logEvent.Message == "whatever")
-                .ExpectOneAsync(async () =>
-                {
+                .ExpectOneAsync(() => {
                     Log.Error("whatever");
+                    return Task.CompletedTask;
                 });
         }
     }

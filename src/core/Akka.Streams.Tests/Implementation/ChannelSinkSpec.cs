@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Implementation
         #region from writer
 
         [Fact]
-        public async Task ChannelSink_writer_when_isOwner_should_complete_channel_with_success_when_upstream_completes()
+        public Task ChannelSink_writer_when_isOwner_should_complete_channel_with_success_when_upstream_completes()
         {
             var probe = this.CreateManualPublisherProbe<int>();
             var channel = Channel.CreateBounded<int>(10);
@@ -44,6 +44,7 @@ namespace Akka.Streams.Tests.Implementation
             subscription.SendComplete();
 
             channel.Reader.Completion.Wait(1.Seconds()).Should().BeTrue();
+            return Task.CompletedTask;
         }
 
         [Fact]
@@ -158,7 +159,7 @@ namespace Akka.Streams.Tests.Implementation
         #region as reader
 
         [Fact]
-        public async Task ChannelSink_reader_should_complete_channel_with_success_when_upstream_completes()
+        public Task ChannelSink_reader_should_complete_channel_with_success_when_upstream_completes()
         {
             var probe = this.CreateManualPublisherProbe<int>();
 
@@ -170,6 +171,7 @@ namespace Akka.Streams.Tests.Implementation
             subscription.SendComplete();
 
             reader.Completion.Wait(1.Seconds()).Should().BeTrue();
+            return Task.CompletedTask;
         }
 
         [Fact]

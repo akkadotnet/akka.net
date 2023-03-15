@@ -234,7 +234,7 @@ namespace Akka.Remote.Tests
              * Wait for the ReliableDeliverySupervisor to receive its "TooLongIdle" message,
              * which will throw a HopelessAssociation wrapped around a TimeoutException.
              */
-            await EventFilter.Exception<TimeoutException>().ExpectOneAsync(async () => { });
+            await EventFilter.Exception<TimeoutException>().ExpectOneAsync(() => { return Task.CompletedTask; });
 
             await AwaitAssertAsync(() =>
             {

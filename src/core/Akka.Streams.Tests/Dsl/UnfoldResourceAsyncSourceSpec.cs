@@ -457,8 +457,7 @@ namespace Akka.Streams.Tests.Dsl
             // use a separate materializer to ensure we know what child is our stream
             var materializer = Sys.Materializer();
             
-            await this.AssertAllStagesStoppedAsync(async () =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var tcs = new TaskCompletionSource<Task>();
                 try
                 {
@@ -478,6 +477,8 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     tcs.TrySetResult(Task.CompletedTask);
                 }
+
+                return Task.CompletedTask;
             }, materializer);
         }
 
