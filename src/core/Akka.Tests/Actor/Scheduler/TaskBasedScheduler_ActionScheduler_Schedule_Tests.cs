@@ -286,7 +286,7 @@ namespace Akka.Tests.Actor.Scheduler
                     Interlocked.Increment(ref timesCalled);
                     throw new Exception("Crash");
                 });
-                await AwaitConditionAsync(async () => timesCalled >= 1);
+                await AwaitConditionAsync(() => Task.FromResult(timesCalled >= 1));
                 await Task.Delay(200); //Allow any scheduled actions to be fired. 
 
                 //We expect only one of the scheduled actions to actually fire

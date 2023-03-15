@@ -148,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
                 await c.ExpectNextAsync("tick");
                 
                 cancelable.Cancel();
-                await AwaitConditionAsync(async () => cancelable.IsCancellationRequested);
+                await AwaitConditionAsync(() => Task.FromResult(cancelable.IsCancellationRequested));
                 
                 sub.Request(3);
                 await c.ExpectCompleteAsync();

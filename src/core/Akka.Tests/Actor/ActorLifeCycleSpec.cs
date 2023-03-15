@@ -202,10 +202,10 @@ namespace Akka.Tests
         public async Task Log_failures_in_PostStop()
         {
             var a = Sys.ActorOf<EmptyActor>();
-            await EventFilter.Exception<Exception>(message: "hurrah").ExpectOneAsync(async () =>
-                {
-                    a.Tell(PoisonPill.Instance);
-                });            
+            await EventFilter.Exception<Exception>(message: "hurrah").ExpectOneAsync(() => {
+                a.Tell(PoisonPill.Instance);
+                return Task.CompletedTask;
+            });            
         }
 
         public class Become

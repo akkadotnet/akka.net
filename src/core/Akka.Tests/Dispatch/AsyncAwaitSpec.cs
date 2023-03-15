@@ -484,8 +484,7 @@ namespace Akka.Tests.Dispatch
         {
             public AsyncReentrantActor()
             {
-                ReceiveAsync<string>(async msg =>
-                {
+                ReceiveAsync<string>(msg => {
                     var sender = Sender;
 #pragma warning disable CS4014
                     Task.Run(() =>
@@ -497,6 +496,7 @@ namespace Akka.Tests.Dispatch
 #pragma warning restore CS4014
 
                     Thread.Sleep(3000);
+                    return Task.CompletedTask;
                 });
             }
             
