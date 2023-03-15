@@ -33,7 +33,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task SingleExceptionIsIntercepted()
         {
             await EventFilter.Exception<SomeException>()
-                .ExpectOneAsync(async () => Log.Error(new SomeException(), "whatever"));
+                .ExpectOneAsync(() => { Log.Error(new SomeException(), "whatever"); return Task.CompletedTask; });
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
 
@@ -41,7 +41,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task CanInterceptMessagesWhenStartIsSpecified()
         {
             await EventFilter.Exception<SomeException>(start: "what")
-                .ExpectOneAsync(async () => Log.Error(new SomeException(), "whatever"));
+                .ExpectOneAsync(() => { Log.Error(new SomeException(), "whatever"); return Task.CompletedTask; });
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
 
@@ -57,7 +57,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task CanInterceptMessagesWhenMessageIsSpecified()
         {
             await EventFilter.Exception<SomeException>(message: "whatever")
-                .ExpectOneAsync(async () => Log.Error(new SomeException(), "whatever"));
+                .ExpectOneAsync(() => { Log.Error(new SomeException(), "whatever"); return Task.CompletedTask; });
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
 
@@ -73,7 +73,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task CanInterceptMessagesWhenContainsIsSpecified()
         {
             await EventFilter.Exception<SomeException>(contains: "ate")
-                .ExpectOneAsync(async () => Log.Error(new SomeException(), "whatever"));
+                .ExpectOneAsync(() => { Log.Error(new SomeException(), "whatever"); return Task.CompletedTask; });
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
 
@@ -90,7 +90,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task CanInterceptMessagesWhenSourceIsSpecified()
         {
             await EventFilter.Exception<SomeException>(source: LogSource.Create(this, Sys).Source)
-                .ExpectOneAsync(async () => Log.Error(new SomeException(), "whatever"));
+                .ExpectOneAsync(() => { Log.Error(new SomeException(), "whatever"); return Task.CompletedTask; });
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
 
@@ -107,10 +107,10 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task SpecifiedNumbersOfExceptionsCanBeIntercepted()
         {
             await EventFilter.Exception<SomeException>()
-                .ExpectAsync(2, async () =>
-                {
+                .ExpectAsync(2, () => {
                     Log.Error(new SomeException(), "whatever");
                     Log.Error(new SomeException(), "whatever");
+                    return Task.CompletedTask;
                 });
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
@@ -120,11 +120,11 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
             await Awaiting(async () =>
                 {
-                    await EventFilter.Exception<SomeException>().ExpectAsync(2, async () =>
-                    {
+                    await EventFilter.Exception<SomeException>().ExpectAsync(2, () => {
                         Log.Error(new SomeException(), "whatever");
                         Log.Error(new SomeException(), "whatever");
                         Log.Error(new SomeException(), "whatever");
+                        return Task.CompletedTask;
                     });                    
                 })
                 .Should().ThrowAsync<TrueException>().WithMessage("Received 1 message too many.*");
@@ -139,7 +139,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             await EventFilter
                 .Exception<InvalidOperationException>(source: actor.Path.ToString())
                 // expecting 2 because the same exception is logged in PostRestart
-                .ExpectAsync(2, async () => actor.Tell( toSend ));
+                .ExpectAsync(2, () => { actor.Tell( toSend ); return Task.CompletedTask; });
         }
 
         internal sealed class ExceptionTestActor : UntypedActor

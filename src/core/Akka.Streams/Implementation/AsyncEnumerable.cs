@@ -68,13 +68,14 @@ namespace Akka.Streams.Dsl
             _killSwitch = queueAndSwitch.killSwitch;
             _token = token;
         }
-        public async ValueTask DisposeAsync()
+        public ValueTask DisposeAsync()
         {
             //If we are disposing, let's shut down the stream
             //so that we don't have data hanging around.
             _killSwitch.Shutdown();
             _killSwitch = null;
             _sinkQueue = null;
+            return new ValueTask();
         }
 
         public async ValueTask<bool> MoveNextAsync()

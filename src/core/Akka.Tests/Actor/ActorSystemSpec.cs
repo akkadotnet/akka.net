@@ -78,7 +78,7 @@ namespace Akka.Tests.Actor
 
             // Notice here we forcedly start actor system again to monitor how it processes
             var expected = "log-config-on-start : on";
-            await eventFilter.Info(contains:expected).ExpectOneAsync(async () => system.Start());
+            await eventFilter.Info(contains:expected).ExpectOneAsync(() => { system.Start(); return Task.CompletedTask; });
 
             await system.Terminate();
         }
@@ -96,7 +96,7 @@ namespace Akka.Tests.Actor
             var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
-            await eventFilter.Info().ExpectAsync(0, async () => system.Start());
+            await eventFilter.Info().ExpectAsync(0, () => { system.Start(); return Task.CompletedTask; });
 
             await system.Terminate();
         }
@@ -120,10 +120,10 @@ namespace Akka.Tests.Actor
                 var a = sys.ActorOf(Props.Create<Terminater>());
 
                 var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(sys));
-                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, async () =>
-                {
+                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, () => {
                     a.Tell("run");
                     a.Tell("boom");
+                    return Task.CompletedTask;
                 });
             }
             finally { Shutdown(sys); }

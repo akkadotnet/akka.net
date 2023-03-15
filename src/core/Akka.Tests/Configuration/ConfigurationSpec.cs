@@ -100,7 +100,6 @@ namespace Akka.Tests.Configuration
             Output.WriteLine("This test is skipped.");
 #endif
         }
-
     }
 
 }

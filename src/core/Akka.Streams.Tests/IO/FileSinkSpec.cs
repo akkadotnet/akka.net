@@ -313,7 +313,7 @@ namespace Akka.Streams.Tests.IO
                 // LazySink must wait for result of initialization even if got UpstreamComplete
                 TargetFile(f => 
                 {
-                    var lazySink = Sink.LazyInitAsync(async () => FileIO.ToFile(f))
+                    var lazySink = Sink.LazyInitAsync(() => Task.FromResult(FileIO.ToFile(f)))
                         // map a Task<Option<Task<IOResult>>> into a Task<IOResult>
                         .MapMaterializedValue(t => t.Result.GetOrElse(Task.FromResult(IOResult.Success(0))));
 
