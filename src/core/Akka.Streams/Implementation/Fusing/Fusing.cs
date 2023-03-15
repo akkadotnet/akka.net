@@ -85,7 +85,9 @@ namespace Akka.Streams.Implementation.Fusing
                 Attributes.None,
                 info);
 
+#pragma warning disable CS0162 // Unreachable code detected
             if (StreamLayout.IsDebug) StreamLayout.Validate(module);
+#pragma warning restore CS0162 // Unreachable code detected
             if (IsDebug) Console.WriteLine(module.ToString());
 
             return new Streams.Fusing.FusedGraph<TShape, TMat>(module, (TShape) shape);
