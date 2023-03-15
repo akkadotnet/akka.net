@@ -247,9 +247,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_finish_after_task_failure()
+        public async Task A_Flow_with_SelectAsync_must_finish_after_task_failure()
         {
-            this.AssertAllStagesStopped(async() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var t = Source.From(Enumerable.Range(1, 3))
                     .SelectAsync(1, n => Task.Run(() =>
@@ -262,7 +262,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 
-                var complete = t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.ShouldCompleteWithin(3.Seconds());
                 complete.Should().BeEquivalentTo(new[] { 1, 2 });
             }, Materializer);
         }

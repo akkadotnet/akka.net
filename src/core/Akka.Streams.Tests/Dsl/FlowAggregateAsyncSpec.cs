@@ -281,11 +281,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_finish_after_task_failure()
+        public async Task A_AggregateAsync_must_finish_after_task_failure()
         {
-            this.AssertAllStagesStopped(async() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
-                var complete = Source.From(Enumerable.Range(1, 3)).AggregateAsync(1, (_, n) => Task.Run(() =>
+                var complete = await Source.From(Enumerable.Range(1, 3)).AggregateAsync(1, (_, n) => Task.Run(() =>
                     {
                         if (n == 3)
                             throw new Exception("err3b");
