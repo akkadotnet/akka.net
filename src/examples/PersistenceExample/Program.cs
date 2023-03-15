@@ -27,8 +27,6 @@ namespace PersistenceExample
 
                 //SnapshotedActor(system);
 
-                //ViewExample(system);
-
                 AtLeastOnceDelivery(system);
 
                 Console.ReadLine();
@@ -61,16 +59,6 @@ namespace PersistenceExample
             Console.WriteLine("\nSYSTEM: Enabled confirmations\n");
             delivery.Tell("start");
             
-        }
-
-        private static void ViewExample(ActorSystem system)
-        {
-            Console.WriteLine("\n--- PERSISTENT VIEW EXAMPLE ---\n");
-            var pref = system.ActorOf(Props.Create<ViewExampleActor>());
-            var view = system.ActorOf(Props.Create<ExampleView>());
-
-            system.Scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, TimeSpan.FromSeconds(2), pref, "scheduled", ActorRefs.NoSender);
-            system.Scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, TimeSpan.FromSeconds(5), view, "snap", ActorRefs.NoSender);
         }
 
         private static void SnapshotedActor(ActorSystem system)
