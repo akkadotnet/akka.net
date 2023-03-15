@@ -8,21 +8,22 @@
 using Akka.Util;
 using Xunit;
 
-namespace Akka.Tests.Util;
-
-public class Base64EncodingSpec
+namespace Akka.Tests.Util
 {
-    [Fact]
-    public void When_prefix_is_null_it_should_work_correctly()
+    public class Base64EncodingSpec
     {
-        var actual = Base64Encoding.Base64Encode(12345, null);
-        Assert.Equal("5ad", actual);
-    }
+        [Fact]
+        public void When_prefix_is_null_it_should_work_correctly()
+        {
+            var actual = Base64Encoding.Base64Encode(12345, (string)null);
+            Assert.Equal("5ad", actual);
+        }
     
-    [Fact]
-    public void Should_calculate_base_64_correctly()
-    {
-        var actual = Base64Encoding.Base64Encode(12345, "");
-        Assert.Equal("5ad", actual);
+        [Fact]
+        public void Should_calculate_base_64_correctly()
+        {
+            var actual = Base64Encoding.Base64Encode(12345, "");
+            Assert.Equal("5ad", actual);
+        }
     }
 }
