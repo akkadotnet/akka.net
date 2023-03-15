@@ -74,10 +74,6 @@ namespace Akka.Remote.Tests.Transport
 
                     backoff-interval = 1 s
 
-                    require-cookie = off
-
-                    secure-cookie = ""abcde""
-
                     shutdown-timeout = 5 s
 
                     startup-timeout = 5 s
