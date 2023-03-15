@@ -39,10 +39,10 @@ namespace Akka.TestKit
             WithinAsync(
                     min: TimeSpan.Zero,
                     max: max,
-                    function: async () =>
+                    function: () =>
                     {
                         action();
-                        return NotUsed.Instance;
+                        return Task.FromResult(NotUsed.Instance);
                     },
                     hint: null,
                     epsilonValue: epsilonValue,
@@ -98,10 +98,10 @@ namespace Akka.TestKit
             WithinAsync(
                     min: min, 
                     max: max, 
-                    function: async () =>
+                    function: () =>
                     {
                         action();
-                        return NotUsed.Instance;
+                        return Task.FromResult(NotUsed.Instance);
                     }, 
                     hint: hint, 
                     epsilonValue: epsilonValue, 
@@ -157,7 +157,7 @@ namespace Akka.TestKit
             return WithinAsync(
                     min: TimeSpan.Zero,
                     max: max,
-                    function: async () => function(),
+                    function: () => Task.FromResult(function()),
                     hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
@@ -219,7 +219,7 @@ namespace Akka.TestKit
             return WithinAsync(
                     min: min,
                     max: max,
-                    function: async () => function(),
+                    function: () => Task.FromResult(function()),
                     hint: hint,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)

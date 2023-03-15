@@ -331,8 +331,7 @@ namespace Akka.Serialization
 
         private static object TranslateSurrogate(object deserializedValue, NewtonSoftJsonSerializer parent, Type type)
         {
-            var j = deserializedValue as JObject;
-            if (j != null)
+            if (deserializedValue is JObject j)
             {
                 //The JObject represents a special akka.net wrapper for primitives (int,float,decimal) to preserve correct type when deserializing
                 if (j["$"] != null)
@@ -341,17 +340,50 @@ namespace Akka.Serialization
                     return GetValue(value);
                 }
 
+                // Bug: #6502 Newtonsoft could not deserialize pure JObject inside an object payload.
+                // If type is `object`, deep-convert object and return as is.
+                if (type == typeof(object))
+                {
+                    return RestoreJToken(j);
+                }
+                
                 //The JObject is not of our concern, let Json.NET deserialize it.
                 return j.ToObject(type, parent._serializer);
             }
-            var surrogate = deserializedValue as ISurrogate;
 
             //The deserialized object is a surrogate, unwrap it
-            if (surrogate != null)
+            if (deserializedValue is ISurrogate surrogate)
             {
                 return surrogate.FromSurrogate(parent.system);
             }
             return deserializedValue;
+        }
+
+        private static JToken RestoreJToken(JToken value)
+        {
+            switch (value)
+            {
+                case JObject obj:
+                    if (obj["$"] != null)
+                    {
+                        var v = obj["$"].Value<string>();
+                        return new JValue(GetValue(v));
+                    }
+                    var dict = (IDictionary<string, JToken>)obj;
+                    foreach (var kvp in dict)
+                    {
+                        dict[kvp.Key] = RestoreJToken(kvp.Value);
+                    }
+                    return obj;
+                case JArray arr:
+                    for (var i = 0; i < arr.Count; i++)
+                    {
+                        arr[i] = RestoreJToken(arr[i]);
+                    }
+                    return arr;
+                default:
+                    return value;
+            }
         }
 
         private static object GetValue(string V)

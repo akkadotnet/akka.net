@@ -227,9 +227,9 @@ namespace Akka.Remote.Tests.Transport
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
 
-            var aggregateException = await Assert.ThrowsAsync<AggregateException>(async () =>
-            {
+            var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => {
                 Setup(true, null, Password);
+                return Task.CompletedTask;
             });
 
             var realException = GetInnerMostException<ArgumentNullException>(aggregateException);
@@ -243,9 +243,9 @@ namespace Akka.Remote.Tests.Transport
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
 
-            var aggregateException = await Assert.ThrowsAsync<AggregateException>(async () =>
-            {
+            var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => {
                 Setup(true, ValidCertPath, null);
+                return Task.CompletedTask;
             });
 
             var realException = GetInnerMostException<CryptographicException>(aggregateException);

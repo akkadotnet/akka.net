@@ -95,8 +95,10 @@ namespace Akka.Tests.Actor {
             a.Tell("state");
             await ExpectMsgAsync("1");
 
-            await EventFilter.Exception<Exception>("Crash (expected)!").ExpectAsync(1, async () => {
+            await EventFilter.Exception<Exception>("Crash (expected)!").ExpectAsync(1, () =>
+            {
                 a.Tell("crash");
+                return Task.CompletedTask;
             });
 
             a.Tell("state");
