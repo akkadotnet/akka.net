@@ -33,9 +33,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
             await EventFilter
                 .Info(new Regex("^Unhandled message from"))
-                .ExpectOneAsync(async () =>
-                {
+                .ExpectOneAsync(() => {
                     _unhandledMessageActor.Tell("whatever");
+                    return Task.CompletedTask;
                 });
         }
         
@@ -46,9 +46,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
                 .Warning()
                 .And
                 .Error()
-                .ExpectAsync(0, async () =>
-                {
+                .ExpectAsync(0, () => {
                     _unhandledMessageActor.Tell("whatever");
+                    return Task.CompletedTask;
                 });
         }
     }

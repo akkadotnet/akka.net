@@ -95,7 +95,7 @@ namespace Akka.Tests.Actor
                 await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
                 //The inbox is full. Sending another message should result in a Warning message
-                await EventFilter.Warning(start: "Dropping message").ExpectOneAsync(async () => _inbox.Receiver.Tell(42));
+                await EventFilter.Warning(start: "Dropping message").ExpectOneAsync(() => { _inbox.Receiver.Tell(42); return Task.CompletedTask; });
 
                 //The inbox is still full. But since the warning message has already been sent, no more warnings should be sent
                 _inbox.Receiver.Tell(42);

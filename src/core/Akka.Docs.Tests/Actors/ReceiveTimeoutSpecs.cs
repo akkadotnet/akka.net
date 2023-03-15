@@ -47,7 +47,7 @@ namespace DocsExamples.Actors
         // </ReceiveTimeoutActor>
 
         [Fact]
-        public async Task ShouldReceiveTimeoutActors()
+        public Task ShouldReceiveTimeoutActors()
         {
             var receiveTimeout = Sys.ActorOf(
                 Props.Create(() => new ReceiveTimeoutActor(TimeSpan.FromMilliseconds(100), TestActor)), 
@@ -58,6 +58,7 @@ namespace DocsExamples.Actors
             
             // then should receive timeout due to inactivity
             ExpectMsg("timeout", TimeSpan.FromSeconds(30));
+            return Task.CompletedTask;
         }
     }
 }

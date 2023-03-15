@@ -45,7 +45,7 @@ namespace Akka.TestKit.Internal
         /// <param name="cancellationToken"></param>
         public void ExpectOne(Action action, CancellationToken cancellationToken = default)
         {
-            ExpectOneAsync(async () => action(), cancellationToken)
+            ExpectOneAsync(() => { action(); return Task.CompletedTask; }, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
         
@@ -97,7 +97,7 @@ namespace Akka.TestKit.Internal
             Action action,
             CancellationToken cancellationToken = default)
         {
-            ExpectOneAsync(timeout, async () => action(), cancellationToken)
+            ExpectOneAsync(timeout, () => { action(); return Task.CompletedTask; }, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
         
@@ -130,7 +130,7 @@ namespace Akka.TestKit.Internal
             Action action,
             CancellationToken cancellationToken = default)
         {
-            ExpectAsync(expectedCount, async () => action(), cancellationToken)
+            ExpectAsync(expectedCount, () => { action(); return Task.CompletedTask; }, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
 
@@ -180,7 +180,7 @@ namespace Akka.TestKit.Internal
             Action action,
             CancellationToken cancellationToken = default)
         {
-            ExpectAsync(expectedCount, timeout, async () => action(), cancellationToken)
+            ExpectAsync(expectedCount, timeout, () => { action(); return Task.CompletedTask; }, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken); 
         }
         
@@ -222,7 +222,7 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         public T ExpectOne<T>(Func<T> func, CancellationToken cancellationToken = default)
         {
-            return ExpectOneAsync(async () => func(), cancellationToken)
+            return ExpectOneAsync(() => Task.FromResult(func()), cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
         
@@ -255,7 +255,7 @@ namespace Akka.TestKit.Internal
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
-            return ExpectOneAsync(timeout, async () => func(), cancellationToken)
+            return ExpectOneAsync(timeout, () => Task.FromResult(func()), cancellationToken)
                 .WaitAndUnwrapException();
         }
         
@@ -290,7 +290,7 @@ namespace Akka.TestKit.Internal
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
-            return ExpectAsync(expectedCount, async () => func(), cancellationToken)
+            return ExpectAsync(expectedCount, () => Task.FromResult(func()), cancellationToken)
                 .WaitAndUnwrapException();
         }
 
@@ -327,7 +327,7 @@ namespace Akka.TestKit.Internal
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
-            return ExpectAsync(expectedCount, timeout, async () => func(), cancellationToken)
+            return ExpectAsync(expectedCount, timeout, () => Task.FromResult(func()), cancellationToken)
                 .WaitAndUnwrapException();
         }
         
@@ -360,7 +360,7 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         public T Mute<T>(Func<T> func, CancellationToken cancellationToken = default)
         {
-            return MuteAsync(async () => func(), cancellationToken)
+            return MuteAsync(() => Task.FromResult(func()), cancellationToken)
                 .WaitAndUnwrapException();
         }
         
@@ -386,7 +386,7 @@ namespace Akka.TestKit.Internal
         /// <param name="cancellationToken"></param>
         public void Mute(Action action, CancellationToken cancellationToken = default)
         {
-            MuteAsync(async () => action(), cancellationToken)
+            MuteAsync(() => { action(); return Task.CompletedTask; }, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
         
@@ -461,7 +461,7 @@ namespace Akka.TestKit.Internal
             CancellationToken cancellationToken = default)
         {
             return InterceptAsync(
-                    func: async () => func(),
+                    func: () => Task.FromResult(func()),
                     system: system,
                     timeout: timeout,
                     expectedOccurrences: expectedOccurrences,
@@ -569,13 +569,13 @@ namespace Akka.TestKit.Internal
                 var expected = expectedOccurrences.GetValueOrDefault();
                 if (expected > 0)
                 {
-                    await _testkit.AwaitConditionNoThrowAsync(async () => matchedEventHandler.ReceivedCount >= expected, timeout, cancellationToken: cancellationToken);
+                    await _testkit.AwaitConditionNoThrowAsync(() => Task.FromResult(matchedEventHandler.ReceivedCount >= expected), timeout, cancellationToken: cancellationToken);
                     return matchedEventHandler.ReceivedCount == expected;
                 }
                 else
                 {
                     // if expecting no events to arrive - assert that given condition will never match
-                    var foundEvent = await _testkit.AwaitConditionNoThrowAsync(async () => matchedEventHandler.ReceivedCount > 0, timeout, cancellationToken: cancellationToken);
+                    var foundEvent = await _testkit.AwaitConditionNoThrowAsync(() => Task.FromResult(matchedEventHandler.ReceivedCount > 0), timeout, cancellationToken: cancellationToken);
                     return foundEvent == false;
                 }
             }

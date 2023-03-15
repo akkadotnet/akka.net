@@ -125,19 +125,19 @@ namespace Akka.Tests.Actor
 
             var bserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
 
-            await AwaitConditionAsync(async () =>
+            await AwaitConditionAsync(() =>
             {
-                var bref = (IActorRef) bserializer.FromBinary(binary, typeof (IActorRef));
+                var bref = (IActorRef)bserializer.FromBinary(binary, typeof(IActorRef));
                 try
                 {
-                    bref.GetType().ShouldBe(typeof (EmptyLocalActorRef));
+                    bref.GetType().ShouldBe(typeof(EmptyLocalActorRef));
                     bref.Path.ShouldBe(aref.Path);
 
-                    return true;
+                    return Task.FromResult(true);
                 }
                 catch (Exception)
                 {
-                    return false;
+                    return Task.FromResult(false);
                 }
             });
         }
@@ -145,8 +145,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task An_ActorRef_should_restart_when_Killed()
         {
-            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async () =>
-            {
+            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(() => {
                 var latch = CreateTestLatch(2);
                 var boss = ActorOf(a =>
                 {
@@ -155,7 +154,7 @@ namespace Akka.Tests.Actor
                         c.ReceiveAny((msg, ctx) => { });
                         c.OnPreRestart = (reason, msg, ctx) =>
                         {
-                            latch.CountDown(); 
+                            latch.CountDown();
                             c.DefaultPreRestart(reason, msg);
                         };
                         c.OnPostRestart = (reason, ctx) =>
@@ -164,12 +163,13 @@ namespace Akka.Tests.Actor
                             c.DefaultPostRestart(reason);
                         };
                     });
-                    a.Strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), r=> Directive.Restart);
+                    a.Strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), r => Directive.Restart);
                     a.Receive<string>((_, ctx) => child.Tell(Kill.Instance));
                 });
 
                 boss.Tell("send kill");
                 latch.Ready(TimeSpan.FromSeconds(5));
+                return Task.CompletedTask;
             });
         }
 
@@ -304,7 +304,7 @@ namespace Akka.Tests.Actor
         {          
             var actor = ActorOfAsTestActorRef<NonPublicActor>(Props.Create<NonPublicActor>(SupervisorStrategy.StoppingStrategy));
             // actors with a null sender should always write to deadletters
-            await EventFilter.DeadLetter<object>().ExpectOneAsync(async () => actor.Tell(new object(), null));
+            await EventFilter.DeadLetter<object>().ExpectOneAsync(() => { actor.Tell(new object(), null); return Task.CompletedTask; });
 
             // will throw an exception if there's a bug
             await ExpectNoMsgAsync(default);
