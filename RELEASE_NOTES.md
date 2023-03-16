@@ -1,3 +1,15 @@
+#### 1.4.50 March 15th 2023 ####
+
+* [Query.Sql: Fix PersistenceIdPublisher froze on failure messages](https://github.com/akkadotnet/akka.net/pull/6375)
+* [Akka: Improve DeadLetter log message](https://github.com/akkadotnet/akka.net/pull/6492)
+* [Akka: Fix StackOverflow exception in NewtonsoftJsonSerializer](https://github.com/akkadotnet/akka.net/pull/6522)
+* [Akka.Persistence: Add Persistence.Query support to InMemory journal](https://github.com/akkadotnet/akka.net/pull/6520)
+* [Akka: Fix bugs reported by PVS-Studio static analyzer](https://github.com/akkadotnet/akka.net/pull/6521)
+
+| COMMITS | LOC+ | LOC-  | AUTHOR              |
+|---------|------|-------|---------------------|
+| 6       | 2402 | 241   | Gregorius Soedharmo |
+
 #### 1.4.49 January 26th 2023 ####
 Akka.NET v1.4.49 includes some new core Akka.NET APIs and bug fixes to fundamental `Akka.Actor` behavior.
 

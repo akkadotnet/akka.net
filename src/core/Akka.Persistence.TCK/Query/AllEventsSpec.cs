@@ -69,7 +69,6 @@ namespace Akka.Persistence.TCK.Query
             probe.Cancel();
         }
 
-
         [Fact]
         public virtual void ReadJournal_query_AllEvents_should_find_events_from_offset_exclusive()
         {

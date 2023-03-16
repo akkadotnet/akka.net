@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\..\common.props" />
+    <Import Project="..\..\..\xunitSettings.props" />
+
+    <PropertyGroup>
+        <AssemblyTitle>Akka.Persistence.Query.InMemory.Tests</AssemblyTitle>
+        <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion);$(NetTestVersion)</TargetFrameworks>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\core\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj" />
+      <ProjectReference Include="..\Akka.Persistence.Query.InMemory\Akka.Persistence.Query.InMemory.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+      <PackageReference Include="xunit" Version="$(XunitVersion)" />
+      <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
+      <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    </ItemGroup>
+
+</Project>

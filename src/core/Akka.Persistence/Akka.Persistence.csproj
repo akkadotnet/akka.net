@@ -6,6 +6,7 @@
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <LangVersion>10</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="persistence.conf" />

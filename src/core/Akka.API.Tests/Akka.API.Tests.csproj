@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Metrics\Akka.Cluster.Metrics.csproj" />
     <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
     <ProjectReference Include="..\..\contrib\cluster\Akka.DistributedData\Akka.DistributedData.csproj" />
+    <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.InMemory\Akka.Persistence.Query.InMemory.csproj" />
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj" />
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
     <ProjectReference Include="..\Akka.Coordination\Akka.Coordination.csproj" />
