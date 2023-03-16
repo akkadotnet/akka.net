@@ -313,8 +313,6 @@ namespace Akka.DistributedData
         private ImmutableSortedSet<Address> _exitingNodes = ImmutableSortedSet<Address>.Empty;
 
         private ImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
-        private ImmutableDictionary<UniqueAddress, long> _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
-        private ImmutableHashSet<UniqueAddress> _tombstonedNodes = ImmutableHashSet<UniqueAddress>.Empty;
 
         /// <summary>
         /// All nodes sorted with the leader first
