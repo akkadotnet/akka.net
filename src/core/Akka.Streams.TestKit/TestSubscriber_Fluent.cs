@@ -66,7 +66,6 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Fluent DSL. Expect multiple stream elements.
             /// </summary>
-            [Obsolete("Use the method with CancellationToken support instead")]
             public ManualProbe<T> ExpectNext(params T[] elems)
             {
                 ExpectNextTask(this, null, default, elems)

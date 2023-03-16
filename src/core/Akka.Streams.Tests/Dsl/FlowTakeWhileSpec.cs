@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
@@ -35,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
                     .TakeWhile(i => i < 3)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
-                    .ExpectNext(1, 2)
+                    .ExpectNext( 1, 2)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -69,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(4)
-                    .ExpectNext(1, 2, 4)
+                    .ExpectNext( 1, 2, 4)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -83,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
                 .TakeWhile(i => i < 3, true)
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .Request(4)
-                .ExpectNext(1, 2, 3)
+                .ExpectNext( 1, 2, 3)
                 .ExpectComplete();
             }, Materializer);
         }

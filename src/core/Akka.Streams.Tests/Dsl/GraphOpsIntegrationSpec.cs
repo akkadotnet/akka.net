@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -227,7 +228,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sub = s.ExpectSubscription();
             sub.Request(10);
-            s.ExpectNext(1*2, 2*2, 3*2).ExpectComplete();
+            s.ExpectNext( 1 *2, 2*2, 3*2).ExpectComplete();
         }
 
         [Fact]

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.Util;
@@ -80,7 +81,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Recover(_ => Option<int>.Create(0))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
-                    .ExpectNext(1, 2, 3)
+                    .ExpectNext( 1, 2, 3)
                     .ExpectComplete();
             }, Materializer);
         }
