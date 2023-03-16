@@ -33,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
             var probe = t.Item2;
 
             probe.Request(3)
-                .ExpectNext(1, 2, 3)
+                .ExpectNext( 1, 2, 3)
                 .ExpectComplete();
 
             var complete = await lastElement.ShouldCompleteWithin(TimeSpan.FromSeconds(1));

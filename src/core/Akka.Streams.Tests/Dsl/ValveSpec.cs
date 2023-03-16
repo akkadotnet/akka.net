@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
             sourceProbe.SendNext(3);
             sourceProbe.SendComplete();
 
-            sinkProbe.ExpectNext(2, 3);
+            sinkProbe.ExpectNext( 2, 3);
 
             sinkProbe.ExpectComplete();
         }
@@ -253,7 +253,7 @@ namespace Akka.Streams.Tests.Dsl
             sourceProbe.SendNext(3);
             sourceProbe.SendComplete();
 
-            sinkProbe.ExpectNext(2, 3);
+            sinkProbe.ExpectNext( 2, 3);
 
             sinkProbe.ExpectComplete();
         }

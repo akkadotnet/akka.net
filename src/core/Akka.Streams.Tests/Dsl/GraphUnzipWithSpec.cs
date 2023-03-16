@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
@@ -101,7 +102,7 @@ namespace Akka.Streams.Tests.Dsl
                 leftSubscription.Request(2);
                 rightSubscription.Request(1);
 
-                leftProbe.ExpectNext(2, 4);
+                leftProbe.ExpectNext( 2, 4);
                 leftProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                 rightProbe.ExpectNext("1+1");
@@ -113,7 +114,7 @@ namespace Akka.Streams.Tests.Dsl
                 leftProbe.ExpectNext(6);
                 leftProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-                rightProbe.ExpectNext("2+2", "3+3");
+                rightProbe.ExpectNext( "2+2", "3+3");
                 rightProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                 leftSubscription.Request(1);

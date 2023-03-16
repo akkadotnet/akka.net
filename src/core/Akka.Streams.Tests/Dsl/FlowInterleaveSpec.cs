@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
@@ -68,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 probe.ExpectSubscription().Request(10);
-                probe.ExpectNext(0, 1, 3, 4, 2, 5);
+                probe.ExpectNext( 0, 1, 3, 4, 2, 5);
                 probe.ExpectComplete();
             }, Materializer);
         }
@@ -85,7 +86,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 probe.ExpectSubscription().Request(10);
-                probe.ExpectNext(0, 3, 1, 4, 2, 5);
+                probe.ExpectNext( 0, 3, 1, 4, 2, 5);
                 probe.ExpectComplete();
             }, Materializer);
         }

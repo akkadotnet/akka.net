@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -55,7 +56,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(SumScanFlow)
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .Request(2)
-                .ExpectNext(0, 1)
+                .ExpectNext( 0, 1)
                 .ExpectComplete();
         }
 
@@ -104,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedScan(elements, 0, decider: Deciders.RestartingDecider)
-                .ExpectNext(1, 1)
+                .ExpectNext( 1, 1)
                 .ExpectComplete();
         }
 
@@ -114,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedTask(elements, 0, decider: Deciders.RestartingDecider)
-                .ExpectNext(1, 1)
+                .ExpectNext( 1, 1)
                 .ExpectComplete();
         }
 
@@ -124,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedScan(elements, 0, decider: Deciders.ResumingDecider)
-                .ExpectNext(1, 2)
+                .ExpectNext( 1, 2)
                 .ExpectComplete();
         }
 
@@ -134,7 +135,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedTask(elements, 0, decider: Deciders.ResumingDecider)
-                .ExpectNext(1, 2)
+                .ExpectNext( 1, 2)
                 .ExpectComplete();
         }
 
