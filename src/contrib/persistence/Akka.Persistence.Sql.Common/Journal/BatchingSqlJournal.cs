@@ -234,6 +234,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// The default serializer used when not type override matching is found
         /// </summary>
+        [Obsolete(message: "This property should never be used for writes, use the default `System.Object` serializer instead")]
         public string DefaultSerializer { get; }
 
         /// <summary>
@@ -1228,7 +1229,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual void WriteEvent(TCommand command, IPersistentRepresentation persistent, string tags = "")
         {
             var payloadType = persistent.Payload.GetType();
-            var serializer = _serialization.FindSerializerForType(payloadType, Setup.DefaultSerializer);
+            var serializer = _serialization.FindSerializerForType(payloadType);
 
             // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
             Akka.Serialization.Serialization.WithTransport(_serialization.System, () =>
