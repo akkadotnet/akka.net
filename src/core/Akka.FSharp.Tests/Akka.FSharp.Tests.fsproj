@@ -34,7 +34,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
   </ItemGroup>
 
-    <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' OR '$(TargetFramework)' == '$(NetTestVersion)'">
+    <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetTestVersion)'">
         <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
     </PropertyGroup>
 
