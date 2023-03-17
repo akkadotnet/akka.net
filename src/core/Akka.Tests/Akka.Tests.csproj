@@ -4,8 +4,8 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Tests</AssemblyTitle>
-    <TargetFrameworks Condition=" '$(OS)' == 'Windows_NT' ">$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
-    <TargetFrameworks Condition=" '$(OS)' != 'Windows_NT' ">$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks Condition=" '$(OS)' == 'Windows_NT' ">$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+    <TargetFrameworks Condition=" '$(OS)' != 'Windows_NT' ">$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

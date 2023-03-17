@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests</AssemblyName>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

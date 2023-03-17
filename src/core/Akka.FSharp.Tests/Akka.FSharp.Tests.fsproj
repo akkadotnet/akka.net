@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.FSharp.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
