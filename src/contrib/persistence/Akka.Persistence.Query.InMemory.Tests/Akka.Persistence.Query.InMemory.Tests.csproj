@@ -4,7 +4,7 @@
 
     <PropertyGroup>
         <AssemblyTitle>Akka.Persistence.Query.InMemory.Tests</AssemblyTitle>
-        <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion);$(NetTestVersion)</TargetFrameworks>
+        <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
