@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util;
@@ -50,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
             source.SendNext(1);
             source.SendNext(2);
             source.SendNext(3);
-            sink.ExpectNext(2, 1, 8);
+            sink.ExpectNext( 2, 1, 8);
             source.SendComplete();
             sink.ExpectComplete();
         }

@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -57,9 +58,9 @@ namespace Akka.Streams.Tests.Dsl
                 sub2.Request(2);
 
                 c1.ExpectNext(1).ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                c2.ExpectNext(1, 2).ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                c2.ExpectNext( 1, 2).ExpectNoMsg(TimeSpan.FromMilliseconds(100));
                 sub1.Request(3);
-                c1.ExpectNext(2, 3).ExpectComplete();
+                c1.ExpectNext( 2, 3).ExpectComplete();
                 sub2.Request(3);
                 c2.ExpectNext(3).ExpectComplete();
             }, Materializer);
@@ -190,7 +191,7 @@ namespace Akka.Streams.Tests.Dsl
                 sub1.Cancel();
                 var sub2 = c2.ExpectSubscription();
                 sub2.Request(3);
-                c2.ExpectNext(1, 2, 3);
+                c2.ExpectNext( 1, 2, 3);
                 c2.ExpectComplete();
             }, Materializer);
         }
@@ -220,7 +221,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sub2 = c2.ExpectSubscription();
                 sub2.Cancel();
                 sub1.Request(3);
-                c1.ExpectNext(1, 2, 3);
+                c1.ExpectNext( 1, 2, 3);
                 c1.ExpectComplete();
             }, Materializer);
         }
@@ -316,8 +317,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 ps1.Request(6);
                 ps2.Request(6);
-                ps1.ExpectNext(1, 2, 3, 4, 5, 6);
-                ps2.ExpectNext(1, 2, 3, 4, 5, 6);
+                ps1.ExpectNext( 1, 2, 3, 4, 5, 6);
+                ps2.ExpectNext( 1, 2, 3, 4, 5, 6);
                 ps1.ExpectComplete();
                 ps2.ExpectComplete();
             }, Materializer);
@@ -342,7 +343,7 @@ namespace Akka.Streams.Tests.Dsl
                 
                 ps2.Request(6);
                 ps1.Cancel();
-                ps2.ExpectNext(1, 2, 3, 4, 5, 6);
+                ps2.ExpectNext( 1, 2, 3, 4, 5, 6);
                 ps2.ExpectComplete();
             }, Materializer);
         }

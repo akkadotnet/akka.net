@@ -3,7 +3,7 @@
     
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Sharding.Tests.MultiNode</AssemblyTitle>
-    <TargetFrameworks>$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

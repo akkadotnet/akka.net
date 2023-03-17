@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
@@ -111,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(5);
-                downstream.ExpectNext(1, 2, 3);
+                downstream.ExpectNext( 1, 2, 3);
 
                 downstream.ExpectNoMsg(TimeSpan.FromSeconds(1));
 

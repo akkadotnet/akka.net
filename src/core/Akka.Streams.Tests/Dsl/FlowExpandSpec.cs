@@ -184,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
             source.SendNext(1);
 
             sink.Request(4)
-                .ExpectNext((1, 0), (1, 1), (1, 2))
+                .ExpectNext( (1, 0), (1, 1), (1, 2))
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             source.SendNext(2).SendComplete();

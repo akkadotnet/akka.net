@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
@@ -71,7 +72,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 probe
                     .Request(2)
-                    .ExpectNext(1, 2);
+                    .ExpectNext( 1, 2);
 
                 probe
                     .Request(1)
@@ -118,15 +119,15 @@ namespace Akka.Streams.Tests.Dsl
 
                 probe
                     .Request(2)
-                    .ExpectNext(1, 2);
+                    .ExpectNext( 1, 2);
 
                 probe
                     .Request(2)
-                    .ExpectNext(1, 2);
+                    .ExpectNext( 1, 2);
 
                 probe
                     .Request(2)
-                    .ExpectNext(1, 2);
+                    .ExpectNext( 1, 2);
 
                 probe.Cancel();
             }, Materializer);
@@ -142,7 +143,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RecoverWithRetries(_ => Source.Single(0), -1)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
-                    .ExpectNext(1, 2, 3)
+                    .ExpectNext( 1, 2, 3)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -187,11 +188,11 @@ namespace Akka.Streams.Tests.Dsl
 
                 probe
                     .Request(2)
-                    .ExpectNext(1, 2);
+                    .ExpectNext( 1, 2);
 
                 probe
                     .Request(2)
-                    .ExpectNext(11, 33);
+                    .ExpectNext( 11, 33);
 
                 probe
                     .Request(1)
@@ -227,7 +228,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 probe
                     .Request(2)
-                    .ExpectNext(1, 2);
+                    .ExpectNext( 1, 2);
 
                 probe
                     .Request(1)
@@ -260,10 +261,10 @@ namespace Akka.Streams.Tests.Dsl
                         }), 3)
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
-                probe.Request(2).ExpectNext(1, 2);
-                probe.Request(2).ExpectNext(11, 22);
-                probe.Request(2).ExpectNext(11, 22);
-                probe.Request(2).ExpectNext(11, 22);
+                probe.Request(2).ExpectNext( 1, 2);
+                probe.Request(2).ExpectNext( 11, 22);
+                probe.Request(2).ExpectNext( 11, 22);
+                probe.Request(2).ExpectNext( 11, 22);
                 probe.Request(1).ExpectError().Should().Be(Ex);
             }, Materializer);
         }

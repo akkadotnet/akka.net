@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -155,12 +156,12 @@ namespace Akka.Streams.Tests.Dsl
                 var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 var subscription1 = subscriber1.ExpectSubscription();
                 subscription1.Request(4);
-                subscriber1.ExpectNext(1, 2, 3, 4).ExpectComplete();
+                subscriber1.ExpectNext( 1, 2, 3, 4).ExpectComplete();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
                 var subscription2 = subscriber2.ExpectSubscription();
                 subscription2.Request(4);
-                subscriber2.ExpectNext(1, 2, 3, 4).ExpectComplete();
+                subscriber2.ExpectNext( 1, 2, 3, 4).ExpectComplete();
             }, Materializer);
         }
 
@@ -172,12 +173,12 @@ namespace Akka.Streams.Tests.Dsl
                 var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 var subscription1 = subscriber1.ExpectSubscription();
                 subscription1.Request(4);
-                subscriber1.ExpectNext(1, 2, 3, 4).ExpectComplete();
+                subscriber1.ExpectNext( 1, 2, 3, 4).ExpectComplete();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
                 var subscription2 = subscriber2.ExpectSubscription();
                 subscription2.Request(4);
-                subscriber2.ExpectNext(1, 2, 3, 4).ExpectComplete();
+                subscriber2.ExpectNext( 1, 2, 3, 4).ExpectComplete();
             }, Materializer);
         }
 
