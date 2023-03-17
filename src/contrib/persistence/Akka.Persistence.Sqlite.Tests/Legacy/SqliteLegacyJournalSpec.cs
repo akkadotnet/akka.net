@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -24,7 +25,7 @@ namespace Akka.Persistence.Sqlite.Tests.Legacy
         private readonly TestProbe _probe;
 
         public SqliteLegacyJournalSpec(ITestOutputHelper output)
-            : base(CreateSpecConfig("Filename=file:.\\\\data\\\\Sqlite.v1.3.0.db"), nameof(SqliteLegacyJournalSpec), output)
+            : base(CreateSpecConfig("Filename=file:TestDb.db"), nameof(SqliteLegacyJournalSpec), output)
         {
             SqlitePersistence.Get(Sys);
             _probe = CreateTestProbe();
@@ -32,6 +33,10 @@ namespace Akka.Persistence.Sqlite.Tests.Legacy
         
         private static Config CreateSpecConfig(string connectionString)
         {
+            if(File.Exists("./TestDb.db"))
+                File.Delete("./TestDb.db");
+            File.Copy("./data/Sqlite.v1.3.0.db", "./TestDb.db");
+            
             return ConfigurationFactory.ParseString($@"
 akka.persistence {{
     publish-plugin-commands = on
@@ -75,9 +80,10 @@ akka.persistence {{
 
             foreach (var state in stateDict.Values)
             {
-                state.State.Should().Be(5);
+                state.State.Should().BeOfType<PersistedLegacyActor.Persisted>();
+                state.State.Payload.Should().Be(5);
                 state.Events.Count.Should().Be(5);
-                state.Events.Should().BeEquivalentTo(6, 7, 8, 9, 10);
+                state.Events.Select(e => e.Payload).Should().BeEquivalentTo(6, 7, 8, 9, 10);
             }
         }
 

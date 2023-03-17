@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 
-namespace Akka.Persistence.Sqlite.Tests
+namespace Akka.Persistence.Sqlite.Tests.Legacy
 {
     public class PersistedLegacyActor: ReceivePersistentActor
     {
@@ -28,7 +28,7 @@ namespace Akka.Persistence.Sqlite.Tests
             Recover<SnapshotOffer>(msg => _savedState = (Persisted) msg.Snapshot);
             Recover<Persisted>(msg => _events.Add(msg));
             
-            Command<RecoveryCompleted>(_ =>
+            Recover<RecoveryCompleted>(_ =>
             {
                 _recoveryCompleted = true;
                 if(_stateRequested)
