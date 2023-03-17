@@ -224,22 +224,5 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 await QueryExecutor.DeleteBatchAsync(connection, nestedCancellationTokenSource.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
             }
         }
-        
-        private SnapshotEntry ToSnapshotEntry(SnapshotMetadata metadata, object snapshot)
-        {
-            var snapshotType = snapshot.GetType();
-            var serializer = Context.System.Serialization.FindSerializerForType(snapshotType, _settings.DefaultSerializer);
-
-            var binary  = Akka.Serialization.Serialization.WithTransport(_actorSystem,
-                () => serializer.ToBinary(snapshot));
-            
-
-            return new SnapshotEntry(
-                persistenceId: metadata.PersistenceId,
-                sequenceNr: metadata.SequenceNr,
-                timestamp: metadata.Timestamp,
-                manifest: snapshotType.TypeQualifiedName(),
-                payload: binary);
-        }
     }
 }

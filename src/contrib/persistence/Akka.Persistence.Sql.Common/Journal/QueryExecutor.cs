@@ -181,6 +181,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// The default serializer used when not type override matching is found
         /// </summary>
+        [Obsolete(message: "This property should never be used for writes, use the default `System.Object` serializer instead")]
         public string DefaultSerializer { get; }
 
         /// <summary>
@@ -780,7 +781,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual void WriteEvent(DbCommand command, IPersistentRepresentation e, IImmutableSet<string> tags)
         {
             
-            var serializer = Serialization.FindSerializerForType(e.Payload.GetType(), Configuration.DefaultSerializer);
+            var serializer = Serialization.FindSerializerForType(e.Payload.GetType());
 
             // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
             var (binary,manifest) = Akka.Serialization.Serialization.WithTransport(Serialization.System,(e.Payload,serializer) ,(state) =>
@@ -846,7 +847,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 // Support old writes that did not set the serializer id
                 var type = Type.GetType(manifest, true);
+#pragma warning disable CS0618
+                // Backward compatibility code, we still need to use the old default serializer on read to support legacy data
                 var deserializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
+#pragma warning restore CS0618
                 // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
                 deserialized = Akka.Serialization.Serialization.WithTransport(
                     Serialization.System, (deserializer, (byte[])payload, type),
