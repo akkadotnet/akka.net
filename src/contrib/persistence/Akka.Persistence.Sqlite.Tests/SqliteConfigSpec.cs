@@ -98,21 +98,21 @@ namespace Akka.Persistence.Sqlite.Tests
             // values should be correct
             settings.ConnectionString.Should().Be(string.Empty);
             settings.ConnectionStringName.Should().Be(string.Empty);
-            settings.ConnectionTimeout.Should().Equals(TimeSpan.FromSeconds(30));
+            settings.ConnectionTimeout.Should().Be(TimeSpan.FromSeconds(30));
             settings.SchemaName.Should().BeNull();
-            settings.TableName.Should().Equals("snapshot");
+            settings.TableName.Should().Be("snapshot");
             settings.AutoInitialize.Should().BeFalse();
             settings.DefaultSerializer.Should().BeNull();
-            settings.FullTableName.Should().Equals(settings.TableName);
+            settings.FullTableName.Should().Be(settings.TableName);
 
             // values should reflect configuration
-            settings.ConnectionString.Should().Equals(config.GetString("connection-string"));
-            settings.ConnectionStringName.Should().Equals(config.GetString("connection-string-name"));
-            settings.ConnectionTimeout.Should().Equals(config.GetTimeSpan("connection-timeout"));
-            settings.SchemaName.Should().Equals(config.GetString("schema-name", null));
-            settings.TableName.Should().Equals(config.GetString("table-name"));
-            settings.AutoInitialize.Should().Equals(config.GetBoolean("auto-initialize"));
-            settings.DefaultSerializer.Should().Equals(config.GetString("serializer", null));
+            settings.ConnectionString.Should().Be(config.GetString("connection-string"));
+            settings.ConnectionStringName.Should().Be(config.GetString("connection-string-name"));
+            settings.ConnectionTimeout.Should().Be(config.GetTimeSpan("connection-timeout"));
+            settings.SchemaName.Should().Be(config.GetString("schema-name", null));
+            settings.TableName.Should().Be(config.GetString("table-name"));
+            settings.AutoInitialize.Should().Be(config.GetBoolean("auto-initialize"));
+            settings.DefaultSerializer.Should().Be(config.GetString("serializer", null));
         }
 
     }
