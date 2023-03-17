@@ -27,15 +27,6 @@ jobs:
         displayName: 'Use .NET 7 SDK 7.0.100'
         inputs:
           version: 7.0.100
-      - task: UseDotNet@2 # to keep DocFx happy
-        displayName: "Use .NET 6 SDK 6.0.100" 
-        inputs:
-          version: 6.0.100
-      - task: UseDotNet@2
-        displayName: 'Use .NET Core Runtime 3.1.10'
-        inputs:
-          packageType: runtime
-          version: 3.1.10
       - task: Bash@3 
         displayName: Linux / OSX Build
         inputs:
