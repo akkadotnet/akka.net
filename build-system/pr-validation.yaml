@@ -19,7 +19,7 @@ jobs:
   - job: DocsSpellcheck
     displayName: "Docs: Spellcheck"
     pool:
-      vmImage: ubuntu-20.04
+      vmImage: ubuntu-latest
     steps:
       - checkout: self # self represents the repo where the initial Pipelines YAML file was found
         clean: false # whether to fetch clean each time
@@ -55,7 +55,7 @@ jobs:
   - job: WindowsBuild
     displayName: Windows Build
     pool:
-      vmImage: windows-2019
+      vmImage: windows-latest
       demands: Cmd
     steps:
       - checkout: self # self represents the repo where the initial Pipelines YAML file was found
@@ -66,11 +66,6 @@ jobs:
         displayName: "Use .NET 7 SDK 7.0.100"
         inputs:
           version: 7.0.100
-      - task: UseDotNet@2
-        displayName: "Use .NET Core Runtime 3.1.10"
-        inputs:
-          packageType: runtime
-          version: 3.1.10
       - task: BatchScript@1
         displayName: Windows Build
         inputs:
@@ -98,7 +93,7 @@ jobs:
     parameters:
       name: "netfx_tests_windows"
       displayName: ".NET Framework Unit Tests (Windows)"
-      vmImage: "windows-2019"
+      vmImage: "windows-latest"
       scriptFileName: build.cmd
       scriptArgs: runTests incremental
       outputDirectory: "TestResults"
@@ -106,29 +101,9 @@ jobs:
 
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "net_core_tests_windows"
-      displayName: ".NET Core Unit Tests (Windows)"
-      vmImage: "windows-2019"
-      scriptFileName: build.cmd
-      scriptArgs: runTestsNetCore incremental
-      outputDirectory: "TestResults"
-      artifactName: "net_core_tests_windows-$(Build.BuildId)"
-
-  - template: azure-pipeline.template.yaml
-    parameters:
-      name: "net_core_tests_linux"
-      displayName: ".NET Core Unit Tests (Linux)"
-      vmImage: "ubuntu-latest"
-      scriptFileName: "./build.sh"
-      scriptArgs: runTestsNetCore incremental
-      outputDirectory: "TestResults"
-      artifactName: "net_core_tests_linux-$(Build.BuildId)"
-
-  - template: azure-pipeline.template.yaml
-    parameters:
       name: "docfx_test"
       displayName: "DocFX warning check"
-      vmImage: "windows-2019"
+      vmImage: "windows-latest"
       scriptFileName: build.cmd
       scriptArgs: docfx
       outputDirectory: "TestResults"
@@ -137,53 +112,41 @@ jobs:
       
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "net_6_tests_windows"
-      displayName: ".NET 6 Unit Tests (Windows)"
-      vmImage: "windows-2019"
+      name: "net_7_tests_windows"
+      displayName: ".NET 7 Unit Tests (Windows)"
+      vmImage: "windows-latest"
       scriptFileName: build.cmd
       scriptArgs: runTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_6_tests_windows-$(Build.BuildId)"
+      artifactName: "net_7_tests_windows-$(Build.BuildId)"
 
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "net_6_tests_linux"
-      displayName: ".NET 6 Unit Tests (Linux)"
+      name: "net_7_tests_linux"
+      displayName: ".NET 7 Unit Tests (Linux)"
       vmImage: "ubuntu-latest"
       scriptFileName: "./build.sh"
       scriptArgs: runTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_6_tests_linux-$(Build.BuildId)"
+      artifactName: "net_7_tests_linux-$(Build.BuildId)"
 
   - template: azure-pipeline.mntr-template.yaml
     parameters:
-      name: "net_core_mntr_windows"
-      displayName: ".NET Core Multi-Node Tests (Windows)"
-      vmImage: "windows-2019"
-      scriptFileName: "build.cmd"
-      scriptArgs: MultiNodeTestsNetCore incremental
-      outputDirectory: "TestResults"
-      artifactName: "net_core_mntr_windows-$(Build.BuildId)"
-      mntrFailuresDir: 'TestResults\\multinode'
-      mntrFailuresArtifactName: "net_core_mntr_FAILED_windows-$(Build.BuildId)"
-
-  - template: azure-pipeline.mntr-template.yaml
-    parameters:
-      name: "net_6_mntr_windows"
-      displayName: ".NET 6 Multi-Node Tests (Windows)"
-      vmImage: "windows-2019"
+      name: "net_7_mntr_windows"
+      displayName: ".NET 7 Multi-Node Tests (Windows)"
+      vmImage: "windows-latest"
       scriptFileName: "build.cmd"
       scriptArgs: MultiNodeTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_6_mntr_windows-$(Build.BuildId)"
+      artifactName: "net_7_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
-      mntrFailuresArtifactName: "net_6_mntr_FAILED_windows-$(Build.BuildId)"
+      mntrFailuresArtifactName: "net_7_mntr_FAILED_windows-$(Build.BuildId)"
 
   - template: azure-pipeline.template.yaml
     parameters:
       name: "nuget_pack"
       displayName: "NuGet Pack"
-      vmImage: "windows-2019"
+      vmImage: "windows-latest"
       scriptFileName: build.cmd
       scriptArgs: CreateNuget nugetprerelease=dev incremental
       outputDirectory: "bin/nuget"
