@@ -31,7 +31,6 @@ namespace Akka.Discovery
             /// Result of a failed resolve request
             /// </summary>
             /// <param name="serviceName">TBD</param>
-            /// <param name="addresses">TBD</param>
             public Resolved(string serviceName)
             {
                 ServiceName = serviceName;

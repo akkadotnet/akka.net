@@ -497,7 +497,6 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <exception cref="TimeoutException">TBD</exception>
         public virtual void Shutdown(
             TimeSpan? duration = null,
@@ -512,7 +511,6 @@ namespace Akka.TestKit
         /// <param name="system">The system to shutdown.</param>
         /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <exception cref="TimeoutException">TBD</exception>
         protected virtual void Shutdown(
             ActorSystem system,
