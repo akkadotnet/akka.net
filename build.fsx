@@ -570,7 +570,6 @@ Target "BuildRelease" DoNothing
 Target "All" DoNothing
 Target "Nuget" DoNothing
 Target "RunTestsFull" DoNothing
-Target "RunTestsNetCoreFull" DoNothing
 
 // build dependencies
 "Clean" ==> "AssemblyInfo" ==> "Build"
@@ -579,11 +578,9 @@ Target "RunTestsNetCoreFull" DoNothing
 
 // tests dependencies
 "Build" ==> "RunTests"
-"Build" ==> "RunTestsNetCore"
 "Build" ==> "RunTestsNet"
 "Build" ==> "NBench"
 
-"BuildRelease" ==> "MultiNodeTestsNetCore"
 "BuildRelease" ==> "MultiNodeTestsNet"
 
 // nuget dependencies
@@ -595,9 +592,7 @@ Target "RunTestsNetCoreFull" DoNothing
 // all
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
-"RunTestsNetCore" ==> "All"
 "RunTestsNet" ==> "All"
-"MultiNodeTestsNetCore" ==> "All"
 "MultiNodeTestsNet" ==> "All"
 "NBench" ==> "All"
 
