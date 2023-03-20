@@ -16,11 +16,14 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
+using Akka.Streams.Tests.Actor;
 
 namespace Akka.Streams.Tests.Implementation.Fusing
 {
@@ -36,7 +39,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void ActorGraphInterpreter_should_be_able_to_interpret_a_simple_identity_graph_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var identity = GraphStages.Identity<int>();
 
@@ -44,15 +47,15 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                
-                task.AwaitResult().Should().Equal(Enumerable.Range(1, 100));
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Equal(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
         [Fact]
         public void ActorGraphInterpreter_should_be_able_to_reuse_a_simple_identity_graph_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var identity = GraphStages.Identity<int>();
 
@@ -62,15 +65,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                
-                task.AwaitResult().Should().Equal(Enumerable.Range(1, 100));
+
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Equal(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
         [Fact]
         public void ActorGraphInterpreter_should_be_able_to_interpret_a_simple_bidi_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var identityBidi = new IdentityBidiGraphStage();
                 var identity = BidiFlow.FromGraph(identityBidi).Join(Flow.Identity<int>().Select(x => x));
@@ -79,15 +83,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                
-                task.AwaitResult().Should().Equal(Enumerable.Range(1, 10));
+
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
         [Fact]
         public void ActorGraphInterpreter_should_be_able_to_interpret_and_reuse_a_simple_bidi_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var identityBidi = new IdentityBidiGraphStage();
                 var identityBidiFlow = BidiFlow.FromGraph(identityBidi);
@@ -97,15 +102,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                
-                task.AwaitResult().Should().Equal(Enumerable.Range(1, 10));
+
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
         [Fact]
         public void ActorGraphInterpreter_should_be_able_to_interpret_a_rotated_identity_bidi_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var rotatedBidi = new RotatedIdentityBidiGraphStage();
                 var takeAll = Flow.Identity<int>()
@@ -129,8 +135,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                         return ClosedShape.Instance;
                     })).Run(Materializer);
                 
-                tasks.Item1.AwaitResult().Should().Equal(Enumerable.Range(1, 100));
-                tasks.Item2.AwaitResult().Should().Equal(Enumerable.Range(1, 10));
+                var complete = await tasks.Item1.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Equal(Enumerable.Range(1, 100));
+                var complete1 = await tasks.Item2.ShouldCompleteWithin(3.Seconds());
+                complete1.Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
 

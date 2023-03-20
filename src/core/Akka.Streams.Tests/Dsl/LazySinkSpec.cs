@@ -16,6 +16,7 @@ using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
+using Akka.TestKit.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -45,20 +46,20 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_LazySink_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
                 var taskProbe = Source.From(Enumerable.Range(0, 11)).RunWith(lazySink, Materializer);
-                var probe = taskProbe.AwaitResult(RemainingOrDefault).Value;
-                probe.Request(100);
-                Enumerable.Range(0, 11).ForEach(i => probe.ExpectNext(i));
+                var probe = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                probe.Value.Request(100);
+                Enumerable.Range(0, 11).ForEach(i => probe.Value.ExpectNext(i));
             }, Materializer);
         }
 
         [Fact]
         public void A_LazySink_must_work_with_slow_sink_init()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var p = new TaskCompletionSource<Sink<int, TestSubscriber.Probe<int>>>();
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
@@ -73,7 +74,8 @@ namespace Akka.Streams.Tests.Dsl
                 taskProbe.Wait(TimeSpan.FromMilliseconds(200)).ShouldBeFalse();
 
                 p.SetResult(this.SinkProbe<int>());
-                var probe = taskProbe.AwaitResult(RemainingOrDefault).Value;
+                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var probe = complete.Value;
                 probe.Request(100);
                 probe.ExpectNext(0);
                 Enumerable.Range(1,10).ForEach(i =>
@@ -88,23 +90,24 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_LazySink_must_complete_when_there_was_no_elements_in_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(Sink.Aggregate(0, (int i, int i2) => i + i2)));
                 var taskProbe = Source.Empty<int>().RunWith(lazySink, Materializer);
-                taskProbe.AwaitResult(RemainingOrDefault).ShouldBe(Option<Task<int>>.None);
+                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                complete.ShouldBe(Option<Task<int>>.None);
             }, Materializer);
         }
 
         [Fact]
         public void A_LazySink_must_complete_normally_when_upstream_is_completed()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
                 var taskProbe = Source.Single(1).RunWith(lazySink, Materializer);
-                var taskResult = taskProbe.AwaitResult(RemainingOrDefault).Value;
-                taskResult.Request(1).ExpectNext(1).ExpectComplete();
+                var taskResult = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                taskResult.Value.Request(1).ExpectNext(1).ExpectComplete();
             }, Materializer);
         }
 
@@ -126,7 +129,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_LazySink_must_fail_gracefully_when_upstream_failed()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
@@ -135,7 +138,8 @@ namespace Akka.Streams.Tests.Dsl
                 var sourceSub = sourceProbe.ExpectSubscription();
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
-                var probe = taskProbe.AwaitResult(RemainingOrDefault).Value;
+                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var probe = complete.Value;
                 probe.Request(1).ExpectNext(0);
                 sourceSub.SendError(Ex);
                 probe.ExpectError().Should().Be(Ex);
@@ -165,7 +169,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_LazySink_must_cancel_upstream_when_internal_sink_is_cancelled()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
@@ -174,7 +178,8 @@ namespace Akka.Streams.Tests.Dsl
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
                 sourceSub.ExpectRequest(1);
-                var probe = taskProbe.AwaitResult(RemainingOrDefault).Value;
+                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var probe = complete.Value;
                 probe.Request(1).ExpectNext(0);
                 probe.Cancel();
                 sourceSub.ExpectCancellation();

@@ -19,9 +19,11 @@ using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions.Extensions;
 
 // ReSharper disable InvokeAsExtensionMethod
 #pragma warning disable 162
@@ -220,7 +222,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsyncUnordered_must_resume_after_multiple_failures()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var futures = new[]
                 {
@@ -237,7 +239,8 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.First<string>(), Materializer);
 
-                t.AwaitResult().Should().Be("happy");
+                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Be("happy");
             }, Materializer);
         }
 

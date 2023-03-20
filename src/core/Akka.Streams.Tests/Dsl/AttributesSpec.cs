@@ -11,7 +11,9 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
@@ -30,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
             Attributes.CreateName("a").And(Attributes.CreateName("b")).And(Attributes.CreateInputBuffer(1, 2));
 
         [Fact]
-        public void Attributes_must_be_overridable_on_a_module_basis()
+        public async Task Attributes_must_be_overridable_on_a_module_basis()
         {
             var runnable =
                 Source.Empty<NotUsed>()
@@ -38,18 +40,19 @@ namespace Akka.Streams.Tests.Dsl
                         Keep.Right);
             var task = runnable.Run(Materializer);
 
-            task.AwaitResult().GetAttribute<Attributes.Name>().Value.Should().Contain("new-name");
+            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            complete.GetAttribute<Attributes.Name>().Value.Should().Contain("new-name");
         }
 
         [Fact]
-        public void Attributes_must_keep_the_outermost_attribute_as_the_least_specific()
+        public async Task Attributes_must_keep_the_outermost_attribute_as_the_least_specific()
         {
             var task = Source.Empty<NotUsed>()
                 .ToMaterialized(AttributesSink.Create(), Keep.Right)
                 .WithAttributes(Attributes.CreateName("new-name"))
                 .Run(Materializer);
-            
-            task.AwaitResult().GetAttribute<Attributes.Name>().Value.Should().Contain("attributesSink");
+            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            complete.GetAttribute<Attributes.Name>().Value.Should().Contain("attributesSink");
         }
 
         [Fact]

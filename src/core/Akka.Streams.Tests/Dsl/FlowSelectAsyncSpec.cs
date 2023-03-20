@@ -21,8 +21,10 @@ using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
+using Akka.TestKit.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions.Extensions;
 
 // ReSharper disable InvokeAsExtensionMethod
 #pragma warning disable 162
@@ -245,9 +247,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_finish_after_task_failure()
+        public async Task A_Flow_with_SelectAsync_must_finish_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var t = Source.From(Enumerable.Range(1, 3))
                     .SelectAsync(1, n => Task.Run(() =>
@@ -260,7 +262,8 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 
-                t.AwaitResult().Should().BeEquivalentTo(new[] {1, 2});
+                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(new[] { 1, 2 });
             }, Materializer);
         }
 
@@ -334,9 +337,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
+        public async Task A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
@@ -385,7 +388,8 @@ namespace Akka.Streams.Tests.Dsl
                         .SelectAsync(parallelism, _ => deferred())
                         .RunAggregate(0, (c, _) => c + 1, Materializer);
 
-                    task.AwaitResult().Should().Be(n);
+                    var complete = await task.ShouldCompleteWithin(3.Seconds());
+                    complete.Should().Be(n);
                 }
                 finally
                 {
