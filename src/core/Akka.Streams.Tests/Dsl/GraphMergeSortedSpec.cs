@@ -12,7 +12,10 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
+using Akka.TestKit.Extensions;
 using Xunit.Abstractions;
+using FluentAssertions.Extensions;
+using System.Threading.Tasks;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -42,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeSorted_must_work_in_the_nominal_case()
+        public async Task MergeSorted_must_work_in_the_nominal_case()
         {
             var random = new Random();
             var gen = Enumerable.Range(1, 10)
@@ -60,18 +63,20 @@ namespace Akka.Streams.Tests.Dsl
                     .Concat(Source.Single<IEnumerable<int>>(new List<int>()))
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                task.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(0, n), o => o.WithStrictOrdering());
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(Enumerable.Range(0, n), o => o.WithStrictOrdering());
             }
         }
 
         [Fact]
-        public void MergeSorted_must_work_with_custom_comparer()
+        public async Task MergeSorted_must_work_with_custom_comparer()
         {
             var task = Source.From(new[] { 1, 5 })
                     .MergeSorted(Source.From(new[] { 0, 1, 2, 7 }), (l, r) => 2 * l.CompareTo(r))
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-            task.AwaitResult().Should().BeEquivalentTo(new[] { 0, 1, 1, 2, 5, 7 }, o => o.WithStrictOrdering());
+            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            complete.Should().BeEquivalentTo(new[] { 0, 1, 1, 2, 5, 7 }, o => o.WithStrictOrdering());
         }
     }
 }

@@ -10,14 +10,17 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
+using Akka.TestKit.Extensions;
 using Xunit;
+using System.Threading.Tasks;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
     public class SampleSpec : Akka.TestKit.Xunit2.TestKit
     {
         [Fact]
-        public void Sample_Stage_should_return_every_Nth_element_in_stream()
+        public async Task Sample_Stage_should_return_every_Nth_element_in_stream()
         {
             var list = Enumerable.Range(1, 1000);
             var source = Source.From(list);
@@ -29,12 +32,13 @@ namespace Akka.Streams.Tests.Dsl
 
                 var expected = list.Where(x => x % n == 0);
 
-                future.AwaitResult().Should().BeEquivalentTo(expected, o => o.WithStrictOrdering());
+                var complete = await future.ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(expected, o => o.WithStrictOrdering());
             }
         }
 
         [Fact]
-        public void Sample_Stage_should_return_elements_using_next_function()
+        public async Task Sample_Stage_should_return_elements_using_next_function()
         {
             var num = 0;
             int next() => ++num;
@@ -43,7 +47,8 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(new Sample<int>(next))
                 .RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-            future.AwaitResult().Should().BeEquivalentTo(new[] { 1, 3, 6, 10 }, o => o.WithStrictOrdering());
+            var complete = await future.ShouldCompleteWithin(3.Seconds());
+            complete.Should().BeEquivalentTo(new[] { 1, 3, 6, 10 }, o => o.WithStrictOrdering());
         }
 
         [Fact]

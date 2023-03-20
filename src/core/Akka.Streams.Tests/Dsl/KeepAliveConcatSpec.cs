@@ -8,11 +8,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.TestKit.Extensions;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using System.Threading.Tasks;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -30,20 +33,21 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void KeepAliveConcat_should_not_emit_additional_elements_if_upstream_is_fast_enough()
+        public async Task KeepAliveConcat_should_not_emit_additional_elements_if_upstream_is_fast_enough()
         {
             var t = _sampleSource
                 .Via(new KeepAliveConcat<IEnumerable<int>>(5, TimeSpan.FromSeconds(1), Expand))
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<IEnumerable<int>>>(), Sys.Materializer());
 
-            t.AwaitResult()
+            var complete = await t.ShouldCompleteWithin(3.Seconds());
+            complete
                 .SelectMany(x => x)
                 .Should().BeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
         }
 
         [Fact]
-        public void KeepAliveConcat_should_emit_elements_periodically_after_silent_periods()
+        public async Task KeepAliveConcat_should_emit_elements_periodically_after_silent_periods()
         {
             var sourceWithIdleGap = Source.From(Enumerable.Range(1, 5).Grouped(3))
                 .Concat
@@ -56,7 +60,8 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<IEnumerable<int>>>(), Sys.Materializer());
 
-            t.AwaitResult(TimeSpan.FromSeconds(6))
+            var complete = await t.ShouldCompleteWithin(TimeSpan.FromSeconds(6));
+            complete
                 .SelectMany(x => x)
                 .Should().BeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
         }

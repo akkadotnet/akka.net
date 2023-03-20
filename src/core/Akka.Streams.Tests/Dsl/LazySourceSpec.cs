@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.TestKit.Extensions;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
@@ -17,6 +18,7 @@ using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -32,10 +34,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_lazy_source_must_work_like_a_normal_source_happy_path()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var result = Source.Lazily(() => Source.From(new[] { 1, 2, 3 })).RunWith(Sink.Seq<int>(), Materializer);
-                result.AwaitResult().Should().BeEquivalentTo(ImmutableList.Create(1, 2, 3));
+                var complete = await result.ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(ImmutableList.Create(1, 2, 3));
             }, Materializer);
         }
 
@@ -170,7 +173,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_lazy_source_must_propagate_attributes_to_inner_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            this.AssertAllStagesStopped(async() =>
             {
                 var attributesSource = Source.FromGraph(new AttibutesSourceStage())
                     .AddAttributes(Attributes.CreateName("inner"));
@@ -179,7 +182,8 @@ namespace Akka.Streams.Tests.Dsl
                     .AddAttributes(Attributes.CreateName("outer"))
                     .RunWith(Sink.First<Attributes>(), Materializer);
 
-                var attributes = first.AwaitResult().AttributeList.ToList();
+                var complete = await first.ShouldCompleteWithin(3.Seconds());
+                var attributes = complete.AttributeList.ToList();
                 var inner = new Attributes.Name("inner");
                 var outer = new Attributes.Name("outer");
                 attributes.Should().Contain(inner);
