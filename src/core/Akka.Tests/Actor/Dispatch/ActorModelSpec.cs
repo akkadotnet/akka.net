@@ -707,7 +707,11 @@ namespace Akka.Tests.Actor.Dispatch
             Sys.Stop(a);
             Sys.Stop(b);
 
+#pragma warning disable CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
             SpinWait.SpinUntil(() => a.AsInstanceOf<IInternalActorRef>().IsTerminated && b.AsInstanceOf<IInternalActorRef>().IsTerminated);
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning restore CS0618 // Type or member is obsolete
 
             AssertRefDefaultZero(a, dispatcher, registers:1, unregisters:1, msgsReceived:1, msgsProcessed:1);
             AssertRefDefaultZero(b, dispatcher, registers: 1, unregisters: 1, msgsReceived: 1, msgsProcessed: 1);

@@ -29,10 +29,14 @@ namespace Akka.Streams.Tests.Dsl
                     .AddAttributes(Attributes.None)
                     .Named("useless");
 
+#pragma warning disable CS0618 // Type or member is obsolete
             r.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("useless");
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
             r.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
                 .Should()
                 .Be(Attributes.AsyncBoundary.Instance);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 }

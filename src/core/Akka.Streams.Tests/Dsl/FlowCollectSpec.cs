@@ -75,6 +75,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 int ThrowOnTwo(int x) => x == 2 ? throw new TestException("") : x;
 
+#pragma warning disable CS0618 // Type or member is obsolete
                 var probe =
                     Source.From(Enumerable.Range(1, 3))
                         // This is intentional, testing backward compatibility with old obsolete method 
@@ -83,6 +84,7 @@ namespace Akka.Streams.Tests.Dsl
 #pragma warning restore CS0618
                         .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                         .RunWith(this.SinkProbe<int>(), Materializer);
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 await probe.AsyncBuilder()
                     .Request(1)

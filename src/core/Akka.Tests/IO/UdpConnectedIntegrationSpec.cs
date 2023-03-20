@@ -94,6 +94,7 @@ namespace Akka.Tests.IO
             var (client, clientLocalEndpoint) =await ConnectUdpAsync(null, serverLocalEndpoint, TestActor);
             client.Tell(UdpConnected.Send.Create(data1));
 
+#pragma warning disable CS0618 // Type or member is obsolete
             var clientAddress = ExpectMsgPf(TimeSpan.FromSeconds(3), "", msg =>
             {
                 if (msg is Udp.Received received)
@@ -104,6 +105,7 @@ namespace Akka.Tests.IO
                 }
                 throw new Exception();
             });
+#pragma warning restore CS0618 // Type or member is obsolete
 
             server.Tell(Udp.Send.Create(data2, clientAddress));
 
@@ -121,6 +123,7 @@ namespace Akka.Tests.IO
             var (client, clientLocalEndpoint) = await  ConnectUdpAsync(serverLocalEndpoint, clientProbe);
             client.Tell(UdpConnected.Send.Create(data1));
 
+#pragma warning disable CS0618 // Type or member is obsolete
             ExpectMsgPf(TimeSpan.FromSeconds(3), "", serverProbe, msg =>
             {
                 if (msg is Udp.Received received)
@@ -130,6 +133,7 @@ namespace Akka.Tests.IO
                 }
                 throw new Exception();
             });
+#pragma warning restore CS0618 // Type or member is obsolete
 
             server.Tell(Udp.Send.Create(data2, clientLocalEndpoint));
 

@@ -17,13 +17,9 @@ using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
-using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using System.Threading.Tasks;
-using FluentAssertions.Extensions;
-using Akka.Streams.Tests.Actor;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -37,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         private ActorMaterializer Materializer { get; }
 
         [Fact]
-        public async Task Collecting_multiple_json_should_parse_json_array()
+        public void Collecting_multiple_json_should_parse_json_array()
         {
             var input = @"
            [
@@ -54,17 +50,18 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new []
+#pragma warning disable CS0618 // Type or member is obsolete
+            result.AwaitResult().Should().BeEquivalentTo(new []
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""Ég get etið gler án þess að meiða mig"" }",
                 @"{ ""name"" : ""jack"" }"
             });
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Collecting_multiple_json_should_emit_single_json_element_from_string()
+        public void Collecting_multiple_json_should_emit_single_json_element_from_string()
         {
             var input = @"
             { ""name"" : ""john"" }
@@ -80,12 +77,13 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
-            complete.Should().HaveCount(1).And.Subject.Should().Contain(@"{ ""name"" : ""john"" }");
+#pragma warning disable CS0618 // Type or member is obsolete
+            result.AwaitResult().Should().HaveCount(1).And.Subject.Should().Contain(@"{ ""name"" : ""john"" }");
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Collecting_multiple_json_should_parse_line_delimited()
+        public void Collecting_multiple_json_should_parse_line_delimited()
         {
             var input = @"
             { ""name"" : ""john"" }
@@ -101,17 +99,19 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[]
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            result.AwaitResult().Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""jack"" }",
                 @"{ ""name"" : ""katie"" }"
             });
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Collecting_multiple_json_should_parse_comma_delimited()
+        public void Collecting_multiple_json_should_parse_comma_delimited()
         {
             var input = @"{ ""name"" : ""john"" }, { ""name"" : ""jack"" }, { ""name"" : ""katie"" }
            ";
@@ -124,18 +124,20 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[]
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            result.AwaitResult().Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""jack"" }",
                 @"{ ""name"" : ""katie"" }"
             });
+#pragma warning restore CS0618 // Type or member is obsolete
 
         }
 
         [Fact]
-        public async Task Collecting_multiple_json_should_parse_chunks_successfully()
+        public void Collecting_multiple_json_should_parse_chunks_successfully()
         {
             var input = new[]
             {
@@ -143,14 +145,16 @@ namespace Akka.Streams.Tests.Dsl
                 ByteString.FromString("{ \"na"), ByteString.FromString("me\" : \"jack\" "),
                 ByteString.FromString("}]")
             };
-            var result = await Source.From(input)
+#pragma warning disable CS0618 // Type or member is obsolete
+            var result = Source.From(input)
                 .Via(JsonFraming.ObjectScanner(int.MaxValue))
                 .RunAggregate(new List<string>(), (list, s) =>
                 {
                     list.Add(s.ToString());
                     return list;
                 }, Materializer)
-                .ShouldCompleteWithin(3.Seconds()); ;
+                .AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
 
 
             result.Should().BeEquivalentTo(new[]

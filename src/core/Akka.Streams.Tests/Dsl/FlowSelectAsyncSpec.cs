@@ -21,10 +21,8 @@ using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
-using Akka.TestKit.Extensions;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions.Extensions;
 
 // ReSharper disable InvokeAsExtensionMethod
 #pragma warning disable 162
@@ -247,9 +245,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task A_Flow_with_SelectAsync_must_finish_after_task_failure()
+        public void A_Flow_with_SelectAsync_must_finish_after_task_failure()
         {
-            await this.AssertAllStagesStoppedAsync(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 3))
                     .SelectAsync(1, n => Task.Run(() =>
@@ -262,8 +260,9 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
-                complete.Should().BeEquivalentTo(new[] { 1, 2 });
+#pragma warning disable CS0618 // Type or member is obsolete
+                t.AwaitResult().Should().BeEquivalentTo(new[] {1, 2});
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
@@ -337,9 +336,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public async Task A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
+        public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
-            await this.AssertAllStagesStoppedAsync(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
@@ -388,8 +387,9 @@ namespace Akka.Streams.Tests.Dsl
                         .SelectAsync(parallelism, _ => deferred())
                         .RunAggregate(0, (c, _) => c + 1, Materializer);
 
-                    var complete = await task.ShouldCompleteWithin(3.Seconds());
-                    complete.Should().Be(n);
+#pragma warning disable CS0618 // Type or member is obsolete
+                    task.AwaitResult().Should().Be(n);
+#pragma warning restore CS0618 // Type or member is obsolete
                 }
                 finally
                 {

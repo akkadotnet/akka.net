@@ -154,7 +154,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             TimestampColumnName = timestampColumnName;
             SerializerIdColumnName = serializerIdColumnName;
             Timeout = timeout;
+#pragma warning disable CS0618 // Type or member is obsolete
             DefaultSerializer = defaultSerializer;
+#pragma warning restore CS0618 // Type or member is obsolete
             UseSequentialAccess = useSequentialAccess;
         }
 
@@ -596,7 +598,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             {
                 var type = Type.GetType(manifest, true);
                 // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+#pragma warning disable CS0618 // Type or member is obsolete
                 var serializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
+#pragma warning restore CS0618 // Type or member is obsolete
                 obj = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => serializer.FromBinary(binary, type));
             }
             else

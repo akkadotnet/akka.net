@@ -47,6 +47,7 @@ namespace Akka.Streams.Tests.Dsl
 
             RandomTestRange(Sys).ForEach(_ =>
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 RunScript(script(), Materializer.Settings, flow => flow.StatefulSelectMany<int,int,int, NotUsed>(() =>
                 {
                     int? prev = null;
@@ -63,6 +64,7 @@ namespace Akka.Streams.Tests.Dsl
                         return new List<int>();
                     });
                 }));
+#pragma warning restore CS0618 // Type or member is obsolete
             });
         }
 

@@ -41,10 +41,14 @@ namespace Akka.Tests.Routing
             broadcast.Tell("foo");
 
             //assert
+#pragma warning disable CS0618 // Type or member is obsolete
             barLatch.Ready(TestLatch.DefaultTimeout);
+#pragma warning restore CS0618 // Type or member is obsolete
             Assert.Equal(2, barCount.Current);
 
+#pragma warning disable CS0618 // Type or member is obsolete
             fooLatch.Ready(TestLatch.DefaultTimeout);
+#pragma warning restore CS0618 // Type or member is obsolete
             foreach (var actor in new[] {a1, a2, a3, broadcast})
             {
                 Sys.Stop(actor);

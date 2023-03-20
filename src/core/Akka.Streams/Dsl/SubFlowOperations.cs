@@ -489,7 +489,9 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<TOut1, TOut2> collector)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Collect(flow, collector);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         /// <summary>

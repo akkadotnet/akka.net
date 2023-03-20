@@ -34,7 +34,9 @@ namespace Akka.Tests.Routing
                         usedActors.TryAdd(0, Self.Path.ToString());
                         Self.Tell("another in busy mailbox");
                         receivedLatch.CountDown();
+#pragma warning disable CS0618 // Type or member is obsolete
                         busy.Ready(TestLatch.DefaultTimeout);
+#pragma warning restore CS0618 // Type or member is obsolete
                         break;
                     
                     case (int msg, TestLatch receivedLatch) _:

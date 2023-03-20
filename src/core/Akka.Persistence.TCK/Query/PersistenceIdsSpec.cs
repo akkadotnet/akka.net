@@ -61,7 +61,9 @@ namespace Akka.Persistence.TCK.Query
             var source = queries.PersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
 
+#pragma warning disable CS0618 // Type or member is obsolete
             probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(5).ExpectNextUnordered("e", "f"));
+#pragma warning restore CS0618 // Type or member is obsolete
 
             Setup("g", 1);
             probe.ExpectNext("g", TimeSpan.FromSeconds(10));
@@ -86,7 +88,9 @@ namespace Akka.Persistence.TCK.Query
             });
 
             Setup("j", 1);
+#pragma warning disable CS0618 // Type or member is obsolete
             probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(5).ExpectNextUnordered(expected[0], expected[1]));
+#pragma warning restore CS0618 // Type or member is obsolete
             
             Setup("a1", 1);
             Thread.Sleep(TimeSpan.FromSeconds(2));
@@ -206,18 +210,22 @@ namespace Akka.Persistence.TCK.Query
                 Assert.True(fieldInfo != null);
 
                 // Assert that publisher is running.
+#pragma warning disable CS0618 // Type or member is obsolete
                 probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(10)
                     .ExpectNextUnordered("a", "b")
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 probe.Cancel();
 
                 // Assert that publisher is still alive when it still have a subscriber
                 Assert.True(fieldInfo.GetValue(journal) is IPublisher<string>);
 
+#pragma warning disable CS0618 // Type or member is obsolete
                 probe2.Within(TimeSpan.FromSeconds(10), () => probe2.Request(4)
                     .ExpectNextUnordered("a", "b")
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 // Assert that publisher is de-allocated when the last subscriber left
                 probe2.Cancel();

@@ -163,7 +163,9 @@ namespace Akka.Actor
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <exception cref="ArgumentException">This exception is thrown if <paramref name="type" /> is an unknown actor producer.</exception>
         public Props(Deploy deploy, Type type, params object[] args) 
+#pragma warning disable CS0618 // Type or member is obsolete
             : this(CreateProducer(type, args), deploy, args) // have to preserve the "CreateProducer" call here to preserve backwards compat with Akka.DI.Core
+#pragma warning restore CS0618 // Type or member is obsolete
         {
 
         }

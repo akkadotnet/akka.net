@@ -36,7 +36,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void ActorRefSink_should_send_elements_to_the_ActorRef()
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             Source.From(new[] { 1, 2, 3 }).RunWith(Sink.ActorRef<int>(TestActor, onCompleteMessage: "done"), Materializer);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             ExpectMsg(1);
             ExpectMsg(2);
@@ -48,10 +50,12 @@ namespace Akka.Streams.Tests.Dsl
         public void ActorRefSink_should_cancel_a_stream_when_actor_terminates()
         {
             var fw = Sys.ActorOf(Props.Create(() => new Fw(TestActor)).WithDispatcher("akka.test.stream-dispatcher"));
+#pragma warning disable CS0618 // Type or member is obsolete
             var publisher = this.SourceProbe<int>().To(Sink.ActorRef<int>(fw, onCompleteMessage: "done"))
                     .Run(Materializer)
                     .SendNext(1)
                     .SendNext(2);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             ExpectMsg(1);
             ExpectMsg(2);

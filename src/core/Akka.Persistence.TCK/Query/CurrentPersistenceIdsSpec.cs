@@ -48,10 +48,12 @@ namespace Akka.Persistence.TCK.Query
 
             var source = queries.CurrentPersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
+#pragma warning disable CS0618 // Type or member is obsolete
             probe.Within(TimeSpan.FromSeconds(10), () =>
                 probe.Request(4)
                     .ExpectNextUnordered("a", "b", "c")
                     .ExpectComplete());
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]

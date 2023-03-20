@@ -12,12 +12,10 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.TestKit.Extensions;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -136,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Sum_must_resume_with_the_accumulated_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_resume()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var error = new Exception("boom");
                 var sum = Sink.Sum((int x, int y) =>
@@ -149,15 +147,16 @@ namespace Akka.Streams.Tests.Dsl
                 var task = InputSource.RunWith(
                     sum.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)),
                     Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
-                complete.Should().Be(Expected - 50);
+#pragma warning disable CS0618 // Type or member is obsolete
+                task.AwaitResult().Should().Be(Expected - 50);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
         [Fact]
         public void A_Aggregate_must_resume_and_reset_the_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_restart()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var error = new Exception("boom");
                 var sum = Sink.Sum((int x, int y) =>
@@ -170,8 +169,9 @@ namespace Akka.Streams.Tests.Dsl
                 var task = InputSource.RunWith(
                     sum.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider)),
                     Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
-                complete.Should().Be(Enumerable.Range(51, 50).Sum());
+#pragma warning disable CS0618 // Type or member is obsolete
+                task.AwaitResult().Should().Be(Enumerable.Range(51, 50).Sum());
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 

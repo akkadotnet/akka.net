@@ -38,7 +38,9 @@ namespace Akka.Streams.Tests.Dsl
             foreach (var _ in RandomTestRange(Sys))
             {
                 var d = Math.Min(Math.Max(random.Next(-10, 60), 0), 50);
+#pragma warning disable CS0618 // Type or member is obsolete
                 RunScript(script(d), Settings, f => f.Skip(d));
+#pragma warning restore CS0618 // Type or member is obsolete
             }
         }
 

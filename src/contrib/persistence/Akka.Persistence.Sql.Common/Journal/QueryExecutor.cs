@@ -236,7 +236,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             Timeout = timeout;
             TagsColumnName = tagsColumnName;
             OrderingColumnName = orderingColumnName;
+#pragma warning disable CS0618 // Type or member is obsolete
             DefaultSerializer = defaultSerializer;
+#pragma warning restore CS0618 // Type or member is obsolete
             SerializerIdColumnName = serializerIdColumnName;
             UseSequentialAccess = useSequentialAccess;
         }

@@ -16,12 +16,10 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
-using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using Decider = Akka.Streams.Supervision.Decider;
-using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -61,15 +59,16 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task A_ScanAsync_must_work_with_a_large_source()
+        public void A_ScanAsync_must_work_with_a_large_source()
         {
             var elements = Enumerable.Range(1, 100000).Select(i => (long)i).ToList();
             var expectedSum = elements.Sum();
             var eventualActual = Source.From(elements)
                 .ScanAsync(0L, (l, l1) => Task.FromResult(l + l1))
                 .RunWith(Sink.Last<long>(), Materializer);
-            var complete = await eventualActual.ShouldCompleteWithin(3.Seconds());
-            complete.ShouldBe(expectedSum);
+#pragma warning disable CS0618 // Type or member is obsolete
+            eventualActual.AwaitResult().ShouldBe(expectedSum);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]

@@ -41,7 +41,9 @@ namespace Akka.Streams.Tests.Dsl
             RandomTestRange(Sys).ForEach(_ =>
             {
                 var d = Math.Min(Math.Max(random.Next(-10, 60), 0), 50);
+#pragma warning disable CS0618 // Type or member is obsolete
                 RunScript(script(d), Materializer.Settings, f => f.Take(d));
+#pragma warning restore CS0618 // Type or member is obsolete
             });
         }
 

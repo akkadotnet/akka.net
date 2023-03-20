@@ -19,11 +19,9 @@ using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
-using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions.Extensions;
 
 // ReSharper disable InvokeAsExtensionMethod
 #pragma warning disable 162
@@ -203,6 +201,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 this.AssertAllStagesStopped(() =>
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     Source.From(Enumerable.Range(1, 5))
                         .SelectAsyncUnordered(4, n => Task.Run(() =>
                         {
@@ -215,6 +214,7 @@ namespace Akka.Streams.Tests.Dsl
                         .Request(10)
                         .ExpectNextUnordered(1, 2, 4, 5)
                         .ExpectComplete();
+#pragma warning restore CS0618 // Type or member is obsolete
                 }, Materializer);
             }, Materializer);
         }
@@ -222,7 +222,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsyncUnordered_must_resume_after_multiple_failures()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var futures = new[]
                 {
@@ -239,8 +239,9 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.First<string>(), Materializer);
 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
-                complete.Should().Be("happy");
+#pragma warning disable CS0618 // Type or member is obsolete
+                t.AwaitResult().Should().Be("happy");
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
@@ -268,6 +269,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsyncUnordered_must_resume_when_SelectAsyncUnordered_throws()
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             Source.From(Enumerable.Range(1, 5))
                 .SelectAsyncUnordered(4, n =>
                 {
@@ -280,6 +282,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Request(10)
                 .ExpectNextUnordered(1, 2, 4, 5)
                 .ExpectComplete();
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
@@ -306,7 +309,9 @@ namespace Akka.Streams.Tests.Dsl
                 .To(Sink.FromSubscriber(c)).Run(Materializer);
             var sub = c.ExpectSubscription();
             sub.Request(10);
+#pragma warning disable CS0618 // Type or member is obsolete
             c.ExpectNextUnordered("a", "c");
+#pragma warning restore CS0618 // Type or member is obsolete
             c.ExpectComplete();
         }
 

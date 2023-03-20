@@ -11,9 +11,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
-using Akka.TestKit.Extensions;
-using System.Threading.Tasks;
-using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -22,7 +19,7 @@ namespace Akka.Streams.Tests.Dsl
         private readonly TimeSpan _pulseInterval = TimeSpan.FromMilliseconds(20);
 
         [Fact]
-        public async Task Pulse_should_signal_demand_once_every_interval()
+        public void Pulse_should_signal_demand_once_every_interval()
         {
             var t = this.SourceProbe<int>()
                 .Via(new Pulse<int>(Dilated(_pulseInterval)))
@@ -38,8 +35,9 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectNoMsg(_pulseInterval);
             probe.SendComplete();
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
+#pragma warning disable CS0618 // Type or member is obsolete
+            task.AwaitResult().Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
@@ -60,19 +58,20 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task Initially_opened_Pulse_should_emit_the_first_available_element()
+        public void Initially_opened_Pulse_should_emit_the_first_available_element()
         {
             var task = Source.Repeat(1)
                 .Via(new Pulse<int>(Dilated(_pulseInterval), initiallyOpen: true))
                 .InitialTimeout(Dilated(TimeSpan.FromMilliseconds(2)))
                 .RunWith(Sink.First<int>(), Sys.Materializer());
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
-            complete.Should().Be(1);
+#pragma warning disable CS0618 // Type or member is obsolete
+            task.AwaitResult().Should().Be(1);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Initially_opened_Pulse_should_signal_demand_once_every_interval()
+        public void Initially_opened_Pulse_should_signal_demand_once_every_interval()
         {
             var t = this.SourceProbe<int>()
                 .Via(new Pulse<int>(Dilated(_pulseInterval), initiallyOpen: true))
@@ -88,8 +87,9 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectNoMsg(_pulseInterval);
             probe.SendComplete();
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
+#pragma warning disable CS0618 // Type or member is obsolete
+            task.AwaitResult().Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
+#pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 }

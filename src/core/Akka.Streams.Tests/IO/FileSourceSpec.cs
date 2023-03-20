@@ -13,7 +13,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.TestKit.Extensions;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -230,7 +229,7 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public void FileSource_should_onError_with_failure_and_return_a_failed_IOResult_when_trying_to_read_from_file_which_does_not_exist()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var t = FileIO.FromFile(NotExistingFile())
                     .ToMaterialized(Sink.AsPublisher<ByteString>(false), Keep.Both)
@@ -243,8 +242,9 @@ namespace Akka.Streams.Tests.IO
 
                 c.ExpectSubscription();
                 c.ExpectError();
-                var complete = await r.ShouldCompleteWithin(Dilated(TimeSpan.FromSeconds(3)));
-                complete.WasSuccessful.ShouldBeFalse();
+#pragma warning disable CS0618 // Type or member is obsolete
+                r.AwaitResult(Dilated(TimeSpan.FromSeconds(3))).WasSuccessful.ShouldBeFalse();
+#pragma warning restore CS0618 // Type or member is obsolete
             }, _materializer);
         }
 

@@ -94,8 +94,10 @@ namespace Akka.Streams.Tests
                          * We write out code, knowing that the other side will stream the data into it.
                          * For them it's a Sink; for us it's a Source.
                          */
+#pragma warning disable CS0618 // Type or member is obsolete
                         var sink = StreamRefs.SinkRef<string>().To(Sink.ActorRef<string>(_probe, "<COMPLETE>"))
                             .Run(_materializer);
+#pragma warning restore CS0618 // Type or member is obsolete
                         sink.PipeTo(Sender);
                         return true;
                     }
@@ -107,10 +109,12 @@ namespace Akka.Streams.Tests
                     }
                 case "receive-subscribe-timeout":
                     {
+#pragma warning disable CS0618 // Type or member is obsolete
                         var sink = StreamRefs.SinkRef<string>()
                             .WithAttributes(StreamRefAttributes.CreateSubscriptionTimeout(TimeSpan.FromMilliseconds(500)))
                             .To(Sink.ActorRef<string>(_probe, "<COMPLETE>"))
                             .Run(_materializer);
+#pragma warning restore CS0618 // Type or member is obsolete
                         sink.PipeTo(Sender);
                         return true;
                     }
@@ -242,7 +246,9 @@ namespace Akka.Streams.Tests
             _remoteActor.Tell("give");
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
+#pragma warning disable CS0618 // Type or member is obsolete
             sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>"), Materializer);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             _probe.ExpectMsg("hello");
             _probe.ExpectMsg("world");
@@ -255,7 +261,9 @@ namespace Akka.Streams.Tests
             _remoteActor.Tell("give-fail");
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
+#pragma warning disable CS0618 // Type or member is obsolete
             sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>"), Materializer);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             var f = _probe.ExpectMsg<Status.Failure>();
             f.Cause.Message.Should().Contain("Remote stream (");
@@ -269,7 +277,9 @@ namespace Akka.Streams.Tests
             _remoteActor.Tell("give-complete-asap");
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
+#pragma warning disable CS0618 // Type or member is obsolete
             sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>"), Materializer);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             _probe.ExpectMsg("<COMPLETE>");
         }

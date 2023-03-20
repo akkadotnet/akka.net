@@ -179,9 +179,11 @@ namespace Akka.Streams.Tests.Dsl
             var s = Sink.First<int>().Async().AddAttributes(Attributes.None).Named("name");
 
             s.Module.Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("name");
+#pragma warning disable CS0618 // Type or member is obsolete
             s.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
                 .Should()
                 .Be(Attributes.AsyncBoundary.Instance);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]

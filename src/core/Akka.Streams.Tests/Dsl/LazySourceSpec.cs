@@ -10,7 +10,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.TestKit.Extensions;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
@@ -18,7 +17,6 @@ using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
-using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -34,11 +32,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_lazy_source_must_work_like_a_normal_source_happy_path()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var result = Source.Lazily(() => Source.From(new[] { 1, 2, 3 })).RunWith(Sink.Seq<int>(), Materializer);
-                var complete = await result.ShouldCompleteWithin(3.Seconds());
-                complete.Should().BeEquivalentTo(ImmutableList.Create(1, 2, 3));
+#pragma warning disable CS0618 // Type or member is obsolete
+                result.AwaitResult().Should().BeEquivalentTo(ImmutableList.Create(1, 2, 3));
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
@@ -69,10 +68,12 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(Sink.Cancelled<int>(), Keep.Left)
                     .Run(Materializer);
 
+#pragma warning disable CS0618 // Type or member is obsolete
                 Intercept(() =>
                 {
                     var boom = result.Result;
                 });
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
@@ -173,7 +174,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_lazy_source_must_propagate_attributes_to_inner_stream()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var attributesSource = Source.FromGraph(new AttibutesSourceStage())
                     .AddAttributes(Attributes.CreateName("inner"));
@@ -182,8 +183,9 @@ namespace Akka.Streams.Tests.Dsl
                     .AddAttributes(Attributes.CreateName("outer"))
                     .RunWith(Sink.First<Attributes>(), Materializer);
 
-                var complete = await first.ShouldCompleteWithin(3.Seconds());
-                var attributes = complete.AttributeList.ToList();
+#pragma warning disable CS0618 // Type or member is obsolete
+                var attributes = first.AwaitResult().AttributeList.ToList();
+#pragma warning restore CS0618 // Type or member is obsolete
                 var inner = new Attributes.Name("inner");
                 var outer = new Attributes.Name("outer");
                 attributes.Should().Contain(inner);

@@ -338,6 +338,7 @@ namespace Akka.Streams.Tests.Implementation
         {
             this.AssertAllStagesStopped(() =>
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 Source.Empty<int>()
                     .Via(new Emit1234().Named("testStage"))
                     .RunWith(this.SinkProbe<int>(), Materializer)
@@ -347,6 +348,7 @@ namespace Akka.Streams.Tests.Implementation
                     .ExpectNextUnordered(2, 3)
                     .ExpectNext(4)
                     .ExpectComplete();
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
         
@@ -358,6 +360,8 @@ namespace Akka.Streams.Tests.Implementation
                 var flow = Flow.Create<int>().Via(new Emit1234()).Via(new Emit5678());
                 var g = Streams.Implementation.Fusing.Fusing.Aggressive(flow);
 
+#pragma warning disable CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
                 Source.Empty<int>()
                     .Via(g)
                     .RunWith(this.SinkProbe<int>(), Materializer)
@@ -371,6 +375,8 @@ namespace Akka.Streams.Tests.Implementation
                     .ExpectNextUnordered(6, 7)
                     .ExpectNext(8)
                     .ExpectComplete();
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
@@ -382,6 +388,8 @@ namespace Akka.Streams.Tests.Implementation
                 var flow = Flow.Create<int>().Via(new Emit1234()).Via(new PassThrough()).Via(new Emit5678());
                 var g = Streams.Implementation.Fusing.Fusing.Aggressive(flow);
 
+#pragma warning disable CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
                 Source.Empty<int>()
                     .Via(g)
                     .RunWith(this.SinkProbe<int>(), Materializer)
@@ -395,6 +403,8 @@ namespace Akka.Streams.Tests.Implementation
                     .ExpectNextUnordered(6, 7)
                     .ExpectNext(8)
                     .ExpectComplete();
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 

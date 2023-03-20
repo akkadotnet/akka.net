@@ -44,7 +44,9 @@ namespace Akka.TestKit.Internal
         /// <returns>A <see cref="List{T}"/> for the <see cref="BlockingCollectionTestActorQueue{T}"/> items</returns>
         public List<T> ToList()
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             return _queue.ToList();
+#pragma warning restore CS0618 // Type or member is obsolete
         }
         
         /// <summary>

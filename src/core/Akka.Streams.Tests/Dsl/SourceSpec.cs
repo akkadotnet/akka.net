@@ -13,12 +13,10 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.Util;
-using Akka.TestKit.Extensions;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Extensions;
 using FluentAssertions;
-using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -94,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Maybe_Source_must_complete_materialized_future_with_None_when_stream_cancels()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var neverSource = Source.Maybe<object>();
                 var pubSink = Sink.AsPublisher<object>(false);
@@ -111,15 +109,16 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
 
                 subs.Cancel();
-                var complete = await f.Task.ShouldCompleteWithin(3.Seconds());
-                complete.Should().Be(null);
+#pragma warning disable CS0618 // Type or member is obsolete
+                f.Task.AwaitResult().Should().Be(null);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
         [Fact]
         public void Maybe_Source_must_allow_external_triggering_of_empty_completion()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var neverSource = Source.Maybe<int>().Where(_ => false);
                 var counterSink = Sink.Aggregate<int, int>(0, (acc, _) => acc + 1);
@@ -131,15 +130,16 @@ namespace Akka.Streams.Tests.Dsl
                 //external cancellation
                 neverPromise.TrySetResult(0).Should().BeTrue();
                 
-                var counter = await counterFuture.ShouldCompleteWithin(3.Seconds());
-                counter.Should().Be(0);
+#pragma warning disable CS0618 // Type or member is obsolete
+                counterFuture.AwaitResult().Should().Be(0);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
         [Fact]
         public void Maybe_Source_must_allow_external_triggering_of_non_empty_completion()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var neverSource = Source.Maybe<int>();
                 var counterSink = Sink.First<int>();
@@ -150,8 +150,10 @@ namespace Akka.Streams.Tests.Dsl
 
                 //external cancellation
                 neverPromise.TrySetResult(6).Should().BeTrue();
-                var complete = await counterFuture.ShouldCompleteWithin(3.Seconds());
-                complete.Should().Be(6);
+                
+#pragma warning disable CS0618 // Type or member is obsolete
+                counterFuture.AwaitResult().Should().Be(6);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
@@ -410,15 +412,16 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task Cycle_Source_must_continuously_generate_the_same_sequence()
+        public void Cycle_Source_must_continuously_generate_the_same_sequence()
         {
             var expected = new[] {1, 2, 3, 1, 2, 3, 1, 2, 3};
-            var complete = await Source.Cycle(() => new[] {1, 2, 3}.AsEnumerable().GetEnumerator())
+#pragma warning disable CS0618 // Type or member is obsolete
+            Source.Cycle(() => new[] {1, 2, 3}.AsEnumerable().GetEnumerator())
                 .Grouped(9)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
-                .ShouldCompleteWithin(3.Seconds());
-            
-            complete.Should().BeEquivalentTo(expected);
+                .AwaitResult()
+                .Should().BeEquivalentTo(expected);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
@@ -452,7 +455,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task A_ZipN_Source_must_properly_ZipN()
+        public void A_ZipN_Source_must_properly_ZipN()
         {
             var sources = new[]
             {
@@ -461,20 +464,21 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(new[] {100, 200, 300}),
             };
 
-            var complete = await Source.ZipN(sources)
-                 .RunWith(Sink.Seq<IImmutableList<int>>(), Materializer)
-                 .ShouldCompleteWithin(3.Seconds());
-
-               complete.Should().BeEquivalentTo(new[]
+#pragma warning disable CS0618 // Type or member is obsolete
+            Source.ZipN(sources)
+                .RunWith(Sink.Seq<IImmutableList<int>>(), Materializer)
+                .AwaitResult()
+                .Should().BeEquivalentTo(new[]
                 {
                     new[] {1, 10, 100},
                     new[] {2, 20, 200},
                     new[] {3, 30, 300},
                 });
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task A_ZipWithN_Source_must_properly_ZipWithN()
+        public void A_ZipWithN_Source_must_properly_ZipWithN()
         {
             var sources = new[]
             {
@@ -483,10 +487,12 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(new[] {100, 200, 300}),
             };
 
-            var complete = await Source.ZipWithN(list => list.Sum(), sources)
-                 .RunWith(Sink.Seq<int>(), Materializer)
-                 .ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[] {111, 222, 333});
+#pragma warning disable CS0618 // Type or member is obsolete
+            Source.ZipWithN(list => list.Sum(), sources)
+                .RunWith(Sink.Seq<int>(), Materializer)
+                .AwaitResult()
+                .Should().BeEquivalentTo(new[] {111, 222, 333});
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]

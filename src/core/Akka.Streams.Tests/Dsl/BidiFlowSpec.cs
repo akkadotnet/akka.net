@@ -207,10 +207,14 @@ namespace Akka.Streams.Tests.Dsl
             var b = (BidiFlow<int, long, ByteString, string, NotUsed>)
                 Bidi().WithAttributes(Attributes.CreateName("")).Async().Named("name");
 
+#pragma warning disable CS0618 // Type or member is obsolete
             b.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
             b.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
                 .Should()
                 .Be(Attributes.AsyncBoundary.Instance);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 }

@@ -9,13 +9,10 @@
 using System;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.TestKit.Extensions;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using System.Threading.Tasks;
-using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -31,27 +28,29 @@ namespace Akka.Streams.Tests.Dsl
         private ActorMaterializer Materializer { get; }
 
         [Fact]
-        public async Task An_OrElse_flow_should_pass_elements_from_the_first_input()
+        public void An_OrElse_flow_should_pass_elements_from_the_first_input()
         {
             var source1 = Source.From(new[] {1, 2, 3});
             var source2 = Source.From(new[] {4, 5, 6});
 
             var sink = Sink.Seq<int>();
 
-            var complete = await source1.OrElse(source2).RunWith(sink, Materializer).ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+#pragma warning disable CS0618 // Type or member is obsolete
+            source1.OrElse(source2).RunWith(sink, Materializer).AwaitResult().Should().BeEquivalentTo(new[] {1, 2, 3});
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task An_OrElse_flow_should_pass_elements_from_the_second_input_if_the_first_completes_with_no_elements_emitted()
+        public void An_OrElse_flow_should_pass_elements_from_the_second_input_if_the_first_completes_with_no_elements_emitted()
         {
             var source1 = Source.Empty<int>();
             var source2 = Source.From(new[] { 4, 5, 6 });
 
             var sink = Sink.Seq<int>();
 
-            var complete = await source1.OrElse(source2).RunWith(sink, Materializer).ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[] { 4, 5, 6 });
+#pragma warning disable CS0618 // Type or member is obsolete
+            source1.OrElse(source2).RunWith(sink, Materializer).AwaitResult().Should().BeEquivalentTo(new[] { 4, 5, 6 });
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]

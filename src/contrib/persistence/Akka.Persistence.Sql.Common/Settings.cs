@@ -138,7 +138,9 @@ namespace Akka.Persistence.Sql.Common
             SchemaName = config.GetString("schema-name", null);
             TableName = config.GetString("table-name");
             AutoInitialize = config.GetBoolean("auto-initialize");
+#pragma warning disable CS0618 // Type or member is obsolete
             DefaultSerializer = config.GetString("serializer", null);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         /// <summary>

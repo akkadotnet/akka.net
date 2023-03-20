@@ -43,7 +43,9 @@ namespace Akka.Streams.Tests.Dsl
             var n = ThreadLocalRandom.Current.Next(10);
             for (int i = 0; i < n; i++)
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 RunScript(script, _settings, x => x.Select(y => y.ToString()));
+#pragma warning restore CS0618 // Type or member is obsolete
             }
         }
 

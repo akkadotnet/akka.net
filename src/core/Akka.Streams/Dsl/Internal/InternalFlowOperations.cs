@@ -1284,7 +1284,9 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="stageFactory">TBD</param>
         /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> Transform<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+#pragma warning disable CS0618 // Type or member is obsolete
             Func<IStage<TIn, TOut>> stageFactory)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             return flow.Via(new PushPullGraphStage<TIn, TOut>(attr => stageFactory(), Attributes.None));
         }

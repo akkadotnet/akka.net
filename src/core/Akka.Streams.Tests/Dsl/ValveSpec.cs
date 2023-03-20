@@ -13,16 +13,13 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
-using Akka.TestKit.Extensions;
-using FluentAssertions.Extensions;
-using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
     public class ValveSpec : Akka.TestKit.Xunit2.TestKit
     {
         [Fact]
-        public async Task Closed_Valve_should_emit_only_3_elements_into_a_sequence_when_the_valve_is_switched_to_open()
+        public void Closed_Valve_should_emit_only_3_elements_into_a_sequence_when_the_valve_is_switched_to_open()
         {
             var t = Source.From(Enumerable.Range(1, 3))
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
@@ -32,15 +29,18 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1;
             var seq = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
-            await Task.Delay(100);
+#pragma warning disable CS0618 // Type or member is obsolete
+            var valveSwitch = switchTask.AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
+            Thread.Sleep(100);
             var flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeTrue();
+#pragma warning disable CS0618 // Type or member is obsolete
+            flip.AwaitResult().Should().BeTrue();
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Closed_Valve_should_emit_only_5_elements_when_the_valve_is_switched_to_open()
+        public void Closed_Valve_should_emit_only_5_elements_when_the_valve_is_switched_to_open()
         {
             var t = Source.From(Enumerable.Range(1, 5))
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
@@ -50,13 +50,16 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1;
             var probe = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+#pragma warning disable CS0618 // Type or member is obsolete
+            var valveSwitch = switchTask.AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
             probe.Request(2);
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             var flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeTrue();
+#pragma warning disable CS0618 // Type or member is obsolete
+            flip.AwaitResult().Should().BeTrue();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             probe.ExpectNext(1, 2);
 
@@ -67,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task Closed_Valve_should_emit_only_3_elements_when_the_valve_is_switch_to_open_close_open()
+        public void Closed_Valve_should_emit_only_3_elements_when_the_valve_is_switch_to_open_close_open()
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Both)
@@ -78,26 +81,31 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1.Item2;
             var sinkProbe = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+#pragma warning disable CS0618 // Type or member is obsolete
+            var valveSwitch = switchTask.AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             sinkProbe.Request(1);
             var flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeTrue();
+#pragma warning disable CS0618 // Type or member is obsolete
+            flip.AwaitResult().Should().BeTrue();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             sourceProbe.SendNext(1);
 
             sinkProbe.ExpectNext().Should().Be(1);
 
             flip = valveSwitch.Flip(SwitchMode.Close);
-            var complete1 = await flip.ShouldCompleteWithin(3.Seconds());
-            complete1.Should().BeTrue();
+#pragma warning disable CS0618 // Type or member is obsolete
+            flip.AwaitResult().Should().BeTrue();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete2 = await flip.ShouldCompleteWithin(3.Seconds());
-            complete2.Should().BeTrue();   
+#pragma warning disable CS0618 // Type or member is obsolete
+            flip.AwaitResult().Should().BeTrue();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
@@ -113,7 +121,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task Closed_Valve_should_return_false_when_the_valve_is_already_closed()
+        public void Closed_Valve_should_return_false_when_the_valve_is_already_closed()
         {
             var t = Source.From(Enumerable.Range(1, 5))
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
@@ -123,17 +131,20 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1;
             var probe = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+#pragma warning disable CS0618 // Type or member is obsolete
+            var valveSwitch = switchTask.AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
 
-            var complete = await valveSwitch.Flip(SwitchMode.Close).ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeFalse();
-
-            var complete1 = await valveSwitch.Flip(SwitchMode.Close).ShouldCompleteWithin(3.Seconds());
-            complete1.Should().BeFalse();
+#pragma warning disable CS0618 // Type or member is obsolete
+            valveSwitch.Flip(SwitchMode.Close).AwaitResult().Should().BeFalse();
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
+            valveSwitch.Flip(SwitchMode.Close).AwaitResult().Should().BeFalse();
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Closed_Valve_should_emit_nothing_when_the_source_is_empty()
+        public void Closed_Valve_should_emit_nothing_when_the_source_is_empty()
         {
             var t = Source.Empty<int>()
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
@@ -142,12 +153,13 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            var complete = await seq.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEmpty();
+#pragma warning disable CS0618 // Type or member is obsolete
+            seq.AwaitResult().Should().BeEmpty();
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Closed_Valve_should_emit_nothing_when_the_source_is_failing()
+        public void Closed_Valve_should_emit_nothing_when_the_source_is_failing()
         {
             var ex = new Exception();
             var t = Source.Failed<int>(ex)
@@ -157,15 +169,13 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            var resultException = await Awaiting(async () => await seq)
-            .Should().ThrowAsync<Exception>()
-            .ShouldCompleteWithin(3.Seconds());
-
-            resultException.And.Should().Be(ex);
+#pragma warning disable CS0618 // Type or member is obsolete
+            seq.Invoking(x => x.AwaitResult()).Should().Throw<Exception>().And.Should().Be(ex);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Closed_Valve_should_not_pull_elements_again_when_opened_and_closed_and_re_opened()
+        public void Closed_Valve_should_not_pull_elements_again_when_opened_and_closed_and_re_opened()
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Both)
@@ -176,7 +186,9 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item2;
             var resultTask = t.Item3;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+#pragma warning disable CS0618 // Type or member is obsolete
+            var valveSwitch = switchTask.AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             async Task<int> result()
             {
@@ -189,12 +201,13 @@ namespace Akka.Streams.Tests.Dsl
                 return await resultTask;
             }
 
-            var complete = await result().ShouldCompleteWithin(3.Seconds());
-            complete.Should().Be(1);
+#pragma warning disable CS0618 // Type or member is obsolete
+            result().AwaitResult().Should().Be(1);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Closed_Valve_should_be_in_closed_state()
+        public void Closed_Valve_should_be_in_closed_state()
         {
             var t = Source.From(Enumerable.Range(1, 3))
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
@@ -204,13 +217,17 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1;
             var seq = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
-            var mode = await valveSwitch.GetMode().ShouldCompleteWithin(3.Seconds());
+#pragma warning disable CS0618 // Type or member is obsolete
+            var valveSwitch = switchTask.AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
+            var mode = valveSwitch.GetMode().AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
             mode.Should().Be(SwitchMode.Close);
         }
 
         [Fact]
-        public async Task Open_Valve_should_emit_5_elements_after_it_has_been_close_open()
+        public void Open_Valve_should_emit_5_elements_after_it_has_been_close_open()
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(new Valve<int>(), Keep.Both)
@@ -221,29 +238,35 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1.Item2;
             var sinkProbe = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+#pragma warning disable CS0618 // Type or member is obsolete
+            var valveSwitch = switchTask.AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             sinkProbe.Request(1);
             var flip = valveSwitch.Flip(SwitchMode.Close);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeTrue();
+#pragma warning disable CS0618 // Type or member is obsolete
+            flip.AwaitResult().Should().BeTrue();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             sourceProbe.SendNext(1);
             sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete1 = await flip.ShouldCompleteWithin(3.Seconds());
-            complete1.Should().BeTrue();
+#pragma warning disable CS0618 // Type or member is obsolete
+            flip.AwaitResult().Should().BeTrue();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             sinkProbe.ExpectNext().Should().Be(1);
 
             flip = valveSwitch.Flip(SwitchMode.Close);
-            var complete2 = await flip.ShouldCompleteWithin(3.Seconds());
-            complete2.Should().BeTrue();
+#pragma warning disable CS0618 // Type or member is obsolete
+            flip.AwaitResult().Should().BeTrue();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete3 = await flip.ShouldCompleteWithin(3.Seconds());
-            complete3.Should().BeTrue();
+#pragma warning disable CS0618 // Type or member is obsolete
+            flip.AwaitResult().Should().BeTrue();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
@@ -259,7 +282,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task Open_Valve_should_return_false_when_the_valve_is_already_opened()
+        public void Open_Valve_should_return_false_when_the_valve_is_already_opened()
         {
             var t = Source.From(Enumerable.Range(1, 5))
                 .ViaMaterialized(new Valve<int>(), Keep.Right)
@@ -268,17 +291,20 @@ namespace Akka.Streams.Tests.Dsl
 
             var switchTask = t.Item1;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+#pragma warning disable CS0618 // Type or member is obsolete
+            var valveSwitch = switchTask.AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
 
-            var complete = await valveSwitch.Flip(SwitchMode.Open).ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeFalse();
-
-            var complete1 = await valveSwitch.Flip(SwitchMode.Open).ShouldCompleteWithin(3.Seconds());
-            complete1.Should().BeFalse();
+#pragma warning disable CS0618 // Type or member is obsolete
+            valveSwitch.Flip(SwitchMode.Open).AwaitResult().Should().BeFalse();
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
+            valveSwitch.Flip(SwitchMode.Open).AwaitResult().Should().BeFalse();
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Open_Valve_should_emit_only_3_elements_into_a_sequence()
+        public void Open_Valve_should_emit_only_3_elements_into_a_sequence()
         {
             var t = Source.From(Enumerable.Range(1, 3))
                 .ViaMaterialized(new Valve<int>(), Keep.Right)
@@ -287,12 +313,13 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            var complete = await seq.ShouldCompleteWithin(TimeSpan.FromMilliseconds(200));
-            complete.Should().ContainInOrder(1, 2, 3);
+#pragma warning disable CS0618 // Type or member is obsolete
+            seq.AwaitResult(TimeSpan.FromMilliseconds(200)).Should().ContainInOrder(1, 2, 3);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Open_Valve_should_emit_nothing_when_the_source_is_empty()
+        public void Open_Valve_should_emit_nothing_when_the_source_is_empty()
         {
             var t = Source.Empty<int>()
                 .ViaMaterialized(new Valve<int>(), Keep.Right)
@@ -301,12 +328,13 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            var complete = await seq.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEmpty();
+#pragma warning disable CS0618 // Type or member is obsolete
+            seq.AwaitResult().Should().BeEmpty();
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Open_Valve_should_emit_nothing_when_the_source_is_failing()
+        public void Open_Valve_should_emit_nothing_when_the_source_is_failing()
         {
             var ex = new Exception();
 
@@ -317,15 +345,13 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            var resultException = await Awaiting(async () => await seq)
-            .Should().ThrowAsync<Exception>()
-            .ShouldCompleteWithin(3.Seconds());
-
-            resultException.And.Should().Be(ex);
+#pragma warning disable CS0618 // Type or member is obsolete
+            seq.Invoking(x => x.AwaitResult()).Should().Throw<Exception>().And.Should().Be(ex);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Open_Valve_should_not_pull_elements_again_when_closed_and_re_opened()
+        public void Open_Valve_should_not_pull_elements_again_when_closed_and_re_opened()
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(new Valve<int>(), Keep.Both)
@@ -336,7 +362,9 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item2;
             var resultTask = t.Item3;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+#pragma warning disable CS0618 // Type or member is obsolete
+            var valveSwitch = switchTask.AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             async Task<int> result()
             {
@@ -348,12 +376,13 @@ namespace Akka.Streams.Tests.Dsl
                 return await resultTask;
             }
 
-            var complete = await result().ShouldCompleteWithin(3.Seconds());
-            complete.Should().Be(1);
+#pragma warning disable CS0618 // Type or member is obsolete
+            result().AwaitResult().Should().Be(1);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task Open_Valve_should_be_in_open_state()
+        public void Open_Valve_should_be_in_open_state()
         {
             var t = Source.From(Enumerable.Range(1, 5))
                 .ViaMaterialized(new Valve<int>(), Keep.Right)
@@ -362,9 +391,12 @@ namespace Akka.Streams.Tests.Dsl
 
             var switchTask = t.Item1;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
-            var complete = await valveSwitch.GetMode().ShouldCompleteWithin(3.Seconds());
-            complete.Should().Be(SwitchMode.Open);
+#pragma warning disable CS0618 // Type or member is obsolete
+            var valveSwitch = switchTask.AwaitResult();
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
+            valveSwitch.GetMode().AwaitResult().Should().Be(SwitchMode.Open);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 }

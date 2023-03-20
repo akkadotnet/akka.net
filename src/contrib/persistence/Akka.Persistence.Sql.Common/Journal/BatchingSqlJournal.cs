@@ -299,7 +299,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             CircuitBreakerSettings = new CircuitBreakerSettings(config.GetConfig("circuit-breaker"));
             ReplayFilterSettings = new ReplayFilterSettings(config.GetConfig("replay-filter"));
             NamingConventions = namingConventions;
+#pragma warning disable CS0618 // Type or member is obsolete
             DefaultSerializer = config.GetString("serializer", null);
+#pragma warning restore CS0618 // Type or member is obsolete
             TimestampProviderTypeName = config.GetString("timestamp-provider", null);
         }
 
@@ -335,7 +337,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             CircuitBreakerSettings = circuitBreakerSettings;
             ReplayFilterSettings = replayFilterSettings;
             NamingConventions = namingConventions;
+#pragma warning disable CS0618 // Type or member is obsolete
             DefaultSerializer = defaultSerializer;
+#pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 
@@ -1281,7 +1285,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 // Support old writes that did not set the serializer id
                 var type = Type.GetType(manifest, true);
+#pragma warning disable CS0618 // Type or member is obsolete
                 var deserializer = _serialization.FindSerializerForType(type, Setup.DefaultSerializer);
+#pragma warning restore CS0618 // Type or member is obsolete
                 deserialized = deserializer.FromBinary((byte[])payload, type);
             }
             else

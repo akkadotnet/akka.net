@@ -168,9 +168,13 @@ namespace Akka.Tests.Actor
             a.Path.Elements.Head().Should().Be("temp");
             Provider.ResolveActorRef(a.Path).Should().Be(a);
             Provider.ResolveActorRef(a.Path.ToString()).Should().Be(a);
+#pragma warning disable CS0618 // Type or member is obsolete
             Provider.ResolveActorRef(a.Path.ToString() + "/hello").AsInstanceOf<IInternalActorRef>().IsTerminated.Should().Be(true);
+#pragma warning restore CS0618 // Type or member is obsolete
             f.IsCompleted.Should().Be(false);
+#pragma warning disable CS0618 // Type or member is obsolete
             a.IsTerminated.Should().Be(false);
+#pragma warning restore CS0618 // Type or member is obsolete
             a.Tell(42);
             await AwaitAssertAsync(() => f.IsCompleted.Should().Be(true));
             await AwaitAssertAsync(() => f.Result.Should().Be(42));

@@ -56,24 +56,26 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public async Task A_AggregateAsync_must_work_when_using_Source_AggregateAsync()
+        public void A_AggregateAsync_must_work_when_using_Source_AggregateAsync()
         {
-            await this.AssertAllStagesStoppedAsync(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var task = AggregateSource.RunWith(Sink.First<int>(), Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
-                complete.Should().Be(Expected);
+#pragma warning disable CS0618 // Type or member is obsolete
+                task.AwaitResult().Should().Be(Expected);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
         [Fact]
         public void A_AggregateAsync_must_work_when_using_Sink_AggregateAsync()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var task = InputSource.RunWith(AggregateSink, Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
-                complete.Should().Be(Expected);
+#pragma warning disable CS0618 // Type or member is obsolete
+                task.AwaitResult().Should().Be(Expected);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
@@ -81,22 +83,24 @@ namespace Akka.Streams.Tests.Dsl
         public void A_AggregateAsync_must_work_when_using_Flow_AggregateAsync()
         {
             var flowTimeout = TimeSpan.FromMilliseconds(FlowDelayInMs*Input.Count()) + TimeSpan.FromSeconds(3);
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var task = InputSource.Via(AggregateFlow).RunWith(Sink.First<int>(), Materializer);
-                var complete = await task.ShouldCompleteWithin(flowTimeout);
-                complete.Should().Be(Expected);
+#pragma warning disable CS0618 // Type or member is obsolete
+                task.AwaitResult(flowTimeout).Should().Be(Expected);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
         [Fact]
         public void A_AggregateAsync_must_work_when_using_Source_AggregateAsync_and_Flow_AggregateAsync_and_Sink_AggregateAsync()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var task = AggregateSource.Via(AggregateFlow).RunWith(AggregateSink, Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
-                complete.Should().Be(Expected);
+#pragma warning disable CS0618 // Type or member is obsolete
+                task.AwaitResult().Should().Be(Expected);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
@@ -281,11 +285,12 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task A_AggregateAsync_must_finish_after_task_failure()
+        public void A_AggregateAsync_must_finish_after_task_failure()
         {
-            await this.AssertAllStagesStoppedAsync(async() =>
+            this.AssertAllStagesStopped(() =>
             {
-                var complete = await Source.From(Enumerable.Range(1, 3)).AggregateAsync(1, (_, n) => Task.Run(() =>
+#pragma warning disable CS0618 // Type or member is obsolete
+                Source.From(Enumerable.Range(1, 3)).AggregateAsync(1, (_, n) => Task.Run(() =>
                     {
                         if (n == 3)
                             throw new Exception("err3b");
@@ -294,8 +299,8 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
-                    .ShouldCompleteWithin(3.Seconds());
-                complete.Should().BeEquivalentTo(2);
+                    .AwaitResult().Should().BeEquivalentTo(2);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
@@ -422,24 +427,26 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_AggregateAsync_must_complete_task_and_return_zero_given_an_empty_stream()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var task = Source.From(Enumerable.Empty<int>())
                     .RunAggregateAsync(0, (acc, element) => Task.FromResult(acc + element), Materializer);
-                var complete = await task.ShouldCompleteWithin(RemainingOrDefault);
-                complete.ShouldBe(0);
+#pragma warning disable CS0618 // Type or member is obsolete
+                task.AwaitResult(RemainingOrDefault).ShouldBe(0);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
 
         [Fact]
         public void A_AggregateAsync_must_complete_task_and_return_zero_and_item_given_a_stream_of_one_item()
         {
-            this.AssertAllStagesStopped(async() =>
+            this.AssertAllStagesStopped(() =>
             {
                 var task = Source.Single(100)
                     .RunAggregateAsync(5, (acc, element) => Task.FromResult(acc + element), Materializer);
-                var complete = await task.ShouldCompleteWithin(RemainingOrDefault);
-                complete.ShouldBe(105);
+#pragma warning disable CS0618 // Type or member is obsolete
+                task.AwaitResult(RemainingOrDefault).ShouldBe(105);
+#pragma warning restore CS0618 // Type or member is obsolete
             }, Materializer);
         }
     }

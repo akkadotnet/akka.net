@@ -19,8 +19,12 @@ namespace Akka.Benchmarks.Configurations
     {
         public MicroBenchmarkConfig()
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             this.Add(MemoryDiagnoser.Default);
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
             this.Add(MarkdownExporter.GitHub);
+#pragma warning restore CS0618 // Type or member is obsolete
             AddLogger(ConsoleLogger.Default);
         }
     }
@@ -32,7 +36,9 @@ namespace Akka.Benchmarks.Configurations
     {
         public MonitoringConfig()
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             this.Add(MarkdownExporter.GitHub);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 }

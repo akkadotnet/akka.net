@@ -231,8 +231,10 @@ namespace Akka.Streams.Tests.Dsl
                     return ((ICollection<int>)new[] { x, y, z }, (ICollection<IEnumerable<int>>)new[] { new[] { x, y, z } });
                 }).ToArray());
 
+#pragma warning disable CS0618 // Type or member is obsolete
             RandomTestRange(Sys)
                 .ForEach(_ => RunScript(script, Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
@@ -254,8 +256,10 @@ namespace Akka.Streams.Tests.Dsl
                 }).Concat(rest).ToArray());
             };
 
+#pragma warning disable CS0618 // Type or member is obsolete
             RandomTestRange(Sys)
                 .ForEach(_ => RunScript(script(), Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact(Skip = "Skipped for async_testkit conversion build")]

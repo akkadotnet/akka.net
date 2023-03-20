@@ -8,14 +8,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Akka.TestKit.Extensions;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using System.Threading.Tasks;
-using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -33,21 +30,22 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async Task KeepAliveConcat_should_not_emit_additional_elements_if_upstream_is_fast_enough()
+        public void KeepAliveConcat_should_not_emit_additional_elements_if_upstream_is_fast_enough()
         {
             var t = _sampleSource
                 .Via(new KeepAliveConcat<IEnumerable<int>>(5, TimeSpan.FromSeconds(1), Expand))
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<IEnumerable<int>>>(), Sys.Materializer());
 
-            var complete = await t.ShouldCompleteWithin(3.Seconds());
-            complete
+#pragma warning disable CS0618 // Type or member is obsolete
+            t.AwaitResult()
                 .SelectMany(x => x)
                 .Should().BeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
-        public async Task KeepAliveConcat_should_emit_elements_periodically_after_silent_periods()
+        public void KeepAliveConcat_should_emit_elements_periodically_after_silent_periods()
         {
             var sourceWithIdleGap = Source.From(Enumerable.Range(1, 5).Grouped(3))
                 .Concat
@@ -60,10 +58,11 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<IEnumerable<int>>>(), Sys.Materializer());
 
-            var complete = await t.ShouldCompleteWithin(TimeSpan.FromSeconds(6));
-            complete
+#pragma warning disable CS0618 // Type or member is obsolete
+            t.AwaitResult(TimeSpan.FromSeconds(6))
                 .SelectMany(x => x)
                 .Should().BeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]

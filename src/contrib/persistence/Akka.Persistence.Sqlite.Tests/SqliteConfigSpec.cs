@@ -102,7 +102,9 @@ namespace Akka.Persistence.Sqlite.Tests
             settings.SchemaName.Should().BeNull();
             settings.TableName.Should().Be("snapshot");
             settings.AutoInitialize.Should().BeFalse();
+#pragma warning disable CS0618 // Type or member is obsolete
             settings.DefaultSerializer.Should().BeNull();
+#pragma warning restore CS0618 // Type or member is obsolete
             settings.FullTableName.Should().Be(settings.TableName);
 
             // values should reflect configuration
@@ -112,7 +114,9 @@ namespace Akka.Persistence.Sqlite.Tests
             settings.SchemaName.Should().Be(config.GetString("schema-name", null));
             settings.TableName.Should().Be(config.GetString("table-name"));
             settings.AutoInitialize.Should().Be(config.GetBoolean("auto-initialize"));
+#pragma warning disable CS0618 // Type or member is obsolete
             settings.DefaultSerializer.Should().Be(config.GetString("serializer", null));
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
     }

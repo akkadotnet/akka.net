@@ -42,7 +42,9 @@ namespace Akka.Streams.Tests.Dsl
                 return ((ICollection<int>)new[] { x }, (ICollection<int>)((x & 1) == 0 ? new[] { x } : new int[] { }));
             }).ToArray());
 
+#pragma warning disable CS0618 // Type or member is obsolete
             RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.Where(x => x%2 == 0)));
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Fact]
@@ -96,7 +98,9 @@ namespace Akka.Streams.Tests.Dsl
                 return ((ICollection<int>)new[] { x }, (ICollection<int>)((x & 1) == 1 ? new[] { x } : new int[] { }));
             }).ToArray());
 
+#pragma warning disable CS0618 // Type or member is obsolete
             RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.WhereNot(x => x % 2 == 0)));
+#pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 }

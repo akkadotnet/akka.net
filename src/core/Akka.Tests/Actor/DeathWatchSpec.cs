@@ -205,7 +205,9 @@ namespace Akka.Tests.Actor
                     return res.ToString();
                 }, 3).ToListAsync();
 
+#pragma warning disable CS0618 // Type or member is obsolete
                 ((IInternalActorRef)TestActor).IsTerminated.ShouldBe(false);
+#pragma warning restore CS0618 // Type or member is obsolete
                 result.ShouldOnlyContainInOrder("1", "2", "3");
             });
         }
