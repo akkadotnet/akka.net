@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
@@ -32,13 +33,12 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Zip_for_Flow_must_work_in_the_happy_case()
+        public async Task A_Zip_for_Flow_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = this.CreateManualSubscriberProbe<(int, string)>();
                 Source.From(Enumerable.Range(1, 4))
-                    .Zip(Source.From(new[] {"A", "B", "C", "D", "E", "F"}))
+                    .Zip(Source.From(new[] { "A", "B", "C", "D", "E", "F" }))
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
                 var subscription = probe.ExpectSubscription();
 
@@ -52,6 +52,7 @@ namespace Akka.Streams.Tests.Dsl
                 probe.ExpectNext((4, "D"));
 
                 probe.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 

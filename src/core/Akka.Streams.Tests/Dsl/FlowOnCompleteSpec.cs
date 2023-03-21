@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -25,10 +26,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_OnComplete_must_invoke_callback_on_normal_completion()
+        public async Task A_Flow_with_OnComplete_must_invoke_callback_on_normal_completion()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
@@ -40,14 +40,14 @@ namespace Akka.Streams.Tests.Dsl
                 onCompleteProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
                 proc.SendComplete();
                 onCompleteProbe.ExpectMsg("done");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_OnComplete_must_yield_the_first_error()
+        public async Task A_Flow_with_OnComplete_must_yield_the_first_error()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
@@ -59,14 +59,14 @@ namespace Akka.Streams.Tests.Dsl
                 proc.SendError(cause);
                 onCompleteProbe.ExpectMsg(cause);
                 onCompleteProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_OnComplete_must_invoke_callback_for_an_empty_stream()
+        public async Task A_Flow_with_OnComplete_must_invoke_callback_for_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
@@ -77,14 +77,14 @@ namespace Akka.Streams.Tests.Dsl
                 proc.SendComplete();
                 onCompleteProbe.ExpectMsg("done");
                 onCompleteProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_OnComplete_must_invoke_callback_after_transform_and_foreach_steps()
+        public async Task A_Flow_with_OnComplete_must_invoke_callback_after_transform_and_foreach_steps()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
                 var foreachSink = Sink.ForEach<int>(x => onCompleteProbe.Ref.Tell("foreach-" + x));
@@ -102,6 +102,7 @@ namespace Akka.Streams.Tests.Dsl
                 onCompleteProbe.ExpectMsg("map-42");
                 onCompleteProbe.ExpectMsg("foreach-42");
                 onCompleteProbe.ExpectMsg("done");
+                return Task.CompletedTask;
             }, Materializer);
         }
 

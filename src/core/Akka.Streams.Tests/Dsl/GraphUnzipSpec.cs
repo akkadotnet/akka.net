@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -28,10 +29,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Unzip_must_unzip_to_two_subscribers()
+        public async Task A_Unzip_must_unzip_to_two_subscribers()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<string>();
 
@@ -45,10 +45,10 @@ namespace Akka.Streams.Tests.Dsl
                             new KeyValuePair<int, string>(2, "b"),
                             new KeyValuePair<int, string>(3, "c")
                         });
-                    
+
                     b.From(source).To(unzip.In);
                     b.From(unzip.Out0)
-                        .Via(Flow.Create<int>().Buffer(16, OverflowStrategy.Backpressure).Select(x => x*2))
+                        .Via(Flow.Create<int>().Buffer(16, OverflowStrategy.Backpressure).Select(x => x * 2))
                         .To(Sink.FromSubscriber(c1));
                     b.From(unzip.Out1)
                         .Via(Flow.Create<string>().Buffer(16, OverflowStrategy.Backpressure))
@@ -62,24 +62,24 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub1.Request(1);
                 sub2.Request(2);
-                c1.ExpectNext(1*2);
+                c1.ExpectNext(1 * 2);
                 c1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                c2.ExpectNext( "a", "b");
+                c2.ExpectNext("a", "b");
                 c2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
                 sub1.Request(3);
-                c1.ExpectNext( 2*2, 3*2);
+                c1.ExpectNext(2 * 2, 3 * 2);
                 c1.ExpectComplete();
                 sub2.Request(3);
                 c2.ExpectNext("c");
                 c2.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Unzip_must_produce_to_right_downstream_even_though_left_downstream_cancels()
+        public async Task A_Unzip_must_produce_to_right_downstream_even_though_left_downstream_cancels()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<string>();
 
@@ -106,16 +106,16 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub1.Cancel();
                 sub2.Request(3);
-                c2.ExpectNext( "a", "b", "c");
+                c2.ExpectNext("a", "b", "c");
                 c2.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Unzip_must_produce_to_left_downstream_even_though_right_downstream_cancels()
+        public async Task A_Unzip_must_produce_to_left_downstream_even_though_right_downstream_cancels()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<string>();
 
@@ -142,8 +142,9 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub2.Cancel();
                 sub1.Request(3);
-                c1.ExpectNext( 1, 2, 3);
+                c1.ExpectNext(1, 2, 3);
                 c1.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -211,10 +212,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Unzip_must_cancel_upstream_when_downstream_cancel()
+        public async Task A_Unzip_must_cancel_upstream_when_downstream_cancel()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var p1 = this.CreateManualPublisherProbe<KeyValuePair<int, string>>();
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<string>();
@@ -247,14 +247,14 @@ namespace Akka.Streams.Tests.Dsl
                 sub1.Cancel();
                 sub2.Cancel();
                 p1Sub.ExpectCancellation();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Unzip_must_work_with_Zip()
+        public async Task A_Unzip_must_work_with_Zip()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var c1 = this.CreateManualSubscriberProbe<(int, string)>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -283,6 +283,7 @@ namespace Akka.Streams.Tests.Dsl
                 c1.ExpectNext((2, "b"));
                 c1.ExpectNext((3, "c"));
                 c1.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
     }

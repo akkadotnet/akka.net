@@ -100,10 +100,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_produce_scheduled_ticks_as_expected()
+        public async Task GraphStage_timer_support_must_produce_scheduled_ticks_as_expected()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -112,20 +111,20 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(5);
-                downstream.ExpectNext( 1, 2, 3);
+                downstream.ExpectNext(1, 2, 3);
 
                 downstream.ExpectNoMsg(TimeSpan.FromSeconds(1));
 
                 upstream.SendComplete();
                 downstream.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_propagate_error_if_OnTimer_throws_an_Exception()
+        public async Task GraphStage_timer_support_must_propagate_error_if_OnTimer_throws_an_Exception()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var exception = new TestException("Expected exception to the rule");
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -136,6 +135,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 downstream.Request(1);
                 downstream.ExpectError().Should().Be(exception);
+                return Task.CompletedTask;
             }, Materializer);
         }
 

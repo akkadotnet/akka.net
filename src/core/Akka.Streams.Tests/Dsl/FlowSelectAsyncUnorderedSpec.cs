@@ -41,10 +41,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [WindowsFact(Skip ="Racy in Linux")]
-        public void A_Flow_with_SelectAsyncUnordered_must_produce_task_elements_in_the_order_they_are_ready()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_produce_task_elements_in_the_order_they_are_ready()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var c = this.CreateManualSubscriberProbe<int>();
                 var latch = Enumerable.Range(0, 4).Select(_ => new TestLatch(1)).ToArray();
 
@@ -69,6 +68,7 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNext(0);
 
                 c.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
             
         }
@@ -113,10 +113,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void A_Flow_with_SelectAsyncUnordered_must_signal_task_failure()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_signal_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var latch = new TestLatch(1);
                 var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 5))
@@ -133,15 +132,15 @@ namespace Akka.Streams.Tests.Dsl
                 sub.Request(10);
                 c.ExpectError().InnerException.Message.Should().Be("err1");
                 latch.CountDown();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_signal_task_failure_asap()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_signal_task_failure_asap()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var latch = CreateTestLatch();
                 var done = Source.From(Enumerable.Range(1, 5))
                     .Select(n =>
@@ -166,14 +165,14 @@ namespace Akka.Streams.Tests.Dsl
 
                 done.Invoking(d => d.Wait(RemainingOrDefault)).Should().Throw<Exception>().WithMessage("err1");
                 latch.CountDown();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_signal_error_from_SelectAsyncUnordered()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_signal_error_from_SelectAsyncUnordered()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var latch = new TestLatch(1);
                 var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 5))
@@ -193,36 +192,37 @@ namespace Akka.Streams.Tests.Dsl
                 sub.Request(10);
                 c.ExpectError().Message.Should().Be("err2");
                 latch.CountDown();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_resume_after_task_failure()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_resume_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
-                this.AssertAllStagesStopped(() =>
-                {
+                await this.AssertAllStagesStoppedAsync(() => {
                     Source.From(Enumerable.Range(1, 5))
-                        .SelectAsyncUnordered(4, n => Task.Run(() =>
-                        {
-                            if (n == 3)
-                                throw new TestException("err3");
-                            return n;
-                        }))
-                        .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                        .RunWith(this.SinkProbe<int>(), Materializer)
-                        .Request(10)
-                        .ExpectNextUnordered(1, 2, 4, 5)
-                        .ExpectComplete();
+                                                                                     .SelectAsyncUnordered(4, n => Task.Run(() =>
+                                                                                     {
+                                                                                         if (n == 3)
+                                                                                             throw new TestException("err3");
+                                                                                         return n;
+                                                                                     }))
+                                                                                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
+                                                                                     .RunWith(this.SinkProbe<int>(), Materializer)
+                                                                                     .Request(10)
+                                                                                     .ExpectNextUnordered(1, 2, 4, 5)
+                                                                                     .ExpectComplete();
+                    return Task.CompletedTask;
                 }, Materializer);
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_resume_after_multiple_failures()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_resume_after_multiple_failures()
         {
-            this.AssertAllStagesStopped(async() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var futures = new[]
                 {
@@ -245,23 +245,23 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_finish_after_task_failure()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_finish_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var t = Source.From(Enumerable.Range(1, 3))
-                    .SelectAsyncUnordered(1, n => Task.Run(() =>
-                    {
-                        if (n == 3)
-                            throw new TestException("err3b");
-                        return n;
-                    }))
-                    .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                    .Grouped(10)
-                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+                                                                             .SelectAsyncUnordered(1, n => Task.Run(() =>
+                                                                             {
+                                                                                 if (n == 3)
+                                                                                     throw new TestException("err3b");
+                                                                                 return n;
+                                                                             }))
+                                                                             .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
+                                                                             .Grouped(10)
+                                                                             .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                t.Result.Should().BeEquivalentTo(new[] {1, 2});
+                t.Result.Should().BeEquivalentTo(new[] { 1, 2 });
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -311,10 +311,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_handle_cancel_properly()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_handle_cancel_properly()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var pub = this.CreateManualPublisherProbe<int>();
                 var sub = this.CreateManualSubscriberProbe<int>();
 
@@ -328,14 +327,14 @@ namespace Akka.Streams.Tests.Dsl
                 sub.ExpectSubscription().Cancel();
 
                 upstream.ExpectCancellation();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_configured()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_configured()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
                 var queue = new BlockingQueue<(TaskCompletionSource<int>, long)>();
@@ -365,7 +364,7 @@ namespace Akka.Streams.Tests.Dsl
                         }
                     }
                 }, cancellation.Token);
-               
+
                 Func<Task<int>> deferred = () =>
                 {
                     var promise = new TaskCompletionSource<int>();
@@ -390,6 +389,8 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     cancellation.Cancel(false);
                 }
+
+                return Task.CompletedTask;
             }, Materializer);
         }
     }

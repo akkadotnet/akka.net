@@ -74,10 +74,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Concat_for_Flow_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
+        public async Task A_Concat_for_Flow_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 var subscription1 = subscriber1.ExpectSubscription();
                 subscription1.Request(5);
@@ -89,24 +88,24 @@ namespace Akka.Streams.Tests.Dsl
                 subscription2.Request(5);
                 Enumerable.Range(1, 4).ForEach(x => subscriber2.ExpectNext(x));
                 subscriber2.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Concat_for_Flow_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
+        public async Task A_Concat_for_Flow_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber = Setup(FailedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 subscriber.ExpectSubscriptionAndError().Should().BeOfType<TestException>();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Concat_for_Flow_must_work_with_one_nonempty_and_one_immediately_failed_publisher()
+        public async Task A_Concat_for_Flow_must_work_with_one_nonempty_and_one_immediately_failed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), FailedPublisher<int>());
                 subscriber.ExpectSubscription().Request(5);
 
@@ -114,24 +113,24 @@ namespace Akka.Streams.Tests.Dsl
                     .Aggregate(false, (b, e) => b || subscriber.ExpectNextOrError() is TestException);
                 if (!errorSignalled)
                     subscriber.ExpectSubscriptionAndError().Should().BeOfType<TestException>();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Concat_for_Flow_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
+        public async Task A_Concat_for_Flow_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber = Setup(SoonToFailPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 subscriber.ExpectSubscriptionAndError().Should().BeOfType<TestException>();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Concat_for_Flow_must_work_with_one_nonempty_and_one_delayed_failed_publisher()
+        public async Task A_Concat_for_Flow_must_work_with_one_nonempty_and_one_delayed_failed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToFailPublisher<int>());
                 subscriber.ExpectSubscription().Request(5);
 
@@ -139,14 +138,14 @@ namespace Akka.Streams.Tests.Dsl
                     .Aggregate(false, (b, e) => b || subscriber.ExpectNextOrError() is TestException);
                 if (!errorSignalled)
                     subscriber.ExpectSubscriptionAndError().Should().BeOfType<TestException>();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Concat_for_Flow_must_correctly_handle_async_errors_in_secondary_upstream()
+        public async Task A_Concat_for_Flow_must_correctly_handle_async_errors_in_secondary_upstream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var promise = new TaskCompletionSource<int>();
                 var subscriber = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 3))
@@ -158,21 +157,21 @@ namespace Akka.Streams.Tests.Dsl
                 Enumerable.Range(1, 3).ForEach(x => subscriber.ExpectNext(x));
                 promise.SetException(TestException());
                 subscriber.ExpectError().Should().BeOfType<TestException>();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Concat_for_Flow_must_work_with_Source_DSL()
+        public async Task A_Concat_for_Flow_must_work_with_Source_DSL()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var testSource =
-                    Source.From(Enumerable.Range(1, 5))
-                        .ConcatMaterialized(Source.From(Enumerable.Range(6, 5)), Keep.Both)
-                        .Grouped(1000);
+                                                                             Source.From(Enumerable.Range(1, 5))
+                                                                                 .ConcatMaterialized(Source.From(Enumerable.Range(6, 5)), Keep.Both)
+                                                                                 .Grouped(1000);
                 var task = testSource.RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1,10));
+                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
 
                 var runnable = testSource.ToMaterialized(Sink.Ignore<IEnumerable<int>>(), Keep.Left);
                 var t = runnable.Run(Materializer);
@@ -180,17 +179,17 @@ namespace Akka.Streams.Tests.Dsl
                 t.Item2.Should().BeOfType<NotUsed>();
 
                 runnable.MapMaterializedValue(_ => "boo").Run(Materializer).Should().Be("boo");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Concat_for_Flow_must_work_with_Flow_DSL()
+        public async Task A_Concat_for_Flow_must_work_with_Flow_DSL()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var testFlow = Flow.Create<int>()
-                    .ConcatMaterialized(Source.From(Enumerable.Range(6, 5)), Keep.Both)
-                    .Grouped(1000);
+                                                                             .ConcatMaterialized(Source.From(Enumerable.Range(6, 5)), Keep.Both)
+                                                                             .Grouped(1000);
                 var task = Source.From(Enumerable.Range(1, 5))
                     .ViaMaterialized(testFlow, Keep.Both)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
@@ -204,43 +203,30 @@ namespace Akka.Streams.Tests.Dsl
                 runnable.Invoking(r => r.Run(Materializer)).Should().NotThrow();
 
                 runnable.MapMaterializedValue(_ => "boo").Run(Materializer).Should().Be("boo");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact(Skip = "ConcatMaterialized type conflict")]
-        public void A_Concat_for_Flow_must_work_with_Flow_DSL2()
+        public async Task A_Concat_for_Flow_must_work_with_Flow_DSL2()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var testFlow = Flow.Create<int>()
-                    .ConcatMaterialized(Source.From(Enumerable.Range(6, 5)), Keep.Both)
-                    .Grouped(1000);
+                                                                             .ConcatMaterialized(Source.From(Enumerable.Range(6, 5)), Keep.Both)
+                                                                             .Grouped(1000);
                 var task = Source.From(Enumerable.Range(1, 5))
                     .ViaMaterialized(testFlow, Keep.Both)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-
-                //var sink = testFlow.ConcatMaterialized(Source.From(Enumerable.Range(1, 5)), Keep.Both)
-                //    .To(Sink.Ignore<IEnumerable<int>>())
-                //    .MapMaterializedValue(
-                //        x =>
-                //        {
-                //            x.Item1.Item1.Should().BeOfType<NotUsed>();
-                //            x.Item1.Item2.Should().BeOfType<NotUsed>();
-                //            x.Item2.Should().BeOfType<NotUsed>();
-                //            return "boo";
-                //        });
-
-                //Source.From(Enumerable.Range(10, 6)).RunWith(sink, Materializer).Should().Be("boo");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Concat_for_Flow_must_subscribe_at_one_to_initial_source_and_to_one_that_it_is_concat_to()
+        public async Task A_Concat_for_Flow_must_subscribe_at_one_to_initial_source_and_to_one_that_it_is_concat_to()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var publisher1 = this.CreatePublisherProbe<int>();
                 var publisher2 = this.CreatePublisherProbe<int>();
                 var probeSink =
@@ -263,6 +249,7 @@ namespace Akka.Streams.Tests.Dsl
                 sub2.SendComplete();
 
                 probeSink.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
     }

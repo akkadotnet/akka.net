@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -46,10 +47,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Merge_must_work_in_the_happy_case()
+        public async Task A_Merge_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 // Different input sizes(4 and 6)
                 var source1 = Source.From(Enumerable.Range(0, 4));
                 var source2 = Source.From(Enumerable.Range(4, 6));
@@ -63,8 +63,8 @@ namespace Akka.Streams.Tests.Dsl
                     var sink = Sink.FromSubscriber(probe);
 
                     b.From(source1).To(m1.In(0));
-                    b.From(m1.Out).Via(Flow.Create<int>().Select(x => x*2)).To(m2.In(0));
-                    b.From(m2.Out).Via(Flow.Create<int>().Select(x => x / 2).Select(x=>x+1)).To(sink);
+                    b.From(m1.Out).Via(Flow.Create<int>().Select(x => x * 2)).To(m2.In(0));
+                    b.From(m2.Out).Via(Flow.Create<int>().Select(x => x / 2).Select(x => x + 1)).To(sink);
                     b.From(source2).To(m1.In(1));
                     b.From(source3).To(m2.In(1));
 
@@ -84,6 +84,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 collected.Should().BeEquivalentTo(Enumerable.Range(1, 10).ToArray());
                 probe.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -149,62 +150,59 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Merge_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
+        public async Task A_Merge_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 var subscription1 = subscriber1.ExpectSubscription();
                 subscription1.Request(4);
-                subscriber1.ExpectNext( 1, 2, 3, 4).ExpectComplete();
+                subscriber1.ExpectNext(1, 2, 3, 4).ExpectComplete();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
                 var subscription2 = subscriber2.ExpectSubscription();
                 subscription2.Request(4);
-                subscriber2.ExpectNext( 1, 2, 3, 4).ExpectComplete();
+                subscriber2.ExpectNext(1, 2, 3, 4).ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Merge_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
+        public async Task A_Merge_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 var subscription1 = subscriber1.ExpectSubscription();
                 subscription1.Request(4);
-                subscriber1.ExpectNext( 1, 2, 3, 4).ExpectComplete();
+                subscriber1.ExpectNext(1, 2, 3, 4).ExpectComplete();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
                 var subscription2 = subscriber2.ExpectSubscription();
                 subscription2.Request(4);
-                subscriber2.ExpectNext( 1, 2, 3, 4).ExpectComplete();
+                subscriber2.ExpectNext(1, 2, 3, 4).ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact(Skip = "This is nondeterministic, multiple scenarios can happen")]
-        public void A_Merge_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
+        public async Task A_Merge_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-
+            await this.AssertAllStagesStoppedAsync(() => {
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact(Skip = "This is nondeterministic, multiple scenarios can happen")]
-        public void A_Merge_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
+        public async Task A_Merge_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-
+            await this.AssertAllStagesStoppedAsync(() => {
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Merge_must_pass_along_early_cancellation()
+        public async Task A_Merge_must_pass_along_early_cancellation()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var up1 = this.CreateManualPublisherProbe<int>();
                 var up2 = this.CreateManualPublisherProbe<int>();
                 var down = this.CreateManualSubscriberProbe<int>();
@@ -232,6 +230,7 @@ namespace Akka.Streams.Tests.Dsl
                 upSub1.ExpectCancellation();
                 var upSub2 = up2.ExpectSubscription();
                 upSub2.ExpectCancellation();
+                return Task.CompletedTask;
             }, Materializer);
         }
     }

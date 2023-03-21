@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -86,10 +87,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_terminate_when_the_stream_is_cancelled()
+        public async Task A_ActorRefSource_must_terminate_when_the_stream_is_cancelled()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(0, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
@@ -98,14 +98,14 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = s.ExpectSubscription();
                 sub.Cancel();
                 ExpectTerminated(actorRef);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_ActorRefSource_must_not_fail_when_0_buffer_space_and_demand_is_signalled()
+        public async Task A_ActorRefSource_must_not_fail_when_0_buffer_space_and_demand_is_signalled()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(0, OverflowStrategy.DropHead)
                     .To(Sink.FromSubscriber(s))
@@ -115,14 +115,14 @@ namespace Akka.Streams.Tests.Dsl
                 sub.Request(100);
                 sub.Cancel();
                 ExpectTerminated(actorRef);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_ActorRefSource_must_signal_buffered_elements_and_complete_the_stream_after_receiving_Status_Success()
+        public async Task A_ActorRefSource_must_signal_buffered_elements_and_complete_the_stream_after_receiving_Status_Success()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
@@ -133,16 +133,16 @@ namespace Akka.Streams.Tests.Dsl
                 actorRef.Tell(3);
                 actorRef.Tell(new Status.Success("ok"));
                 sub.Request(10);
-                s.ExpectNext( 1, 2, 3);
+                s.ExpectNext(1, 2, 3);
                 s.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_ActorRefSource_must_not_buffer_elements_after_receiving_Status_Success()
+        public async Task A_ActorRefSource_must_not_buffer_elements_after_receiving_Status_Success()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
                     .To(Sink.FromSubscriber(s))
@@ -156,30 +156,29 @@ namespace Akka.Streams.Tests.Dsl
                 actorRef.Tell(100);
                 actorRef.Tell(100);
                 sub.Request(10);
-                s.ExpectNext( 1, 2, 3);
+                s.ExpectNext(1, 2, 3);
                 s.ExpectComplete();
-
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_ActorRefSource_must_complete_and_materialize_the_stream_after_receiving_Status_Success()
+        public async Task A_ActorRefSource_must_complete_and_materialize_the_stream_after_receiving_Status_Success()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var (actorRef, done) = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
-                    .ToMaterialized(Sink.Ignore<int>(), Keep.Both)
-                    .Run(Materializer);
+                                                                             .ToMaterialized(Sink.Ignore<int>(), Keep.Both)
+                                                                             .Run(Materializer);
                 actorRef.Tell(new Status.Success("ok"));
                 done.ContinueWith(_ => Done.Instance).Result.Should().Be(Done.Instance);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_ActorRefSource_must_fail_the_stream_when_receiving_Status_Failure()
+        public async Task A_ActorRefSource_must_fail_the_stream_when_receiving_Status_Failure()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
@@ -188,14 +187,14 @@ namespace Akka.Streams.Tests.Dsl
                 var ex = new TestException("testfailure");
                 actorRef.Tell(new Status.Failure(ex));
                 s.ExpectError().Should().Be(ex);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_ActorRefSource_must_set_actor_name_equal_to_stage_name()
+        public async Task A_ActorRefSource_must_set_actor_name_equal_to_stage_name()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 const string name = "SomeCustomName";
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
@@ -204,6 +203,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(Materializer);
                 actorRef.Path.ToString().Should().Contain(name);
                 actorRef.Tell(PoisonPill.Instance);
+                return Task.CompletedTask;
             }, Materializer);
         }
     }

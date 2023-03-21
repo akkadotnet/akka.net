@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
@@ -40,15 +41,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void GroupBy_and_SplitWhen_must_timeout_and_cancel_substream_publisher_when_no_one_subscribes_to_them_after_some_time()
+        public async Task GroupBy_and_SplitWhen_must_timeout_and_cancel_substream_publisher_when_no_one_subscribes_to_them_after_some_time()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber = this.CreateManualSubscriberProbe<(int, Source<int, NotUsed>)>();
                 var publisherProbe = this.CreatePublisherProbe<int>();
                 Source.FromPublisher(publisherProbe)
-                    .GroupBy(3, x => x%3)
-                    .Lift(x => x%3)
+                    .GroupBy(3, x => x % 3)
+                    .Lift(x => x % 3)
                     .RunWith(Sink.FromSubscriber(subscriber), Materializer);
 
                 var downstreamSubscription = subscriber.ExpectSubscription();
@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
                 publisherProbe.SendNext(1);
                 publisherProbe.SendNext(2);
                 publisherProbe.SendNext(3);
-                
+
                 /*
                  * Why this spec is skipped: in the event that subscriber.ExpectSubscription() or (subscriber.ExpectNext()
                  * + s1SubscriberProbe.ExpectSubscription()) exceeds 300ms, the next call to subscriber.ExpectNext will
@@ -91,14 +91,14 @@ namespace Akka.Streams.Tests.Dsl
                 action.Should().Throw<SubscriptionTimeoutException>();
 
                 publisherProbe.SendComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void GroupBy_and_SplitWhen_must_timeout_and_stop_groupBy_parent_actor_if_none_of_the_substreams_are_actually_consumed()
+        public async Task GroupBy_and_SplitWhen_must_timeout_and_stop_groupBy_parent_actor_if_none_of_the_substreams_are_actually_consumed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber = this.CreateManualSubscriberProbe<(int, Source<int, NotUsed>)>();
                 var publisherProbe = this.CreatePublisherProbe<int>();
                 Source.FromPublisher(publisherProbe)
@@ -116,6 +116,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 subscriber.ExpectNext();
                 subscriber.ExpectNext();
+                return Task.CompletedTask;
             }, Materializer);
         }
 

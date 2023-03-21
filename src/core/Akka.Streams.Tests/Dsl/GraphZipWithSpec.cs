@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
@@ -88,17 +89,16 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void ZipWith_must_work_in_the_happy_case()
+        public async Task ZipWith_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
-                    var zipWith = b.Add(new ZipWith<int, int, int>((i, i1) => i+i1));
+                    var zipWith = b.Add(new ZipWith<int, int, int>((i, i1) => i + i1));
                     var source1 = Source.From(Enumerable.Range(1, 4));
-                    var source2 = Source.From(new[] {10, 20, 30, 40});
+                    var source2 = Source.From(new[] { 10, 20, 30, 40 });
 
                     b.From(source1).To(zipWith.In0);
                     b.From(source2).To(zipWith.In1);
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription = probe.ExpectSubscription();
 
                 subscription.Request(2);
-                probe.ExpectNext( 11, 22);
+                probe.ExpectNext(11, 22);
 
                 subscription.Request(1);
                 probe.ExpectNext(33);
@@ -119,15 +119,15 @@ namespace Akka.Streams.Tests.Dsl
                 probe.ExpectNext(44);
 
                 probe.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
 
         [Fact]
-        public void ZipWith_must_work_in_the_sad_case()
+        public async Task ZipWith_must_work_in_the_sad_case()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -146,18 +146,18 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription = probe.ExpectSubscription();
 
                 subscription.Request(2);
-                probe.ExpectNext( 1/-2, 2/-1);
+                probe.ExpectNext(1 / -2, 2 / -1);
                 EventFilter.Exception<DivideByZeroException>().ExpectOne(() => subscription.Request(2));
                 probe.ExpectError().Should().BeOfType<DivideByZeroException>();
                 probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void ZipWith_must_ZipWith_expanded_Person_unapply_3_outputs()
+        public async Task ZipWith_must_ZipWith_expanded_Person_unapply_3_outputs()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = this.CreateManualSubscriberProbe<Person>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -181,16 +181,16 @@ namespace Akka.Streams.Tests.Dsl
                 probe.ExpectNext().Should().BeEquivalentTo(new Person("Caplin", "Capybara", 55));
 
                 probe.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void ZipWith_must_work_with_up_to_9_inputs()
+        public async Task ZipWith_must_work_with_up_to_9_inputs()
         {
             // the jvm version uses 19 inputs but we have only 9
 
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -220,6 +220,7 @@ namespace Akka.Streams.Tests.Dsl
                 subscription.Request(1);
                 probe.ExpectNext(Enumerable.Range(1, 9).Aggregate("", (s, i) => s + i));
                 probe.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 

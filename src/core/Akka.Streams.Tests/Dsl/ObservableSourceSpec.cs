@@ -8,6 +8,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -70,11 +71,10 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void An_ObservableSource_must_subscribe_to_an_observable()
+        public async Task An_ObservableSource_must_subscribe_to_an_observable()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
-
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o)
@@ -84,14 +84,14 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = s.ExpectSubscription();
 
                 o.Complete();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_receive_events_from_an_observable()
+        public async Task An_ObservableSource_must_receive_events_from_an_observable()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o)
@@ -120,14 +120,14 @@ namespace Akka.Streams.Tests.Dsl
                 s.ExpectNext(4);
 
                 o.Complete();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact(Skip = "Buggy")]
-        public void An_ObservableSource_must_receive_errors_from_an_observable()
+        public async Task An_ObservableSource_must_receive_errors_from_an_observable()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o)
@@ -146,14 +146,14 @@ namespace Akka.Streams.Tests.Dsl
                 s.ExpectNext(1);
                 s.ExpectError().ShouldBe(e);
                 s.ExpectNoMsg();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_receive_completion_from_an_observable()
+        public async Task An_ObservableSource_must_receive_completion_from_an_observable()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o)
@@ -166,16 +166,16 @@ namespace Akka.Streams.Tests.Dsl
                 o.Complete();
 
                 sub.Request(5);
-                
+
                 s.ExpectComplete();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_be_able_to_unsubscribe()
+        public async Task An_ObservableSource_must_be_able_to_unsubscribe()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o)
@@ -191,14 +191,14 @@ namespace Akka.Streams.Tests.Dsl
                 Thread.Sleep(100);
 
                 o.Subscribed.ShouldBeFalse();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_ignore_new_element_on_DropNew_overflow()
+        public async Task An_ObservableSource_must_ignore_new_element_on_DropNew_overflow()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o, maxBufferCapacity: 2, overflowStrategy: OverflowStrategy.DropNew)
@@ -218,14 +218,14 @@ namespace Akka.Streams.Tests.Dsl
                 s.ExpectNoMsg();
 
                 sub.Cancel();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_drop_oldest_element_on_DropHead_overflow()
+        public async Task An_ObservableSource_must_drop_oldest_element_on_DropHead_overflow()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o, maxBufferCapacity: 2, overflowStrategy: OverflowStrategy.DropHead)
@@ -245,14 +245,14 @@ namespace Akka.Streams.Tests.Dsl
                 s.ExpectNoMsg();
 
                 sub.Cancel();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_drop_newest_element_on_DropTail_overflow()
+        public async Task An_ObservableSource_must_drop_newest_element_on_DropTail_overflow()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o, maxBufferCapacity: 2, overflowStrategy: OverflowStrategy.DropTail)
@@ -272,14 +272,14 @@ namespace Akka.Streams.Tests.Dsl
                 s.ExpectNoMsg();
 
                 sub.Cancel();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_fail_on_Fail_overflow()
+        public async Task An_ObservableSource_must_fail_on_Fail_overflow()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o, maxBufferCapacity: 2, overflowStrategy: OverflowStrategy.Fail)
@@ -293,11 +293,12 @@ namespace Akka.Streams.Tests.Dsl
                 o.Event(3); // this should cause an error
 
                 sub.Request(3);
-                
+
                 s.ExpectError();
                 s.ExpectNoMsg();
 
                 sub.Cancel();
+                return Task.CompletedTask;
             }, _materializer);
         }
     }

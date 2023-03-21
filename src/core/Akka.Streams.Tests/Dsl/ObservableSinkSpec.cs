@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -55,10 +56,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void An_ObservableSink_must_allow_the_same_observer_to_be_subscribed_only_once()
+        public async Task An_ObservableSink_must_allow_the_same_observer_to_be_subscribed_only_once()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = new TestObserver<int>(this);
                 var observable = Source.From(new[] { 1, 2, 3 })
                     .RunWith(Sink.AsObservable<int>(), Materializer);
@@ -73,15 +73,14 @@ namespace Akka.Streams.Tests.Dsl
                 probe.ExpectEvent(3);
                 probe.ExpectCompleted();
                 probe.ExpectNoMsg();
-
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void An_ObservableSink_must_propagate_events_to_all_observers()
+        public async Task An_ObservableSink_must_propagate_events_to_all_observers()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe1 = new TestObserver<int>(this);
                 var probe2 = new TestObserver<int>(this);
                 var observable = Source.From(new[] { 1, 2 })
@@ -99,15 +98,14 @@ namespace Akka.Streams.Tests.Dsl
                 probe2.ExpectEvent(2);
                 probe2.ExpectCompleted();
                 probe2.ExpectNoMsg();
-
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void An_ObservableSink_must_propagate_error_to_all_observers()
+        public async Task An_ObservableSink_must_propagate_error_to_all_observers()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var e = new Exception("boom");
                 var probe1 = new TestObserver<int>(this);
                 var probe2 = new TestObserver<int>(this);
@@ -122,7 +120,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 probe2.ExpectError(e);
                 probe2.ExpectNoMsg();
-
+                return Task.CompletedTask;
             }, Materializer);
         }
         

@@ -399,9 +399,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact(Skip = "Skipped for async_testkit conversion build")]
-        public void SynchronousFileSink_should_write_buffered_element_if_manual_flush_is_called()
+        public async Task SynchronousFileSink_should_write_buffered_element_if_manual_flush_is_called()
         {
-            this.AssertAllStagesStopped(async() => 
+            await this.AssertAllStagesStoppedAsync(async() => 
             {
                 await TargetFileAsync(f =>
                 {

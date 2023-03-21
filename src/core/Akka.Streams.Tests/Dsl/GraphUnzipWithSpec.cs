@@ -33,50 +33,49 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void UnzipWith_must_work_with_immediately_completed_publisher()
+        public async Task UnzipWith_must_work_with_immediately_completed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscribers = Setup(TestPublisher.Empty<int>());
                 ValidateSubscriptionAndComplete(subscribers);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void UnzipWith_must_work_with_delayed_completed_publisher()
+        public async Task UnzipWith_must_work_with_delayed_completed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscribers = Setup(TestPublisher.LazyEmpty<int>());
                 ValidateSubscriptionAndComplete(subscribers);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void UnzipWith_must_work_with_two_immediately_failed_publisher()
+        public async Task UnzipWith_must_work_with_two_immediately_failed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscribers = Setup(TestPublisher.Error<int>(TestException));
                 ValidateSubscriptionAndError(subscribers);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void UnzipWith_must_work_with_two_delayed_failed_publisher()
+        public async Task UnzipWith_must_work_with_two_delayed_failed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscribers = Setup(TestPublisher.LazyError<int>(TestException));
                 ValidateSubscriptionAndError(subscribers);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void UnzipWith_must_work_in_the_happy_case()
+        public async Task UnzipWith_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var leftProbe = this.CreateManualSubscriberProbe<int>();
                 var rightProbe = this.CreateManualSubscriberProbe<string>();
 
@@ -102,19 +101,19 @@ namespace Akka.Streams.Tests.Dsl
                 leftSubscription.Request(2);
                 rightSubscription.Request(1);
 
-                leftProbe.ExpectNext( 2, 4);
+                leftProbe.ExpectNext(2, 4);
                 leftProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                 rightProbe.ExpectNext("1+1");
                 rightProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                
+
                 leftSubscription.Request(1);
                 rightSubscription.Request(2);
 
                 leftProbe.ExpectNext(6);
                 leftProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-                rightProbe.ExpectNext( "2+2", "3+3");
+                rightProbe.ExpectNext("2+2", "3+3");
                 rightProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                 leftSubscription.Request(1);
@@ -125,20 +124,20 @@ namespace Akka.Streams.Tests.Dsl
 
                 leftProbe.ExpectComplete();
                 rightProbe.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
         
         [Fact]
-        public void UnzipWith_must_work_in_the_sad_case()
+        public async Task UnzipWith_must_work_in_the_sad_case()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var leftProbe = this.CreateManualSubscriberProbe<int>();
                 var rightProbe = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
-                    var unzip = b.Add(new UnzipWith<int, int, string>(i => (1/i, 1 + "/" + i)));
+                    var unzip = b.Add(new UnzipWith<int, int, string>(i => (1 / i, 1 + "/" + i)));
                     var source = Source.From(Enumerable.Range(-2, 5));
 
                     b.From(source).To(unzip.In);
@@ -158,7 +157,7 @@ namespace Akka.Streams.Tests.Dsl
                 };
 
                 requestFromBoth();
-                leftProbe.ExpectNext(1/-2);
+                leftProbe.ExpectNext(1 / -2);
                 rightProbe.ExpectNext("1/-2");
 
                 requestFromBoth();
@@ -172,14 +171,14 @@ namespace Akka.Streams.Tests.Dsl
 
                 leftProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
                 rightProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void UnzipWith_must_propagate_last_downstream_cancellation_cause_once_all_downstream_have_cancelled()
+        public async Task UnzipWith_must_propagate_last_downstream_cancellation_cause_once_all_downstream_have_cancelled()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = CreateTestProbe();
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -196,7 +195,7 @@ namespace Akka.Streams.Tests.Dsl
                     var unzip = b.Add(new UnzipWith<int, int, string>(i => (1 / i, $"1 / {i}")));
 
                     b.From(source).To(unzip.In);
-                
+
                     Flow<T, T, NotUsed> KillSwitchFlow<T>()
                         => Flow.Create<T, NotUsed>()
                             .ViaMaterialized(KillSwitches.Single<T>(), Keep.Right)
@@ -223,14 +222,14 @@ namespace Akka.Streams.Tests.Dsl
                     t.Exception.Should().NotBeNull();
                     t.Exception.InnerException.Should().Be(boom);
                 });
+                return Task.CompletedTask;
             }, Materializer);
         }
         
         [Fact]
-        public void UnzipWith_must_unzipWith_expanded_Person_unapply_3_outputs()
+        public async Task UnzipWith_must_unzipWith_expanded_Person_unapply_3_outputs()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe0 = this.CreateManualSubscriberProbe<string>();
                 var probe1 = this.CreateManualSubscriberProbe<string>();
                 var probe2 = this.CreateManualSubscriberProbe<int>();
@@ -263,16 +262,16 @@ namespace Akka.Streams.Tests.Dsl
                 probe0.ExpectComplete();
                 probe1.ExpectComplete();
                 probe2.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void UnzipWith_must_work_with_up_to_6_outputs()
+        public async Task UnzipWith_must_work_with_up_to_6_outputs()
         {
             // the jvm version uses 20 outputs but we have only 7 so changed this spec a little bit
 
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe0 = this.CreateManualSubscriberProbe<int>();
                 var probe1 = this.CreateManualSubscriberProbe<string>();
                 var probe2 = this.CreateManualSubscriberProbe<int>();
@@ -290,8 +289,8 @@ namespace Akka.Streams.Tests.Dsl
                                     (ints[0], ints[0].ToString(), ints[1], ints[1].ToString(), ints[2],
                                         ints[2].ToString())));
 
-                    var source = Source.Single(Enumerable.Range(1,3).ToList());
-                    
+                    var source = Source.Single(Enumerable.Range(1, 3).ToList());
+
                     b.From(source).To(unzip.In);
                     b.From(unzip.Out0).To(Sink.FromSubscriber(probe0));
                     b.From(unzip.Out1).To(Sink.FromSubscriber(probe1));
@@ -323,6 +322,7 @@ namespace Akka.Streams.Tests.Dsl
                 probe3.ExpectComplete();
                 probe4.ExpectComplete();
                 probe5.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 

@@ -29,10 +29,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(DisplayName = "The Maybe Source must complete materialized promise with None when stream cancels")]
-        public void CompleteMaterializedPromiseWithNoneWhenCancelled()
+        public async Task CompleteMaterializedPromiseWithNoneWhenCancelled()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var neverSource = Source.Maybe<int>();
                 var pubSink = Sink.AsPublisher<int>(false);
 
@@ -46,23 +45,23 @@ namespace Akka.Streams.Tests.Dsl
 
                 subs.Request(1000);
                 c.ExpectNoMsg(100.Milliseconds());
-                
+
                 subs.Cancel();
 
                 tcs.Task.Wait(3.Seconds()).Should().BeTrue();
                 tcs.Task.Result.Should().Be(0);
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact(DisplayName = "The Maybe Source must complete materialized promise with 0 when stream cancels with a failure cause")]
-        public void CompleteMaterializedTaskWithNoneWhenStreamCancelsWithFailure()
+        public async Task CompleteMaterializedTaskWithNoneWhenStreamCancelsWithFailure()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var (tcs, killSwitch) = Source.Maybe<int>()
-                    .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
-                    .To(Sink.Ignore<int>())
-                    .Run(_materializer);
+                                                                             .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
+                                                                             .To(Sink.Ignore<int>())
+                                                                             .Run(_materializer);
 
                 var boom = new TestException("Boom");
                 killSwitch.Abort(boom);
@@ -70,24 +69,25 @@ namespace Akka.Streams.Tests.Dsl
                 // the assumptions in the CoupledTerminationFlowSpec
                 tcs.Task.Wait(3.Seconds()).Should().BeTrue();
                 tcs.Task.Result.Should().Be(0);
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact(DisplayName = "The Maybe Source must allow external triggering of empty completion")]
-        public void AllowExternalTriggeringOfEmptyCompletion()
+        public async Task AllowExternalTriggeringOfEmptyCompletion()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var neverSource = Source.Maybe<int>().Where(_ => false);
                 var counterSink = Sink.Aggregate<int, int>(0, (acc, _) => acc + 1);
                 var (neverPromise, counterFuture) = neverSource
                     .ToMaterialized(counterSink, Keep.Both)
                     .Run(_materializer);
-            
+
                 // external cancellation
                 neverPromise.TrySetResult(0).Should().BeTrue();
                 counterFuture.Wait(3.Seconds()).Should().BeTrue();
                 counterFuture.Result.Should().Be(0);
+                return Task.CompletedTask;
             }, _materializer);
         }
 
@@ -96,54 +96,53 @@ namespace Akka.Streams.Tests.Dsl
         [Fact(
             DisplayName = "The Maybe Source must allow external triggering of empty completion when there was no demand",
             Skip = "Not working, check Maybe<T> source.")]
-        public void AllowExternalTriggerOfEmptyCompletionWhenNoDemand()
+        public async Task AllowExternalTriggerOfEmptyCompletionWhenNoDemand()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = this.CreateSubscriberProbe<int>();
                 var promise = Source
                     .Maybe<int>()
                     .To(Sink.FromSubscriber(probe))
                     .Run(_materializer);
-            
+
                 // external cancellation
                 probe.EnsureSubscription();
                 promise.TrySetResult(0).Should().BeTrue();
                 probe.ExpectComplete();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact(DisplayName = "The Maybe Source must allow external triggering of non-empty completion")]
-        public void AllowExternalTriggerNonEmptyCompletion()
+        public async Task AllowExternalTriggerNonEmptyCompletion()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var neverSource = Source.Maybe<int>();
                 var counterSink = Sink.First<int>();
 
                 var (neverPromise, counterFuture) = neverSource
                     .ToMaterialized(counterSink, Keep.Both)
                     .Run(_materializer);
-            
+
                 // external cancellation
                 neverPromise.TrySetResult(6).Should().BeTrue();
                 counterFuture.Wait(3.Seconds()).Should().BeTrue();
                 counterFuture.Result.Should().Be(6);
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact(DisplayName = "The Maybe Source must allow external triggering of onError")]
-        public void AllowExternalTriggerOnError()
+        public async Task AllowExternalTriggerOnError()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var neverSource = Source.Maybe<int>();
                 var counterSink = Sink.Aggregate<int, int>(0, (acc, _) => acc + 1);
 
                 var (neverPromise, counterFuture) = neverSource
                     .ToMaterialized(counterSink, Keep.Both)
                     .Run(_materializer);
-            
+
                 // external cancellation
                 neverPromise.TrySetException(new TestException("Boom")).Should().BeTrue();
 
@@ -152,6 +151,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithInnerException<AggregateException>()
                     .WithInnerException<TestException>()
                     .WithMessage("Boom");
+                return Task.CompletedTask;
             }, _materializer);
         }
 

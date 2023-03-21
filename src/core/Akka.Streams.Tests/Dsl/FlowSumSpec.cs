@@ -44,66 +44,63 @@ namespace Akka.Streams.Tests.Dsl
         private static Sink<int, Task<int>> SumSink => Sink.Sum<int>((i, i1) => i + i1);
 
         [Fact]
-        public void A_Sum_must_work_when_using_Source_RunSum()
+        public async Task A_Sum_must_work_when_using_Source_RunSum()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var t = InputSource.RunSum((i, i1) => i + i1, Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be(Expected);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Sum_must_work_when_using_Source_Sum()
+        public async Task A_Sum_must_work_when_using_Source_Sum()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var t = SumSource.RunWith(Sink.First<int>(), Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be(Expected);
+                return Task.CompletedTask;
             }, Materializer);
         }
         [Fact]
-        public void A_Sum_must_work_when_using_Sink_Sum()
+        public async Task A_Sum_must_work_when_using_Sink_Sum()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var t = InputSource.RunWith(SumSink, Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be(Expected);
-
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Sum_must_work_when_using_Flow_Sum()
+        public async Task A_Sum_must_work_when_using_Flow_Sum()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var t = InputSource.Via(SumFlow).RunWith(Sink.First<int>(), Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be(Expected);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Sum_must_work_when_using_Source_Sum_and_Flow_Sum_and_Sink_Sum()
+        public async Task A_Sum_must_work_when_using_Source_Sum_and_Flow_Sum_and_Sink_Sum()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var t = SumSource.Via(SumFlow).RunWith(SumSink, Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be(Expected);
-
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Sum_must_propagate_an_error()
+        public async Task A_Sum_must_propagate_an_error()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var error = new TestException("test");
                 var task = InputSource.Select(x =>
                 {
@@ -113,14 +110,14 @@ namespace Akka.Streams.Tests.Dsl
                 }).RunSum((i, i1) => 0, Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>().WithMessage("test");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Sum_must_complete_task_with_failure_when_reduce_function_throws_and_the_supervisor_strategy_decides_to_stop()
+        public async Task A_Sum_must_complete_task_with_failure_when_reduce_function_throws_and_the_supervisor_strategy_decides_to_stop()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var error = new TestException("test");
                 var task = InputSource.RunSum((x, y) =>
                 {
@@ -130,13 +127,14 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>().WithMessage("test");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Sum_must_resume_with_the_accumulated_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_resume()
+        public async Task A_Sum_must_resume_with_the_accumulated_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_resume()
         {
-            this.AssertAllStagesStopped(async() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var error = new Exception("boom");
                 var sum = Sink.Sum((int x, int y) =>
@@ -155,9 +153,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Aggregate_must_resume_and_reset_the_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_restart()
+        public async Task A_Aggregate_must_resume_and_reset_the_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_restart()
         {
-            this.AssertAllStagesStopped(async() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var error = new Exception("boom");
                 var sum = Sink.Sum((int x, int y) =>
@@ -176,44 +174,44 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Sum_must_fail_on_Empty_stream_using_Source_RunSum()
+        public async Task A_Sum_must_fail_on_Empty_stream_using_Source_RunSum()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var result = Source.Empty<int>().RunSum((i, i1) => i + i1, Materializer);
                 result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
                     .Should().Throw<NoSuchElementException>()
                     .And.Message.Should()
                     .Contain("empty stream");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Sum_must_fail_on_Empty_stream_using_Flow_Sum()
+        public async Task A_Sum_must_fail_on_Empty_stream_using_Flow_Sum()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var result = Source.Empty<int>()
-                    .Via(SumFlow)
-                    .RunWith(Sink.Aggregate<int, int>(0, (i, i1) => i + i1), Materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var result = Source.Empty<int>()                                                                             
+                .Via(SumFlow)                                                                             
+                .RunWith(Sink.Aggregate<int, int>(0, (i, i1) => i + i1), Materializer);
                 result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
                     .Should().Throw<NoSuchElementException>()
                     .And.Message.Should()
                     .Contain("empty stream");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Sum_must_fail_on_Empty_stream_using_Sink_Sum()
+        public async Task A_Sum_must_fail_on_Empty_stream_using_Sink_Sum()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var result = Source.Empty<int>()
-                    .RunWith(SumSink, Materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var result = Source.Empty<int>()                                                                            
+                .RunWith(SumSink, Materializer);
                 result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
                     .Should().Throw<NoSuchElementException>()
                     .And.Message.Should()
                     .Contain("empty stream");
+                return Task.CompletedTask;
             }, Materializer);
         }
     }

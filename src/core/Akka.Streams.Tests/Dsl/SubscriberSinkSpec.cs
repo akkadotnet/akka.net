@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -25,10 +26,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SubscriberSink_must_publish_elements_to_the_subscriber()
+        public async Task A_Flow_with_SubscriberSink_must_publish_elements_to_the_subscriber()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 3)).To(Sink.FromSubscriber(c)).Run(Materializer);
 
@@ -38,6 +38,7 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNext(2);
                 c.ExpectNext(3);
                 c.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
     }

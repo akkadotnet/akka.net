@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
@@ -33,10 +34,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_GroupedWithin_must_group_elements_within_the_duration()
+        public async Task A_GroupedWithin_must_group_elements_within_the_duration()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var input = new Iterator<int>(Enumerable.Range(1, 10000));
                 var p = this.CreateManualPublisherProbe<int>();
                 var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNext().Should().HaveCount(1).And.HaveElementAt(0, last);
                 c.ExpectComplete();
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
-
+                return Task.CompletedTask;
             }, Materializer);
         }
 

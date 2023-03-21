@@ -30,16 +30,15 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_cycles()
+        public async Task A_Flow_using_Join_must_allow_for_cycles()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 const int end = 47;
-                var t = Enumerable.Range(0, end + 1).GroupBy(i => i%2 == 0).ToList();
+                var t = Enumerable.Range(0, end + 1).GroupBy(i => i % 2 == 0).ToList();
                 var even = t.First(x => x.Key).ToList();
                 var odd = t.First(x => !x.Key).ToList();
                 var source = Source.From(Enumerable.Range(0, end + 1));
-                var result = even.Concat(odd).Concat(odd.Select(x => x*10));
+                var result = even.Concat(odd).Concat(odd.Select(x => x * 10));
                 var probe = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
                 var flow1 = Flow.FromGraph(GraphDsl.Create(b =>
@@ -56,10 +55,10 @@ namespace Akka.Streams.Tests.Dsl
 
                 var flow2 =
                     Flow.Create<int>()
-                        .Where(x => x%2 == 1)
-                        .Select(x => x*10)
-                        .Buffer((end + 1)/2, OverflowStrategy.Backpressure)
-                        .Take((end + 1)/2);
+                        .Where(x => x % 2 == 1)
+                        .Select(x => x * 10)
+                        .Buffer((end + 1) / 2, OverflowStrategy.Backpressure)
+                        .Take((end + 1) / 2);
 
                 flow1.Join(flow2).Run(Materializer);
 
@@ -67,16 +66,16 @@ namespace Akka.Streams.Tests.Dsl
                 sub.Request(1);
                 probe.ExpectNext().Should().BeEquivalentTo(result);
                 sub.Cancel();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_merge_cycle()
+        public async Task A_Flow_using_Join_must_allow_for_merge_cycle()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var source =
-                    Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
+                                                                             Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
 
                 var flow1 = Flow.FromGraph(GraphDsl.Create(Sink.First<string>(), (b, sink) =>
                 {
@@ -92,16 +91,16 @@ namespace Akka.Streams.Tests.Dsl
                 var t = flow1.Join(Flow.Create<string>()).Run(Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be("lonely traveler");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_merge_preferred_cycle()
+        public async Task A_Flow_using_Join_must_allow_for_merge_preferred_cycle()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var source =
-                    Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
+                                                                             Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
 
                 var flow1 = Flow.FromGraph(GraphDsl.Create(Sink.First<string>(), (b, sink) =>
                 {
@@ -117,18 +116,18 @@ namespace Akka.Streams.Tests.Dsl
                 var t = flow1.Join(Flow.Create<string>()).Run(Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be("lonely traveler");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_zip_cycle()
+        public async Task A_Flow_using_Join_must_allow_for_zip_cycle()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var source = Source.From(new[] {"traveler1", "traveler2"})
-                    .MapMaterializedValue<TestSubscriber.Probe<(string, string)>>(_ => null);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var source = Source.From(new[] { "traveler1", "traveler2" })
+                                                                             .MapMaterializedValue<TestSubscriber.Probe<(string, string)>>(_ => null);
 
-                var flow = Flow.FromGraph(GraphDsl.Create(this.SinkProbe<(string,string)>(), (b, sink) =>
+                var flow = Flow.FromGraph(GraphDsl.Create(this.SinkProbe<(string, string)>(), (b, sink) =>
                 {
                     var zip = b.Add(new Zip<string, string>());
                     var broadcast = b.Add(new Broadcast<(string, string)>(2));
@@ -153,24 +152,24 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = flow.Join(feedback).Run(Materializer);
                 probe.RequestNext(("traveler1", "ignition"));
                 probe.RequestNext(("traveler2", "traveler1"));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_concat_cycle()
+        public async Task A_Flow_using_Join_must_allow_for_concat_cycle()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var flow = Flow.FromGraph(GraphDsl.Create(TestSource.SourceProbe<string>(this), Sink.First<string>(), Keep.Both, (b, source, sink) =>
-                {
-                    var concat = b.Add(Concat.Create<string>());
-                    var broadcast = b.Add(new Broadcast<string>(2, true));
+                                                                         {
+                                                                             var concat = b.Add(Concat.Create<string>());
+                                                                             var broadcast = b.Add(new Broadcast<string>(2, true));
 
-                    b.From(source).To(concat.In(0));
-                    b.From(concat.Out).To(broadcast.In);
-                    b.From(broadcast.Out(0)).To(sink);
-                    return new FlowShape<string, string>(concat.In(1), broadcast.Out(1));
-                }));
+                                                                             b.From(source).To(concat.In(0));
+                                                                             b.From(concat.Out).To(broadcast.In);
+                                                                             b.From(broadcast.Out(0)).To(sink);
+                                                                             return new FlowShape<string, string>(concat.In(1), broadcast.Out(1));
+                                                                         }));
 
                 var tuple = flow.Join(Flow.Create<string>()).Run(Materializer);
                 var probe = tuple.Item1;
@@ -179,14 +178,14 @@ namespace Akka.Streams.Tests.Dsl
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be("lonely traveler");
                 probe.SendComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_interleave_cycle()
+        public async Task A_Flow_using_Join_must_allow_for_interleave_cycle()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var source = Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
                 var flow = Flow.FromGraph(GraphDsl.Create(Sink.First<string>(), (b, sink) =>
                 {
@@ -198,10 +197,11 @@ namespace Akka.Streams.Tests.Dsl
                     b.From(broadcast.Out(0)).To(sink);
                     return new FlowShape<string, string>(interleave.In(1), broadcast.Out(1));
                 }));
-                
+
                 var t = flow.Join(Flow.Create<string>()).Run(Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be("lonely traveler");
+                return Task.CompletedTask;
             }, Materializer);
         }
     }
