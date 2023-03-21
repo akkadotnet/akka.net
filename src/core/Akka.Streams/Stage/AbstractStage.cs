@@ -457,6 +457,7 @@ namespace Akka.Streams.Stage
         /// By default the cancel signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </summary>
         /// <param name="context">TBD</param>
+        /// <param name="cause"></param>
         /// <returns>TBD</returns>
         public abstract ITerminationDirective OnDownstreamFinish(IContext context, Exception cause);
 

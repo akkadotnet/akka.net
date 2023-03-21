@@ -243,7 +243,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// TBD
         /// </summary>
         /// <param name="persistent">TBD</param>
-        /// <param name="tag">TBD</param>
         /// <param name="offset">TBD</param>
         public ReplayedEvent(IPersistentRepresentation persistent, long offset)
         {

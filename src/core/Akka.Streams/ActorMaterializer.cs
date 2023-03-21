@@ -462,7 +462,6 @@ namespace Akka.Streams
         /// <param name="isFuzzingMode">TBD</param>
         /// <param name="isAutoFusing">TBD</param>
         /// <param name="maxFixedBufferSize">TBD</param>
-        /// <param name="blockingIoDispatcher">TBD</param>
         /// <param name="syncProcessingLimit">TBD</param>
         public ActorMaterializerSettings(
             int initialInputBufferSize, 
