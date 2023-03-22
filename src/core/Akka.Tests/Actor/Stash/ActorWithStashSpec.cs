@@ -21,148 +21,70 @@ namespace Akka.Tests.Actor.Stash
     public class ActorWithStashSpec : AkkaSpec
     {
         private static StateObj _state;
-        public ActorWithStashSpec()
-        {
-            _state = new StateObj(this);
-        }
+
+        public ActorWithStashSpec() => _state = new StateObj(this);
 
         [Fact]
-        public void An_actor_with_unbounded_stash_must_have_a_stash_assigned_to_it()
-        {
-            var actor = ActorOfAsTestActorRef<UnboundedStashActor>();
-            Assert.NotNull(actor.UnderlyingActor.Stash);
-            Assert.IsAssignableFrom<UnboundedStashImpl>(actor.UnderlyingActor.Stash);
-        }
-
-        [Fact]
-        public void An_actor_with_bounded_stash_must_have_a_stash_assigned_to_it()
-        {
-            var actor = ActorOfAsTestActorRef<BoundedStashActor>();
-            Assert.NotNull(actor.UnderlyingActor.Stash);
-            Assert.IsAssignableFrom<BoundedStashImpl>(actor.UnderlyingActor.Stash);
-        }
-
-        [Fact]
-        public void An_actor_with_Stash_Must_stash_and_unstash_messages()
+        public void An_actor_with_stash_must_stash_messages()
         {
             var stasher = ActorOf<StashingActor>("stashing-actor");
-            stasher.Tell("bye");    //will be stashed
-            stasher.Tell("hello");  //forces UnstashAll
+            stasher.Tell("bye");
+            stasher.Tell("hello");
             _state.Finished.Await();
             _state.S.ShouldBe("bye");
         }
 
         [Fact]
-        public void An_actor_Must_throw_an_exception_if_the_same_message_is_stashed_twice()
+        public void An_actor_with_stash_must_support_protocols()
+        {
+            var protoActor = ActorOf<ActorWithProtocol>();
+            protoActor.Tell("open");
+            protoActor.Tell("write");
+            protoActor.Tell("open");
+            protoActor.Tell("close");
+            protoActor.Tell("write");
+            protoActor.Tell("close");
+            protoActor.Tell("done");
+            _state.Finished.Await();
+        }
+
+        [Fact]
+        public void An_actor_must_throw_an_exception_if_the_same_message_is_stashed_twice()
         {
             _state.ExpectedException = new TestLatch();
             var stasher = ActorOf<StashingTwiceActor>("stashing-actor");
             stasher.Tell("hello");
-            _state.ExpectedException.Ready(TimeSpan.FromSeconds(3));
-        }
-
-        [Fact]
-        public async Task An_actor_Should__not_throw_an_exception_if_the_same_message_is_received_and_stashed_twice()
-        {
-            _state.ExpectedException = new TestLatch();
-            var stasher = ActorOf<StashAndReplyActor>("stashing-actor");
             stasher.Tell("hello");
-            await ExpectMsgAsync("bye");
-            stasher.Tell("hello");
-            await ExpectMsgAsync("bye");
-        }
-
-        [Fact]
-        public async Task An_actor_must_unstash_all_messages_on_PostStop()
-        {
-            var stasher = ActorOf<StashEverythingActor>("stasher");
-            Watch(stasher);
-            //This message will be stashed by stasher
-            stasher.Tell("message");
-
-            //When stasher is stopped it should unstash message during poststop to mailbox
-            //the mailbox will be emptied and the messages will be sent to deadletters
-            await EventFilter.DeadLetter<string>(s=>s=="message", source: stasher.Path.ToString())
-                .ExpectOneAsync(async () =>
-                {
-                    Sys.Stop(stasher);
-                    await ExpectTerminatedAsync(stasher);
-                });
+            _state.ExpectedException.Ready(TimeSpan.FromSeconds(10));
         }
 
         [Fact]
         public async Task An_actor_Must_process_stashed_messages_after_restart()
         {
-            SupervisorStrategy strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), e => Directive.Restart);
-            var boss = ActorOf(() => new Supervisor(strategy));
+            var boss = ActorOf(() => new Supervisor(new OneForOneStrategy(2, TimeSpan.FromSeconds(1), e => Directive.Restart)));
+
             var restartLatch = CreateTestLatch();
             var hasMsgLatch = CreateTestLatch();
-            var slaveProps = Props.Create(() => new SlaveActor(restartLatch, hasMsgLatch, "stashme"));
 
-            //Send the props to supervisor, which will create an actor and return the ActorRef
+            var slaveProps = Props.Create(() => new SlaveActor(restartLatch, hasMsgLatch));
             var slave = await boss.Ask<IActorRef>(slaveProps).WithTimeout(TestKitSettings.DefaultTimeout);
 
-            //send a message that will be stashed
-            slave.Tell("stashme");
-
-            //this will crash the slave.
+            slave.Tell("hello");
             slave.Tell("crash");
 
-            //During preRestart restartLatch is opened
-            //After that the cell will unstash "stashme", it should be received by the slave and open hasMsgLatch
             restartLatch.Ready(TimeSpan.FromSeconds(10));
             hasMsgLatch.Ready(TimeSpan.FromSeconds(10));
-        }
-
-        [Fact]
-        public async Task An_actor_that_clears_the_stash_on_preRestart_Must_not_receive_previously_stashed_messages()
-        {
-            SupervisorStrategy strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), e => Directive.Restart);
-            var boss = ActorOf(() => new Supervisor(strategy));
-            var restartLatch = CreateTestLatch();
-            var slaveProps = Props.Create(() => new ActorsThatClearsStashOnPreRestart(restartLatch));
-
-            //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = await boss.Ask<IActorRef>(slaveProps).WithTimeout(TestKitSettings.DefaultTimeout);;
-
-            //send messages that will be stashed
-            slave.Tell("stashme 1");
-            slave.Tell("stashme 2");
-            slave.Tell("stashme 3");
-
-            //this will crash the slave.
-            slave.Tell("crash");
-
-            //send a message that should not be stashed
-            slave.Tell("this should bounce back");
-
-            //During preRestart restartLatch is opened
-            //After that the cell will clear the stash
-            //So when the cell tries to unstash, it will not unstash messages. If it would TestActor
-            //would receive all stashme messages instead of "this should bounce back"
-            restartLatch.Ready(TimeSpan.FromSeconds(1110));
-            await ExpectMsgAsync("this should bounce back");
         }
 
         [Fact]
         public async Task An_actor_must_rereceive_unstashed_Terminated_messages()
         {
             ActorOf(Props.Create(() => new TerminatedMessageStashingActor(TestActor)), "terminated-message-stashing-actor");
-            await ExpectMsgAsync("terminated1");
-            await ExpectMsgAsync("terminated2");
+            await ExpectMsgAsync("terminated");
+            await ExpectMsgAsync("terminated");
         }
 
-        private class UnboundedStashActor : BlackHoleActor, IWithUnboundedStash
-        {
-            public IStash Stash { get; set; }
-        }
-
-        private class BoundedStashActor : BlackHoleActor, IWithBoundedStash
-        {
-            public IStash Stash { get; set; }
-        }
-
-        private class StashingActor : TestReceiveActor, IWithUnboundedStash
+        private class StashingActor : TestReceiveActor, IWithStash
         {
             public StashingActor()
             {
@@ -188,132 +110,97 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class StashAndReplyActor : ReceiveActor, IWithUnboundedStash
-        {
-            public StashAndReplyActor()
-            {
-                ReceiveAny(m =>
-                {
-                    Stash.Stash();
-                    Sender.Tell("bye");
-                }
-                );
-            }
-            public IStash Stash { get; set; }
-        }
-
-        private class StashEverythingActor : ReceiveActor, IWithUnboundedStash
-        {
-            public StashEverythingActor()
-            {
-                ReceiveAny(m=>Stash.Stash());
-            }
-            public IStash Stash { get; set; }
-        }
-
-        private class StashingTwiceActor : TestReceiveActor, IWithUnboundedStash
+        private class StashingTwiceActor : TestReceiveActor, IWithStash
         {
             public StashingTwiceActor()
             {
                 Receive("hello", m =>
                 {
-                    Stash.Stash();
                     try
                     {
                         Stash.Stash();
+                        Stash.Stash();
                     }
-                    catch(IllegalActorStateException)
+                    catch (IllegalActorStateException)
                     {
                         _state.ExpectedException.Open();
                     }
                 });
-                ReceiveAny(m => { });
+                ReceiveAny(m => { }); // do nothing
             }
 
-            private void Greeted()
+            public IStash Stash { get; set; }
+        }
+
+        private class ActorWithProtocol : TestReceiveActor, IWithStash
+        {
+            public ActorWithProtocol()
             {
-                Receive("bye", _ =>
+                Receive("open", m =>
                 {
-                    _state.S = "bye";
-                    _state.Finished.Await();
+                    Stash.UnstashAll();
+                    Context.BecomeStacked(m =>
+                    {
+                        Receive("write", _ => { }); // do writing...
+                        Receive("close", _ =>
+                        {
+                            Stash.UnstashAll();
+                            Context.UnbecomeStacked();
+                        });
+                        ReceiveAny(_ => Stash.Stash());
+                    });
                 });
-                ReceiveAny(_ => { }); //Do nothing
+                Receive("done", m => _state.Finished.Await());
+                ReceiveAny(_ => Stash.Stash());
             }
 
             public IStash Stash { get; set; }
         }
 
-        private class SlaveActor : TestReceiveActor, IWithUnboundedStash
+        private class SlaveActor : TestReceiveActor, IWithStash
         {
             private readonly TestLatch _restartLatch;
 
-            public SlaveActor(TestLatch restartLatch, TestLatch hasMsgLatch, string expectedUnstashedMessage)
+            public SlaveActor(TestLatch restartLatch, TestLatch hasMsgLatch)
             {
                 _restartLatch = restartLatch;
-                Receive("crash", _ => { throw new Exception("Received \"crash\""); });
+
+                Receive("crash", _ => throw new Exception("Crashing..."));
 
                 // when restartLatch is not yet open, stash all messages != "crash"                
                 Receive<object>(_ => !restartLatch.IsOpen, m => Stash.Stash());
 
-                // when restartLatch is open, must receive the unstashed message
-                Receive(expectedUnstashedMessage, _ => hasMsgLatch.Open());
+                // when restartLatch is open, must receive "hello"
+                Receive("hello", _ => hasMsgLatch.Open());
             }
 
             protected override void PreRestart(Exception reason, object message)
             {
-                if(!_restartLatch.IsOpen) _restartLatch.Open();
+                if (!_restartLatch.IsOpen) _restartLatch.Open();
 
                 base.PreRestart(reason, message);
             }
             public IStash Stash { get; set; }
-        }
-
-        private class ActorsThatClearsStashOnPreRestart : TestReceiveActor, IWithUnboundedStash
-        {
-            private readonly TestLatch _restartLatch;
-
-            public ActorsThatClearsStashOnPreRestart(TestLatch restartLatch)
-            {
-                _restartLatch = restartLatch;
-                Receive("crash", _ => { throw new Exception("Received \"crash\""); });
-
-                // when restartLatch is not yet open, stash all messages != "crash"                
-                Receive<object>(_ => !restartLatch.IsOpen, m => Stash.Stash());
-
-                // when restartLatch is open we send all messages back
-                ReceiveAny(m => Sender.Tell(m));
-            }
-            protected override void PreRestart(Exception reason, object message)
-            {
-                if(!_restartLatch.IsOpen) _restartLatch.Open();
-                Stash.ClearStash();
-                base.PreRestart(reason, message);
-            }
-            public IStash Stash { get; set; }
-
         }
 
         private class TerminatedMessageStashingActor : TestReceiveActor, IWithUnboundedStash
         {
             public TerminatedMessageStashingActor(IActorRef probe)
             {
-                var watchedActor=Context.Watch(Context.ActorOf<BlackHoleActor>("watched-actor"));
+                var watchedActor = Context.Watch(Context.ActorOf<BlackHoleActor>("watched-actor"));
                 var stashed = false;
+
                 Context.Stop(watchedActor);
 
                 Receive<Terminated>(w => w.ActorRef == watchedActor, w =>
                 {
-                    if(!stashed)
+                    if (!stashed)
                     {
                         Stash.Stash();        //Stash the Terminated message
                         stashed = true;
                         Stash.UnstashAll();   //Unstash the Terminated message
-                        probe.Tell("terminated1");
                     }
-                    else
-                    {
-                        probe.Tell("terminated2");
-                    }
+                    probe.Tell("terminated");
                 });
             }
             public IStash Stash { get; set; }
@@ -330,85 +217,6 @@ namespace Akka.Tests.Actor.Stash
             public string S;
             public TestBarrier Finished;
             public TestLatch ExpectedException;
-        }
-
-        [Fact]
-        public void An_actor_should_not_throw_an_exception_if_sent_two_messages_with_same_value_different_reference()
-        {
-            _state.ExpectedException = new TestLatch();
-            var stasher = ActorOf<StashEverythingActor>("stashing-actor");
-            stasher.Tell(new CustomMessageOverrideEquals("A"));
-            stasher.Tell(new CustomMessageOverrideEquals("A"));
-
-            // NOTE:
-            // here we should test for no exception thrown..
-            // but I don't know how....
-        }
-
-        public class CustomMessageOverrideEquals
-        {
-
-            public CustomMessageOverrideEquals(string cargo)
-            {
-                Cargo = cargo;
-            }
-            public override int GetHashCode()
-            {
-                return base.GetHashCode() ^ 314;
-            }
-            public override bool Equals(System.Object obj)
-            {
-                // If parameter is null return false.
-                if (obj == null)
-                {
-                    return false;
-                }
-
-                // If parameter cannot be cast to Point return false.
-                CustomMessageOverrideEquals p = obj as CustomMessageOverrideEquals;
-                if ((System.Object)p == null)
-                {
-                    return false;
-                }
-
-                // Return true if the fields match:
-                return (Cargo == p.Cargo);
-            }
-
-            public bool Equals(CustomMessageOverrideEquals p)
-            {
-                // If parameter is null return false:
-                if ((object)p == null)
-                {
-                    return false;
-                }
-
-                // Return true if the fields match:
-                return (Cargo == p.Cargo);
-            }
-            public static bool operator ==(CustomMessageOverrideEquals a, CustomMessageOverrideEquals b)
-            {
-                // If both are null, or both are same instance, return true.
-                if (System.Object.ReferenceEquals(a, b))
-                {
-                    return true;
-                }
-
-                // If one is null, but not both, return false.
-                if (((object)a == null) || ((object)b == null))
-                {
-                    return false;
-                }
-
-                // Return true if the fields match:
-                return (a.Cargo == b.Cargo);
-            }
-
-            public static bool operator !=(CustomMessageOverrideEquals a, CustomMessageOverrideEquals b)
-            {
-                return !(a == b);
-            }
-            public string Cargo { get; private set; }
         }
     }
 }

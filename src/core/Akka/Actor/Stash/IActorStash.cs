@@ -50,7 +50,7 @@ namespace Akka.Actor
         {
             if (actor is IActorStash stashed && stashed.Stash == null)
             {
-                stashed.Stash = context.CreateStash(actor.GetType());
+                stashed.Stash = context.CreateStash();
             }
         }
 
