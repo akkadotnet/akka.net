@@ -63,6 +63,13 @@ namespace Akka.TestKit
         private readonly ITestKitAssertions _assertions;
         private TestState _testState;
 
+        private readonly ActorSystem _ctorSystem;
+        private readonly ActorSystemSetup _ctorConfig;
+        private readonly string _ctorSystemName;
+        private readonly string _ctorTestActorName;
+        
+        protected virtual bool DeferredStart => false;
+
         /// <summary>
         /// Create a new instance of the <see cref="TestKitBase"/> class.
         /// If no <paramref name="system"/> is passed in, a new system 
@@ -117,9 +124,27 @@ namespace Akka.TestKit
 
             _assertions = assertions;
             
-            InitializeTest(system, config, actorSystemName, testActorName);
+            if (DeferredStart)
+            {
+                _ctorSystem = system;
+                _ctorConfig = config;
+                _ctorSystemName = actorSystemName;
+                _ctorTestActorName = testActorName;
+            }
+            else
+            {
+                InitializeTest(system, config, actorSystemName, testActorName);
+            }
         }
 
+        public void Start()
+        {
+            if (!DeferredStart)
+                return;
+            
+            InitializeTest(_ctorSystem, _ctorConfig, _ctorSystemName, _ctorTestActorName);
+        }
+        
         /// <summary>
         /// Initializes the <see cref="TestState"/> for a new spec.
         /// </summary>
