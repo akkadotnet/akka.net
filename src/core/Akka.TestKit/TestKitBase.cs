@@ -68,6 +68,10 @@ namespace Akka.TestKit
         private readonly string _ctorSystemName;
         private readonly string _ctorTestActorName;
         
+        /// <summary>
+        /// If overriden to return <c>true</c>, <see cref="ActorSystem"/> would not be started automatically.
+        /// You would need to call the <see cref="Start"/> method to start the TestKit <see cref="ActorSystem"/>
+        /// </summary>
         protected virtual bool DeferredStart => false;
 
         /// <summary>
@@ -137,6 +141,9 @@ namespace Akka.TestKit
             }
         }
 
+        /// <summary>
+        /// Start the <see cref="ActorSystem"/> if TestKit is set to deferred mode.
+        /// </summary>
         public void Start()
         {
             if (!DeferredStart)
