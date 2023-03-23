@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
@@ -77,10 +78,9 @@ namespace Akka.Streams.Tests.Dsl
         private IActorRef CreateActor<T>() => Sys.ActorOf(Props.Create(typeof(T), TestActor).WithDispatcher("akka.test.stream-dispatcher"));
 
         [Fact]
-        public void ActorBackpressureSink_should_send_the_elements_to_the_ActorRef()
+        public async Task ActorBackpressureSink_should_send_the_elements_to_the_ActorRef()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var fw = CreateActor<Fw>();
                 Source.From(Enumerable.Range(1, 3))
                     .RunWith(Sink.ActorRefWithAck<int>(fw, InitMessage, AckMessage, CompleteMessage), Materializer);
@@ -89,14 +89,14 @@ namespace Akka.Streams.Tests.Dsl
                 ExpectMsg(2);
                 ExpectMsg(3);
                 ExpectMsg(CompleteMessage);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void ActorBackpressureSink_should_send_the_elements_to_the_ActorRef2()
+        public async Task ActorBackpressureSink_should_send_the_elements_to_the_ActorRef2()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var fw = CreateActor<Fw>();
                 var probe =
                     this.SourceProbe<int>()
@@ -111,14 +111,14 @@ namespace Akka.Streams.Tests.Dsl
                 ExpectMsg(3);
                 probe.SendComplete();
                 ExpectMsg(CompleteMessage);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void ActorBackpressureSink_should_cancel_stream_when_actor_terminates()
+        public async Task ActorBackpressureSink_should_cancel_stream_when_actor_terminates()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var fw = CreateActor<Fw>();
                 var publisher =
                     this.SourceProbe<int>()
@@ -129,14 +129,14 @@ namespace Akka.Streams.Tests.Dsl
                 ExpectMsg(1);
                 Sys.Stop(fw);
                 publisher.ExpectCancellation();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void ActorBackpressureSink_should_send_message_only_when_backpressure_received()
+        public async Task ActorBackpressureSink_should_send_message_only_when_backpressure_received()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var fw = CreateActor<Fw2>();
                 var publisher = this.SourceProbe<int>()
                         .To(Sink.ActorRefWithAck<int>(fw, InitMessage, AckMessage, CompleteMessage))
@@ -156,14 +156,14 @@ namespace Akka.Streams.Tests.Dsl
                 ExpectMsg(3);
 
                 ExpectMsg(CompleteMessage);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void ActorBackpressureSink_should_keep_on_sending_even_after_the_buffer_has_been_full()
+        public async Task ActorBackpressureSink_should_keep_on_sending_even_after_the_buffer_has_been_full()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var bufferSize = 16;
                 var streamElementCount = bufferSize + 4;
                 var fw = CreateActor<Fw2>();
@@ -187,14 +187,14 @@ namespace Akka.Streams.Tests.Dsl
                     fw.Tell(TriggerAckMessage.Instance);
                 }
                 ExpectMsg(CompleteMessage);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void ActorBackpressureSink_should_work_with_one_element_buffer()
+        public async Task ActorBackpressureSink_should_work_with_one_element_buffer()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var fw = CreateActor<Fw2>();
                 var publisher =
                     this.SourceProbe<int>()
@@ -216,6 +216,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 publisher.SendComplete();
                 ExpectMsg(CompleteMessage);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
