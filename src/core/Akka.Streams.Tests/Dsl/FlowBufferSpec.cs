@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -53,9 +54,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Buffer_must_pass_elements_through_a_chain_of_backpressured_buffers_of_different_size()
+        public async Task Buffer_must_pass_elements_through_a_chain_of_backpressured_buffers_of_different_size()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var future = Source.From(Enumerable.Range(1, 1000))
                     .Buffer(1, OverflowStrategy.Backpressure)
@@ -242,10 +243,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Buffer_must_fail_upstream_if_buffer_is_full_and_configured_so()
+        public async Task Buffer_must_fail_upstream_if_buffer_is_full_and_configured_so()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var publisher = this.CreatePublisherProbe<int>();
                 var subscriber = this.CreateManualSubscriberProbe<int>();
 
@@ -275,6 +275,7 @@ namespace Akka.Streams.Tests.Dsl
                 var actualError = subscriber.ExpectError();
                 actualError.Should().BeOfType<BufferOverflowException>();
                 actualError.Message.Should().Be("Buffer overflow (max capacity was 100)");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
