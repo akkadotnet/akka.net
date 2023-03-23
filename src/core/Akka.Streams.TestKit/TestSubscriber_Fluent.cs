@@ -107,7 +107,6 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Fluent DSL. Expect multiple stream elements in arbitrary order.
             /// </summary>
-            [Obsolete("Use the method with CancellationToken support instead")]
             public ManualProbe<T> ExpectNextUnordered(params T[] elems)
             {
                 ExpectNextUnorderedTask(this, null, default, elems)
