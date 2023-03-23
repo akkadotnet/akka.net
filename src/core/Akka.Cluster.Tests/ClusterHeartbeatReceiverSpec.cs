@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -67,8 +68,8 @@ akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "fal
             var heartbeater = Sys.ActorOf(Props.Create(() => new ClusterHeartbeatSender(Cluster.Get(Sys))));
             heartbeater.Tell(new ClusterEvent.CurrentClusterState());
             
-            EventFilter.Debug(contains: "- Sequence number [2] - Creation time [3]")
-                .ExpectOne(() => heartbeater.Tell(new HeartbeatRsp(Cluster.Get(Sys).SelfUniqueAddress, 2, 3)));
+            EventFilter.Debug(contains: "- Sequence number [2] - Creation time [00:00:03]")
+                .ExpectOne(() => heartbeater.Tell(new HeartbeatRsp(Cluster.Get(Sys).SelfUniqueAddress, 2, 3000000000)));
         }
     }
 }

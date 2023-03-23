@@ -259,7 +259,7 @@ namespace Akka.Cluster
             if (_cluster.Settings.VerboseHeartbeatLogging)
             {
                 _log.Debug("Cluster Node [{0}] - Heartbeat response from [{1}] - Sequence number [{2}] - Creation time [{3}]", _cluster.SelfAddress, rsp.From.Address,
-                    rsp.SequenceNr.ToString(CultureInfo.InvariantCulture), rsp.CreationTimeNanos.ToString(CultureInfo.InvariantCulture));
+                    rsp.SequenceNr.ToString(CultureInfo.InvariantCulture), new TimeSpan(rsp.CreationTimeNanos.ToTicks()).ToString());
             }
             _state = _state.HeartbeatRsp(rsp.From);
         }
