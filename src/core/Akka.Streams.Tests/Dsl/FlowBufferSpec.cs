@@ -56,20 +56,19 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Buffer_must_pass_elements_through_a_chain_of_backpressured_buffers_of_different_size()
         {
-            await this.AssertAllStagesStoppedAsync(async() =>
-            {
-                var future = Source.From(Enumerable.Range(1, 1000))
-                    .Buffer(1, OverflowStrategy.Backpressure)
-                    .Buffer(10, OverflowStrategy.Backpressure)
-                    .Buffer(256, OverflowStrategy.Backpressure)
-                    .Buffer(1, OverflowStrategy.Backpressure)
-                    .Buffer(5, OverflowStrategy.Backpressure)
-                    .Buffer(128, OverflowStrategy.Backpressure)
-                    .Grouped(1001)
-                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-
+            await this.AssertAllStagesStoppedAsync(() => {
+                var future = Source.From(Enumerable.Range(1, 1000))                                                                             
+                .Buffer(1, OverflowStrategy.Backpressure)                                                                             
+                .Buffer(10, OverflowStrategy.Backpressure)                                                                             
+                .Buffer(256, OverflowStrategy.Backpressure)                                                                             
+                .Buffer(1, OverflowStrategy.Backpressure)                                                                            
+                .Buffer(5, OverflowStrategy.Backpressure)                                                                             
+                .Buffer(128, OverflowStrategy.Backpressure)                                                                             
+                .Grouped(1001)                                                                             
+                .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 future.Result.Should().BeEquivalentTo(Enumerable.Range(1, 1000));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
