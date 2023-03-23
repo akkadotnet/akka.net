@@ -147,11 +147,10 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Flow_with_ask_must_produce_asked_elements() => this.AssertAllStagesStopped(() =>
-        {
+        public async Task Flow_with_ask_must_produce_asked_elements() => await this.AssertAllStagesStoppedAsync(() => {
             var replyOnInts =
-                Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"),
-                    "replyOnInts");
+                                                                                                                                      Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"),
+                                                                                                                                          "replyOnInts");
             var c = this.CreateManualSubscriberProbe<Reply>();
 
             var p = Source.From(Enumerable.Range(1, 3))
@@ -166,11 +165,11 @@ namespace Akka.Streams.Tests.Dsl
             sub.Request(2);
             c.ExpectNext(new Reply(3));
             c.ExpectComplete();
+            return Task.CompletedTask;
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_must_produce_asked_elements_for_simple_ask() => this.AssertAllStagesStopped(() =>
-        {
+        public async Task Flow_with_ask_must_produce_asked_elements_for_simple_ask() => await this.AssertAllStagesStoppedAsync(() => {
             var replyOnInts = Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"), "replyOnInts");
             var c = this.CreateManualSubscriberProbe<Reply>();
 
@@ -186,11 +185,11 @@ namespace Akka.Streams.Tests.Dsl
             sub.Request(2);
             c.ExpectNext(new Reply(3));
             c.ExpectComplete();
+            return Task.CompletedTask;
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_must_produce_asked_elements_when_response_is_Status_Success() => this.AssertAllStagesStopped(() =>
-        {
+        public async Task Flow_with_ask_must_produce_asked_elements_when_response_is_Status_Success() => await this.AssertAllStagesStoppedAsync(() => {
             var statusReplier = Sys.ActorOf(Props.Create(() => new StatusReplier()).WithDispatcher("akka.test.stream-dispatcher"), "statusReplier");
             var c = this.CreateManualSubscriberProbe<Reply>();
 
@@ -206,6 +205,7 @@ namespace Akka.Streams.Tests.Dsl
             sub.Request(2);
             c.ExpectNext(new Reply(3));
             c.ExpectComplete();
+            return Task.CompletedTask;
         }, _materializer);
 
         [Fact]
@@ -227,8 +227,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Flow_with_ask_must_signal_ask_timeout_failure() => this.AssertAllStagesStopped(() =>
-        {
+        public async Task Flow_with_ask_must_signal_ask_timeout_failure() => await this.AssertAllStagesStoppedAsync(() => {
             var dontReply = Sys.ActorOf(BlackHoleActor.Props.WithDispatcher("akka.test.stream-dispatcher"), "dontReply");
             var c = this.CreateManualSubscriberProbe<Reply>();
 
@@ -241,11 +240,11 @@ namespace Akka.Streams.Tests.Dsl
             error.As<AggregateException>().Flatten()
                 .InnerException
                 .Should().BeOfType<AskTimeoutException>();
+            return Task.CompletedTask;
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_must_signal_ask_failure() => this.AssertAllStagesStopped(() =>
-        {
+        public async Task Flow_with_ask_must_signal_ask_failure() => await this.AssertAllStagesStoppedAsync(() => {
             var failsOn = ReplierFailOn(1);
             var c = this.CreateManualSubscriberProbe<Reply>();
 
@@ -253,13 +252,13 @@ namespace Akka.Streams.Tests.Dsl
                 .Ask<Reply>(failsOn, _timeout, 1)
                 .RunWith(Sink.FromSubscriber(c), _materializer);
 
-            var error = (AggregateException) c.ExpectSubscriptionAndError();
+            var error = (AggregateException)c.ExpectSubscriptionAndError();
             error.InnerException.Message.Should().Be("Booming for 1!");
+            return Task.CompletedTask;
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_signal_failure_when_target_actor_is_terminated() => this.AssertAllStagesStopped(() =>
-        {
+        public async Task Flow_with_ask_signal_failure_when_target_actor_is_terminated() => await this.AssertAllStagesStoppedAsync(() => {
             var r = Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"), "replyRandomDelays");
             var done = Source.Maybe<int>()
                 .Ask<Reply>(r, _timeout, 4)
@@ -270,12 +269,11 @@ namespace Akka.Streams.Tests.Dsl
                 r.Tell(PoisonPill.Instance);
                 done.Wait(RemainingOrDefault);
             });
-
+            return Task.CompletedTask;
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_a_failure_mid_stream_must_skip_element_with_resume_strategy() => this.AssertAllStagesStopped(() =>
-        {
+        public async Task Flow_with_ask_a_failure_mid_stream_must_skip_element_with_resume_strategy() => await this.AssertAllStagesStoppedAsync(() => {
             var p = CreateTestProbe();
             var input = new[] { "a", "b", "c", "d", "e", "f" };
             var elements = Source.From(input)
@@ -304,12 +302,11 @@ namespace Akka.Streams.Tests.Dsl
 
             cSender.Tell(new Status.Failure(new Exception("Boom!")));
             elements.Result.Should().BeEquivalentTo(new[] { "a", "b", /*no c*/ "d", "e", "f" });
-
+            return Task.CompletedTask;
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_must_resume_after_ask_failure() => this.AssertAllStagesStopped(() =>
-        {
+        public async Task Flow_with_ask_must_resume_after_ask_failure() => await this.AssertAllStagesStoppedAsync(() => {
             var c = this.CreateManualSubscriberProbe<Reply>();
             var aref = ReplierFailOn(3);
             var p = Source.From(Enumerable.Range(1, 5))
@@ -326,12 +323,11 @@ namespace Akka.Streams.Tests.Dsl
             }
 
             c.ExpectComplete();
-
+            return Task.CompletedTask;
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_must_resume_after_multiple_failures() => this.AssertAllStagesStopped(() =>
-        {
+        public async Task Flow_with_ask_must_resume_after_multiple_failures() => await this.AssertAllStagesStoppedAsync(() => {
             var aref = ReplierFailAllExceptOn(6);
             var t = Source.From(Enumerable.Range(1, 6))
                 .Ask<Reply>(aref, _timeout, 2)
@@ -340,11 +336,11 @@ namespace Akka.Streams.Tests.Dsl
 
             t.Wait(3.Seconds()).Should().BeTrue();
             t.Result.Should().Be(new Reply(6));
+            return Task.CompletedTask;
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_should_handle_cancel_properly() => this.AssertAllStagesStopped(() =>
-        {
+        public async Task Flow_with_ask_should_handle_cancel_properly() => await this.AssertAllStagesStoppedAsync(() => {
             var dontReply = Sys.ActorOf(BlackHoleActor.Props.WithDispatcher("akka.test.stream-dispatcher"), "dontReply");
             var pub = this.CreateManualPublisherProbe<int>();
             var sub = this.CreateManualSubscriberProbe<Reply>();
@@ -357,6 +353,7 @@ namespace Akka.Streams.Tests.Dsl
             upstream.ExpectRequest();
             sub.ExpectSubscription().Cancel();
             upstream.ExpectCancellation();
+            return Task.CompletedTask;
         }, _materializer);
 
         private IActorRef ReplierFailOn(int n) => 
