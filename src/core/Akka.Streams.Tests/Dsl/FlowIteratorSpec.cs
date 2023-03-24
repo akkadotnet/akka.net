@@ -9,6 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -145,13 +146,12 @@ namespace Akka.Streams.Tests.Dsl
         protected abstract Source<int, NotUsed> CreateSource(int elements);
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_produce_elements()
+        public async Task A_Flow_based_on_an_iterable_must_produce_elements()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<int>();
-                
+
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
@@ -162,32 +162,32 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNext(2)
                     .ExpectNext(3)
                     .ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_complete_empty()
+        public async Task A_Flow_based_on_an_iterable_must_complete_empty()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var p = CreateSource(0).RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<int>();
 
                 p.Subscribe(c);
                 c.ExpectSubscriptionAndComplete();
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_produce_elements_with_multiple_subscribers()
+        public async Task A_Flow_based_on_an_iterable_must_produce_elements_with_multiple_subscribers()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(true), Materializer);
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
-                
+
                 p.Subscribe(c1);
                 p.Subscribe(c2);
                 var sub1 = c1.ExpectSubscription();
@@ -206,18 +206,18 @@ namespace Akka.Streams.Tests.Dsl
                 c2.ExpectNext(3);
                 c1.ExpectComplete();
                 c2.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_produce_elements_to_later_subscriber()
+        public async Task A_Flow_based_on_an_iterable_must_produce_elements_to_later_subscriber()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(true), Materializer);
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
-                
+
                 p.Subscribe(c1);
                 var sub1 = c1.ExpectSubscription();
                 sub1.Request(1);
@@ -236,17 +236,17 @@ namespace Akka.Streams.Tests.Dsl
                 c1.ExpectNext(2)
                     .ExpectNext(3)
                     .ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_produce_elements_with_one_transformation_step()
+        public async Task A_Flow_based_on_an_iterable_must_produce_elements_with_one_transformation_step()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var p = CreateSource(3)
-                    .Select(x => x*2)
-                    .RunWith(Sink.AsPublisher<int>(false), Materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var p = CreateSource(3)                                                                             
+                .Select(x => x * 2)                                                                             
+                .RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<int>();
 
                 p.Subscribe(c);
@@ -257,18 +257,18 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(4)
                     .ExpectNext(6)
                     .ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_produce_elements_with_two_transformation_steps()
+        public async Task A_Flow_based_on_an_iterable_must_produce_elements_with_two_transformation_steps()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var p = CreateSource(4)
-                    .Where(x => x%2 == 0)
-                    .Select(x => x*2)
-                    .RunWith(Sink.AsPublisher<int>(false), Materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var p = CreateSource(4)                                                                             
+                .Where(x => x % 2 == 0)                                                                             
+                .Select(x => x * 2)                                                                             
+                .RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<int>();
 
                 p.Subscribe(c);
@@ -278,14 +278,14 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNext(4)
                     .ExpectNext(8)
                     .ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_not_produce_after_cancel()
+        public async Task A_Flow_based_on_an_iterable_must_not_produce_after_cancel()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<int>();
 
@@ -297,6 +297,7 @@ namespace Akka.Streams.Tests.Dsl
                 sub.Cancel();
                 sub.Request(2);
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                return Task.CompletedTask;
             }, Materializer);
         }
     }
