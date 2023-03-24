@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.IO
     public class FileSinkSpec : AkkaSpec
     {
         private readonly ActorMaterializer _materializer;
-        private readonly List<string> _testLines = new List<string>();
+        private readonly List<string> _testLines = new();
         private readonly List<ByteString> _testByteStrings;
         private readonly TimeSpan _expectTimeout = TimeSpan.FromSeconds(10);
 
@@ -444,7 +444,7 @@ namespace Akka.Streams.Tests.IO
             ActorMaterializer materializer, 
             bool create = true)
         {
-            var targetFile = new FileInfo(Path.Combine(Path.GetTempPath(), "synchronous-file-sink.tmp"));
+            var targetFile = new FileInfo(Path.Combine(Path.GetTempPath(), $"synchronous-file-sink-{Guid.NewGuid()}.tmp"));
 
             if (!create)
                 targetFile.Delete();
