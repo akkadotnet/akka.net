@@ -32,10 +32,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_balance_between_subscribers_which_signal_demand()
+        public async Task A_Balance_must_balance_between_subscribers_which_signal_demand()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
 
@@ -56,17 +55,17 @@ namespace Akka.Streams.Tests.Dsl
                 c1.ExpectNext(1).ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                 sub2.Request(2);
-                c2.ExpectNext( 2, 3);
+                c2.ExpectNext(2, 3);
                 c1.ExpectComplete();
                 c2.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Balance_must_support_waiting_for_demand_from_all_downstream_subscriptions()
+        public async Task A_Balance_must_support_waiting_for_demand_from_all_downstream_subscriptions()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s1 = this.CreateManualSubscriberProbe<int>();
 
                 var p2 = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false), (b, p2Sink) =>
@@ -93,17 +92,17 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub2.Request(2);
                 s1.ExpectNext(1);
-                s2.ExpectNext( 2, 3);
+                s2.ExpectNext(2, 3);
                 s1.ExpectComplete();
                 s2.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void A_Balance_must_support_waiting_for_demand_from_all_non_cancelled_downstream_subscriptions()
+        public async Task A_Balance_must_support_waiting_for_demand_from_all_non_cancelled_downstream_subscriptions()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s1 = this.CreateManualSubscriberProbe<int>();
 
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false),
@@ -141,46 +140,45 @@ namespace Akka.Streams.Tests.Dsl
                 sub3.Cancel();
 
                 s1.ExpectNext(1);
-                s2.ExpectNext( 2, 3);
+                s2.ExpectNext(2, 3);
                 s1.ExpectComplete();
                 s2.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Balance_must_work_with_1_way_balance()
+        public async Task A_Balance_must_work_with_1_way_balance()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var task = Source.FromGraph(GraphDsl.Create(b =>
-                {
-                    var balance = b.Add(new Balance<int>(1));
+            await this.AssertAllStagesStoppedAsync(() => {
+                var task = Source.FromGraph(GraphDsl.Create(b =>                                                                         
+                {                                                                             
+                    var balance = b.Add(new Balance<int>(1));                                                                             
                     var source = b.Add(Source.From(Enumerable.Range(1, 3)));
-
-                    b.From(source).To(balance.In);
-                    return new SourceShape<int>(balance.Out(0));
-                })).RunAggregate(new List<int>(), (list, i) =>
-                {
-                    list.Add(i);
-                    return list;
+                                                                             
+                    b.From(source).To(balance.In);                                                                             
+                    return new SourceShape<int>(balance.Out(0));                                                                         
+                })).RunAggregate(new List<int>(), (list, i) =>                                                                         
+                {                                                                             
+                    list.Add(i);                                                                             
+                    return list;                                                                         
                 }, Materializer);
-
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(new[] {1, 2, 3});
+                task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Balance_must_work_with_5_way_balance()
+        public async Task A_Balance_must_work_with_5_way_balance()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var sink = Sink.First<IEnumerable<int>>();
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(sink, sink, sink, sink, sink, ValueTuple.Create,
                     (b, s1, s2, s3, s4, s5) =>
                     {
                         var balance = b.Add(new Balance<int>(5, true));
-                        var source = Source.From(Enumerable.Range(0, 15)).MapMaterializedValue(_=> default((Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)));
+                        var source = Source.From(Enumerable.Range(0, 15)).MapMaterializedValue(_ => default((Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)));
                         b.From(source).To(balance.In);
                         b.From(balance.Out(0)).Via(Flow.Create<int>().Grouped(15)).To(s1);
                         b.From(balance.Out(1)).Via(Flow.Create<int>().Grouped(15)).To(s2);
@@ -192,15 +190,15 @@ namespace Akka.Streams.Tests.Dsl
 
                 var task = Task.WhenAll(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.SelectMany(l=>l).Should().BeEquivalentTo(Enumerable.Range(0, 15));
+                task.Result.SelectMany(l => l).Should().BeEquivalentTo(Enumerable.Range(0, 15));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Balance_must_balance_between_all_three_outputs()
+        public async Task A_Balance_must_balance_between_all_three_outputs()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 const int numElementsForSink = 10000;
                 var outputs = Sink.Aggregate<int, int>(0, (sum, i) => sum + i);
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(outputs, outputs, outputs, ValueTuple.Create,
@@ -209,7 +207,7 @@ namespace Akka.Streams.Tests.Dsl
                         var balance = b.Add(new Balance<int>(3, true));
                         var source =
                             Source.Repeat(1)
-                                .Take(numElementsForSink*3)
+                                .Take(numElementsForSink * 3)
                                 .MapMaterializedValue(_ => default((Task<int>, Task<int>, Task<int>)));
                         b.From(source).To(balance.In);
                         b.From(balance.Out(0)).To(o1);
@@ -221,22 +219,22 @@ namespace Akka.Streams.Tests.Dsl
                 var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().NotContain(0);
-                task.Result.Sum().Should().Be(numElementsForSink*3);
+                task.Result.Sum().Should().Be(numElementsForSink * 3);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Balance_must_fairly_balance_between_three_outputs()
+        public async Task A_Balance_must_fairly_balance_between_three_outputs()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = this.SinkProbe<int>();
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(probe, probe, probe, ValueTuple.Create,
                     (b, o1, o2, o3) =>
                     {
                         var balance = b.Add(new Balance<int>(3));
                         var source =
-                            Source.From(Enumerable.Range(1,7))
+                            Source.From(Enumerable.Range(1, 7))
                                 .MapMaterializedValue(_ => default((TestSubscriber.Probe<int>, TestSubscriber.Probe<int>, TestSubscriber.Probe<int>)));
                         b.From(source).To(balance.In);
                         b.From(balance.Out(0)).To(o1);
@@ -259,14 +257,14 @@ namespace Akka.Streams.Tests.Dsl
                 p1.ExpectComplete();
                 p2.ExpectComplete();
                 p3.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Balance_must_produce_to_second_even_though_first_cancels()
+        public async Task A_Balance_must_produce_to_second_even_though_first_cancels()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
 
@@ -284,16 +282,16 @@ namespace Akka.Streams.Tests.Dsl
                 sub1.Cancel();
                 var sub2 = c2.ExpectSubscription();
                 sub2.Request(3);
-                c2.ExpectNext( 1, 2, 3);
+                c2.ExpectNext(1, 2, 3);
                 c2.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Balance_must_produce_to_first_even_though_second_cancels()
+        public async Task A_Balance_must_produce_to_first_even_though_second_cancels()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
 
@@ -311,16 +309,16 @@ namespace Akka.Streams.Tests.Dsl
                 var sub2 = c2.ExpectSubscription();
                 sub2.Cancel();
                 sub1.Request(3);
-                c1.ExpectNext( 1, 2, 3);
+                c1.ExpectNext(1, 2, 3);
                 c1.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Balance_must_cancel_upstream_when_downstream_cancel()
+        public async Task A_Balance_must_cancel_upstream_when_downstream_cancel()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var p1 = this.CreateManualPublisherProbe<int>();
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -351,14 +349,14 @@ namespace Akka.Streams.Tests.Dsl
                 sub1.Cancel();
                 sub2.Cancel();
                 bsub.ExpectCancellation();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Balance_must_not_push_output_twice()
+        public async Task A_Balance_must_not_push_output_twice()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var p1 = this.CreateManualPublisherProbe<int>();
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -387,6 +385,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub1.Cancel();
                 bsub.ExpectCancellation();
+                return Task.CompletedTask;
             }, Materializer);
         }
     }
