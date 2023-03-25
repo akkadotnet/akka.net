@@ -77,11 +77,11 @@ namespace Akka.Streams.Tests.Dsl
         public async Task A_FLow_with_a_Sink_Head_must_yield_NoSuchElementException_for_empty_stream()
         {
             await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<int>()
-                                                                             .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
-                                                                             .Should().Throw<AggregateException>()
-                                                                             .WithInnerException<NoSuchElementException>()
-                                                                             .WithMessage("First of empty stream");
+                Source.Empty<int>()                                                                             
+                .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))                                                                             
+                .Should().Throw<AggregateException>()                                                                             
+                .WithInnerException<NoSuchElementException>()                                                                             
+                .WithMessage("First of empty stream");
                 return Task.CompletedTask;
             }, Materializer);
         }
