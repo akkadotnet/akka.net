@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         }
         
         [Fact]
-        public void A_Scan_must_Scan()
+        public async Task A_Scan_must_Scan()
         {
             Func<int[], int[]> scan = source =>
             {
@@ -57,28 +57,28 @@ namespace Akka.Streams.Tests.Dsl
                 return result;
             };
 
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var random = new Random();
                 var v = Enumerable.Range(1, random.Next(100, 1000)).Select(_ => random.Next()).ToArray();
                 Scan(Source.From(v)).Should().BeEquivalentTo(scan(v));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Scan_must_Scan_empty_failed()
+        public async Task A_Scan_must_Scan_empty_failed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var error = new TestException("fail!");
                 Action fail = () => Scan(Source.Failed<int>(error));
                 fail.Should().Throw<TestException>();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Scan_must_Scan_empty() =>
-            this.AssertAllStagesStopped(() => Scan(Source.Empty<int>()).Should().BeEquivalentTo(new[] {0}), Materializer);
+        public async Task A_Scan_must_Scan_empty() =>
+            await this.AssertAllStagesStoppedAsync(() => Task.FromResult(Scan(Source.Empty<int>()).Should().BeEquivalentTo(new[] {0})), Materializer);
 
         [Fact]
         public void A_Scan_must_emit_values_promptly()
