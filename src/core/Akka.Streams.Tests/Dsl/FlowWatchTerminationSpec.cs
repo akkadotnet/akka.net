@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -28,48 +29,47 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_WatchTermination_must_complete_the_future_when_stream_is_completed()
+        public async Task A_WatchTermination_must_complete_the_future_when_stream_is_completed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var t =
-                    Source.From(Enumerable.Range(1, 4))
-                        .WatchTermination(Keep.Right)
-                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                        .Run(Materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var t =                                                                             
+                Source.From(Enumerable.Range(1, 4))                                                                                 
+                .WatchTermination(Keep.Right)                                                                                 
+                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)                                                                                 
+                .Run(Materializer);
                 var future = t.Item1;
                 var p = t.Item2;
 
-                p.Request(4).ExpectNext( 1, 2, 3, 4);
+                p.Request(4).ExpectNext(1, 2, 3, 4);
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 p.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_WatchTermination_must_complete_the_future_when_stream_is_cancelled_from_downstream()
+        public async Task A_WatchTermination_must_complete_the_future_when_stream_is_cancelled_from_downstream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var t =
-                    Source.From(Enumerable.Range(1, 4))
-                        .WatchTermination(Keep.Right)
-                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                        .Run(Materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var t =                                                                            
+                Source.From(Enumerable.Range(1, 4))                                                                                 
+                .WatchTermination(Keep.Right)                                                                                 
+                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)                                                                                 
+                .Run(Materializer);
                 var future = t.Item1;
                 var p = t.Item2;
 
-                p.Request(3).ExpectNext( 1, 2, 3);
+                p.Request(3).ExpectNext(1, 2, 3);
                 p.Cancel();
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_WatchTermination_must_fail_the_future_when_stream_is_failed()
+        public async Task A_WatchTermination_must_fail_the_future_when_stream_is_failed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var ex = new Exception("Stream failed.");
                 var t = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(Materializer);
                 var p = t.Item1;
@@ -77,34 +77,34 @@ namespace Akka.Streams.Tests.Dsl
                 p.SendNext(1);
                 p.SendError(ex);
                 future.Invoking(f => f.Wait()).Should().Throw<Exception>().WithMessage("Stream failed.");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_WatchTermination_must_complete_the_future_for_an_empty_stream()
+        public async Task A_WatchTermination_must_complete_the_future_for_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var t =
-                    Source.Empty<int>()
-                        .WatchTermination(Keep.Right)
-                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                        .Run(Materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var t =                                                                             
+                Source.Empty<int>()                                                                                 
+                .WatchTermination(Keep.Right)                                                                                 
+                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)                                                                                 
+                .Run(Materializer);
                 var future = t.Item1;
                 var p = t.Item2;
                 p.Request(1);
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact(Skip = "We need a way to combine multiple sources with different materializer types")]
-        public void A_WatchTermination_must_complete_the_future_for_graph()
+        public async Task A_WatchTermination_must_complete_the_future_for_graph()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 //var first = this.SourceProbe<int>().WatchTermination(Keep.Both);
                 //var second = Source.From(Enumerable.Range(2, 4)).MapMaterializedValue(new Func<NotUsed, (TestPublisher.Probe<int>, Task)>(_ => null));
-                
+
                 //var t = Source.FromGraph(
                 //    GraphDsl.Create<SourceShape<int>, (TestPublisher.Probe<int>, Task)>(b =>
                 //    {
@@ -128,6 +128,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 //sourceProbe.SendComplete();
                 //sinkProbe.ExpectNextN(new[] {2, 3, 4, 5}).ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
