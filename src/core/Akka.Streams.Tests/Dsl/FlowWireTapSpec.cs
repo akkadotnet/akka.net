@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -30,38 +31,34 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_wireTap_must_call_the_procedure_for_each_element()
+        public async Task A_wireTap_must_call_the_procedure_for_each_element()
         {
-            this.AssertAllStagesStopped(() =>
-            {   
-                Source.From(Enumerable.Range(1, 100))
-                    .WireTap(i => TestActor.Tell(i))
-                    .RunWith(Sink.Ignore<int>(), Materializer).Wait();
-
+            await this.AssertAllStagesStoppedAsync(() => {
+                Source.From(Enumerable.Range(1, 100))                                                                             
+                .WireTap(i => TestActor.Tell(i))                                                                             
+                .RunWith(Sink.Ignore<int>(), Materializer).Wait();
                 Enumerable.Range(1, 100).Select(i => ExpectMsg(i));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_wireTap_must_complete_the_future_for_an_empty_stream()
+        public async Task A_wireTap_must_complete_the_future_for_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
-            {   
-                Source.Empty<string>()
-                    .WireTap(i => TestActor.Tell(i))
-                    .RunWith(Sink.Ignore<string>(), Materializer)
-                    .ContinueWith(_ => TestActor.Tell("done"));
-
+            await this.AssertAllStagesStoppedAsync(() => {
+                Source.Empty<string>()                                                                             
+                .WireTap(i => TestActor.Tell(i))                                                                             
+                .RunWith(Sink.Ignore<string>(), Materializer)                                                                             
+                .ContinueWith(_ => TestActor.Tell("done"));
                 ExpectMsg("done");
-
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_wireTap_must_yield_the_first_error()
+        public async Task A_wireTap_must_yield_the_first_error()
         {
-            this.AssertAllStagesStopped(() =>
-            {   
+            await this.AssertAllStagesStoppedAsync(() => {
                 var p = this.CreateManualPublisherProbe<int>();
 
                 Source.FromPublisher(p)
@@ -74,18 +71,18 @@ namespace Akka.Streams.Tests.Dsl
                 var rte = new Exception("ex");
                 proc.SendError(rte);
                 ExpectMsg(rte);
-
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_wireTap_must_no_cause_subsequent_stages_to_be_failed_if_throws()
+        public async Task A_wireTap_must_no_cause_subsequent_stages_to_be_failed_if_throws()
         {
-            this.AssertAllStagesStopped(() =>
-            {   
+            await this.AssertAllStagesStoppedAsync(() => {
                 var error = new TestException("Boom!");
                 var future = Source.Single(1).WireTap(_ => throw error).RunWith(Sink.Ignore<int>(), Materializer);
                 Invoking(() => future.Wait()).Should().NotThrow();
+                return Task.CompletedTask;
             }, Materializer);
         }
     }
