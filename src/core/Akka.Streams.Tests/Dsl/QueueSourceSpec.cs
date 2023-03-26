@@ -114,10 +114,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_not_fail_when_0_buffer_space_and_demand_is_signalled()
+        public async Task QueueSource_should_not_fail_when_0_buffer_space_and_demand_is_signalled()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(0, OverflowStrategy.DropHead)
@@ -128,15 +127,14 @@ namespace Akka.Streams.Tests.Dsl
                 sub.Request(1);
                 AssertSuccess(queue.OfferAsync(1));
                 sub.Cancel();
-
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSource_should_wait_for_demand_when_buffer_is_0()
+        public async Task QueueSource_should_wait_for_demand_when_buffer_is_0()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(0, OverflowStrategy.DropHead)
@@ -150,14 +148,14 @@ namespace Akka.Streams.Tests.Dsl
                 ExpectMsg<Enqueued>();
                 s.ExpectNext(1);
                 sub.Cancel();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSource_should_finish_offer_and_complete_futures_when_stream_completed()
+        public async Task QueueSource_should_finish_offer_and_complete_futures_when_stream_completed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(0, OverflowStrategy.DropHead)
@@ -173,15 +171,15 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.Cancel();
 
-                ExpectMsgAllOf(new object[]{ QueueClosed.Instance, "done" });
+                ExpectMsgAllOf(new object[] { QueueClosed.Instance, "done" });
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSource_should_fail_stream_on_buffer_overflow_in_fail_mode()
+        public async Task QueueSource_should_fail_stream_on_buffer_overflow_in_fail_mode()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.Fail)
@@ -192,14 +190,14 @@ namespace Akka.Streams.Tests.Dsl
                 queue.OfferAsync(1);
                 queue.OfferAsync(1);
                 s.ExpectError();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSource_should_remember_pull_from_downstream_to_send_offered_element_immediately()
+        public async Task QueueSource_should_remember_pull_from_downstream_to_send_offered_element_immediately()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var probe = CreateTestProbe();
                 var queue = TestSourceStage<int, ISourceQueueWithComplete<int>>.Create(
@@ -213,18 +211,18 @@ namespace Akka.Streams.Tests.Dsl
                 AssertSuccess(queue.OfferAsync(1));
                 s.ExpectNext(1);
                 sub.Cancel();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSource_should_fail_offer_future_if_user_does_not_wait_in_backpressure_mode()
+        public async Task QueueSource_should_fail_offer_future_if_user_does_not_wait_in_backpressure_mode()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var tuple =
-                    Source.Queue<int>(5, OverflowStrategy.Backpressure)
-                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                        .Run(_materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var tuple =                                                                             
+                Source.Queue<int>(5, OverflowStrategy.Backpressure)                                                                                 
+                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)                                                                                 
+                .Run(_materializer);
                 var queue = tuple.Item1;
                 var probe = tuple.Item2;
 
@@ -239,16 +237,16 @@ namespace Akka.Streams.Tests.Dsl
                 queue.Complete();
 
                 probe.Request(6)
-                    .ExpectNext( 2, 3, 4, 5, 6)
+                    .ExpectNext(2, 3, 4, 5, 6)
                     .ExpectComplete();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSource_should_complete_watching_future_with_failure_if_stream_failed()
+        public async Task QueueSource_should_complete_watching_future_with_failure_if_stream_failed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.Fail)
@@ -258,14 +256,14 @@ namespace Akka.Streams.Tests.Dsl
                 queue.OfferAsync(1); // need to wait when first offer is done as initialization can be done in this moment
                 queue.OfferAsync(2);
                 ExpectMsg<Status.Failure>();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSource_should_complete_watching_future_with_failure_if_materializer_shut_down()
+        public async Task QueueSource_should_complete_watching_future_with_failure_if_materializer_shut_down()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var tempMap = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys)); // need to create a new materializer to be able to shutdown it
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue = Source.Queue<int>(1, OverflowStrategy.Fail)
@@ -274,14 +272,14 @@ namespace Akka.Streams.Tests.Dsl
                 queue.WatchCompletionAsync().PipeTo(TestActor);
                 tempMap.Shutdown();
                 ExpectMsg<Status.Failure>();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSource_should_return_false_when_element_was_not_added_to_buffer()
+        public async Task QueueSource_should_return_false_when_element_was_not_added_to_buffer()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.DropNew)
@@ -296,14 +294,14 @@ namespace Akka.Streams.Tests.Dsl
                 sub.Request(1);
                 s.ExpectNext(1);
                 sub.Cancel();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSource_should_wait_when_buffer_is_full_and_backpressure_is_on()
+        public async Task QueueSource_should_wait_when_buffer_is_full_and_backpressure_is_on()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.Backpressure)
@@ -323,14 +321,14 @@ namespace Akka.Streams.Tests.Dsl
                 ExpectMsg<Enqueued>();
 
                 sub.Cancel();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSource_should_fail_offer_future_when_stream_is_completed()
+        public async Task QueueSource_should_fail_offer_future_when_stream_is_completed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.DropNew)
@@ -344,6 +342,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var exception = Record.ExceptionAsync(async () => await queue.OfferAsync(1)).Result;
                 exception.Should().BeOfType<StreamDetachedException>();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
