@@ -68,8 +68,8 @@ namespace Akka.Streams.Tests.IO
                         var result = await completion.ShouldCompleteWithin(Remaining); 
                         result.Count.Should().Be(6006);
 
-                        await AwaitAssertAsync(
-                            () => CheckFileContent(f, _testLines.Aggregate((s, s1) => s + s1)),
+                        await AwaitAssertAsync(async
+                            () => await CheckFileContent(f, _testLines.Aggregate((s, s1) => s + s1)),
                             Remaining);
                     }, _materializer);
                 });
@@ -87,8 +87,8 @@ namespace Akka.Streams.Tests.IO
                     
                     var result = await completion.ShouldCompleteWithin(Remaining);
                     result.Count.Should().Be(6006);
-                    await AwaitAssertAsync(
-                        () => CheckFileContent(f, _testLines.Aggregate((s, s1) => s + s1)),
+                    await AwaitAssertAsync(async
+                        () => await CheckFileContent(f, _testLines.Aggregate((s, s1) => s + s1)),
                         Remaining);
                 }, _materializer, false);
             });
@@ -120,8 +120,8 @@ namespace Akka.Streams.Tests.IO
                     result.Count.Should().Be(lastWriteString.Length);
                     var testLinesString = new string(_testLines.SelectMany(x => x).ToArray());
 
-                    await AwaitAssertAsync(
-                        () => CheckFileContent(f, lastWriteString + testLinesString.Substring(100)),
+                    await AwaitAssertAsync(async
+                        () => await CheckFileContent(f, lastWriteString + testLinesString.Substring(100)),
                         Remaining);
                 }, _materializer);
             });
@@ -147,8 +147,8 @@ namespace Akka.Streams.Tests.IO
 
                     result.Count.Should().Be(lastWrite.Count);
 
-                    await AwaitAssertAsync(
-                        () => CheckFileContent(f, string.Join("", lastWrite)),
+                    await AwaitAssertAsync(async
+                        () => await CheckFileContent(f, string.Join("", lastWrite)),
                         Remaining);
                 }, _materializer);
             });
@@ -183,8 +183,8 @@ namespace Akka.Streams.Tests.IO
                     f.Length.Should().Be(result1.Count + result2.Count);
 
                     //NOTE: no new line at the end of the file - does JVM/linux appends new line at the end of the file in append mode?
-                    await AwaitAssertAsync(
-                        () => CheckFileContent(f, testLinesString + lastWriteString),
+                    await AwaitAssertAsync(async
+                        () => await CheckFileContent(f, testLinesString + lastWriteString),
                         Remaining);
                 }, _materializer);
             });
@@ -229,8 +229,8 @@ namespace Akka.Streams.Tests.IO
 
                     f.Length.ShouldBe(startPosition + result2.Count);
 
-                    await AwaitAssertAsync(
-                        () => CheckFileContent(f, testLinesCommon.Join("") + testLinesPart2.Join("")),
+                    await AwaitAssertAsync(async
+                        () => await CheckFileContent(f, testLinesCommon.Join("") + testLinesPart2.Join("")),
                         Remaining);
                 }, _materializer);
             });
@@ -321,8 +321,8 @@ namespace Akka.Streams.Tests.IO
                         .RunWith(lazySink, _materializer);
 
                     await completion.ShouldCompleteWithin(Remaining);
-                    await AwaitAssertAsync(
-                        () => CheckFileContent(f, _testLines.Head()),
+                    await AwaitAssertAsync(async
+                        () => await CheckFileContent(f, _testLines.Head()),
                         Remaining);
                 }, _materializer);
             });
@@ -331,7 +331,7 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public async Task SynchronousFileSink_should_complete_materialized_task_with_an_exception_when_upstream_fails()
         {
-            await TargetFileAsync(f =>
+            await TargetFileAsync(async f =>
             {
                 var completion = Source.From(_testByteStrings)
                     .Select(bytes =>
@@ -343,7 +343,7 @@ namespace Akka.Streams.Tests.IO
 
                 var ex = Intercept<AbruptIOTerminationException>(() => completion.Wait(TimeSpan.FromSeconds(3)));
                 ex.IoResult.Count.ShouldBe(1001);
-                CheckFileContent(f, string.Join("", _testLines.TakeWhile(s => !s.Contains('b'))));
+                await CheckFileContent(f, string.Join("", _testLines.TakeWhile(s => !s.Contains('b'))));
             }, _materializer);
         }
 
@@ -379,7 +379,7 @@ namespace Akka.Streams.Tests.IO
 
                     await AwaitAssertAsync(async() =>
                     {
-                        CheckFileContent(f, "a\nb\n");
+                        await CheckFileContent(f, "a\nb\n");
                     }, Remaining);
 
                     actor.Tell("a\n");
@@ -393,17 +393,17 @@ namespace Akka.Streams.Tests.IO
                     ExpectTerminated(actor, Remaining);
 
                     f.Length.ShouldBe(8);
-                    CheckFileContent(f, "a\nb\na\nb\n");
+                    await CheckFileContent(f, "a\nb\na\nb\n");
                 }, _materializer);
             });
         }
 
         [Fact(Skip = "Skipped for async_testkit conversion build")]
-        public void SynchronousFileSink_should_write_buffered_element_if_manual_flush_is_called()
+        public async Task SynchronousFileSink_should_write_buffered_element_if_manual_flush_is_called()
         {
-            this.AssertAllStagesStopped(async() => 
+            await this.AssertAllStagesStoppedAsync(async() => 
             {
-                await TargetFileAsync(f =>
+                await TargetFileAsync(async f =>
                 {
                     var flusher = new FlushSignaler();
                     var (actor, task) = Source.ActorRef<string>(64, OverflowStrategy.DropNew)
@@ -412,24 +412,24 @@ namespace Akka.Streams.Tests.IO
                             FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: 0, flushSignaler:flusher), 
                             (a, t) => (a, t))
                         .Run(_materializer);
-                    Thread.Sleep(100); // wait for stream to catch up
+                    await Task.Delay(100); // wait for stream to catch up
 
                     actor.Tell("a\n");
                     actor.Tell("b\n");
-                    Thread.Sleep(200); // wait for stream to catch up
+                    await Task.Delay(200); // wait for stream to catch up
 
                     flusher.Flush();
-                    Thread.Sleep(100); // wait for flush
-                    CheckFileContent(f, "a\nb\n"); // file should be flushed
+                    await Task.Delay(100); // wait for flush
+                    await CheckFileContent(f, "a\nb\n"); // file should be flushed
 
                     actor.Tell("c\n");
                     actor.Tell("d\n");
-                    Thread.Sleep(200); // wait for stream to catch up
-                    CheckFileContent(f, "a\nb\n"); // file content should not change
+                    await Task.Delay(200); // wait for stream to catch up
+                    await CheckFileContent(f, "a\nb\n"); // file content should not change
 
                     flusher.Flush();
-                    Thread.Sleep(100); // wait for flush
-                    CheckFileContent(f, "a\nb\nc\nd\n"); // file content should all be flushed
+                    await Task.Delay(100); // wait for flush
+                    await CheckFileContent(f, "a\nb\nc\nd\n"); // file content should all be flushed
 
                     actor.Tell(new Status.Success(NotUsed.Instance));
                     task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -459,7 +459,7 @@ namespace Akka.Streams.Tests.IO
             {
                 // this is the proverbial stream kill switch, make sure that all streams
                 // are dead so that the file handle would be released
-                await this.AssertAllStagesStoppedAsync(async() => { }, materializer);
+                await this.AssertAllStagesStoppedAsync(() => { return Task.CompletedTask; }, materializer);
 
                 //give the system enough time to shutdown and release the file handle
                 await Task.Delay(500);
@@ -467,13 +467,13 @@ namespace Akka.Streams.Tests.IO
             }
         }
 
-        private static void CheckFileContent(FileInfo f, string contents)
+        private static async Task CheckFileContent(FileInfo f, string contents)
         {
             using (var s = f.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 using(var reader = new StreamReader(s))
                 {
-                    var cont = reader.ReadToEnd();
+                    var cont = await reader.ReadToEndAsync();
                     cont.Should().Be(contents);
                 }
             }
