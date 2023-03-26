@@ -200,10 +200,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_explicity_closed()
+        public async Task A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_explicity_closed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
@@ -231,14 +230,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 // PostStop should not be concurrent with the event handler. This event here tests this.
                 ExpectMsg<EndOfEventHandler>();
                 ExpectMsg<PostStop>();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_explicitly_failed()
+        public async Task A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_explicitly_failed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
@@ -269,15 +268,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 // PostStop should not be concurrent with the event handler. This event here tests this.
                 ExpectMsg<EndOfEventHandler>();
                 ExpectMsg<PostStop>();
-
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_implicity_failed_via_exception()
+        public async Task A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_implicity_failed_via_exception()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
@@ -306,19 +304,18 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 // We need to catch the exception otherwise the test fails
                 // ReSharper disable once EmptyGeneralCatchClause
-                try { pinger.ThrowEx();} catch { }
+                try { pinger.ThrowEx(); } catch { }
                 // PostStop should not be concurrent with the event handler. This event here tests this.
                 ExpectMsg<EndOfEventHandler>();
                 ExpectMsg<PostStop>();
-
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_stage_with_keep_going_must_close_down_earls_if_keepAlive_is_not_requested()
+        public async Task A_stage_with_keep_going_must_close_down_earls_if_keepAlive_is_not_requested()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(false), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
@@ -337,6 +334,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 maybePromise.TrySetResult(0);
                 ExpectMsg<UpstreamCompleted>();
                 ExpectMsg<PostStop>();
+                return Task.CompletedTask;
             }, Materializer);
         }
     }
