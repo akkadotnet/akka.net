@@ -399,9 +399,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact(Skip = "Skipped for async_testkit conversion build")]
-        public void SynchronousFileSink_should_write_buffered_element_if_manual_flush_is_called()
+        public async Task SynchronousFileSink_should_write_buffered_element_if_manual_flush_is_called()
         {
-            this.AssertAllStagesStopped(async() => 
+            await this.AssertAllStagesStoppedAsync(async() => 
             {
                 await TargetFileAsync(f =>
                 {
@@ -459,7 +459,7 @@ namespace Akka.Streams.Tests.IO
             {
                 // this is the proverbial stream kill switch, make sure that all streams
                 // are dead so that the file handle would be released
-                await this.AssertAllStagesStoppedAsync(async() => { }, materializer);
+                await this.AssertAllStagesStoppedAsync(() => { return Task.CompletedTask; }, materializer);
 
                 //give the system enough time to shutdown and release the file handle
                 await Task.Delay(500);
