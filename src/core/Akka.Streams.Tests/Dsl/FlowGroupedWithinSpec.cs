@@ -231,8 +231,8 @@ namespace Akka.Streams.Tests.Dsl
                     return ((ICollection<int>)new[] { x, y, z }, (ICollection<IEnumerable<int>>)new[] { new[] { x, y, z } });
                 }).ToArray());
 
-            RandomTestRange(Sys)
-                .ForEach(async _ => await RunScriptAsync(script, Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
+            RandomTestRange(Sys).ToList()
+                .Select(async _ => await RunScriptAsync(script, Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
         }
 
         [Fact]
@@ -254,8 +254,8 @@ namespace Akka.Streams.Tests.Dsl
                 }).Concat(rest).ToArray());
             };
 
-            RandomTestRange(Sys)
-                .ForEach(async _ => await RunScriptAsync(script(), Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
+            RandomTestRange(Sys).ToList()
+                .Select(async _ => await RunScriptAsync(script(), Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
         }
 
         [Fact(Skip = "Skipped for async_testkit conversion build")]

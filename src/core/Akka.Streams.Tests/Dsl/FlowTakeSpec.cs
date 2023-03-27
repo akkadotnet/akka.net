@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
             Func<int, Script<int, int>> script =
                 d => Script.Create(RandomTestRange(Sys).Select(n => ((ICollection<int>)new[] { n }, (ICollection<int>)(n > d ? new int[]{ } : new[] { n }))).ToArray());
             var random = new Random();
-            RandomTestRange(Sys).ForEach(async _ =>
+            RandomTestRange(Sys).ToList().Select(async _ =>
             {
                 var d = Math.Min(Math.Max(random.Next(-10, 60), 0), 50);
                 await RunScriptAsync(script(d), Materializer.Settings, f => f.Take(d));
