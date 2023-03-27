@@ -86,7 +86,7 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of element emitted by the MergeHub</typeparam>
     internal class MergeHub<T> : GraphStageWithMaterializedValue<SourceShape<T>, Sink<T, NotUsed>>
     {
         #region Internal classes
@@ -426,14 +426,14 @@ namespace Akka.Streams.Dsl
         /// TBD
         /// </summary>
         /// <param name="perProducerBufferSize">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the specified <paramref name="perProducerBufferSize"/> is less than or equal to zero.
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown when the specified <paramref name="perProducerBufferSize"/>is less than or equal to zero.
         /// </exception>
         public MergeHub(int perProducerBufferSize)
         {
             if (perProducerBufferSize <= 0)
-                throw new ArgumentException("Buffer size must be positive", nameof(perProducerBufferSize));
-
+                throw new ArgumentOutOfRangeException(nameof(perProducerBufferSize), perProducerBufferSize, "Buffer size must be positive");
+            
             _perProducerBufferSize = perProducerBufferSize;
             DemandThreshold = perProducerBufferSize / 2 + perProducerBufferSize % 2;
             Shape = new SourceShape<T>(Out);
