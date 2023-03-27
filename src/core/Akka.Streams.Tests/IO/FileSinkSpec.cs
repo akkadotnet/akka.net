@@ -462,7 +462,7 @@ namespace Akka.Streams.Tests.IO
 
             try
             {
-                block(targetFile);
+                await block(targetFile);
             }
             finally
             {
