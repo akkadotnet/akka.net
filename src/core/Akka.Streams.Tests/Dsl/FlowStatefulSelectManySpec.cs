@@ -45,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
                 return Script.Create(phases);
             };
 
-            RandomTestRange(Sys).ForEach(async _ =>
+            RandomTestRange(Sys).Select(async _ =>
             {
                 await RunScriptAsync(script(), Materializer.Settings, flow => flow.StatefulSelectMany<int,int,int, NotUsed>(() =>
                 {

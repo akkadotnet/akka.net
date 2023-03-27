@@ -231,7 +231,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ((ICollection<int>)new[] { x, y, z }, (ICollection<IEnumerable<int>>)new[] { new[] { x, y, z } });
                 }).ToArray());
 
-            RandomTestRange(Sys).ToList()
+            RandomTestRange(Sys)
                 .Select(async _ => await RunScriptAsync(script, Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
         }
 
@@ -254,7 +254,7 @@ namespace Akka.Streams.Tests.Dsl
                 }).Concat(rest).ToArray());
             };
 
-            RandomTestRange(Sys).ToList()
+            RandomTestRange(Sys)
                 .Select(async _ => await RunScriptAsync(script(), Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
         }
 
