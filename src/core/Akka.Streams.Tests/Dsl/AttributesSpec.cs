@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
 
         [Fact]
         public void Attributes_must_give_access_to_first_attribute()
-            => Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("a");
+            => Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("a");
 
         [Fact]
         public void Attributes_must_give_access_to_attribute_by_type()
