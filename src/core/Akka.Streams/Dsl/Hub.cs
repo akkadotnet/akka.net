@@ -78,6 +78,7 @@ namespace Akka.Streams.Dsl
             /// <param name="cause">The exception that is the cause of the current exception.</param>
             public ProducerFailed(string message, Exception cause) : base(message, cause)
             {
+
             }
         }
     }
@@ -232,29 +233,35 @@ namespace Akka.Streams.Dsl
 
             private void TryProcessNext(bool firstAttempt)
             {
-                // That we dequeue elements from the queue when there is demand means that Register and Deregister messages
-                // might be delayed for arbitrary long. This is not a problem as Register is only interesting if it is followed
-                // by actual elements, which would be delayed anyway by the backpressure.
-                // Unregister is only used to keep the map growing too large, but otherwise it is not critical to process it
-                // timely. In fact, the only way the map could keep growing would mean that we dequeue Registers from the
-                // queue, but then we will eventually reach the Deregister message, too.
-                if (_queue.TryDequeue(out var nextElement))
+                while (true)
                 {
-                    _needWakeup = false;
-                    if (OnEvent(nextElement))
+                    // That we dequeue elements from the queue when there is demand means that Register and Deregister messages
+                    // might be delayed for arbitrary long. This is not a problem as Register is only interesting if it is followed
+                    // by actual elements, which would be delayed anyway by the backpressure.
+                    // Unregister is only used to keep the map growing too large, but otherwise it is not critical to process it
+                    // timely. In fact, the only way the map could keep growing would mean that we dequeue Registers from the
+                    // queue, but then we will eventually reach the Deregister message, too.
+                    if (_queue.TryDequeue(out var nextElement))
                     {
-                        TryProcessNext(true);
+                        _needWakeup = false;
+                        if (OnEvent(nextElement))
+                        {
+                            firstAttempt = true;
+                            continue;
+                        }
                     }
-                }
-                else
-                {
-                    // additional poll to grab any elements that might missed the needWakeup
-                    // and have been enqueued just after it
-                    _needWakeup = true;
-                    if (firstAttempt)
+                    else
                     {
-                        TryProcessNext(false);
+                        // additional poll to grab any elements that might missed the needWakeup
+                        // and have been enqueued just after it
+                        _needWakeup = true;
+                        if (firstAttempt)
+                        {
+                            firstAttempt = false;
+                            continue;
+                        }
                     }
+                    break;
                 }
             }
 
@@ -452,8 +459,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="inheritedAttributes">TBD</param>
         /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<Sink<T, NotUsed>> CreateLogicAndMaterializedValue(
-            Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Sink<T, NotUsed>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var idCounter = new AtomicCounterLong();
             var logic = new HubLogic(this, idCounter);
@@ -524,9 +530,7 @@ namespace Akka.Streams.Dsl
     {
         #region internal classes
 
-        private interface IHubEvent
-        {
-        }
+        private interface IHubEvent { }
 
         private sealed class RegistrationPending : IHubEvent
         {
@@ -534,6 +538,7 @@ namespace Akka.Streams.Dsl
 
             private RegistrationPending()
             {
+
             }
         }
 
@@ -602,13 +607,12 @@ namespace Akka.Streams.Dsl
 
             private Completed()
             {
+
             }
         }
 
 
-        private interface IHubState
-        {
-        }
+        private interface IHubState { }
 
         private sealed class Open : IHubState
         {
@@ -634,9 +638,7 @@ namespace Akka.Streams.Dsl
         }
 
 
-        private interface IConsumerEvent
-        {
-        }
+        private interface IConsumerEvent { }
 
         private sealed class Wakeup : IConsumerEvent
         {
@@ -644,6 +646,7 @@ namespace Akka.Streams.Dsl
 
             private Wakeup()
             {
+
             }
         }
 
@@ -669,7 +672,7 @@ namespace Akka.Streams.Dsl
 
         #endregion
 
-        #region Logic
+        #region Logic 
 
         private sealed class HubLogic : InGraphStageLogic
         {
@@ -781,7 +784,6 @@ namespace Akka.Streams.Dsl
                     }
                     else
                         CheckUnblock(unregister.PreviousOffset);
-
                     return;
                 }
 
@@ -931,7 +933,6 @@ namespace Akka.Streams.Dsl
                         else
                             continue;
                     }
-
                     // Already closed, ignore
                     break;
                 }
@@ -1023,8 +1024,7 @@ namespace Akka.Streams.Dsl
                         if (state is Open open)
                         {
                             var newRegistrations = open.Registrations.Insert(0, new Consumer(_id, callback));
-                            if (_stage._hubLogic.State.CompareAndSet(state,
-                                    new Open(open.CallbackTask, newRegistrations)))
+                            if (_stage._hubLogic.State.CompareAndSet(state, new Open(open.CallbackTask, newRegistrations)))
                             {
                                 var readyCallback = GetAsyncCallback((Action<Result<Action<IHubEvent>>>)OnHubReady);
                                 open.CallbackTask.ContinueWith(t => readyCallback(Result.FromTask(t)));
@@ -1159,8 +1159,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="inheritedAttributes">TBD</param>
         /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<Source<T, NotUsed>> CreateLogicAndMaterializedValue(
-            Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Source<T, NotUsed>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var idCounter = new AtomicCounterLong();
             var logic = new HubLogic(this);
@@ -1340,9 +1339,7 @@ namespace Akka.Streams.Dsl
         private sealed class PartitionQueue : IPartitionQueue
         {
             private readonly AtomicCounter _totalSize = new AtomicCounter();
-
-            private readonly ConcurrentDictionary<long, ConsumerQueue> _queues =
-                new ConcurrentDictionary<long, ConsumerQueue>();
+            private readonly ConcurrentDictionary<long, ConsumerQueue> _queues = new ConcurrentDictionary<long, ConsumerQueue>();
 
             public void Init(long id) => _queues.TryAdd(id, ConsumerQueue.Empty);
 
@@ -1405,26 +1402,20 @@ namespace Akka.Streams.Dsl
 
         #region internal classes
 
-        private interface IConsumerEvent
-        {
-        }
+        private interface IConsumerEvent { }
 
         private sealed class Wakeup : IConsumerEvent
         {
             public static Wakeup Instance { get; } = new Wakeup();
 
-            private Wakeup()
-            {
-            }
+            private Wakeup() { }
         }
 
         private sealed class Initialize : IConsumerEvent
         {
             public static Initialize Instance { get; } = new Initialize();
 
-            private Initialize()
-            {
-            }
+            private Initialize() { }
         }
 
         private sealed class HubCompleted : IConsumerEvent
@@ -1438,17 +1429,13 @@ namespace Akka.Streams.Dsl
         }
 
 
-        private interface IHubEvent
-        {
-        }
+        private interface IHubEvent { }
 
         private sealed class RegistrationPending : IHubEvent
         {
             public static RegistrationPending Instance { get; } = new RegistrationPending();
 
-            private RegistrationPending()
-            {
-            }
+            private RegistrationPending() { }
         }
 
         private sealed class UnRegister : IHubEvent
@@ -1469,6 +1456,7 @@ namespace Akka.Streams.Dsl
             {
                 Consumer = consumer;
             }
+
         }
 
         private sealed class Consumer : IHubEvent
@@ -1487,24 +1475,18 @@ namespace Akka.Streams.Dsl
         {
             public static TryPull Instance { get; } = new TryPull();
 
-            private TryPull()
-            {
-            }
+            private TryPull() { }
         }
 
         private sealed class Completed
         {
             public static Completed Instance { get; } = new Completed();
 
-            private Completed()
-            {
-            }
+            private Completed() { }
         }
 
 
-        private interface IHubState
-        {
-        }
+        private interface IHubState { }
 
         private sealed class Open : IHubState
         {
@@ -1528,7 +1510,7 @@ namespace Akka.Streams.Dsl
             }
         }
 
-        #endregion
+        #endregion  
 
         private sealed class PartitionSinkLogic : InGraphStageLogic
         {
@@ -1558,10 +1540,7 @@ namespace Akka.Streams.Dsl
             private readonly PartitionHub<T> _hub;
             private readonly int _demandThreshold;
             private readonly Func<PartitionHub.IConsumerInfo, T, long> _materializedPartitioner;
-
-            private readonly TaskCompletionSource<Action<IHubEvent>> _callbackCompletion =
-                new TaskCompletionSource<Action<IHubEvent>>();
-
+            private readonly TaskCompletionSource<Action<IHubEvent>> _callbackCompletion = new TaskCompletionSource<Action<IHubEvent>>();
             private readonly IHubState _noRegistrationsState;
             private bool _initialized;
             private readonly IPartitionQueue _queue = new PartitionQueue();
@@ -1672,8 +1651,7 @@ namespace Akka.Streams.Dsl
                     var o = (Open)State.GetAndSet(_noRegistrationsState);
                     foreach (var consumer in o.Registrations)
                     {
-                        var newConsumers = _consumerInfo.Consumers.Add(consumer)
-                            .Sort((c1, c2) => c1.Id.CompareTo(c2.Id));
+                        var newConsumers = _consumerInfo.Consumers.Add(consumer).Sort((c1, c2) => c1.Id.CompareTo(c2.Id));
                         _consumerInfo = new ConsumerInfo(this, newConsumers);
                         _queue.Init(consumer.Id);
                         if (newConsumers.Count >= _hub._startAfterNrOfConsumers)
@@ -1872,8 +1850,7 @@ namespace Akka.Streams.Dsl
         private readonly int _startAfterNrOfConsumers;
         private readonly int _bufferSize;
 
-        public PartitionHub(Func<Func<PartitionHub.IConsumerInfo, T, long>> partitioner, int startAfterNrOfConsumers,
-            int bufferSize)
+        public PartitionHub(Func<Func<PartitionHub.IConsumerInfo, T, long>> partitioner, int startAfterNrOfConsumers, int bufferSize)
         {
             _partitioner = partitioner;
             _startAfterNrOfConsumers = startAfterNrOfConsumers;
@@ -1885,8 +1862,7 @@ namespace Akka.Streams.Dsl
 
         public override SinkShape<T> Shape { get; }
 
-        public override ILogicAndMaterializedValue<Source<T, NotUsed>> CreateLogicAndMaterializedValue(
-            Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Source<T, NotUsed>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var idCounter = new AtomicCounterLong();
             var logic = new PartitionSinkLogic(this);
