@@ -16,7 +16,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -68,35 +67,37 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_UnfoldResourceSource_must_read_contents_from_a_file()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p = Source.UnfoldResource(_open, Read, Close).RunWith(Sink.AsPublisher<string>(false), Materializer);
 
                 var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
-                var sub = c.ExpectSubscription();
+                var sub = await c.ExpectSubscriptionAsync();
 
                 sub.Request(1);
-                c.ExpectNext().Should().Be(ManyLinesArray[0]);
+                var next = await c.ExpectNextAsync();
+                next.Should().Be(ManyLinesArray[0]);
                 sub.Request(1);
-                c.ExpectNext().Should().Be(ManyLinesArray[1]);
-                c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
+                next = await c.ExpectNextAsync();
+                next.Should().Be(ManyLinesArray[1]);
+                await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
 
                 for (var i = 2; i < ManyLinesArray.Length; i++)
                 {
                     sub.Request(1);
-                    c.ExpectNext().Should().Be(ManyLinesArray[i]);
+                    next = await c.ExpectNextAsync();
+                    next.Should().Be(ManyLinesArray[i]);
                 }
 
                 sub.Request(1);
-                c.ExpectComplete();
-                return Task.CompletedTask;
+                await c.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_UnfoldResourceSource_must_continue_when_strategy_is_resume_and_exception_happened()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p = Source.UnfoldResource(_open, reader =>                                                                         
                 {                                                                             
                     var s = reader.ReadLine();                                                                             
@@ -109,23 +110,23 @@ namespace Akka.Streams.Tests.Dsl
                 var c = this.CreateManualSubscriberProbe<string>();
 
                 p.Subscribe(c);
-                var sub = c.ExpectSubscription();
+                var sub = await c.ExpectSubscriptionAsync();
 
-                Enumerable.Range(0, 50).ForEach(i =>
+                Enumerable.Range(0, 50).ForEach(async i =>
                 {
                     sub.Request(1);
-                    c.ExpectNext().Should().Be(i < 10 ? ManyLinesArray[i] : ManyLinesArray[i + 10]);
+                    var next = await c.ExpectNextAsync();
+                    next.Should().Be(i < 10 ? ManyLinesArray[i] : ManyLinesArray[i + 10]);
                 });
                 sub.Request(1);
-                c.ExpectComplete();
-                return Task.CompletedTask;
+                await c.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_UnfoldResourceSource_must_close_and_open_stream_again_when_strategy_is_restart()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p = Source.UnfoldResource(_open, reader =>                                                                         
                 {                                                                             
                     var s = reader.ReadLine();                                                                             
@@ -138,22 +139,22 @@ namespace Akka.Streams.Tests.Dsl
                 var c = this.CreateManualSubscriberProbe<string>();
 
                 p.Subscribe(c);
-                var sub = c.ExpectSubscription();
+                var sub = await c.ExpectSubscriptionAsync();
 
-                Enumerable.Range(0, 20).ForEach(i =>
+                Enumerable.Range(0, 20).ForEach(async i =>
                 {
                     sub.Request(1);
-                    c.ExpectNext().Should().Be(ManyLinesArray[0]);
+                    var next = await c.ExpectNextAsync();
+                    next.Should().Be(ManyLinesArray[0]);
                 });
                 sub.Cancel();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_UnfoldResourceSource_must_work_with_ByteString_as_well()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var chunkSize = 50;
                 var buffer = new char[chunkSize];
 
@@ -179,23 +180,23 @@ namespace Akka.Streams.Tests.Dsl
                 };
 
                 p.Subscribe(c);
-                var sub = c.ExpectSubscription();
+                var sub = await c.ExpectSubscriptionAsync();
 
-                Enumerable.Range(0, 122).ForEach(i =>
+                Enumerable.Range(0, 122).ForEach(async i =>
                 {
                     sub.Request(1);
-                    c.ExpectNext().ToString().Should().Be(nextChunk());
+                    var next = await c.ExpectNextAsync();
+                    next.ToString().Should().Be(nextChunk());
                 });
                 sub.Request(1);
-                c.ExpectComplete();
-                return Task.CompletedTask;
+                await c.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_UnfoldResourceSource_must_use_dedicated_blocking_io_dispatcher_by_default()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
                 var materializer = sys.Materializer();
 
@@ -206,7 +207,8 @@ namespace Akka.Streams.Tests.Dsl
 
                     ((ActorMaterializerImpl)materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance,
                         TestActor);
-                    var refs = ExpectMsg<StreamSupervisor.Children>().Refs;
+                    var msg = await ExpectMsgAsync<StreamSupervisor.Children>();
+                    var refs = msg.Refs;
                     var actorRef = refs.First(@ref => @ref.Path.ToString().Contains("unfoldResourceSource"));
                     try
                     {
@@ -223,14 +225,13 @@ namespace Akka.Streams.Tests.Dsl
                     Shutdown(sys);
                 }
 
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_UnfoldResourceSource_must_fail_when_create_throws_exception()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var testException = new TestException("");
                 var p = Source.UnfoldResource(() =>
                 {
@@ -239,16 +240,16 @@ namespace Akka.Streams.Tests.Dsl
                 var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
 
-                c.ExpectSubscription();
-                c.ExpectError().Should().Be(testException);
-                return Task.CompletedTask;
+                await c.ExpectSubscriptionAsync();
+                var error = await c.ExpectErrorAsync();
+                error.Should().Be(testException);
             }, Materializer);
         }
 
         [Fact]
         public async Task A_UnfoldResourceSource_must_fail_when_close_throws_exception()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var testException = new TestException("");
                 var p = Source.UnfoldResource(_open, Read, reader =>
                 {
@@ -258,16 +259,16 @@ namespace Akka.Streams.Tests.Dsl
                 var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
 
-                var sub = c.ExpectSubscription();
+                var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(61);
-                c.ExpectNextN(60);
-                c.ExpectError().Should().Be(testException);
-                return Task.CompletedTask;
+                c.ExpectNextNAsync(60);
+                var error = await c.ExpectErrorAsync();
+                error.Should().Be(testException);
             }, Materializer);
         }
 
         [Fact]
-        public void A_UnfoldResourceSource_must_not_close_the_resource_twice_when_read_fails()
+        public async Task A_UnfoldResourceSource_must_not_close_the_resource_twice_when_read_fails()
         {
             var closedCounter = new AtomicCounter(0);
             var testException = new TestException("failing read");
@@ -279,12 +280,13 @@ namespace Akka.Streams.Tests.Dsl
                 ).RunWith(this.SinkProbe<int>(), Materializer);
 
             probe.Request(1);
-            probe.ExpectError().Should().Be(testException);
+            var error = await probe.ExpectErrorAsync();
+            error.Should().Be(testException);
             closedCounter.Current.Should().Be(1);
         }
 
         [Fact]
-        public void A_UnfoldResourceSource_must_not_close_the_resource_twice_when_read_fails_and_then_close_fails()
+        public async Task A_UnfoldResourceSource_must_not_close_the_resource_twice_when_read_fails_and_then_close_fails()
         {
             var closedCounter = new AtomicCounter(0);
             var testException = new TestException("boom");
@@ -299,10 +301,11 @@ namespace Akka.Streams.Tests.Dsl
                 }
             ).RunWith(this.SinkProbe<int>(), Materializer);
 
-            EventFilter.Exception<TestException>().Expect(1, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(1, async () =>
             {
                 probe.Request(1);
-                probe.ExpectError().Should().Be(testException);
+                var error = await probe.ExpectErrorAsync();
+                error.Should().Be(testException);
             });
             
             closedCounter.Current.Should().Be(1);
