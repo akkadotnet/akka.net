@@ -276,27 +276,25 @@ namespace Akka.Streams.Tests.Implementation
         [Fact]
         public async Task A_GraphStageLogic_must_read_N_and_emit_N_before_completing()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 10))                                                                         
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 10))                                                                         
                 .Via(new ReadNEmitN(2))                                                                         
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                         
                 .Request(10)                                                                         
                 .ExpectNext(1, 2)                                                                         
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_GraphStageLogic_must_read_N_should_not_emit_if_upstream_completes_before_N_is_sent()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 5))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 5))                                                                             
                 .Via(new ReadNEmitN(6))                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(10)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -323,22 +321,21 @@ namespace Akka.Streams.Tests.Implementation
         [Fact]
         public async Task A_GraphStageLogic_must_read_N_should_provide_elements_read_if_OnComplete_happens_before_N_elements_have_been_seen()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 5))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 5))                                                                             
                 .Via(new ReadNEmitRestOnComplete(6))                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(10)                                                                             
                 .ExpectNext(1, 2, 3, 4, 5)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_GraphStageLogic_must_emit_all_things_before_completing()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<int>()                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<int>()                                                                             
                 .Via(new Emit1234().Named("testStage"))                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(5)                                                                             
@@ -346,19 +343,18 @@ namespace Akka.Streams.Tests.Implementation
                 //emitting with callback gives nondeterminism whether 2 or 3 will be pushed first                                                                             
                 .ExpectNextUnordered(2, 3)                                                                             
                 .ExpectNext(4)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
         
         [Fact]
         public async Task A_GraphStageLogic_must_emit_all_things_before_completing_with_two_fused_stages()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var flow = Flow.Create<int>().Via(new Emit1234()).Via(new Emit5678());
                 var g = Streams.Implementation.Fusing.Fusing.Aggressive(flow);
 
-                Source.Empty<int>()
+                await Source.Empty<int>()
                     .Via(g)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(9)
@@ -370,19 +366,18 @@ namespace Akka.Streams.Tests.Implementation
                     //emitting with callback gives nondeterminism whether 6 or 7 will be pushed first
                     .ExpectNextUnordered(6, 7)
                     .ExpectNext(8)
-                    .ExpectComplete();
-                return Task.CompletedTask;
+                    .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_GraphStageLogic_must_emit_all_things_before_completing_with_three_fused_stages()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var flow = Flow.Create<int>().Via(new Emit1234()).Via(new PassThrough()).Via(new Emit5678());
                 var g = Streams.Implementation.Fusing.Fusing.Aggressive(flow);
 
-                Source.Empty<int>()
+                await Source.Empty<int>()
                     .Via(g)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(9)
@@ -394,8 +389,7 @@ namespace Akka.Streams.Tests.Implementation
                     //emitting with callback gives nondeterminism whether 6 or 7 will be pushed first
                     .ExpectNextUnordered(6, 7)
                     .ExpectNext(8)
-                    .ExpectComplete();
-                return Task.CompletedTask;
+                    .ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -428,14 +422,13 @@ namespace Akka.Streams.Tests.Implementation
         [Fact]
         public async Task A_GraphStageLogic_must_invoke_livecycle_hooks_in_the_right_order()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var g = new LifecycleStage(TestActor);
 
-                Source.Single(1).Via(g).RunWith(Sink.Ignore<int>(), Materializer);
-                ExpectMsg("preStart");
-                ExpectMsg("pulled");
-                ExpectMsg("postStop");
-                return Task.CompletedTask;
+                await Source.Single(1).Via(g).RunWith(Sink.Ignore<int>(), Materializer);
+                await ExpectMsgAsync("preStart");
+                await ExpectMsgAsync("pulled");
+                await ExpectMsgAsync("postStop");
             }, Materializer);
         }
 
@@ -492,14 +485,14 @@ namespace Akka.Streams.Tests.Implementation
         {
             WithBaseBuilderSetup(
                 new GraphStage<FlowShape<int, int>>[] {new DoubleTerminateStage(TestActor), new PassThrough()},
-                interpreter =>
+                async interpreter => 
                 {
                     interpreter.Complete(interpreter.Connections[0]);
                     interpreter.Cancel(interpreter.Connections[1], SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
                     interpreter.Execute(2);
 
-                    ExpectMsg("postStop2");
-                    ExpectNoMsg(0);
+                    await ExpectMsgAsync("postStop2");
+                    await ExpectNoMsgAsync(0);
 
                     interpreter.IsCompleted.Should().BeFalse();
                     interpreter.IsSuspended.Should().BeFalse();
