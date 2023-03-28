@@ -112,12 +112,12 @@ namespace Akka.Streams.Tests.Dsl
                 p.Subscribe(c);
                 var sub = await c.ExpectSubscriptionAsync();
 
-                Enumerable.Range(0, 50).ForEach(async i =>
+                foreach (var i in Enumerable.Range(0, 50))
                 {
                     sub.Request(1);
                     var next = await c.ExpectNextAsync();
                     next.Should().Be(i < 10 ? ManyLinesArray[i] : ManyLinesArray[i + 10]);
-                });
+                }
                 sub.Request(1);
                 await c.ExpectCompleteAsync();
             }, Materializer);
@@ -140,13 +140,13 @@ namespace Akka.Streams.Tests.Dsl
 
                 p.Subscribe(c);
                 var sub = await c.ExpectSubscriptionAsync();
-
-                Enumerable.Range(0, 20).ForEach(async i =>
+                foreach (var i in Enumerable.Range(0, 20))
                 {
                     sub.Request(1);
                     var next = await c.ExpectNextAsync();
                     next.Should().Be(ManyLinesArray[0]);
-                });
+                }
+                
                 sub.Cancel();
             }, Materializer);
         }
@@ -182,12 +182,13 @@ namespace Akka.Streams.Tests.Dsl
                 p.Subscribe(c);
                 var sub = await c.ExpectSubscriptionAsync();
 
-                Enumerable.Range(0, 122).ForEach(async i =>
+                foreach (var i in Enumerable.Range(0, 122))
                 {
                     sub.Request(1);
                     var next = await c.ExpectNextAsync();
                     next.ToString().Should().Be(nextChunk());
-                });
+                }
+                
                 sub.Request(1);
                 await c.ExpectCompleteAsync();
             }, Materializer);
@@ -241,8 +242,7 @@ namespace Akka.Streams.Tests.Dsl
                 p.Subscribe(c);
 
                 await c.ExpectSubscriptionAsync();
-                var error = await c.ExpectErrorAsync();
-                error.Should().Be(testException);
+                c.ExpectError().Should().Be(testException);
             }, Materializer);
         }
 
@@ -261,9 +261,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(61);
-                c.ExpectNextNAsync(60);
-                var error = await c.ExpectErrorAsync();
-                error.Should().Be(testException);
+                c.ExpectNextN(60);
+                c.ExpectError().Should().Be(testException);
             }, Materializer);
         }
 
