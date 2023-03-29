@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
@@ -31,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SelectMany_should_map_and_concat()
+        public async Task SelectMany_should_map_and_concat()
         {
             var script = Script.Create(
                 (new[] { 0 }, new int[0]),
@@ -43,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var random = ThreadLocalRandom.Current.Next(1, 10);
             for (int i = 0; i < random; i++)
-                RunScript(script, Settings, a => a.SelectMany(x => Enumerable.Range(1, x).Select(_ => x)));
+                await RunScriptAsync(script, Settings, a => a.SelectMany(x => Enumerable.Range(1, x).Select(_ => x)));
         }
 
         [Fact]

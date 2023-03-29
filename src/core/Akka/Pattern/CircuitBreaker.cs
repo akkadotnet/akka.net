@@ -214,10 +214,7 @@ namespace Akka.Pattern
         /// <summary>
         /// Retrieves current failure count.
         /// </summary>
-        public long CurrentFailureCount
-        {
-            get { return Closed.Current; }
-        }
+        public long CurrentFailureCount => Closed.Current;
 
         public Exception LastCaughtException { get; private set; }
 
@@ -227,67 +224,35 @@ namespace Akka.Pattern
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
-        public Task<T> WithCircuitBreaker<T>(Func<Task<T>> body)
-        {
-            return CurrentState.Invoke(body);
-        }
+        public Task<T> WithCircuitBreaker<T>(Func<Task<T>> body) => CurrentState.Invoke(body);
 
-        public Task<T> WithCircuitBreaker<T, TState>(TState state,
-            Func<TState, Task<T>> body)
-        {
-            return CurrentState.InvokeState(state, body);
-        }
+        public Task<T> WithCircuitBreaker<T, TState>(TState state, Func<TState, Task<T>> body) => 
+            CurrentState.InvokeState(state, body);
 
         /// <summary>
         /// Wraps invocation of asynchronous calls that need to be protected
         /// </summary>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/></returns>
-        public Task WithCircuitBreaker(Func<Task> body)
-        {
-            return CurrentState.Invoke(body);
-        }
-        public Task WithCircuitBreaker<TState>(TState state, Func<TState, Task> body)
-        {
-            return CurrentState.InvokeState(state, body);
-        }
+        public Task WithCircuitBreaker(Func<Task> body) => CurrentState.Invoke(body);
+
+        public Task WithCircuitBreaker<TState>(TState state, Func<TState, Task> body) => 
+            CurrentState.InvokeState(state, body);
 
         /// <summary>
-        /// The failure will be recorded farther down.
+        /// Wraps invocations of asynchronous calls that need to be protected.
         /// </summary>
-        /// <param name="body">TBD</param>
-        public void WithSyncCircuitBreaker(Action body)
-        {
-            var cbTask = WithCircuitBreaker(body,(b) => Task.Factory.StartNew(b));
-            if (!cbTask.Wait(CallTimeout))
-            {
-                //throw new TimeoutException( string.Format( "Execution did not complete within the time allotted {0} ms", CallTimeout.TotalMilliseconds ) );
-            }
-            if (cbTask.Exception != null)
-            {
-                ExceptionDispatchInfo.Capture(cbTask.Exception).Throw();
-            }
-        }
+        /// <param name="body">Call needing protected</param>
+        public void WithSyncCircuitBreaker(Action body) =>
+            WithCircuitBreaker(body, b => Task.Run(b)).GetAwaiter().GetResult();
 
         /// <summary>
-        /// Wraps invocations of asynchronous calls that need to be protected
-        /// If this does not complete within the time allotted, it should return default(<typeparamref name="T"/>)
-        ///
-        /// <code>
-        ///  Await.result(
-        ///      withCircuitBreaker(try Future.successful(body) catch { case NonFatal(t) ⇒ Future.failed(t) }),
-        ///      callTimeout)
-        /// </code>
-        ///
+        /// Wraps invocations of asynchronous calls that need to be protected.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="body">TBD</param>
-        /// <returns><typeparamref name="T"/> or default(<typeparamref name="T"/>)</returns>
-        public T WithSyncCircuitBreaker<T>(Func<T> body)
-        {
-            var cbTask = WithCircuitBreaker(body,(b) => Task.Factory.StartNew(b));
-            return cbTask.Wait(CallTimeout) ? cbTask.Result : default(T);
-        }
+        /// <param name="body">Call needing protected</param>
+        /// <returns>The result of the call</returns>
+        public T WithSyncCircuitBreaker<T>(Func<T> body) =>
+            WithCircuitBreaker(body, b => Task.Run(b)).Result;
 
         /// <summary>
         /// Mark a successful call through CircuitBreaker. Sometimes the callee of CircuitBreaker sends back a message to the
