@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact(DisplayName = "The Maybe Source must complete materialized promise with None when stream cancels")]
         public async Task CompleteMaterializedPromiseWithNoneWhenCancelled()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var neverSource = Source.Maybe<int>();
                 var pubSink = Sink.AsPublisher<int>(false);
 
@@ -41,16 +41,15 @@ namespace Akka.Streams.Tests.Dsl
 
                 var c = this.CreateManualSubscriberProbe<int>();
                 neverPub.Subscribe(c);
-                var subs = c.ExpectSubscription();
+                var subs = await c.ExpectSubscriptionAsync();
 
                 subs.Request(1000);
-                c.ExpectNoMsg(100.Milliseconds());
+                await c.ExpectNoMsgAsync(100.Milliseconds());
 
                 subs.Cancel();
 
                 tcs.Task.Wait(3.Seconds()).Should().BeTrue();
                 tcs.Task.Result.Should().Be(0);
-                return Task.CompletedTask;
             }, _materializer);
         }
 
@@ -98,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
             Skip = "Not working, check Maybe<T> source.")]
         public async Task AllowExternalTriggerOfEmptyCompletionWhenNoDemand()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateSubscriberProbe<int>();
                 var promise = Source
                     .Maybe<int>()
@@ -106,10 +105,9 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(_materializer);
 
                 // external cancellation
-                probe.EnsureSubscription();
+                await probe.EnsureSubscriptionAsync();
                 promise.TrySetResult(0).Should().BeTrue();
-                probe.ExpectComplete();
-                return Task.CompletedTask;
+                await probe.ExpectCompleteAsync();
             }, _materializer);
         }
 
