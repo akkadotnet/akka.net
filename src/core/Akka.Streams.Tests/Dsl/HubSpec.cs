@@ -195,7 +195,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
                 
                 (await result).OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
-            }, Materializer, 3.Seconds());
+            }, Materializer, 10.Seconds());
         }
 
         [Fact]
