@@ -23,7 +23,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task NeverSource_must_never_completes()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var neverSource = Source.Never<int>();
                 var pubSink = Sink.AsPublisher<int>(false);
 
@@ -31,12 +31,11 @@ namespace Akka.Streams.Tests.Dsl
 
                 var c = this.CreateManualSubscriberProbe<int>();
                 neverPub.Subscribe(c);
-                var subs = c.ExpectSubscription();
+                var subs = await c.ExpectSubscriptionAsync();
                 subs.Request(1);
-                c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
+                await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
 
                 subs.Cancel();
-                return Task.CompletedTask;
             }, materializer);
         }
     }
