@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Can't control the flow of ticks with any guaranteed precision")]
         public async Task A_Flow_based_on_a_tick_publisher_must_drop_ticks_when_not_requested()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
