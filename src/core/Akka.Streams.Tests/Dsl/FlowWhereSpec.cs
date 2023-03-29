@@ -42,7 +42,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ((ICollection<int>)new[] { x }, (ICollection<int>)((x & 1) == 0 ? new[] { x } : new int[] { }));
             }).ToArray());
 
-            RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.Where(x => x%2 == 0)));
+            RandomTestRange(Sys).Select(async _ => await RunScriptAsync(script, Settings, flow => flow.Where(x => x%2 == 0)));
         }
 
         [Fact]
@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ((ICollection<int>)new[] { x }, (ICollection<int>)((x & 1) == 1 ? new[] { x } : new int[] { }));
             }).ToArray());
 
-            RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.WhereNot(x => x % 2 == 0)));
+            RandomTestRange(Sys).Select(async _ => await RunScriptAsync(script, Settings, flow => flow.WhereNot(x => x % 2 == 0)));
         }
     }
 }

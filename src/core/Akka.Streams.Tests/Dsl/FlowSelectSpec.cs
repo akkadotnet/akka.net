@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util;
@@ -31,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Select_should_select()
+        public async Task Select_should_select()
         {
 
             var script = Script.Create(Enumerable.Range(1, ThreadLocalRandom.Current.Next(1, 10)).Select(_ =>
@@ -43,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
             var n = ThreadLocalRandom.Current.Next(10);
             for (int i = 0; i < n; i++)
             {
-                RunScript(script, _settings, x => x.Select(y => y.ToString()));
+                await RunScriptAsync(script, _settings, x => x.Select(y => y.ToString()));
             }
         }
 
