@@ -1612,6 +1612,7 @@ namespace Akka.Actor
     public sealed class SchedulerException : Akka.Actor.AkkaException
     {
         public SchedulerException(string message) { }
+        public SchedulerException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class static SchedulerExtensions
     {
