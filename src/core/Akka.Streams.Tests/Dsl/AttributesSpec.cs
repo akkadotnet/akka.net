@@ -57,7 +57,9 @@ namespace Akka.Streams.Tests.Dsl
 
         [Fact]
         public void Attributes_must_give_access_to_first_attribute()
+#pragma warning disable CS0618 // Type or member is obsolete
             => Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("a");
+#pragma warning restore CS0618 // Type or member is obsolete
 
         [Fact]
         public void Attributes_must_give_access_to_attribute_by_type()
