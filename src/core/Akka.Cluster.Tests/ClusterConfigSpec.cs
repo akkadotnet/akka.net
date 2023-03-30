@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Cluster.SBR;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Remote;
@@ -71,6 +72,13 @@ namespace Akka.Cluster.Tests
             settings.VerboseHeartbeatLogging.Should().BeFalse();
             settings.VerboseGossipReceivedLogging.Should().BeFalse();
             settings.RunCoordinatedShutdownWhenDown.Should().BeTrue();
+            
+            // downing provider settings
+            settings.DowningProviderType.Should().Be<SplitBrainResolverProvider>();
+            var sbrSettings = new SplitBrainResolverSettings(Sys.Settings.Config);
+            sbrSettings.DowningStableAfter.Should().Be(20.Seconds());
+            sbrSettings.DownAllWhenUnstable.Should().Be(15.Seconds()); // 3/4 OF DowningStableAfter
+            sbrSettings.DowningStrategy.Should().Be("keep-majority");
         }
 
         /// <summary>
