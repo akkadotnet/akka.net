@@ -30,26 +30,25 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_WireTap_must_broadcast_to_the_tap()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var (tps, mps) = Source.From(Enumerable.Range(1, 2))                                                                             
                 .WireTapMaterialized(this.SinkProbe<int>(), Keep.Right)                                                                             
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)                                                                             
                 .Run(Materializer);
 
                 tps.Request(2);
-                mps.RequestNext(1);
-                mps.RequestNext(2);
+                await mps.RequestNextAsync(1);
+                await mps.RequestNextAsync(2);
                 tps.ExpectNext(1, 2);
-                mps.ExpectComplete();
-                tps.ExpectComplete();
-                return Task.CompletedTask;
+                await mps.ExpectCompleteAsync();
+                await tps.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_WireTap_must_drop_elements_while_the_tap_has_no_demand_buffering_up_to_one_element()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var (tps, mps) = Source.From(Enumerable.Range(1, 6))                                                                             
                 .WireTapMaterialized(this.SinkProbe<int>(), Keep.Right)                                                                             
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)                                                                             
@@ -57,20 +56,19 @@ namespace Akka.Streams.Tests.Dsl
                 mps.Request(3);
                 mps.ExpectNext(1, 2, 3);
                 tps.Request(4);
-                mps.RequestNext(4);
-                mps.RequestNext(5);
-                mps.RequestNext(6);
+                await mps.RequestNextAsync(4);
+                await mps.RequestNextAsync(5);
+                await mps.RequestNextAsync(6);
                 tps.ExpectNext(3, 4, 5, 6);
-                mps.ExpectComplete();
-                tps.ExpectComplete();
-                return Task.CompletedTask;
+                await mps.ExpectCompleteAsync();
+                await tps.ExpectCompleteAsync();
             }, Materializer);
         }
         
         [Fact]
         public async Task A_WireTap_must_cancel_if_main_sink_cancels()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var (tps, mps) = Source.From(Enumerable.Range(1, 6))                                                                             
                 .WireTapMaterialized(this.SinkProbe<int>(), Keep.Right)                                                                             
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)                                                                             
@@ -78,15 +76,14 @@ namespace Akka.Streams.Tests.Dsl
 
                 tps.Request(6);
                 mps.Cancel();
-                tps.ExpectComplete();
-                return Task.CompletedTask;
+                await tps.ExpectCompleteAsync();
             }, Materializer);
         }
         
         [Fact]
         public async Task A_WireTap_must_continue_if_tap_sink_cancels()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var (tps, mps) = Source.From(Enumerable.Range(1, 6))                                                                             
                 .WireTapMaterialized(this.SinkProbe<int>(), Keep.Right)                                                                             
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)                                                                             
@@ -94,8 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                 tps.Cancel();
                 mps.Request(6);
                 mps.ExpectNext(1, 2, 3, 4, 5, 6);
-                mps.ExpectComplete();
-                return Task.CompletedTask;
+                await mps.ExpectCompleteAsync();
             }, Materializer);
         }
     }
