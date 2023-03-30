@@ -75,7 +75,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task UnzipWith_must_work_in_the_happy_case()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var leftProbe = this.CreateManualSubscriberProbe<int>();
                 var rightProbe = this.CreateManualSubscriberProbe<string>();
 
@@ -95,43 +95,42 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var leftSubscription = leftProbe.ExpectSubscription();
-                var rightSubscription = rightProbe.ExpectSubscription();
+                var leftSubscription = await leftProbe.ExpectSubscriptionAsync();
+                var rightSubscription = await rightProbe.ExpectSubscriptionAsync();
 
                 leftSubscription.Request(2);
                 rightSubscription.Request(1);
 
                 leftProbe.ExpectNext(2, 4);
-                leftProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await leftProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
-                rightProbe.ExpectNext("1+1");
-                rightProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await rightProbe.ExpectNextAsync("1+1");
+                await rightProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                 leftSubscription.Request(1);
                 rightSubscription.Request(2);
 
                 leftProbe.ExpectNext(6);
-                leftProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await leftProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                 rightProbe.ExpectNext("2+2", "3+3");
-                rightProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await rightProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                 leftSubscription.Request(1);
                 rightSubscription.Request(1);
 
-                leftProbe.ExpectNext(8);
-                rightProbe.ExpectNext("4+4");
+                await leftProbe.ExpectNextAsync(8);
+                await rightProbe.ExpectNextAsync("4+4");
 
-                leftProbe.ExpectComplete();
-                rightProbe.ExpectComplete();
-                return Task.CompletedTask;
+                await leftProbe.ExpectCompleteAsync();
+                await rightProbe.ExpectCompleteAsync();
             }, Materializer);
         }
         
         [Fact]
         public async Task UnzipWith_must_work_in_the_sad_case()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var leftProbe = this.CreateManualSubscriberProbe<int>();
                 var rightProbe = this.CreateManualSubscriberProbe<string>();
 
@@ -147,8 +146,8 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var leftSubscription = leftProbe.ExpectSubscription();
-                var rightSubscription = rightProbe.ExpectSubscription();
+                var leftSubscription = await leftProbe.ExpectSubscriptionAsync();
+                var rightSubscription = await rightProbe.ExpectSubscriptionAsync();
 
                 Action requestFromBoth = () =>
                 {
@@ -157,21 +156,20 @@ namespace Akka.Streams.Tests.Dsl
                 };
 
                 requestFromBoth();
-                leftProbe.ExpectNext(1 / -2);
-                rightProbe.ExpectNext("1/-2");
+                await leftProbe.ExpectNextAsync(1 / -2);
+                await rightProbe.ExpectNextAsync("1/-2");
 
                 requestFromBoth();
-                leftProbe.ExpectNext(1 / -1);
-                rightProbe.ExpectNext("1/-1");
+                await leftProbe.ExpectNextAsync(1 / -1);
+                await rightProbe.ExpectNextAsync("1/-1");
 
-                EventFilter.Exception<DivideByZeroException>().ExpectOne(requestFromBoth);
+                await EventFilter.Exception<DivideByZeroException>().ExpectOneAsync(requestFromBoth);
 
                 leftProbe.ExpectError().Should().BeOfType<DivideByZeroException>();
                 rightProbe.ExpectError().Should().BeOfType<DivideByZeroException>();
 
-                leftProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                rightProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                return Task.CompletedTask;
+                await leftProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await rightProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
             }, Materializer);
         }
 
@@ -229,7 +227,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task UnzipWith_must_unzipWith_expanded_Person_unapply_3_outputs()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe0 = this.CreateManualSubscriberProbe<string>();
                 var probe1 = this.CreateManualSubscriberProbe<string>();
                 var probe2 = this.CreateManualSubscriberProbe<int>();
@@ -247,22 +245,21 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var subscription0 = probe0.ExpectSubscription();
-                var subscription1 = probe1.ExpectSubscription();
-                var subscription2 = probe2.ExpectSubscription();
+                var subscription0 = await probe0.ExpectSubscriptionAsync();
+                var subscription1 = await probe1.ExpectSubscriptionAsync();
+                var subscription2 = await probe2.ExpectSubscriptionAsync();
 
                 subscription0.Request(1);
                 subscription1.Request(1);
                 subscription2.Request(1);
 
-                probe0.ExpectNext("Caplin");
-                probe1.ExpectNext("Capybara");
-                probe2.ExpectNext(55);
+                await probe0.ExpectNextAsync("Caplin");
+                await probe1.ExpectNextAsync("Capybara");
+                await probe2.ExpectNextAsync(55);
 
-                probe0.ExpectComplete();
-                probe1.ExpectComplete();
-                probe2.ExpectComplete();
-                return Task.CompletedTask;
+                await probe0.ExpectCompleteAsync();
+                await probe1.ExpectCompleteAsync();
+                await probe2.ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -271,7 +268,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             // the jvm version uses 20 outputs but we have only 7 so changed this spec a little bit
 
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe0 = this.CreateManualSubscriberProbe<int>();
                 var probe1 = this.CreateManualSubscriberProbe<string>();
                 var probe2 = this.CreateManualSubscriberProbe<int>();
@@ -302,27 +299,26 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                probe0.ExpectSubscription().Request(1);
-                probe1.ExpectSubscription().Request(1);
-                probe2.ExpectSubscription().Request(1);
-                probe3.ExpectSubscription().Request(1);
-                probe4.ExpectSubscription().Request(1);
-                probe5.ExpectSubscription().Request(1);
+                (await probe0.ExpectSubscriptionAsync()).Request(1);
+                (await probe1.ExpectSubscriptionAsync()).Request(1);
+                (await probe2.ExpectSubscriptionAsync()).Request(1);
+                (await probe3.ExpectSubscriptionAsync()).Request(1);
+                (await probe4.ExpectSubscriptionAsync()).Request(1);
+                (await probe5.ExpectSubscriptionAsync()).Request(1);
 
-                probe0.ExpectNext(1);
-                probe1.ExpectNext("1");
-                probe2.ExpectNext(2);
-                probe3.ExpectNext("2");
-                probe4.ExpectNext(3);
-                probe5.ExpectNext("3");
-
-                probe0.ExpectComplete();
-                probe1.ExpectComplete();
-                probe2.ExpectComplete();
-                probe3.ExpectComplete();
-                probe4.ExpectComplete();
-                probe5.ExpectComplete();
-                return Task.CompletedTask;
+                await probe0.ExpectNextAsync(1);
+                await probe1.ExpectNextAsync("1");
+                await probe2.ExpectNextAsync(2);
+                await probe3.ExpectNextAsync("2");
+                await probe4.ExpectNextAsync(3);
+                await probe5.ExpectNextAsync("3");
+                
+                await probe0.ExpectCompleteAsync();
+                await probe1.ExpectCompleteAsync();
+                await probe2.ExpectCompleteAsync();
+                await probe3.ExpectCompleteAsync();
+                await probe4.ExpectCompleteAsync();
+                await probe5.ExpectCompleteAsync();
             }, Materializer);
         }
 
