@@ -19,6 +19,7 @@ using Akka.Util;
 using FluentAssertions;
 using Xunit;
 using FluentAssertions.Extensions;
+using Xunit.Sdk;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -68,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ToMaterialized(Sink.Cancelled<int>(), Keep.Left)                                                                             
                 .Run(Materializer);
 
-                Intercept(() =>
+                AssertThrows<Exception>(() =>
                 {
                     var boom = result.Result;
                 });
@@ -79,26 +80,25 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_lazy_source_must_stop_consuming_when_downstream_has_cancelled()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var outProbe = this.CreateSubscriberProbe<int>();
                 var inProbe = this.CreatePublisherProbe<int>();
 
                 Source.Lazily(() => Source.FromPublisher(inProbe)).RunWith(Sink.FromSubscriber(outProbe), Materializer);
 
                 outProbe.Request(1);
-                inProbe.ExpectRequest();
-                inProbe.SendNext(27);
-                outProbe.ExpectNext(27);
-                outProbe.Cancel();
-                inProbe.ExpectCancellation();
-                return Task.CompletedTask;
+                await inProbe.ExpectRequestAsync();
+                await inProbe.SendNextAsync(27);
+                await outProbe.ExpectNextAsync(27);
+                await outProbe.CancelAsync();
+                await inProbe.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_lazy_source_must_materialize_when_the_source_has_been_created()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateSubscriberProbe<int>();
 
                 var task = Source.Lazily(() => Source.From(new[] { 1, 2, 3 }).MapMaterializedValue(_ => Done.Instance))
@@ -107,18 +107,17 @@ namespace Akka.Streams.Tests.Dsl
 
                 task.IsCompleted.Should().BeFalse();
                 probe.Request(1);
-                probe.ExpectNext(1);
+                await probe.ExpectNextAsync(1);
                 task.Result.Should().Be(Done.Instance);
 
                 probe.Cancel();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_lazy_source_must_propagate_downstream_cancellation_cause_when_inner_source_has_been_materialized()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = CreateTestProbe();
                 var (doneF, killSwitch) = Source.Lazily(() =>
                     {
@@ -137,7 +136,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(Materializer);
 
                 var boom = new TestException("boom");
-                probe.ExpectMsg<Done>();
+                await probe.ExpectMsgAsync<Done>();
                 killSwitch.Abort(boom);
                 doneF.ContinueWith(t =>
                 {
@@ -145,28 +144,26 @@ namespace Akka.Streams.Tests.Dsl
                     t.Exception.InnerException.Should().NotBeNull();
                     t.Exception.InnerException.Should().Be(boom);
                 });
-                return Task.CompletedTask;
             }, Materializer);
         }
         
         [Fact]
         public async Task A_lazy_source_must_fail_stage_when_upstream_fails()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var outProbe = this.CreateSubscriberProbe<int>();
                 var inProbe = this.CreatePublisherProbe<int>();
 
                 Source.Lazily(() => Source.FromPublisher(inProbe)).RunWith(Sink.FromSubscriber(outProbe), Materializer);
 
                 outProbe.Request(1);
-                inProbe.ExpectRequest();
-                inProbe.SendNext(27);
-                outProbe.ExpectNext(27);
+                await inProbe.ExpectRequestAsync();
+                await inProbe.SendNextAsync(27);
+                await outProbe.ExpectNextAsync(27);
 
                 var testException = new TestException("OMG Who set that on fire !?!");
                 inProbe.SendError(testException);
                 outProbe.ExpectError().Should().Be(testException);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -195,7 +192,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_lazy_source_must_fail_correctly_when_materialization_of_inner_source_fails()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(() =>
+            {
                 var matFail = new TestException("fail!");
 
                 var task = Source.Lazily(() => Source.FromGraph(new FailingInnerMat(matFail)))
