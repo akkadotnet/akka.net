@@ -49,23 +49,23 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void ZipWith_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
+        public async Task ZipWith_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
         {
             var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-            subscriber1.ExpectSubscriptionAndComplete();
+            await subscriber1.ExpectSubscriptionAndCompleteAsync();
 
             var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
-            subscriber2.ExpectSubscriptionAndComplete();
+            await subscriber2.ExpectSubscriptionAndCompleteAsync();
         }
 
         [Fact]
-        public void ZipWith_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
+        public async Task ZipWith_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
         {
             var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-            subscriber1.ExpectSubscriptionAndComplete();
+            await subscriber1.ExpectSubscriptionAndCompleteAsync();
 
             var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
-            subscriber2.ExpectSubscriptionAndComplete();
+            await subscriber2.ExpectSubscriptionAndCompleteAsync();
         }
 
         [Fact]
@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task ZipWith_must_work_in_the_happy_case()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var subscription = probe.ExpectSubscription();
+                var subscription = await probe.ExpectSubscriptionAsync();
 
                 subscription.Request(2);
                 probe.ExpectNext(11, 22);
@@ -118,8 +118,7 @@ namespace Akka.Streams.Tests.Dsl
                 subscription.Request(1);
                 probe.ExpectNext(44);
 
-                probe.ExpectComplete();
-                return Task.CompletedTask;
+                await probe.ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -127,7 +126,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task ZipWith_must_work_in_the_sad_case()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -143,21 +142,20 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var subscription = probe.ExpectSubscription();
+                var subscription = await probe.ExpectSubscriptionAsync();
 
                 subscription.Request(2);
                 probe.ExpectNext(1 / -2, 2 / -1);
                 EventFilter.Exception<DivideByZeroException>().ExpectOne(() => subscription.Request(2));
                 probe.ExpectError().Should().BeOfType<DivideByZeroException>();
-                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
-                return Task.CompletedTask;
+                await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
             }, Materializer);
         }
 
         [Fact]
         public async Task ZipWith_must_ZipWith_expanded_Person_unapply_3_outputs()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualSubscriberProbe<Person>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -175,13 +173,12 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var subscription = probe.ExpectSubscription();
+                var subscription = await probe.ExpectSubscriptionAsync();
 
                 subscription.Request(5);
                 probe.ExpectNext().Should().BeEquivalentTo(new Person("Caplin", "Capybara", 55));
 
-                probe.ExpectComplete();
-                return Task.CompletedTask;
+                await probe.ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -190,7 +187,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             // the jvm version uses 19 inputs but we have only 9
 
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -215,12 +212,11 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var subscription = probe.ExpectSubscription();
+                var subscription = await probe.ExpectSubscriptionAsync();
 
                 subscription.Request(1);
-                probe.ExpectNext(Enumerable.Range(1, 9).Aggregate("", (s, i) => s + i));
-                probe.ExpectComplete();
-                return Task.CompletedTask;
+                await probe.ExpectNextAsync(Enumerable.Range(1, 9).Aggregate("", (s, i) => s + i));
+                await probe.ExpectCompleteAsync();
             }, Materializer);
         }
 
