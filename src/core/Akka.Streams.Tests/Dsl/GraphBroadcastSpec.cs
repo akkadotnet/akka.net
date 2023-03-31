@@ -33,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Broadcast_must_broadcast_to_other_subscriber()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -50,19 +50,18 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var sub1 = c1.ExpectSubscription();
-                var sub2 = c2.ExpectSubscription();
+                var sub1 = await c1.ExpectSubscriptionAsync();
+                var sub2 = await c2.ExpectSubscriptionAsync();
 
                 sub1.Request(1);
                 sub2.Request(2);
 
-                c1.ExpectNext(1).ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                c2.ExpectNext(1, 2).ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await c1.ExpectNext(1).ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await c2.ExpectNext(1, 2).ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
                 sub1.Request(3);
-                c1.ExpectNext(2, 3).ExpectComplete();
+                await c1.ExpectNext(2, 3).ExpectCompleteAsync();
                 sub2.Request(3);
-                c2.ExpectNext(3).ExpectComplete();
-                return Task.CompletedTask;
+                await c2.ExpectNext(3).ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -168,7 +167,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Broadcast_must_produce_to_other_even_though_downstream_cancels()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -185,20 +184,19 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var sub1 = c1.ExpectSubscription();
+                var sub1 = await c1.ExpectSubscriptionAsync();
                 sub1.Cancel();
-                var sub2 = c2.ExpectSubscription();
+                var sub2 = await c2.ExpectSubscriptionAsync();
                 sub2.Request(3);
                 c2.ExpectNext(1, 2, 3);
-                c2.ExpectComplete();
-                return Task.CompletedTask;
+                await c2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Broadcast_must_produce_to_downstream_even_though_other_cancels()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -215,20 +213,19 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var sub1 = c1.ExpectSubscription();
-                var sub2 = c2.ExpectSubscription();
+                var sub1 = await c1.ExpectSubscriptionAsync();
+                var sub2 = await c2.ExpectSubscriptionAsync();
                 sub2.Cancel();
                 sub1.Request(3);
                 c1.ExpectNext(1, 2, 3);
-                c1.ExpectComplete();
-                return Task.CompletedTask;
+                await c1.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Broadcast_must_cancel_upstream_when_downstreams_cancel()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p1 = this.CreateManualPublisherProbe<int>();
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -246,30 +243,29 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var bSub = p1.ExpectSubscription();
-                var sub1 = c1.ExpectSubscription();
-                var sub2 = c2.ExpectSubscription();
+                var bSub = await p1.ExpectSubscriptionAsync();
+                var sub1 = await c1.ExpectSubscriptionAsync();
+                var sub2 = await c2.ExpectSubscriptionAsync();
 
                 sub1.Request(3);
                 sub2.Request(3);
-                p1.ExpectRequest(bSub, 16);
+                await p1.ExpectRequestAsync(bSub, 16);
                 bSub.SendNext(1);
-                c1.ExpectNext(1);
-                c2.ExpectNext(1);
+                await c1.ExpectNextAsync(1);
+                await c2.ExpectNextAsync(1);
                 bSub.SendNext(2);
-                c1.ExpectNext(2);
-                c2.ExpectNext(2);
+                await c1.ExpectNextAsync(2);
+                await c2.ExpectNextAsync(2);
                 sub1.Cancel();
                 sub2.Cancel();
-                bSub.ExpectCancellation();
-                return Task.CompletedTask;
+                await bSub.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Broadcast_must_pass_along_early_cancellation()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
 
@@ -285,22 +281,21 @@ namespace Akka.Streams.Tests.Dsl
 
                 var up = this.CreateManualPublisherProbe<int>();
 
-                var downSub1 = c1.ExpectSubscription();
-                var downSub2 = c2.ExpectSubscription();
+                var downSub1 = await c1.ExpectSubscriptionAsync();
+                var downSub2 = await c2.ExpectSubscriptionAsync();
                 downSub1.Cancel();
                 downSub2.Cancel();
 
                 up.Subscribe(s);
-                var upSub = up.ExpectSubscription();
-                upSub.ExpectCancellation();
-                return Task.CompletedTask;
+                var upSub = await up.ExpectSubscriptionAsync();
+                await upSub.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Broadcast_must_AltoTo_must_broadcast()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p = this.SinkProbe<int>();
                 var p2 = this.SinkProbe<int>();
 
@@ -313,20 +308,19 @@ namespace Akka.Streams.Tests.Dsl
                 var ps1 = t.Item1;
                 var ps2 = t.Item2;
 
-                ps1.Request(6);
-                ps2.Request(6);
+                await ps1.RequestAsync(6);
+                await ps2.RequestAsync(6);
                 ps1.ExpectNext(1, 2, 3, 4, 5, 6);
                 ps2.ExpectNext(1, 2, 3, 4, 5, 6);
-                ps1.ExpectComplete();
-                ps2.ExpectComplete();
-                return Task.CompletedTask;
+                await ps1.ExpectCompleteAsync();
+                await ps2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Broadcast_must_AlsoTo_must_continue_if_sink_cancels()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p = this.SinkProbe<int>();
                 var p2 = this.SinkProbe<int>();
 
@@ -339,11 +333,10 @@ namespace Akka.Streams.Tests.Dsl
                 var ps1 = t.Item1;
                 var ps2 = t.Item2;
 
-                ps2.Request(6);
+                await ps2.RequestAsync(6);
                 ps1.Cancel();
                 ps2.ExpectNext(1, 2, 3, 4, 5, 6);
-                ps2.ExpectComplete();
-                return Task.CompletedTask;
+                await ps2.ExpectCompleteAsync();
             }, Materializer);
         }
     }
