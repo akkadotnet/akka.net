@@ -12,7 +12,7 @@ namespace Akka.Streams
     public sealed class AbruptStageTerminationException : System.Exception
     {
         public AbruptStageTerminationException(Akka.Streams.Stage.GraphStageLogic logic) { }
-        protected AbruptStageTerminationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public AbruptStageTerminationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class AbruptTerminationException : System.Exception
     {
@@ -1804,7 +1804,7 @@ namespace Akka.Streams.Dsl
     public sealed class PartitionOutOfBoundsException : System.Exception
     {
         public PartitionOutOfBoundsException(string message) { }
-        protected PartitionOutOfBoundsException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public PartitionOutOfBoundsException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class PartitionWith<TIn, TOut0, TOut1> : Akka.Streams.Stage.GraphStage<Akka.Streams.FanOutShape<TIn, TOut0, TOut1>>
     {
@@ -2393,7 +2393,7 @@ namespace Akka.Streams.Dsl
     public sealed class TcpIdleTimeoutException : System.TimeoutException
     {
         public TcpIdleTimeoutException(string message, System.TimeSpan duration) { }
-        protected TcpIdleTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public TcpIdleTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public System.TimeSpan Duration { get; }
     }
     public class static TcpStreamExtensions

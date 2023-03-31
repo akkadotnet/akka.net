@@ -37,30 +37,28 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void InputStreamSink_should_read_bytes_from_input_stream()
+        public async Task InputStreamSink_should_read_bytes_from_input_stream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
                 var result = ReadN(inputStream, _byteString.Count);
                 inputStream.Dispose();
                 result.Item1.Should().Be(_byteString.Count);
                 result.Item2.Should().BeEquivalentTo(_byteString);
-
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_read_bytes_correctly_if_requested_by_input_stream_not_in_chunk_size()
+        public async Task InputStreamSink_should_read_bytes_correctly_if_requested_by_input_stream_not_in_chunk_size()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var sinkProbe = CreateTestProbe();
                 var byteString2 = RandomByteString(3);
                 var inputStream = Source.From(new[] { _byteString, byteString2, null })
                     .RunWith(TestSink(sinkProbe), _materializer);
 
-                sinkProbe.ExpectMsgAllOf(new []{ GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance });
+                sinkProbe.ExpectMsgAllOf(new[] { GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance });
 
                 var result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
@@ -75,34 +73,32 @@ namespace Akka.Streams.Tests.IO
                 result.Item2.Should().BeEquivalentTo(byteString2.Slice(1));
 
                 inputStream.Dispose();
-
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_return_less_than_was_expected_when_data_source_has_provided_some_but_not_enough_data()
+        public async Task InputStreamSink_should_return_less_than_was_expected_when_data_source_has_provided_some_but_not_enough_data()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
 
                 var arr = new byte[_byteString.Count + 1];
                 inputStream.Read(arr, 0, arr.Length).Should().Be(arr.Length - 1);
                 inputStream.Dispose();
                 ByteString.FromBytes(arr).Should().BeEquivalentTo(Enumerable.Concat(_byteString, ByteString.FromBytes(new byte[] { 0 })));
-
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [WindowsFact(Skip ="Racy in Linux")]
-        public void InputStreamSink_should_block_read_until_get_requested_number_of_bytes_from_upstream()
+        public async Task InputStreamSink_should_block_read_until_get_requested_number_of_bytes_from_upstream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var run =
-                    this.SourceProbe<ByteString>()
-                        .ToMaterialized(StreamConverters.AsInputStream(), Keep.Both)
-                        .Run(_materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var run =                                                                             
+                this.SourceProbe<ByteString>()                                                                                 
+                .ToMaterialized(StreamConverters.AsInputStream(), Keep.Both)                                                                                 
+                .Run(_materializer);
                 var probe = run.Item1;
                 var inputStream = run.Item2;
                 var f = Task.Run(() => inputStream.Read(new byte[_byteString.Count], 0, _byteString.Count));
@@ -116,18 +112,17 @@ namespace Akka.Streams.Tests.IO
                 probe.SendComplete();
                 inputStream.ReadByte().Should().Be(-1);
                 inputStream.Dispose();
-
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_throw_error_when_reactive_stream_is_closed()
+        public async Task InputStreamSink_should_throw_error_when_reactive_stream_is_closed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var t = this.SourceProbe<ByteString>()
-                        .ToMaterialized(StreamConverters.AsInputStream(), Keep.Both)
-                        .Run(_materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var t = this.SourceProbe<ByteString>()                                                                                 
+                .ToMaterialized(StreamConverters.AsInputStream(), Keep.Both)                                                                                 
+                .Run(_materializer);
                 var probe = t.Item1;
                 var inputStream = t.Item2;
 
@@ -137,14 +132,14 @@ namespace Akka.Streams.Tests.IO
 
                 Action block = () => inputStream.Read(new byte[1], 0, 1);
                 block.Should().Throw<IOException>();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_return_all_data_when_upstream_is_completed()
+        public async Task InputStreamSink_should_return_all_data_when_upstream_is_completed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var sinkProbe = CreateTestProbe();
                 var t = this.SourceProbe<ByteString>().ToMaterialized(TestSink(sinkProbe), Keep.Both).Run(_materializer);
                 var probe = t.Item1;
@@ -160,14 +155,14 @@ namespace Akka.Streams.Tests.IO
                 var result = ReadN(inputStream, 3);
                 result.Item1.Should().Be(1);
                 result.Item2.Should().BeEquivalentTo(bytes);
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_work_when_read_chunks_smaller_then_stream_chunks()
+        public async Task InputStreamSink_should_work_when_read_chunks_smaller_then_stream_chunks()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var bytes = RandomByteString(10);
                 var inputStream = Source.Single(bytes).RunWith(StreamConverters.AsInputStream(), _materializer);
 
@@ -182,14 +177,14 @@ namespace Akka.Streams.Tests.IO
                 }
 
                 inputStream.Dispose();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_throw_exception_when_call_read_With_wrong_parameters()
+        public async Task InputStreamSink_should_throw_exception_when_call_read_With_wrong_parameters()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
                 var buf = new byte[3];
 
@@ -197,16 +192,16 @@ namespace Akka.Streams.Tests.IO
                 Action(() => inputStream.Read(buf, 0, 5)).Should().Throw<ArgumentException>();
                 Action(() => inputStream.Read(new byte[0], 0, 1)).Should().Throw<ArgumentException>();
                 Action(() => inputStream.Read(buf, 0, 0)).Should().Throw<ArgumentException>();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         private Action Action(Action a) => a;
 
         [Fact]
-        public void InputStreamSink_should_successfully_read_several_chunks_at_once()
+        public async Task InputStreamSink_should_successfully_read_several_chunks_at_once()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var bytes = Enumerable.Range(1, 4).Select(_ => RandomByteString(4)).ToList();
                 var sinkProbe = CreateTestProbe();
                 var inputStream = Source.From(bytes).RunWith(TestSink(sinkProbe), _materializer);
@@ -222,21 +217,21 @@ namespace Akka.Streams.Tests.IO
                 }
 
                 inputStream.Dispose();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_work_when_read_chunks_bigger_than_stream_chunks()
+        public async Task InputStreamSink_should_work_when_read_chunks_bigger_than_stream_chunks()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var bytes1 = RandomByteString(10);
                 var bytes2 = RandomByteString(10);
                 var sinkProbe = CreateTestProbe();
                 var inputStream = Source.From(new[] { bytes1, bytes2, null }).RunWith(TestSink(sinkProbe), _materializer);
 
                 //need to wait while both elements arrive to sink
-                sinkProbe.ExpectMsgAllOf(new []{ GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance });
+                sinkProbe.ExpectMsgAllOf(new[] { GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance });
 
                 var r1 = ReadN(inputStream, 15);
                 r1.Item1.Should().Be(15);
@@ -247,14 +242,14 @@ namespace Akka.Streams.Tests.IO
                 r2.Item2.Should().BeEquivalentTo(bytes2.Slice(5));
 
                 inputStream.Dispose();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_return_minus_1_when_read_after_stream_is_completed()
+        public async Task InputStreamSink_should_return_minus_1_when_read_after_stream_is_completed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
 
                 var r = ReadN(inputStream, _byteString.Count);
@@ -263,14 +258,14 @@ namespace Akka.Streams.Tests.IO
 
                 inputStream.ReadByte().Should().Be(-1);
                 inputStream.Dispose();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_return_Exception_when_stream_is_failed()
+        public async Task InputStreamSink_should_return_Exception_when_stream_is_failed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var sinkProbe = CreateTestProbe();
                 var t = this.SourceProbe<ByteString>().ToMaterialized(TestSink(sinkProbe), Keep.Both).Run(_materializer);
                 var probe = t.Item1;
@@ -293,15 +288,14 @@ namespace Akka.Streams.Tests.IO
                 block.Should().Throw<Exception>();
 
                 task.Exception.InnerException.Should().Be(ex);
-
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_use_dedicated_default_blocking_io_dispatcher_by_default()
+        public async Task InputStreamSink_should_use_dedicated_default_blocking_io_dispatcher_by_default()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var sys = ActorSystem.Create("InputStreamSink-testing", Utils.UnboundedMailboxConfig);
                 var materializer = ActorMaterializer.Create(sys);
                 try
@@ -316,14 +310,15 @@ namespace Akka.Streams.Tests.IO
                 {
                     Shutdown(sys);
                 }
+
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void InputStreamSink_should_work_when_more_bytes_pulled_from_input_stream_than_available()
+        public async Task InputStreamSink_should_work_when_more_bytes_pulled_from_input_stream_than_available()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
 
                 var r = ReadN(inputStream, _byteString.Count * 2);
@@ -331,15 +326,15 @@ namespace Akka.Streams.Tests.IO
                 r.Item2.Should().BeEquivalentTo(_byteString);
 
                 inputStream.Dispose();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
 
         [Fact]
-        public void InputStreamSink_should_read_next_byte_as_an_int_from_InputStream()
+        public async Task InputStreamSink_should_read_next_byte_as_an_int_from_InputStream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var bytes = ByteString.CopyFrom(new byte[] { 0, 100, 200, 255 });
                 var inputStream = Source.Single(bytes).RunWith(StreamConverters.AsInputStream(), _materializer);
 
@@ -348,6 +343,7 @@ namespace Akka.Streams.Tests.IO
                     .Should().BeEquivalentTo(new[] { 0, 100, 200, 255, -1 });
 
                 inputStream.Dispose();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
