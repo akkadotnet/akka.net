@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Concat_must_work_in_the_happy_case()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -64,66 +64,63 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var subscription = probe.ExpectSubscription();
+                var subscription = await probe.ExpectSubscriptionAsync();
 
                 for (var i = 1; i <= 10; i++)
                 {
                     subscription.Request(1);
-                    probe.ExpectNext(i);
+                    await probe.ExpectNextAsync(i);
                 }
 
-                probe.ExpectComplete();
-                return Task.CompletedTask;
+                await probe.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task Concat_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-                var subscription1 = subscriber1.ExpectSubscription();
+                var subscription1 = await subscriber1.ExpectSubscriptionAsync();
 
                 subscription1.Request(5);
-                subscriber1.ExpectNext(1, 2, 3, 4).ExpectComplete();
+                await subscriber1.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
-                var subscription2 = subscriber2.ExpectSubscription();
+                var subscription2 = await subscriber2.ExpectSubscriptionAsync();
 
                 subscription2.Request(5);
-                subscriber2.ExpectNext(1, 2, 3, 4).ExpectComplete();
-                return Task.CompletedTask;
+                await subscriber2.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task Concat_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-                var subscription1 = subscriber1.ExpectSubscription();
+                var subscription1 = await subscriber1.ExpectSubscriptionAsync();
 
                 subscription1.Request(5);
-                subscriber1.ExpectNext(1, 2, 3, 4).ExpectComplete();
+                await subscriber1.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
-                var subscription2 = subscriber2.ExpectSubscription();
+                var subscription2 = await subscriber2.ExpectSubscriptionAsync();
 
                 subscription2.Request(5);
-                subscriber2.ExpectNext(1, 2, 3, 4).ExpectComplete();
-                return Task.CompletedTask;
+                await subscriber2.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task Concat_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var subscriber1 = Setup(FailedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 subscriber1.ExpectSubscriptionAndError().Should().Be(TestException());
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), FailedPublisher<int>());
-                subscriber2.ExpectSubscription().Request(5);
+                (await subscriber2.ExpectSubscriptionAsync()).Request(5);
 
                 foreach (var i in Enumerable.Range(1, 4))
                 {
@@ -131,20 +128,19 @@ namespace Akka.Streams.Tests.Dsl
                     if (result is int && (int)result == i)
                         continue;
                     if (result.Equals(TestException()))
-                        return Task.CompletedTask;
+                        return;
                 }
 
                 subscriber2.ExpectError().Should().Be(TestException());
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task Concat_must_work_with_one_nonempty_publisher_and_one_delayed_failed_and()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var subscriber = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToFailPublisher<int>());
-                subscriber.ExpectSubscription().Request(5);
+                (await subscriber.ExpectSubscriptionAsync()).Request(5);
 
                 foreach (var i in Enumerable.Range(1, 4))
                 {
@@ -152,11 +148,10 @@ namespace Akka.Streams.Tests.Dsl
                     if (result is int && (int)result == i)
                         continue;
                     if (result.Equals(TestException()))
-                        return Task.CompletedTask;
+                        return;
                 }
 
                 subscriber.ExpectError().Should().Be(TestException());
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -173,7 +168,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Concat_must_correctly_handle_async_errors_in_secondary_upstream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var promise = new TaskCompletionSource<int>();
                 var subscriber = this.CreateManualSubscriberProbe<int>();
 
@@ -190,12 +185,11 @@ namespace Akka.Streams.Tests.Dsl
                 })).Run(Materializer);
 
 
-                var subscription = subscriber.ExpectSubscription();
+                var subscription = await subscriber.ExpectSubscriptionAsync();
                 subscription.Request(4);
                 subscriber.ExpectNext(1, 2, 3);
                 promise.SetException(TestException());
                 subscriber.ExpectError().Should().Be(TestException());
-                return Task.CompletedTask;
             }, Materializer);
         }
     }
