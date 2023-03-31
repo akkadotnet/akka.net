@@ -63,7 +63,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Partition_must_complete_stage_after_upstream_completes()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateSubscriberProbe<string>();
                 var c2 = this.CreateSubscriberProbe<string>();
 
@@ -79,20 +79,19 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                c1.Request(1);
-                c2.Request(4);
-                c1.ExpectNext("another");
+                await c1.RequestAsync(1);
+                await c2.RequestAsync(4);
+                await c1.ExpectNextAsync("another");
                 c2.ExpectNext("this", "is", "just", "test");
-                c1.ExpectComplete();
-                c2.ExpectComplete();
-                return Task.CompletedTask;
+                await c1.ExpectCompleteAsync();
+                await c2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Partition_must_remember_first_pull_even_thought_first_element_target_another_out()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateSubscriberProbe<int>();
                 var c2 = this.CreateSubscriberProbe<int>();
 
@@ -108,21 +107,20 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                c1.Request(1);
-                c1.ExpectNoMsg(TimeSpan.FromSeconds(1));
-                c2.Request(1);
-                c2.ExpectNext(6);
-                c1.ExpectNext(3);
-                c1.ExpectComplete();
-                c2.ExpectComplete();
-                return Task.CompletedTask;
+                await c1.RequestAsync(1);
+                await c1.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+                await c2.RequestAsync(1);
+                await c2.ExpectNextAsync(6);
+                await c1.ExpectNextAsync(3);
+                await c1.ExpectCompleteAsync();
+                await c2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Partition_must_cancel_upstream_when_downstreams_cancel()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p1 = this.CreatePublisherProbe<int>();
                 var c1 = this.CreateSubscriberProbe<int>();
                 var c2 = this.CreateSubscriberProbe<int>();
@@ -143,21 +141,20 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var p1Sub = p1.ExpectSubscription();
-                var sub1 = c1.ExpectSubscription();
-                var sub2 = c2.ExpectSubscription();
+                var p1Sub = await p1.ExpectSubscriptionAsync();
+                var sub1 = await c1.ExpectSubscriptionAsync();
+                var sub2 = await c2.ExpectSubscriptionAsync();
                 sub1.Request(3);
                 sub2.Request(3);
                 p1Sub.SendNext(1);
                 p1Sub.SendNext(8);
-                c1.ExpectNext(1);
-                c2.ExpectNext(8);
+                await c1.ExpectNextAsync(1);
+                await c2.ExpectNextAsync(8);
                 p1Sub.SendNext(2);
-                c1.ExpectNext(2);
+                await c1.ExpectNextAsync(2);
                 sub1.Cancel();
                 sub2.Cancel();
-                p1Sub.ExpectCancellation();
-                return Task.CompletedTask;
+                await p1Sub.ExpectCancellationAsync();
             }, Materializer);
         }
 
@@ -191,7 +188,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Partition_must_stage_completion_is_waiting_for_pending_output()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateSubscriberProbe<int>();
                 var c2 = this.CreateSubscriberProbe<int>();
 
@@ -207,20 +204,19 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                c1.Request(1);
-                c1.ExpectNoMsg(TimeSpan.FromSeconds(1));
-                c2.Request(1);
-                c2.ExpectNext(6);
-                c1.ExpectComplete();
-                c2.ExpectComplete();
-                return Task.CompletedTask;
+                await c1.RequestAsync(1);
+                await c1.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+                await c2.RequestAsync(1);
+                await c2.ExpectNextAsync(6);
+                await c1.ExpectCompleteAsync();
+                await c2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Partition_must_fail_stage_if_partitioner_outcome_is_out_of_bound()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -236,20 +232,19 @@ namespace Akka.Streams.Tests.Dsl
                 })).Run(Materializer);
 
 
-                c1.Request(1);
+                await c1.RequestAsync(1);
                 var error = c1.ExpectError();
                 error.Should().BeOfType<PartitionOutOfBoundsException>();
                 error.Message.Should()
                     .Be(
                         "partitioner must return an index in the range [0,1]. returned: [-1] for input [Int32].");
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Partition_divertTo_must_send_matching_elements_to_the_sink()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var odd = this.CreateSubscriberProbe<int>();
                 var even = this.CreateSubscriberProbe<int>();
 
@@ -258,14 +253,13 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(even))
                     .Run(Materializer);
 
-                even.Request(1);
-                even.ExpectNoMsg(TimeSpan.FromSeconds(1));
-                odd.Request(1);
-                odd.ExpectNext(1);
-                even.ExpectNext(2);
-                odd.ExpectComplete();
-                even.ExpectComplete();
-                return Task.CompletedTask;
+                await even.RequestAsync(1);
+                await even.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+                await odd.RequestAsync(1);
+                await odd.ExpectNextAsync(1);
+                await even.ExpectNextAsync(2);
+                await odd.ExpectCompleteAsync();
+                await even.ExpectCompleteAsync();
             }, Materializer);
         }
     }
