@@ -31,37 +31,35 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_TakeWhile_must_take_while_predicate_is_true()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 4))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 4))                                                                             
                 .TakeWhile(i => i < 3)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(3)                                                                             
                 .ExpectNext(1, 2)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_TakeWhile_must_complete_the_future_for_an_empty_stream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<int>()                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<int>()                                                                             
                 .TakeWhile(i => i < 2)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(1)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_TakeWhile_must_continue_if_error()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var testException = new Exception("test");
 
-                Source.From(Enumerable.Range(1, 4)).TakeWhile(a =>
+                await Source.From(Enumerable.Range(1, 4)).TakeWhile(a =>
                 {
                     if (a == 3)
                         throw testException;
@@ -71,22 +69,21 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(4)
                     .ExpectNext(1, 2, 4)
-                    .ExpectComplete();
-                return Task.CompletedTask;
+                    .ExpectCompleteAsync();
+                
             }, Materializer);
         }
 
         [Fact]
         public async Task A_TakeWhile_must_emit_the_element_that_caused_the_predicate_to_return_false_and_then_no_more_with_inclusive_set()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 10))                                                                         
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 10))                                                                         
                 .TakeWhile(i => i < 3, true)                                                                         
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                         
                 .Request(4)                                                                         
                 .ExpectNext(1, 2, 3)                                                                         
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
     }
