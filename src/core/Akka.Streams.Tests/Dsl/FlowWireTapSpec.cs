@@ -33,25 +33,27 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_wireTap_must_call_the_procedure_for_each_element()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 Source.From(Enumerable.Range(1, 100))                                                                             
                 .WireTap(i => TestActor.Tell(i))                                                                             
                 .RunWith(Sink.Ignore<int>(), Materializer).Wait();
-                Enumerable.Range(1, 100).Select(i => ExpectMsg(i));
-                return Task.CompletedTask;
+                foreach (var i in Enumerable.Range(1, 100))
+                    await ExpectMsgAsync(i);
+                //Enumerable.Range(1, 100).Select(i => ExpectMsg(i));
+                //return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_wireTap_must_complete_the_future_for_an_empty_stream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<string>()                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<string>()                                                                             
                 .WireTap(i => TestActor.Tell(i))                                                                             
                 .RunWith(Sink.Ignore<string>(), Materializer)                                                                             
                 .ContinueWith(_ => TestActor.Tell("done"));
-                ExpectMsg("done");
-                return Task.CompletedTask;
+                await ExpectMsgAsync("done");
+                //return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -64,6 +66,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.FromPublisher(p)
                     .WireTap(i => TestActor.Tell(i))
                     .RunWith(Sink.Ignore<int>(), Materializer)
+                    //failing for async
                     .ContinueWith(t => TestActor.Tell(t.Exception.InnerException));
 
                 var proc = p.ExpectSubscription();
