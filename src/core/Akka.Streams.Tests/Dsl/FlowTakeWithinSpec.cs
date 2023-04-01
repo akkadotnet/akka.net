@@ -27,7 +27,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_TakeWithin_must_deliver_elements_within_the_duration_but_not_afterwards()
+        public async Task A_TakeWithin_must_deliver_elements_within_the_duration_but_not_afterwards()
         {
             var input = 1;
             var p = this.CreateManualPublisherProbe<int>();
@@ -36,37 +36,52 @@ namespace Akka.Streams.Tests.Dsl
                 .TakeWithin(TimeSpan.FromSeconds(1))
                 .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
-            var pSub = p.ExpectSubscription();
-            var cSub = c.ExpectSubscription();
+            var pSub = await p.ExpectSubscriptionAsync();
+            var cSub = await c.ExpectSubscriptionAsync();
             cSub.Request(100);
-            var demand1 = (int)pSub.ExpectRequest();
-            Enumerable.Range(1,demand1).ForEach(_=>pSub.SendNext(input++));
-            var demand2 = (int) pSub.ExpectRequest();
-            Enumerable.Range(1, demand2).ForEach(_ => pSub.SendNext(input++));
-            var demand3 = (int)pSub.ExpectRequest();
+
+            var demand1 = (int)await pSub.ExpectRequestAsync();
+            foreach (var n in Enumerable.Range(1, demand1))
+                pSub.SendNext(input++);
+            //Enumerable.Range(1,demand1).ForEach(_=>pSub.SendNext(input++));
+
+            var demand2 = (int) await pSub.ExpectRequestAsync();
+            foreach (var n in Enumerable.Range(1, demand2))
+                pSub.SendNext(input++);
+            //Enumerable.Range(1, demand2).ForEach(_ => pSub.SendNext(input++));
+
+            var demand3 = (int)await pSub.ExpectRequestAsync();            
             var sentN = demand1 + demand2;
-            Enumerable.Range(1, sentN).ForEach(n => c.ExpectNext(n));
-            Within(TimeSpan.FromSeconds(2), () => c.ExpectComplete());
-            Enumerable.Range(1, demand3).ForEach(_ => pSub.SendNext(input++));
-            c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+            foreach (var n in Enumerable.Range(1, sentN))
+                await c.ExpectNextAsync(n);
+            //Enumerable.Range(1, sentN).ForEach(n => c.ExpectNext(n));
+
+            await WithinAsync(TimeSpan.FromSeconds(2), async() => await c.ExpectCompleteAsync());
+
+            foreach (var n in Enumerable.Range(1, demand3))
+                pSub.SendNext(input++);
+            //Enumerable.Range(1, demand3).ForEach(_ => pSub.SendNext(input++));
+
+            await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
         }
 
         [Fact]
         public async Task A_TakeWithin_must_deliver_buffered_elements_OnComplete_before_the_timeout()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 3))
                     .TakeWithin(TimeSpan.FromSeconds(1))
                     .To(Sink.FromSubscriber(c))
                     .Run(Materializer);
-                var cSub = c.ExpectSubscription();
-                c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+                var cSub = await c.ExpectSubscriptionAsync();
+                await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
                 cSub.Request(100);
-                Enumerable.Range(1, 3).ForEach(n => c.ExpectNext(n));
-                c.ExpectComplete();
-                c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
-                return Task.CompletedTask;
+                foreach (var n in Enumerable.Range(1, 3))
+                    await c.ExpectNextAsync(n);
+                //Enumerable.Range(1, 3).ForEach(n => c.ExpectNext(n));
+                await c.ExpectCompleteAsync();
+                await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
             }, Materializer);
         }
     }
