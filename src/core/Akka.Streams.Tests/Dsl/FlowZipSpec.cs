@@ -35,45 +35,44 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Zip_for_Flow_must_work_in_the_happy_case()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualSubscriberProbe<(int, string)>();
                 Source.From(Enumerable.Range(1, 4))
                     .Zip(Source.From(new[] { "A", "B", "C", "D", "E", "F" }))
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
-                var subscription = probe.ExpectSubscription();
+                var subscription = await probe.ExpectSubscriptionAsync();
 
                 subscription.Request(2);
-                probe.ExpectNext((1, "A"));
-                probe.ExpectNext((2, "B"));
+                await probe.ExpectNextAsync((1, "A"));
+                await probe.ExpectNextAsync((2, "B"));
 
                 subscription.Request(1);
-                probe.ExpectNext((3, "C"));
+                await probe.ExpectNextAsync((3, "C"));
                 subscription.Request(1);
-                probe.ExpectNext((4, "D"));
+                await probe.ExpectNextAsync((4, "D"));
 
-                probe.ExpectComplete();
-                return Task.CompletedTask;
+                await probe.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void A_Zip_for_Flow_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
+        public async Task A_Zip_for_Flow_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
         {
             var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-            subscriber1.ExpectSubscriptionAndComplete();
+            await subscriber1.ExpectSubscriptionAndCompleteAsync();
 
             var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
-            subscriber2.ExpectSubscriptionAndComplete();
+            await subscriber2.ExpectSubscriptionAndCompleteAsync();
         }
 
         [Fact]
-        public void A_Zip_for_Flow_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
+        public async Task A_Zip_for_Flow_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
         {
             var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-            subscriber1.ExpectSubscriptionAndComplete();
+            await subscriber1.ExpectSubscriptionAndCompleteAsync();
 
             var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
-            subscriber2.ExpectSubscriptionAndComplete();
+            await subscriber2.ExpectSubscriptionAndCompleteAsync();
         }
 
         [Fact]
