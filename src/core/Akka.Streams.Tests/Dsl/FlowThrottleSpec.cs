@@ -49,43 +49,40 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Throttle_for_single_cost_elements_must_work_for_the_happy_case()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 5))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 5))                                                                             
                 .Throttle(1, TimeSpan.FromMilliseconds(100), 0, ThrottleMode.Shaping)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(5)                                                                             
                 .ExpectNext(1, 2, 3, 4, 5)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task Throttle_for_single_cost_elements_must_accept_very_high_rates()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 5))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 5))                                                                             
                 .Throttle(1, TimeSpan.FromTicks(1), 0, ThrottleMode.Shaping)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(5)                                                                             
                 .ExpectNext(1, 2, 3, 4, 5)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task Throttle_for_single_cost_elements_must_accept_very_low_rates()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = Source.From(Enumerable.Range(1, 5))                                                                             
                 .Throttle(1, TimeSpan.FromDays(100), 1, ThrottleMode.Shaping)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer);
-                probe.Request(5)
+                await probe.Request(5)
                     .ExpectNext(1)
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                    .ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
                 probe.Cancel();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -114,7 +111,7 @@ namespace Akka.Streams.Tests.Dsl
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -122,25 +119,24 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(1, TimeSpan.FromMilliseconds(500), 0, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-                downstream.Request(2);
-                upstream.SendNext(1);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(150));
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(2);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(150));
+                await downstream.ExpectNextAsync(1);
 
-                upstream.SendNext(2);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(150));
-                downstream.ExpectNext(2);
+                await upstream.SendNextAsync(2);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(150));
+                await downstream.ExpectNextAsync(2);
 
-                upstream.SendComplete();
-                downstream.ExpectComplete();
-                return Task.CompletedTask;
+                await upstream.SendCompleteAsync();
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task Throttle_for_single_cost_elements_must_not_send_downstream_if_upstream_does_not_emit_element()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -148,17 +144,16 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-                downstream.Request(2);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(2);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
-                upstream.SendNext(2);
-                downstream.ExpectNext(2);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+                await upstream.SendNextAsync(2);
+                await downstream.ExpectNextAsync(2);
 
-                upstream.SendComplete();
-                downstream.ExpectComplete();
-                return Task.CompletedTask;
+                await upstream.SendCompleteAsync();
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -178,28 +173,27 @@ namespace Akka.Streams.Tests.Dsl
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task Throttle_for_single_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe =                                                                             
                 Source.From(Enumerable.Range(1, 10))                                                                                 
                 .Throttle(2, TimeSpan.FromMilliseconds(750), 0, ThrottleMode.Shaping)                                                                                 
                 .RunWith(this.SinkProbe<int>(), Materializer);
                 probe.Request(5);
                 var result = probe.ReceiveWhile(TimeSpan.FromMilliseconds(900), filter: x => x);
-                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(150))
+                await probe.ExpectNoMsg(TimeSpan.FromMilliseconds(150))
                     .ExpectNext(3)
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(150))
-                    .ExpectNext(4);
+                    .ExpectNextAsync(4);
                 probe.Cancel();
                 // assertion may take longer then the throttle and therefore the next assertion fails
                 result.Should().BeEquivalentTo(new[] { new OnNext(1), new OnNext(2) });
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task Throttle_for_single_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var ms = TimeSpan.FromMilliseconds(300);
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -210,20 +204,21 @@ namespace Akka.Streams.Tests.Dsl
 
                 // Exhaust bucket first
                 downstream.Request(5);
-                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                foreach (var i in Enumerable.Range(1, 5))
+                    await upstream.SendNextAsync(i);
                 // Check later, takes to long
                 var exhaustElements = downstream.ReceiveWhile(ms, ms,
                     msg => msg is TestSubscriber.OnNext<int> ? msg : null, 5);
                 downstream.Request(1);
-                upstream.SendNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(6);
+                await upstream.SendNextAsync(6);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNextAsync(6);
                 downstream.Request(5);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(1200));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(1200));
                 var expected = new List<OnNext>();
                 for (var i = 7; i < 12; i++)
                 {
-                    upstream.SendNext(i);
+                    await upstream.SendNextAsync(i);
                     expected.Add(new OnNext(i));
                 }
                 downstream.ReceiveWhile(TimeSpan.FromMilliseconds(300), filter: x => x, msgs: 5)
@@ -234,14 +229,13 @@ namespace Akka.Streams.Tests.Dsl
                 exhaustElements.Cast<TestSubscriber.OnNext<int>>()
                     .Select(n => n.Element)
                     .Should().BeEquivalentTo(Enumerable.Range(1, 5));
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task Throttle_for_single_cost_elements_must_burst_some_elements_if_have_enough_time()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -251,20 +245,21 @@ namespace Akka.Streams.Tests.Dsl
 
                 // Exhaust bucket first
                 downstream.Request(5);
-                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                foreach (var i in Enumerable.Range(1, 5))
+                    await upstream.SendNextAsync(i);
                 // Check later, takes too long
                 var exhaustElements = downstream.ReceiveWhile(filter: o => o, max: TimeSpan.FromMilliseconds(300), msgs: 5);
 
                 downstream.Request(1);
-                upstream.SendNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+                await upstream.SendNextAsync(6);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNextAsync(6);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
                 downstream.Request(5);
                 var expected = new List<OnNext>();
                 for (var i = 7; i < 11; i++)
                 {
-                    upstream.SendNext(i);
+                    await upstream.SendNextAsync(i);
                     if (i < 9)
                         expected.Add(new OnNext(i));
                 }
@@ -276,7 +271,6 @@ namespace Akka.Streams.Tests.Dsl
                     .Cast<TestSubscriber.OnNext<int>>()
                     .Select(n => n.Element)
                     .Should().BeEquivalentTo(Enumerable.Range(1, 5));
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -303,15 +297,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Throttle_for_single_cost_elements_must_properly_combine_shape_and_throttle_modes()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 5))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 5))                                                                             
                 .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Shaping)                                                                             
                 .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(5)                                                                             
                 .ExpectNext(1, 2, 3, 4, 5)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -320,24 +313,23 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Throttle_for_various_cost_elements_must_work_for_the_happy_case()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 5))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 5))                                                                             
                 .Throttle(1, TimeSpan.FromMilliseconds(100), 0, _ => 1, ThrottleMode.Shaping)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(5)                                                                             
                 .ExpectNext(1, 2, 3, 4, 5)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy, see https://github.com/akkadotnet/akka.net/pull/4424#issuecomment-632284459")]
         public async Task Throttle_for_various_cost_elements_must_emit_elements_according_to_cost()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var list = Enumerable.Range(1, 4).Select(x => x * 2).Select(GenerateByteString).ToList();
 
-                Source.From(list)
+                await Source.From(list)
                     .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x.Count, ThrottleMode.Shaping)
                     .RunWith(this.SinkProbe<ByteString>(), Materializer)
                     .Request(4)
@@ -348,15 +340,14 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(list[2])
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(700))
                     .ExpectNext(list[3])
-                    .ExpectComplete();
-                return Task.CompletedTask;
+                    .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task Throttle_for_various_cost_elements_must_not_send_downstream_if_upstream_does_not_emit_element()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -365,16 +356,15 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(2);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
-                upstream.SendNext(2);
-                downstream.ExpectNext(2);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+                await upstream.SendNextAsync(2);
+                await downstream.ExpectNextAsync(2);
 
-                upstream.SendComplete();
-                downstream.ExpectComplete();
-                return Task.CompletedTask;
+                await upstream.SendCompleteAsync();
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -394,28 +384,28 @@ namespace Akka.Streams.Tests.Dsl
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task Throttle_for_various_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe =                                                                             
                 Source.From(Enumerable.Range(1, 10))                                                                                 
                 .Throttle(4, TimeSpan.FromMilliseconds(500), 0, _ => 2, ThrottleMode.Shaping)                                                                                 
                 .RunWith(this.SinkProbe<int>(), Materializer);
                 probe.Request(5);
                 var result = probe.ReceiveWhile(TimeSpan.FromMilliseconds(600), filter: x => x);
-                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100))
+                await probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100))
                     .ExpectNext(3)
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(100))
-                    .ExpectNext(4);
+                    .ExpectNextAsync(4);
                 probe.Cancel();
                 // assertion may take longer then the throttle and therefore the next assertion fails
                 result.Should().BeEquivalentTo(new[] { new OnNext(1), new OnNext(2) });
-                return Task.CompletedTask;
+
             }, Materializer);
         }
 
         [Fact]
         public async Task Throttle_for_various_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -425,25 +415,28 @@ namespace Akka.Streams.Tests.Dsl
 
                 // Exhaust bucket first
                 downstream.Request(5);
-                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                foreach (var i in Enumerable.Range(1, 5))
+                    await upstream.SendNextAsync(i);
                 downstream.ReceiveWithin<int>(TimeSpan.FromMilliseconds(300), 5)
                     .Should().BeEquivalentTo(Enumerable.Range(1, 5));
 
                 downstream.Request(5);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(1200));
-                Enumerable.Range(7, 5).ForEach(i => upstream.SendNext(i));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(1200));
+                foreach (var i in Enumerable.Range(7, 5))
+                    await upstream.SendNextAsync(i);
+
                 downstream.ReceiveWithin<int>(TimeSpan.FromMilliseconds(300), 5)
                     .Should().BeEquivalentTo(Enumerable.Range(7, 5));
 
                 downstream.Cancel();
-                return Task.CompletedTask;
+
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task Throttle_for_various_cost_elements_must_burst_some_elements_if_have_enough_time()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -453,21 +446,22 @@ namespace Akka.Streams.Tests.Dsl
 
                 // Exhaust bucket first
                 downstream.Request(5);
-                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                foreach (var i in Enumerable.Range(1, 5))
+                    await upstream.SendNextAsync(i);
                 // Check later, takes too long
                 var exhaustElements = downstream.ReceiveWhile(filter: o => o, max: TimeSpan.FromMilliseconds(300),
                     msgs: 5);
 
                 downstream.Request(1);
-                upstream.SendNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(500)); //wait to receive 2 in burst afterwards
+                await upstream.SendNextAsync(6);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNextAsync(6);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500)); //wait to receive 2 in burst afterwards
                 downstream.Request(5);
                 var expected = new List<OnNext>();
                 for (var i = 7; i < 10; i++)
                 {
-                    upstream.SendNext(i);
+                    await upstream.SendNextAsync(i);
                     if (i < 9)
                         expected.Add(new OnNext(i));
                 }
@@ -479,7 +473,6 @@ namespace Akka.Streams.Tests.Dsl
                     .Cast<TestSubscriber.OnNext<int>>()
                     .Select(n => n.Element)
                     .Should().BeEquivalentTo(Enumerable.Range(1, 5));
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -506,15 +499,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Throttle_for_various_cost_elements_must_properly_combine_shape_and_enforce_modes()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 5))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 5))                                                                             
                 .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x, ThrottleMode.Shaping)                                                                             
                 .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(5)                                                                             
                 .ExpectNext(1, 2, 3, 4, 5)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
