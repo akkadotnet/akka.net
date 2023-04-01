@@ -34,7 +34,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Balance_must_balance_between_subscribers_which_signal_demand()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
 
@@ -48,24 +48,23 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var sub1 = c1.ExpectSubscription();
-                var sub2 = c2.ExpectSubscription();
+                var sub1 = await c1.ExpectSubscriptionAsync();
+                var sub2 = await c2.ExpectSubscriptionAsync();
 
                 sub1.Request(1);
-                c1.ExpectNext(1).ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await c1.ExpectNext(1).ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                 sub2.Request(2);
                 c2.ExpectNext(2, 3);
-                c1.ExpectComplete();
-                c2.ExpectComplete();
-                return Task.CompletedTask;
+                await c1.ExpectCompleteAsync();
+                await c2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Balance_must_support_waiting_for_demand_from_all_downstream_subscriptions()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var s1 = this.CreateManualSubscriberProbe<int>();
 
                 var p2 = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false), (b, p2Sink) =>
@@ -78,31 +77,30 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var sub1 = s1.ExpectSubscription();
+                var sub1 = await s1.ExpectSubscriptionAsync();
 
                 sub1.Request(1);
-                s1.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+                await s1.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
                 var s2 = this.CreateManualSubscriberProbe<int>();
                 p2.Subscribe(s2);
-                var sub2 = s2.ExpectSubscription();
+                var sub2 = await s2.ExpectSubscriptionAsync();
 
                 // still no demand from s2
-                s2.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+                await s2.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
                 sub2.Request(2);
-                s1.ExpectNext(1);
+                await s1.ExpectNextAsync(1);
                 s2.ExpectNext(2, 3);
-                s1.ExpectComplete();
-                s2.ExpectComplete();
-                return Task.CompletedTask;
+                await s1.ExpectCompleteAsync();
+                await s2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task A_Balance_must_support_waiting_for_demand_from_all_non_cancelled_downstream_subscriptions()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var s1 = this.CreateManualSubscriberProbe<int>();
 
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false),
@@ -124,26 +122,25 @@ namespace Akka.Streams.Tests.Dsl
                 var p2 = t.Item1;
                 var p3 = t.Item2;
 
-                var sub1 = s1.ExpectSubscription();
+                var sub1 = await s1.ExpectSubscriptionAsync();
                 sub1.Request(1);
 
                 var s2 = this.CreateManualSubscriberProbe<int>();
                 p2.Subscribe(s2);
-                var sub2 = s2.ExpectSubscription();
+                var sub2 = await s2.ExpectSubscriptionAsync();
 
                 var s3 = this.CreateManualSubscriberProbe<int>();
                 p3.Subscribe(s3);
-                var sub3 = s3.ExpectSubscription();
+                var sub3 = await s3.ExpectSubscriptionAsync();
 
                 sub2.Request(2);
-                s1.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+                await s1.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
                 sub3.Cancel();
 
                 s1.ExpectNext(1);
                 s2.ExpectNext(2, 3);
-                s1.ExpectComplete();
-                s2.ExpectComplete();
-                return Task.CompletedTask;
+                await s1.ExpectCompleteAsync();
+                await s2.ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -227,7 +224,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Balance_must_fairly_balance_between_three_outputs()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.SinkProbe<int>();
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(probe, probe, probe, ValueTuple.Create,
                     (b, o1, o2, o3) =>
@@ -246,25 +243,24 @@ namespace Akka.Streams.Tests.Dsl
                 var p2 = t.Item2;
                 var p3 = t.Item3;
 
-                p1.RequestNext(1);
-                p2.RequestNext(2);
-                p3.RequestNext(3);
-                p2.RequestNext(4);
-                p1.RequestNext(5);
-                p3.RequestNext(6);
-                p1.RequestNext(7);
+                await p1.RequestNextAsync(1);
+                await p2.RequestNextAsync(2);
+                await p3.RequestNextAsync(3);
+                await p2.RequestNextAsync(4);
+                await p1.RequestNextAsync(5);
+                await p3.RequestNextAsync(6);
+                await p1.RequestNextAsync(7);
 
-                p1.ExpectComplete();
-                p2.ExpectComplete();
-                p3.ExpectComplete();
-                return Task.CompletedTask;
+                await p1.ExpectCompleteAsync();
+                await p2.ExpectCompleteAsync();
+                await p3.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Balance_must_produce_to_second_even_though_first_cancels()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
 
@@ -278,20 +274,19 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var sub1 = c1.ExpectSubscription();
+                var sub1 = await c1.ExpectSubscriptionAsync();
                 sub1.Cancel();
-                var sub2 = c2.ExpectSubscription();
+                var sub2 = await c2.ExpectSubscriptionAsync();
                 sub2.Request(3);
                 c2.ExpectNext(1, 2, 3);
-                c2.ExpectComplete();
-                return Task.CompletedTask;
+                await c2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Balance_must_produce_to_first_even_though_second_cancels()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
 
@@ -305,20 +300,19 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var sub1 = c1.ExpectSubscription();
-                var sub2 = c2.ExpectSubscription();
+                var sub1 = await c1.ExpectSubscriptionAsync();
+                var sub2 = await c2.ExpectSubscriptionAsync();
                 sub2.Cancel();
                 sub1.Request(3);
                 c1.ExpectNext(1, 2, 3);
-                c1.ExpectComplete();
-                return Task.CompletedTask;
+                await c1.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Balance_must_cancel_upstream_when_downstream_cancel()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p1 = this.CreateManualPublisherProbe<int>();
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -333,30 +327,29 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var bsub = p1.ExpectSubscription();
-                var sub1 = c1.ExpectSubscription();
-                var sub2 = c2.ExpectSubscription();
+                var bsub = await p1.ExpectSubscriptionAsync();
+                var sub1 = await c1.ExpectSubscriptionAsync();
+                var sub2 = await c2.ExpectSubscriptionAsync();
 
                 sub1.Request(1);
-                p1.ExpectRequest(bsub, 16);
+                await p1.ExpectRequestAsync(bsub, 16);
                 bsub.SendNext(1);
-                c1.ExpectNext(1);
+                await c1.ExpectNextAsync(1);
 
                 sub2.Request(1);
                 bsub.SendNext(2);
-                c2.ExpectNext(2);
+                await c2.ExpectNextAsync(2);
 
                 sub1.Cancel();
                 sub2.Cancel();
-                bsub.ExpectCancellation();
-                return Task.CompletedTask;
+                await bsub.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Balance_must_not_push_output_twice()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p1 = this.CreateManualPublisherProbe<int>();
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -370,22 +363,21 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var bsub = p1.ExpectSubscription();
-                var sub1 = c1.ExpectSubscription();
-                var sub2 = c2.ExpectSubscription();
+                var bsub = await p1.ExpectSubscriptionAsync();
+                var sub1 = await c1.ExpectSubscriptionAsync();
+                var sub2 = await c2.ExpectSubscriptionAsync();
 
                 sub1.Request(1);
-                p1.ExpectRequest(bsub, 16);
+                await p1.ExpectRequestAsync(bsub, 16);
                 bsub.SendNext(1);
-                c1.ExpectNext(1);
+                await c1.ExpectNextAsync(1);
 
                 sub2.Request(1);
                 sub2.Cancel();
                 bsub.SendNext(2);
 
                 sub1.Cancel();
-                bsub.ExpectCancellation();
-                return Task.CompletedTask;
+                await bsub.ExpectCancellationAsync();
             }, Materializer);
         }
     }
