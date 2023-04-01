@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Where_must_not_blow_up_with_high_request_counts()
+        public async Task A_Where_must_not_blow_up_with_high_request_counts()
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(1, 1);
             var materializer = ActorMaterializer.Create(Sys, settings);
@@ -61,17 +61,17 @@ namespace Akka.Streams.Tests.Dsl
             for (var i = 1; i <= 1000; i++)
                 subscription.Request(int.MaxValue);
 
-            probe.ExpectNext(1);
-            probe.ExpectComplete();
+            await probe.ExpectNextAsync(1);
+            await probe.ExpectCompleteAsync();
         }
 
         [Fact]
         public async Task A_Where_must_continue_if_error()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var ex = new TestException("Test");
 
-                Source.From(Enumerable.Range(1, 3))
+                await Source.From(Enumerable.Range(1, 3))
                     .Where(x =>
                     {
                         if (x == 2)
@@ -82,8 +82,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
                     .ExpectNext(1, 3)
-                    .ExpectComplete();
-                return Task.CompletedTask;
+                    .ExpectCompleteAsync();
             }, Materializer);
         }
 
