@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_WatchTermination_must_complete_the_future_when_stream_is_completed()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var t =                                                                             
                 Source.From(Enumerable.Range(1, 4))                                                                                 
                 .WatchTermination(Keep.Right)                                                                                 
@@ -42,8 +42,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 p.Request(4).ExpectNext(1, 2, 3, 4);
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                p.ExpectComplete();
-                return Task.CompletedTask;
+                await p.ExpectCompleteAsync();
             }, Materializer);
         }
 
