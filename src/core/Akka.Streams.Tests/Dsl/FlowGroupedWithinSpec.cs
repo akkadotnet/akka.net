@@ -232,7 +232,7 @@ namespace Akka.Streams.Tests.Dsl
                 }).ToArray());
 
             RandomTestRange(Sys)
-                .ForEach(_ => RunScript(script, Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
+                .Select(async _ => await RunScriptAsync(script, Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
         }
 
         [Fact]
@@ -255,7 +255,7 @@ namespace Akka.Streams.Tests.Dsl
             };
 
             RandomTestRange(Sys)
-                .ForEach(_ => RunScript(script(), Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
+                .Select(async _ => await RunScriptAsync(script(), Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
         }
 
         [Fact(Skip = "Skipped for async_testkit conversion build")]
