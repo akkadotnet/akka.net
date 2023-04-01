@@ -185,25 +185,17 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var (sink, probe) = MergeHub.Source<int>(1)
-                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                var (sink, result) = MergeHub.Source<int>(1)
+                    .Take(20000)
+                    .ToMaterialized(Sink.Seq<int>(), Keep.Both)
                     .Run(Materializer);
-
+                
+                
                 Source.From(Enumerable.Range(1, 10000)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
-
-                await probe.RequestAsync(int.MaxValue);
-                var result = new List<int>();
-                foreach (var i in Enumerable.Range(1, 20000))
-                {
-                    var evt = await probe.ExpectEventAsync();
-                    if (evt is TestSubscriber.OnNext<int> next)
-                        result.Add(next.Element);
-                    else
-                        throw new Exception($"For element [{i}]: Expected OnNext<int> but received {evt.GetType()}");
-                }
-                result.OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
-            }, Materializer, 300.Seconds());
+                
+                (await result).OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
+            }, Materializer, 10.Seconds());
         }
 
         [Fact]
