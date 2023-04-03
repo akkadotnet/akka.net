@@ -41,22 +41,21 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task PrefixAndTail_must_work_on_empty_input()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var futureSink = NewHeadSink;
                 var fut = Source.Empty<int>().PrefixAndTail(10).RunWith(futureSink, Materializer);
                 fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var tailFlow = fut.Result.Item2;
                 var tailSubscriber = this.CreateManualSubscriberProbe<int>();
                 tailFlow.To(Sink.FromSubscriber(tailSubscriber)).Run(Materializer);
-                tailSubscriber.ExpectSubscriptionAndComplete();
-                return Task.CompletedTask;
+                await tailSubscriber.ExpectSubscriptionAndCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task PrefixAndTail_must_work_on_short_inputs()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(new[] { 1, 2, 3 }).PrefixAndTail(10).RunWith(futureSink, Materializer);
                 fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -64,8 +63,7 @@ namespace Akka.Streams.Tests.Dsl
                 var tailFlow = fut.Result.Item2;
                 var tailSubscriber = this.CreateManualSubscriberProbe<int>();
                 tailFlow.To(Sink.FromSubscriber(tailSubscriber)).Run(Materializer);
-                tailSubscriber.ExpectSubscriptionAndComplete();
-                return Task.CompletedTask;
+                await tailSubscriber.ExpectSubscriptionAndCompleteAsync();
             }, Materializer);
         }
 
@@ -127,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task PrefixAndTail_must_work_if_size_of_tak_is_equal_to_stream_size()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 10)).PrefixAndTail(10).RunWith(futureSink, Materializer);
                 fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -135,15 +133,14 @@ namespace Akka.Streams.Tests.Dsl
                 var tail = fut.Result.Item2;
                 var subscriber = this.CreateManualSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber)).Run(Materializer);
-                subscriber.ExpectSubscriptionAndComplete();
-                return Task.CompletedTask;
+                await subscriber.ExpectSubscriptionAndCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task PrefixAndTail_must_throw_if_tail_is_attempted_to_be_materialized_twice()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 2)).PrefixAndTail(1).RunWith(futureSink, Materializer);
                 fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -159,8 +156,7 @@ namespace Akka.Streams.Tests.Dsl
                 subscriber2.ExpectSubscriptionAndError()
                     .Message.Should()
                     .Be("Substream Source cannot be materialized more than once");
-                subscriber1.RequestNext(2).ExpectComplete();
-                return Task.CompletedTask;
+                await subscriber1.RequestNext(2).ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -196,7 +192,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task PrefixAndTail_must_not_fail_the_stream_if_substream_has_not_been_subscribed_in_time_and_configured_subscription_timeout_is_noop()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var settings = ActorMaterializerSettings.Create(Sys)                                                                             
                 .WithSubscriptionTimeoutSettings(                                                                                 
                     new StreamSubscriptionTimeoutSettings(                                                                                     
@@ -213,8 +209,7 @@ namespace Akka.Streams.Tests.Dsl
                 Thread.Sleep(200);
                 fut.Result.Item2.To(Sink.FromSubscriber(subscriber)).Run(tightTimeoutMaterializer);
                 subscriber.ExpectSubscription().Request(2);
-                subscriber.ExpectNext(2).ExpectComplete();
-                return Task.CompletedTask;
+                await subscriber.ExpectNext(2).ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -233,7 +228,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task PrefixAndTail_must_handle_OnError_when_no_substream_is_open()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var publisher = this.CreateManualPublisherProbe<int>();
                 var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
 
@@ -242,24 +237,23 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
-                var upstream = publisher.ExpectSubscription();
-                var downstream = subscriber.ExpectSubscription();
+                var upstream = await publisher.ExpectSubscriptionAsync();
+                var downstream = await subscriber.ExpectSubscriptionAsync();
 
                 downstream.Request(1);
 
-                upstream.ExpectRequest();
+                await upstream.ExpectRequestAsync();
                 upstream.SendNext(1);
                 upstream.SendError(TestException);
 
                 subscriber.ExpectError().Should().Be(TestException);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task PrefixAndTail_must_handle_OnError_when_substream_is_open()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var publisher = this.CreateManualPublisherProbe<int>();
                 var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
 
@@ -268,32 +262,31 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
-                var upstream = publisher.ExpectSubscription();
-                var downstream = subscriber.ExpectSubscription();
+                var upstream = await publisher.ExpectSubscriptionAsync();
+                var downstream = await subscriber.ExpectSubscriptionAsync();
 
                 downstream.Request(1000);
 
-                upstream.ExpectRequest();
+                await upstream.ExpectRequestAsync();
                 upstream.SendNext(1);
 
-                var t = subscriber.ExpectNext();
+                var t = await subscriber.ExpectNextAsync();
                 t.Item1.Should().ContainSingle(i => i == 1);
                 var tail = t.Item2;
-                subscriber.ExpectComplete();
+                await subscriber.ExpectCompleteAsync();
 
                 var substreamSubscriber = this.CreateManualSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(substreamSubscriber)).Run(Materializer);
-                substreamSubscriber.ExpectSubscription();
+                await substreamSubscriber.ExpectSubscriptionAsync();
                 upstream.SendError(TestException);
                 substreamSubscriber.ExpectError().Should().Be(TestException);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task PrefixAndTail_must_handle_master_stream_cancellation()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var publisher = this.CreateManualPublisherProbe<int>();
                 var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
 
@@ -302,24 +295,23 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
-                var upstream = publisher.ExpectSubscription();
-                var downstream = subscriber.ExpectSubscription();
+                var upstream = await publisher.ExpectSubscriptionAsync();
+                var downstream = await subscriber.ExpectSubscriptionAsync();
 
                 downstream.Request(1);
 
-                upstream.ExpectRequest();
+                await upstream.ExpectRequestAsync();
                 upstream.SendNext(1);
 
                 downstream.Cancel();
-                upstream.ExpectCancellation();
-                return Task.CompletedTask;
+                await upstream.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task PrefixAndTail_must_handle_substream_cancellation()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var publisher = this.CreateManualPublisherProbe<int>();
                 var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
 
@@ -328,32 +320,31 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
-                var upstream = publisher.ExpectSubscription();
-                var downstream = subscriber.ExpectSubscription();
+                var upstream = await publisher.ExpectSubscriptionAsync();
+                var downstream = await subscriber.ExpectSubscriptionAsync();
 
                 downstream.Request(1000);
 
-                upstream.ExpectRequest();
+                await upstream.ExpectRequestAsync();
                 upstream.SendNext(1);
 
-                var t = subscriber.ExpectNext();
+                var t = await subscriber.ExpectNextAsync();
                 t.Item1.Should().ContainSingle(i => i == 1);
                 var tail = t.Item2;
-                subscriber.ExpectComplete();
+                await subscriber.ExpectCompleteAsync();
 
                 var substreamSubscriber = this.CreateManualSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(substreamSubscriber)).Run(Materializer);
-                substreamSubscriber.ExpectSubscription().Cancel();
+                (await substreamSubscriber.ExpectSubscriptionAsync()).Cancel();
 
-                upstream.ExpectCancellation();
-                return Task.CompletedTask;
+                await upstream.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task PrefixAndTail_must_pass_along_early_cancellation()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var up = this.CreateManualPublisherProbe<int>();
                 var down = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
 
@@ -362,17 +353,16 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(down))
                     .Run(Materializer);
 
-                var downstream = down.ExpectSubscription();
+                var downstream = await down.ExpectSubscriptionAsync();
                 downstream.Cancel();
                 up.Subscribe(flowSubscriber);
-                var upSub = up.ExpectSubscription();
-                upSub.ExpectCancellation();
-                return Task.CompletedTask;
+                var upSub = await up.ExpectSubscriptionAsync();
+                await upSub.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void PrefixAndTail_must_work_even_if_tail_subscriber_arrives_after_substream_completion()
+        public async Task PrefixAndTail_must_work_even_if_tail_subscriber_arrives_after_substream_completion()
         {
             var pub = this.CreateManualPublisherProbe<int>();
             var sub = this.CreateManualSubscriberProbe<int>();
@@ -381,7 +371,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.FromPublisher(pub)
                     .PrefixAndTail(1)
                     .RunWith(Sink.First<(IImmutableList<int>, Source<int, NotUsed>)>(), Materializer);
-            var s = pub.ExpectSubscription();
+            var s = await pub.ExpectSubscriptionAsync();
             s.SendNext(0);
 
             f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -390,7 +380,7 @@ namespace Akka.Streams.Tests.Dsl
             s.SendComplete();
 
             tailPub.Subscribe(sub);
-            sub.ExpectSubscriptionAndComplete();
+            await sub.ExpectSubscriptionAndCompleteAsync();
         }
     }
 }
