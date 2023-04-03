@@ -138,15 +138,15 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Sliding_must_work_with_empty_sources()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<int>().Sliding(1)
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<int>().Sliding(1)
                 .RunForeach(ints => TestActor.Tell(ints), Materializer)                                                                             
                 .ContinueWith(t =>                                                                             
                 {                                                                                 
                     if (t.IsCompleted && t.Exception == null)                                                                                     
                         TestActor.Tell("done");                                                                             
                 });
-                ExpectMsg("done");
+                await ExpectMsgAsync("done");
                 return Task.CompletedTask;
             }, Materializer);
         }
