@@ -34,8 +34,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Recover_must_recover_when_there_is_a_handler()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 4)).Select(x =>                                                                         
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 4)).Select(x =>                                                                         
                 {                                                                             
                     if (x == 3)                                                                                 
                         throw Ex;                                                                             
@@ -47,8 +47,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RequestNext(2)                                                                             
                 .RequestNext(0)                                                                             
                 .Request(1)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -74,29 +73,27 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Recover_must_not_influence_stream_when_there_is_no_exception()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 3))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 3))                                                                             
                 .Select(x => x)                                                                             
                 .Recover(_ => Option<int>.Create(0))                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(3)                                                                             
                 .ExpectNext(1, 2, 3)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Recover_must_finish_stream_if_it_is_empty()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<int>()                                                                             
+           await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<int>()                                                                             
                 .Select(x => x)                                                                             
                 .Recover(_ => Option<int>.Create(0))                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(1)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
     }
