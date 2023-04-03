@@ -54,9 +54,14 @@ namespace Akka.Streams.Tests.Dsl
 
             public async Task ExpectNextAsync(int element) => await _probe.ExpectNextAsync(element);
 
+            public void ExpectNext(int element) => _probe.ExpectNext(element);
+
             public async Task ExpectNoMsgAsync(TimeSpan max) => await _probe.ExpectNoMsgAsync(max);
 
+            public void ExpectNoMsg(TimeSpan max) => _probe.ExpectNoMsg(max);
+
             public async Task ExpectCompleteAsync() => await _probe.ExpectCompleteAsync();
+            public void ExpectComplete() => _probe.ExpectComplete();
 
             public void ExpectError(Exception ex) => _probe.ExpectError().Should().Be(ex);
 
@@ -89,33 +94,33 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async() => {
                 await WithSubstreamsSupportAsync(elementCount: 4, 
-                    run: async (masterSubscriber, masterSubscription, getSubFlow) =>                                                                                            
+                    run: (masterSubscriber, masterSubscription, getSubFlow) =>                                                                                            
                     {                                                                             
                         var s1 = new StreamPuppet(getSubFlow()
                             .RunWith(Sink.AsPublisher<int>(false), Materializer), this);                                                                             
-                        await masterSubscriber.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                        masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
                                                                              
                         s1.Request(2);                                                                             
-                        await s1.ExpectNextAsync(1);                                                                             
-                        await s1.ExpectNextAsync(2);                                                                             
+                        s1.ExpectNext(1);                                                                             
+                        s1.ExpectNext(2);                                                                             
                         s1.Request(1);                                                                             
-                        await s1.ExpectCompleteAsync();
+                        s1.ExpectComplete();
                                                                              
                         var s2 = new StreamPuppet(getSubFlow()
                             .RunWith(Sink.AsPublisher<int>(false), Materializer), this);                                                                             
-                        await masterSubscriber.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                        masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
                                                                              
                         s2.Request(1);                                                                             
-                        await s2.ExpectNextAsync(3);                                                                             
-                        await s2.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                        s2.ExpectNext(3);                                                                             
+                        s2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
                                                                              
                         s2.Request(1);                                                                             
-                        await s2.ExpectNextAsync(4);                                                                             
+                        s2.ExpectNext(4);                                                                             
                         s2.Request(1);                                                                             
-                        await s2.ExpectCompleteAsync();
+                        s2.ExpectComplete();
                                                                              
                         masterSubscription.Request(1);                                                                             
-                        await masterSubscriber.ExpectCompleteAsync();  
+                        masterSubscriber.ExpectComplete();  
                     });
             }, Materializer);
         }
