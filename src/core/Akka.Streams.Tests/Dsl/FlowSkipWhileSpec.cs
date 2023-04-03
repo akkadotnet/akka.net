@@ -31,35 +31,33 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_SkipWhile_must_skip_while_predicate_is_true()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 4))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 4))                                                                             
                 .SkipWhile(x => x < 3)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(2)                                                                             
                 .ExpectNext(3, 4)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SkipWhile_must_complete_the_future_for_an_empty_stream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<int>()                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<int>()                                                                             
                 .SkipWhile(x => x < 2)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(1)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SkipWhile_must_continue_if_error()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 4)).SkipWhile(x =>                                                                         
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 4)).SkipWhile(x =>                                                                         
                 {                                                                             
                     if (x < 3)                                                                                 
                         return true;                                                                             
@@ -68,16 +66,15 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(1)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SkipWhile_must_restart_with_strategy()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 4)).SkipWhile(x =>                                                                         
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 4)).SkipWhile(x =>                                                                         
                 {                                                                             
                     if (x == 1 || x == 3)                                                                                 
                         return true;                                                                             
@@ -89,8 +86,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(1)                                                                             
                 .ExpectNext(4)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
     }
