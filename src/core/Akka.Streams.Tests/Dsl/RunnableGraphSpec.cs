@@ -29,8 +29,8 @@ namespace Akka.Streams.Tests.Dsl
                     .AddAttributes(Attributes.None)
                     .Named("useless");
 
-            r.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("useless");
-            r.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+            r.Module.Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("useless");
+            r.Module.Attributes.GetAttribute<Attributes.AsyncBoundary>()
                 .Should()
                 .Be(Attributes.AsyncBoundary.Instance);
         }
