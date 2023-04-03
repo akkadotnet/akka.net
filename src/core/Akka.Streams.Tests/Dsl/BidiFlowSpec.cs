@@ -209,8 +209,8 @@ namespace Akka.Streams.Tests.Dsl
             var b = (BidiFlow<int, long, ByteString, string, NotUsed>)
                 Bidi().WithAttributes(Attributes.CreateName("")).Async().Named("name");
 
-            b.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");
-            b.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+            b.Module.Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("name");
+            b.Module.Attributes.GetAttribute<Attributes.AsyncBoundary>()
                 .Should()
                 .Be(Attributes.AsyncBoundary.Instance);
         }
