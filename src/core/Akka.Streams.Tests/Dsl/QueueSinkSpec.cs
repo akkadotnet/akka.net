@@ -38,10 +38,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_send_the_elements_as_result_of_future()
+        public async Task QueueSink_should_send_the_elements_as_result_of_future()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var expected = new List<Option<int>>
                 {
                     Option<int>.Create(1),
@@ -52,19 +51,18 @@ namespace Akka.Streams.Tests.Dsl
                 var queue = Source.From(expected.Where(o => o.HasValue).Select(o => o.Value))
                     .RunWith(Sink.Queue<int>(), _materializer);
 
-                expected.ForEach(v =>
+                foreach(var v in expected)
                 {
                     queue.PullAsync().PipeTo(TestActor);
-                    ExpectMsg(v);
-                });
+                    await ExpectMsgAsync(v);
+                };
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSink_should_allow_to_have_only_one_future_waiting_for_result_in_each_point_in_time()
+        public async Task QueueSink_should_allow_to_have_only_one_future_waiting_for_result_in_each_point_in_time()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = probe.ExpectSubscription();
@@ -74,58 +72,55 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.SendNext(1);
                 future.PipeTo(TestActor);
-                ExpectMsg(Option<int>.Create(1));
+                await ExpectMsgAsync(Option<int>.Create(1));
 
                 sub.SendComplete();
-                queue.PullAsync();
+                await queue.PullAsync();
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSink_should_wait_for_next_element_from_upstream()
+        public async Task QueueSink_should_wait_for_next_element_from_upstream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = probe.ExpectSubscription();
 
                 queue.PullAsync().PipeTo(TestActor);
-                ExpectNoMsg(_pause);
+                await ExpectNoMsgAsync(_pause);
 
                 sub.SendNext(1);
-                ExpectMsg(Option<int>.Create(1));
+                await ExpectMsgAsync(Option<int>.Create(1));
                 sub.SendComplete();
-                queue.PullAsync();
+                await queue.PullAsync();
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSink_should_fail_future_on_stream_failure()
+        public async Task QueueSink_should_fail_future_on_stream_failure()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
-                var sub = probe.ExpectSubscription();
+                var sub = await probe.ExpectSubscriptionAsync();
 
                 queue.PullAsync().PipeTo(TestActor);
-                ExpectNoMsg(_pause);
+                await ExpectNoMsgAsync(_pause);
 
                 sub.SendError(TestException());
-                ExpectMsg<Status.Failure>(
+                await ExpectMsgAsync<Status.Failure>(
                     f => f.Cause.Equals(TestException()));
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSink_should_fail_future_when_stream_failed()
+        public async Task QueueSink_should_fail_future_when_stream_failed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
-                var sub = probe.ExpectSubscription();
+                var sub = await probe.ExpectSubscriptionAsync();
 
                 sub.SendError(TestException());
                 queue.Invoking(q => q.PullAsync().Wait(RemainingOrDefault))
@@ -134,51 +129,48 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_timeout_future_when_stream_cannot_provide_data()
+        public async Task QueueSink_should_timeout_future_when_stream_cannot_provide_data()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
-                var sub = probe.ExpectSubscription();
+                var sub = await probe.ExpectSubscriptionAsync();
 
                 queue.PullAsync().PipeTo(TestActor);
-                ExpectNoMsg(_pause);
+                await ExpectNoMsgAsync(_pause);
 
                 sub.SendNext(1);
-                ExpectMsg(Option<int>.Create(1));
+                await ExpectMsgAsync(Option<int>.Create(1));
                 sub.SendComplete();
-                queue.PullAsync();
+                await queue.PullAsync();
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSink_should_fail_pull_future_when_stream_is_completed()
+        public async Task QueueSink_should_fail_pull_future_when_stream_is_completed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
-                var sub = probe.ExpectSubscription();
+                var sub = await probe.ExpectSubscriptionAsync();
 
                 queue.PullAsync().PipeTo(TestActor);
                 sub.SendNext(1);
-                ExpectMsg(Option<int>.Create(1));
+                await ExpectMsgAsync(Option<int>.Create(1));
 
                 sub.SendComplete();
-                var result = queue.PullAsync().Result;
+                var result = await queue.PullAsync();
                 result.Should().Be(Option<int>.None);
 
-                var exception = Record.ExceptionAsync(async () => await queue.PullAsync()).Result;
+                var exception = await Record.ExceptionAsync(async () => await queue.PullAsync());
                 exception.Should().BeOfType<StreamDetachedException>();
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSink_should_keep_on_sending_even_after_the_buffer_has_been_full()
+        public async Task QueueSink_should_keep_on_sending_even_after_the_buffer_has_been_full()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 const int bufferSize = 16;
                 const int streamElementCount = bufferSize + 4;
                 var sink = Sink.Queue<int>().WithAttributes(Attributes.CreateInputBuffer(bufferSize, bufferSize));
@@ -195,31 +187,30 @@ namespace Akka.Streams.Tests.Dsl
                 for (var i = 1; i <= streamElementCount; i++)
                 {
                     queue.PullAsync().PipeTo(TestActor);
-                    ExpectMsg(Option<int>.Create(i));
+                    await ExpectMsgAsync(Option<int>.Create(i));
                 }
                 queue.PullAsync().PipeTo(TestActor);
-                ExpectMsg(Option<int>.None);
+                await ExpectMsgAsync(Option<int>.None);
             }, _materializer);
         }
 
         [Fact]
-        public void QueueSink_should_work_with_one_element_buffer()
+        public async Task QueueSink_should_work_with_one_element_buffer()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var sink = Sink.Queue<int>().WithAttributes(Attributes.CreateInputBuffer(1, 1));
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(sink, _materializer);
-                var sub = probe.ExpectSubscription();
+                var sub = await probe.ExpectSubscriptionAsync();
 
                 queue.PullAsync().PipeTo(TestActor);
                 sub.SendNext(1); // should pull next element
-                ExpectMsg(Option<int>.Create(1));
+                await ExpectMsgAsync(Option<int>.Create(1));
 
                 queue.PullAsync().PipeTo(TestActor);
-                ExpectNoMsg(); // element requested but buffer empty
+                await ExpectNoMsgAsync(); // element requested but buffer empty
                 sub.SendNext(2);
-                ExpectMsg(Option<int>.Create(2));
+                await ExpectMsgAsync(Option<int>.Create(2));
 
                 sub.SendComplete();
                 var future = queue.PullAsync();
