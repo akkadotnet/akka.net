@@ -34,7 +34,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_RecoverWith_must_recover_when_there_is_a_handler()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = Source.From(Enumerable.Range(1, 4))
                 .Select(x =>                                                                         
                 {                                                                             
@@ -43,27 +43,26 @@ namespace Akka.Streams.Tests.Dsl
                     return x;                                                                         
                 }).RecoverWithRetries(_ => Source.From(new[] { 0, -1 }), -1).RunWith(this.SinkProbe<int>(), Materializer);
 
-                probe
+                await probe
                     .Request(2)
                     .ExpectNext(1)
-                    .ExpectNext(2);
+                    .ExpectNextAsync(2);
 
-                probe
+                await probe
                     .Request(1)
-                    .ExpectNext(0);
+                    .ExpectNextAsync(0);
 
-                probe
+                await probe
                     .Request(1)
                     .ExpectNext(-1)
-                    .ExpectComplete();
-                return Task.CompletedTask;
+                    .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_RecoverWith_must_cancel_substream_if_parent_is_terminated_when_there_is_a_handler()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = Source.From(Enumerable.Range(1, 4))
                 .Select(x =>                                                                         
                 {                                                                             
@@ -76,19 +75,18 @@ namespace Akka.Streams.Tests.Dsl
                     .Request(2)
                     .ExpectNext(1, 2);
 
-                probe
+                await probe
                     .Request(1)
-                    .ExpectNext(0);
+                    .ExpectNextAsync(0);
 
                 probe.Cancel();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_RecoverWith_must_failed_stream_if_handler_is_not_for_such_exception_type()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = Source.From(Enumerable.Range(1, 3))
                 .Select(x =>                                                                         
                 {                                                                             
@@ -97,14 +95,13 @@ namespace Akka.Streams.Tests.Dsl
                     return x;                                                                         
                 }).RecoverWithRetries(_ => null, -1).RunWith(this.SinkProbe<int>(), Materializer);
 
-                probe
+                await probe
                     .Request(1)
-                    .ExpectNext(1);
+                    .ExpectNextAsync(1);
 
                 probe
                     .Request(1)
                     .ExpectError().Should().Be(Ex);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -141,36 +138,34 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_RecoverWith_must_not_influence_stream_when_there_is_no_exception()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 3))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 3))                                                                             
                 .Select(x => x)                                                                             
                 .RecoverWithRetries(_ => Source.Single(0), -1)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(3)                                                                             
                 .ExpectNext(1, 2, 3)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_RecoverWith_must_finish_stream_if_it_is_empty()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<int>()                                                                            
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<int>()                                                                            
                 .Select(x => x)                                                                             
                 .RecoverWithRetries(_ => Source.Single(0), -1)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(3)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_RecoverWith_must_switch_the_second_time_if_alternative_source_throws_exception()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = Source.From(Enumerable.Range(1, 3)).Select(x =>                                                                         
                 {                                                                             
                     if (x == 3)                                                                                 
@@ -197,18 +192,17 @@ namespace Akka.Streams.Tests.Dsl
                     .Request(2)
                     .ExpectNext(11, 33);
 
-                probe
+                await probe
                     .Request(1)
                     .ExpectNext(44)
-                    .ExpectComplete();
-                return Task.CompletedTask;
+                    .ExpectCompleteAsync();
             }, Materializer);
         }
         
         [Fact]
         public async Task A_RecoverWith_must_terminate_with_exception_if_partial_function_fails_to_match_after_an_alternative_source_failure()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = Source.From(Enumerable.Range(1, 3))                                                                             
                 .Select(x =>                                                                             
                 {                                                                                 
@@ -232,14 +226,13 @@ namespace Akka.Streams.Tests.Dsl
                     .Request(2)
                     .ExpectNext(1, 2);
 
-                probe
+                await probe
                     .Request(1)
-                    .ExpectNext(11);
+                    .ExpectNextAsync(11);
 
                 probe
                     .Request(1)
                     .ExpectError().Should().Be(Ex);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
