@@ -33,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_SelectError_must_select_when_there_is_a_handler()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 Source.From(Enumerable.Range(1, 3))                                                                             
                 .Select(ThrowOnTwo)                                                                             
                 .SelectError(_ => Boom)                                                                             
@@ -79,30 +79,28 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_SelectError_must_not_influence_stream_when_there_is_no_exceptions()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 3))                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 3))                                                                             
                 .Select(x => x)                                                                             
                 .SelectError(ex => Boom)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .RequestNext(1)                                                                             
                 .RequestNext(2)                                                                             
                 .RequestNext(3)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SelectError_must_finish_stream_if_it_is_empty()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<int>()                                                                             
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<int>()                                                                             
                 .Select(x => x)                                                                             
                 .SelectError(_ => Boom)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .Request(1)                                                                             
-                .ExpectComplete();
-                return Task.CompletedTask;
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
