@@ -1168,8 +1168,6 @@ namespace Akka.Actor
         void Become(Akka.Actor.UntypedReceive receive);
         void BecomeStacked(Akka.Actor.UntypedReceive receive);
     }
-    [System.ObsoleteAttribute("Use `IWithStash` with a configured BoundedDeque-based mailbox instead.")]
-    public interface IWithBoundedStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IBoundedDequeBasedMessageQueueSemantics> { }
     public interface IWithStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IDequeBasedMessageQueueSemantics> { }
     public interface IWithTimers
     {
@@ -1726,10 +1724,7 @@ namespace Akka.Actor
     }
     public class static StashFactory
     {
-        public static Akka.Actor.IStash CreateStash<T>(this Akka.Actor.IActorContext context)
-            where T : Akka.Actor.ActorBase { }
-        public static Akka.Actor.IStash CreateStash(this Akka.Actor.IActorContext context, Akka.Actor.IActorStash actorInstance) { }
-        public static Akka.Actor.IStash CreateStash(this Akka.Actor.IActorContext context, System.Type actorType) { }
+        public static Akka.Actor.IStash CreateStash(this Akka.Actor.IActorContext context) { }
     }
     public class StashOverflowException : Akka.Actor.AkkaException
     {
@@ -1985,10 +1980,6 @@ namespace Akka.Actor.Internal
         public override bool TryGetExtension<T>(out T extension)
             where T :  class, Akka.Actor.IExtension { }
     }
-    public class BoundedStashImpl : Akka.Actor.Internal.AbstractStash
-    {
-        public BoundedStashImpl(Akka.Actor.IActorContext context) { }
-    }
     public class ChildNameReserved : Akka.Actor.Internal.IChildStats
     {
         public static Akka.Actor.Internal.ChildNameReserved Instance { get; }
@@ -2130,10 +2121,6 @@ namespace Akka.Actor.Internal
         public override Akka.Actor.Internal.IChildrenContainer ShallDie(Akka.Actor.IActorRef actor) { }
         public override string ToString() { }
         public override Akka.Actor.Internal.IChildrenContainer Unreserve(string name) { }
-    }
-    public class UnboundedStashImpl : Akka.Actor.Internal.AbstractStash
-    {
-        public UnboundedStashImpl(Akka.Actor.IActorContext context) { }
     }
 }
 namespace Akka.Actor.Setup

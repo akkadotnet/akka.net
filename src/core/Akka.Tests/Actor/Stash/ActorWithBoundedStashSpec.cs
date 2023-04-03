@@ -18,7 +18,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor.Stash
 {
-    public class StashingActor : UntypedActor, IWithBoundedStash
+    public class StashingActor : UntypedActor, IWithStash
     {
         public IStash Stash { get; set; }
 
@@ -39,7 +39,7 @@ namespace Akka.Tests.Actor.Stash
         private void AfterWorldBehavior(object message) => Stash.Stash();
     }
 
-    public class StashingActorWithOverflow : UntypedActor, IWithBoundedStash
+    public class StashingActorWithOverflow : UntypedActor, IWithStash
     {
         private int numStashed = 0;
 

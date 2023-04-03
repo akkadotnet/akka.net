@@ -114,7 +114,7 @@ namespace Akka.Persistence
             _instanceId = InstanceCounter.GetAndIncrement();
             _writerGuid = Guid.NewGuid().ToString();
             _currentState = null;
-            _internalStash = CreateStash();
+            _internalStash = Context.CreateStash();
             Log = Context.GetLogger();
         }
 
@@ -607,11 +607,6 @@ namespace Akka.Persistence
                 _journalBatch = new List<IPersistentEnvelope>(0);
                 _isWriteInProgress = true;
             }
-        }
-
-        private IStash CreateStash()
-        {
-            return Context.CreateStash(GetType());
         }
 
         private void StashInternally(object currentMessage)

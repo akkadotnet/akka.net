@@ -5,9 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Actor.Internal;
-using Akka.Util;
 
 namespace Akka.Actor
 {
@@ -16,48 +14,13 @@ namespace Akka.Actor
     /// </summary>
     public static class StashFactory
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
-        public static IStash CreateStash<T>(this IActorContext context) where T : ActorBase
+        private class StashSupport : AbstractStash
         {
-            var actorType = typeof(T);
-            return CreateStash(context, actorType);
+            public StashSupport(IActorContext context)
+                : base(context)
+            { }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="actorInstance">TBD</param>
-        /// <returns>TBD</returns>
-        public static IStash CreateStash(this IActorContext context, IActorStash actorInstance) =>
-            CreateStash(context, actorInstance.GetType());
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="actorType">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown if the given <paramref name="actorType"/> implements an unrecognized subclass of <see cref="IActorStash"/>.
-        /// </exception>
-        /// <returns>TBD</returns>
-        public static IStash CreateStash(this IActorContext context, Type actorType)
-        {
-            if (actorType.Implements<IWithBoundedStash>())
-                return new BoundedStashImpl(context);
-
-            if (actorType.Implements<IWithUnboundedStash>())
-                return new UnboundedStashImpl(context);
-
-            if (actorType.Implements<IWithUnrestrictedStash>())
-                return new UnrestrictedStashImpl(context);
-
-            throw new ArgumentException($"Actor {actorType} implements an unrecognized subclass of {typeof(IActorStash)} - cannot instantiate", nameof(actorType));
-        }
+        public static IStash CreateStash(this IActorContext context) => new StashSupport(context);
     }
 }
