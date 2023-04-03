@@ -28,63 +28,60 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Flow_with_OnComplete_must_invoke_callback_on_normal_completion()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
                     .To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"), _ => { }))
                     .Run(Materializer);
-                var proc = p.ExpectSubscription();
-                proc.ExpectRequest();
+                var proc = await p.ExpectSubscriptionAsync();
+                await proc.ExpectRequestAsync();
                 proc.SendNext(42);
-                onCompleteProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await onCompleteProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
                 proc.SendComplete();
-                onCompleteProbe.ExpectMsg("done");
-                return Task.CompletedTask;
+                await onCompleteProbe.ExpectMsgAsync("done");
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Flow_with_OnComplete_must_yield_the_first_error()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
                     .To(Sink.OnComplete<int>(() => { }, ex => onCompleteProbe.Ref.Tell(ex)))
                     .Run(Materializer);
-                var proc = p.ExpectSubscription();
-                proc.ExpectRequest();
+                var proc = await p.ExpectSubscriptionAsync();
+                await proc.ExpectRequestAsync();
                 var cause = new TestException("test");
                 proc.SendError(cause);
-                onCompleteProbe.ExpectMsg(cause);
-                onCompleteProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                return Task.CompletedTask;
+                await onCompleteProbe.ExpectMsgAsync(cause);
+                await onCompleteProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Flow_with_OnComplete_must_invoke_callback_for_an_empty_stream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
                     .To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"), _ => { }))
                     .Run(Materializer);
-                var proc = p.ExpectSubscription();
-                proc.ExpectRequest();
+                var proc = await p.ExpectSubscriptionAsync();
+                await proc.ExpectRequestAsync();
                 proc.SendComplete();
-                onCompleteProbe.ExpectMsg("done");
-                onCompleteProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                return Task.CompletedTask;
+                await onCompleteProbe.ExpectMsgAsync("done");
+                await onCompleteProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Flow_with_OnComplete_must_invoke_callback_after_transform_and_foreach_steps()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
                 var foreachSink = Sink.ForEach<int>(x => onCompleteProbe.Ref.Tell("foreach-" + x));
@@ -95,19 +92,19 @@ namespace Akka.Streams.Tests.Dsl
                 }).RunWith(foreachSink, Materializer);
                 future.ContinueWith(t => onCompleteProbe.Tell(t.IsCompleted ? "done" : "failure"));
 
-                var proc = p.ExpectSubscription();
-                proc.ExpectRequest();
+                var proc = await p.ExpectSubscriptionAsync();
+                await proc.ExpectRequestAsync();
                 proc.SendNext(42);
                 proc.SendComplete();
-                onCompleteProbe.ExpectMsg("map-42");
-                onCompleteProbe.ExpectMsg("foreach-42");
-                onCompleteProbe.ExpectMsg("done");
-                return Task.CompletedTask;
+                await onCompleteProbe.ExpectMsgAsync("map-42");
+                await onCompleteProbe.ExpectMsgAsync("foreach-42");
+                await onCompleteProbe.ExpectMsgAsync("done");
+               
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_OnComplete_must_yield_error_on_abrupt_termination()
+        public async Task A_Flow_with_OnComplete_must_yield_error_on_abrupt_termination()
         {
             var materializer = ActorMaterializer.Create(Sys);
             var onCompleteProbe = CreateTestProbe();
@@ -116,11 +113,11 @@ namespace Akka.Streams.Tests.Dsl
             Source.FromPublisher(publisher).To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"),
                     ex => onCompleteProbe.Ref.Tell(ex)))
                 .Run(materializer);
-            var proc = publisher.ExpectSubscription();
-            proc.ExpectRequest();
+            var proc = await publisher.ExpectSubscriptionAsync();
+            await proc.ExpectRequestAsync();
             materializer.Shutdown();
 
-            onCompleteProbe.ExpectMsg<AbruptTerminationException>();
+            await onCompleteProbe.ExpectMsgAsync<AbruptTerminationException>();
         }
     }
 }
