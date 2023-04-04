@@ -30,8 +30,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Foreach_must_call_the_procedure_for_each_element()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 3)).RunForeach(i => 
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 3)).RunForeach(i => 
                 TestActor.Tell(i), Materializer)
                 .ContinueWith(                                                                             
                     task =>                                                                             
@@ -39,45 +39,42 @@ namespace Akka.Streams.Tests.Dsl
                         if (task.IsCompleted && task.Exception == null)                                                                                  
                             TestActor.Tell("done");                                                                             
                     });
-                ExpectMsg(1);
-                ExpectMsg(2);
-                ExpectMsg(3);
-                ExpectMsg("done");
-                return Task.CompletedTask;
+                await ExpectMsgAsync(1);
+                await ExpectMsgAsync(2);
+                await ExpectMsgAsync(3);
+                await ExpectMsgAsync("done");
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Foreach_must_complete_the_future_for_an_empty_stream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<int>().RunForeach(i => 
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<int>().RunForeach(i => 
                 TestActor.Tell(i), Materializer).ContinueWith(                                                                        
                     task =>                                                                        
                     {                                                                         
                         if (task.IsCompleted && task.Exception == null)                                                                                     
                             TestActor.Tell("done");                                                                             
                     });
-                ExpectMsg("done");
-                return Task.CompletedTask;
+                await ExpectMsgAsync("done");
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Foreach_must_yield_the_first_error()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p).RunForeach(i => TestActor.Tell(i), Materializer).ContinueWith(task =>
                 {
                     if (task.Exception != null)
                         TestActor.Tell(task.Exception.InnerException);
                 });
-                var proc = p.ExpectSubscription();
+                var proc = await p.ExpectSubscriptionAsync();
                 var ex = new TestException("ex");
                 proc.SendError(ex);
-                ExpectMsg(ex);
-                return Task.CompletedTask;
+                await ExpectMsgAsync(ex);
             }, Materializer);
         }
 
