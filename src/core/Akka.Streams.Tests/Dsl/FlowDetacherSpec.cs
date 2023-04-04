@@ -58,11 +58,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Detacher_must_emit_the_last_element_when_completed_Without_demand()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = Source.Single(42).Detach().RunWith(this.SinkProbe<int>(), Materializer).EnsureSubscription();
-                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
-                probe.RequestNext(42);
-                return Task.CompletedTask;
+                await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
+                await probe.RequestNextAsync(42);
             }, Materializer);
         }
     }
