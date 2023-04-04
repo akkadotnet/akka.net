@@ -33,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Merge_for_Flow_must_work_in_the_happy_case()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 // Different input size (4 and 6)
                 var source1 = Source.From(Enumerable.Range(0, 4));
                 var source2 = Source.From(new List<int>());
@@ -48,56 +48,61 @@ namespace Akka.Streams.Tests.Dsl
                     .Select(i => i + 1)
                 .RunWith(Sink.FromSubscriber(probe), Materializer);
 
-                var subscription = probe.ExpectSubscription();
+                var subscription = await probe.ExpectSubscriptionAsync();
 
                 var collected = new List<int>();
                 for (var i = 1; i <= 10; i++)
                 {
                     subscription.Request(1);
-                    collected.Add(probe.ExpectNext());
+                    collected.Add(await probe.ExpectNextAsync());
                 }
 
                 collected.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                probe.ExpectComplete();
-                return Task.CompletedTask;
+                await probe.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Merge_for_Flow_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 var subscription1 = subscriber1.EnsureSubscription();
                 subscription1.Request(4);
-                Enumerable.Range(1, 4).ForEach(_ => subscriber1.ExpectNext());
-                subscriber1.ExpectComplete();
+                foreach (var _ in Enumerable.Range(1, 4))
+                    await subscriber1.ExpectNextAsync();
+                //Enumerable.Range(1, 4).ForEach(_ => subscriber1.ExpectNext());
+                await subscriber1.ExpectCompleteAsync();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
                 var subscription2 = subscriber2.EnsureSubscription();
                 subscription2.Request(4);
-                Enumerable.Range(1, 4).ForEach(_ => subscriber2.ExpectNext());
-                subscriber2.ExpectComplete();
-                return Task.CompletedTask;
+                foreach (var _ in Enumerable.Range(1, 4))
+                    await subscriber2.ExpectNextAsync();
+                //Enumerable.Range(1, 4).ForEach(_ => subscriber2.ExpectNext());
+                await subscriber2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Merge_for_Flow_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 var subscription1 = subscriber1.EnsureSubscription();
                 subscription1.Request(4);
-                Enumerable.Range(1, 4).ForEach(_ => subscriber1.ExpectNext());
-                subscriber1.ExpectComplete();
+                foreach (var _ in Enumerable.Range(1, 4))
+                    await subscriber1.ExpectNextAsync();
+                //Enumerable.Range(1, 4).ForEach(_ => subscriber1.ExpectNext());
+                await subscriber1.ExpectCompleteAsync();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
                 var subscription2 = subscriber2.EnsureSubscription();
                 subscription2.Request(4);
-                Enumerable.Range(1, 4).ForEach(_ => subscriber2.ExpectNext());
-                subscriber2.ExpectComplete();
-                return Task.CompletedTask;
+                foreach (var _ in Enumerable.Range(1, 4))
+                    await subscriber2.ExpectNextAsync();
+                //Enumerable.Range(1, 4).ForEach(_ => subscriber2.ExpectNext());
+                await subscriber2.ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -114,7 +119,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Merge_for_Flow_must_pass_along_early_cancellation()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var up1 = this.CreateManualPublisherProbe<int>();
                 var up2 = this.CreateManualPublisherProbe<int>();
                 var down = this.CreateManualSubscriberProbe<int>();
@@ -127,21 +132,20 @@ namespace Akka.Streams.Tests.Dsl
                 var graphSubscriber1 = t.Item1;
                 var graphSubscriber2 = t.Item2;
 
-                var downstream = down.ExpectSubscription();
+                var downstream = await down.ExpectSubscriptionAsync();
                 downstream.Cancel();
                 up1.Subscribe(graphSubscriber1);
                 up2.Subscribe(graphSubscriber2);
 
-                up1.ExpectSubscription().ExpectCancellation();
-                up2.ExpectSubscription().ExpectCancellation();
-                return Task.CompletedTask;
+                await up1.ExpectSubscription().ExpectCancellationAsync();
+                await up2.ExpectSubscription().ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Merge_for_Flow_must_not_try_to_grab_from_closed_input_previously_enqueued()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var up1 = this.CreatePublisherProbe<int>();
                 var up2 = this.CreatePublisherProbe<int>();
                 var down = this.CreateSubscriberProbe<int>();
@@ -151,20 +155,19 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(down))
                     .Run(Materializer);
 
-                up1.EnsureSubscription();
-                up2.EnsureSubscription();
-                down.EnsureSubscription();
+                await up1.EnsureSubscriptionAsync();
+                await up2.EnsureSubscriptionAsync();
+                await down.EnsureSubscriptionAsync();
 
-                up1.ExpectRequest();
-                up2.ExpectRequest();
-                up1.SendNext(7);
-                up2.SendNext(8);
+                await up1.ExpectRequestAsync();
+                await up2.ExpectRequestAsync();
+                await up1.SendNextAsync(7);
+                await up2.SendNextAsync(8);
                 // there is a race here, the 8 needs to be queued before the
                 // source completes (it failed consistently on my machine before bugfix)
-                up2.SendComplete();
-                down.Request(1);
-                down.ExpectNext();
-                return Task.CompletedTask;
+                await up2.SendCompleteAsync();
+                await down.RequestAsync(1);
+                await down.ExpectNextAsync();
             }, Materializer);
         }
     }
