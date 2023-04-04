@@ -60,19 +60,18 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Flow_InitialDelay_must_properly_ignore_timer_while_backpressured()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 10))
                     .InitialDelay(TimeSpan.FromSeconds(0.5))
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
 
-                probe.EnsureSubscription();
-                probe.ExpectNoMsg(TimeSpan.FromSeconds(1.5));
-                probe.Request(20);
-                probe.ExpectNextN(Enumerable.Range(1, 10));
+                await probe.EnsureSubscriptionAsync();
+                await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1.5));
+                await probe.RequestAsync(20);
+                await probe.ExpectNextNAsync(Enumerable.Range(1, 10));
 
-                probe.ExpectComplete();
-                return Task.CompletedTask;
+                await probe.ExpectCompleteAsync();
             }, Materializer);
         }
     }
