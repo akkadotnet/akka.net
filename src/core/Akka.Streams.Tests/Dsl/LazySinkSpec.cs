@@ -56,8 +56,6 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     await probe.Value.ExpectNextAsync(i);
                 }
-                //I CHECK IT THIS IS NOT GOOD - EVERYTHING WORKS FINE NOW
-               // Enumerable.Range(0, 11).ForEach(i => probe.Value.ExpectNext(i));
             }, Materializer);
         }
 
@@ -88,15 +86,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     sourceSub.SendNext(i);
                     await probe.ExpectNextAsync(i);
-                }
-                //I CHECK IT THIS IS NOT GOOD - EVERYTHING WORKS FINE NOW
-                /*
-                 Enumerable.Range(1,10).ForEach(i =>
-                {
-                    sourceSub.SendNext(i);
-                    probe.ExpectNext(i);
-                });
-                 */
+                }                
                 sourceSub.SendComplete();
             }, Materializer);
         }
