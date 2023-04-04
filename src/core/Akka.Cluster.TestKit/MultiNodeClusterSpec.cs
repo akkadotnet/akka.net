@@ -66,7 +66,6 @@ namespace Akka.Cluster.TestKit
                 #akka.remote.log-remote-lifecycle-events = off
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
-                akka.
                 #akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
                 akka.test {
                     single-expect-default = 15 s
