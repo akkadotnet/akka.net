@@ -375,7 +375,7 @@ namespace Akka.Streams.Implementation
             {
                 if (_tail - _head == Size)
                 {
-                    var queue = new DynamicQueue(_head);
+                    var queue = new DynamicQueue(Capacity);
                     while (NonEmpty)
                         queue.Enqueue(Dequeue());
                     queue.Enqueue(element);
