@@ -60,21 +60,19 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_wireTap_must_yield_the_first_error()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p = this.CreateManualPublisherProbe<int>();
 
                 Source.FromPublisher(p)
                     .WireTap(i => TestActor.Tell(i))
                     .RunWith(Sink.Ignore<int>(), Materializer)
-                    //failing for async
                     .ContinueWith(t => TestActor.Tell(t.Exception.InnerException));
 
-                var proc = p.ExpectSubscription();
-                proc.ExpectRequest();
+                var proc = await p.ExpectSubscriptionAsync();
+                await proc.ExpectRequestAsync();
                 var rte = new Exception("ex");
                 proc.SendError(rte);
-                ExpectMsg(rte);
-                return Task.CompletedTask;
+                await ExpectMsgAsync(rte);
             }, Materializer);
         }
 
