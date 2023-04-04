@@ -34,7 +34,7 @@ namespace Akka.Cluster.Tests
         }
     }
 
-    class DummyDowningProvider : IDowningProvider
+    internal class DummyDowningProvider : IDowningProvider
     {
         public readonly AtomicBoolean ActorPropsAccessed = new AtomicBoolean(false);
         public DummyDowningProvider(ActorSystem system, Cluster cluster)
@@ -97,7 +97,7 @@ namespace Akka.Cluster.Tests
                 var downingProvider = Cluster.Get(system).DowningProvider;
                 downingProvider.Should().BeOfType<DummyDowningProvider>();
                 AwaitCondition(() =>
-                    (downingProvider as DummyDowningProvider).ActorPropsAccessed.Value,
+                    ((DummyDowningProvider)downingProvider).ActorPropsAccessed.Value,
                     TimeSpan.FromSeconds(3));
             }
         }

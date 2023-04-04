@@ -91,5 +91,17 @@ namespace Akka.Cluster.Tests
             var settings = new ClusterSettings(config.WithFallback(Sys.Settings.Config), Sys.Name);
             settings.AppVersion.Should().Be(AppVersion.Zero);
         }
+
+        /// <summary>
+        /// Validate that we can disable the default downing provider if needed
+        /// </summary>
+        [Fact]
+        public void Cluster_should_allow_disabling_of_default_DowningProvider()
+        {
+            // configure HOCON to disable the default akka.cluster downing provider
+            Config config = "akka.cluster.downing-provider-class = \"\"";
+            var settings = new ClusterSettings(config.WithFallback(Sys.Settings.Config), Sys.Name);
+            settings.DowningProviderType.Should().Be<NoDowning>();
+        }
     }
 }

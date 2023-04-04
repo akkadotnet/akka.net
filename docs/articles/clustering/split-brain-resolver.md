@@ -41,6 +41,16 @@ Beginning in Akka.NET v1.4.16, the Akka.NET project has ported the original spli
 > [!IMPORTANT]
 > As of Akka.NET v1.5.2, the `keep-majority` split brain resolution strategy is now enabled by default. This should be acceptable for the majority of Akka.Cluster users, but please read on.
 
+### Disabling the Default Downing Provider
+
+To disable the default Akka.Cluster downing provider, simply configure the following in your HOCON:
+
+```hocon
+akka.cluster.downing-provider-class = ""
+```
+
+This will disable the split brain resolver / downing provider functionality altogether in Akka.NET. This was the default behavior for Akka.Cluster as of Akka.NET v1.5.1 and earlier.
+
 ### Picking a Strategy
 
 In order to enable an Akka.NET split brain resolver in your cluster (they are not enabled by default), you will want to update your `akka.cluster` HOCON configuration to the following:
