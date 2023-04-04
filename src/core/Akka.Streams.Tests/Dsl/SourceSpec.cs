@@ -92,9 +92,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Maybe_Source_must_complete_materialized_future_with_None_when_stream_cancels()
+        public async Task Maybe_Source_must_complete_materialized_future_with_None_when_stream_cancels()
         {
-            this.AssertAllStagesStopped(async() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var neverSource = Source.Maybe<object>();
                 var pubSink = Sink.AsPublisher<object>(false);
@@ -117,9 +117,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Maybe_Source_must_allow_external_triggering_of_empty_completion()
+        public async Task Maybe_Source_must_allow_external_triggering_of_empty_completion()
         {
-            this.AssertAllStagesStopped(async() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var neverSource = Source.Maybe<int>().Where(_ => false);
                 var counterSink = Sink.Aggregate<int, int>(0, (acc, _) => acc + 1);
@@ -137,9 +137,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Maybe_Source_must_allow_external_triggering_of_non_empty_completion()
+        public async Task Maybe_Source_must_allow_external_triggering_of_non_empty_completion()
         {
-            this.AssertAllStagesStopped(async() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var neverSource = Source.Maybe<int>();
                 var counterSink = Sink.First<int>();
@@ -156,10 +156,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Maybe_Source_must_allow_external_triggering_of_OnError()
+        public async Task Maybe_Source_must_allow_external_triggering_of_OnError()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var neverSource = Source.Maybe<int>();
                 var counterSink = Sink.First<int>();
 
@@ -172,6 +171,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 counterFuture.Invoking(f => f.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>()
                     .WithMessage("Boom");
+                return Task.CompletedTask;
             }, Materializer);
         }
 

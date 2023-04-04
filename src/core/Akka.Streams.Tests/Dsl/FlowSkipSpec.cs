@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Xunit;
@@ -28,7 +29,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Skip_must_skip()
+        public async Task A_Skip_must_skip()
         {
             Func<long, Script<int, int>> script =
                 d => Script.Create(RandomTestRange(Sys)
@@ -38,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
             foreach (var _ in RandomTestRange(Sys))
             {
                 var d = Math.Min(Math.Max(random.Next(-10, 60), 0), 50);
-                RunScript(script(d), Settings, f => f.Skip(d));
+                await RunScriptAsync(script(d), Settings, f => f.Skip(d));
             }
         }
 
