@@ -329,7 +329,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected EndpointDisassociatedException(SerializationInfo info, StreamingContext context)
+        public EndpointDisassociatedException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
@@ -361,7 +361,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected EndpointAssociationException(SerializationInfo info, StreamingContext context)
+        EndpointAssociationException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
@@ -386,7 +386,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected OversizedPayloadException(SerializationInfo info, StreamingContext context)
+        OversizedPayloadException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }

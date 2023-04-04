@@ -295,11 +295,11 @@ if more element are emitted the sink will cancel the stream
 
 **cancels** If too many values are collected
 
-### Foreach
+### ForEach
 
 Invoke a given procedure for each element received. Note that it is not safe to mutate shared state from the procedure.
 
-The sink materializes into a  ``Task`` which completes when the
+The sink materializes into a  ``Task<Done>`` which completes when the
 stream completes, or fails if the stream fails.
 
 Note that it is not safe to mutate state from the procedure.
@@ -308,9 +308,19 @@ Note that it is not safe to mutate state from the procedure.
 
 **backpressures** when the previous procedure invocation has not yet completed
 
-### ForeachParallel
+### ForEachASync
 
-Like ``Foreach`` but allows up to ``parallellism`` procedure calls to happen in parallel.
+Invoke a given procedure asynchronously for each element received. Note that if shared state is mutated from the procedure that must be done in a thread-safe way.
+
+The sink materializes into a ``Task<Done>`` which completes when the stream completes, or fails if the stream fails.
+
+**cancels** when a ``Task`` fails
+
+**backpressures** when the number of ``Task``s reaches the configured parallelism
+
+### ForEachParallel
+
+Like ``ForEach`` but allows up to ``parallellism`` procedure calls to happen in parallel.
 
 **cancels** never
 
