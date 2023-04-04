@@ -69,21 +69,21 @@ namespace Akka.Cluster.Tests
         ");
 
         [Fact]
-        public void Downing_provider_should_default_to_NoDowning()
+        public void Downing_provider_should_default_to_KeepMajority()
         {
             using (var system = ActorSystem.Create("default", BaseConfig))
             {
-                Cluster.Get(system).DowningProvider.Should().BeOfType<NoDowning>();
+                Cluster.Get(system).DowningProvider.Should().BeOfType<Akka.Cluster.SBR.SplitBrainResolverProvider>();
             }
         }
 
         [Fact]
-        public void Downing_provider_should_use_AutoDowning_if_auto_down_unreachable_after_is_configured()
+        public void Downing_provider_should_ignore_AutoDowning_if_auto_down_unreachable_after_is_configured()
         {
             var config = ConfigurationFactory.ParseString(@"akka.cluster.auto-down-unreachable-after=18s");
             using (var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig)))
             {
-                Cluster.Get(system).DowningProvider.Should().BeOfType<AutoDowning>();
+                Cluster.Get(system).DowningProvider.Should().BeOfType<Akka.Cluster.SBR.SplitBrainResolverProvider>();
             }
         }
 
