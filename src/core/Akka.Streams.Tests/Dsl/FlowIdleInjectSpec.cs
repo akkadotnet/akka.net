@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void KeepAlive_must_immediately_pull_upstream()
+        public async Task KeepAlive_must_immediately_pull_upstream()
         {
             var upstream = this.CreatePublisherProbe<int>();
             var downstream = this.CreateSubscriberProbe<int>();
@@ -74,17 +74,17 @@ namespace Akka.Streams.Tests.Dsl
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-            downstream.Request(1);
+            await downstream.RequestAsync(1);
 
-            upstream.SendNext(1);
-            downstream.ExpectNext(1);
+            await upstream.SendNextAsync(1);
+            await downstream.ExpectNextAsync(1);
 
-            upstream.SendComplete();
-            downstream.ExpectComplete();
+            await upstream.SendCompleteAsync();
+            await downstream.ExpectCompleteAsync();
         }
 
         [Fact]
-        public void KeepAlive_must_immediately_pull_upstream_after_busy_period()
+        public async Task KeepAlive_must_immediately_pull_upstream_after_busy_period()
         {
             var upstream = this.CreatePublisherProbe<int>();
             var downstream = this.CreateSubscriberProbe<int>();
@@ -94,20 +94,20 @@ namespace Akka.Streams.Tests.Dsl
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-            downstream.Request(10);
+            await downstream.RequestAsync(10);
             downstream.ExpectNextN(10).Should().BeEquivalentTo(Enumerable.Range(1, 10));
 
-            downstream.Request(1);
+            await downstream.RequestAsync(1);
 
-            upstream.SendNext(1);
-            downstream.ExpectNext(1);
+            await upstream.SendNextAsync(1);
+            await downstream.ExpectNextAsync(1);
 
-            upstream.SendComplete();
-            downstream.ExpectComplete();
+            await upstream.SendCompleteAsync();
+            await downstream.ExpectCompleteAsync();
         }
 
         [Fact]
-        public void KeepAlive_must_work_if_timer_fires_before_initial_request()
+        public async Task KeepAlive_must_work_if_timer_fires_before_initial_request()
         {
             var upstream = this.CreatePublisherProbe<int>();
             var downstream = this.CreateSubscriberProbe<int>();
@@ -116,17 +116,17 @@ namespace Akka.Streams.Tests.Dsl
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-            downstream.EnsureSubscription();
-            downstream.ExpectNoMsg(TimeSpan.FromSeconds(1.5));
-            downstream.Request(1);
-            downstream.ExpectNext(0);
+            await downstream.EnsureSubscriptionAsync();
+            await downstream.ExpectNoMsgAsync(TimeSpan.FromSeconds(1.5));
+            await downstream.RequestAsync(1);
+            await downstream.ExpectNextAsync(0);
 
-            upstream.SendComplete();
-            downstream.ExpectComplete();
+            await upstream.SendCompleteAsync();
+            await downstream.ExpectCompleteAsync();
         }
 
         [Fact]
-        public void KeepAlive_must_work_if_timer_fires_before_initial_request_after_busy_period()
+        public async Task KeepAlive_must_work_if_timer_fires_before_initial_request_after_busy_period()
         {
             var upstream = this.CreatePublisherProbe<int>();
             var downstream = this.CreateSubscriberProbe<int>();
@@ -136,19 +136,19 @@ namespace Akka.Streams.Tests.Dsl
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-            downstream.Request(10);
+            await downstream.RequestAsync(10);
             downstream.ExpectNextN(Enumerable.Range(1, 10));
             
-            downstream.ExpectNoMsg(TimeSpan.FromSeconds(1.5));
-            downstream.Request(1);
-            downstream.ExpectNext(0);
+            await downstream.ExpectNoMsgAsync(TimeSpan.FromSeconds(1.5));
+            await downstream.RequestAsync(1);
+            await downstream.ExpectNextAsync(0);
 
-            upstream.SendComplete();
-            downstream.ExpectComplete();
+            await upstream.SendCompleteAsync();
+            await downstream.ExpectCompleteAsync();
         }
 
         [Fact]
-        public void KeepAlive_must_prefer_upstream_element_over_injected()
+        public async Task KeepAlive_must_prefer_upstream_element_over_injected()
         {
             var upstream = this.CreatePublisherProbe<int>();
             var downstream = this.CreateSubscriberProbe<int>();
@@ -157,20 +157,20 @@ namespace Akka.Streams.Tests.Dsl
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-            downstream.EnsureSubscription();
-            downstream.ExpectNoMsg(TimeSpan.FromSeconds(1.5));
-            upstream.SendNext(1);
-            downstream.ExpectNoMsg(TimeSpan.FromSeconds(0.5));
+            await downstream.EnsureSubscriptionAsync();
+            await downstream.ExpectNoMsgAsync(TimeSpan.FromSeconds(1.5));
+            await upstream.SendNextAsync(1);
+            await downstream.ExpectNoMsgAsync(TimeSpan.FromSeconds(0.5));
 
-            downstream.Request(1);
-            downstream.ExpectNext(1);
+            await downstream.RequestAsync(1);
+            await downstream.ExpectNextAsync(1);
 
-            upstream.SendComplete();
-            downstream.ExpectComplete();
+            await upstream.SendCompleteAsync();
+            await downstream.ExpectCompleteAsync();
         }
 
         [Fact]
-        public void KeepAlive_must_prefer_upstream_element_over_injected_after_busy_period()
+        public async Task KeepAlive_must_prefer_upstream_element_over_injected_after_busy_period()
         {
             var upstream = this.CreatePublisherProbe<int>();
             var downstream = this.CreateSubscriberProbe<int>();
@@ -180,22 +180,22 @@ namespace Akka.Streams.Tests.Dsl
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-            downstream.Request(10);
+            await downstream.RequestAsync(10);
             downstream.ExpectNextN(Enumerable.Range(1, 10));
             
-            downstream.ExpectNoMsg(TimeSpan.FromSeconds(1.5));
-            upstream.SendNext(1);
-            downstream.ExpectNoMsg(TimeSpan.FromSeconds(0.5));
+            await downstream.ExpectNoMsgAsync(TimeSpan.FromSeconds(1.5));
+            await upstream.SendNextAsync(1);
+            await downstream.ExpectNoMsgAsync(TimeSpan.FromSeconds(0.5));
 
-            downstream.Request(1);
-            downstream.ExpectNext(1);
+            await downstream.RequestAsync(1);
+            await downstream.ExpectNextAsync(1);
 
-            upstream.SendComplete();
-            downstream.ExpectComplete();
+            await upstream.SendCompleteAsync();
+            await downstream.ExpectCompleteAsync();
         }
 
         [Fact]
-        public void KeepAlive_must_reset_deadline_properly_after_injected_element()
+        public async Task KeepAlive_must_reset_deadline_properly_after_injected_element()
         {
             var upstream = this.CreatePublisherProbe<int>();
             var downstream = this.CreateSubscriberProbe<int>();
@@ -204,12 +204,12 @@ namespace Akka.Streams.Tests.Dsl
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-            downstream.Request(2);
-            downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
-            downstream.ExpectNext(0);
+            await downstream.RequestAsync(2);
+            await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
+            await downstream.ExpectNextAsync(0);
 
-            downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
-            downstream.ExpectNext(0);
+            await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
+            await downstream.ExpectNextAsync(0);
         }
     }
 }
