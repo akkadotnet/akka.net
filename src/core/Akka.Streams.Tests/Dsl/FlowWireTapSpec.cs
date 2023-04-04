@@ -39,8 +39,6 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Ignore<int>(), Materializer).Wait();
                 foreach (var i in Enumerable.Range(1, 100))
                     await ExpectMsgAsync(i);
-                //Enumerable.Range(1, 100).Select(i => ExpectMsg(i));
-                //return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -53,7 +51,6 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Ignore<string>(), Materializer)                                                                             
                 .ContinueWith(_ => TestActor.Tell("done"));
                 await ExpectMsgAsync("done");
-                //return Task.CompletedTask;
             }, Materializer);
         }
 
