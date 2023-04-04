@@ -43,17 +43,16 @@ namespace Akka.Streams.Tests.Dsl
         }
         
         [Fact]
-        public void Zip_must_work_in_the_happy_case()
+        public async Task Zip_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = this.CreateManualSubscriberProbe<(int, string)>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var zip = b.Add(new Zip<int, string>());
                     var source1 = Source.From(Enumerable.Range(1, 4));
-                    var source2 = Source.From(new[] {"A", "B", "C", "D", "E", "F"});
+                    var source2 = Source.From(new[] { "A", "B", "C", "D", "E", "F" });
 
                     b.From(source1).To(zip.In0);
                     b.From(source2).To(zip.In1);
@@ -62,24 +61,23 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var subscription = probe.ExpectSubscription();
+                var subscription = await probe.ExpectSubscriptionAsync();
 
                 subscription.Request(2);
-                probe.ExpectNext((1, "A"));
-                probe.ExpectNext((2, "B"));
+                await probe.ExpectNextAsync((1, "A"));
+                await probe.ExpectNextAsync((2, "B"));
                 subscription.Request(1);
-                probe.ExpectNext((3, "C"));
+                await probe.ExpectNextAsync((3, "C"));
                 subscription.Request(1);
-                probe.ExpectNext((4, "D"));
-                probe.ExpectComplete();
+                await probe.ExpectNextAsync((4, "D"));
+                await probe.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Zip_must_complete_if_one_side_is_available_but_other_already_completed()
+        public async Task Zip_must_complete_if_one_side_is_available_but_other_already_completed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
 
@@ -96,21 +94,20 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                upstream1.SendNext(1);
-                upstream1.SendNext(2);
-                upstream2.SendNext("A");
-                upstream2.SendComplete();
+                await upstream1.SendNextAsync(1);
+                await upstream1.SendNextAsync(2);
+                await upstream2.SendNextAsync("A");
+                await upstream2.SendCompleteAsync();
 
                 completed.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                upstream1.ExpectCancellation();
+                await upstream1.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Zip_must_complete_even_if_no_pending_demand()
+        public async Task Zip_must_complete_even_if_no_pending_demand()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
                 var downstream = this.CreateSubscriberProbe<(int, string)>();
@@ -130,21 +127,20 @@ namespace Akka.Streams.Tests.Dsl
 
                 downstream.Request(1);
 
-                upstream1.SendNext(1);
-                upstream2.SendNext("A");
-                downstream.ExpectNext((1, "A"));
+                await upstream1.SendNextAsync(1);
+                await upstream2.SendNextAsync("A");
+                await downstream.ExpectNextAsync((1, "A"));
 
-                upstream2.SendComplete();
-                downstream.ExpectComplete();
-                upstream1.ExpectCancellation();
+                await upstream2.SendCompleteAsync();
+                await downstream.ExpectCompleteAsync();
+                await upstream1.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Zip_must_complete_if_both_sides_complete_before_requested_with_elements_pending_2()
+        public async Task Zip_must_complete_if_both_sides_complete_before_requested_with_elements_pending_2()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
                 var downstream = this.CreateSubscriberProbe<(int, string)>();
@@ -162,22 +158,21 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                upstream1.SendNext(1);
-                upstream2.SendNext("A");
+                await upstream1.SendNextAsync(1);
+                await upstream2.SendNextAsync("A");
 
-                upstream1.SendComplete();
-                upstream2.SendComplete();
+                await upstream1.SendCompleteAsync();
+                await upstream2.SendCompleteAsync();
 
-                downstream.RequestNext((1, "A"));
-                downstream.ExpectComplete();
+                await downstream.RequestNextAsync((1, "A"));
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Zip_must_complete_if_one_side_complete_before_requested_with_elements_pending()
+        public async Task Zip_must_complete_if_one_side_complete_before_requested_with_elements_pending()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
                 var downstream = this.CreateSubscriberProbe<(int, string)>();
@@ -195,23 +190,22 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                upstream1.SendNext(1);
-                upstream1.SendNext(2);
-                upstream2.SendNext("A");
+                await upstream1.SendNextAsync(1);
+                await upstream1.SendNextAsync(2);
+                await upstream2.SendNextAsync("A");
 
-                upstream1.SendComplete();
-                upstream2.SendComplete();
+                await upstream1.SendCompleteAsync();
+                await upstream2.SendCompleteAsync();
 
-                downstream.RequestNext((1, "A"));
-                downstream.ExpectComplete();
+                await downstream.RequestNextAsync((1, "A"));
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Zip_must_complete_if_one_side_complete_before_requested_with_elements_pending_2()
+        public async Task Zip_must_complete_if_one_side_complete_before_requested_with_elements_pending_2()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
                 var downstream = this.CreateSubscriberProbe<(int, string)>();
@@ -229,69 +223,67 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                downstream.EnsureSubscription();
+                await downstream.EnsureSubscriptionAsync();
 
-                upstream1.SendNext(1);
-                upstream1.SendComplete();
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+                await upstream1.SendNextAsync(1);
+                await upstream1.SendCompleteAsync();
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
 
-                upstream2.SendNext("A");
-                upstream2.SendComplete();
+                await upstream2.SendNextAsync("A");
+                await upstream2.SendCompleteAsync();
 
-                downstream.RequestNext((1, "A"));
-                downstream.ExpectComplete();
+                await downstream.RequestNextAsync((1, "A"));
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Zip_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
+        public async Task Zip_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-                subscriber1.ExpectSubscriptionAndComplete();
+                await subscriber1.ExpectSubscriptionAndCompleteAsync();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
-                subscriber2.ExpectSubscriptionAndComplete();
+                await subscriber2.ExpectSubscriptionAndCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Zip_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
+        public async Task Zip_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-                subscriber1.ExpectSubscriptionAndComplete();
+                await subscriber1.ExpectSubscriptionAndCompleteAsync();
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
-                subscriber2.ExpectSubscriptionAndComplete();
+                await subscriber2.ExpectSubscriptionAndCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Zip_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
+        public async Task Zip_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber1 = Setup(FailedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 subscriber1.ExpectSubscriptionAndError().Should().Be(TestException());
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), FailedPublisher<int>());
                 subscriber2.ExpectSubscriptionAndError().Should().Be(TestException());
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void Zip_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
+        public async Task Zip_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var subscriber1 = Setup(SoonToFailPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 subscriber1.ExpectSubscriptionAndError().Should().Be(TestException());
 
                 var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToFailPublisher<int>());
                 subscriber2.ExpectSubscriptionAndError().Should().Be(TestException());
+                return Task.CompletedTask;
             }, Materializer);
         }
     }
