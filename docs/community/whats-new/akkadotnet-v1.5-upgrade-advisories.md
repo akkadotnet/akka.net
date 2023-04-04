@@ -24,7 +24,7 @@ We meant to include both of these changes in Akka.NET v1.5.0 but simply ran out 
 
 The impact of [Akka.Persistence: need to remove hard-coded Newtonsoft.Json `object` serializer](https://github.com/akkadotnet/akka.net/issues/6389) is pretty minor: all versions of Akka.NET prior to 1.5.2 used Newtonsoft.Json as the `object` serializer for Akka.Persistence regardless of whether or not you [used a custom `object` serializer, such as Hyperion](xref:serialization#complex-object-serialization-using-hyperion).
 
-Going forward your user-defined `object` serialization binding will now be respected by Akka.Persistence. Any old data previously saved using Newtonsoft.Json will continue to be recovered automatically by Newtonsoft.Json - it's only the serialziation of new objects inserted after upgrading to v1.5.2 that will be affected.
+Going forward your user-defined `object` serialization binding will now be respected by Akka.Persistence. Any old data previously saved using Newtonsoft.Json will continue to be recovered automatically by Newtonsoft.Json - it's only the serialization of new objects inserted after upgrading to v1.5.2 that will be affected.
 
 If you _never changed your `object`_ serializer (most users don't) then this change doesn't affect you.
 
@@ -36,7 +36,7 @@ If you were already running with a custom SBR enabled, this change won't affect 
 
 If you weren't running with an SBR enabled, you should read the [Akka.Cluster Split Brain Resolver documentation](xref:split-brain-resolver).
 
-Also worth noting: we've disabled the `akka.cluster.auto-down-unreachable-after` setting as it's always been a poor and shoddy way to manage network partitions inside Akka.Cluster. If you have that seting enabled it will be ignored and you'll see the following warning appear instead:
+Also worth noting: we've disabled the `akka.cluster.auto-down-unreachable-after` setting as it's always been a poor and shoddy way to manage network partitions inside Akka.Cluster. If you have that setting enabled it will be ignored and you'll see the following warning appear instead:
 
 ```shell
 The `auto-down-unreachable-after` feature has been deprecated as of Akka.NET v1.5.2 and will be removed in a future version of Akka.NET.

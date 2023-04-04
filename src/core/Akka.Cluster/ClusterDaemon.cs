@@ -285,11 +285,6 @@ namespace Akka.Cluster
         /// <inheritdoc cref="JoinSeenNode"/>
         internal class InitJoin : IClusterMessage, IDeadLetterSuppression
         {
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return obj is InitJoin;
-            }
         }
 
         /// <inheritdoc cref="JoinSeenNode"/>
