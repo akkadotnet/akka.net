@@ -34,70 +34,69 @@ namespace Akka.Streams.Tests.Dsl
         private static readonly Exception Ex = new TestException("");
 
         private static readonly Task<Flow<int, int, NotUsed>> FlowF = Task.FromResult(Flow.Create<int>());
-
+        
         [Fact]
-        public void A_LazyFlow_must_work_in_happy_case()
+        public async Task A_LazyFlow_must_work_in_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Func<Task<Flow<int, string, NotUsed>>> MapF(int e) => () =>
-                    Task.FromResult(Flow.FromFunction<int, string>(i => (i * e).ToString()));
+            await this.AssertAllStagesStoppedAsync(async() => {
+                Func<Task<Flow<int, string, NotUsed>>> MapF(int e) => () =>                                                                             
+                Task.FromResult(Flow.FromFunction<int, string>(i => (i * e).ToString()));
 
                 var probe = Source.From(Enumerable.Range(2, 10))
                     .Via(Flow.LazyInitAsync(MapF(2)))
                     .RunWith(this.SinkProbe<string>(), Materializer);
                 probe.Request(100);
-                Enumerable.Range(2, 10).Select(i => (i * 2).ToString()).ForEach(i => probe.ExpectNext(i));
+                foreach(var i in Enumerable.Range(2, 10).Select(i => (i * 2).ToString()))
+                {
+                    await probe.ExpectNextAsync(i);
+                }                
             }, Materializer);
         }
 
         [Fact]
-        public void A_LazyFlow_must_work_with_slow_flow_init()
+        public async Task A_LazyFlow_must_work_with_slow_flow_init()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p = new TaskCompletionSource<Flow<int, int, NotUsed>>();
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
                 var flowProbe = Source.FromPublisher(sourceProbe)
                     .Via(Flow.LazyInitAsync(() => p.Task))
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
-                var sourceSub = sourceProbe.ExpectSubscription();
+                var sourceSub = await sourceProbe.ExpectSubscriptionAsync();
                 flowProbe.Request(1);
-                sourceSub.ExpectRequest(1);
+                await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
-                sourceSub.ExpectRequest(1);
-                sourceProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+                await sourceSub.ExpectRequestAsync(1);
+                await sourceProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
                 p.SetResult(Flow.Create<int>());
                 flowProbe.Request(99);
-                flowProbe.ExpectNext(0);
-                Enumerable.Range(1, 10).ForEach(i =>
-                 {
+                await flowProbe.ExpectNextAsync(0);
+                foreach(var i in Enumerable.Range(0, 10))
+                {
                      sourceSub.SendNext(i);
-                     flowProbe.ExpectNext(i);
-                 });
+                     await flowProbe.ExpectNextAsync(i);
+                }
                 sourceSub.SendComplete();
             }, Materializer);
         }
 
         [Fact]
-        public void A_LazyFlow_must_complete_when_there_was_no_elements_in_stream()
+        public async Task A_LazyFlow_must_complete_when_there_was_no_elements_in_stream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var probe = Source.Empty<int>()
-                    .Via(Flow.LazyInitAsync(() => FlowF))
-                    .RunWith(this.SinkProbe<int>(), Materializer);
-                probe.Request(1).ExpectComplete();
+            await this.AssertAllStagesStoppedAsync(async() => {
+                var probe = Source.Empty<int>()                                                                             
+                .Via(Flow.LazyInitAsync(() => FlowF))                                                                             
+                .RunWith(this.SinkProbe<int>(), Materializer);
+                await probe.Request(1).ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void A_LazyFlow_must_complete_normally_when_upstream_completes_BEFORE_the_stage_has_switched_to_the_inner_flow()
+        public async Task A_LazyFlow_must_complete_normally_when_upstream_completes_BEFORE_the_stage_has_switched_to_the_inner_flow()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var promise = new TaskCompletionSource<Flow<int, int, NotUsed>>();
                 var (pub, sub) = this.SourceProbe<int>()
                     .ViaMaterialized(Flow.LazyInitAsync(() => promise.Task), Keep.Left)
@@ -105,80 +104,76 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(Materializer);
 
                 sub.Request(1);
-                pub.SendNext(1).SendComplete();
+                await pub.SendNext(1).SendCompleteAsync();
                 promise.SetResult(Flow.Create<int>());
-                sub.ExpectNext(1).ExpectComplete();
+                await sub.ExpectNext(1).ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void A_LazyFlow_must_complete_normally_when_upstream_completes_AFTER_the_stage_has_switched_to_the_inner_flow()
+        public async Task A_LazyFlow_must_complete_normally_when_upstream_completes_AFTER_the_stage_has_switched_to_the_inner_flow()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var (pub, sub) = this.SourceProbe<int>()
-                    .ViaMaterialized(Flow.LazyInitAsync(() => Task.FromResult(Flow.Create<int>())), Keep.Left)
-                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                    .Run(Materializer);
+            await this.AssertAllStagesStoppedAsync(async() => {
+                var (pub, sub) = this.SourceProbe<int>()                                                                             
+                .ViaMaterialized(Flow.LazyInitAsync(() => Task.FromResult(Flow.Create<int>())), Keep.Left)                                                                             
+                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)                                                                             
+                .Run(Materializer);
 
                 sub.Request(1);
-                pub.SendNext(1);
-                sub.ExpectNext(1);
-                pub.SendComplete();
-                sub.ExpectComplete();
+                await pub.SendNextAsync(1);
+                await sub.ExpectNextAsync(1);
+                await pub.SendCompleteAsync();
+                await sub.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void A_LazyFlow_must_fail_gracefully_when_flow_factory_method_failed()
+        public async Task A_LazyFlow_must_fail_gracefully_when_flow_factory_method_failed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
                 var probe = Source.FromPublisher(sourceProbe)
                     .Via(Flow.LazyInitAsync<int, int, NotUsed>(() => throw Ex))
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
-                var sourceSub = sourceProbe.ExpectSubscription();
+                var sourceSub = await sourceProbe.ExpectSubscriptionAsync();
                 probe.Request(1);
-                sourceSub.ExpectRequest(1);
+                await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
-                sourceSub.ExpectCancellation();
+                await sourceSub.ExpectCancellationAsync();
                 probe.ExpectError().Should().Be(Ex);
             }, Materializer);
         }
 
         [Fact]
-        public void A_LazyFlow_must_fail_gracefully_when_upstream_failed()
+        public async Task A_LazyFlow_must_fail_gracefully_when_upstream_failed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
                 var probe = Source.FromPublisher(sourceProbe)
                     .Via(Flow.LazyInitAsync(() => FlowF))
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
-                var sourceSub = sourceProbe.ExpectSubscription();
-                sourceSub.ExpectRequest(1);
+                var sourceSub = await sourceProbe.ExpectSubscriptionAsync();
+                await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
-                probe.Request(1).ExpectNext(0);
+                await probe.Request(1).ExpectNextAsync(0);
                 sourceSub.SendError(Ex);
                 probe.ExpectError().Should().Be(Ex);
             }, Materializer);
         }
 
         [Fact]
-        public void A_LazyFlow_must_fail_gracefully_when_factory_task_failed()
+        public async Task A_LazyFlow_must_fail_gracefully_when_factory_task_failed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
                 var flowprobe = Source.FromPublisher(sourceProbe)
                     .Via(Flow.LazyInitAsync(() => Task.FromException<Flow<int, int, NotUsed>>(Ex)))
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
-                var sourceSub = sourceProbe.ExpectSubscription();
-                sourceSub.ExpectRequest(1);
+                var sourceSub = await sourceProbe.ExpectSubscriptionAsync();
+                await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
                 var error = flowprobe.Request(1).ExpectError().As<AggregateException>();
                 error.Flatten().InnerException.Should().Be(Ex);
@@ -186,31 +181,29 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_LazyFlow_must_cancel_upstream_when_the_downstream_is_cancelled()
+        public async Task A_LazyFlow_must_cancel_upstream_when_the_downstream_is_cancelled()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
                 var probe = Source.FromPublisher(sourceProbe)
                     .Via(Flow.LazyInitAsync(() => FlowF))
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
-                var sourceSub = sourceProbe.ExpectSubscription();
+                var sourceSub = await sourceProbe.ExpectSubscriptionAsync();
                 probe.Request(1);
-                sourceSub.ExpectRequest(1);
+                await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
-                sourceSub.ExpectRequest(1);
-                probe.ExpectNext(0);
+                await sourceSub.ExpectRequestAsync(1);
+                await probe.ExpectNextAsync(0);
                 probe.Cancel();
-                sourceSub.ExpectCancellation();
+                await sourceSub.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void A_LazyFlow_must_fail_correctly_when_factory_throw_error()
+        public async Task A_LazyFlow_must_fail_correctly_when_factory_throw_error()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 const string msg = "fail!";
                 var matFail = new TestException(msg);
 
@@ -220,6 +213,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Invoking(source => source.Run(Materializer));
 
                 result.Should().Throw<TestException>().WithMessage(msg);
+                return Task.CompletedTask;
             }, Materializer);
         }
     }
