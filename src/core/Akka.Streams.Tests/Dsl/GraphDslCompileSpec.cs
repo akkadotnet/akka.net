@@ -481,8 +481,8 @@ namespace Akka.Streams.Tests.Dsl
                 return new FlowShape<int, int>(id.Inlet, id.Outlet);
             }).Async().AddAttributes(Attributes.None).Named("useless");
 
-            ga.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("useless");
-            ga.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+            ga.Module.Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("useless");
+            ga.Module.Attributes.GetAttribute<Attributes.AsyncBoundary>()
                 .Should()
                 .Be(Attributes.AsyncBoundary.Instance);
         }
