@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
@@ -25,23 +26,22 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FLow_with_a_Sink_Head_must_yield_the_first_value()
+        public async Task A_FLow_with_a_Sink_Head_must_yield_the_first_value()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p = this.CreateManualPublisherProbe<int>();
-                var task = Source.FromPublisher(p).Select(x=>x).RunWith(Sink.First<int>(), Materializer);
-                var proc = p.ExpectSubscription();
-                proc.ExpectRequest();
+                var task = Source.FromPublisher(p).Select(x => x).RunWith(Sink.First<int>(), Materializer);
+                var proc = await p.ExpectSubscriptionAsync();
+                await proc.ExpectRequestAsync();
                 proc.SendNext(42);
                 task.Wait(100);
                 task.Result.Should().Be(42);
-                proc.ExpectCancellation();
+                await proc.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void A_FLow_with_a_Sink_Head_must_yield_the_first_value_when_actively_constructing()
+        public async Task A_FLow_with_a_Sink_Head_must_yield_the_first_value_when_actively_constructing()
         {
             var p = this.CreateManualPublisherProbe<int>();
             var f = Sink.First<int>();
@@ -51,79 +51,78 @@ namespace Akka.Streams.Tests.Dsl
             var future = t.Item2;
 
             p.Subscribe(subscriber);
-            var proc = p.ExpectSubscription();
-            proc.ExpectRequest();
+            var proc = await p.ExpectSubscriptionAsync();
+            await proc.ExpectRequestAsync();
             proc.SendNext(42);
             future.Wait(100);
             future.Result.Should().Be(42);
-            proc.ExpectCancellation();
+            await proc.ExpectCancellationAsync();
         }
 
         [Fact]
-        public void A_FLow_with_a_Sink_Head_must_yield_the_first_error()
+        public async Task A_FLow_with_a_Sink_Head_must_yield_the_first_error()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.Failed<int>(new Exception("ex"))
-                    .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
-                    .Should().Throw<AggregateException>()
-                    .WithInnerException<Exception>()
-                    .WithMessage("ex");
+            await this.AssertAllStagesStoppedAsync(() => {
+                Source.Failed<int>(new Exception("ex"))                                                                             
+                .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))                                                                             
+                .Should().Throw<AggregateException>()                                                                             
+                .WithInnerException<Exception>()                                                                            
+                .WithMessage("ex");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_FLow_with_a_Sink_Head_must_yield_NoSuchElementException_for_empty_stream()
+        public async Task A_FLow_with_a_Sink_Head_must_yield_NoSuchElementException_for_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.Empty<int>()
-                    .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
-                    .Should().Throw<AggregateException>()
-                    .WithInnerException<NoSuchElementException>()
-                    .WithMessage("First of empty stream");
+            await this.AssertAllStagesStoppedAsync(() => {
+                Source.Empty<int>()                                                                             
+                .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))                                                                             
+                .Should().Throw<AggregateException>()                                                                             
+                .WithInnerException<NoSuchElementException>()                                                                             
+                .WithMessage("First of empty stream");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
 
 
         [Fact]
-        public void A_FLow_with_a_Sink_HeadOption_must_yield_the_first_value()
+        public async Task A_FLow_with_a_Sink_HeadOption_must_yield_the_first_value()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var p = this.CreateManualPublisherProbe<int>();
                 var task = Source.FromPublisher(p).Select(x => x).RunWith(Sink.FirstOrDefault<int>(), Materializer);
-                var proc = p.ExpectSubscription();
-                proc.ExpectRequest();
+                var proc = await p.ExpectSubscriptionAsync();
+                await proc.ExpectRequestAsync();
                 proc.SendNext(42);
                 task.Wait(100);
                 task.Result.Should().Be(42);
-                proc.ExpectCancellation();
+                await proc.ExpectCancellationAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void A_FLow_with_a_Sink_HeadOption_must_yield_the_first_error()
+        public async Task A_FLow_with_a_Sink_HeadOption_must_yield_the_first_error()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.Failed<int>(new Exception("ex"))
-                    .Invoking(s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
-                    .Should().Throw<AggregateException>()
-                    .WithInnerException<Exception>()
-                    .WithMessage("ex");
+            await this.AssertAllStagesStoppedAsync(() => {
+                Source.Failed<int>(new Exception("ex"))                                                                             
+                .Invoking(s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))                                                                             
+                .Should().Throw<AggregateException>()                                                                             
+                .WithInnerException<Exception>()                                                                             
+                .WithMessage("ex");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_FLow_with_a_Sink_HeadOption_must_yield_default_for_empty_stream()
+        public async Task A_FLow_with_a_Sink_HeadOption_must_yield_default_for_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var task = Source.Empty<int>().RunWith(Sink.FirstOrDefault<int>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
                 task.Result.Should().Be(0);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
