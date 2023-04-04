@@ -33,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         #region unique kill switch
 
         [Fact]
-        public void A_UniqueKillSwitch_must_stop_a_stream_if_requested()
+        public async Task A_UniqueKillSwitch_must_stop_a_stream_if_requested()
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
@@ -43,18 +43,18 @@ namespace Akka.Streams.Tests.Dsl
             var killSwitch = t.Item1.Item2;
             var downstream = t.Item2;
 
-            downstream.Request(1);
-            upstream.SendNext(1);
-            downstream.ExpectNext(1);
+            await downstream.RequestAsync(1);
+            await upstream.SendNextAsync(1);
+            await downstream.ExpectNextAsync(1);
 
             killSwitch.Shutdown();
 
-            upstream.ExpectCancellation();
-            downstream.ExpectComplete();
+            await upstream.ExpectCancellationAsync();
+            await downstream.ExpectCompleteAsync();
         }
 
         [Fact]
-        public void A_UniqueKillSwitch_must_fail_a_stream_if_requested()
+        public async Task A_UniqueKillSwitch_must_fail_a_stream_if_requested()
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
@@ -64,20 +64,20 @@ namespace Akka.Streams.Tests.Dsl
             var killSwitch = t.Item1.Item2;
             var downstream = t.Item2;
 
-            downstream.Request(1);
-            upstream.SendNext(1);
-            downstream.ExpectNext(1);
+            await downstream.RequestAsync(1);
+            await upstream.SendNextAsync(1);
+            await downstream.ExpectNextAsync(1);
 
             var testException = new TestException("Abort");
             killSwitch.Abort(testException);
 
-            upstream.ExpectCancellation();
+            await upstream.ExpectCancellationAsync();
             //is a AggregateException from the Task
             downstream.ExpectError().InnerException.Should().Be(testException);
         }
 
         [Fact]
-        public void A_UniqueKillSwitch_must_work_if_used_multiple_times_in_a_flow()
+        public async Task A_UniqueKillSwitch_must_work_if_used_multiple_times_in_a_flow()
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
@@ -91,21 +91,21 @@ namespace Akka.Streams.Tests.Dsl
             var killSwitch2 = t.Item1.Item2;
             var downstream = t.Item2;
 
-            downstream.Request(1);
-            upstream.SendNext(1);
-            downstream.ExpectNext(1);
+            await downstream.RequestAsync(1);
+            await upstream.SendNextAsync(1);
+            await downstream.ExpectNextAsync(1);
 
             var testException = new TestException("Abort");
             killSwitch1.Abort(testException);
-            upstream.ExpectCancellation();
-            downstream.RequestNext(-1);
+            await upstream.ExpectCancellationAsync();
+            await downstream.RequestNextAsync(-1);
 
             killSwitch2.Shutdown();
-            downstream.ExpectComplete();
+            await downstream.ExpectCompleteAsync();
         }
 
         [Fact]
-        public void A_UniqueKillSwitch_must_ignore_completion_after_already_completed()
+        public async Task A_UniqueKillSwitch_must_ignore_completion_after_already_completed()
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
@@ -115,16 +115,16 @@ namespace Akka.Streams.Tests.Dsl
             var killSwitch = t.Item1.Item2;
             var downstream = t.Item2;
 
-            upstream.EnsureSubscription();
-            downstream.EnsureSubscription();
+            await upstream.EnsureSubscriptionAsync();
+            await downstream.EnsureSubscriptionAsync();
 
             killSwitch.Shutdown();
-            upstream.ExpectCancellation();
-            downstream.ExpectComplete();
+            await upstream.ExpectCancellationAsync();
+            await downstream.ExpectCompleteAsync();
 
             killSwitch.Abort(new TestException("Won't happen"));
-            upstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-            downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            await upstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
 
         #endregion
@@ -134,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_SharedKillSwitch_must_stop_a_stream_if_requested()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var killSwitch = KillSwitches.Shared("switch");
 
                 var t = this.SourceProbe<int>()
@@ -144,21 +144,20 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                downstream.Request(1);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(1);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
                 killSwitch.Shutdown();
-                upstream.ExpectCancellation();
-                downstream.ExpectComplete();
-                return Task.CompletedTask;
+                await upstream.ExpectCancellationAsync();
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SharedKillSwitch_must_fail_a_stream_if_requested()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var killSwitch = KillSwitches.Shared("switch");
 
                 var t = this.SourceProbe<int>()
@@ -168,15 +167,14 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                downstream.Request(1);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(1);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
                 var testException = new TestException("Abort");
                 killSwitch.Abort(testException);
-                upstream.ExpectCancellation();
+                await upstream.ExpectCancellationAsync();
                 downstream.ExpectError().InnerException.Should().Be(testException);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -197,7 +195,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_SharedKillSwitch_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_stops_all_streams_if_requested()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var killSwitch = KillSwitches.Shared("switch");
 
                 var t1 = this.SourceProbe<int>()
@@ -214,28 +212,27 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream2 = t2.Item1;
                 var downstream2 = t2.Item2;
 
-                downstream1.Request(1);
-                upstream1.SendNext(1);
-                downstream1.ExpectNext(1);
+                await downstream1.RequestAsync(1);
+                await upstream1.SendNextAsync(1);
+                await downstream1.ExpectNextAsync(1);
 
-                downstream2.Request(2);
-                upstream2.SendNext("A").SendNext("B");
+                await downstream2.RequestAsync(2);
+                await upstream2.SendNext("A").SendNextAsync("B");
                 downstream2.ExpectNext("A", "B");
 
                 killSwitch.Shutdown();
 
-                upstream1.ExpectCancellation();
-                upstream2.ExpectCancellation();
-                downstream1.ExpectComplete();
-                downstream2.ExpectComplete();
-                return Task.CompletedTask;
+                await upstream1.ExpectCancellationAsync();
+                await upstream2.ExpectCancellationAsync();
+                await downstream1.ExpectCompleteAsync();
+                await downstream2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SharedKillSwitch_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_fails_all_streams_if_requested()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var killSwitch = KillSwitches.Shared("switch");
 
                 var t1 = this.SourceProbe<int>()
@@ -252,29 +249,28 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream2 = t2.Item1;
                 var downstream2 = t2.Item2;
 
-                downstream1.Request(1);
-                upstream1.SendNext(1);
-                downstream1.ExpectNext(1);
+                await downstream1.RequestAsync(1);
+                await upstream1.SendNextAsync(1);
+                await downstream1.ExpectNextAsync(1);
 
-                downstream2.Request(2);
-                upstream2.SendNext("A").SendNext("B");
+                await downstream2.RequestAsync(2);
+                await upstream2.SendNext("A").SendNextAsync("B");
                 downstream2.ExpectNext("A", "B");
 
                 var testException = new TestException("Abort");
                 killSwitch.Abort(testException);
-                upstream1.ExpectCancellation();
-                upstream2.ExpectCancellation();
+                await upstream1.ExpectCancellationAsync();
+                await upstream2.ExpectCancellationAsync();
 
                 downstream1.ExpectError().InnerException.Should().Be(testException);
                 downstream2.ExpectError().InnerException.Should().Be(testException);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SharedKillSwitch_must_ignore_subsequent_aborts_and_shutdowns_after_shutdown()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var killSwitch = KillSwitches.Shared("switch");
 
                 var t = this.SourceProbe<int>()
@@ -284,29 +280,28 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                downstream.Request(1);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(1);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
                 killSwitch.Shutdown();
-                upstream.ExpectCancellation();
-                downstream.ExpectComplete();
+                await upstream.ExpectCancellationAsync();
+                await downstream.ExpectCompleteAsync();
 
                 killSwitch.Shutdown();
-                upstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await upstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                 killSwitch.Abort(new TestException("Abort"));
-                upstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                return Task.CompletedTask;
+                await upstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SharedKillSwitch_must_ignore_subsequent_aborts_and_shutdowns_after_abort()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var killSwitch = KillSwitches.Shared("switch");
 
                 var t = this.SourceProbe<int>()
@@ -316,30 +311,29 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                downstream.Request(1);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(1);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
                 var testException = new TestException("Abort");
                 killSwitch.Abort(testException);
-                upstream.ExpectCancellation();
+                await upstream.ExpectCancellationAsync();
                 downstream.ExpectError().InnerException.Should().Be(testException);
 
                 killSwitch.Shutdown();
-                upstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await upstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                 killSwitch.Abort(new TestException("Abort_Late"));
-                upstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                return Task.CompletedTask;
+                await upstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SharedKillSwitch_must_complete_immediately_flows_materialized_after_switch_shutdown()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var killSwitch = KillSwitches.Shared("switch");
                 killSwitch.Shutdown();
 
@@ -350,16 +344,15 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                upstream.ExpectCancellation();
-                downstream.ExpectSubscriptionAndComplete();
-                return Task.CompletedTask;
+                await upstream.ExpectCancellationAsync();
+                await downstream.ExpectSubscriptionAndCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SharedKillSwitch_must_fail_immediately_flows_materialized_after_switch_failure()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var killSwitch = KillSwitches.Shared("switch");
                 var testException = new TestException("Abort");
                 killSwitch.Abort(testException);
@@ -371,9 +364,8 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                upstream.ExpectCancellation();
+                await upstream.ExpectCancellationAsync();
                 downstream.ExpectSubscriptionAndError().InnerException.Should().Be(testException);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -415,7 +407,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_SharedKillSwitch_must_not_affect_streams_corresponding_to_another_KillSwitch()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var killSwitch1 = KillSwitches.Shared("switch");
                 var killSwitch2 = KillSwitches.Shared("switch");
 
@@ -433,34 +425,33 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream2 = t2.Item1;
                 var downstream2 = t2.Item2;
 
-                downstream1.Request(1);
-                upstream1.SendNext(1);
-                downstream1.ExpectNext(1);
+                await downstream1.RequestAsync(1);
+                await upstream1.SendNextAsync(1);
+                await downstream1.ExpectNextAsync(1);
 
-                downstream2.Request(1);
-                upstream2.SendNext(2);
-                downstream2.ExpectNext(2);
+                await downstream2.RequestAsync(1);
+                await upstream2.SendNextAsync(2);
+                await downstream2.ExpectNextAsync(2);
 
                 killSwitch1.Shutdown();
-                upstream1.ExpectCancellation();
-                downstream1.ExpectComplete();
-                upstream2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await upstream1.ExpectCancellationAsync();
+                await downstream1.ExpectCompleteAsync();
+                await upstream2.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream2.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                 var testException = new TestException("Abort");
                 killSwitch2.Abort(testException);
-                upstream1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                upstream2.ExpectCancellation();
+                await upstream1.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream1.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await upstream2.ExpectCancellationAsync();
                 downstream2.ExpectError().InnerException.Should().Be(testException);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SharedKillSwitch_must_allow_using_multiple_KillSwitch_in_one_graph()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var killSwitch1 = KillSwitches.Shared("switch");
                 var killSwitch2 = KillSwitches.Shared("switch");
 
@@ -476,15 +467,14 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                downstream.EnsureSubscription();
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await downstream.EnsureSubscriptionAsync();
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                 killSwitch1.Shutdown();
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                 killSwitch2.Shutdown();
-                downstream.ExpectComplete();
-                return Task.CompletedTask;
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -506,7 +496,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_CancellationToken_flow_must_stop_a_stream_if_requested()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var cancel = new CancellationTokenSource();
 
                 var t = this.SourceProbe<int>()
@@ -516,21 +506,20 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                downstream.Request(1);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(1);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
                 cancel.Cancel();
-                upstream.ExpectCancellation();
-                downstream.ExpectComplete();
-                return Task.CompletedTask;
+                await upstream.ExpectCancellationAsync();
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_CancellationToken_flow_must_fail_a_stream_if_requested()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var cancel = new CancellationTokenSource();
 
                 var t = this.SourceProbe<int>()
@@ -540,14 +529,13 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                downstream.Request(1);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(1);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
                 cancel.Cancel();
-                upstream.ExpectCancellation();
+                await upstream.ExpectCancellationAsync();
                 downstream.ExpectError().Should().BeOfType<OperationCanceledException>();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -568,7 +556,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_CancellationToken_flow_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_stops_all_streams_if_requested()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var cancel = new CancellationTokenSource();
 
                 var t1 = this.SourceProbe<int>()
@@ -585,28 +573,27 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream2 = t2.Item1;
                 var downstream2 = t2.Item2;
 
-                downstream1.Request(1);
-                upstream1.SendNext(1);
-                downstream1.ExpectNext(1);
+                await downstream1.RequestAsync(1);
+                await upstream1.SendNextAsync(1);
+                await downstream1.ExpectNextAsync(1);
 
-                downstream2.Request(2);
-                upstream2.SendNext("A").SendNext("B");
+                await downstream2.RequestAsync(2);
+                await upstream2.SendNext("A").SendNextAsync("B");
                 downstream2.ExpectNext("A", "B");
 
                 cancel.Cancel();
 
-                upstream1.ExpectCancellation();
-                upstream2.ExpectCancellation();
-                downstream1.ExpectComplete();
-                downstream2.ExpectComplete();
-                return Task.CompletedTask;
+                await upstream1.ExpectCancellationAsync();
+                await upstream2.ExpectCancellationAsync();
+                await downstream1.ExpectCompleteAsync();
+                await downstream2.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_CancellationToken_flow_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_fails_all_streams_if_requested()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var cancel = new CancellationTokenSource();
 
                 var t1 = this.SourceProbe<int>()
@@ -623,28 +610,27 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream2 = t2.Item1;
                 var downstream2 = t2.Item2;
 
-                downstream1.Request(1);
-                upstream1.SendNext(1);
-                downstream1.ExpectNext(1);
+                await downstream1.RequestAsync(1);
+                await upstream1.SendNextAsync(1);
+                await downstream1.ExpectNextAsync(1);
 
-                downstream2.Request(2);
-                upstream2.SendNext("A").SendNext("B");
+                await downstream2.RequestAsync(2);
+                await upstream2.SendNext("A").SendNextAsync("B");
                 downstream2.ExpectNext("A", "B");
 
                 cancel.Cancel();
-                upstream1.ExpectCancellation();
-                upstream2.ExpectCancellation();
+                await upstream1.ExpectCancellationAsync();
+                await upstream2.ExpectCancellationAsync();
 
                 downstream1.ExpectError().Should().BeOfType<OperationCanceledException>();
                 downstream2.ExpectError().Should().BeOfType<OperationCanceledException>();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_CancellationToken_flow_must_ignore_subsequent_aborts_and_shutdowns_after_shutdown()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var cancel = new CancellationTokenSource();
 
                 var t = this.SourceProbe<int>()
@@ -654,29 +640,28 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                downstream.Request(1);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(1);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
                 cancel.Cancel();
-                upstream.ExpectCancellation();
-                downstream.ExpectComplete();
+                await upstream.ExpectCancellationAsync();
+                await downstream.ExpectCompleteAsync();
 
                 cancel.Cancel();
-                upstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                await upstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                 cancel.Cancel();
-                upstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                return Task.CompletedTask;
+                await upstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
             }, Materializer);
         }
 
         [Fact]
         public async Task A_CancellationToken_flow_must_complete_immediately_flows_materialized_after_switch_shutdown()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var cancel = new CancellationTokenSource();
                 cancel.Cancel();
 
@@ -687,16 +672,15 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                upstream.ExpectCancellation();
-                downstream.ExpectSubscriptionAndComplete();
-                return Task.CompletedTask;
+                await upstream.ExpectCancellationAsync();
+                await downstream.ExpectSubscriptionAndCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_CancellationToken_flow_must_fail_immediately_flows_materialized_after_switch_failure()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var cancel = new CancellationTokenSource();
                 cancel.Cancel();
 
@@ -707,9 +691,8 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = t.Item1;
                 var downstream = t.Item2;
 
-                upstream.ExpectCancellation();
+                await upstream.ExpectCancellationAsync();
                 downstream.ExpectSubscriptionAndError().Should().BeOfType<OperationCanceledException>();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
