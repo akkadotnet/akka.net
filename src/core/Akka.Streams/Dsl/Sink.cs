@@ -325,7 +325,7 @@ namespace Akka.Streams.Dsl
         /// <param name="action">Async function delegate to be executed on all elements</param>
         /// <returns>TBD</returns>
         public static Sink<TIn, Task<Done>> ForEachAsync<TIn>(int parallelism, Func<TIn, Task> action) => Flow.Create<TIn>()
-            .SelectAsync(parallelism, async input =>
+            .SelectAsyncUnordered(parallelism, async input =>
             {
                 await action(input);
                 return NotUsed.Instance;
@@ -375,6 +375,7 @@ namespace Akka.Streams.Dsl
         /// <param name="parallelism">TBD</param>
         /// <param name="action">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Use `ForEachAsync` instead, it allows you to choose how to run the procedure, by calling some other API returning a Task or using Task.Run. Obsolete since 1.5.2")]
         public static Sink<TIn, Task<Done>> ForEachParallel<TIn>(int parallelism, Action<TIn> action) => Flow.Create<TIn>()
             .SelectAsyncUnordered(parallelism, input => Task.Run(() =>
             {
