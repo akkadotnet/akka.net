@@ -31,43 +31,51 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_emit_received_messages_to_the_stream()
+        public async Task A_ActorRefSource_must_emit_received_messages_to_the_stream()
         {
             var s = this.CreateManualSubscriberProbe<int>();
             var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                 .To(Sink.FromSubscriber(s))
                 .Run(Materializer);
-            var sub = s.ExpectSubscription();
+            var sub = await s.ExpectSubscriptionAsync();
             sub.Request(2);
             actorRef.Tell(1);
-            s.ExpectNext(1);
+            await s.ExpectNextAsync(1);
             actorRef.Tell(2);
-            s.ExpectNext(2);
+            await s.ExpectNextAsync(2);
             actorRef.Tell(3);
-            s.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            await s.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
         }
 
         [Fact]
-        public void A_ActorRefSource_must_buffer_when_needed()
+        public async Task A_ActorRefSource_must_buffer_when_needed()
         {
             var s = this.CreateManualSubscriberProbe<int>();
             var actorRef = Source.ActorRef<int>(100, OverflowStrategy.DropHead)
                 .To(Sink.FromSubscriber(s))
                 .Run(Materializer);
-            var sub = s.ExpectSubscription();
-            Enumerable.Range(1, 20).ForEach(x => actorRef.Tell(x));
-            sub.Request(10);
-            Enumerable.Range(1, 10).ForEach(x => s.ExpectNext(x));
-            sub.Request(10);
-            Enumerable.Range(11, 10).ForEach(x => s.ExpectNext(x));
+            var sub = await s.ExpectSubscriptionAsync();
+            foreach (var x in Enumerable.Range(1, 20))
+                actorRef.Tell(x);
 
-            Enumerable.Range(200, 200).ForEach(x => actorRef.Tell(x));
+            sub.Request(10);
+            foreach (var x in Enumerable.Range(1, 10))
+                await s.ExpectNextAsync(x);
+            sub.Request(10);
+            foreach (var x in Enumerable.Range(11, 10))
+                await s.ExpectNextAsync(x);
+
+            foreach (var x in Enumerable.Range(200, 200))
+                actorRef.Tell(x);
             sub.Request(100);
-            Enumerable.Range(300, 100).ForEach(x => s.ExpectNext(x));
+
+            foreach (var x in Enumerable.Range(300, 100))
+                await s.ExpectNextAsync(x);
+
         }
 
         [Fact]
-        public void A_ActorRefSource_must_drop_new_when_full_and_with_DropNew_strategy()
+        public async Task A_ActorRefSource_must_drop_new_when_full_and_with_DropNew_strategy()
         {
             var t = Source.ActorRef<int>(100, OverflowStrategy.DropNew)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
@@ -75,27 +83,37 @@ namespace Akka.Streams.Tests.Dsl
             var actorRef = t.Item1;
             var sub = t.Item2;
 
-            Enumerable.Range(1, 20).ForEach(x => actorRef.Tell(x));
-            sub.Request(10);
-            Enumerable.Range(1, 10).ForEach(x => sub.ExpectNext(x));
-            sub.Request(10);
-            Enumerable.Range(11, 10).ForEach(x => sub.ExpectNext(x));
+            foreach (var x in Enumerable.Range(1, 20))
+                actorRef.Tell(x);
 
-            Enumerable.Range(200, 200).ForEach(x => actorRef.Tell(x));
+            sub.Request(10);
+
+            foreach (var x in Enumerable.Range(1, 10))
+                await sub.ExpectNextAsync(x);
+
+            sub.Request(10);
+
+            foreach (var x in Enumerable.Range(11, 10))
+                await sub.ExpectNextAsync(x);
+
+            foreach (var x in Enumerable.Range(200, 200))
+                actorRef.Tell(x);
+
             sub.Request(100);
-            Enumerable.Range(200, 100).ForEach(x => sub.ExpectNext(x));
+            foreach(var x in Enumerable.Range(200, 100))
+                await sub.ExpectNextAsync(x);
         }
 
         [Fact]
         public async Task A_ActorRefSource_must_terminate_when_the_stream_is_cancelled()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(0, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
                 Watch(actorRef);
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
                 sub.Cancel();
                 ExpectTerminated(actorRef);
                 return Task.CompletedTask;
@@ -105,49 +123,47 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_ActorRefSource_must_not_fail_when_0_buffer_space_and_demand_is_signalled()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(0, OverflowStrategy.DropHead)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
                 Watch(actorRef);
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
                 sub.Request(100);
                 sub.Cancel();
                 ExpectTerminated(actorRef);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_ActorRefSource_must_signal_buffered_elements_and_complete_the_stream_after_receiving_Status_Success()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
                 actorRef.Tell(1);
                 actorRef.Tell(2);
                 actorRef.Tell(3);
                 actorRef.Tell(new Status.Success("ok"));
                 sub.Request(10);
                 s.ExpectNext(1, 2, 3);
-                s.ExpectComplete();
-                return Task.CompletedTask;
+                await s.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
         public async Task A_ActorRefSource_must_not_buffer_elements_after_receiving_Status_Success()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
                 actorRef.Tell(1);
                 actorRef.Tell(2);
                 actorRef.Tell(3);
@@ -157,8 +173,7 @@ namespace Akka.Streams.Tests.Dsl
                 actorRef.Tell(100);
                 sub.Request(10);
                 s.ExpectNext(1, 2, 3);
-                s.ExpectComplete();
-                return Task.CompletedTask;
+                await s.ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -178,16 +193,15 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_ActorRefSource_must_fail_the_stream_when_receiving_Status_Failure()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
-                s.ExpectSubscription();
+                await s.ExpectSubscriptionAsync();
                 var ex = new TestException("testfailure");
                 actorRef.Tell(new Status.Failure(ex));
                 s.ExpectError().Should().Be(ex);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
