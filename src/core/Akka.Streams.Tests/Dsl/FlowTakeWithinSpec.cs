@@ -43,24 +43,20 @@ namespace Akka.Streams.Tests.Dsl
             var demand1 = (int)await pSub.ExpectRequestAsync();
             foreach (var n in Enumerable.Range(1, demand1))
                 pSub.SendNext(input++);
-            //Enumerable.Range(1,demand1).ForEach(_=>pSub.SendNext(input++));
 
             var demand2 = (int) await pSub.ExpectRequestAsync();
             foreach (var n in Enumerable.Range(1, demand2))
                 pSub.SendNext(input++);
-            //Enumerable.Range(1, demand2).ForEach(_ => pSub.SendNext(input++));
 
             var demand3 = (int)await pSub.ExpectRequestAsync();            
             var sentN = demand1 + demand2;
             foreach (var n in Enumerable.Range(1, sentN))
                 await c.ExpectNextAsync(n);
-            //Enumerable.Range(1, sentN).ForEach(n => c.ExpectNext(n));
 
             await WithinAsync(TimeSpan.FromSeconds(2), async() => await c.ExpectCompleteAsync());
 
             foreach (var n in Enumerable.Range(1, demand3))
                 pSub.SendNext(input++);
-            //Enumerable.Range(1, demand3).ForEach(_ => pSub.SendNext(input++));
 
             await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
         }
@@ -79,7 +75,6 @@ namespace Akka.Streams.Tests.Dsl
                 cSub.Request(100);
                 foreach (var n in Enumerable.Range(1, 3))
                     await c.ExpectNextAsync(n);
-                //Enumerable.Range(1, 3).ForEach(n => c.ExpectNext(n));
                 await c.ExpectCompleteAsync();
                 await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
             }, Materializer);
