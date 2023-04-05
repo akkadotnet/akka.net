@@ -59,6 +59,7 @@ namespace Akka.Cluster.TestKit
                         retry-interval = 200ms
                         waiting-for-state-timeout = 200ms
                     }
+                    downing-provider-class = """" # disable default SBR
                 }
                 akka.loglevel = INFO
                 akka.log-dead-letters = off
