@@ -68,6 +68,8 @@ namespace Akka.Cluster
 
 #pragma warning disable CS0618
             AutoDownUnreachableAfter = clusterConfig.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
+            if (AutoDownUnreachableAfter == default(TimeSpan)) // need to restore correct defaults now that it's been deleted from HOCON file
+                AutoDownUnreachableAfter = null;
 #pragma warning restore CS0618
 
             Roles = clusterConfig.GetStringList("roles", new string[] { }).ToImmutableHashSet();
