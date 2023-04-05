@@ -68,8 +68,6 @@ namespace Akka.Cluster
 
 #pragma warning disable CS0618
             AutoDownUnreachableAfter = clusterConfig.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
-            if (AutoDownUnreachableAfter == default(TimeSpan)) // need to restore correct defaults now that it's been deleted from HOCON file
-                AutoDownUnreachableAfter = null;
 #pragma warning restore CS0618
 
             Roles = clusterConfig.GetStringList("roles", new string[] { }).ToImmutableHashSet();
@@ -91,7 +89,14 @@ namespace Akka.Cluster
             VerboseGossipReceivedLogging = clusterConfig.GetBoolean("debug.verbose-receive-gossip-logging", false);
 
             var downingProviderClassName = clusterConfig.GetString("downing-provider-class", null);
-            DowningProviderType = !string.IsNullOrEmpty(downingProviderClassName) ? Type.GetType(downingProviderClassName, true) : typeof(NoDowning);
+            if (!string.IsNullOrEmpty(downingProviderClassName))
+                DowningProviderType = Type.GetType(downingProviderClassName, true);
+#pragma warning disable CS0618
+            else if (AutoDownUnreachableAfter.HasValue)
+#pragma warning restore CS0618
+                DowningProviderType = typeof(AutoDowning);
+            else
+                DowningProviderType = typeof(NoDowning);
 
             RunCoordinatedShutdownWhenDown = clusterConfig.GetBoolean("run-coordinated-shutdown-when-down", false);
             
@@ -207,7 +212,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Obsolete. No longer used as of Akka.NET v1.5.
         /// </summary>
-        [Obsolete(message:"No longer used as of Akka.NET v1.5.2 - clustering defaults to using KeepMajority SBR instead")]
+        [Obsolete(message:"Deprecated as of Akka.NET v1.5.2 - clustering defaults to using KeepMajority SBR instead")]
         public TimeSpan? AutoDownUnreachableAfter { get; }
 
         /// <summary>

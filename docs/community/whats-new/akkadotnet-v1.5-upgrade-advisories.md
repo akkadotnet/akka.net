@@ -36,7 +36,7 @@ If you were already running with a custom SBR enabled, this change won't affect 
 
 If you weren't running with an SBR enabled, you should read the [Akka.Cluster Split Brain Resolver documentation](xref:split-brain-resolver).
 
-Also worth noting: we've disabled the `akka.cluster.auto-down-unreachable-after` setting as it's always been a poor and shoddy way to manage network partitions inside Akka.Cluster. If you have that setting enabled it will be ignored and you'll see the following warning appear instead:
+Also worth noting: we've deprecated the `akka.cluster.auto-down-unreachable-after` setting as it's always been a poor and shoddy way to manage network partitions inside Akka.Cluster. If you have that setting enabled you'll see the following warning appear:
 
 ```shell
 The `auto-down-unreachable-after` feature has been deprecated as of Akka.NET v1.5.2 and will be removed in a future version of Akka.NET.

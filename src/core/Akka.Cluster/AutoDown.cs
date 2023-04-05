@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Configuration;
 using static Akka.Cluster.MembershipState;
@@ -270,7 +271,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Used when no custom provider is configured and 'auto-down-unreachable-after' is enabled.
     /// </summary>
-    [Obsolete("No longer used as of Akka.NET v1.5.2")]
+    [InternalApi] // really only used during MNTR for Akka.Cluster.Sharding
     public sealed class AutoDowning : IDowningProvider
     {
         private readonly ActorSystem _system;
