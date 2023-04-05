@@ -53,3 +53,52 @@ message Publish {
 message SendToOneSubscriber {
   Akka.Remote.Serialization.Proto.Msg.Payload payload = 1;
 }
+
+message GetLocalPubSubStats {
+}
+
+message GetPubSubStats {
+}
+
+message TopicStats {
+  string name = 1;
+  int32 count = 2;
+}
+
+message LocalPubSubStats {
+  map<string, TopicStats> topics = 1;
+}
+
+message PubSubStats {
+  message AddressLocalPubSubStatsPair {
+    Akka.Remote.Serialization.Proto.Msg.AddressData key = 1;
+    LocalPubSubStats value = 2;
+  }
+  
+  repeated AddressLocalPubSubStatsPair clusterStats = 1;
+}
+
+message GetLocalPubSubState {
+}
+
+message GetPubSubState {
+}
+
+message TopicState {
+  string name = 1;
+  repeated Akka.Remote.Serialization.Proto.Msg.AddressData subscribers = 2;
+}
+
+message LocalPubSubState {
+  map<string, TopicState> topics = 1;
+}
+
+message PubSubState {
+  message AddressLocalPubSubStatePair {
+    Akka.Remote.Serialization.Proto.Msg.AddressData key = 1;
+    LocalPubSubState value = 2;
+  }
+  
+  repeated AddressLocalPubSubStatePair clusterState = 1;
+}
+

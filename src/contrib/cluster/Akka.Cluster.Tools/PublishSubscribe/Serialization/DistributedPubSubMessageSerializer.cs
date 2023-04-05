@@ -8,16 +8,31 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
+using Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg;
 using Akka.Remote.Serialization;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
+using Google.Protobuf.Collections;
 using AddressData = Akka.Remote.Serialization.Proto.Msg.AddressData;
+using Delta = Akka.Cluster.Tools.PublishSubscribe.Internal.Delta;
+using GetLocalPubSubState = Akka.Cluster.Tools.PublishSubscribe.Query.GetLocalPubSubState;
+using GetLocalPubSubStats = Akka.Cluster.Tools.PublishSubscribe.Query.GetLocalPubSubStats;
+using GetPubSubState = Akka.Cluster.Tools.PublishSubscribe.Query.GetPubSubState;
+using GetPubSubStats = Akka.Cluster.Tools.PublishSubscribe.Query.GetPubSubStats;
+using LocalPubSubState = Akka.Cluster.Tools.PublishSubscribe.Query.LocalPubSubState;
+using LocalPubSubStats = Akka.Cluster.Tools.PublishSubscribe.Query.LocalPubSubStats;
+using PubSubState = Akka.Cluster.Tools.PublishSubscribe.Query.PubSubState;
+using PubSubStats = Akka.Cluster.Tools.PublishSubscribe.Query.PubSubStats;
+using SendToOneSubscriber = Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber;
 using Status = Akka.Cluster.Tools.PublishSubscribe.Internal.Status;
+using TopicStats = Akka.Cluster.Tools.PublishSubscribe.Query.TopicStats;
+using TopicState = Akka.Cluster.Tools.PublishSubscribe.Query.TopicState;
 
 namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 {
@@ -32,6 +47,16 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         private const string SendToAllManifest = "D";
         private const string PublishManifest = "E";
         private const string SendToOneSubscriberManifest = "F";
+        
+        private const string GetLocalPubSubStatsManifest = "qA";
+        private const string GetPubSubStatsManifest = "qB";
+        private const string LocalPubSubStatsManifest = "qC";
+        private const string PubSubStatsManifest = "qD";
+        
+        private const string GetLocalPubSubStateManifest = "qR";
+        private const string GetPubSubStateManifest = "qS";
+        private const string LocalPubSubStateManifest = "qT";
+        private const string PubSubStateManifest = "qU";
 
         private readonly IDictionary<string, Func<byte[], object>> _fromBinaryMap;
 
@@ -51,7 +76,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                 {SendManifest, SendFrom},
                 {SendToAllManifest, SendToAllFrom},
                 {PublishManifest, PublishFrom},
-                {SendToOneSubscriberManifest, SendToOneSubscriberFrom}
+                {SendToOneSubscriberManifest, SendToOneSubscriberFrom},
+                
+                {GetLocalPubSubStatsManifest, GetLocalPubSubStatsFrom},
+                {LocalPubSubStatsManifest, LocalPubSubStatsFrom},
+                {GetPubSubStatsManifest, GetPubSubStatsFrom},
+                {PubSubStatsManifest, PubSubStatsFrom},
+                
+                {GetLocalPubSubStateManifest, GetLocalPubSubStateFrom},
+                {LocalPubSubStateManifest, LocalPubSubStateFrom},
+                {GetPubSubStateManifest, GetPubSubStateFrom},
+                {PubSubStateManifest, PubSubStateFrom},
             };
         }
 
@@ -81,6 +116,25 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                     return PublishToProto(publish);
                 case SendToOneSubscriber subscriber:
                     return SendToOneSubscriberToProto(subscriber);
+                
+                case GetLocalPubSubStats:
+                    return GetLocalPubSubStatsToProto();
+                case LocalPubSubStats localPubSubStats:
+                    return LocalPubSubStatsToBytes(localPubSubStats);
+                case GetPubSubStats:
+                    return GetPubSubStatsToProto();
+                case PubSubStats pubSubStats:
+                    return PubSubStatsToBytes(pubSubStats);
+                
+                case GetLocalPubSubState:
+                    return GetLocalPubSubStateToProto();
+                case LocalPubSubState localPubSubState:
+                    return LocalPubSubStateToBytes(localPubSubState);
+                case GetPubSubState:
+                    return GetPubSubStateToProto();
+                case PubSubState pubSubState:
+                    return PubSubStateToBytes(pubSubState);
+                
                 default:
                     throw new ArgumentException($"Can't serialize object of type {obj.GetType()} with {nameof(DistributedPubSubMessageSerializer)}");
             }
@@ -130,6 +184,25 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                     return PublishManifest;
                 case SendToOneSubscriber _:
                     return SendToOneSubscriberManifest;
+                
+                case GetLocalPubSubStats:
+                    return GetLocalPubSubStatsManifest;
+                case GetPubSubStats:
+                    return GetPubSubStatsManifest;
+                case LocalPubSubStats:
+                    return LocalPubSubStatsManifest;
+                case PubSubStats:
+                    return PubSubStatsManifest;
+                
+                case GetLocalPubSubState:
+                    return GetLocalPubSubStateManifest;
+                case GetPubSubState:
+                    return GetPubSubStateManifest;
+                case LocalPubSubState:
+                    return LocalPubSubStateManifest;
+                case PubSubState:
+                    return PubSubStateManifest;
+                
                 default:
                     throw new ArgumentException($"Serializer {nameof(DistributedPubSubMessageSerializer)} cannot serialize message of type {o.GetType()}");
             }
@@ -264,6 +337,139 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             return new SendToOneSubscriber(_payloadSupport.PayloadFrom(sendToOneSubscriberProto.Payload));
         }
 
+        #region Stats query
+
+        private static byte[] GetLocalPubSubStatsToProto()
+            => new Proto.Msg.GetLocalPubSubStats().ToByteArray();
+
+        private static GetLocalPubSubStats GetLocalPubSubStatsFrom(byte[] bytes)
+            => GetLocalPubSubStats.Instance;
+        
+        private static Proto.Msg.LocalPubSubStats LocalPubSubStatsToProto(LocalPubSubStats localPubSubStats)
+        {
+            var protoMessage = new Proto.Msg.LocalPubSubStats();
+            protoMessage.Topics.Add(localPubSubStats.Topics.ToDictionary(
+                t => t.Key, 
+                t => new Proto.Msg.TopicStats { Name = t.Value.Name, Count = t.Value.SubscriberCount }));
+            return protoMessage;
+        }
+
+        private static byte[] LocalPubSubStatsToBytes(LocalPubSubStats localPubSubStats)
+            => LocalPubSubStatsToProto(localPubSubStats).ToByteArray();
+
+        private static LocalPubSubStats LocalPubSubStatsFrom(byte[] bytes)
+            => LocalPubSubStatsFrom(Proto.Msg.LocalPubSubStats.Parser.ParseFrom(bytes));
+        
+        private static LocalPubSubStats LocalPubSubStatsFrom(Proto.Msg.LocalPubSubStats protoMessage)
+            =>  new (protoMessage.Topics
+                .Select(t => new KeyValuePair<string, TopicStats>(t.Key, new TopicStats(t.Value.Name, t.Value.Count)))
+                .ToImmutableDictionary());
+        
+        private static byte[] GetPubSubStatsToProto()
+            => new Proto.Msg.GetPubSubStats().ToByteArray();
+
+        private static GetPubSubStats GetPubSubStatsFrom(byte[] bytes)
+            => GetPubSubStats.Instance;
+
+        private static Proto.Msg.PubSubStats PubSubStatsToProto(PubSubStats pubSubStats)
+        {
+            var protoMessage = new Proto.Msg.PubSubStats();
+            protoMessage.ClusterStats.Add(pubSubStats.ClusterStats.Select(
+                t => new Proto.Msg.PubSubStats.Types.AddressLocalPubSubStatsPair {
+                    Key = AddressToProto(t.Key), 
+                    Value = LocalPubSubStatsToProto(t.Value)
+                }));
+            return protoMessage;
+        }
+
+        private static byte[] PubSubStatsToBytes(PubSubStats pubSubStats)
+            => PubSubStatsToProto(pubSubStats).ToByteArray();
+
+        private static PubSubStats PubSubStatsFrom(byte[] bytes)
+        {
+            var protoMessage = Proto.Msg.PubSubStats.Parser.ParseFrom(bytes);
+            var dict = protoMessage.ClusterStats
+                .Select(pair => new KeyValuePair<Address, LocalPubSubStats>(
+                    AddressFrom(pair.Key), 
+                    LocalPubSubStatsFrom(pair.Value)))
+                .ToImmutableDictionary();
+            
+            return new PubSubStats(dict);
+        }
+
+        #endregion
+
+        #region State query
+
+        private static byte[] GetLocalPubSubStateToProto()
+            => new Proto.Msg.GetLocalPubSubState().ToByteArray();
+
+        private static GetLocalPubSubState GetLocalPubSubStateFrom(byte[] bytes)
+            => GetLocalPubSubState.Instance;
+        
+        private static Proto.Msg.LocalPubSubState LocalPubSubStateToProto(LocalPubSubState localPubSubStats)
+        {
+            var protoMessage = new Proto.Msg.LocalPubSubState();
+            protoMessage.Topics.Add(localPubSubStats.Topics.ToDictionary(
+                kvp => kvp.Key, 
+                kvp => {
+                    var state = new Proto.Msg.TopicState { Name = kvp.Value.Name };
+                    state.Subscribers.Add(kvp.Value.Subscribers.Select(AddressToProto));
+                    return state;
+                }));
+
+            return protoMessage;
+        }
+
+        private static byte[] LocalPubSubStateToBytes(LocalPubSubState localPubSubState)
+            => LocalPubSubStateToProto(localPubSubState).ToByteArray();
+
+        private static LocalPubSubState LocalPubSubStateFrom(byte[] bytes)
+            => LocalPubSubStateFrom(Proto.Msg.LocalPubSubState.Parser.ParseFrom(bytes));
+        
+        private static LocalPubSubState LocalPubSubStateFrom(Proto.Msg.LocalPubSubState protoMessage)
+        {
+            return new LocalPubSubState(protoMessage.Topics.Select(kvp =>
+                new KeyValuePair<string, TopicState>(
+                    kvp.Key, 
+                    new TopicState(kvp.Value.Name, kvp.Value.Subscribers.Select(AddressFrom).ToImmutableList())))
+                .ToImmutableDictionary());
+        }
+        
+        private static byte[] GetPubSubStateToProto()
+            => new Proto.Msg.GetPubSubState().ToByteArray();
+
+        private static GetPubSubState GetPubSubStateFrom(byte[] bytes)
+            => GetPubSubState.Instance;
+
+        private static Proto.Msg.PubSubState PubSubStateToProto(PubSubState pubSubState)
+        {
+            var protoMessage = new Proto.Msg.PubSubState();
+            protoMessage.ClusterState.Add(pubSubState.ClusterStates.Select(kvp =>
+                new Proto.Msg.PubSubState.Types.AddressLocalPubSubStatePair {
+                    Key = AddressToProto(kvp.Key), 
+                    Value = LocalPubSubStateToProto(kvp.Value)
+                }
+            ));
+
+            return protoMessage;
+        }
+
+        private static byte[] PubSubStateToBytes(PubSubState pubSubState)
+            => PubSubStateToProto(pubSubState).ToByteArray();
+
+        private static PubSubState PubSubStateFrom(byte[] bytes)
+        {
+            var protoMessage = Proto.Msg.PubSubState.Parser.ParseFrom(bytes);
+            return new PubSubState(protoMessage.ClusterState
+                .Select(kvp => new KeyValuePair<Address, LocalPubSubState>(
+                    AddressFrom(kvp.Key), 
+                    LocalPubSubStateFrom(kvp.Value)))
+                .ToImmutableDictionary());
+        }
+
+        #endregion
+        
         //
         // Address
         //
