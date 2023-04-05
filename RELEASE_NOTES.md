@@ -1,3 +1,27 @@
+#### 1.5.2 April 5th 2023 ####
+
+* [Akka.Remote: Remove secure cookie from configuration](https://github.com/akkadotnet/akka.net/pull/6515)
+* [DData: Remove unused _pruningPerformed and _tombstonedNodes variables](https://github.com/akkadotnet/akka.net/pull/6526)
+* [Akka.Persistence: Remove default object serializer in Sql.Common](https://github.com/akkadotnet/akka.net/pull/6528)
+* [Akka.Cluster: Log send time in verbose heartbeat message](https://github.com/akkadotnet/akka.net/pull/6548)
+* [Akka.Streams: Optimize ForEachAsync](https://github.com/akkadotnet/akka.net/pull/6538)
+* [Akka: Implement alternative AtomicState leveraging WaitAsync](https://github.com/akkadotnet/akka.net/pull/6109)
+* [Akka.Streams: Use correct capacity when creating DynamicQueue when FixedQueue is full](https://github.com/akkadotnet/akka.net/pull/6632)
+* [Akka.Cluster: Enable keep majority split brain resolver as default](https://github.com/akkadotnet/akka.net/pull/6628)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.2, click here](https://github.com/akkadotnet/akka.net/milestone/83?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 56      | 2580 | 2913 | Ebere Abanonu       |
+| 5       | 201  | 82   | Aaron Stannard      |
+| 4       | 754  | 558  | Ismael Hamed        |
+| 3       | 4    | 4    | dependabot[bot]     |
+| 2       | 33   | 12   | Sergey Popov        |
+| 1       | 511  | 53   | Gregorius Soedharmo |
+| 1       | 1    | 1    | ondravondra         |
+| 1       | 0    | 2    | Simon Cropp         |
+
 #### 1.5.1 March 15th 2023 ####
 
 * [Akka.Persistence: Improve memory allocation](https://github.com/akkadotnet/akka.net/pull/6487)
