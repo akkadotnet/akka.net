@@ -58,7 +58,9 @@ namespace Akka.Cluster.Sharding.Tests
             Common =
                 ConfigurationFactory.ParseString($@"
                     akka.actor.provider = ""cluster""
-                    akka.cluster.auto-down-unreachable-after = 0s
+                    akka.cluster.downing-provider-class = ""Akka.Cluster.SBR.SplitBrainResolverProvider, Akka.Cluster""
+                    akka.cluster.split-brain-resolver.stable-after = 1s
+                    akka.cluster.down-removal-margin = 1s
                     akka.cluster.sharding.state-store-mode = ""{mode}""
                     akka.cluster.sharding.remember-entities = {rememberEntities.ToString().ToLowerInvariant()}
                     akka.cluster.sharding.remember-entities-store = ""{rememberEntitiesStore}""
