@@ -45,7 +45,9 @@ namespace Akka.Cluster.Tests
             settings.AllowWeaklyUpMembers.Should().BeTrue();
             settings.WeaklyUpAfter.Should().Be(7.Seconds());
             settings.PublishStatsInterval.Should().NotHaveValue();
+#pragma warning disable CS0618
             settings.AutoDownUnreachableAfter.Should().NotHaveValue();
+#pragma warning restore CS0618
             settings.DownRemovalMargin.Should().Be(TimeSpan.Zero);
             settings.MinNrOfMembers.Should().Be(1);
             settings.MinNrOfMembersOfRole.Should().Equal(ImmutableDictionary<string, int>.Empty);

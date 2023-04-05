@@ -225,7 +225,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is Welcome && Equals((Welcome)obj);
+                return obj is Welcome welcome && Equals(welcome);
             }
 
             private bool Equals(Welcome other)
