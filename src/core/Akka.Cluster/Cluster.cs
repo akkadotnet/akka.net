@@ -67,13 +67,11 @@ namespace Akka.Cluster
             bool GetAssertInvariants()
             {
                 var isOn = Environment.GetEnvironmentVariable("AKKA_CLUSTER_ASSERT")?.ToLowerInvariant();
-                switch (isOn)
+                return isOn switch
                 {
-                    case "on":
-                        return true;
-                    default:
-                        return false;
-                }
+                    "on" => true,
+                    _ => false
+                };
             }
 
             IsAssertInvariantsEnabled = GetAssertInvariants();
@@ -114,12 +112,24 @@ namespace Akka.Cluster
             System = system;
             Settings = new ClusterSettings(system.Settings.Config, system.Name);
 
-            if (!(system.Provider is IClusterActorRefProvider provider))
+            if (system.Provider is not IClusterActorRefProvider provider)
                 throw new ConfigurationException(
                     $"ActorSystem {system} needs to have a 'IClusterActorRefProvider' enabled in the configuration, currently uses {system.Provider.GetType().FullName}");
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
+            
+            // log a warning if the user has set auto-down-unreachable-after to any value other than "off"
+            // obsolete setting, so suppress obsolete warning
+#pragma warning disable CS0618
+            if (Settings.AutoDownUnreachableAfter != null)
+#pragma warning restore CS0618
+            {
+                _log.Warning(
+                    "The `auto-down-unreachable-after` feature has been deprecated as of Akka.NET v1.5.2 and will be removed in a future version of Akka.NET. " +
+                    "The `keep-majority` split brain resolver will be used instead. See https://getakka.net/articles/cluster/split-brain-resolver.html for more details.");
+            }
+            
 
             CurrentInfoLogger = new InfoLogger(_log, Settings, SelfAddress);
 
