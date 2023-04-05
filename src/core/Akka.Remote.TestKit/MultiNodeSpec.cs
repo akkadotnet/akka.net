@@ -379,6 +379,7 @@ namespace Akka.Remote.TestKit
                             }
                           }
                         }
+                        cluster.downing-provider-class = """" #disable SBR by default
                       }").WithFallback(TestKitBase.DefaultConfig);
             }
         }

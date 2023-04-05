@@ -23,10 +23,10 @@ namespace Akka.Cluster.SBR
         public static readonly ImmutableHashSet<string> AllStrategyNames = ImmutableHashSet.Create(KeepMajorityName,
             LeaseMajorityName, StaticQuorumName, KeepOldestName, DownAllName);
 
-        private readonly Lazy<string> lazyKeepMajorityRole;
-        private readonly Lazy<KeepOldestSettings> lazyKeepOldestSettings;
-        private readonly Lazy<LeaseMajoritySettings> lazyLeaseMajoritySettings;
-        private readonly Lazy<StaticQuorumSettings> lazyStaticQuorumSettings;
+        private readonly Lazy<string> _lazyKeepMajorityRole;
+        private readonly Lazy<KeepOldestSettings> _lazyKeepOldestSettings;
+        private readonly Lazy<LeaseMajoritySettings> _lazyLeaseMajoritySettings;
+        private readonly Lazy<StaticQuorumSettings> _lazyStaticQuorumSettings;
 
         public SplitBrainResolverSettings(Config config)
         {
@@ -82,9 +82,9 @@ namespace Akka.Cluster.SBR
                 return r;
             }
 
-            lazyKeepMajorityRole = new Lazy<string>(() => { return Role(StrategyConfig(KeepMajorityName)); });
+            _lazyKeepMajorityRole = new Lazy<string>(() => { return Role(StrategyConfig(KeepMajorityName)); });
 
-            lazyStaticQuorumSettings = new Lazy<StaticQuorumSettings>(() =>
+            _lazyStaticQuorumSettings = new Lazy<StaticQuorumSettings>(() =>
             {
                 var c = StrategyConfig(StaticQuorumName);
                 var size = c.GetInt("quorum-size");
@@ -95,7 +95,7 @@ namespace Akka.Cluster.SBR
                 return new StaticQuorumSettings(size, Role(c));
             });
 
-            lazyKeepOldestSettings = new Lazy<KeepOldestSettings>(() =>
+            _lazyKeepOldestSettings = new Lazy<KeepOldestSettings>(() =>
             {
                 var c = StrategyConfig(KeepOldestName);
                 var downIfAlone = c.GetBoolean("down-if-alone");
@@ -103,7 +103,7 @@ namespace Akka.Cluster.SBR
                 return new KeepOldestSettings(downIfAlone, Role(c));
             });
 
-            lazyLeaseMajoritySettings = new Lazy<LeaseMajoritySettings>(() =>
+            _lazyLeaseMajoritySettings = new Lazy<LeaseMajoritySettings>(() =>
             {
                 var c = StrategyConfig(LeaseMajorityName);
                 var leaseImplementation = c.GetString("lease-implementation");
@@ -129,13 +129,13 @@ namespace Akka.Cluster.SBR
 
         public TimeSpan DownAllWhenUnstable { get; }
 
-        public string KeepMajorityRole => lazyKeepMajorityRole.Value;
+        public string KeepMajorityRole => _lazyKeepMajorityRole.Value;
 
-        public StaticQuorumSettings StaticQuorumSettings => lazyStaticQuorumSettings.Value;
+        public StaticQuorumSettings StaticQuorumSettings => _lazyStaticQuorumSettings.Value;
 
-        public KeepOldestSettings KeepOldestSettings => lazyKeepOldestSettings.Value;
+        public KeepOldestSettings KeepOldestSettings => _lazyKeepOldestSettings.Value;
 
-        public LeaseMajoritySettings LeaseMajoritySettings => lazyLeaseMajoritySettings.Value;
+        public LeaseMajoritySettings LeaseMajoritySettings => _lazyLeaseMajoritySettings.Value;
     }
 
     public sealed class StaticQuorumSettings
