@@ -217,7 +217,6 @@ namespace Akka.Streams.Tests.Dsl
                     sub.Request(10);
                     foreach (var i in new[] { 1, 2, 4, 5 })
                         await c.ExpectNextAsync(i);
-                    //new[] { 1, 2, 4, 5 }.ForEach(i => c.ExpectNext(i));
                     await c.ExpectCompleteAsync();
                 }, Materializer);
             }, Materializer);
@@ -286,7 +285,6 @@ namespace Akka.Streams.Tests.Dsl
             sub.Request(10);
             foreach (var i in new[] { 1, 2, 4, 5 })
                 await c.ExpectNextAsync(i);
-            //new[] {1, 2, 4, 5}.ForEach(i => c.ExpectNext(i));
             await c.ExpectCompleteAsync();
         }
 
