@@ -54,9 +54,13 @@ namespace Akka.Streams.Tests.Dsl
 
             public async Task ExpectNextAsync(int element) => await _probe.ExpectNextAsync(element);
 
+            public void ExpectNext(int element) => _probe.ExpectNext(element);
+
             public void ExpectNoMsg(TimeSpan max) => _probe.ExpectNoMsg(max);
 
             public async Task ExpectCompleteAsync() => await _probe.ExpectCompleteAsync();
+
+            public void ExpectComplete() => _probe.ExpectComplete();
 
             public void ExpectError(Exception ex) => _probe.ExpectError().Should().Be(ex);
 
@@ -89,44 +93,33 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(() => {
                 WithSubstreamsSupport(elementCount: 4,                                                                             
-                    run: async (masterSubscriber, masterSubscription, getSubFlow) =>                                                                             
+                    run: (masterSubscriber, masterSubscription, getSubFlow) =>                                                                             
                     {
-                        var p = getSubFlow()
-                            .RunWith(Sink.AsPublisher<int>(false), Materializer);
-                        var kit = this;
-                        var probe = kit.CreateManualSubscriberProbe<int>();
-                        p.Subscribe(probe);
-                        var subscription = await probe.ExpectSubscriptionAsync();
-                        //var s1 = new StreamPuppet(getSubFlow()                                                                                     
-                            //.RunWith(Sink.AsPublisher<int>(false), Materializer), this);                                                                                 
-                        await masterSubscriber.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(4100));
-                        subscription.Request(2);                                                                                 
-                        await probe.ExpectNextAsync(1);                                                                                 
-                        await probe.ExpectNextAsync(2);
-                        subscription.Request(1);                                                                                 
-                        await probe.ExpectCompleteAsync();
+                        var s1 = new StreamPuppet(getSubFlow()                                                                                     
+                            .RunWith(Sink.AsPublisher<int>(false), Materializer), this);                                                                                 
+                        masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(4100));
+                        s1.Request(2);                                                                                 
+                        s1.ExpectNext(1);
+                        s1.ExpectNext(2);
+                        s1.Request(1);                                                                                 
+                        s1.ExpectComplete();
 
-                        p = getSubFlow()
-                            .RunWith(Sink.AsPublisher<int>(false), Materializer);
-                        kit = this;
-                        probe = kit.CreateManualSubscriberProbe<int>();
-                        p.Subscribe(probe);
+                        
+                        var s2 = new StreamPuppet(getSubFlow()                                                                                     
+                            .RunWith(Sink.AsPublisher<int>(false), Materializer), this);                                                                                 
+                        masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-                        //var s2 = new StreamPuppet(getSubFlow()                                                                                     
-                            //.RunWith(Sink.AsPublisher<int>(false), Materializer), this);                                                                                 
-                        await masterSubscriber.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                        s2.Request(1);                                                                                 
+                        s2.ExpectNext(3);
+                        s2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-                        subscription.Request(1);                                                                                 
-                        await probe.ExpectNextAsync(3);
-                        await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
-
-                        subscription.Request(1);                                                                                 
-                        await probe.ExpectNextAsync(4);
-                        subscription.Request(1);                                                                                 
-                        await probe.ExpectCompleteAsync();
+                        s2.Request(1);                                                                                 
+                        s2.ExpectNext(4);
+                        s2.Request(1);                                                                                 
+                        s2.ExpectComplete();
                                                                                  
                         masterSubscription.Request(1);                                                                                 
-                        await masterSubscriber.ExpectCompleteAsync();                                                                             
+                        masterSubscriber.ExpectComplete();                                                                             
                     });
                 return Task.CompletedTask;
             }, Materializer);
