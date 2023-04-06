@@ -138,12 +138,14 @@ namespace Akka.Streams.Tests.Dsl
                 var boom = new TestException("boom");
                 await probe.ExpectMsgAsync<Done>();
                 killSwitch.Abort(boom);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 doneF.ContinueWith(t =>
                 {
                     t.Exception.Should().NotBeNull();
                     t.Exception.InnerException.Should().NotBeNull();
                     t.Exception.InnerException.Should().Be(boom);
                 });
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }, Materializer);
         }
         
