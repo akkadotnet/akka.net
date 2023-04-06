@@ -318,6 +318,65 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public override string ToString() { }
     }
 }
+namespace Akka.Cluster.Tools.PublishSubscribe.Query
+{
+    public sealed class GetClusterPubSubState
+    {
+        public static readonly Akka.Cluster.Tools.PublishSubscribe.Query.GetClusterPubSubState Instance;
+    }
+    public sealed class GetClusterPubSubStats
+    {
+        public static readonly Akka.Cluster.Tools.PublishSubscribe.Query.GetClusterPubSubStats Instance;
+    }
+    public sealed class GetLocalPubSubState
+    {
+        public static readonly Akka.Cluster.Tools.PublishSubscribe.Query.GetLocalPubSubState Instance;
+    }
+    public sealed class GetLocalPubSubStats
+    {
+        public static readonly Akka.Cluster.Tools.PublishSubscribe.Query.GetLocalPubSubStats Instance;
+    }
+    public sealed class GetPubSubState
+    {
+        public static readonly Akka.Cluster.Tools.PublishSubscribe.Query.GetPubSubState Instance;
+    }
+    public sealed class GetPubSubStats
+    {
+        public static readonly Akka.Cluster.Tools.PublishSubscribe.Query.GetPubSubStats Instance;
+    }
+    public sealed class LocalPubSubState
+    {
+        public LocalPubSubState(System.Collections.Immutable.ImmutableDictionary<string, Akka.Cluster.Tools.PublishSubscribe.Query.TopicState> topics) { }
+        public System.Collections.Immutable.ImmutableDictionary<string, Akka.Cluster.Tools.PublishSubscribe.Query.TopicState> Topics { get; }
+    }
+    public sealed class LocalPubSubStats
+    {
+        public LocalPubSubStats(System.Collections.Immutable.ImmutableDictionary<string, Akka.Cluster.Tools.PublishSubscribe.Query.TopicStats> topics) { }
+        public System.Collections.Immutable.ImmutableDictionary<string, Akka.Cluster.Tools.PublishSubscribe.Query.TopicStats> Topics { get; }
+    }
+    public sealed class PubSubState
+    {
+        public PubSubState(System.Collections.Immutable.ImmutableDictionary<Akka.Actor.Address, Akka.Cluster.Tools.PublishSubscribe.Query.LocalPubSubState> clusterStates) { }
+        public System.Collections.Immutable.ImmutableDictionary<Akka.Actor.Address, Akka.Cluster.Tools.PublishSubscribe.Query.LocalPubSubState> ClusterStates { get; }
+    }
+    public sealed class PubSubStats
+    {
+        public PubSubStats(System.Collections.Immutable.ImmutableDictionary<Akka.Actor.Address, Akka.Cluster.Tools.PublishSubscribe.Query.LocalPubSubStats> clusterStats) { }
+        public System.Collections.Immutable.ImmutableDictionary<Akka.Actor.Address, Akka.Cluster.Tools.PublishSubscribe.Query.LocalPubSubStats> ClusterStats { get; }
+    }
+    public sealed class TopicState
+    {
+        public TopicState(string name, System.Collections.Immutable.ImmutableList<Akka.Actor.Address> subscribers) { }
+        public string Name { get; }
+        public System.Collections.Immutable.ImmutableList<Akka.Actor.Address> Subscribers { get; }
+    }
+    public sealed class TopicStats
+    {
+        public TopicStats(string name, int subscriberCount) { }
+        public string Name { get; }
+        public int SubscriberCount { get; }
+    }
+}
 namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 {
     public class DistributedPubSubMessageSerializer : Akka.Serialization.SerializerWithStringManifest
