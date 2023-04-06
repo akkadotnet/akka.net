@@ -158,20 +158,14 @@ namespace Akka.Streams.Tests.Dsl
                 await WithSubstreamsSupportAsync(1, 3,
                     run: async (masterSubscriber, masterSubscription, getSubFlow) =>
                     {
-                        var p = (await getSubFlow())
-                            .RunWith(Sink.AsPublisher<int>(false), Materializer);
-                        var kit = this;
-                        var probe = kit.CreateManualSubscriberProbe<int>();
-                        p.Subscribe(probe);
-                        var subscription = await probe.ExpectSubscriptionAsync();
-                        //var s1 = new StreamPuppet((await getSubFlow())
-                            //.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                        var s1 = new StreamPuppet((await getSubFlow())
+                            .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
-                        subscription.Request(5);
-                        await probe.ExpectNextAsync(1);
-                        await probe.ExpectNextAsync(2);
-                        await probe.ExpectNextAsync(3);
-                        await probe.ExpectCompleteAsync();
+                        s1.Request(5);
+                        await s1.ExpectNextAsync(1);
+                        await s1.ExpectNextAsync(2);
+                        await s1.ExpectNextAsync(3);
+                        await s1.ExpectCompleteAsync();
 
                         masterSubscription.Request(1);
                         await masterSubscriber.ExpectCompleteAsync();
@@ -188,32 +182,19 @@ namespace Akka.Streams.Tests.Dsl
                 await WithSubstreamsSupportAsync(5, 8,
                     run: async (masterSubscriber, masterSubscription, getSubFlow) =>
                     {
-                        var p = (await getSubFlow())
-                            .RunWith(Sink.AsPublisher<int>(false), Materializer);
-                        var kit = this;
-                        var probe = kit.CreateManualSubscriberProbe<int>();
-                        p.Subscribe(probe);
-                        var subscription = await probe.ExpectSubscriptionAsync();
-                        //var s1 = new StreamPuppet((await getSubFlow())
-                            //.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
-                        subscription.Cancel();
+                        var s1 = new StreamPuppet((await getSubFlow())
+                            .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                        s1.Cancel();
+                        var s2 = new StreamPuppet((await getSubFlow())
+                            .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
-                        p = (await getSubFlow())
-                            .RunWith(Sink.AsPublisher<int>(false), Materializer);
-                        kit = this;
-                        probe = kit.CreateManualSubscriberProbe<int>();
-                        p.Subscribe(probe);
-                        subscription = await probe.ExpectSubscriptionAsync();
-                        //var s2 = new StreamPuppet((await getSubFlow())
-                            //.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
-
-                        subscription.Request(4);
-                        await probe.ExpectNextAsync(5);
-                        await probe.ExpectNextAsync(6);
-                        await probe.ExpectNextAsync(7);
-                        await probe.ExpectNextAsync(8);
-                        subscription.Request(1);
-                        await probe.ExpectCompleteAsync();
+                        s2.Request(4);
+                        await s2.ExpectNextAsync(5);
+                        await s2.ExpectNextAsync(6);
+                        await s2.ExpectNextAsync(7);
+                        await s2.ExpectNextAsync(8);
+                        s2.Request(1);
+                        await s2.ExpectCompleteAsync();
 
                         masterSubscription.Request(1);
                         await masterSubscriber.ExpectCompleteAsync();
@@ -299,23 +280,17 @@ namespace Akka.Streams.Tests.Dsl
                 await WithSubstreamsSupportAsync(5, 8,
                     run: async (masterSubscriber, masterSubscription, getSubFlow) =>
                     {
-                        var p = (await getSubFlow())
-                            .RunWith(Sink.AsPublisher<int>(false), Materializer);
-                        var kit = this;
-                        var probe = kit.CreateManualSubscriberProbe<int>();
-                        p.Subscribe(probe);
-                        var subscription = await probe.ExpectSubscriptionAsync();
-                        //var s1 = new StreamPuppet((await getSubFlow())
-                            //.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                        var s1 = new StreamPuppet((await getSubFlow())
+                            .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
                         masterSubscription.Cancel();
 
-                        subscription.Request(4);
-                        await probe.ExpectNextAsync(1);
-                        await probe.ExpectNextAsync(2);
-                        await probe.ExpectNextAsync(3);
-                        await probe.ExpectNextAsync(4);
-                        subscription.Request(1);
-                        await probe.ExpectCompleteAsync();
+                        s1.Request(4);
+                        await s1.ExpectNextAsync(1);
+                        await s1.ExpectNextAsync(2);
+                        await s1.ExpectNextAsync(3);
+                        await s1.ExpectNextAsync(4);
+                        s1.Request(1);
+                        await s1.ExpectCompleteAsync();
                     });
                 //return Task.CompletedTask;
             }, Materializer);
@@ -381,11 +356,11 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(() => {
                 var task = Source.Single(1).SplitWhen(_ => true).Lift()                                                                             
-                .SelectAsync(1, async source =>                                                                             
+                .SelectAsync(1, source =>                                                                             
                 {                                                                                 
-                    await source.RunWith(Sink.Ignore<int>(), Materializer);                                                                                 
+                    source.RunWith(Sink.Ignore<int>(), Materializer);                                                                                 
                     // Sink.ignore+mapAsync pipes error back                                                                                 
-                    return await Task.Run(() =>                                                                                 
+                    return Task.Run(() =>                                                                                 
                     {                                                                                     
                         source.RunWith(Sink.Ignore<int>(), Materializer).Wait(TimeSpan.FromSeconds(3));                                                                                     
                         return 1;                                                                                 
@@ -463,17 +438,11 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() => {
                 await WithSubstreamsSupportAsync(5, 8, SubstreamCancelStrategy.Propagate,                                                                             
                     async (masterSubscriber, masterSubscription, expectSubFlow) =>                                                                             
-                    {
-                        var p = (await expectSubFlow())
-                            .RunWith(Sink.AsPublisher<int>(false), Materializer);
-                        var kit = this;
-                        var probe = kit.CreateManualSubscriberProbe<int>();
-                        p.Subscribe(probe);
-                        var subscription = await probe.ExpectSubscriptionAsync();
-                        //var s1 = new StreamPuppet((await expectSubFlow())                                                                                     
-                            //.RunWith(Sink.AsPublisher<int>(false), Materializer),                                                                                     
-                            //this);
-                        subscription.Cancel();                                                                                 
+                    {                                                                                 
+                        var s1 = new StreamPuppet((await expectSubFlow())                                                                                     
+                            .RunWith(Sink.AsPublisher<int>(false), Materializer),                                                                                     
+                            this);                                                                                 
+                        s1.Cancel();                                                                                 
                         await masterSubscriber.ExpectCompleteAsync();
                                                                              
                     });
