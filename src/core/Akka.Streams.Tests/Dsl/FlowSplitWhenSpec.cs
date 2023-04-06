@@ -90,28 +90,40 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(() => {
                 WithSubstreamsSupport(elementCount: 4,                                                                             
                     run: async (masterSubscriber, masterSubscription, getSubFlow) =>                                                                             
-                    {                                                                                 
-                        var s1 = new StreamPuppet(getSubFlow()                                                                                     
-                            .RunWith(Sink.AsPublisher<int>(false), Materializer), this);                                                                                 
-                        masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));                                                                                 
-                        s1.Request(2);                                                                                 
-                        await s1.ExpectNextAsync(1);                                                                                 
-                        await s1.ExpectNextAsync(2);                                                                                 
-                        s1.Request(1);                                                                                 
-                        await s1.ExpectCompleteAsync();
-                        
-                        var s2 = new StreamPuppet(getSubFlow()                                                                                     
-                            .RunWith(Sink.AsPublisher<int>(false), Materializer), this);                                                                                 
-                        masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                                                                                 
-                        s2.Request(1);                                                                                 
-                        await s2.ExpectNextAsync(3);
-                        s2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                                                                                 
-                        s2.Request(1);                                                                                 
-                        await s2.ExpectNextAsync(4);                                                                                 
-                        s2.Request(1);                                                                                 
-                        await s2.ExpectCompleteAsync();
+                    {
+                        var p = getSubFlow()
+                            .RunWith(Sink.AsPublisher<int>(false), Materializer);
+                        var kit = this;
+                        var probe = kit.CreateManualSubscriberProbe<int>();
+                        p.Subscribe(probe);
+                        var subscription = await probe.ExpectSubscriptionAsync();
+                        //var s1 = new StreamPuppet(getSubFlow()                                                                                     
+                            //.RunWith(Sink.AsPublisher<int>(false), Materializer), this);                                                                                 
+                        await masterSubscriber.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(4100));
+                        subscription.Request(2);                                                                                 
+                        await probe.ExpectNextAsync(1);                                                                                 
+                        await probe.ExpectNextAsync(2);
+                        subscription.Request(1);                                                                                 
+                        await probe.ExpectCompleteAsync();
+
+                        p = getSubFlow()
+                            .RunWith(Sink.AsPublisher<int>(false), Materializer);
+                        kit = this;
+                        probe = kit.CreateManualSubscriberProbe<int>();
+                        p.Subscribe(probe);
+
+                        //var s2 = new StreamPuppet(getSubFlow()                                                                                     
+                            //.RunWith(Sink.AsPublisher<int>(false), Materializer), this);                                                                                 
+                        await masterSubscriber.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+
+                        subscription.Request(1);                                                                                 
+                        await probe.ExpectNextAsync(3);
+                        await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+
+                        subscription.Request(1);                                                                                 
+                        await probe.ExpectNextAsync(4);
+                        subscription.Request(1);                                                                                 
+                        await probe.ExpectCompleteAsync();
                                                                                  
                         masterSubscription.Request(1);                                                                                 
                         await masterSubscriber.ExpectCompleteAsync();                                                                             
