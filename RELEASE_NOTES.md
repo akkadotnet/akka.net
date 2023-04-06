@@ -1,5 +1,7 @@
 #### 1.5.2 April 5th 2023 ####
 
+There are some major behavioral changes introduced to Akka.Cluster and Akka.Persistence in Akka.NET v1.5.2 - to learn how these changes might affect your Akka.NET applications, please [see our Akka.NET v1.5.2 Upgrade Advisories on the Akka.NET website](https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html#upgrading-to-akkanet-v152).
+
 * [Akka.Remote: Remove secure cookie from configuration](https://github.com/akkadotnet/akka.net/pull/6515)
 * [DData: Remove unused _pruningPerformed and _tombstonedNodes variables](https://github.com/akkadotnet/akka.net/pull/6526)
 * [Akka.Persistence: Remove default object serializer in Sql.Common](https://github.com/akkadotnet/akka.net/pull/6528)
