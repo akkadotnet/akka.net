@@ -345,6 +345,7 @@ namespace Akka.Streams.Tests.Dsl
                 var counter = new AtomicCounter();
                 var queue = new BlockingQueue<(TaskCompletionSource<int>, long)>();
                 var cancellation = new CancellationTokenSource();
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 Task.Run(() =>
                 {
                     var delay = 500; // 50000 nanoseconds
@@ -369,6 +370,7 @@ namespace Akka.Streams.Tests.Dsl
                         }
                     }
                 }, cancellation.Token);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
                 Func<Task<int>> deferred = () =>
                 {
