@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
             groupStream.Subscribe(masterSubscriber);
             var masterSubscription = await masterSubscriber.ExpectSubscriptionAsync();
 
-            run(masterSubscriber, masterSubscription, async() =>
+            run?.Invoke(masterSubscriber, masterSubscription, async() =>
             {
                 masterSubscription.Request(1);
                 return await masterSubscriber.ExpectNextAsync();
@@ -123,6 +123,7 @@ namespace Akka.Streams.Tests.Dsl
                         masterSubscription.Request(1);                                                                             
                         await masterSubscriber.ExpectCompleteAsync();                                                                         
                     });
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -151,6 +152,7 @@ namespace Akka.Streams.Tests.Dsl
                         masterSubscription.Request(1);                                                                             
                         await masterSubscriber.ExpectCompleteAsync();                                                                         
                     });
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -229,7 +231,7 @@ namespace Akka.Streams.Tests.Dsl
                 subscriber.ExpectError().Should().Be(ex);
                 substreamPuppet.ExpectError(ex);
                 await upstreamSubscription.ExpectCancellationAsync();
-                //return Task.CompletedTask;
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -259,7 +261,7 @@ namespace Akka.Streams.Tests.Dsl
                 up.Subscribe(flowSubscriber);
                 var upSub = await up.ExpectSubscriptionAsync();
                 await upSub.ExpectCancellationAsync();
-                //return Task.CompletedTask;
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -276,6 +278,7 @@ namespace Akka.Streams.Tests.Dsl
                         s1.Cancel();                                                                                 
                         await masterSubscriber.ExpectCompleteAsync();                                                                             
                     });
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -307,11 +310,11 @@ namespace Akka.Streams.Tests.Dsl
 
             var testSource = Source.Single(1).ConcatMaterialized(Source.Maybe<int>(), Keep.Left).SplitAfter(_ => true);
 
-            Func<Task> a = async () =>
+            Action a = () =>
             {
-                await testSource.Lift().Delay(TimeSpan.FromSeconds(1)).ConcatMany(x => x)
+                testSource.Lift().Delay(TimeSpan.FromSeconds(1)).ConcatMany(x => x)
                     .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer)
-                    .WaitAsync(TimeSpan.FromSeconds(3));
+                    .Wait(TimeSpan.FromSeconds(3));
             };
             a.Should().Throw<SubscriptionTimeoutException>();
             return Task.CompletedTask;
