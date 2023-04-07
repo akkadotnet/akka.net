@@ -225,7 +225,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is Welcome && Equals((Welcome)obj);
+                return obj is Welcome welcome && Equals(welcome);
             }
 
             private bool Equals(Welcome other)
@@ -289,6 +289,16 @@ namespace Akka.Cluster
             public override bool Equals(object obj)
             {
                 return obj is InitJoin;
+            }
+
+            protected bool Equals(InitJoin other)
+            {
+                return true;
+            }
+
+            public override int GetHashCode()
+            {
+                return 1;
             }
         }
 
