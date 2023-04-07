@@ -60,15 +60,26 @@ If you want to include Akka.NET in your project, you can [install it directly fr
 To install Akka.NET Distributed Actor Framework, run the following command in the Package Manager Console
 
 ```
-PM> Install-Package Akka
-PM> Install-Package Akka.Remote
+PM> Install-Package Akka.Hosting
 ```
+
+> [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) includes the base Akka NuGet package and also provides an easy interface to integrate Akka.NET with the most-used parts of the Microsoft.Extensions ecosystem: Configuration, Logging, Hosting, and DependencyInjection. We encourage developers to adopt it.
 
 And if you need F# support:
 
 ```
 PM> Install-Package Akka.FSharp
 ```
+
+### Akka.NET Project Templates
+
+To create your own Akka.NET projects using [our templates (Akka.Templates)](https://github.com/akkadotnet/akkadotnet-templates), install them via the `dotnet` CLI:
+
+```
+dotnet new install "Akka.Templates::*"
+```
+
+This will make our templates available via `dotnet new` on the CLI _and_ as new project templates inside any .NET IDE such as Visual Studio or JetBrains Rider. You can view the full list of templates included in our package here: https://github.com/akkadotnet/akkadotnet-templates#available-templates
 
 ## Builds
 Please see [Building Akka.NET](http://getakka.net/community/building-akka-net.html).
@@ -79,7 +90,7 @@ To access nightly Akka.NET builds, please [see the instructions here](http://get
 If you need help getting started with Akka.NET, there's a number of great community resources online:
 
 * Subscribe to the Akka.NET project feed on Twitter: https://twitter.com/AkkaDotNet  (@AkkaDotNet)
-* Join the Akka.NET project Gitter chat: https://gitter.im/akkadotnet/akka.net
+* Join the Akka.NET Discord: https://discord.gg/GSCfPwhbWP
 * Ask Akka.NET questions on Stack Overflow: http://stackoverflow.com/questions/tagged/akka.net
 
 If you and your company are interested in getting professional Akka.NET support, you can [contact Petabridge for dedicated Akka.NET support](https://petabridge.com/).
