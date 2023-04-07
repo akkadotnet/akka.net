@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
             groupStream.Subscribe(masterSubscriber);
             var masterSubscription = await masterSubscriber.ExpectSubscriptionAsync();
 
-            run?.Invoke(masterSubscriber, masterSubscription, async() =>
+            run(masterSubscriber, masterSubscription, async() =>
             {
                 masterSubscription.Request(1);
                 return await masterSubscriber.ExpectNextAsync();
@@ -94,7 +94,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task SplitAfter_must_work_in_the_happy_case()
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
+            await this.AssertAllStagesStoppedAsync(async() => 
+            {
                 await WithSubstreamsSupportAsync(3, 5, 
                     run: async(masterSubscriber, masterSubscription, expectSubFlow) =>                                                                         
                     {
@@ -188,6 +189,7 @@ namespace Akka.Streams.Tests.Dsl
                         s1.Request(1);                                                                             
                         await s1.ExpectCompleteAsync();                                                                         
                     });
+                return Task.CompletedTask;
             }, Materializer);
         }
 
