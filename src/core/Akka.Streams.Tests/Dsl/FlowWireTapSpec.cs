@@ -60,10 +60,12 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() => {
                 var p = this.CreateManualPublisherProbe<int>();
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 Source.FromPublisher(p)
                     .WireTap(i => TestActor.Tell(i))
                     .RunWith(Sink.Ignore<int>(), Materializer)
                     .ContinueWith(t => TestActor.Tell(t.Exception.InnerException));
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
                 var proc = await p.ExpectSubscriptionAsync();
                 await proc.ExpectRequestAsync();
