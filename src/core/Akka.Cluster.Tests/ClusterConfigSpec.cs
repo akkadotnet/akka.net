@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Cluster.SBR;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Remote;
@@ -44,7 +45,9 @@ namespace Akka.Cluster.Tests
             settings.AllowWeaklyUpMembers.Should().BeTrue();
             settings.WeaklyUpAfter.Should().Be(7.Seconds());
             settings.PublishStatsInterval.Should().NotHaveValue();
+#pragma warning disable CS0618
             settings.AutoDownUnreachableAfter.Should().NotHaveValue();
+#pragma warning restore CS0618
             settings.DownRemovalMargin.Should().Be(TimeSpan.Zero);
             settings.MinNrOfMembers.Should().Be(1);
             settings.MinNrOfMembersOfRole.Should().Equal(ImmutableDictionary<string, int>.Empty);
@@ -71,6 +74,13 @@ namespace Akka.Cluster.Tests
             settings.VerboseHeartbeatLogging.Should().BeFalse();
             settings.VerboseGossipReceivedLogging.Should().BeFalse();
             settings.RunCoordinatedShutdownWhenDown.Should().BeTrue();
+            
+            // downing provider settings
+            settings.DowningProviderType.Should().Be<SplitBrainResolverProvider>();
+            var sbrSettings = new SplitBrainResolverSettings(Sys.Settings.Config);
+            sbrSettings.DowningStableAfter.Should().Be(20.Seconds());
+            sbrSettings.DownAllWhenUnstable.Should().Be(15.Seconds()); // 3/4 OF DowningStableAfter
+            sbrSettings.DowningStrategy.Should().Be("keep-majority");
         }
 
         /// <summary>
@@ -82,6 +92,18 @@ namespace Akka.Cluster.Tests
             Config config = "akka.cluster.app-version = \"0.0.0\"";
             var settings = new ClusterSettings(config.WithFallback(Sys.Settings.Config), Sys.Name);
             settings.AppVersion.Should().Be(AppVersion.Zero);
+        }
+
+        /// <summary>
+        /// Validate that we can disable the default downing provider if needed
+        /// </summary>
+        [Fact]
+        public void Cluster_should_allow_disabling_of_default_DowningProvider()
+        {
+            // configure HOCON to disable the default akka.cluster downing provider
+            Config config = "akka.cluster.downing-provider-class = \"\"";
+            var settings = new ClusterSettings(config.WithFallback(Sys.Settings.Config), Sys.Name);
+            settings.DowningProviderType.Should().Be<NoDowning>();
         }
     }
 }
