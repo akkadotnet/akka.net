@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             clusterSingletonManagerSettings.SingletonName.ShouldBe("singleton");
             clusterSingletonManagerSettings.Role.ShouldBe(null);
             clusterSingletonManagerSettings.HandOverRetryInterval.TotalSeconds.ShouldBe(1);
-            clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(0);
+            clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(20); // now 20 due to default SBR settings
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
             Assert.False(config.IsNullOrEmpty());
