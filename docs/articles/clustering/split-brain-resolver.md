@@ -38,6 +38,19 @@ Keep in mind that split brain resolver will NOT work when `akka.cluster.auto-dow
 
 Beginning in Akka.NET v1.4.16, the Akka.NET project has ported the original split brain resolver implementations from Lightbend as they are now open source. The following section of documentation describes how Akka.NET's hand-rolled split brain resolvers are implemented.
 
+> [!IMPORTANT]
+> As of Akka.NET v1.5.2, the `keep-majority` split brain resolution strategy is now enabled by default. This should be acceptable for the majority of Akka.Cluster users, but please read on.
+
+### Disabling the Default Downing Provider
+
+To disable the default Akka.Cluster downing provider, simply configure the following in your HOCON:
+
+```hocon
+akka.cluster.downing-provider-class = ""
+```
+
+This will disable the split brain resolver / downing provider functionality altogether in Akka.NET. This was the default behavior for Akka.Cluster as of Akka.NET v1.5.1 and earlier.
+
 ### Picking a Strategy
 
 In order to enable an Akka.NET split brain resolver in your cluster (they are not enabled by default), you will want to update your `akka.cluster` HOCON configuration to the following:
@@ -59,7 +72,7 @@ This will cause the [`Akka.Cluster.SBR.SplitBrainResolverProvider`](xref:Akka.Cl
 The following strategies are supported:
 
 * `static-quorum`
-* `keep-majority`
+* `keep-majority` **(default)**
 * `keep-oldest`
 * `down-all`
 * `lease-majority`
@@ -143,6 +156,9 @@ akka.cluster.split-brain-resolver {
 ```
 
 #### Keep Majority
+
+> [!NOTE]
+> `keep-majority` is the default SBR strategy for Akka.Cluster as of Akka.NET v1.5.2+.
 
 The `keep-majority` strategy will down this part of the cluster, which sees a lesser part of the whole cluster. This choice is made based on the latest known state of the cluster. When cluster will split into two equal parts, the one which contains the lowest address, will survive.
 

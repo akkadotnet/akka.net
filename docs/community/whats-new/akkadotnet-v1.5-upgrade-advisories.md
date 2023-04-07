@@ -11,6 +11,48 @@ This document contains specific upgrade suggestions, warnings, and notices that 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/-UPestlIw4k" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 <!-- markdownlint-enable MD033 -->
 
+## Upgrading to Akka.NET v1.5.2
+
+Akka.NET v1.5.2 introduces two important behavioral changes:
+
+* [Akka.Persistence: need to remove hard-coded Newtonsoft.Json `object` serializer](https://github.com/akkadotnet/akka.net/issues/6389)
+* [Akka.Cluster: enable `keep-majority` as default Split Brain Resolver](https://github.com/akkadotnet/akka.net/pull/6628)
+
+We meant to include both of these changes in Akka.NET v1.5.0 but simply ran out of time before making them into that release.
+
+### Akka.Persistence Changes
+
+The impact of [Akka.Persistence: need to remove hard-coded Newtonsoft.Json `object` serializer](https://github.com/akkadotnet/akka.net/issues/6389) is pretty minor: all versions of Akka.NET prior to 1.5.2 used Newtonsoft.Json as the `object` serializer for Akka.Persistence regardless of whether or not you [used a custom `object` serializer, such as Hyperion](xref:serialization#complex-object-serialization-using-hyperion).
+
+Going forward your user-defined `object` serialization binding will now be respected by Akka.Persistence. Any old data previously saved using Newtonsoft.Json will continue to be recovered automatically by Newtonsoft.Json - it's only the serialization of new objects inserted after upgrading to v1.5.2 that will be affected.
+
+If you _never changed your `object`_ serializer (most users don't) then this change doesn't affect you.
+
+### Akka.Cluster Split Brain Resolver Changes
+
+As of Akka.NET v1.5.2 we've now enabled the `keep-majority` [Split Brain Resolver](xref:split-brain-resolver) by default.
+
+If you were already running with a custom SBR enabled, this change won't affect you.
+
+If you weren't running with an SBR enabled, you should read the [Akka.Cluster Split Brain Resolver documentation](xref:split-brain-resolver).
+
+Also worth noting: we've deprecated the `akka.cluster.auto-down-unreachable-after` setting as it's always been a poor and shoddy way to manage network partitions inside Akka.Cluster. If you have that setting enabled you'll see the following warning appear:
+
+```shell
+The `auto-down-unreachable-after` feature has been deprecated as of Akka.NET v1.5.2 and will be removed in a future version of Akka.NET.
+The `keep-majority` split brain resolver will be used instead. See https://getakka.net/articles/cluster/split-brain-resolver.html for more details.
+```
+
+#### Disabling the Default Downing Provider
+
+To disable the default Akka.Cluster downing provider, simply configure the following in your HOCON:
+
+```hocon
+akka.cluster.downing-provider-class = ""
+```
+
+This will disable the split brain resolver / downing provider functionality altogether in Akka.NET. This was the default behavior for Akka.Cluster as of Akka.NET v1.5.1 and earlier.
+
 ## Upgrading From Akka.NET v1.4 to v1.5
 
 In case you need help upgrading:

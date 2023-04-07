@@ -53,7 +53,9 @@ namespace Akka.Streams.Tests.Dsl
 
                 foreach(var v in expected)
                 {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     queue.PullAsync().PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     await ExpectMsgAsync(v);
                 };
             }, _materializer);
@@ -71,7 +73,9 @@ namespace Akka.Streams.Tests.Dsl
                 future2.Invoking(t => t.Wait(RemainingOrDefault)).Should().Throw<IllegalStateException>();
 
                 sub.SendNext(1);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 future.PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 await ExpectMsgAsync(Option<int>.Create(1));
 
                 sub.SendComplete();
@@ -87,7 +91,9 @@ namespace Akka.Streams.Tests.Dsl
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = probe.ExpectSubscription();
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 queue.PullAsync().PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 await ExpectNoMsgAsync(_pause);
 
                 sub.SendNext(1);
@@ -105,7 +111,9 @@ namespace Akka.Streams.Tests.Dsl
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = await probe.ExpectSubscriptionAsync();
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 queue.PullAsync().PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 await ExpectNoMsgAsync(_pause);
 
                 sub.SendError(TestException());
@@ -136,7 +144,9 @@ namespace Akka.Streams.Tests.Dsl
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = await probe.ExpectSubscriptionAsync();
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 queue.PullAsync().PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 await ExpectNoMsgAsync(_pause);
 
                 sub.SendNext(1);
@@ -154,7 +164,9 @@ namespace Akka.Streams.Tests.Dsl
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = await probe.ExpectSubscriptionAsync();
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 queue.PullAsync().PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 sub.SendNext(1);
                 await ExpectMsgAsync(Option<int>.Create(1));
 
@@ -186,10 +198,14 @@ namespace Akka.Streams.Tests.Dsl
 
                 for (var i = 1; i <= streamElementCount; i++)
                 {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     queue.PullAsync().PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     await ExpectMsgAsync(Option<int>.Create(i));
                 }
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 queue.PullAsync().PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 await ExpectMsgAsync(Option<int>.None);
             }, _materializer);
         }
@@ -203,11 +219,15 @@ namespace Akka.Streams.Tests.Dsl
                 var queue = Source.FromPublisher(probe).RunWith(sink, _materializer);
                 var sub = await probe.ExpectSubscriptionAsync();
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 queue.PullAsync().PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 sub.SendNext(1); // should pull next element
                 await ExpectMsgAsync(Option<int>.Create(1));
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 queue.PullAsync().PipeTo(TestActor);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 await ExpectNoMsgAsync(); // element requested but buffer empty
                 sub.SendNext(2);
                 await ExpectMsgAsync(Option<int>.Create(2));
