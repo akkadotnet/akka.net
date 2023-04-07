@@ -58,7 +58,7 @@ namespace Akka.Cluster.Sharding.Tests
             CommonConfig = ConfigurationFactory.ParseString($@"
                 akka.cluster.sharding.verbose-debug-logging = on
                 #akka.loggers = [""akka.testkit.SilenceAllTestEventListener""]
-
+                akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.roles = [""backend""]
                 akka.cluster.distributed-data.gossip-interval = 1s
                 akka.persistence.journal.sqlite-shared.timeout = 10s #the original default, base test uses 5s
