@@ -22,8 +22,8 @@ namespace Akka.Cluster
     /// </summary>
     public sealed class ClusterSettings
     {
-        readonly Config _failureDetectorConfig;
-        readonly string _useDispatcher;
+        private readonly Config _failureDetectorConfig;
+        private readonly string _useDispatcher;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterSettings"/> class.
@@ -66,7 +66,9 @@ namespace Akka.Cluster
                 ) ? TimeSpan.Zero :
                 clusterConfig.GetTimeSpan("down-removal-margin", null);
 
+#pragma warning disable CS0618
             AutoDownUnreachableAfter = clusterConfig.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
+#pragma warning restore CS0618
 
             Roles = clusterConfig.GetStringList("roles", new string[] { }).ToImmutableHashSet();
             AppVersion = Util.AppVersion.Create(clusterConfig.GetString("app-version"));
@@ -89,14 +91,15 @@ namespace Akka.Cluster
             var downingProviderClassName = clusterConfig.GetString("downing-provider-class", null);
             if (!string.IsNullOrEmpty(downingProviderClassName))
                 DowningProviderType = Type.GetType(downingProviderClassName, true);
+#pragma warning disable CS0618
             else if (AutoDownUnreachableAfter.HasValue)
+#pragma warning restore CS0618
                 DowningProviderType = typeof(AutoDowning);
             else
                 DowningProviderType = typeof(NoDowning);
 
             RunCoordinatedShutdownWhenDown = clusterConfig.GetBoolean("run-coordinated-shutdown-when-down", false);
-
-            // TODO: replace with a switch expression when we upgrade to C#8 or later
+            
             TimeSpan GetWeaklyUpDuration()
             {
                 var cKey = "allow-weakly-up-members";
@@ -207,8 +210,9 @@ namespace Akka.Cluster
         public TimeSpan? PublishStatsInterval { get; }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. No longer used as of Akka.NET v1.5.
         /// </summary>
+        [Obsolete(message:"Deprecated as of Akka.NET v1.5.2 - clustering defaults to using KeepMajority SBR instead")]
         public TimeSpan? AutoDownUnreachableAfter { get; }
 
         /// <summary>

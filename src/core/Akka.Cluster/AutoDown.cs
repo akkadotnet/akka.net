@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Configuration;
 using static Akka.Cluster.MembershipState;
@@ -270,6 +271,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Used when no custom provider is configured and 'auto-down-unreachable-after' is enabled.
     /// </summary>
+    [InternalApi] // really only used during MNTR for Akka.Cluster.Sharding
     public sealed class AutoDowning : IDowningProvider
     {
         private readonly ActorSystem _system;
@@ -296,7 +298,9 @@ namespace Akka.Cluster
         {
             get
             {
+#pragma warning disable CS0618 // disable obsolete warning here because this entire class is obsolete
                 var autoDownUnreachableAfter = _cluster.Settings.AutoDownUnreachableAfter;
+#pragma warning restore CS0618
                 if (!autoDownUnreachableAfter.HasValue)
                     throw new ConfigurationException("AutoDowning downing provider selected but 'akka.cluster.auto-down-unreachable-after' not set");
 
