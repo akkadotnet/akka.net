@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -30,33 +31,32 @@ namespace Akka.Streams.Tests.Dsl
         public ActorMaterializer Materializer { get; }
 
         [Fact]
-        public void A_SelectError_must_select_when_there_is_a_handler()
+        public async Task A_SelectError_must_select_when_there_is_a_handler()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 3))
-                    .Select(ThrowOnTwo)
-                    .SelectError(_ => Boom)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
-                    .Request(2)
-                    .ExpectNext(1)
-                    .ExpectError().Should().Be(Boom);
+            await this.AssertAllStagesStoppedAsync(async() => {
+                Source.From(Enumerable.Range(1, 3))                                                                             
+                .Select(ThrowOnTwo)                                                                             
+                .SelectError(_ => Boom)                                                                             
+                .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
+                .Request(2)                                                                             
+                .ExpectNext(1)                                                                             
+                .ExpectError().Should().Be(Boom);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_SelectError_must_fail_the_stream_with_exception_thrown_in_handler_and_log_it()
+        public async Task A_SelectError_must_fail_the_stream_with_exception_thrown_in_handler_and_log_it()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 3))
-                    .Select(ThrowOnTwo)
-                    .SelectError(_ => throw Boom)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
-                    .RequestNext(1)
-                    .Request(1)
-                    .ExpectError().Should().Be(Boom);
-
+            await this.AssertAllStagesStoppedAsync(() => {
+                Source.From(Enumerable.Range(1, 3))                                                                             
+                .Select(ThrowOnTwo)                                                                             
+                .SelectError(_ => throw Boom)                                                                             
+                .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
+                .RequestNext(1)                                                                             
+                .Request(1)                                                                             
+                .ExpectError().Should().Be(Boom);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -77,32 +77,30 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SelectError_must_not_influence_stream_when_there_is_no_exceptions()
+        public async Task A_SelectError_must_not_influence_stream_when_there_is_no_exceptions()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 3))
-                    .Select(x => x)
-                    .SelectError(ex => Boom)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
-                    .RequestNext(1)
-                    .RequestNext(2)
-                    .RequestNext(3)
-                    .ExpectComplete();
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 3))                                                                             
+                .Select(x => x)                                                                             
+                .SelectError(ex => Boom)                                                                             
+                .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
+                .RequestNext(1)                                                                             
+                .RequestNext(2)                                                                             
+                .RequestNext(3)                                                                             
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void A_SelectError_must_finish_stream_if_it_is_empty()
+        public async Task A_SelectError_must_finish_stream_if_it_is_empty()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.Empty<int>()
-                    .Select(x => x)
-                    .SelectError(_ => Boom)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
-                    .Request(1)
-                    .ExpectComplete();
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<int>()                                                                             
+                .Select(x => x)                                                                             
+                .SelectError(_ => Boom)                                                                             
+                .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
+                .Request(1)                                                                             
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
