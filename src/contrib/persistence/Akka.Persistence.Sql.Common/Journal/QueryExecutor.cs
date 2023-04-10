@@ -676,8 +676,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public virtual async Task InsertBatchAsync(DbConnection connection, CancellationToken cancellationToken, WriteJournalBatch write)
         {
-            using (var command = GetCommand(connection, InsertEventSql))
-            using (var tx = connection.BeginTransaction())
+            using var command = GetCommand(connection, InsertEventSql);
+            // Isolation.Serializable: Enforce a table lock during the transaction when we're writing the event to database
+            // This is to prevent a racy condition when a high volume write is coupled with eager reading of the table
+            // that results in an event row missing on the read side because 2 transactions were completed out of order
+            using (var tx = connection.BeginTransaction(IsolationLevel.Serializable))
             {
                 command.Transaction = tx;
 
