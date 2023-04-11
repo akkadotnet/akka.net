@@ -447,7 +447,9 @@ namespace Akka.DistributedData
         {
         }
 
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         internal abstract class AtomicDeltaOperation : IDeltaOperation, IReplicatedDeltaSize, ORDictionary.IDeltaOperation
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         {
             public abstract ORSet<TKey>.IDeltaOperation Underlying { get; }
             public virtual IReplicatedData Merge(IReplicatedData other)

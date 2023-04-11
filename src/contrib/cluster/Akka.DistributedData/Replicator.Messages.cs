@@ -981,7 +981,9 @@ namespace Akka.DistributedData
     /// with the configured `notify-subscribers-interval`.
     /// </summary>
     [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public sealed class FlushChanges
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public static readonly FlushChanges Instance = new FlushChanges();
 

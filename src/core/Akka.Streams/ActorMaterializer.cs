@@ -355,7 +355,9 @@ namespace Akka.Streams
     /// This class describes the configurable properties of the <see cref="ActorMaterializer"/>. 
     /// Please refer to the withX methods for descriptions of the individual settings.
     /// </summary>
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public sealed class ActorMaterializerSettings
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         /// <summary>
         /// TBD
