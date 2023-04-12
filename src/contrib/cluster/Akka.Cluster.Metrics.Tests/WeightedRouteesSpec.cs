@@ -16,7 +16,6 @@ using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
-using Akka.Configuration;
 using Xunit;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
