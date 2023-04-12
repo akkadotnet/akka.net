@@ -32,7 +32,7 @@
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
     <MultiNodeAdapterVersion>1.5.0</MultiNodeAdapterVersion>
-    <MicrosoftLibVersion>5.0.0</MicrosoftLibVersion>
+    <MicrosoftLibVersion>7.0.0</MicrosoftLibVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
