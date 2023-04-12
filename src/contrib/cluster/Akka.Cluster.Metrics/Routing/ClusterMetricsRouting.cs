@@ -18,7 +18,6 @@ using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Extensions;
-using Akka.Configuration;
 
 namespace Akka.Cluster.Metrics
 {
