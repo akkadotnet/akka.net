@@ -12,8 +12,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Remote.TestKit;
 using FluentAssertions;
-using System.Threading.Tasks;
-using System.Threading;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 

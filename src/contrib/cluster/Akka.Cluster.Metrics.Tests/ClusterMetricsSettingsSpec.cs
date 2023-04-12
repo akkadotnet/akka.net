@@ -15,7 +15,6 @@ using Akka.Util;
 using Xunit;
 using FluentAssertions;
 using FsCheck;
-using Akka.Configuration;
 using FluentAssertions.Extensions;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
