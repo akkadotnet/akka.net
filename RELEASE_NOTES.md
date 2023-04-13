@@ -1,3 +1,7 @@
+#### 1.5.3 April 10th 2023 ####
+
+*Placeholder for nightly builds*
+
 #### 1.5.2 April 5th 2023 ####
 
 There are some major behavioral changes introduced to Akka.Cluster and Akka.Persistence in Akka.NET v1.5.2 - to learn how these changes might affect your Akka.NET applications, please [see our Akka.NET v1.5.2 Upgrade Advisories on the Akka.NET website](https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html#upgrading-to-akkanet-v152).
