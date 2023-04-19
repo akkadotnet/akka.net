@@ -28,6 +28,15 @@ namespace Akka.Serialization
     public class HyperionSerializer : Serializer
     {
         /// <summary>
+        /// Returns a default configuration for Hyperion serializer.
+        /// </summary>
+        /// <returns>TBD</returns>
+        public static Config DefaultConfiguration()
+        {
+            return ConfigurationFactory.FromResource<HyperionSerializer>("Akka.Serialization.Hyperion.reference.conf");
+        }
+        
+        /// <summary>
         /// Settings used for an underlying Hyperion serializer implementation.
         /// </summary>
         public readonly HyperionSerializerSettings Settings;
@@ -67,7 +76,7 @@ namespace Akka.Serialization
                 var settingsSetup = system.Settings.Setup.Get<HyperionSerializerSetup>()
                     .GetOrElse(HyperionSerializerSetup.Empty);
 
-                settingsSetup.ApplySettings(Settings);
+                Settings = settingsSetup.ApplySettings(Settings);
             }
 
             var surrogates = settings.Surrogates.ToList();
@@ -161,14 +170,7 @@ namespace Akka.Serialization
         /// <summary>
         /// Default settings used by <see cref="HyperionSerializer"/> when no config has been specified.
         /// </summary>
-        public static readonly HyperionSerializerSettings Default = new HyperionSerializerSettings(
-            preserveObjectReferences: true,
-            versionTolerance: true,
-            knownTypesProvider: typeof(NoKnownTypes), 
-            packageNameOverrides: new List<Func<string, string>>(),
-            surrogates: new Surrogate[0],
-            disallowUnsafeType: true,
-            typeFilter: DisabledTypeFilter.Instance);
+        public static readonly HyperionSerializerSettings Default = Create(HyperionSerializer.DefaultConfiguration());
 
         /// <summary>
         /// Creates a new instance of <see cref="HyperionSerializerSettings"/> using provided HOCON config.
