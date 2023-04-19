@@ -27,7 +27,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private IImmutableDictionary<string, long> _tagSequenceNr = ImmutableDictionary<string, long>.Empty;
 
         private readonly CancellationTokenSource _pendingRequestsCancellation;
-        private readonly JournalSettings _settings;
+        protected readonly JournalSettings Settings;
 
         private ILoggingAdapter _log;
 
@@ -37,7 +37,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="journalConfig">TBD</param>
         protected SqlJournal(Config journalConfig)
         {
-            _settings = new JournalSettings(journalConfig);
+            Settings = new JournalSettings(journalConfig);
             _pendingRequestsCancellation = new CancellationTokenSource();
         }
 
@@ -267,7 +267,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private async Task<object> Initialize()
         {
-            if (!_settings.AutoInitialize) 
+            if (!Settings.AutoInitialize) 
                 return new Status.Success(NotUsed.Instance);
 
             try
@@ -358,11 +358,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected virtual string GetConnectionString()
         {
-            var connectionString = _settings.ConnectionString;
+            var connectionString = Settings.ConnectionString;
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
+                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[Settings.ConnectionStringName].ConnectionString;
             }
 
             return connectionString;

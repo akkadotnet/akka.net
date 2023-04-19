@@ -38,7 +38,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// </summary>
         private readonly CancellationTokenSource _pendingRequestsCancellation;
 
-        private readonly SnapshotStoreSettings _settings;
+        protected readonly SnapshotStoreSettings Settings;
 
         private readonly ExtendedActorSystem _actorSystem;
 
@@ -49,7 +49,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected SqlSnapshotStore(Config config)
         {
             _actorSystem = Context.System.AsInstanceOf<ExtendedActorSystem>();
-            _settings = new SnapshotStoreSettings(config);
+            Settings = new SnapshotStoreSettings(config);
             _pendingRequestsCancellation = new CancellationTokenSource();
         }
 
@@ -91,7 +91,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected override void PreStart()
         {
             base.PreStart();
-            if (_settings.AutoInitialize)
+            if (Settings.AutoInitialize)
             {
                 Initialize().PipeTo(Self);
                 BecomeStacked(WaitingForInitialization);
@@ -151,11 +151,11 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <returns>TBD</returns>
         protected virtual string GetConnectionString()
         {
-            var connectionString = _settings.ConnectionString;
+            var connectionString = Settings.ConnectionString;
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
+                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[Settings.ConnectionStringName].ConnectionString;
             }
 
             return connectionString;
