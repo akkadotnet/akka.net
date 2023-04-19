@@ -62,14 +62,6 @@ namespace Akka.Serialization
             : base(system)
         {
             Settings = settings;
-            var surrogates = settings.Surrogates.ToList();
-            surrogates.Add(Surrogate
-                .Create<ISurrogated, ISurrogate>(
-                    from => from.ToSurrogate(system),
-                    to => to.FromSurrogate(system)));
-            
-            var provider = CreateKnownTypesProvider(system, settings.KnownTypesProvider);
-
             if (system != null)
             {
                 var settingsSetup = system.Settings.Setup.Get<HyperionSerializerSetup>()
@@ -77,6 +69,14 @@ namespace Akka.Serialization
 
                 settingsSetup.ApplySettings(Settings);
             }
+
+            var surrogates = settings.Surrogates.ToList();
+            surrogates.Add(Surrogate
+                .Create<ISurrogated, ISurrogate>(
+                    from => from.ToSurrogate(system),
+                    to => to.FromSurrogate(system)));
+            
+            var provider = CreateKnownTypesProvider(system, settings.KnownTypesProvider);
 
             _serializer =
                 new HySerializer(new SerializerOptions(
