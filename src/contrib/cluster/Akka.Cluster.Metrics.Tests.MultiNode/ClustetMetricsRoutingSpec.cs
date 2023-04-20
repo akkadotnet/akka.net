@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClustetMetricsRoutingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,6 @@ using Akka.Event;
 using Akka.Remote.TestKit;
 using Akka.Routing;
 using FluentAssertions;
-using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using FluentAssertions.Extensions;
 using Address = Akka.Actor.Address;
