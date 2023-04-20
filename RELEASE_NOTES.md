@@ -17,7 +17,7 @@ Four new HOCON settings are introduced:
 
 you can go to the [official Microsoft documentation](https://learn.microsoft.com/en-us/dotnet/api/system.data.isolationlevel?#fields) to read more about these isolation level settings.
 
-If you want to see the [full set of changes made in Akka.NET v1.5.2, click here](https://github.com/akkadotnet/akka.net/milestone/85?closed=1).
+If you want to see the [full set of changes made in Akka.NET v1.5.3, click here](https://github.com/akkadotnet/akka.net/milestone/85?closed=1).
 
 | COMMITS | LOC+ | LOC- | AUTHOR              |
 |---------|------|------|---------------------|
