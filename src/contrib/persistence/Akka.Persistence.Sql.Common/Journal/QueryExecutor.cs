@@ -312,8 +312,8 @@ namespace Akka.Persistence.Sql.Common.Journal
 #pragma warning restore CS0618
             SerializerIdColumnName = serializerIdColumnName;
             UseSequentialAccess = useSequentialAccess;
-            ReadIsolationLevel = readIsolationLevel ?? IsolationLevel.ReadCommitted;
-            WriteIsolationLevel = writeIsolationLevel ?? IsolationLevel.ReadCommitted;
+            ReadIsolationLevel = readIsolationLevel ?? IsolationLevel.Unspecified;
+            WriteIsolationLevel = writeIsolationLevel ?? IsolationLevel.Unspecified;
         }
 
         /// <summary>
