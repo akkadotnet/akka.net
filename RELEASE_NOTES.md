@@ -1,3 +1,7 @@
+#### 1.5.4 April 20th 2023 ####
+
+*placeholder for nightlies*
+
 #### 1.5.3 April 20th 2023 ####
 
 * [Persistence.Sqlite: Bump Microsoft.Data.SQLite to 7.0.5](https://github.com/akkadotnet/akka.net/pull/6643)
