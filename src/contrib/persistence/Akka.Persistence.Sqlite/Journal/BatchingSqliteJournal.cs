@@ -13,6 +13,7 @@ using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Akka.Configuration;
 using Akka.Pattern;
+using Akka.Persistence.Sql.Common.Extensions;
 using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sqlite.Journal
@@ -41,7 +42,9 @@ namespace Akka.Persistence.Sqlite.Journal
                     serializerIdColumnName: "serializer_id",
                     timeout: config.GetTimeSpan("connection-timeout", null),
                     defaultSerializer: config.GetString("serializer", null),
-                    useSequentialAccess: config.GetBoolean("use-sequential-access", false)))
+                    useSequentialAccess: config.GetBoolean("use-sequential-access", false),
+                    readIsolationLevel: config.GetIsolationLevel("read-isolation-level"),
+                    writeIsolationLevel: config.GetIsolationLevel("write-isolation-level")))
         {
         }
 
@@ -58,16 +61,89 @@ namespace Akka.Persistence.Sqlite.Journal
         /// to starting executing any requests.
         /// </param>
         /// <param name="connectionTimeout">The maximum time given for executed <see cref="DbCommand"/> to complete.</param>
-        /// <param name="isolationLevel">The isolation level of transactions used during query execution.</param>
+        /// <param name="isolationLevel">The isolation level of transactions used during read AND write query execution.</param>
         /// <param name="circuitBreakerSettings">
         /// The settings used by the <see cref="CircuitBreaker"/> when for executing request batches.
         /// </param>
         /// <param name="replayFilterSettings">The settings used when replaying events from database back to the persistent actors.</param>
         /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
         /// <param name="defaultSerializer">The serializer used when no specific type matching can be found.</param>
-        public BatchingSqliteJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, 
-            TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions, string defaultSerializer) 
-            : base(connectionString, maxConcurrentOperations, maxBatchSize, maxBufferSize, autoInitialize, connectionTimeout, isolationLevel, circuitBreakerSettings, replayFilterSettings, namingConventions, defaultSerializer)
+        [Obsolete("Use the constructor with read and write IsolationLevel arguments (since v1.5.2)")]
+        public BatchingSqliteJournalSetup(
+            string connectionString,
+            int maxConcurrentOperations,
+            int maxBatchSize,
+            int maxBufferSize,
+            bool autoInitialize, 
+            TimeSpan connectionTimeout,
+            IsolationLevel isolationLevel,
+            CircuitBreakerSettings circuitBreakerSettings,
+            ReplayFilterSettings replayFilterSettings,
+            QueryConfiguration namingConventions,
+            string defaultSerializer) 
+            : base(
+                connectionString: connectionString,
+                maxConcurrentOperations: maxConcurrentOperations,
+                maxBatchSize: maxBatchSize,
+                maxBufferSize: maxBufferSize,
+                autoInitialize: autoInitialize,
+                connectionTimeout: connectionTimeout,
+                readIsolationLevel: isolationLevel,
+                writeIsolationLevel: isolationLevel,
+                circuitBreakerSettings: circuitBreakerSettings,
+                replayFilterSettings: replayFilterSettings,
+                namingConventions: namingConventions,
+                defaultSerializer: defaultSerializer)
+        {
+        }
+        
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BatchingSqliteJournalSetup" /> class.
+        /// </summary>
+        /// <param name="connectionString">The connection string used to connect to the database.</param>
+        /// <param name="maxConcurrentOperations">The maximum number of batch operations allowed to be executed at the same time.</param>
+        /// <param name="maxBatchSize">The maximum size of single batch of operations to be executed over a single <see cref="DbConnection"/>.</param>
+        /// <param name="maxBufferSize">The maximum size of requests stored in journal buffer.</param>
+        /// <param name="autoInitialize">
+        /// If set to <c>true</c>, the journal executes all SQL scripts stored under the
+        /// <see cref="BatchingSqlJournal{TConnection,TCommand}.Initializers"/> collection prior
+        /// to starting executing any requests.
+        /// </param>
+        /// <param name="connectionTimeout">The maximum time given for executed <see cref="DbCommand"/> to complete.</param>
+        /// <param name="readIsolationLevel">The isolation level of transactions used during read query execution.</param>
+        /// <param name="writeIsolationLevel">The isolation level of transactions used during write query execution.</param>
+        /// <param name="circuitBreakerSettings">
+        /// The settings used by the <see cref="CircuitBreaker"/> when for executing request batches.
+        /// </param>
+        /// <param name="replayFilterSettings">The settings used when replaying events from database back to the persistent actors.</param>
+        /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
+        /// <param name="defaultSerializer">The serializer used when no specific type matching can be found.</param>
+        public BatchingSqliteJournalSetup(
+            string connectionString,
+            int maxConcurrentOperations,
+            int maxBatchSize,
+            int maxBufferSize,
+            bool autoInitialize, 
+            TimeSpan connectionTimeout,
+            IsolationLevel readIsolationLevel,
+            IsolationLevel writeIsolationLevel,
+            CircuitBreakerSettings circuitBreakerSettings,
+            ReplayFilterSettings replayFilterSettings,
+            QueryConfiguration namingConventions,
+            string defaultSerializer) 
+            : base(
+                connectionString: connectionString,
+                maxConcurrentOperations: maxConcurrentOperations,
+                maxBatchSize: maxBatchSize,
+                maxBufferSize: maxBufferSize,
+                autoInitialize: autoInitialize,
+                connectionTimeout: connectionTimeout,
+                writeIsolationLevel: readIsolationLevel,
+                readIsolationLevel: writeIsolationLevel,
+                circuitBreakerSettings: circuitBreakerSettings,
+                replayFilterSettings: replayFilterSettings,
+                namingConventions: namingConventions,
+                defaultSerializer: defaultSerializer)
         {
         }
     }

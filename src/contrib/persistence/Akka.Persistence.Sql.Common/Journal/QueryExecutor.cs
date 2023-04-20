@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
@@ -15,6 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Persistence.Sql.Common.Extensions;
 using Akka.Serialization;
 using Akka.Util;
 
@@ -188,6 +188,16 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.
         /// </summary>
         public bool UseSequentialAccess { get; }
+        
+        /// <summary>
+        /// Isolation level of transactions used during write query execution.
+        /// </summary>
+        public IsolationLevel WriteIsolationLevel { get; }
+        
+        /// <summary>
+        /// Isolation level of transactions used during read query execution.
+        /// </summary>
+        public IsolationLevel ReadIsolationLevel { get; }
 
         /// <summary>
         /// TBD
@@ -207,6 +217,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="timeout">TBD</param>
         /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
         /// <param name="useSequentialAccess">Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.</param>
+        [Obsolete("Use .ctor that accepts read and write IsolationLevel instead (since v1.5.2)")]
         public QueryConfiguration(
             string schemaName,
             string journalEventsTableName,
@@ -223,6 +234,66 @@ namespace Akka.Persistence.Sql.Common.Journal
             TimeSpan timeout,
             string defaultSerializer,
             bool useSequentialAccess)
+            : this(
+                schemaName,
+                journalEventsTableName,
+                metaTableName,
+                persistenceIdColumnName,
+                sequenceNrColumnName,
+                payloadColumnName,
+                manifestColumnName,
+                timestampColumnName,
+                isDeletedColumnName,
+                tagsColumnName,
+                orderingColumnName,
+                serializerIdColumnName,
+                timeout,
+                defaultSerializer,
+                useSequentialAccess,
+                // ReSharper disable once IntroduceOptionalParameters.Global
+                null,
+                null)
+        {
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="schemaName">TBD</param>
+        /// <param name="journalEventsTableName">TBD</param>
+        /// <param name="metaTableName">TBD</param>
+        /// <param name="persistenceIdColumnName">TBD</param>
+        /// <param name="sequenceNrColumnName">TBD</param>
+        /// <param name="payloadColumnName">TBD</param>
+        /// <param name="manifestColumnName">TBD</param>
+        /// <param name="timestampColumnName">TBD</param>
+        /// <param name="isDeletedColumnName">TBD</param>
+        /// <param name="tagsColumnName">TBD</param>
+        /// <param name="orderingColumnName">TBD</param>
+        /// <param name="serializerIdColumnName">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
+        /// <param name="useSequentialAccess">Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.</param>
+        /// <param name="readIsolationLevel">Isolation level of transactions used during read query execution.</param>
+        /// <param name="writeIsolationLevel">Isolation level of transactions used during write query execution.</param>
+        public QueryConfiguration(
+            string schemaName,
+            string journalEventsTableName,
+            string metaTableName,
+            string persistenceIdColumnName,
+            string sequenceNrColumnName,
+            string payloadColumnName,
+            string manifestColumnName,
+            string timestampColumnName,
+            string isDeletedColumnName,
+            string tagsColumnName,
+            string orderingColumnName,
+            string serializerIdColumnName,
+            TimeSpan timeout,
+            string defaultSerializer,
+            bool useSequentialAccess,
+            IsolationLevel? readIsolationLevel,
+            IsolationLevel? writeIsolationLevel)
         {
             SchemaName = schemaName;
             JournalEventsTableName = journalEventsTableName;
@@ -236,9 +307,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             Timeout = timeout;
             TagsColumnName = tagsColumnName;
             OrderingColumnName = orderingColumnName;
+#pragma warning disable CS0618
             DefaultSerializer = defaultSerializer;
+#pragma warning restore CS0618
             SerializerIdColumnName = serializerIdColumnName;
             UseSequentialAccess = useSequentialAccess;
+            ReadIsolationLevel = readIsolationLevel ?? IsolationLevel.Unspecified;
+            WriteIsolationLevel = writeIsolationLevel ?? IsolationLevel.Unspecified;
         }
 
         /// <summary>
@@ -310,16 +385,31 @@ namespace Akka.Persistence.Sql.Common.Journal
         public QueryConfiguration Configuration { get; }
 
         /// <summary>
+        /// Isolation level of transactions used during write query execution.
+        /// </summary>
+        public IsolationLevel WriteIsolationLevel { get; }
+        
+        /// <summary>
+        /// Isolation level of transactions used during read query execution.
+        /// </summary>
+        public IsolationLevel ReadIsolationLevel { get; }
+        
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="configuration">TBD</param>
         /// <param name="serialization">TBD</param>
         /// <param name="timestampProvider">TBD</param>
-        protected AbstractQueryExecutor(QueryConfiguration configuration, Akka.Serialization.Serialization serialization, ITimestampProvider timestampProvider)
+        protected AbstractQueryExecutor(
+            QueryConfiguration configuration,
+            Akka.Serialization.Serialization serialization,
+            ITimestampProvider timestampProvider)
         {
             TimestampProvider = timestampProvider;
             Serialization = serialization;
             Configuration = configuration;
+            WriteIsolationLevel = Configuration.WriteIsolationLevel;
+            ReadIsolationLevel = Configuration.ReadIsolationLevel;
 
             var allEventColumnNames = $@"
                 e.{Configuration.PersistenceIdColumnName} as PersistenceId, 
@@ -487,22 +577,25 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="cancellationToken">TBD</param>
         /// <param name="offset">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken, long offset)
+        public virtual async Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(
+            DbConnection connection, 
+            CancellationToken cancellationToken,
+            long offset)
         {
-            using (var command = GetCommand(connection, AllPersistenceIdsSql))
+            return await connection.ExecuteInTransaction(ReadIsolationLevel, cancellationToken, async (tx, token) =>
             {
+                using var command = GetCommand(connection, AllPersistenceIdsSql);
+                command.Transaction = tx;
                 AddParameter(command, "@Ordering", DbType.Int64, offset);
 
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                using var reader = await command.ExecuteReaderAsync(token);
+                var builder = ImmutableArray.CreateBuilder<string>();
+                while (await reader.ReadAsync(token))
                 {
-                    var builder = ImmutableArray.CreateBuilder<string>();
-                    while (await reader.ReadAsync(cancellationToken))
-                    {
-                        builder.Add(reader.GetString(0));
-                    }
-                    return builder.ToImmutable();
+                    builder.Add(reader.GetString(0));
                 }
-            }
+                return builder.ToImmutable();
+            });
         }
 
         /// <summary>
@@ -516,37 +609,35 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="max">TBD</param>
         /// <param name="callback">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task SelectByPersistenceIdAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long fromSequenceNr, long toSequenceNr,
-            long max, Action<IPersistentRepresentation> callback)
+        public virtual async Task SelectByPersistenceIdAsync(
+            DbConnection connection,
+            CancellationToken cancellationToken,
+            string persistenceId,
+            long fromSequenceNr,
+            long toSequenceNr,
+            long max,
+            Action<IPersistentRepresentation> callback)
         {
-            using (var command = GetCommand(connection, ByPersistenceIdSql))
+            await connection.ExecuteInTransaction(ReadIsolationLevel, cancellationToken, async (tx, token) =>
             {
+                using var command = GetCommand(connection, ByPersistenceIdSql);
+                command.Transaction = tx;
                 AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
                 AddParameter(command, "@FromSequenceNr", DbType.Int64, fromSequenceNr);
                 AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
 
-                CommandBehavior commandBehavior;
+                var commandBehavior = Configuration.UseSequentialAccess 
+                    ? CommandBehavior.SequentialAccess : CommandBehavior.Default;
 
-                if (Configuration.UseSequentialAccess)
+                using var reader = await command.ExecuteReaderAsync(commandBehavior, token);
+                var i = 0L;
+                while (i++ < max && await reader.ReadAsync(token))
                 {
-                    commandBehavior = CommandBehavior.SequentialAccess;
+                    var persistent = ReadEvent(reader);
+                    callback(persistent);
                 }
-                else
-                {
-                    commandBehavior = CommandBehavior.Default;
-                }
-
-                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
-                {
-                    var i = 0L;
-                    while ((i++) < max && await reader.ReadAsync(cancellationToken))
-                    {
-                        var persistent = ReadEvent(reader);
-                        callback(persistent);
-                    }
-                    command.Cancel();
-                }
-            }
+                command.Cancel();
+            });
         }
 
         /// <summary>
@@ -560,45 +651,48 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="max">TBD</param>
         /// <param name="callback">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task<long> SelectByTagAsync(DbConnection connection, CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max,
+        public virtual async Task<long> SelectByTagAsync(
+            DbConnection connection,
+            CancellationToken cancellationToken,
+            string tag, 
+            long fromOffset,
+            long toOffset,
+            long max,
             Action<ReplayedTaggedMessage> callback)
         {
-            using (var command = GetCommand(connection, ByTagSql))
+            return await connection.ExecuteInTransaction(ReadIsolationLevel, cancellationToken, async (tx, token) =>
             {
-                var take = Math.Min(toOffset - fromOffset, max);
-                AddParameter(command, "@Tag", DbType.String, "%;" + tag + ";%");
-                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
-                AddParameter(command, "@Take", DbType.Int64, take);
-
-                CommandBehavior commandBehavior;
-
-                if (Configuration.UseSequentialAccess)
+                using (var command = GetCommand(connection, ByTagSql))
                 {
-                    commandBehavior = CommandBehavior.SequentialAccess;
-                }
-                else
-                {
-                    commandBehavior = CommandBehavior.Default;
-                }
+                    command.Transaction = tx;
+                    var take = Math.Min(toOffset - fromOffset, max);
+                    AddParameter(command, "@Tag", DbType.String, "%;" + tag + ";%");
+                    AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
+                    AddParameter(command, "@Take", DbType.Int64, take);
 
-                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
-                {
-                    while (await reader.ReadAsync(cancellationToken))
+                    var commandBehavior = Configuration.UseSequentialAccess 
+                        ? CommandBehavior.SequentialAccess : CommandBehavior.Default;
+
+                    using (var reader = await command.ExecuteReaderAsync(commandBehavior, token))
                     {
-                        var persistent = ReadEvent(reader);
-                        var ordering = reader.GetInt64(OrderingIndex);
-                        callback(new ReplayedTaggedMessage(persistent, tag, ordering));
+                        while (await reader.ReadAsync(token))
+                        {
+                            var persistent = ReadEvent(reader);
+                            var ordering = reader.GetInt64(OrderingIndex);
+                            callback(new ReplayedTaggedMessage(persistent, tag, ordering));
+                        }
                     }
                 }
-            }
 
-            using (var command = GetCommand(connection, HighestTagOrderingSql))
-            {
-                AddParameter(command, "@Tag", DbType.String, "%;" + tag + ";%");
-                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
-                var maxOrdering = (await command.ExecuteScalarAsync(cancellationToken)) as long? ?? 0L;
-                return maxOrdering;
-            }
+                using (var command = GetCommand(connection, HighestTagOrderingSql))
+                {
+                    command.Transaction = tx;
+                    AddParameter(command, "@Tag", DbType.String, "%;" + tag + ";%");
+                    AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
+                    var maxOrdering = (await command.ExecuteScalarAsync(token)) as long? ?? 0L;
+                    return maxOrdering;
+                }
+            });
         }
 
         public virtual async Task<long> SelectAllEventsAsync(
@@ -609,35 +703,40 @@ namespace Akka.Persistence.Sql.Common.Journal
             long max, 
             Action<ReplayedEvent> callback)
         {
-            long maxOrdering;
-            using (var command = GetCommand(connection, HighestOrderingSql))
+            return await connection.ExecuteInTransaction(ReadIsolationLevel, cancellationToken, async (tx, token) =>
             {
-                maxOrdering = (await command.ExecuteScalarAsync(cancellationToken)) as long? ?? 0L;
-            }
-
-            using (var command = GetCommand(connection, AllEventsSql))
-            {
-                var take = Math.Min(toOffset - fromOffset, max);
-
-                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
-                AddParameter(command, "@Take", DbType.Int64, take);
-
-                var commandBehavior = Configuration.UseSequentialAccess ? 
-                    CommandBehavior.SequentialAccess : 
-                    CommandBehavior.Default;
-
-                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
+                long maxOrdering;
+                using (var command = GetCommand(connection, HighestOrderingSql))
                 {
-                    while (await reader.ReadAsync(cancellationToken))
+                    command.Transaction = tx;
+                    maxOrdering = (await command.ExecuteScalarAsync(token)) as long? ?? 0L;
+                }
+
+                using (var command = GetCommand(connection, AllEventsSql))
+                {
+                    command.Transaction = tx;
+                    var take = Math.Min(toOffset - fromOffset, max);
+
+                    AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
+                    AddParameter(command, "@Take", DbType.Int64, take);
+
+                    var commandBehavior = Configuration.UseSequentialAccess ? 
+                        CommandBehavior.SequentialAccess : 
+                        CommandBehavior.Default;
+
+                    using (var reader = await command.ExecuteReaderAsync(commandBehavior, token))
                     {
-                        var persistent = ReadEvent(reader);
-                        var ordering = reader.GetInt64(OrderingIndex);
-                        callback(new ReplayedEvent(persistent, ordering));
+                        while (await reader.ReadAsync(token))
+                        {
+                            var persistent = ReadEvent(reader);
+                            var ordering = reader.GetInt64(OrderingIndex);
+                            callback(new ReplayedEvent(persistent, ordering));
+                        }
                     }
                 }
-            }
 
-            return maxOrdering;
+                return maxOrdering;
+            });
         }
 
         /// <summary>
@@ -649,22 +748,26 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public virtual async Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId)
         {
-            using (var command = GetCommand(connection, HighestSequenceNrSql))
+            return await connection.ExecuteInTransaction(ReadIsolationLevel, cancellationToken, async (tx, token) =>
             {
+                using var command = GetCommand(connection, HighestSequenceNrSql);
+                command.Transaction = tx;
                 AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
 
-                var result = await command.ExecuteScalarAsync(cancellationToken);
+                var result = await command.ExecuteScalarAsync(token);
                 return result is long ? Convert.ToInt64(result) : 0L;
-            }
+            });
         }
 
         public virtual async Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken)
         {
-            using (var command = GetCommand(connection, HighestOrderingSql))
+            return await connection.ExecuteInTransaction(ReadIsolationLevel, cancellationToken, async (tx, token) =>
             {
-                var result = await command.ExecuteScalarAsync(cancellationToken);
+                using var command = GetCommand(connection, HighestOrderingSql);
+                command.Transaction = tx;
+                var result = await command.ExecuteScalarAsync(token);
                 return result is long ? Convert.ToInt64(result) : 0L;
-            }
+            });
         }
 
         /// <summary>
@@ -676,12 +779,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public virtual async Task InsertBatchAsync(DbConnection connection, CancellationToken cancellationToken, WriteJournalBatch write)
         {
-            using var command = GetCommand(connection, InsertEventSql);
-            // Isolation.Serializable: Enforce a table lock during the transaction when we're writing the event to database
-            // This is to prevent a racy condition when a high volume write is coupled with eager reading of the table
-            // that results in an event row missing on the read side because 2 transactions were completed out of order
-            using (var tx = connection.BeginTransaction(IsolationLevel.Serializable))
+            await connection.ExecuteInTransaction(WriteIsolationLevel, cancellationToken, async (tx, token) =>
             {
+                using var command = GetCommand(connection, InsertEventSql);
                 command.Transaction = tx;
 
                 foreach (var entry in write.EntryTags)
@@ -690,12 +790,10 @@ namespace Akka.Persistence.Sql.Common.Journal
                     var tags = entry.Value;
 
                     WriteEvent(command, evt.WithTimestamp(TimestampProvider.GenerateTimestamp(evt)), tags);
-                    await command.ExecuteScalarAsync(cancellationToken);
+                    await command.ExecuteScalarAsync(token);
                     command.Parameters.Clear();
                 }
-
-                tx.Commit();
-            }
+            });
         }
 
         /// <summary>
@@ -708,40 +806,35 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public virtual async Task DeleteBatchAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long toSequenceNr)
         {
-            using (var deleteCommand = GetCommand(connection, DeleteBatchSql))
-            using (var highestSeqNrCommand = GetCommand(connection, HighestSequenceNrSql))
+            await connection.ExecuteInTransaction(WriteIsolationLevel, cancellationToken, async (tx, token) =>
             {
+                using var deleteCommand = GetCommand(connection, DeleteBatchSql);
+                using var highestSeqNrCommand = GetCommand(connection, HighestSequenceNrSql);
+                
+                deleteCommand.Transaction = tx;
+                highestSeqNrCommand.Transaction = tx;
+
                 AddParameter(highestSeqNrCommand, "@PersistenceId", DbType.String, persistenceId);
 
                 AddParameter(deleteCommand, "@PersistenceId", DbType.String, persistenceId);
                 AddParameter(deleteCommand, "@ToSequenceNr", DbType.Int64, toSequenceNr);
 
-                using (var tx = connection.BeginTransaction())
+                var res = await highestSeqNrCommand.ExecuteScalarAsync(token);
+                var highestSeqNr = res is long ? Convert.ToInt64(res) : 0L;
+
+                await deleteCommand.ExecuteNonQueryAsync(token);
+
+                if (highestSeqNr <= toSequenceNr)
                 {
-                    deleteCommand.Transaction = tx;
-                    highestSeqNrCommand.Transaction = tx;
+                    using var updateCommand = GetCommand(connection, UpdateSequenceNrSql);
+                    updateCommand.Transaction = tx;
 
-                    var res = await highestSeqNrCommand.ExecuteScalarAsync(cancellationToken);
-                    var highestSeqNr = res is long ? Convert.ToInt64(res) : 0L;
+                    AddParameter(updateCommand, "@PersistenceId", DbType.String, persistenceId);
+                    AddParameter(updateCommand, "@SequenceNr", DbType.Int64, highestSeqNr);
 
-                    await deleteCommand.ExecuteNonQueryAsync(cancellationToken);
-
-                    if (highestSeqNr <= toSequenceNr)
-                    {
-                        using (var updateCommand = GetCommand(connection, UpdateSequenceNrSql))
-                        {
-                            updateCommand.Transaction = tx;
-
-                            AddParameter(updateCommand, "@PersistenceId", DbType.String, persistenceId);
-                            AddParameter(updateCommand, "@SequenceNr", DbType.Int64, highestSeqNr);
-
-                            await updateCommand.ExecuteNonQueryAsync(cancellationToken);
-                            tx.Commit();
-                        }
-                    }
-                    else tx.Commit();
+                    await updateCommand.ExecuteNonQueryAsync(token);
                 }
-            }
+            });
         }
 
         /// <summary>
