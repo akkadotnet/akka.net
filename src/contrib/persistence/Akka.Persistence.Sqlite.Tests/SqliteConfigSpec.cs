@@ -43,8 +43,8 @@ namespace Akka.Persistence.Sqlite.Tests
             Assert.Equal("journal_metadata", config.GetString("metadata-table-name"));
             Assert.False(config.GetBoolean("auto-initialize"));
             Assert.Equal("Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common", config.GetString("timestamp-provider"));
-            Assert.Equal("read-committed", config.GetString("read-isolation-level"));
-            Assert.Equal("read-committed", config.GetString("write-isolation-level"));
+            Assert.Equal("unspecified", config.GetString("read-isolation-level"));
+            Assert.Equal("unspecified", config.GetString("write-isolation-level"));
             Assert.False(config.HasPath("schema-name"));
         }
 
@@ -62,8 +62,8 @@ namespace Akka.Persistence.Sqlite.Tests
             settings.SchemaName.Should().BeNull();
             settings.MetaTableName.Should().Be("journal_metadata");
             settings.TimestampProvider.Should().Be("Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common");
-            settings.ReadIsolationLevel.Should().Be(IsolationLevel.ReadCommitted);
-            settings.WriteIsolationLevel.Should().Be(IsolationLevel.ReadCommitted);
+            settings.ReadIsolationLevel.Should().Be(IsolationLevel.Unspecified);
+            settings.WriteIsolationLevel.Should().Be(IsolationLevel.Unspecified);
             settings.AutoInitialize.Should().BeFalse();
 
             // values should reflect configuration
@@ -94,8 +94,8 @@ namespace Akka.Persistence.Sqlite.Tests
             Assert.Equal(TimeSpan.FromSeconds(30), config.GetTimeSpan("connection-timeout", null));
             // This is changed from "snapshot-store" to "snapshot"
             Assert.Equal("snapshot", config.GetString("table-name", null));
-            Assert.Equal("read-committed", config.GetString("read-isolation-level"));
-            Assert.Equal("read-committed", config.GetString("write-isolation-level"));
+            Assert.Equal("unspecified", config.GetString("read-isolation-level"));
+            Assert.Equal("unspecified", config.GetString("write-isolation-level"));
             Assert.False(config.GetBoolean("auto-initialize", false));
         }
 
@@ -115,8 +115,8 @@ namespace Akka.Persistence.Sqlite.Tests
 #pragma warning disable CS0618
             settings.DefaultSerializer.Should().BeNull();
 #pragma warning restore CS0618
-            settings.ReadIsolationLevel.Should().Be(IsolationLevel.ReadCommitted);
-            settings.WriteIsolationLevel.Should().Be(IsolationLevel.ReadCommitted);
+            settings.ReadIsolationLevel.Should().Be(IsolationLevel.Unspecified);
+            settings.WriteIsolationLevel.Should().Be(IsolationLevel.Unspecified);
             settings.FullTableName.Should().Be(settings.TableName);
 
             // values should reflect configuration
