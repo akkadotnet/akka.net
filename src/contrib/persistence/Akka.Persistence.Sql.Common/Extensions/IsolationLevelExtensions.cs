@@ -22,7 +22,8 @@ namespace Akka.Persistence.Sql.Common.Extensions
             => level switch
             {
                 null => IsolationLevel.Unspecified,
-                "chaos" => IsolationLevel.Chaos,
+                "chaos" => // IsolationLevel.Chaos,
+                    throw new ConfigurationException($"{nameof(IsolationLevel)}.{IsolationLevel.Chaos} is not supported."),
                 "read-committed" => IsolationLevel.ReadCommitted,
                 "read-uncommitted" => IsolationLevel.ReadUncommitted,
                 "repeatable-read" => IsolationLevel.RepeatableRead,
@@ -30,7 +31,7 @@ namespace Akka.Persistence.Sql.Common.Extensions
                 "snapshot" => IsolationLevel.Snapshot,
                 "unspecified" => IsolationLevel.Unspecified,
                 _ => throw new ConfigurationException(
-                    "Unknown isolation-level value. Should be one of: chaos | read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified")
+                    "Unknown isolation-level value. Should be one of: read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified")
             };
         
     }
