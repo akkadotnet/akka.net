@@ -700,6 +700,7 @@ namespace Akka.Persistence
             public bool IsEmpty => _userStash.IsEmpty;
             public bool NonEmpty => _userStash.NonEmpty;
             public bool IsFull => _userStash.IsFull;
+            public int Capacity => _userStash.Capacity;
         }
     }
 }

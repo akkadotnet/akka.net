@@ -74,6 +74,11 @@ namespace Akka.Actor
         /// Always returns <c>false</c> when using an unbounded stash.
         /// </remarks>
         public bool IsFull { get; }
+        
+        /// <summary>
+        /// The total capacity of the stash.
+        /// </summary>
+        public int Capacity { get; }
     }
 }
 
