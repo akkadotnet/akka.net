@@ -806,27 +806,21 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public virtual async Task DeleteBatchAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long toSequenceNr)
         {
-            var res = await connection.ExecuteInTransaction(ReadIsolationLevel, cancellationToken, async (tx, token) =>
-            {
-                using var highestSeqNrCommand = GetCommand(connection, HighestSequenceNrSql);
-
-                highestSeqNrCommand.Transaction = tx;
-                
-                AddParameter(highestSeqNrCommand, "@PersistenceId", DbType.String, persistenceId);
-                
-                return await highestSeqNrCommand.ExecuteScalarAsync(token);
-            });
-            
-            var highestSeqNr = res is long ? Convert.ToInt64(res) : 0L;
-            
             await connection.ExecuteInTransaction(WriteIsolationLevel, cancellationToken, async (tx, token) =>
             {
                 using var deleteCommand = GetCommand(connection, DeleteBatchSql);
+                using var highestSeqNrCommand = GetCommand(connection, HighestSequenceNrSql);
                 
                 deleteCommand.Transaction = tx;
+                highestSeqNrCommand.Transaction = tx;
+
+                AddParameter(highestSeqNrCommand, "@PersistenceId", DbType.String, persistenceId);
 
                 AddParameter(deleteCommand, "@PersistenceId", DbType.String, persistenceId);
                 AddParameter(deleteCommand, "@ToSequenceNr", DbType.Int64, toSequenceNr);
+
+                var res = await highestSeqNrCommand.ExecuteScalarAsync(token);
+                var highestSeqNr = res is long ? Convert.ToInt64(res) : 0L;
 
                 await deleteCommand.ExecuteNonQueryAsync(token);
 
