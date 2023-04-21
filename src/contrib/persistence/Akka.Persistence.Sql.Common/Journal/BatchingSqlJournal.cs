@@ -402,7 +402,6 @@ namespace Akka.Persistence.Sql.Common.Journal
             ConnectionTimeout = connectionTimeout;
             WriteIsolationLevel = writeIsolationLevel;
             ReadIsolationLevel = readIsolationLevel;
-            ReadIsolationLevel = writeIsolationLevel;
             CircuitBreakerSettings = circuitBreakerSettings;
             ReplayFilterSettings = replayFilterSettings;
             NamingConventions = namingConventions;
