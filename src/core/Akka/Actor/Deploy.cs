@@ -29,6 +29,11 @@ namespace Akka.Actor
         /// This deployment does not have a mailbox associated with it.
         /// </summary>
         public static readonly string NoMailboxGiven = string.Empty;
+        
+        /// <summary>
+        /// No stash size set.
+        /// </summary>
+        public const int NoStashSize = -1;
 
         internal const string DispatcherSameAsParent = "..";
 
@@ -44,6 +49,7 @@ namespace Akka.Actor
         private readonly string _dispatcher;
         private readonly string _mailbox;
         private readonly string _path;
+        private readonly int _boundedStashSize;
         private readonly RouterConfig _routerConfig;
         private readonly Scope _scope;
 
@@ -58,6 +64,7 @@ namespace Akka.Actor
             _scope = NoScopeGiven;
             _dispatcher = NoDispatcherGiven;
             _mailbox = NoMailboxGiven;
+            _boundedStashSize = NoStashSize;
         }
 
         /// <summary>
@@ -118,6 +125,7 @@ namespace Akka.Actor
             _routerConfig = routerConfig;
             _scope = scope ?? NoScopeGiven;
             _dispatcher = dispatcher ?? NoDispatcherGiven;
+            _boundedStashSize = NoStashSize;
         }
 
         /// <summary>
@@ -139,6 +147,30 @@ namespace Akka.Actor
             _scope = scope ?? NoScopeGiven;
             _dispatcher = dispatcher ?? NoDispatcherGiven;
             _mailbox = mailbox ?? NoMailboxGiven;
+            _boundedStashSize = NoStashSize; //means unset
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Deploy"/> class.
+        /// </summary>
+        /// <param name="path">The path to deploy the actor.</param>
+        /// <param name="config">The configuration used when deploying the actor.</param>
+        /// <param name="routerConfig">The router used in this deployment.</param>
+        /// <param name="scope">The scope to bind to this deployment.</param>
+        /// <param name="dispatcher">The dispatcher used in this deployment.</param>
+        /// <param name="mailbox">The mailbox configured for the actor used in this deployment.</param>
+        /// <param name="stashSize">If this actor is using a stash, the bounded stash size.</param>
+        public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher,
+            string mailbox, int stashSize)
+            : this()
+        {
+            _path = path;
+            _config = config;
+            _routerConfig = routerConfig;
+            _scope = scope ?? NoScopeGiven;
+            _dispatcher = dispatcher ?? NoDispatcherGiven;
+            _mailbox = mailbox ?? NoMailboxGiven;
+            _boundedStashSize = stashSize;
         }
 
         /// <summary>
@@ -190,6 +222,20 @@ namespace Akka.Actor
         }
 
         /// <summary>
+        /// The size of the <see cref="IStash"/>, if there's one configured.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to -1, which means an unbounded stash.
+        /// </remarks>
+        public int StashSize
+        {
+            get
+            {
+                return _boundedStashSize;
+            }
+        }
+
+        /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
@@ -203,6 +249,7 @@ namespace Akka.Actor
                     string.Equals(_mailbox, other._mailbox)) &&
                    string.Equals(_dispatcher, other._dispatcher) &&
                    string.Equals(_path, other._path) &&
+                     _boundedStashSize == other._boundedStashSize &&
                    _routerConfig.Equals(other._routerConfig) &&
                    ((_config.IsNullOrEmpty() && other._config.IsNullOrEmpty()) ||
                     _config.Root.ToString().Equals(other._config.Root.ToString())) &&
@@ -223,7 +270,8 @@ namespace Akka.Actor
                 Path = Path,
                 Config = Config,
                 Mailbox = Mailbox,
-                Dispatcher = Dispatcher
+                Dispatcher = Dispatcher,
+                StashSize = StashSize
             };
         }
 
@@ -268,7 +316,8 @@ namespace Akka.Actor
                 RouterConfig,
                 scope ?? Scope,
                 Dispatcher,
-                Mailbox
+                Mailbox,
+                StashSize
                 );
         }
 
@@ -290,7 +339,8 @@ namespace Akka.Actor
                 RouterConfig,
                 Scope,
                 Dispatcher,
-                mailbox
+                mailbox,
+                StashSize
                 );
         }
 
@@ -312,7 +362,8 @@ namespace Akka.Actor
                 RouterConfig,
                 Scope,
                 dispatcher,
-                Mailbox
+                Mailbox,
+                StashSize
                 );
         }
 
@@ -334,7 +385,31 @@ namespace Akka.Actor
                 routerConfig,
                 Scope,
                 Dispatcher,
-                Mailbox
+                Mailbox,
+                StashSize
+                );
+        }
+        
+        /// <summary>
+        /// Creates a new <see cref="Akka.Actor.Deploy" /> with a given <paramref name="stashSize" />.
+        ///
+        /// <note>
+        /// This method is immutable and returns a new instance of <see cref="Akka.Actor.Deploy" />.
+        /// </note>
+        /// </summary>
+        /// The size of the <see cref="IStash"/>, if there's one configured.
+        /// <returns>A new <see cref="Akka.Actor.Deploy" /> with a given <paramref name="stashSize" />.</returns>
+        public virtual Deploy WithStashSize(int stashSize)
+        {
+            return new Deploy
+                (
+                Path,
+                Config,
+                RouterConfig,
+                Scope,
+                Dispatcher,
+                Mailbox,
+                stashSize
                 );
         }
 
@@ -368,6 +443,11 @@ namespace Akka.Actor
             /// The dispatcher used in this deployment.
             /// </summary>
             public string Dispatcher { get; set; }
+            
+            /// <summary>
+            /// The size of the stash used in this deployment.
+            /// </summary>
+            public int StashSize { get; set; }
 
             /// <summary>
             /// Creates a <see cref="Deploy"/> encapsulated by this surrogate.

@@ -55,8 +55,10 @@ namespace Akka.Actor.Internal
             }
             _actorCell = actorCell;
 
-            // The capacity of the stash. Configured in the actor's mailbox or dispatcher config.
-            Capacity = context.System.Mailboxes.StashCapacity(context.Props.Dispatcher, context.Props.Mailbox);
+            // The capacity of the stash. Configured in the actor's deployment. If not there, then the mailbox or dispatcher config.
+            Capacity = actorCell.Props.Deploy.StashSize == -1
+                ? Capacity = context.System.Mailboxes.StashCapacity(context.Props.Dispatcher, context.Props.Mailbox)
+                : Capacity = actorCell.Props.Deploy.StashSize;
         }
 
         private int _currentEnvelopeId;
