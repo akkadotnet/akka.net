@@ -43,14 +43,37 @@ namespace Akka.Actor
         /// Returns all messages and clears the stash.
         /// The stash is guaranteed to be empty afterwards.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The previous stashed messages.</returns>
         IEnumerable<Envelope> ClearStash();
 
         /// <summary>
-        /// TBD
+        /// Prepend a set of envelopes to the front of the stash.
         /// </summary>
         /// <param name="envelopes">TBD</param>
         void Prepend(IEnumerable<Envelope> envelopes);
+        
+        /// <summary>
+        /// The number of messages currently inside the stash.
+        /// </summary>
+        public int Count { get; }
+        
+        /// <summary>
+        /// Returns <c>true</c> when <see cref="Count"/> is zero.
+        /// </summary>
+        public bool IsEmpty { get; }
+        
+        /// <summary>
+        /// Returns <c>true</c> when <see cref="Count"/> is greater than zero.
+        /// </summary>
+        public bool NonEmpty { get; }
+        
+        /// <summary>
+        /// When using a bounded stash, this returns <c>true</c> when the stash is full.
+        /// </summary>
+        /// <remarks>
+        /// Always returns <c>false</c> when using an unbounded stash.
+        /// </remarks>
+        public bool IsFull { get; }
     }
 }
 

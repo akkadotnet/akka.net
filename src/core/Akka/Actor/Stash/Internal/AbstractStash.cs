@@ -189,6 +189,11 @@ namespace Akka.Actor.Internal
             }
         }
 
+        public int Count => _theStash.Count;
+        public bool IsEmpty => Count == 0;
+        public bool NonEmpty => !IsEmpty;
+        public bool IsFull => _theStash.Count >= _capacity;
+
         /// <summary>
         /// Enqueues <paramref name="msg"/> at the first position in the mailbox. If the message contained in
         /// the envelope is a <see cref="Terminated"/> message, it will be ensured that it can be re-received
