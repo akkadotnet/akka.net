@@ -1134,6 +1134,7 @@ namespace Akka.Actor
     }
     public interface IStash
     {
+        int Capacity { get; }
         int Count { get; }
         bool IsEmpty { get; }
         bool IsFull { get; }
@@ -1937,6 +1938,7 @@ namespace Akka.Actor.Internal
     public abstract class AbstractStash : Akka.Actor.IStash
     {
         protected AbstractStash(Akka.Actor.IActorContext context) { }
+        public int Capacity { get; }
         public int Count { get; }
         public bool IsEmpty { get; }
         public bool IsFull { get; }
