@@ -49,7 +49,7 @@ namespace Akka.Actor
         private readonly string _dispatcher;
         private readonly string _mailbox;
         private readonly string _path;
-        private readonly int _boundedStashSize;
+        private readonly int _boundedStashCapacity;
         private readonly RouterConfig _routerConfig;
         private readonly Scope _scope;
 
@@ -64,7 +64,7 @@ namespace Akka.Actor
             _scope = NoScopeGiven;
             _dispatcher = NoDispatcherGiven;
             _mailbox = NoMailboxGiven;
-            _boundedStashSize = NoStashSize;
+            _boundedStashCapacity = NoStashSize;
         }
 
         /// <summary>
@@ -125,7 +125,7 @@ namespace Akka.Actor
             _routerConfig = routerConfig;
             _scope = scope ?? NoScopeGiven;
             _dispatcher = dispatcher ?? NoDispatcherGiven;
-            _boundedStashSize = NoStashSize;
+            _boundedStashCapacity = NoStashSize;
         }
 
         /// <summary>
@@ -147,7 +147,7 @@ namespace Akka.Actor
             _scope = scope ?? NoScopeGiven;
             _dispatcher = dispatcher ?? NoDispatcherGiven;
             _mailbox = mailbox ?? NoMailboxGiven;
-            _boundedStashSize = NoStashSize; //means unset
+            _boundedStashCapacity = NoStashSize; //means unset
         }
 
         /// <summary>
@@ -159,9 +159,9 @@ namespace Akka.Actor
         /// <param name="scope">The scope to bind to this deployment.</param>
         /// <param name="dispatcher">The dispatcher used in this deployment.</param>
         /// <param name="mailbox">The mailbox configured for the actor used in this deployment.</param>
-        /// <param name="stashSize">If this actor is using a stash, the bounded stash size.</param>
+        /// <param name="stashCapacity">If this actor is using a stash, the bounded stash size.</param>
         public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher,
-            string mailbox, int stashSize)
+            string mailbox, int stashCapacity)
             : this()
         {
             _path = path;
@@ -170,7 +170,7 @@ namespace Akka.Actor
             _scope = scope ?? NoScopeGiven;
             _dispatcher = dispatcher ?? NoDispatcherGiven;
             _mailbox = mailbox ?? NoMailboxGiven;
-            _boundedStashSize = stashSize;
+            _boundedStashCapacity = stashCapacity;
         }
 
         /// <summary>
@@ -227,11 +227,11 @@ namespace Akka.Actor
         /// <remarks>
         /// Defaults to -1, which means an unbounded stash.
         /// </remarks>
-        public int StashSize
+        public int StashCapacity
         {
             get
             {
-                return _boundedStashSize;
+                return _boundedStashCapacity;
             }
         }
 
@@ -249,7 +249,7 @@ namespace Akka.Actor
                     string.Equals(_mailbox, other._mailbox)) &&
                    string.Equals(_dispatcher, other._dispatcher) &&
                    string.Equals(_path, other._path) &&
-                     _boundedStashSize == other._boundedStashSize &&
+                     _boundedStashCapacity == other._boundedStashCapacity &&
                    _routerConfig.Equals(other._routerConfig) &&
                    ((_config.IsNullOrEmpty() && other._config.IsNullOrEmpty()) ||
                     _config.Root.ToString().Equals(other._config.Root.ToString())) &&
@@ -271,7 +271,7 @@ namespace Akka.Actor
                 Config = Config,
                 Mailbox = Mailbox,
                 Dispatcher = Dispatcher,
-                StashSize = StashSize
+                StashSize = StashCapacity
             };
         }
 
@@ -294,7 +294,8 @@ namespace Akka.Actor
                 RouterConfig.WithFallback(other.RouterConfig),
                 Scope.WithFallback(other.Scope),
                 Dispatcher == NoDispatcherGiven ? other.Dispatcher : Dispatcher,
-                Mailbox == NoMailboxGiven ? other.Mailbox : Mailbox
+                Mailbox == NoMailboxGiven ? other.Mailbox : Mailbox,
+                StashCapacity == -1 ? other.StashCapacity : StashCapacity
                 );
         }
 
@@ -317,7 +318,7 @@ namespace Akka.Actor
                 scope ?? Scope,
                 Dispatcher,
                 Mailbox,
-                StashSize
+                StashCapacity
                 );
         }
 
@@ -340,7 +341,7 @@ namespace Akka.Actor
                 Scope,
                 Dispatcher,
                 mailbox,
-                StashSize
+                StashCapacity
                 );
         }
 
@@ -363,7 +364,7 @@ namespace Akka.Actor
                 Scope,
                 dispatcher,
                 Mailbox,
-                StashSize
+                StashCapacity
                 );
         }
 
@@ -386,7 +387,7 @@ namespace Akka.Actor
                 Scope,
                 Dispatcher,
                 Mailbox,
-                StashSize
+                StashCapacity
                 );
         }
         

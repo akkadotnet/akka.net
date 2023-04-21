@@ -90,6 +90,11 @@ namespace Akka.Tests.Actor.Stash
     {
         private static Config SpecConfig => ConfigurationFactory.ParseString(@$"
             akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
+            akka.actor.deployment{{
+                /configStashingActor {{
+                    stash-capacity = 2
+                }}
+            }}
             my-dispatcher-1 {{
                 mailbox-type = ""{typeof(Bounded10).AssemblyQualifiedName}""
                 mailbox-capacity = 10
@@ -155,16 +160,16 @@ namespace Akka.Tests.Actor.Stash
                 ExpectMsg<DeadLetter>().Equals(new DeadLetter("hello" + n, TestActor, stasher));
         }
 
-        private void TestStashOverflowException(IActorRef stasher)
+        private void TestStashOverflowException(IActorRef stasher, int cap = 20)
         {
             // fill up stash
-            for (var n = 1; n <= 20; n++)
+            for (var n = 1; n <= cap; n++)
             {
                 stasher.Tell("hello" + n);
                 ExpectMsg("ok");
             }
 
-            stasher.Tell("hello21");
+            stasher.Tell($"hello{cap+1}");
             ExpectMsg("STASHOVERFLOW");
 
             // stashed messages are sent to deadletters when stasher is stopped
@@ -205,6 +210,14 @@ namespace Akka.Tests.Actor.Stash
         {
             var stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithDispatcher("my-aliased-dispatcher-2"));
             TestStashOverflowException(stasher);
+        }
+
+        [Fact]
+        public void An_actor_with_stash_must_get_stash_capacity_from_deployment()
+        {
+            // deployment configuration settings should override dispatcher settings
+            var stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithDispatcher("my-aliased-dispatcher-2"), "configStashingActor");
+            TestStashOverflowException(stasher, 2);
         }
     }
 }
