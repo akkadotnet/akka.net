@@ -695,6 +695,12 @@ namespace Akka.Persistence
             {
                 _userStash.Prepend(envelopes);
             }
+
+            public int Count => _userStash.Count;
+            public bool IsEmpty => _userStash.IsEmpty;
+            public bool NonEmpty => _userStash.NonEmpty;
+            public bool IsFull => _userStash.IsFull;
+            public int Capacity => _userStash.Capacity;
         }
     }
 }
