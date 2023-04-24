@@ -655,7 +655,7 @@ namespace Akka.Actor
             public string Path { get; set; }
             public Akka.Routing.RouterConfig RouterConfig { get; set; }
             public Akka.Actor.Scope Scope { get; set; }
-            public int StashSize { get; set; }
+            public int StashCapacity { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }

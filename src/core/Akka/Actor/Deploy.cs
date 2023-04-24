@@ -271,7 +271,7 @@ namespace Akka.Actor
                 Config = Config,
                 Mailbox = Mailbox,
                 Dispatcher = Dispatcher,
-                StashSize = StashCapacity
+                StashCapacity = StashCapacity
             };
         }
 
@@ -448,7 +448,7 @@ namespace Akka.Actor
             /// <summary>
             /// The size of the stash used in this deployment.
             /// </summary>
-            public int StashSize { get; set; }
+            public int StashCapacity { get; set; }
 
             /// <summary>
             /// Creates a <see cref="Deploy"/> encapsulated by this surrogate.
@@ -457,7 +457,7 @@ namespace Akka.Actor
             /// <returns>The <see cref="Deploy"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                return new Deploy(Path, Config, RouterConfig, Scope, Dispatcher, Mailbox);
+                return new Deploy(Path, Config, RouterConfig, Scope, Dispatcher, Mailbox, StashCapacity);
             }
         }
     }
