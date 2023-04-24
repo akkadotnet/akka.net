@@ -27,7 +27,7 @@ public class StashCapacitySpecs : AkkaSpec
     public async Task ShouldGetAccurateStashReadingForUnboundedStash()
     {
         // we're going to explicitly set the stash size here - this should be ignored since the stash type is unbounded
-        var stashActor = Sys.ActorOf(Props.Create(() => new UnboundedStashActor()).WithStashSize(10));
+        var stashActor = Sys.ActorOf(Props.Create(() => new UnboundedStashActor()).WithStashCapacity(10));
         stashActor.Tell(new StashMessage("1"));
         stashActor.Tell(new StashMessage("2"));
         stashActor.Tell(GetStashReadout.Instance);

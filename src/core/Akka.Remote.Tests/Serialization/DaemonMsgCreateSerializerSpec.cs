@@ -72,7 +72,7 @@ namespace Akka.Remote.Tests.Serialization
                 ConfigurationFactory.ParseString("a=1"),
                 new RoundRobinPool(5, null, supervisorStrategy, null),
                 new RemoteScope(new Address("akka", "Test", "host1", 1921)),
-                "mydispatcher");
+                "mydispatcher").WithStashCapacity(10);
             var deploy2 = new Deploy("path2",
                 ConfigurationFactory.ParseString("a=2"),
                 FromConfig.Instance,

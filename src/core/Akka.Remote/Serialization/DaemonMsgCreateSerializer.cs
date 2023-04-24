@@ -105,7 +105,7 @@ namespace Akka.Remote.Serialization
         {
             var deployBuilder = new Proto.Msg.DeployData();
             deployBuilder.Path = deploy.Path;
-
+            deployBuilder.StashSize = deploy.StashCapacity;
             {
                 var tuple = Serialize(deploy.Config);
                 deployBuilder.ConfigSerializerId = tuple.Item1;
@@ -113,7 +113,7 @@ namespace Akka.Remote.Serialization
                 deployBuilder.Config = ByteString.CopyFrom(tuple.Item4);
             }
 
-            if (deploy.RouterConfig != NoRouter.Instance)
+            if (!deploy.RouterConfig.Equals(NoRouter.Instance))
             {
                 var tuple = Serialize(deploy.RouterConfig);
                 deployBuilder.RouterConfigSerializerId = tuple.Item1;

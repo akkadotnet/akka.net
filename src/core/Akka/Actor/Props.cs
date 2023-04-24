@@ -477,12 +477,12 @@ namespace Akka.Actor
         /// If the actor doesn't use an <see cref="IStash"/> or if it uses an <see cref="IWithUnboundedStash"/>, then this
         /// setting will be ignored.
         /// </remarks>
-        /// <param name="stashSize">The stash size to use when creating the actor.</param>
+        /// <param name="stashCapacity">The stash size to use when creating the actor.</param>
         /// <returns>A new <see cref="Akka.Actor.Props" /> with the provided stash size..</returns>
-        public Props WithStashSize(int stashSize)
+        public Props WithStashCapacity(int stashCapacity)
         {
             var copy = Copy();
-            copy.Deploy = Deploy.WithStashSize(stashSize);
+            copy.Deploy = Deploy.WithStashCapacity(stashCapacity);
             return copy;
         }
 

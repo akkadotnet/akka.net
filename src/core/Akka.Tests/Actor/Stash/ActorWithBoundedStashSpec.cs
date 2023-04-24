@@ -231,7 +231,7 @@ namespace Akka.Tests.Actor.Stash
         public void An_actor_with_stash_must_get_stash_capacity_from_deployment_overridden_by_config()
         {
             // deployment configuration settings should override dispatcher settings
-            var stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithStashSize(10).WithDispatcher("my-aliased-dispatcher-2"), "configStashingActor");
+            var stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithStashCapacity(10).WithDispatcher("my-aliased-dispatcher-2"), "configStashingActor");
             
             // HOCON value is 2
             TestStashOverflowException(stasher, 2);
@@ -241,7 +241,7 @@ namespace Akka.Tests.Actor.Stash
         public void An_actor_with_stash_must_get_stash_capacity_from_deployment_code()
         {
             // deployment configuration settings should override dispatcher settings
-            var stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithStashSize(10).WithDispatcher("my-aliased-dispatcher-2"));
+            var stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithStashCapacity(10).WithDispatcher("my-aliased-dispatcher-2"));
             TestStashOverflowException(stasher, 10);
         }
     }

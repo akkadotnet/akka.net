@@ -400,7 +400,7 @@ namespace Akka.Actor
         /// </summary>
         /// The size of the <see cref="IStash"/>, if there's one configured.
         /// <returns>A new <see cref="Akka.Actor.Deploy" /> with a given <paramref name="stashSize" />.</returns>
-        public virtual Deploy WithStashSize(int stashSize)
+        public virtual Deploy WithStashCapacity(int stashSize)
         {
             return new Deploy
                 (

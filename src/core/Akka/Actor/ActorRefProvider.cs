@@ -556,7 +556,7 @@ namespace Akka.Actor
                     if (propsDeploy.Dispatcher != Deploy.NoDispatcherGiven)
                         props2 = props2.WithDispatcher(propsDeploy.Dispatcher);
                     if(propsDeploy.StashCapacity != Deploy.NoStashSize)
-                        props2 = props2.WithStashSize(propsDeploy.StashCapacity);
+                        props2 = props2.WithStashCapacity(propsDeploy.StashCapacity);
                 }
 
                 if (!system.Dispatchers.HasDispatcher(props2.Dispatcher))
