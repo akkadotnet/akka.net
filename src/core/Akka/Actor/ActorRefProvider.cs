@@ -540,7 +540,7 @@ namespace Akka.Actor
                 if (Settings.DebugRouterMisconfiguration)
                 {
                     var d = Deployer.Lookup(path);
-                    if (d != null && !(d.RouterConfig is NoRouter))
+                    if (d is { RouterConfig: not NoRouter })
                         Log.Warning("Configuration says that [{0}] should be a router, but code disagrees. Remove the config or add a RouterConfig to its Props.",
                                     path);
                 }
@@ -555,6 +555,8 @@ namespace Akka.Actor
                         props2 = props2.WithMailbox(propsDeploy.Mailbox);
                     if (propsDeploy.Dispatcher != Deploy.NoDispatcherGiven)
                         props2 = props2.WithDispatcher(propsDeploy.Dispatcher);
+                    if(propsDeploy.StashCapacity != Deploy.NoStashSize)
+                        props2 = props2.WithStashCapacity(propsDeploy.StashCapacity);
                 }
 
                 if (!system.Dispatchers.HasDispatcher(props2.Dispatcher))
