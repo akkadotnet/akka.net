@@ -55,8 +55,10 @@ namespace Akka.Actor.Internal
             }
             _actorCell = actorCell;
 
-            // The capacity of the stash. Configured in the actor's mailbox or dispatcher config.
-            Capacity = context.System.Mailboxes.StashCapacity(context.Props.Dispatcher, context.Props.Mailbox);
+            // The capacity of the stash. Configured in the actor's deployment. If not there, then the mailbox or dispatcher config.
+            Capacity = actorCell.Props.Deploy.StashCapacity == Deploy.NoStashSize
+                ? Capacity = context.System.Mailboxes.StashCapacity(context.Props.Dispatcher, context.Props.Mailbox)
+                : Capacity = actorCell.Props.Deploy.StashCapacity;
         }
 
         private int _currentEnvelopeId;
@@ -195,7 +197,7 @@ namespace Akka.Actor.Internal
         /// <remarks>
         /// If capacity is negative, then we're using an Unbounded stash.
         /// </remarks>
-        public int Capacity { get; }
+        public virtual int Capacity { get; }
 
         /// <summary>
         /// Enqueues <paramref name="msg"/> at the first position in the mailbox. If the message contained in

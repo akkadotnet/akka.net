@@ -39,18 +39,22 @@ namespace Akka.Tests.Actor.Stash
         private void AfterWorldBehavior(object message) => Stash.Stash();
     }
 
-    public class StashingActorWithOverflow : UntypedActor, IWithBoundedStash
+    public class StashingActorWithOverflow : UntypedActor, IWithStash
     {
-        private int numStashed = 0;
+        private int _numStashed = 0;
+
+        public StashingActorWithOverflow()
+        {
+        }
 
         public IStash Stash { get; set; }
 
         protected override void OnReceive(object message)
         {
-            if (!(message is string s) || !s.StartsWith("hello"))
+            if (message is not string s || !s.StartsWith("hello"))
                 return;
 
-            numStashed++;
+            _numStashed++;
             try
             {
                 Stash.Stash();
@@ -58,14 +62,14 @@ namespace Akka.Tests.Actor.Stash
             }
             catch (Exception ex) when (ex is StashOverflowException)
             {
-                if (numStashed == 21)
+                if (_numStashed > Stash.Capacity)
                 {
                     Sender.Tell("STASHOVERFLOW");
                     Context.Stop(Self);
                 }
                 else
                 {
-                    Sender.Tell("Unexpected StashOverflowException: " + numStashed);
+                    Sender.Tell("Unexpected StashOverflowException: " + _numStashed);
                 }
             }
         }
@@ -90,6 +94,11 @@ namespace Akka.Tests.Actor.Stash
     {
         private static Config SpecConfig => ConfigurationFactory.ParseString(@$"
             akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
+            akka.actor.deployment{{
+                /configStashingActor {{
+                    stash-capacity = 2
+                }}
+            }}
             my-dispatcher-1 {{
                 mailbox-type = ""{typeof(Bounded10).AssemblyQualifiedName}""
                 mailbox-capacity = 10
@@ -155,20 +164,20 @@ namespace Akka.Tests.Actor.Stash
                 ExpectMsg<DeadLetter>().Equals(new DeadLetter("hello" + n, TestActor, stasher));
         }
 
-        private void TestStashOverflowException(IActorRef stasher)
+        private void TestStashOverflowException(IActorRef stasher, int cap = 20)
         {
             // fill up stash
-            for (var n = 1; n <= 20; n++)
+            for (var n = 1; n <= cap; n++)
             {
                 stasher.Tell("hello" + n);
                 ExpectMsg("ok");
             }
 
-            stasher.Tell("hello21");
+            stasher.Tell($"hello{cap+1}");
             ExpectMsg("STASHOVERFLOW");
 
             // stashed messages are sent to deadletters when stasher is stopped
-            for (var n = 1; n <= 20; n++)
+            for (var n = 1; n <= cap; n++)
                 ExpectMsg<DeadLetter>().Equals(new DeadLetter("hello" + n, TestActor, stasher));
         }
 
@@ -205,6 +214,35 @@ namespace Akka.Tests.Actor.Stash
         {
             var stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithDispatcher("my-aliased-dispatcher-2"));
             TestStashOverflowException(stasher);
+        }
+
+        [Fact]
+        public void An_actor_with_stash_must_get_stash_capacity_from_deployment()
+        {
+            // deployment configuration settings should override dispatcher settings
+            var stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithDispatcher("my-aliased-dispatcher-2"), "configStashingActor");
+            TestStashOverflowException(stasher, 2);
+        }
+        
+        /// <summary>
+        /// HOCON value should always beat the C# value
+        /// </summary>
+        [Fact]
+        public void An_actor_with_stash_must_get_stash_capacity_from_deployment_overridden_by_config()
+        {
+            // deployment configuration settings should override dispatcher settings
+            var stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithStashCapacity(10).WithDispatcher("my-aliased-dispatcher-2"), "configStashingActor");
+            
+            // HOCON value is 2
+            TestStashOverflowException(stasher, 2);
+        }
+
+        [Fact]
+        public void An_actor_with_stash_must_get_stash_capacity_from_deployment_code()
+        {
+            // deployment configuration settings should override dispatcher settings
+            var stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithStashCapacity(10).WithDispatcher("my-aliased-dispatcher-2"));
+            TestStashOverflowException(stasher, 10);
         }
     }
 }

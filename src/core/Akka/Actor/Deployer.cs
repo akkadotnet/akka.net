@@ -88,7 +88,7 @@ namespace Akka.Actor
         /// </exception>
         public void SetDeploy(Deploy deploy)
         {
-            void add(IList<string> path, Deploy d)
+            void Add(IList<string> path, Deploy d)
             {
                 var w = _deployments.Value;
                 foreach (var t in path)
@@ -101,11 +101,11 @@ namespace Akka.Actor
                             $"Illegal actor name [{t}] in deployment [${d.Path}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
                     }
                 }
-                if (!_deployments.CompareAndSet(w, w.Insert(path, d))) add(path, d);
+                if (!_deployments.CompareAndSet(w, w.Insert(path, d))) Add(path, d);
             }
 
             var elements = deploy.Path.Split('/').Drop(1).ToList();
-            add(elements, deploy);
+            Add(elements, deploy);
         }
 
         /// <summary>
@@ -122,7 +122,8 @@ namespace Akka.Actor
             var router = CreateRouterConfig(routerType, deployment);
             var dispatcher = deployment.GetString("dispatcher", "");
             var mailbox = deployment.GetString("mailbox", "");
-            var deploy = new Deploy(key, deployment, router, Deploy.NoScopeGiven, dispatcher, mailbox);
+            var stashCapacity = deployment.GetInt("stash-capacity", Deploy.NoStashSize);
+            var deploy = new Deploy(key, deployment, router, Deploy.NoScopeGiven, dispatcher, mailbox, stashCapacity);
             return deploy;
         }
 

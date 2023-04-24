@@ -22,6 +22,8 @@ namespace Akka.Actor.Internal
             : base(context)
         {
         }
+        
+        public override int Capacity => Deploy.NoStashSize; // stash must be unbounded
     }
 }
 
