@@ -5,8 +5,9 @@ title: Event Bus
 # EventBus
 
 EventBus provides several types of custom messages to subscribe to:
+
 1. DeadLetter - messages that are not delivered to actor
-2. UnhandledMessage - messages which actor receives and doesn't understand 
+2. UnhandledMessage - messages which actor receives and doesn't understand
 3. SuppressedDeadLetter - similar to DeadLetter with the slight twist of NOT being logged by the default dead letters listener
 4. Dropped - messages dropped due to overfull queues or routers with no routees
 5. AllDeadLetters - shortcut for all types of beforementioned messages
@@ -65,7 +66,7 @@ sample capture
 DeadLetter captured: another message, sender: [akka://MySystem/deadLetters], recipient: [akka://MySystem/user/ExpendableActor#1469246785]
 ```
 
-## Subscribing to Unhandled messages
+## Subscribing to Unhandled Messages
 
 The following example demonstrates the capturing of unhandled messages. The dedicated actor will output captured unhandled message to the console.
 
@@ -101,7 +102,7 @@ sample capture
 DeadLetter from [akka://MySystem/deadLetters] to [akka://MySystem/user/$a#965879198]: <Hello>
 ```
 
-## Subscribing to AllDeadLetters messages
+## Subscribing to AllDeadLetters Messages
 
 The following example demonstrates the capturing of all unhandled messages types. The dedicated actor will output captured unhandled messages to the console.
 
