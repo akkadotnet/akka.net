@@ -10,7 +10,7 @@ EventBus provides several types of custom messages to subscribe to:
 2. UnhandledMessage - messages which actor receives and doesn't understand
 3. SuppressedDeadLetter - similar to DeadLetter with the slight twist of NOT being logged by the default dead letters listener
 4. Dropped - messages dropped due to overfull queues or routers with no routees
-5. AllDeadLetters - shortcut for all types of beforementioned messages
+5. AllDeadLetters - shortcut for all types of unhandled messages
 
 ## Subscribing to Dead Letter Messages
 
