@@ -36,8 +36,8 @@ namespace Akka.Actor
     {
         private const string NullActorTypeExceptionText = "Props must be instantiated with an actor type.";
 
-        private static readonly Deploy DefaultDeploy = new Deploy();
-        private static readonly object[] NoArgs = { };
+        private static readonly Deploy DefaultDeploy = new();
+        private static readonly object[] NoArgs = Array.Empty<object>();
 
         /// <summary>
         ///     A pre-configured <see cref="Akka.Actor.Props" /> that doesn't create actors.
@@ -464,6 +464,25 @@ namespace Akka.Actor
         {
             var copy = Copy();
             copy.Deploy = Deploy.WithRouterConfig(routerConfig);
+            return copy;
+        }
+        
+        /// <summary>
+        ///     Creates a new <see cref="Akka.Actor.Props" /> with a given stash size.
+        ///     <note>
+        ///         This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
+        ///     </note>
+        /// </summary>
+        /// <remarks>
+        /// If the actor doesn't use an <see cref="IStash"/> or if it uses an <see cref="IWithUnboundedStash"/>, then this
+        /// setting will be ignored.
+        /// </remarks>
+        /// <param name="stashSize">The stash size to use when creating the actor.</param>
+        /// <returns>A new <see cref="Akka.Actor.Props" /> with the provided stash size..</returns>
+        public Props WithStashSize(int stashSize)
+        {
+            var copy = Copy();
+            copy.Deploy = Deploy.WithStashSize(stashSize);
             return copy;
         }
 

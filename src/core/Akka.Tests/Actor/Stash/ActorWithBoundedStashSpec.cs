@@ -41,16 +41,22 @@ namespace Akka.Tests.Actor.Stash
 
     public class StashingActorWithOverflow : UntypedActor, IWithBoundedStash
     {
-        private int numStashed = 0;
+        private int _numStashed = 0;
+        private readonly int _stashCapacity;
+
+        public StashingActorWithOverflow(int stashCapacity = 20)
+        {
+            _stashCapacity = stashCapacity;
+        }
 
         public IStash Stash { get; set; }
 
         protected override void OnReceive(object message)
         {
-            if (!(message is string s) || !s.StartsWith("hello"))
+            if (message is not string s || !s.StartsWith("hello"))
                 return;
 
-            numStashed++;
+            _numStashed++;
             try
             {
                 Stash.Stash();
@@ -58,14 +64,14 @@ namespace Akka.Tests.Actor.Stash
             }
             catch (Exception ex) when (ex is StashOverflowException)
             {
-                if (numStashed == 21)
+                if (_numStashed > _stashCapacity)
                 {
                     Sender.Tell("STASHOVERFLOW");
                     Context.Stop(Self);
                 }
                 else
                 {
-                    Sender.Tell("Unexpected StashOverflowException: " + numStashed);
+                    Sender.Tell("Unexpected StashOverflowException: " + _numStashed);
                 }
             }
         }
