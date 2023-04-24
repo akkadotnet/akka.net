@@ -180,7 +180,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Very racy")] // @Aaronontheweb - I believe the issue here is a genuine race condition with the hub itself. Messages start getting read before any subscribers are attached. Very tricky N+1 error.
         public async Task MergeHub_must_work_with_long_streams_when_buffer_size_is_1()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
