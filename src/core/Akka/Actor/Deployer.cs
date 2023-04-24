@@ -122,7 +122,7 @@ namespace Akka.Actor
             var router = CreateRouterConfig(routerType, deployment);
             var dispatcher = deployment.GetString("dispatcher", "");
             var mailbox = deployment.GetString("mailbox", "");
-            var stashCapacity = deployment.GetInt("stash-capacity", -1);
+            var stashCapacity = deployment.GetInt("stash-capacity", Deploy.NoStashSize);
             var deploy = new Deploy(key, deployment, router, Deploy.NoScopeGiven, dispatcher, mailbox, stashCapacity);
             return deploy;
         }
