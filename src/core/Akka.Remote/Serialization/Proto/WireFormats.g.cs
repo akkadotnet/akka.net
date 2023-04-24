@@ -45,48 +45,48 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             "Ej8KBmRlcGxveRgCIAEoCzIvLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24u",
             "UHJvdG8uTXNnLkRlcGxveURhdGESDQoFY2xhenoYAyABKAkSDAoEYXJncxgE",
             "IAMoDBIRCgltYW5pZmVzdHMYBSADKAkSFQoNc2VyaWFsaXplcklkcxgGIAMo",
-            "BRITCgtoYXNNYW5pZmVzdBgHIAMoCCKcAgoKRGVwbG95RGF0YRIMCgRwYXRo",
+            "BRITCgtoYXNNYW5pZmVzdBgHIAMoCCKgAgoKRGVwbG95RGF0YRIMCgRwYXRo",
             "GAEgASgJEg4KBmNvbmZpZxgCIAEoDBIUCgxyb3V0ZXJDb25maWcYAyABKAwS",
             "DQoFc2NvcGUYBCABKAwSEgoKZGlzcGF0Y2hlchgFIAEoCRIZChFzY29wZVNl",
             "cmlhbGl6ZXJJZBgGIAEoBRIVCg1zY29wZU1hbmlmZXN0GAcgASgJEhoKEmNv",
             "bmZpZ1NlcmlhbGl6ZXJJZBgIIAEoBRIWCg5jb25maWdNYW5pZmVzdBgJIAEo",
             "CRIgChhyb3V0ZXJDb25maWdTZXJpYWxpemVySWQYCiABKAUSHAoUcm91dGVy",
-            "Q29uZmlnTWFuaWZlc3QYCyABKAkSEQoJc3Rhc2hTaXplGAwgASgFInQKE0Fr",
-            "a2FQcm90b2NvbE1lc3NhZ2USDwoHcGF5bG9hZBgBIAEoDBJMCgtpbnN0cnVj",
-            "dGlvbhgCIAEoCzI3LkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8u",
-            "TXNnLkFra2FDb250cm9sTWVzc2FnZSKqAQoSQWtrYUNvbnRyb2xNZXNzYWdl",
-            "EkUKC2NvbW1hbmRUeXBlGAEgASgOMjAuQWtrYS5SZW1vdGUuU2VyaWFsaXph",
-            "dGlvbi5Qcm90by5Nc2cuQ29tbWFuZFR5cGUSTQoNaGFuZHNoYWtlSW5mbxgC",
-            "IAEoCzI2LkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkFr",
-            "a2FIYW5kc2hha2VJbmZvInIKEUFra2FIYW5kc2hha2VJbmZvEkAKBm9yaWdp",
-            "bhgBIAEoCzIwLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
-            "LkFkZHJlc3NEYXRhEgsKA3VpZBgCIAEoBhIOCgZjb29raWUYAyABKAkiTQoL",
-            "UmVtb3RlU2NvcGUSPgoEbm9kZRgBIAEoCzIwLkFra2EuUmVtb3RlLlNlcmlh",
-            "bGl6YXRpb24uUHJvdG8uTXNnLkFkZHJlc3NEYXRhIrEBCg5EZWZhdWx0UmVz",
-            "aXplchISCgpsb3dlckJvdW5kGAEgASgNEhIKCnVwcGVyQm91bmQYAiABKA0S",
-            "GQoRcHJlc3N1cmVUaHJlc2hvbGQYAyABKA0SEgoKcmFtcHVwUmF0ZRgEIAEo",
-            "ARIYChBiYWNrb2ZmVGhyZXNob2xkGAUgASgBEhMKC2JhY2tvZmZSYXRlGAYg",
-            "ASgBEhkKEW1lc3NhZ2VzUGVyUmVzaXplGAcgASgNImUKCkZyb21Db25maWcS",
-            "PQoHcmVzaXplchgBIAEoCzIsLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLlBheWxvYWQSGAoQcm91dGVyRGlzcGF0Y2hlchgCIAEoCSKf",
-            "AQoSR2VuZXJpY1JvdXRpbmdQb29sEhUKDW5yT2ZJbnN0YW5jZXMYASABKA0S",
-            "GAoQcm91dGVyRGlzcGF0Y2hlchgCIAEoCRIZChF1c2VQb29sRGlzcGF0Y2hl",
-            "chgDIAEoCBI9CgdyZXNpemVyGAQgASgLMiwuQWtrYS5SZW1vdGUuU2VyaWFs",
-            "aXphdGlvbi5Qcm90by5Nc2cuUGF5bG9hZCKIAQoRU2NhdHRlckdhdGhlclBv",
-            "b2wSSAoHZ2VuZXJpYxgBIAEoCzI3LkFra2EuUmVtb3RlLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLkdlbmVyaWNSb3V0aW5nUG9vbBIpCgZ3aXRoaW4YAiAB",
-            "KAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24itAEKEFRhaWxDaG9wcGlu",
-            "Z1Bvb2wSSAoHZ2VuZXJpYxgBIAEoCzI3LkFra2EuUmVtb3RlLlNlcmlhbGl6",
-            "YXRpb24uUHJvdG8uTXNnLkdlbmVyaWNSb3V0aW5nUG9vbBIpCgZ3aXRoaW4Y",
-            "AiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SKwoIaW50ZXJ2YWwY",
-            "AyABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24ikgEKElJlbW90ZVJv",
-            "dXRlckNvbmZpZxI7CgVsb2NhbBgBIAEoCzIsLkFra2EuUmVtb3RlLlNlcmlh",
-            "bGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQSPwoFbm9kZXMYAiADKAsyMC5B",
-            "a2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5BZGRyZXNzRGF0",
-            "YSqFAQoLQ29tbWFuZFR5cGUSCAoETk9ORRAAEg0KCUFTU09DSUFURRABEhAK",
-            "DERJU0FTU09DSUFURRACEg0KCUhFQVJUQkVBVBADEh4KGkRJU0FTU09DSUFU",
-            "RV9TSFVUVElOR19ET1dOEAQSHAoYRElTQVNTT0NJQVRFX1FVQVJBTlRJTkVE",
-            "EAViBnByb3RvMw=="));
+            "Q29uZmlnTWFuaWZlc3QYCyABKAkSFQoNc3Rhc2hDYXBhY2l0eRgMIAEoBSJ0",
+            "ChNBa2thUHJvdG9jb2xNZXNzYWdlEg8KB3BheWxvYWQYASABKAwSTAoLaW5z",
+            "dHJ1Y3Rpb24YAiABKAsyNy5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlBy",
+            "b3RvLk1zZy5Ba2thQ29udHJvbE1lc3NhZ2UiqgEKEkFra2FDb250cm9sTWVz",
+            "c2FnZRJFCgtjb21tYW5kVHlwZRgBIAEoDjIwLkFra2EuUmVtb3RlLlNlcmlh",
+            "bGl6YXRpb24uUHJvdG8uTXNnLkNvbW1hbmRUeXBlEk0KDWhhbmRzaGFrZUlu",
+            "Zm8YAiABKAsyNi5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1z",
+            "Zy5Ba2thSGFuZHNoYWtlSW5mbyJyChFBa2thSGFuZHNoYWtlSW5mbxJACgZv",
+            "cmlnaW4YASABKAsyMC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3Rv",
+            "Lk1zZy5BZGRyZXNzRGF0YRILCgN1aWQYAiABKAYSDgoGY29va2llGAMgASgJ",
+            "Ik0KC1JlbW90ZVNjb3BlEj4KBG5vZGUYASABKAsyMC5Ba2thLlJlbW90ZS5T",
+            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5BZGRyZXNzRGF0YSKxAQoORGVmYXVs",
+            "dFJlc2l6ZXISEgoKbG93ZXJCb3VuZBgBIAEoDRISCgp1cHBlckJvdW5kGAIg",
+            "ASgNEhkKEXByZXNzdXJlVGhyZXNob2xkGAMgASgNEhIKCnJhbXB1cFJhdGUY",
+            "BCABKAESGAoQYmFja29mZlRocmVzaG9sZBgFIAEoARITCgtiYWNrb2ZmUmF0",
+            "ZRgGIAEoARIZChFtZXNzYWdlc1BlclJlc2l6ZRgHIAEoDSJlCgpGcm9tQ29u",
+            "ZmlnEj0KB3Jlc2l6ZXIYASABKAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0",
+            "aW9uLlByb3RvLk1zZy5QYXlsb2FkEhgKEHJvdXRlckRpc3BhdGNoZXIYAiAB",
+            "KAkinwEKEkdlbmVyaWNSb3V0aW5nUG9vbBIVCg1uck9mSW5zdGFuY2VzGAEg",
+            "ASgNEhgKEHJvdXRlckRpc3BhdGNoZXIYAiABKAkSGQoRdXNlUG9vbERpc3Bh",
+            "dGNoZXIYAyABKAgSPQoHcmVzaXplchgEIAEoCzIsLkFra2EuUmVtb3RlLlNl",
+            "cmlhbGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQiiAEKEVNjYXR0ZXJHYXRo",
+            "ZXJQb29sEkgKB2dlbmVyaWMYASABKAsyNy5Ba2thLlJlbW90ZS5TZXJpYWxp",
+            "emF0aW9uLlByb3RvLk1zZy5HZW5lcmljUm91dGluZ1Bvb2wSKQoGd2l0aGlu",
+            "GAIgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uIrQBChBUYWlsQ2hv",
+            "cHBpbmdQb29sEkgKB2dlbmVyaWMYASABKAsyNy5Ba2thLlJlbW90ZS5TZXJp",
+            "YWxpemF0aW9uLlByb3RvLk1zZy5HZW5lcmljUm91dGluZ1Bvb2wSKQoGd2l0",
+            "aGluGAIgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEisKCGludGVy",
+            "dmFsGAMgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uIpIBChJSZW1v",
+            "dGVSb3V0ZXJDb25maWcSOwoFbG9jYWwYASABKAsyLC5Ba2thLlJlbW90ZS5T",
+            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEj8KBW5vZGVzGAIgAygL",
+            "MjAuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWRkcmVz",
+            "c0RhdGEqhQEKC0NvbW1hbmRUeXBlEggKBE5PTkUQABINCglBU1NPQ0lBVEUQ",
+            "ARIQCgxESVNBU1NPQ0lBVEUQAhINCglIRUFSVEJFQVQQAxIeChpESVNBU1NP",
+            "Q0lBVEVfU0hVVFRJTkdfRE9XThAEEhwKGERJU0FTU09DSUFURV9RVUFSQU5U",
+            "SU5FRBAFYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Akka.Remote.Serialization.Proto.Msg.CommandType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -95,7 +95,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AcknowledgementInfo), global::Akka.Remote.Serialization.Proto.Msg.AcknowledgementInfo.Parser, new[]{ "CumulativeAck", "Nacks" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.DaemonMsgCreateData), global::Akka.Remote.Serialization.Proto.Msg.DaemonMsgCreateData.Parser, new[]{ "Props", "Deploy", "Path", "Supervisor" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.PropsData), global::Akka.Remote.Serialization.Proto.Msg.PropsData.Parser, new[]{ "Deploy", "Clazz", "Args", "Manifests", "SerializerIds", "HasManifest" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.DeployData), global::Akka.Remote.Serialization.Proto.Msg.DeployData.Parser, new[]{ "Path", "Config", "RouterConfig", "Scope", "Dispatcher", "ScopeSerializerId", "ScopeManifest", "ConfigSerializerId", "ConfigManifest", "RouterConfigSerializerId", "RouterConfigManifest", "StashSize" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.DeployData), global::Akka.Remote.Serialization.Proto.Msg.DeployData.Parser, new[]{ "Path", "Config", "RouterConfig", "Scope", "Dispatcher", "ScopeSerializerId", "ScopeManifest", "ConfigSerializerId", "ConfigManifest", "RouterConfigSerializerId", "RouterConfigManifest", "StashCapacity" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AkkaProtocolMessage), global::Akka.Remote.Serialization.Proto.Msg.AkkaProtocolMessage.Parser, new[]{ "Payload", "Instruction" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AkkaControlMessage), global::Akka.Remote.Serialization.Proto.Msg.AkkaControlMessage.Parser, new[]{ "CommandType", "HandshakeInfo" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AkkaHandshakeInfo), global::Akka.Remote.Serialization.Proto.Msg.AkkaHandshakeInfo.Parser, new[]{ "Origin", "Uid", "Cookie" }, null, null, null, null),
@@ -1657,7 +1657,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       configManifest_ = other.configManifest_;
       routerConfigSerializerId_ = other.routerConfigSerializerId_;
       routerConfigManifest_ = other.routerConfigManifest_;
-      stashSize_ = other.stashSize_;
+      stashCapacity_ = other.stashCapacity_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1799,15 +1799,15 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       }
     }
 
-    /// <summary>Field number for the "stashSize" field.</summary>
-    public const int StashSizeFieldNumber = 12;
-    private int stashSize_;
+    /// <summary>Field number for the "stashCapacity" field.</summary>
+    public const int StashCapacityFieldNumber = 12;
+    private int stashCapacity_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int StashSize {
-      get { return stashSize_; }
+    public int StashCapacity {
+      get { return stashCapacity_; }
       set {
-        stashSize_ = value;
+        stashCapacity_ = value;
       }
     }
 
@@ -1837,7 +1837,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       if (ConfigManifest != other.ConfigManifest) return false;
       if (RouterConfigSerializerId != other.RouterConfigSerializerId) return false;
       if (RouterConfigManifest != other.RouterConfigManifest) return false;
-      if (StashSize != other.StashSize) return false;
+      if (StashCapacity != other.StashCapacity) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1856,7 +1856,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       if (ConfigManifest.Length != 0) hash ^= ConfigManifest.GetHashCode();
       if (RouterConfigSerializerId != 0) hash ^= RouterConfigSerializerId.GetHashCode();
       if (RouterConfigManifest.Length != 0) hash ^= RouterConfigManifest.GetHashCode();
-      if (StashSize != 0) hash ^= StashSize.GetHashCode();
+      if (StashCapacity != 0) hash ^= StashCapacity.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1919,9 +1919,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
         output.WriteRawTag(90);
         output.WriteString(RouterConfigManifest);
       }
-      if (StashSize != 0) {
+      if (StashCapacity != 0) {
         output.WriteRawTag(96);
-        output.WriteInt32(StashSize);
+        output.WriteInt32(StashCapacity);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -1977,9 +1977,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
         output.WriteRawTag(90);
         output.WriteString(RouterConfigManifest);
       }
-      if (StashSize != 0) {
+      if (StashCapacity != 0) {
         output.WriteRawTag(96);
-        output.WriteInt32(StashSize);
+        output.WriteInt32(StashCapacity);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -2024,8 +2024,8 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       if (RouterConfigManifest.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(RouterConfigManifest);
       }
-      if (StashSize != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(StashSize);
+      if (StashCapacity != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(StashCapacity);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2072,8 +2072,8 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       if (other.RouterConfigManifest.Length != 0) {
         RouterConfigManifest = other.RouterConfigManifest;
       }
-      if (other.StashSize != 0) {
-        StashSize = other.StashSize;
+      if (other.StashCapacity != 0) {
+        StashCapacity = other.StashCapacity;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -2135,7 +2135,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             break;
           }
           case 96: {
-            StashSize = input.ReadInt32();
+            StashCapacity = input.ReadInt32();
             break;
           }
         }
@@ -2198,7 +2198,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             break;
           }
           case 96: {
-            StashSize = input.ReadInt32();
+            StashCapacity = input.ReadInt32();
             break;
           }
         }
