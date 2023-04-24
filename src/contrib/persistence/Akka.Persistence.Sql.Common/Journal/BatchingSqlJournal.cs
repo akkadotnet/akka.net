@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqlJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,6 +22,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Persistence.Journal;
+using Akka.Persistence.Sql.Common.Extensions;
 using Akka.Persistence.Sql.Common.Journal;
 using Akka.Serialization;
 using Akka.Util;
@@ -210,9 +211,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         public TimeSpan ConnectionTimeout { get; }
 
         /// <summary>
-        /// Isolation level of transactions used during query execution.
+        /// Isolation level of transactions used during write query execution.
         /// </summary>
-        public IsolationLevel IsolationLevel { get; }
+        [Obsolete("Use WriteIsolationLevel property instead")]
+        public IsolationLevel IsolationLevel => WriteIsolationLevel;
 
         /// <summary>
         /// Settings specific to <see cref="CircuitBreaker"/>, which is used internally 
@@ -241,6 +243,16 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// The fully qualified name of the type that should be used as timestamp provider.
         /// </summary>
         public string TimestampProviderTypeName { get; }
+        
+        /// <summary>
+        /// Isolation level of transactions used during read query execution.
+        /// </summary>
+        public IsolationLevel ReadIsolationLevel { get; }
+
+        /// <summary>
+        /// Isolation level of transactions used during write query execution.
+        /// </summary>
+        public IsolationLevel WriteIsolationLevel { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BatchingSqlJournalSetup" /> class.
@@ -276,18 +288,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ConfigurationException("No connection string for Sql Event Journal was specified");
 
-            IsolationLevel level;
-            switch (config.GetString("isolation-level", "unspecified"))
-            {
-                case "chaos": level = IsolationLevel.Chaos; break;
-                case "read-committed": level = IsolationLevel.ReadCommitted; break;
-                case "read-uncommitted": level = IsolationLevel.ReadUncommitted; break;
-                case "repeatable-read": level = IsolationLevel.RepeatableRead; break;
-                case "serializable": level = IsolationLevel.Serializable; break;
-                case "snapshot": level = IsolationLevel.Snapshot; break;
-                case "unspecified": level = IsolationLevel.Unspecified; break;
-                default: throw new ConfigurationException("Unknown isolation-level value. Should be one of: chaos | read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified");
-            }
+            ReadIsolationLevel = namingConventions.ReadIsolationLevel;
+            WriteIsolationLevel = namingConventions.WriteIsolationLevel;
+            
+            // backward compatibility
+            var level = config.GetString("isolation-level");
+            if (level is { })
+                WriteIsolationLevel = level.ToIsolationLevel();
 
             ConnectionString = connectionString;
             MaxConcurrentOperations = config.GetInt("max-concurrent-operations", 64);
@@ -295,11 +302,12 @@ namespace Akka.Persistence.Sql.Common.Journal
             MaxBufferSize = config.GetInt("max-buffer-size", 500000);
             AutoInitialize = config.GetBoolean("auto-initialize", false);
             ConnectionTimeout = config.GetTimeSpan("connection-timeout", TimeSpan.FromSeconds(30));
-            IsolationLevel = level;
             CircuitBreakerSettings = new CircuitBreakerSettings(config.GetConfig("circuit-breaker"));
             ReplayFilterSettings = new ReplayFilterSettings(config.GetConfig("replay-filter"));
             NamingConventions = namingConventions;
+#pragma warning disable CS0618
             DefaultSerializer = config.GetString("serializer", null);
+#pragma warning restore CS0618
             TimestampProviderTypeName = config.GetString("timestamp-provider", null);
         }
 
@@ -323,7 +331,68 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="replayFilterSettings">The settings used when replaying events from database back to the persistent actors.</param>
         /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
         /// <param name="defaultSerializer">The serializer used when no specific type matching can be found.</param>
-        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions, string defaultSerializer)
+        [Obsolete("Use constructor with separate read and write isolation level instead. (since v1.5.2)")]
+        protected BatchingSqlJournalSetup(
+            string connectionString,
+            int maxConcurrentOperations,
+            int maxBatchSize,
+            int maxBufferSize,
+            bool autoInitialize,
+            TimeSpan connectionTimeout,
+            IsolationLevel isolationLevel,
+            CircuitBreakerSettings circuitBreakerSettings,
+            ReplayFilterSettings replayFilterSettings,
+            QueryConfiguration namingConventions,
+            string defaultSerializer)
+            : this(
+                connectionString: connectionString,
+                maxConcurrentOperations: maxConcurrentOperations,
+                maxBatchSize: maxBatchSize,
+                maxBufferSize: maxBufferSize,
+                autoInitialize: autoInitialize,
+                connectionTimeout: connectionTimeout,
+                writeIsolationLevel: isolationLevel,
+                readIsolationLevel: isolationLevel,
+                circuitBreakerSettings: circuitBreakerSettings,
+                replayFilterSettings: replayFilterSettings,
+                namingConventions: namingConventions,
+                defaultSerializer: defaultSerializer)
+        { }
+        
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BatchingSqlJournalSetup" /> class.
+        /// </summary>
+        /// <param name="connectionString">The connection string used to connect to the database.</param>
+        /// <param name="maxConcurrentOperations">The maximum number of batch operations allowed to be executed at the same time.</param>
+        /// <param name="maxBatchSize">The maximum size of single batch of operations to be executed over a single <see cref="DbConnection"/>.</param>
+        /// <param name="maxBufferSize">The maximum size of requests stored in journal buffer.</param>
+        /// <param name="autoInitialize">
+        /// If set to <c>true</c>, the journal executes all SQL scripts stored under the
+        /// <see cref="BatchingSqlJournal{TConnection,TCommand}.Initializers"/> collection prior
+        /// to starting executing any requests.
+        /// </param>
+        /// <param name="connectionTimeout">The maximum time given for executed <see cref="DbCommand"/> to complete.</param>
+        /// <param name="readIsolationLevel">The isolation level of transactions used during read query execution.</param>
+        /// <param name="writeIsolationLevel">The isolation level of transactions used during write query execution.</param>
+        /// <param name="circuitBreakerSettings">
+        /// The settings used by the <see cref="CircuitBreaker"/> when for executing request batches.
+        /// </param>
+        /// <param name="replayFilterSettings">The settings used when replaying events from database back to the persistent actors.</param>
+        /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
+        /// <param name="defaultSerializer">The serializer used when no specific type matching can be found.</param>
+        protected BatchingSqlJournalSetup(
+            string connectionString,
+            int maxConcurrentOperations,
+            int maxBatchSize,
+            int maxBufferSize,
+            bool autoInitialize,
+            TimeSpan connectionTimeout,
+            IsolationLevel readIsolationLevel,
+            IsolationLevel writeIsolationLevel,
+            CircuitBreakerSettings circuitBreakerSettings,
+            ReplayFilterSettings replayFilterSettings,
+            QueryConfiguration namingConventions,
+            string defaultSerializer)
         {
             ConnectionString = connectionString;
             MaxConcurrentOperations = maxConcurrentOperations;
@@ -331,11 +400,14 @@ namespace Akka.Persistence.Sql.Common.Journal
             MaxBufferSize = maxBufferSize;
             AutoInitialize = autoInitialize;
             ConnectionTimeout = connectionTimeout;
-            IsolationLevel = isolationLevel;
+            WriteIsolationLevel = writeIsolationLevel;
+            ReadIsolationLevel = readIsolationLevel;
             CircuitBreakerSettings = circuitBreakerSettings;
             ReplayFilterSettings = replayFilterSettings;
             NamingConventions = namingConventions;
+#pragma warning disable CS0618
             DefaultSerializer = defaultSerializer;
+#pragma warning restore CS0618
         }
     }
 
@@ -547,6 +619,8 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private readonly Akka.Serialization.Serialization _serialization;
         private readonly CircuitBreaker _circuitBreaker;
+        private readonly IsolationLevel _writeIsolationLevel;
+        private readonly IsolationLevel _readIsolationLevel;
         private int _remainingOperations;
 
         /// <summary>
@@ -574,6 +648,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                 maxFailures: Setup.CircuitBreakerSettings.MaxFailures,
                 callTimeout: Setup.CircuitBreakerSettings.CallTimeout,
                 resetTimeout: Setup.CircuitBreakerSettings.ResetTimeout);
+            
+            _writeIsolationLevel = Setup.WriteIsolationLevel;
+            _readIsolationLevel = Setup.ReadIsolationLevel;
 
             var conventions = Setup.NamingConventions;
 
@@ -862,17 +939,16 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 _remainingOperations--;
 
-                var chunk = DequeueChunk(_remainingOperations);
+                var (chunk, isWrite) = DequeueChunk(_remainingOperations);
                 var context = Context;
-                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, context))
+                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, context, isWrite))
                     .PipeTo(Self, failure: ex => new ChunkExecutionFailure(ex, chunk.Requests, chunk.ChunkId));
             }
         }
 
-        private async Task<BatchComplete> ExecuteChunk(RequestChunk chunk, IActorContext context)
+        private async Task<BatchComplete> ExecuteChunk(RequestChunk chunk, IActorContext context, bool isWriteOperation)
         {
             var writeResults = new Queue<WriteMessagesResult>();
-            var isWriteOperation = false;
             var stopwatch = new Stopwatch();
             using (var connection = CreateConnection(Setup.ConnectionString))
             {
@@ -880,7 +956,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 // In the grand scheme of thing, using a transaction in an all read batch operation
                 // should not hurt performance by much, because it is done only once at the start.
-                using (var tx = connection.BeginTransaction(Setup.IsolationLevel))
+                using (var tx = connection.BeginTransaction(isWriteOperation ? _writeIsolationLevel : _readIsolationLevel))
                 using (var command = (TCommand)connection.CreateCommand())
                 {
                     command.CommandTimeout = (int)Setup.ConnectionTimeout.TotalSeconds;
@@ -895,11 +971,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                             switch (req)
                             {
                                 case WriteMessages msg:
-                                    isWriteOperation = true;
                                     writeResults.Enqueue(await HandleWriteMessages(msg, command)); 
                                     break;
                                 case DeleteMessagesTo msg:
-                                    isWriteOperation = true;
                                     await HandleDeleteMessagesTo(msg, command);
                                     break;
                                 case ReplayMessages msg:
@@ -1331,7 +1405,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Select the buffer that has the smallest id on its first item, retrieve a maximum Setup.MaxBatchSize
         /// items from it, and return it as a chunk that needs to be batched
         /// </summary>
-        private RequestChunk DequeueChunk(int chunkId)
+        private (RequestChunk chunk, bool isWrite) DequeueChunk(int chunkId)
         {
             var currentBuffer = _buffers
                 .Where(q => q.Count > 0)
@@ -1350,18 +1424,16 @@ namespace Akka.Persistence.Sql.Common.Journal
                     if (operations.Count == Setup.MaxBatchSize)
                         break;
                 }
-            }
-            else
-            {
-                while(currentBuffer.Count > 0)
-                {
-                    operations.Add(currentBuffer.Dequeue().request);
-                    if (operations.Count == Setup.MaxBatchSize)
-                        break;
-                }
+                return (new RequestChunk(chunkId, operations.ToArray()), true);
             }
             
-            return new RequestChunk(chunkId, operations.ToArray());
+            while(currentBuffer.Count > 0)
+            {
+                operations.Add(currentBuffer.Dequeue().request);
+                if (operations.Count == Setup.MaxBatchSize)
+                    break;
+            }
+            return (new RequestChunk(chunkId, operations.ToArray()), false);
         }
 
         private void CompleteBatch(BatchComplete msg)

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Data;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Persistence.Sql.Common.Extensions;
 using Akka.Serialization;
 using Akka.Util;
 
@@ -119,6 +120,16 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         public bool UseSequentialAccess { get; }
 
         /// <summary>
+        /// Isolation level of transactions used during write query execution.
+        /// </summary>
+        public IsolationLevel WriteIsolationLevel { get; }
+        
+        /// <summary>
+        /// Isolation level of transactions used during read query execution.
+        /// </summary>
+        public IsolationLevel ReadIsolationLevel { get; }
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="schemaName">TBD</param>
@@ -132,6 +143,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="timeout">TBD</param>
         /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
         /// <param name="useSequentialAccess">Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.</param>
+        [Obsolete("Use the constructor that takes read and write isolation level argument (since v1.5.2)")]
         public QueryConfiguration(
             string schemaName,
             string snapshotTableName,
@@ -144,6 +156,53 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             TimeSpan timeout,
             string defaultSerializer,
             bool useSequentialAccess)
+            : this(
+                schemaName: schemaName,
+                snapshotTableName: snapshotTableName,
+                persistenceIdColumnName: persistenceIdColumnName,
+                sequenceNrColumnName: sequenceNrColumnName,
+                payloadColumnName: payloadColumnName,
+                manifestColumnName: manifestColumnName,
+                timestampColumnName: timestampColumnName,
+                serializerIdColumnName: serializerIdColumnName,
+                timeout: timeout,
+                defaultSerializer: defaultSerializer,
+                useSequentialAccess: useSequentialAccess,
+                readIsolationLevel: null,
+                writeIsolationLevel: null)
+        {
+        }
+            
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="schemaName">TBD</param>
+        /// <param name="snapshotTableName">TBD</param>
+        /// <param name="persistenceIdColumnName">TBD</param>
+        /// <param name="sequenceNrColumnName">TBD</param>
+        /// <param name="payloadColumnName">TBD</param>
+        /// <param name="manifestColumnName">TBD</param>
+        /// <param name="timestampColumnName">TBD</param>
+        /// <param name="serializerIdColumnName">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
+        /// <param name="useSequentialAccess">Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.</param>
+        /// <param name="readIsolationLevel">Isolation level of transactions used during read query execution.</param>
+        /// <param name="writeIsolationLevel">Isolation level of transactions used during write query execution.</param>
+        public QueryConfiguration(
+            string schemaName,
+            string snapshotTableName,
+            string persistenceIdColumnName,
+            string sequenceNrColumnName,
+            string payloadColumnName,
+            string manifestColumnName,
+            string timestampColumnName,
+            string serializerIdColumnName,
+            TimeSpan timeout,
+            string defaultSerializer,
+            bool useSequentialAccess,
+            IsolationLevel? readIsolationLevel,
+            IsolationLevel? writeIsolationLevel)
         {
             SchemaName = schemaName;
             SnapshotTableName = snapshotTableName;
@@ -154,8 +213,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             TimestampColumnName = timestampColumnName;
             SerializerIdColumnName = serializerIdColumnName;
             Timeout = timeout;
+#pragma warning disable CS0618
             DefaultSerializer = defaultSerializer;
+#pragma warning restore CS0618
             UseSequentialAccess = useSequentialAccess;
+            ReadIsolationLevel = readIsolationLevel ?? IsolationLevel.Unspecified;
+            WriteIsolationLevel = writeIsolationLevel ?? IsolationLevel.Unspecified;
         }
 
         /// <summary>
@@ -262,6 +325,16 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected abstract string CreateSnapshotTableSql { get; }
 
         /// <summary>
+        /// Isolation level of transactions used during write query execution.
+        /// </summary>
+        public IsolationLevel WriteIsolationLevel { get; }
+        
+        /// <summary>
+        /// Isolation level of transactions used during read query execution.
+        /// </summary>
+        public IsolationLevel ReadIsolationLevel { get; }
+        
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="configuration">TBD</param>
@@ -270,6 +343,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         {
             Configuration = configuration;
             Serialization = serialization;
+            WriteIsolationLevel = Configuration.WriteIsolationLevel;
+            ReadIsolationLevel = Configuration.ReadIsolationLevel;
 
             SelectSnapshotSql = $@"
                 SELECT {Configuration.PersistenceIdColumnName},
@@ -378,16 +453,20 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="sequenceNr">TBD</param>
         /// <param name="timestamp">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task DeleteAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long sequenceNr,
+        public virtual async Task DeleteAsync(
+            DbConnection connection,
+            CancellationToken cancellationToken,
+            string persistenceId,
+            long sequenceNr,
             DateTime? timestamp)
         {
-            var sql = timestamp.HasValue
-                ? DeleteSnapshotRangeSql + " AND { Configuration.TimestampColumnName} = @Timestamp"
-                : DeleteSnapshotSql;
-
-            using (var command = GetCommand(connection, sql))
-            using (var tx = connection.BeginTransaction())
+            await connection.ExecuteInTransaction(WriteIsolationLevel, cancellationToken, async (tx, token) =>
             {
+                var sql = timestamp.HasValue
+                    ? DeleteSnapshotRangeSql + " AND { Configuration.TimestampColumnName} = @Timestamp"
+                    : DeleteSnapshotSql;
+
+                using var command = GetCommand(connection, sql); 
                 command.Transaction = tx;
 
                 SetPersistenceIdParameter(persistenceId, command);
@@ -398,10 +477,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                     SetTimestampParameter(timestamp.Value, command);
                 }
 
-                await command.ExecuteNonQueryAsync(cancellationToken);
-
-                tx.Commit();
-            }
+                await command.ExecuteNonQueryAsync(token);
+            });
         }
 
         /// <summary>
@@ -413,22 +490,24 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="maxSequenceNr">TBD</param>
         /// <param name="maxTimestamp">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task DeleteBatchAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId,
-            long maxSequenceNr, DateTime maxTimestamp)
+        public virtual async Task DeleteBatchAsync(
+            DbConnection connection,
+            CancellationToken cancellationToken,
+            string persistenceId,
+            long maxSequenceNr,
+            DateTime maxTimestamp)
         {
-            using (var command = GetCommand(connection, DeleteSnapshotRangeSql))
-            using (var tx = connection.BeginTransaction())
+            await connection.ExecuteInTransaction(WriteIsolationLevel, cancellationToken, async (tx, token) =>
             {
+                using var command = GetCommand(connection, DeleteSnapshotRangeSql);
                 command.Transaction = tx;
 
                 SetPersistenceIdParameter(persistenceId, command);
                 SetSequenceNrParameter(maxSequenceNr, command);
                 SetTimestampParameter(maxTimestamp, command);
 
-                await command.ExecuteNonQueryAsync(cancellationToken);
-
-                tx.Commit();
-            }
+                await command.ExecuteNonQueryAsync(token);
+            });
         }
 
         /// <summary>
@@ -439,11 +518,15 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="snapshot">TBD</param>
         /// <param name="metadata">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task InsertAsync(DbConnection connection, CancellationToken cancellationToken, object snapshot, SnapshotMetadata metadata)
+        public virtual async Task InsertAsync(
+            DbConnection connection,
+            CancellationToken cancellationToken,
+            object snapshot,
+            SnapshotMetadata metadata)
         {
-            using (var command = GetCommand(connection, InsertSnapshotSql))
-            using(var tx = connection.BeginTransaction())
+            await connection.ExecuteInTransaction(WriteIsolationLevel, cancellationToken, async (tx, token) =>
             {
+                using var command = GetCommand(connection, InsertSnapshotSql);
                 command.Transaction = tx;
 
                 SetPersistenceIdParameter(metadata.PersistenceId, command);
@@ -452,10 +535,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 SetManifestParameters(snapshot, command);
                 SetPayloadParameter(snapshot, command);
 
-                await command.ExecuteNonQueryAsync(cancellationToken);
-
-                tx.Commit();
-            }
+                await command.ExecuteNonQueryAsync(token);
+            });
         }
 
         /// <summary>
@@ -467,36 +548,33 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="maxSequenceNr">TBD</param>
         /// <param name="maxTimestamp">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task<SelectedSnapshot> SelectSnapshotAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId,
-            long maxSequenceNr, DateTime maxTimestamp)
+        public virtual async Task<SelectedSnapshot> SelectSnapshotAsync(
+            DbConnection connection,
+            CancellationToken cancellationToken,
+            string persistenceId,
+            long maxSequenceNr,
+            DateTime maxTimestamp)
         {
-            using (var command = GetCommand(connection, SelectSnapshotSql))
+            return await connection.ExecuteInTransaction(ReadIsolationLevel, cancellationToken, async (tx, token) =>
             {
+                using var command = GetCommand(connection, SelectSnapshotSql);
+                command.Transaction = tx;
+                
                 SetPersistenceIdParameter(persistenceId, command);
                 SetSequenceNrParameter(maxSequenceNr, command);
                 SetTimestampParameter(maxTimestamp, command);
 
-                CommandBehavior commandBehavior;
+                var commandBehavior = Configuration.UseSequentialAccess 
+                    ? CommandBehavior.SequentialAccess : CommandBehavior.Default;
 
-                if (Configuration.UseSequentialAccess)
+                using var reader = await command.ExecuteReaderAsync(commandBehavior, token);
+                if (await reader.ReadAsync(token))
                 {
-                    commandBehavior = CommandBehavior.SequentialAccess;
-                }
-                else
-                {
-                    commandBehavior = CommandBehavior.Default;
+                    return ReadSnapshot(reader);
                 }
 
-                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
-                {
-                    if (await reader.ReadAsync(cancellationToken))
-                    {
-                        return ReadSnapshot(reader);
-                    }
-                }
-            }
-
-            return null;
+                return null;
+            });
         }
 
         /// <summary>
