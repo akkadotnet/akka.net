@@ -186,6 +186,8 @@ namespace Akka.Remote.Serialization
                 ? protoDeploy.Dispatcher
                 : Deploy.NoDispatcherGiven;
 
+            // automatically covers backwards compat scenarios too - if the stash capacity is 0 (Protobuf default)
+            // it'll be set to -1 here, which is consistent with how defaults prior to v1.5.4 were handled.
             var stashCapacity = protoDeploy.StashCapacity > 0 ? protoDeploy.StashCapacity : Deploy.NoStashSize;
 
             return stashCapacity == Deploy.NoStashSize
