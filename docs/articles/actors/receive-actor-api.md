@@ -851,7 +851,7 @@ In certain scenarios, it might be helpful to put a limit on the size of the `ISt
 public class StashingActorWithOverflow : UntypedActor, IWithStash
 ```
 
-The `IWithStash` interface will default to _unbounded_ stash behavior, but the the `Props` class or via `akka.actor.deployment` we can easily configure this actor to impose a limit on its stash capacity:
+The `IWithStash` interface will default to *unbounded* stash behavior, but the the `Props` class or via `akka.actor.deployment` we can easily configure this actor to impose a limit on its stash capacity:
 
 ```csharp
 // create an actor with a stash size of 10
