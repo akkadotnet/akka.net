@@ -26,80 +26,83 @@ public class StashCapacitySpecs : AkkaSpec
     [Fact]
     public async Task ShouldGetAccurateStashReadingForUnboundedStash()
     {
-        var stashActor = Sys.ActorOf(Props.Create(() => new StashActor()));
-        stashActor.Tell(new StashActor.StashMessage("1"));
-        stashActor.Tell(new StashActor.StashMessage("2"));
-        stashActor.Tell(StashActor.GetStashReadout.Instance);
-        var readout1 = await ExpectMsgAsync<StashActor.StashReadout>();
+        // we're going to explicitly set the stash size here - this should be ignored since the stash type is unbounded
+        var stashActor = Sys.ActorOf(Props.Create(() => new UnboundedStashActor()).WithStashSize(10));
+        stashActor.Tell(new StashMessage("1"));
+        stashActor.Tell(new StashMessage("2"));
+        stashActor.Tell(GetStashReadout.Instance);
+        var readout1 = await ExpectMsgAsync<StashReadout>();
         readout1.Capacity.Should().Be(-1); // unbounded stash returns -1 for capacity
         readout1.Size.Should().Be(2);
         readout1.IsEmpty.Should().BeFalse();
         readout1.IsFull.Should().BeFalse();
         
-        stashActor.Tell(StashActor.UnstashMessage.Instance);
-        stashActor.Tell(StashActor.GetStashReadout.Instance);
-        var readout2 = await ExpectMsgAsync<StashActor.StashReadout>();
+        stashActor.Tell(UnstashMessage.Instance);
+        stashActor.Tell(GetStashReadout.Instance);
+        var readout2 = await ExpectMsgAsync<StashReadout>();
         readout2.Capacity.Should().Be(-1);
         readout2.Size.Should().Be(1);
         readout2.IsEmpty.Should().BeFalse();
         readout2.IsFull.Should().BeFalse();
         
-        stashActor.Tell(StashActor.UnstashMessage.Instance);
-        stashActor.Tell(StashActor.GetStashReadout.Instance);
-        var readout3 = await ExpectMsgAsync<StashActor.StashReadout>();
+        stashActor.Tell(UnstashMessage.Instance);
+        stashActor.Tell(GetStashReadout.Instance);
+        var readout3 = await ExpectMsgAsync<StashReadout>();
         readout3.Capacity.Should().Be(-1);
         readout3.Size.Should().Be(0);
         readout3.IsEmpty.Should().BeTrue();
         readout3.IsFull.Should().BeFalse();
     }
-
-    private class StashActor : UntypedActorWithStash
+    
+    public class StashMessage
     {
-        public class StashMessage
+        public StashMessage(string message)
         {
-            public StashMessage(string message)
-            {
-                Message = message;
-            }
+            Message = message;
+        }
 
-            public string Message { get; }
-        }
+        public string Message { get; }
+    }
         
-        public class UnstashMessage
+    public class UnstashMessage
+    {
+        private UnstashMessage()
         {
-            private UnstashMessage()
-            {
                 
-            }
-            public static readonly UnstashMessage Instance = new();
         }
+        public static readonly UnstashMessage Instance = new();
+    }
         
-        public class GetStashReadout
+    public class GetStashReadout
+    {
+        private GetStashReadout()
         {
-            private GetStashReadout()
-            {
                 
-            }
-            public static readonly GetStashReadout Instance = new();
         }
+        public static readonly GetStashReadout Instance = new();
+    }
         
-        public class StashReadout
+    public class StashReadout
+    {
+        public StashReadout(int capacity, int size, bool isEmpty, bool isFull)
         {
-            public StashReadout(int capacity, int size, bool isEmpty, bool isFull)
-            {
-                Capacity = capacity;
-                Size = size;
-                IsEmpty = isEmpty;
-                IsFull = isFull;
-            }
+            Capacity = capacity;
+            Size = size;
+            IsEmpty = isEmpty;
+            IsFull = isFull;
+        }
 
-            public int Capacity { get; }
-            public int Size { get; }
+        public int Capacity { get; }
+        public int Size { get; }
             
-            public bool IsEmpty { get; }
+        public bool IsEmpty { get; }
             
-            public bool IsFull { get; }
-        }
+        public bool IsFull { get; }
+    }
+
+    private class UnboundedStashActor : UntypedActorWithUnboundedStash
+    {
+      
         
         protected override void OnReceive(object message)
         {

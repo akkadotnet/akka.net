@@ -197,7 +197,7 @@ namespace Akka.Actor.Internal
         /// <remarks>
         /// If capacity is negative, then we're using an Unbounded stash.
         /// </remarks>
-        public int Capacity { get; }
+        public virtual int Capacity { get; }
 
         /// <summary>
         /// Enqueues <paramref name="msg"/> at the first position in the mailbox. If the message contained in
