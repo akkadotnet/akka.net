@@ -46,7 +46,8 @@ namespace Akka.Remote.Serialization
                 return message.ToByteArray();
             }
 
-            throw new ArgumentException($"Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer [{obj.GetType()}]");
+            throw new ArgumentException(
+                $"Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer [{obj.GetType()}]");
         }
 
         /// <inheritdoc />
@@ -105,7 +106,7 @@ namespace Akka.Remote.Serialization
         {
             var deployBuilder = new Proto.Msg.DeployData();
             deployBuilder.Path = deploy.Path;
-            deployBuilder.StashSize = deploy.StashCapacity;
+            deployBuilder.StashCapacity = deploy.StashCapacity;
             {
                 var tuple = Serialize(deploy.Config);
                 deployBuilder.ConfigSerializerId = tuple.Item1;
@@ -140,7 +141,8 @@ namespace Akka.Remote.Serialization
         private Deploy DeployFromProto(Proto.Msg.DeployData protoDeploy)
         {
             Config config;
-            if (protoDeploy.ConfigSerializerId > 0) // TODO: should be protoDeploy.Config != null. But it always not null
+            if (protoDeploy.ConfigSerializerId >
+                0) // TODO: should be protoDeploy.Config != null. But it always not null
             {
                 config = system.Serialization.Deserialize(
                     protoDeploy.Config.ToByteArray(),
@@ -152,9 +154,10 @@ namespace Akka.Remote.Serialization
                 config = Config.Empty;
             }
 
-            
+
             RouterConfig routerConfig;
-            if (protoDeploy.RouterConfigSerializerId > 0) // TODO: should be protoDeploy.RouterConfig != null. But it always not null
+            if (protoDeploy.RouterConfigSerializerId >
+                0) // TODO: should be protoDeploy.RouterConfig != null. But it always not null
             {
                 routerConfig = system.Serialization.Deserialize(
                     protoDeploy.RouterConfig.ToByteArray(),
@@ -183,18 +186,20 @@ namespace Akka.Remote.Serialization
                 ? protoDeploy.Dispatcher
                 : Deploy.NoDispatcherGiven;
 
-            return new Deploy(protoDeploy.Path, config, routerConfig, scope, dispatcher);
+            var stashCapacity = protoDeploy.StashCapacity > 0 ? protoDeploy.StashCapacity : Deploy.NoStashSize;
+
+            return stashCapacity == Deploy.NoStashSize
+                ? new Deploy(protoDeploy.Path, config, routerConfig, scope, dispatcher)
+                : new Deploy(protoDeploy.Path, config, routerConfig, scope, dispatcher)
+                    .WithStashCapacity(stashCapacity);
         }
 
         //
         // IActorRef
         //
-        private Proto.Msg.ActorRefData SerializeActorRef(IActorRef actorRef)
+        private static Proto.Msg.ActorRefData SerializeActorRef(IActorRef actorRef)
         {
-            return new Proto.Msg.ActorRefData
-            {
-                Path = Akka.Serialization.Serialization.SerializedActorPath(actorRef)
-            };
+            return new Proto.Msg.ActorRefData { Path = Akka.Serialization.Serialization.SerializedActorPath(actorRef) };
         }
 
         private IActorRef DeserializeActorRef(Proto.Msg.ActorRefData actorRefData)
