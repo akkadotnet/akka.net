@@ -1134,6 +1134,11 @@ namespace Akka.Actor
     }
     public interface IStash
     {
+        int Capacity { get; }
+        int Count { get; }
+        bool IsEmpty { get; }
+        bool IsFull { get; }
+        bool NonEmpty { get; }
         System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> ClearStash();
         void Prepend(System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> envelopes);
         void Stash();
@@ -1933,6 +1938,11 @@ namespace Akka.Actor.Internal
     public abstract class AbstractStash : Akka.Actor.IStash
     {
         protected AbstractStash(Akka.Actor.IActorContext context) { }
+        public int Capacity { get; }
+        public int Count { get; }
+        public bool IsEmpty { get; }
+        public bool IsFull { get; }
+        public bool NonEmpty { get; }
         public System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> ClearStash() { }
         public void Prepend(System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> envelopes) { }
         public void Stash() { }

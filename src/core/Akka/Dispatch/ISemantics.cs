@@ -11,7 +11,7 @@ using Akka.Actor;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// TBD
+    /// Describes the message queue semantics of a mailbox.
     /// </summary>
     public interface ISemantics
     {
