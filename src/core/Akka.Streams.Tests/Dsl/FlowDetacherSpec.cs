@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowDetacherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -26,22 +27,21 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Detacher_must_pass_through_all_elements()
+        public async Task A_Detacher_must_pass_through_all_elements()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 100))
-                    .Detach()
-                    .RunWith(Sink.Seq<int>(), Materializer)
-                    .Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
+            await this.AssertAllStagesStoppedAsync(() => {
+                Source.From(Enumerable.Range(1, 100))                                                                             
+                .Detach()                                                                             
+                .RunWith(Sink.Seq<int>(), Materializer)                                                                             
+                .Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Detacher_must_pass_through_failure()
+        public async Task A_Detacher_must_pass_through_failure()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var ex = new TestException("buh");
                 var result = Source.From(Enumerable.Range(1, 100)).Select(x =>
                 {
@@ -51,17 +51,17 @@ namespace Akka.Streams.Tests.Dsl
                 }).Detach().RunWith(Sink.Seq<int>(), Materializer);
 
                 result.Invoking(r => r.Wait(TimeSpan.FromSeconds(2))).Should().Throw<TestException>().And.Should().Be(ex);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_Detacher_must_emit_the_last_element_when_completed_Without_demand()
+        public async Task A_Detacher_must_emit_the_last_element_when_completed_Without_demand()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = Source.Single(42).Detach().RunWith(this.SinkProbe<int>(), Materializer).EnsureSubscription();
-                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
-                probe.RequestNext(42);
+                await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
+                await probe.RequestNextAsync(42);
             }, Materializer);
         }
     }

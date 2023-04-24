@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractStash.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,11 +34,6 @@ namespace Akka.Actor.Internal
         private readonly ActorCell _actorCell;
 
         /// <summary>
-        /// The capacity of the stash. Configured in the actor's mailbox or dispatcher config.
-        /// </summary>
-        private readonly int _capacity;
-
-        /// <summary>
         /// The actor's deque-based message queue. 
         /// `mailbox.queue` is the underlying `Deque`.
         /// </summary>
@@ -61,7 +56,7 @@ namespace Akka.Actor.Internal
             _actorCell = actorCell;
 
             // The capacity of the stash. Configured in the actor's mailbox or dispatcher config.
-            _capacity = context.System.Mailboxes.StashCapacity(context.Props.Dispatcher, context.Props.Mailbox);
+            Capacity = context.System.Mailboxes.StashCapacity(context.Props.Dispatcher, context.Props.Mailbox);
         }
 
         private int _currentEnvelopeId;
@@ -84,7 +79,7 @@ namespace Akka.Actor.Internal
             }
             _currentEnvelopeId = _actorCell.CurrentEnvelopeId;
 
-            if (_capacity <= 0 || _theStash.Count < _capacity)
+            if (Capacity <= 0 || _theStash.Count < Capacity)
                 _theStash.AddLast(new Envelope(currMsg, sender));
             else 
                 throw new StashOverflowException($"Couldn't enqueue message {currMsg} from ${sender} to stash of {_actorCell.Self}");
@@ -188,6 +183,19 @@ namespace Akka.Actor.Internal
                 _theStash.AddFirst(envelope);
             }
         }
+
+        public int Count => _theStash.Count;
+        public bool IsEmpty => Count == 0;
+        public bool NonEmpty => !IsEmpty;
+        public bool IsFull => Capacity >= 0 && _theStash.Count >= Capacity;
+
+        /// <summary>
+        /// The capacity of the stash. Configured in the actor's mailbox or dispatcher config.
+        /// </summary>
+        /// <remarks>
+        /// If capacity is negative, then we're using an Unbounded stash.
+        /// </remarks>
+        public int Capacity { get; }
 
         /// <summary>
         /// Enqueues <paramref name="msg"/> at the first position in the mailbox. If the message contained in

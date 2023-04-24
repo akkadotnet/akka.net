@@ -1,6 +1,34 @@
-#### 1.5.3 April 10th 2023 ####
+#### 1.5.4 April 20th 2023 ####
 
-*Placeholder for nightly builds*
+*placeholder for nightlies*
+
+#### 1.5.3 April 20th 2023 ####
+
+* [Persistence.Sqlite: Bump Microsoft.Data.SQLite to 7.0.5](https://github.com/akkadotnet/akka.net/pull/6643)
+* [Serialization.Hyperion: Fix bug: surrogate and known type provider not applied correctly by Setup](https://github.com/akkadotnet/akka.net/pull/6655)
+* [Akka: Bump Microsoft.Extensions.ObjectPool to 7.0.5](https://github.com/akkadotnet/akka.net/pull/6644)
+* [Persistence.Sql.Common: Add transaction isolation level to SQL queries](https://github.com/akkadotnet/akka.net/pull/6654)
+
+**SQL Transaction Isolation Level Setting**
+
+In 1.5.3, we're introducing fine-grained control over transaction isolation level inside the `Akka.Persistence.Sql.Common` common library. This setting will be propagated to the rest of the SQL persistence plugin ecosystem and the `Akka.Hosting` package in their next release version.
+
+Four new HOCON settings are introduced:
+* `akka.persistence.journal.{plugin-name}.read-isolation-level`
+* `akka.persistence.journal.{plugin-name}.write-isolation-level`
+* `akka.persistence.snapshot-store.{plugin-name}.read-isolation-level`
+* `akka.persistence.snapshot-store.{plugin-name}.write-isolation-level`
+
+you can go to the [official Microsoft documentation](https://learn.microsoft.com/en-us/dotnet/api/system.data.isolationlevel?#fields) to read more about these isolation level settings.
+
+If you want to see the [full set of changes made in Akka.NET v1.5.3, click here](https://github.com/akkadotnet/akka.net/milestone/85?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 23      | 1284 | 1248 | Ebere Abanonu       |
+| 4       | 7    | 7    | dependabot[bot]     |
+| 3       | 933  | 267  | Gregorius Soedharmo |
+| 2       | 4498 | 4407 | Aaron Stannard      |
 
 #### 1.5.2 April 5th 2023 ####
 
