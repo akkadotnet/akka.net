@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractDispatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -389,7 +389,9 @@ channel-executor.priority = normal");
                     Console.WriteLine("{0} inhabitants {1}", dispatcher, dispatcher.Inhabitants);
                     foreach (var actor in a)
                     {
+#pragma warning disable CS0618 // Type or member is obsolete
                         var status = actor.IsTerminated ? "(terminated)" : "(active)";
+#pragma warning restore CS0618 // Type or member is obsolete
                         var messages = actor is ActorRefWithCell
                             ? " " + actor.AsInstanceOf<ActorRefWithCell>().Underlying.NumberOfMessages + " messages"
                             : " " + actor.GetType();

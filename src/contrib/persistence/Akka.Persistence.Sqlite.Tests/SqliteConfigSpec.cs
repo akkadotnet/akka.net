@@ -1,16 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqliteConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Sql.TestKit;
 using Akka.Persistence.Sql.Common;
+using Akka.Persistence.Sql.Common.Extensions;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
@@ -41,6 +43,8 @@ namespace Akka.Persistence.Sqlite.Tests
             Assert.Equal("journal_metadata", config.GetString("metadata-table-name"));
             Assert.False(config.GetBoolean("auto-initialize"));
             Assert.Equal("Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common", config.GetString("timestamp-provider"));
+            Assert.Equal("unspecified", config.GetString("read-isolation-level"));
+            Assert.Equal("unspecified", config.GetString("write-isolation-level"));
             Assert.False(config.HasPath("schema-name"));
         }
 
@@ -53,22 +57,26 @@ namespace Akka.Persistence.Sqlite.Tests
             // values should be correct
             settings.ConnectionString.Should().Be(string.Empty);
             settings.ConnectionStringName.Should().Be(string.Empty);
-            settings.ConnectionTimeout.Should().Equals(TimeSpan.FromSeconds(30));
-            settings.JournalTableName.Should().Equals("event_journal");
+            settings.ConnectionTimeout.Should().Be(TimeSpan.FromSeconds(30));
+            settings.JournalTableName.Should().Be("event_journal");
             settings.SchemaName.Should().BeNull();
-            settings.MetaTableName.Should().Equals("journal_metadata");
+            settings.MetaTableName.Should().Be("journal_metadata");
             settings.TimestampProvider.Should().Be("Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common");
+            settings.ReadIsolationLevel.Should().Be(IsolationLevel.Unspecified);
+            settings.WriteIsolationLevel.Should().Be(IsolationLevel.Unspecified);
             settings.AutoInitialize.Should().BeFalse();
 
             // values should reflect configuration
-            settings.ConnectionString.Should().Equals(config.GetString("connection-string"));
-            settings.ConnectionStringName.Should().Equals(config.GetString("connection-string-name"));
-            settings.ConnectionTimeout.Should().Equals(config.GetTimeSpan("connection-timeout"));
-            settings.JournalTableName.Should().Equals(config.GetString("table-name"));
-            settings.SchemaName.Should().Equals(config.GetString("schema-name", null));
-            settings.MetaTableName.Should().Equals(config.GetString("metadata-table-name"));
+            settings.ConnectionString.Should().Be(config.GetString("connection-string"));
+            settings.ConnectionStringName.Should().Be(config.GetString("connection-string-name"));
+            settings.ConnectionTimeout.Should().Be(config.GetTimeSpan("connection-timeout"));
+            settings.JournalTableName.Should().Be(config.GetString("table-name"));
+            settings.SchemaName.Should().Be(config.GetString("schema-name", null));
+            settings.MetaTableName.Should().Be(config.GetString("metadata-table-name"));
             settings.TimestampProvider.Should().Be(config.GetString("timestamp-provider"));
-            settings.AutoInitialize.Should().Equals(config.GetBoolean("auto-initialize"));
+            settings.ReadIsolationLevel.Should().Be(config.GetIsolationLevel("read-isolation-level"));
+            settings.WriteIsolationLevel.Should().Be(config.GetIsolationLevel("write-isolation-level"));
+            settings.AutoInitialize.Should().Be(config.GetBoolean("auto-initialize"));
         }
 
         [Fact]
@@ -86,6 +94,8 @@ namespace Akka.Persistence.Sqlite.Tests
             Assert.Equal(TimeSpan.FromSeconds(30), config.GetTimeSpan("connection-timeout", null));
             // This is changed from "snapshot-store" to "snapshot"
             Assert.Equal("snapshot", config.GetString("table-name", null));
+            Assert.Equal("unspecified", config.GetString("read-isolation-level"));
+            Assert.Equal("unspecified", config.GetString("write-isolation-level"));
             Assert.False(config.GetBoolean("auto-initialize", false));
         }
 
@@ -102,7 +112,11 @@ namespace Akka.Persistence.Sqlite.Tests
             settings.SchemaName.Should().BeNull();
             settings.TableName.Should().Be("snapshot");
             settings.AutoInitialize.Should().BeFalse();
+#pragma warning disable CS0618
             settings.DefaultSerializer.Should().BeNull();
+#pragma warning restore CS0618
+            settings.ReadIsolationLevel.Should().Be(IsolationLevel.Unspecified);
+            settings.WriteIsolationLevel.Should().Be(IsolationLevel.Unspecified);
             settings.FullTableName.Should().Be(settings.TableName);
 
             // values should reflect configuration
@@ -111,8 +125,12 @@ namespace Akka.Persistence.Sqlite.Tests
             settings.ConnectionTimeout.Should().Be(config.GetTimeSpan("connection-timeout"));
             settings.SchemaName.Should().Be(config.GetString("schema-name", null));
             settings.TableName.Should().Be(config.GetString("table-name"));
+            settings.ReadIsolationLevel.Should().Be(config.GetIsolationLevel("read-isolation-level"));
+            settings.WriteIsolationLevel.Should().Be(config.GetIsolationLevel("write-isolation-level"));
             settings.AutoInitialize.Should().Be(config.GetBoolean("auto-initialize"));
+#pragma warning disable CS0618
             settings.DefaultSerializer.Should().Be(config.GetString("serializer", null));
+#pragma warning restore CS0618
         }
 
     }

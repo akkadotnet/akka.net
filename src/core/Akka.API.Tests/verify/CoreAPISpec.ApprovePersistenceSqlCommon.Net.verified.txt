@@ -2,6 +2,19 @@
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("e438d2c3-1075-4b01-bb84-e9efd3a36691")]
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
+namespace Akka.Persistence.Sql.Common.Extensions
+{
+    public class static DbConnectionExtensions
+    {
+        public static System.Threading.Tasks.Task ExecuteInTransaction(this System.Data.Common.DbConnection connection, System.Data.IsolationLevel isolationLevel, System.Threading.CancellationToken token, System.Func<System.Data.Common.DbTransaction, System.Threading.CancellationToken, System.Threading.Tasks.Task> task) { }
+        public static System.Threading.Tasks.Task<T> ExecuteInTransaction<T>(this System.Data.Common.DbConnection connection, System.Data.IsolationLevel isolationLevel, System.Threading.CancellationToken token, System.Func<System.Data.Common.DbTransaction, System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> task) { }
+    }
+    public class static IsolationLevelExtensions
+    {
+        public static System.Data.IsolationLevel GetIsolationLevel(this Akka.Configuration.Config config, string key) { }
+        public static System.Data.IsolationLevel ToIsolationLevel(this string level) { }
+    }
+}
 namespace Akka.Persistence.Sql.Common.Journal
 {
     public abstract class AbstractQueryExecutor : Akka.Persistence.Sql.Common.Journal.IJournalQueryExecutor
@@ -32,7 +45,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string InsertEventSql { get; }
         [System.ObsoleteAttribute()]
         protected string QueryEventsSql { get; }
+        public System.Data.IsolationLevel ReadIsolationLevel { get; }
         protected virtual string UpdateSequenceNrSql { get; }
+        public System.Data.IsolationLevel WriteIsolationLevel { get; }
         protected void AddParameter(System.Data.Common.DbCommand command, string parameterName, System.Data.DbType parameterType, object value) { }
         protected abstract System.Data.Common.DbCommand CreateCommand(System.Data.Common.DbConnection connection);
         public virtual System.Threading.Tasks.Task CreateTablesAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken) { }
@@ -57,7 +72,10 @@ namespace Akka.Persistence.Sql.Common.Journal
     public abstract class BatchingSqlJournalSetup
     {
         protected BatchingSqlJournalSetup(Akka.Configuration.Config config, Akka.Persistence.Sql.Common.Journal.QueryConfiguration namingConventions) { }
+        [System.ObsoleteAttribute("Use constructor with separate read and write isolation level instead. (since v1.5" +
+            ".2)")]
         protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, System.TimeSpan connectionTimeout, System.Data.IsolationLevel isolationLevel, Akka.Persistence.Sql.Common.Journal.CircuitBreakerSettings circuitBreakerSettings, Akka.Persistence.Sql.Common.Journal.ReplayFilterSettings replayFilterSettings, Akka.Persistence.Sql.Common.Journal.QueryConfiguration namingConventions, string defaultSerializer) { }
+        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, System.TimeSpan connectionTimeout, System.Data.IsolationLevel readIsolationLevel, System.Data.IsolationLevel writeIsolationLevel, Akka.Persistence.Sql.Common.Journal.CircuitBreakerSettings circuitBreakerSettings, Akka.Persistence.Sql.Common.Journal.ReplayFilterSettings replayFilterSettings, Akka.Persistence.Sql.Common.Journal.QueryConfiguration namingConventions, string defaultSerializer) { }
         public bool AutoInitialize { get; }
         public Akka.Persistence.Sql.Common.Journal.CircuitBreakerSettings CircuitBreakerSettings { get; }
         public string ConnectionString { get; }
@@ -65,13 +83,16 @@ namespace Akka.Persistence.Sql.Common.Journal
         [System.ObsoleteAttribute("This property should never be used for writes, use the default `System.Object` se" +
             "rializer instead")]
         public string DefaultSerializer { get; }
+        [System.ObsoleteAttribute("Use WriteIsolationLevel property instead")]
         public System.Data.IsolationLevel IsolationLevel { get; }
         public int MaxBatchSize { get; }
         public int MaxBufferSize { get; }
         public int MaxConcurrentOperations { get; }
         public Akka.Persistence.Sql.Common.Journal.QueryConfiguration NamingConventions { get; }
+        public System.Data.IsolationLevel ReadIsolationLevel { get; }
         public Akka.Persistence.Sql.Common.Journal.ReplayFilterSettings ReplayFilterSettings { get; }
         public string TimestampProviderTypeName { get; }
+        public System.Data.IsolationLevel WriteIsolationLevel { get; }
     }
     public abstract class BatchingSqlJournal<TConnection, TCommand> : Akka.Persistence.Journal.WriteJournalBase
         where TConnection : System.Data.Common.DbConnection
@@ -222,13 +243,34 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly string TagsColumnName;
         public readonly System.TimeSpan Timeout;
         public readonly string TimestampColumnName;
+        [System.ObsoleteAttribute("Use .ctor that accepts read and write IsolationLevel instead (since v1.5.2)")]
         public QueryConfiguration(string schemaName, string journalEventsTableName, string metaTableName, string persistenceIdColumnName, string sequenceNrColumnName, string payloadColumnName, string manifestColumnName, string timestampColumnName, string isDeletedColumnName, string tagsColumnName, string orderingColumnName, string serializerIdColumnName, System.TimeSpan timeout, string defaultSerializer, bool useSequentialAccess) { }
+        public QueryConfiguration(
+                    string schemaName, 
+                    string journalEventsTableName, 
+                    string metaTableName, 
+                    string persistenceIdColumnName, 
+                    string sequenceNrColumnName, 
+                    string payloadColumnName, 
+                    string manifestColumnName, 
+                    string timestampColumnName, 
+                    string isDeletedColumnName, 
+                    string tagsColumnName, 
+                    string orderingColumnName, 
+                    string serializerIdColumnName, 
+                    System.TimeSpan timeout, 
+                    string defaultSerializer, 
+                    bool useSequentialAccess, 
+                    System.Nullable<System.Data.IsolationLevel> readIsolationLevel, 
+                    System.Nullable<System.Data.IsolationLevel> writeIsolationLevel) { }
         [System.ObsoleteAttribute("This property should never be used for writes, use the default `System.Object` se" +
             "rializer instead")]
         public string DefaultSerializer { get; }
         public string FullJournalTableName { get; }
         public string FullMetaTableName { get; }
+        public System.Data.IsolationLevel ReadIsolationLevel { get; }
         public bool UseSequentialAccess { get; }
+        public System.Data.IsolationLevel WriteIsolationLevel { get; }
     }
     public sealed class ReplayAllEvents : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
     {
@@ -278,6 +320,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
     public abstract class SqlJournal : Akka.Persistence.Journal.AsyncWriteJournal, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
     {
+        protected readonly Akka.Persistence.Sql.Common.JournalSettings Settings;
         protected SqlJournal(Akka.Configuration.Config journalConfig) { }
         protected abstract string JournalConfigPath { get; }
         protected Akka.Event.ILoggingAdapter Log { get; }
@@ -346,8 +389,10 @@ namespace Akka.Persistence.Sql.Common
         public System.TimeSpan ConnectionTimeout { get; }
         public string JournalTableName { get; }
         public string MetaTableName { get; }
+        public System.Data.IsolationLevel ReadIsolationLevel { get; }
         public string SchemaName { get; }
         public string TimestampProvider { get; set; }
+        public System.Data.IsolationLevel WriteIsolationLevel { get; }
     }
     public class SnapshotStoreSettings
     {
@@ -360,8 +405,10 @@ namespace Akka.Persistence.Sql.Common
             "stead")]
         public string DefaultSerializer { get; }
         public string FullTableName { get; }
+        public System.Data.IsolationLevel ReadIsolationLevel { get; }
         public string SchemaName { get; }
         public string TableName { get; }
+        public System.Data.IsolationLevel WriteIsolationLevel { get; }
     }
 }
 namespace Akka.Persistence.Sql.Common.Snapshot
@@ -375,7 +422,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected virtual string DeleteSnapshotRangeSql { get; }
         protected virtual string DeleteSnapshotSql { get; }
         protected virtual string InsertSnapshotSql { get; }
+        public System.Data.IsolationLevel ReadIsolationLevel { get; }
         protected virtual string SelectSnapshotSql { get; }
+        public System.Data.IsolationLevel WriteIsolationLevel { get; }
         protected void AddParameter(System.Data.Common.DbCommand command, string parameterName, System.Data.DbType parameterType, object value) { }
         protected abstract System.Data.Common.DbCommand CreateCommand(System.Data.Common.DbConnection connection);
         public virtual System.Threading.Tasks.Task CreateTableAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken) { }
@@ -416,9 +465,14 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         public readonly string SnapshotTableName;
         public readonly System.TimeSpan Timeout;
         public readonly string TimestampColumnName;
+        [System.ObsoleteAttribute("Use the constructor that takes read and write isolation level argument (since v1." +
+            "5.2)")]
         public QueryConfiguration(string schemaName, string snapshotTableName, string persistenceIdColumnName, string sequenceNrColumnName, string payloadColumnName, string manifestColumnName, string timestampColumnName, string serializerIdColumnName, System.TimeSpan timeout, string defaultSerializer, bool useSequentialAccess) { }
+        public QueryConfiguration(string schemaName, string snapshotTableName, string persistenceIdColumnName, string sequenceNrColumnName, string payloadColumnName, string manifestColumnName, string timestampColumnName, string serializerIdColumnName, System.TimeSpan timeout, string defaultSerializer, bool useSequentialAccess, System.Nullable<System.Data.IsolationLevel> readIsolationLevel, System.Nullable<System.Data.IsolationLevel> writeIsolationLevel) { }
         public string FullSnapshotTableName { get; }
+        public System.Data.IsolationLevel ReadIsolationLevel { get; }
         public bool UseSequentialAccess { get; }
+        public System.Data.IsolationLevel WriteIsolationLevel { get; }
     }
     public class SnapshotEntry
     {
@@ -431,6 +485,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
     }
     public abstract class SqlSnapshotStore : Akka.Persistence.Snapshot.SnapshotStore, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
     {
+        protected readonly Akka.Persistence.Sql.Common.SnapshotStoreSettings Settings;
         protected SqlSnapshotStore(Akka.Configuration.Config config) { }
         protected Akka.Event.ILoggingAdapter Log { get; }
         public abstract Akka.Persistence.Sql.Common.Snapshot.ISnapshotQueryExecutor QueryExecutor { get; }
