@@ -843,6 +843,38 @@ The result of this is that when an actor is restarted, any stashed messages will
 > [!NOTE]
 > If you want to enforce that your actor can only work with an unbounded stash, then you should use the `IWithUnboundedStash` interface instead.
 
+### Bounded Stashes
+
+In certain scenarios, it might be helpful to put a limit on the size of the `IStash` inside your actor. You can configure a bounded stash via the following actor definition:
+
+```csharp
+public class StashingActorWithOverflow : UntypedActor, IWithStash
+```
+
+The `IWithStash` interface will default to _unbounded_ stash behavior, but the the `Props` class or via `akka.actor.deployment` we can easily configure this actor to impose a limit on its stash capacity:
+
+```csharp
+// create an actor with a stash size of 10
+IActorRef stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithStashCapacity(10));
+```
+
+Or via HOCON:
+
+```hocon
+akka.actor.deployment{{
+    /configStashingActor {{
+        stash-capacity = 2
+    }}
+}}
+```
+
+Either of these settings will configure the `IStash` to only have a maximum capacity of 2 items. If a third item is attempted to be stashed the `IStash` will throw a `StashOverflowException`.
+
+> [!TIP]
+> You can always check to see if your `IStash` is approaching its capacity by checking the `IStash.IsFull`, `IStash.Capacity`, or `IStash.Count` properties.
+
+If you attempt to apply a maximum stash capacity to an `IWithUnboundedStash` actor then the setting will be ignored.
+
 ## Killing an Actor
 
 You can kill an actor by sending a `Kill` message. This will cause the actor to throw a `ActorKilledException`, triggering a failure. The actor will suspend operation and its supervisor will be asked how to handle the failure, which may mean resuming the actor, restarting it or terminating it completely. See [What Supervision Means](xref:supervision#what-supervision-means) for more information.
