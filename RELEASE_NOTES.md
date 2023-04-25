@@ -1,6 +1,23 @@
-#### 1.5.4 April 20th 2023 ####
+#### 1.5.4 April 25th 2023 ####
 
-*placeholder for nightlies*
+* [Akka: Enhance IStash API and configuration](https://github.com/akkadotnet/akka.net/pull/6660)
+* [Akka: Add bounded IStash configuration](https://github.com/akkadotnet/akka.net/pull/6661)
+
+**IStash Enhancements**
+
+`IStash` API have been improved with metrics API and its bound/capacity can be programatically set. Documentation can be read [here](https://getakka.net/articles/actors/receive-actor-api.html#bounded-stashes)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.4, click here](https://github.com/akkadotnet/akka.net/milestone/86?closed=1).
+
+5 contributors since release 1.5.3
+
+| COMMITS   | LOC+  | LOC-  | AUTHOR              |
+|-----------|-------|-------|---------------------|
+| 7         | 477   | 486   | Ebere Abanonu       |
+| 4         | 627   | 143   | Aaron Stannard      |
+| 2         | 2     | 2     | dependabot[bot]     |
+| 1         | 87    | 0     | Sergey Popov        |
+| 1         | 0     | 1     | Gregorius Soedharmo |
 
 #### 1.5.3 April 20th 2023 ####
 
