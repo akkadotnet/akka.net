@@ -20,7 +20,9 @@ namespace Akka.Routing
     /// <summary>
     /// This class provides base functionality used in the creation and configuration of the various routers in the system.
     /// </summary>
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public abstract class RouterConfig : ISurrogated, IEquatable<RouterConfig>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RouterConfig"/> class.

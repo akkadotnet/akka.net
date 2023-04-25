@@ -115,7 +115,9 @@ namespace Akka.Persistence.Tests
         }
 
         [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         private sealed class InvalidReq
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         {
             public static readonly InvalidReq Instance = new InvalidReq();
 
@@ -259,7 +261,9 @@ namespace Akka.Persistence.Tests
         }
 
         [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         private sealed class ReqAck
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         {
             public static readonly ReqAck Instance = new ReqAck();
 
