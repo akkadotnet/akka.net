@@ -18,7 +18,9 @@ using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor.Stash
 {
+#pragma warning disable CS0618 // Type or member is obsolete
     public class StashingActor : UntypedActor, IWithBoundedStash
+#pragma warning restore CS0618 // Type or member is obsolete
     {
         public IStash Stash { get; set; }
 
