@@ -48,8 +48,10 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static IStash CreateStash(this IActorContext context, Type actorType)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             if (actorType.Implements<IWithBoundedStash>())
                 return new BoundedStashImpl(context);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             if (actorType.Implements<IWithUnboundedStash>())
                 return new UnboundedStashImpl(context);
