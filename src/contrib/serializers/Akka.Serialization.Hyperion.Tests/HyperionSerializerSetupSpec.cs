@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HyperionSerializerSetupSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
@@ -33,7 +34,7 @@ namespace Akka.Serialization.Hyperion.Tests
          => ConfigurationFactory.ParseString(@"
 akka.actor {
     serializers {
-        hyperion = ""Akka.Serialization.Hyperion, Akka.Serialization.Hyperion""
+        hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
     }
 
     serialization-bindings {
@@ -93,6 +94,34 @@ akka.actor {
             adapter("My.Hyperion.Override").Should().Be("My.Hyperion");
         }
         
+        [Fact(DisplayName = "Setup should be applied correctly")]
+        public void SetupApplicationTest()
+        {
+            var surrogate = Surrogate.Create<Foo, FooSurrogate>(
+                foo => new FooSurrogate(foo.Bar),
+                surrogate => new Foo(surrogate.Bar));
+            
+            var actorSetup = ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create().WithConfig(Config))
+                .And(HyperionSerializerSetup.Empty
+                    .WithSurrogates(new[] { surrogate })
+                    .WithKnownTypeProvider<CustomTypeProvider>());
+            
+            var sys = ActorSystem.Create("test", actorSetup);
+            var serializer = (HyperionSerializer) sys.Serialization.FindSerializerForType(typeof(object));
+            var settings = serializer.Settings;
+
+            settings.Surrogates.Should().BeEquivalentTo(surrogate);
+            settings.KnownTypesProvider.Should().Be(typeof(CustomTypeProvider));
+            
+            Shutdown(sys);
+        }
+        
+        private sealed class CustomTypeProvider : IKnownTypesProvider
+        {
+            public IEnumerable<Type> GetKnownTypes() => new[] { typeof(ClassA), typeof(ClassB) };
+        }
+
         public class Foo
         {
             public Foo(string bar)

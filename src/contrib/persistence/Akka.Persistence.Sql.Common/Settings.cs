@@ -1,12 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Settings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Data;
 using Akka.Configuration;
+using Akka.Persistence.Sql.Common.Extensions;
 using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sql.Common
@@ -55,6 +57,16 @@ namespace Akka.Persistence.Sql.Common
         /// Flag determining in in case of event journal or metadata table missing, they should be automatically initialized.
         /// </summary>
         public bool AutoInitialize { get; private set; }
+        
+        /// <summary>
+        /// Isolation level of transactions used during read query execution.
+        /// </summary>
+        public IsolationLevel ReadIsolationLevel { get; }
+
+        /// <summary>
+        /// Isolation level of transactions used during write query execution.
+        /// </summary>
+        public IsolationLevel WriteIsolationLevel { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JournalSettings"/> class.
@@ -76,6 +88,9 @@ namespace Akka.Persistence.Sql.Common
             MetaTableName = config.GetString("metadata-table-name");
             TimestampProvider = config.GetString("timestamp-provider");
             AutoInitialize = config.GetBoolean("auto-initialize");
+
+            ReadIsolationLevel = config.GetIsolationLevel("read-isolation-level");
+            WriteIsolationLevel = config.GetIsolationLevel("write-isolation-level");
         }
     }
 
@@ -119,6 +134,16 @@ namespace Akka.Persistence.Sql.Common
         /// </summary>
         [Obsolete(message: "This property should never be used, use the default `System.Object` serializer instead")]
         public string DefaultSerializer { get; private set; }
+        
+        /// <summary>
+        /// Isolation level of transactions used during read query execution.
+        /// </summary>
+        public IsolationLevel ReadIsolationLevel { get; }
+
+        /// <summary>
+        /// Isolation level of transactions used during write query execution.
+        /// </summary>
+        public IsolationLevel WriteIsolationLevel { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotStoreSettings"/> class.
@@ -138,7 +163,12 @@ namespace Akka.Persistence.Sql.Common
             SchemaName = config.GetString("schema-name", null);
             TableName = config.GetString("table-name");
             AutoInitialize = config.GetBoolean("auto-initialize");
+#pragma warning disable CS0618
             DefaultSerializer = config.GetString("serializer", null);
+#pragma warning restore CS0618
+
+            ReadIsolationLevel = config.GetIsolationLevel("read-isolation-level");
+            WriteIsolationLevel = config.GetIsolationLevel("write-isolation-level");
         }
 
         /// <summary>

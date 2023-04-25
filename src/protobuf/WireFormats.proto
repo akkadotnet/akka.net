@@ -61,6 +61,7 @@ message DeployData {
 	string configManifest = 9;
 	int32 routerConfigSerializerId = 10;
 	string routerConfigManifest = 11;
+	int32 stashCapacity = 12;
 }
 
 /******************************************
