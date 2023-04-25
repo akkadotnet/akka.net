@@ -31,7 +31,9 @@ namespace Akka.Persistence.Journal
     /// TBD
     /// </summary>
     [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public sealed class EmptyEventSequence : IEmptyEventSequence, IEquatable<IEventSequence>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         /// <summary>
         /// TBD
@@ -63,7 +65,9 @@ namespace Akka.Persistence.Journal
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class EventSequence<T> : IEventSequence, IEquatable<IEventSequence>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         private readonly IList<object> _events;
         /// <summary>
@@ -97,7 +101,9 @@ namespace Akka.Persistence.Journal
     /// TBD
     /// </summary>
     [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public struct SingleEventSequence : IEventSequence, IEquatable<IEventSequence>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         private readonly object[] _events;
         /// <summary>

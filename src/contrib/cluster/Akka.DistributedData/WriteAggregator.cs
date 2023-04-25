@@ -181,7 +181,9 @@ namespace Akka.DistributedData
         TimeSpan Timeout { get; }
     }
 
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public sealed class WriteLocal : IWriteConsistency
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public static readonly WriteLocal Instance = new WriteLocal();
 

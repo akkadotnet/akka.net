@@ -55,7 +55,9 @@ namespace Akka.DistributedData.Durable
     /// If the `LoadAll` fails it can throw `LoadFailedException` and the `Replicator` supervisor
     /// will stop itself and the durable store.
     /// </summary>
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public sealed class LoadAll : IEquatable<LoadAll>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public static readonly LoadAll Instance = new LoadAll();
         private LoadAll() { }
@@ -73,7 +75,9 @@ namespace Akka.DistributedData.Durable
         }
     }
 
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public sealed class LoadAllCompleted : IEquatable<LoadAllCompleted>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public static readonly LoadAllCompleted Instance = new LoadAllCompleted();
         private LoadAllCompleted() { }
