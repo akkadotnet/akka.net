@@ -149,7 +149,7 @@ public static class PredicateInfoFactory
             throw new ArgumentException(error);
 
         var predicate =
-            (Predicate<int>)Delegate.CreateDelegate(typeof(Predicate<int>), predicateT.Target, predicateT.Method);
+            (Predicate<T>)Delegate.CreateDelegate(typeof(Predicate<T>), predicateT.Target, predicateT.Method);
         return PredicateInfo.Create(predicate);
     }
 }
