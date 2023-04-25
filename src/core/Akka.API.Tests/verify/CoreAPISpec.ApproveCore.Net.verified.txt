@@ -621,6 +621,7 @@ namespace Akka.Actor
         public static readonly string NoDispatcherGiven;
         public static readonly string NoMailboxGiven;
         public static readonly Akka.Actor.Scope NoScopeGiven;
+        public const int NoStashSize = -1;
         public static readonly Akka.Actor.Deploy None;
         public Deploy() { }
         public Deploy(string path, Akka.Actor.Scope scope) { }
@@ -629,12 +630,14 @@ namespace Akka.Actor
         public Deploy(Akka.Routing.RouterConfig routerConfig) { }
         public Deploy(string path, Akka.Configuration.Config config, Akka.Routing.RouterConfig routerConfig, Akka.Actor.Scope scope, string dispatcher) { }
         public Deploy(string path, Akka.Configuration.Config config, Akka.Routing.RouterConfig routerConfig, Akka.Actor.Scope scope, string dispatcher, string mailbox) { }
+        public Deploy(string path, Akka.Configuration.Config config, Akka.Routing.RouterConfig routerConfig, Akka.Actor.Scope scope, string dispatcher, string mailbox, int stashCapacity) { }
         public Akka.Configuration.Config Config { get; }
         public string Dispatcher { get; }
         public string Mailbox { get; }
         public string Path { get; }
         public Akka.Routing.RouterConfig RouterConfig { get; }
         public Akka.Actor.Scope Scope { get; }
+        public int StashCapacity { get; }
         public bool Equals(Akka.Actor.Deploy other) { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public virtual Akka.Actor.Deploy WithDispatcher(string dispatcher) { }
@@ -642,6 +645,7 @@ namespace Akka.Actor
         public virtual Akka.Actor.Deploy WithMailbox(string mailbox) { }
         public virtual Akka.Actor.Deploy WithRouterConfig(Akka.Routing.RouterConfig routerConfig) { }
         public virtual Akka.Actor.Deploy WithScope(Akka.Actor.Scope scope) { }
+        public virtual Akka.Actor.Deploy WithStashCapacity(int stashSize) { }
         public class DeploySurrogate : Akka.Util.ISurrogate
         {
             public DeploySurrogate() { }
@@ -651,6 +655,7 @@ namespace Akka.Actor
             public string Path { get; set; }
             public Akka.Routing.RouterConfig RouterConfig { get; set; }
             public Akka.Actor.Scope Scope { get; set; }
+            public int StashCapacity { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
@@ -1132,6 +1137,11 @@ namespace Akka.Actor
     }
     public interface IStash
     {
+        int Capacity { get; }
+        int Count { get; }
+        bool IsEmpty { get; }
+        bool IsFull { get; }
+        bool NonEmpty { get; }
         System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> ClearStash();
         void Prepend(System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> envelopes);
         void Stash();
@@ -1467,6 +1477,7 @@ namespace Akka.Actor
         public Akka.Actor.Props WithDispatcher(string dispatcher) { }
         public Akka.Actor.Props WithMailbox(string mailbox) { }
         public Akka.Actor.Props WithRouter(Akka.Routing.RouterConfig routerConfig) { }
+        public Akka.Actor.Props WithStashCapacity(int stashCapacity) { }
         public Akka.Actor.Props WithSupervisorStrategy(Akka.Actor.SupervisorStrategy supervisorStrategy) { }
         public class PropsSurrogate : Akka.Util.ISurrogate
         {
@@ -1931,6 +1942,11 @@ namespace Akka.Actor.Internal
     public abstract class AbstractStash : Akka.Actor.IStash
     {
         protected AbstractStash(Akka.Actor.IActorContext context) { }
+        public virtual int Capacity { get; }
+        public int Count { get; }
+        public bool IsEmpty { get; }
+        public bool IsFull { get; }
+        public bool NonEmpty { get; }
         public System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> ClearStash() { }
         public void Prepend(System.Collections.Generic.IEnumerable<Akka.Actor.Envelope> envelopes) { }
         public void Stash() { }
@@ -2132,6 +2148,7 @@ namespace Akka.Actor.Internal
     public class UnboundedStashImpl : Akka.Actor.Internal.AbstractStash
     {
         public UnboundedStashImpl(Akka.Actor.IActorContext context) { }
+        public override int Capacity { get; }
     }
 }
 namespace Akka.Actor.Setup
