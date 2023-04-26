@@ -23,7 +23,7 @@
     <ProtobufVersion>3.22.1</ProtobufVersion>
     <BenchmarkDotNetVersion>0.13.2</BenchmarkDotNetVersion>
     <NetTestVersion>net7.0</NetTestVersion>
-    <FsharpVersion>6.0.6</FsharpVersion>
+    <FsharpVersion>6.0.5</FsharpVersion>
     <NetFrameworkTestVersion>net471</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <NetLibVersion>net6.0</NetLibVersion>
