@@ -91,7 +91,9 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
+#pragma warning disable CS0420 // A reference to a volatile field will not be treated as volatile
         public Mailbox Mailbox => Volatile.Read(ref _mailboxDoNotCallMeDirectly);
+#pragma warning restore CS0420 // A reference to a volatile field will not be treated as volatile
 
         /// <summary>
         /// TBD
