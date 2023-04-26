@@ -23,10 +23,10 @@ public class ActorWithStashSpec: AkkaSpec, IClassFixture<AkkaDiFixture>
     {
     }
 
-    [Fact(DisplayName = "DependencyInjection should create actor with stash")]
-    public void StashActorTest()
+    [Fact(DisplayName = "DependencyInjection should create actor with IWithStash interface")]
+    public void WithStashActorTest()
     {
-        var stashActor = Sys.ActorOf(DependencyResolver.For(Sys).Props<StashingActor>());
+        var stashActor = Sys.ActorOf(DependencyResolver.For(Sys).Props<WithStashActor>());
         
         stashActor.Tell(GetName.Instance, TestActor);
         ExpectNoMsg(0.3.Seconds());
@@ -39,11 +39,41 @@ public class ActorWithStashSpec: AkkaSpec, IClassFixture<AkkaDiFixture>
         ExpectNoMsg(0.3.Seconds());
     }
     
-    private sealed class StashingActor : ReceiveActor, IWithStash
+    [Fact(DisplayName = "DependencyInjection should create actor with IWithUnboundedStash interface")]
+    public void WithUnboundedStashActorTest()
+    {
+        var stashActor = Sys.ActorOf(DependencyResolver.For(Sys).Props<WithUnboundedStashActor>());
+        
+        stashActor.Tell(GetName.Instance, TestActor);
+        ExpectNoMsg(0.3.Seconds());
+        stashActor.Tell(GetName.Instance, TestActor);
+        ExpectNoMsg(0.3.Seconds());
+        
+        stashActor.Tell(StartProcessing.Instance, TestActor);
+        ExpectMsg<string>().Should().StartWith("s");
+        ExpectMsg<string>().Should().StartWith("s");
+        ExpectNoMsg(0.3.Seconds());
+    }
+    
+    private sealed class WithStashActor: StashingActor, IWithStash
+    {
+        public WithStashActor(AkkaDiFixture.IScopedDependency scoped) : base(scoped)
+        {
+        }
+    }
+    
+    private sealed class WithUnboundedStashActor: StashingActor, IWithUnboundedStash
+    {
+        public WithUnboundedStashActor(AkkaDiFixture.IScopedDependency scoped) : base(scoped)
+        {
+        }
+    }
+    
+    private abstract class StashingActor : ReceiveActor
     {
         private readonly AkkaDiFixture.IScopedDependency _scoped;
-        
-        public StashingActor(AkkaDiFixture.IScopedDependency scoped)
+
+        protected StashingActor(AkkaDiFixture.IScopedDependency scoped)
         {
             _scoped = scoped;
             Become(Stashing);
