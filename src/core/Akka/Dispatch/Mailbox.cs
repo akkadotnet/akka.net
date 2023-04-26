@@ -209,7 +209,9 @@ namespace Akka.Dispatch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal int CurrentStatus()
         {
+#pragma warning disable CS0420 // A reference to a volatile field will not be treated as volatile
             return Volatile.Read(ref _statusDotNotCallMeDirectly);
+#pragma warning restore CS0420 // A reference to a volatile field will not be treated as volatile
         }
 
         /// <summary>
