@@ -47,7 +47,6 @@ namespace Akka.Remote.Tests.MultiNode
     public abstract class RemoteReDeploymentSpec : MultiNodeSpec
     {
         private readonly RemoteReDeploymentSpecConfig _config;
-        private readonly Func<RoleName, string, IActorRef> _identify;
 
         protected RemoteReDeploymentSpec(Type type) : this(new RemoteReDeploymentSpecConfig(), type)
         {
