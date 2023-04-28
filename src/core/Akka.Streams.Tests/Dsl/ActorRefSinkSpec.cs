@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void ActorRefSink_should_send_elements_to_the_ActorRef()
         {
-            Source.From(new[] { 1, 2, 3 }).RunWith(Sink.ActorRef<int>(TestActor, onCompleteMessage: "done"), Materializer);
+            Source.From(new[] { 1, 2, 3 }).RunWith(Sink.ActorRef<int>(TestActor, onCompleteMessage: "done", _ => ""), Materializer);
 
             ExpectMsg(1);
             ExpectMsg(2);
@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Dsl
         public void ActorRefSink_should_cancel_a_stream_when_actor_terminates()
         {
             var fw = Sys.ActorOf(Props.Create(() => new Fw(TestActor)).WithDispatcher("akka.test.stream-dispatcher"));
-            var publisher = this.SourceProbe<int>().To(Sink.ActorRef<int>(fw, onCompleteMessage: "done"))
+            var publisher = this.SourceProbe<int>().To(Sink.ActorRef<int>(fw, onCompleteMessage: "done", _ => ""))
                     .Run(Materializer)
                     .SendNext(1)
                     .SendNext(2);
