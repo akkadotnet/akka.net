@@ -3,8 +3,6 @@
 <PropertyGroup>
   <Description>Akka.Remote x-plat performance benchmark</Description>
   <Copyright>Copyright (c) Akka.NET Team</Copyright>
-  <AssemblyTitle>RemotePingPong</AssemblyTitle>
-  <AssemblyName>RemotePingPong</AssemblyName>
   <Authors>Akka.NET Team</Authors>
   <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
   <OutputType>Exe</OutputType>

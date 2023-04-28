@@ -2,7 +2,6 @@
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Streams.TestKit</AssemblyTitle>
     <Description>Testkit for Reactive stream support for Akka.NET</Description>
     <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <PackageTags>$(AkkaPackageTags);reactive;stream;testkit</PackageTags>

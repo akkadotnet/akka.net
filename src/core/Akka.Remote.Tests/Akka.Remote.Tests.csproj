@@ -3,7 +3,6 @@
   <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Remote.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
 

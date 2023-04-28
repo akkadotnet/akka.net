@@ -3,7 +3,6 @@
     <Import Project="..\..\..\common.props" />
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.DependencyInjection</AssemblyTitle>
         <Description>Dependency injection support for Akka.NET</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);dependency injection</PackageTags>

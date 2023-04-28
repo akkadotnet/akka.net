@@ -2,7 +2,6 @@
   <Import Project="..\..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Serialization.TestKit</AssemblyTitle>
     <Description>Serialization TestKit for Akka.NET</Description>
     <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>

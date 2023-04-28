@@ -2,7 +2,6 @@
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Persistence.TestKit.Xunit2</AssemblyTitle>
     <Description>TestKit for writing tests for Akka.NET Persistance module using xUnit</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);testkit;persistance;xunit</PackageTags>

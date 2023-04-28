@@ -2,7 +2,6 @@
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyName>Akka.Streams.Tests</AssemblyName>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
 

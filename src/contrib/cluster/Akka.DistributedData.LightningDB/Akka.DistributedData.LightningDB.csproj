@@ -2,7 +2,6 @@
     <Import Project="..\..\..\common.props"/>
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.DistributedData.LightningDB</AssemblyTitle>
         <Description>Replicated data using CRDT structures</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);network;cluster;crdt;replication;lightningdb;lmdb</PackageTags>

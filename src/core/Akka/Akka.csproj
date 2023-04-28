@@ -2,7 +2,6 @@
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka</AssemblyTitle>
     <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
     <Description>Canonical actor model implementation for .NET with local + distributed actors in C# and F#.</Description>
     <PackageTags>$(AkkaPackageTags)</PackageTags>

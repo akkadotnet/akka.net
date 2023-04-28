@@ -2,7 +2,6 @@
     <Import Project="..\..\common.props"/>
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.FSharp</AssemblyTitle>
         <Description>F# API support for Akka.NET</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);F#;fsharp</PackageTags>

@@ -3,7 +3,6 @@
   <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <AssemblyName>Akka.Streams.TestKit.Tests</AssemblyName>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
   

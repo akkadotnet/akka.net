@@ -3,7 +3,6 @@
   <Import Project="..\..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.DistributedData.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>

@@ -2,7 +2,6 @@
     <Import Project="..\..\..\common.props" />
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Persistence.Query.InMemory</AssemblyTitle>
         <Description>Akka.NET Persistence Query implementation for InMemory Journal.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>

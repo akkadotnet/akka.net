@@ -2,7 +2,6 @@
   <Import Project="..\..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Persistence.Sql.TestKit</AssemblyTitle>
     <Description>Akka.NET TestKit for SQL-based ADO.NET Persistence middleware</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;testkit;eventsource;sql;reactive;streams</PackageTags>

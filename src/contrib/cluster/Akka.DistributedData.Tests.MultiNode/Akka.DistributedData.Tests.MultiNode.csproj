@@ -2,7 +2,6 @@
     <Import Project="..\..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.DistributedData.Tests.MultiNode</AssemblyTitle>
     <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
  

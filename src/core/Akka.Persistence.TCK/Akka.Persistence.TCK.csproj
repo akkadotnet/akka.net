@@ -2,7 +2,6 @@
     <Import Project="..\..\common.props"/>
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Persistence.TCK</AssemblyTitle>
         <Description>Testkit for Persistence actor support for Akka.NET</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);persistence;eventsource;tck</PackageTags>

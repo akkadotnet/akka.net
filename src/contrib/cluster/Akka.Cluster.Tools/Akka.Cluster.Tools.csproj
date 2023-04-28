@@ -2,7 +2,6 @@
     <Import Project="..\..\..\common.props"/>
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Cluster.Tools</AssemblyTitle>
         <Description>Distributed publish/subscribe, client and singleton support for Akka.NET cluster</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);network;cluster</PackageTags>

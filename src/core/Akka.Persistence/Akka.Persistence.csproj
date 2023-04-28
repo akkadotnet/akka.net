@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
   <PropertyGroup>
-    <AssemblyTitle>Akka.Persistence</AssemblyTitle>
     <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
     <Description>Persistence for Akka.NET actors. Allows actors to persist and recover their state in a database-agnostic fashion.</Description>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource</PackageTags>

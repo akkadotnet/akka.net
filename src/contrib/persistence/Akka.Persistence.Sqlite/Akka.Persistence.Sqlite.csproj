@@ -2,7 +2,6 @@
     <Import Project="..\..\..\common.props"/>
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Persistence.Sqlite</AssemblyTitle>
         <Description>Akka.NET Persistence journal and snapshot store backed by SQLite.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;sqlite</PackageTags>
