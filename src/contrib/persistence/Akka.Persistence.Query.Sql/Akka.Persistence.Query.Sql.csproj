@@ -16,8 +16,4 @@
         <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
     </ItemGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
-
 </Project>
