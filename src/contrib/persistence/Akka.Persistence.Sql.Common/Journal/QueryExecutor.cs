@@ -502,10 +502,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                     @SerializerId
                 )";
 
+#pragma warning disable CS0612 // Type or member is obsolete
             QueryEventsSql = $@"
                 SELECT {allEventColumnNames}
                 FROM {Configuration.FullJournalTableName} e
                 WHERE ";
+#pragma warning restore CS0612 // Type or member is obsolete
         }
 
         /// <summary>
