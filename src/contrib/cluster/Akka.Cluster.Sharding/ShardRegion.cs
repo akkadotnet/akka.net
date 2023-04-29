@@ -967,7 +967,7 @@ namespace Akka.Cluster.Sharding
                         sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress,
                             Option<IActorRef>.Create(entityRef)));
                     }
-                    catch (ActorNotFoundException ex)
+                    catch (ActorNotFoundException)
                     {
                         // entity does not exist
                         sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress,
