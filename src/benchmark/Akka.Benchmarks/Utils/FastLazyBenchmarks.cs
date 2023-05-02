@@ -19,8 +19,6 @@ namespace Akka.Benchmarks.Utils
         private Lazy<int> lazySafe;
         private Lazy<int> lazyUnsafe;
         private FastLazy<int> fastLazy;
-        private FastLazy<int, int> fastLazyWithInit;
-
 
         [GlobalSetup]
         public void Setup()
@@ -28,7 +26,6 @@ namespace Akka.Benchmarks.Utils
             lazySafe = new Lazy<int>(() => 100, LazyThreadSafetyMode.ExecutionAndPublication);
             lazyUnsafe = new Lazy<int>(() => 100, LazyThreadSafetyMode.None);
             fastLazy = new FastLazy<int>(() => 100);
-            fastLazyWithInit = new FastLazy<int, int>(state => state + 100, 1000);
         }
 
         [Benchmark(Baseline = true)]
@@ -47,12 +44,6 @@ namespace Akka.Benchmarks.Utils
         public int FastLazy_get_value()
         {
             return fastLazy.Value;
-        }
-
-        [Benchmark]
-        public int FastLazy_stateful_get_value()
-        {
-            return fastLazyWithInit.Value;
         }
     }
 }
