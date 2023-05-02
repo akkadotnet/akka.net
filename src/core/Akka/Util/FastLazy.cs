@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Akka.Util
@@ -29,14 +30,17 @@ namespace Akka.Util
             _producer = producer ?? throw new ArgumentNullException(nameof(producer));
         }
 
-        public bool IsValueCreated => Volatile.Read(ref _status) == 2;
-        private bool IsExceptionThrown => Volatile.Read(ref _exception) != null;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsValueCreated() => Volatile.Read(ref _status) == 2;
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsExceptionThrown() => Volatile.Read(ref _exception) != null;
         
         public T Value
         {
             get
             {
-                if (IsValueCreated)
+                if (IsValueCreated())
                     return _createdValue;
                 
                 if (Interlocked.CompareExchange(ref _status, 1, 0) == 0)
@@ -56,7 +60,7 @@ namespace Akka.Util
                 }
                 else
                 {
-                    SpinWait.SpinUntil(() => IsValueCreated || IsExceptionThrown);
+                    SpinWait.SpinUntil(() => IsValueCreated() || IsExceptionThrown());
                     var e = Volatile.Read(ref _exception);
                     if (e != null)
                         throw e;

@@ -21,7 +21,7 @@ public class FastLazySpecs
     public void FastLazy_should_indicate_no_value_has_been_produced()
     {
         var fal = new FastLazy<int>(() => 2);
-        Assert.False(fal.IsValueCreated);
+        Assert.False(fal.IsValueCreated());
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class FastLazySpecs
         var fal = new FastLazy<int>(() => 2);
         var value = fal.Value;
         Assert.Equal(2, value);
-        Assert.True(fal.IsValueCreated);
+        Assert.True(fal.IsValueCreated());
     }
 
     [Fact]
