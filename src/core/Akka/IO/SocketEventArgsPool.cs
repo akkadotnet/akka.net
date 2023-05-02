@@ -22,7 +22,7 @@ namespace Akka.IO
     {
         SocketAsyncEventArgs Acquire(IActorRef actor);
         void Release(SocketAsyncEventArgs e);
-        
+
         BufferPoolInfo BufferPoolInfo { get; }
     }
 
@@ -40,16 +40,17 @@ namespace Akka.IO
         // There is no reason why users or developers would need to touch memory management code because it is
         // very specific for providing byte buffers for SocketAsyncEventArgs
         private readonly IBufferPool _bufferPool;
-        
+
         private readonly EventHandler<SocketAsyncEventArgs> _onComplete;
 
-        public PreallocatedSocketEventAgrsPool(int initSize, IBufferPool bufferPool, EventHandler<SocketAsyncEventArgs> onComplete)
+        public PreallocatedSocketEventAgrsPool(int initSize, IBufferPool bufferPool,
+            EventHandler<SocketAsyncEventArgs> onComplete)
         {
             _bufferPool = bufferPool;
             _onComplete = onComplete;
         }
 
-        
+
         public SocketAsyncEventArgs Acquire(IActorRef actor)
         {
             var buffer = _bufferPool.Rent();
@@ -67,6 +68,7 @@ namespace Akka.IO
             {
                 _bufferPool.Release(new ArraySegment<byte>(e.Buffer, e.Offset, e.Count));
             }
+
             if (e.BufferList != null)
             {
                 foreach (var segment in e.BufferList)
@@ -74,6 +76,7 @@ namespace Akka.IO
                     _bufferPool.Release(segment);
                 }
             }
+
             e.Dispose();
         }
 
@@ -82,58 +85,20 @@ namespace Akka.IO
 
     internal static class SocketAsyncEventArgsExtensions
     {
-        public static void SetBuffer(this SocketAsyncEventArgs args, ByteString data)
-        {
-            if (data.IsCompact)
-            {
-                var buffer = data.Buffers[0];
-                if (args.BufferList != null)
-                {
-                    // BufferList property setter is not simple member association operation, 
-                    // but the getter is. Therefore we first check if we need to clear buffer list
-                    // and only do so if necessary.
-                    args.BufferList = null;
-                }
-                args.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
-            }
-            else
-            {
-                if (RuntimeDetector.IsMono)
-                {
-                    // Mono doesn't support BufferList - falback to compacting ByteString
-                    var compacted = data.Compact();
-                    var buffer = compacted.Buffers[0];
-                    args.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
-                }
-                else
-                {
-                    args.SetBuffer(null, 0, 0);
-                    args.BufferList = data.Buffers;
-                }
-            }
-        }
-        
         public static void SetBuffer(this SocketAsyncEventArgs args, IEnumerable<ByteString> dataCollection)
         {
-            if (RuntimeDetector.IsMono)
+            // Mono doesn't support BufferList - fallback to compacting ByteString
+            var dataList = dataCollection.ToList();
+            var totalSize = dataList.Sum(d => d.Count);
+            var bytes = new byte[totalSize];
+            var position = 0;
+            foreach (var byteString in dataList)
             {
-                // Mono doesn't support BufferList - falback to compacting ByteString
-                var dataList = dataCollection.ToList();
-                var totalSize = dataList.SelectMany(d => d.Buffers).Sum(d => d.Count);
-                var bytes = new byte[totalSize];
-                var position = 0;
-                foreach (var byteString in dataList)
-                {
-                    var copied = byteString.CopyTo(bytes, position, byteString.Count);
-                    position += copied;
-                }
-                args.SetBuffer(bytes, 0, bytes.Length);
+                var copied = byteString.CopyTo(bytes, position, byteString.Count);
+                position += copied;
             }
-            else
-            {
-                args.SetBuffer(null, 0, 0);
-                args.BufferList = dataCollection.SelectMany(d => d.Buffers).ToList();
-            }
+
+            args.SetBuffer(bytes, 0, bytes.Length);
         }
     }
 }
