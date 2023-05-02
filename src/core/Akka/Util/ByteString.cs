@@ -339,6 +339,7 @@ namespace Akka.IO
                 throw new ArgumentOutOfRangeException(nameof(index), "Index must be positive number");
             if (count < 0)
                 throw new ArgumentOutOfRangeException(nameof(count), "Count must be positive number");
+            if (count == 0) return Empty;
             if(index > _count)
                 throw new ArgumentOutOfRangeException(nameof(index), "Index is outside of the bounds of the ByteString");
             if(index + count > _count)
