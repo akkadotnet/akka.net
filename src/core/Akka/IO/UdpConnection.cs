@@ -192,8 +192,12 @@ namespace Akka.IO
             {
                 var (send, sender) = _pendingSend.Value;
                 var data = send.Payload;
-
-                var bytesWritten = _socket.Send(data.Buffers);
+                
+                #if NETSTANDARD2_0
+                var bytesWritten = _socket.Send(data.Buffers.ToArray());
+                #else
+                var bytesWritten = _socket.Send(data.Buffers.Span);
+                #endif 
                 if (Udp.Settings.TraceLogging)
                     Log.Debug("Wrote [{0}] bytes to socket", bytesWritten);
 
