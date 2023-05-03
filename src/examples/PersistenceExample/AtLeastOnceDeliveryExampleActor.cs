@@ -63,11 +63,11 @@ namespace PersistenceExample
         {
             switch (message)
             {
-                case string str when str == "start":
+                case string and "start":
                     _confirming = true;
                     break;
                 
-                case string str when str == "stop":
+                case string and "stop":
                     _confirming = false;
                     break;
                 
@@ -135,7 +135,7 @@ namespace PersistenceExample
         {
             switch (message)
             {
-                case string str when str == "boom":
+                case string and "boom":
                     throw new Exception("Controlled devastation");
                 
                 case Message msg:

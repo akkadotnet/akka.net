@@ -461,7 +461,7 @@ namespace Akka.Serialization
             /// <param name="serializer">The calling serializer.</param>
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
             {
-                if (value is int || value is decimal || value is float)
+                if (value is int or decimal or float)
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("$");

@@ -128,7 +128,7 @@ namespace Akka.Persistence.Tests
                                 Context.Become(ProcessC);
                             });
                         }
-                        else if (data == "b-1" || data == "b-2")
+                        else if (data is "b-1" or "b-2")
                         {
                             Persist(new Evt(cmd.Data.ToString()), UpdateStateHandler);
                         }

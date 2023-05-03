@@ -44,10 +44,10 @@ namespace PersistenceExample
         {
             switch (message)
             {
-                case string str when str == "print":
+                case string and "print":
                     Console.WriteLine("Current actor's state: " + State);
                     return true;
-                case string str when str == "snap":
+                case string and "snap":
                     SaveSnapshot(State);
                     return true;
                 case string str:

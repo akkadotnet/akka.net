@@ -75,7 +75,7 @@ namespace Akka.Discovery
             Try<ServiceDiscovery> Create(string typeName)
             {
                 var dynamic = DynamicAccess.CreateInstanceFor<ServiceDiscovery>(typeName, _system);
-                return dynamic.RecoverWith(ex => ex is TypeLoadException || ex is MissingMethodException 
+                return dynamic.RecoverWith(ex => ex is TypeLoadException or MissingMethodException 
                     ? DynamicAccess.CreateInstanceFor<ServiceDiscovery>(typeName) 
                     : dynamic);
             }
@@ -87,7 +87,7 @@ namespace Akka.Discovery
             return instanceTry.IsSuccess switch
             {
                 true => instanceTry.Get(),
-                false when instanceTry.Failure.Value is TypeLoadException || instanceTry.Failure.Value is MissingMethodException =>
+                false when instanceTry.Failure.Value is TypeLoadException or MissingMethodException =>
                     throw new ArgumentException(nameof(method), $"Illegal akka.discovery.{method}.class value or incompatible class! \n" +
                         "The implementation class MUST extend Akka.Discovery.ServiceDiscovery and take an \n" +
                         "ExtendedActorSystem as constructor argument."),

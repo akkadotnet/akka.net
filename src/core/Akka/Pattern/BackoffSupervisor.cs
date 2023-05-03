@@ -264,7 +264,7 @@ namespace Akka.Pattern
         {
             var rand = 1.0 + ThreadLocalRandom.Current.NextDouble() * randomFactor;
             var calculateDuration = Math.Min(maxBackoff.Ticks, minBackoff.Ticks * Math.Pow(2, restartCount)) * rand;
-            return calculateDuration < 0d || calculateDuration >= long.MaxValue ? maxBackoff : new TimeSpan((long)calculateDuration);
+            return calculateDuration is < 0d or >= long.MaxValue ? maxBackoff : new TimeSpan((long)calculateDuration);
         }
     }
 }

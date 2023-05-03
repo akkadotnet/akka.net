@@ -248,7 +248,7 @@ namespace Akka.Persistence.Journal
                         throw;
                 }
             }
-            else if (message is RecoverySuccess || message is ReplayMessagesFailure)
+            else if (message is RecoverySuccess or ReplayMessagesFailure)
             {
                 if (DebugEnabled)
                     _log.Debug($"Replay completed: {message}");
@@ -296,7 +296,7 @@ namespace Akka.Persistence.Journal
                 {
                     // discard
                 }
-                else if (message is RecoverySuccess || message is ReplayMessagesFailure)
+                else if (message is RecoverySuccess or ReplayMessagesFailure)
                 {
                     Context.Stop(Self);
                 }

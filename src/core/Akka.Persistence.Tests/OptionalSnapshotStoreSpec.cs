@@ -38,7 +38,7 @@ namespace Akka.Persistence.Tests
                     _lastSender = Sender;
                     SaveSnapshot(message);
                 }
-                else if (message is SaveSnapshotFailure || message is SaveSnapshotSuccess)
+                else if (message is SaveSnapshotFailure or SaveSnapshotSuccess)
                     _lastSender.Tell(message);
                 else return false;
                 return true;

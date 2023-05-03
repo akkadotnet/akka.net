@@ -303,8 +303,7 @@ namespace Akka.Streams
         internal bool IsAsync
             => _attributes.Length > 0 &&
                 _attributes.Any(
-                    attr => attr is AsyncBoundary ||
-                    attr is ActorAttributes.Dispatcher);
+                    attr => attr is AsyncBoundary or ActorAttributes.Dispatcher);
 
         /// <summary>
         /// Get all attributes of a given type (or subtypes thereof).
