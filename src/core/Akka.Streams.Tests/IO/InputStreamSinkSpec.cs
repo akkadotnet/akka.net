@@ -168,10 +168,11 @@ namespace Akka.Streams.Tests.IO
 
                 while (!bytes.IsEmpty)
                 {
-                    var expected = bytes.Slice(0, 3);
-                    bytes = bytes.Slice(3);
+                    var max = Math.Min(bytes.Count, 3);
+                    var expected = bytes.Slice(0, max);
+                    bytes = bytes.Slice(max);
 
-                    var result = ReadN(inputStream, 3);
+                    var result = ReadN(inputStream, max);
                     result.Item1.Should().Be(expected.Count);
                     result.Item2.Should().BeEquivalentTo(expected);
                 }
