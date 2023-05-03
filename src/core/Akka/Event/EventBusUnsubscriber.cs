@@ -82,7 +82,7 @@ namespace Akka.Event
         {
             if (_debug)
                 _eventStream.Publish(new Debug(GetType().Name, GetType(),
-                    string.Format("registering unsubscriber with {0}", _eventStream)));
+                    $"registering unsubscriber with {_eventStream}"));
         }
 
         /// <summary>

@@ -33,7 +33,7 @@ namespace Akka.Cluster.TestKit
         public static Config ClusterConfigWithFailureDetectorPuppet()
         {
             return ConfigurationFactory.ParseString(
-                string.Format(@"akka.cluster.failure-detector.implementation-class = ""{0}""", typeof(FailureDetectorPuppet).AssemblyQualifiedName))
+                    $@"akka.cluster.failure-detector.implementation-class = ""{typeof(FailureDetectorPuppet).AssemblyQualifiedName}""")
                 .WithFallback(ClusterConfig());
         }
 

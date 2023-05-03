@@ -27,7 +27,7 @@ namespace Akka.Tests.Routing
             {
                 if (message is ConsistentHashableEnvelope)
                 {
-                    Sender.Tell(string.Format("Unexpected envelope: {0}", message));
+                    Sender.Tell($"Unexpected envelope: {message}");
                 }
                 else
                 {

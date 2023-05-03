@@ -110,7 +110,7 @@ akka {
 
             protected override bool Receive(object message)
             {
-                Context.ActorSelection(string.Format("akka.tcp://remote@127.0.0.1:{0}/user/remote", _port))
+                Context.ActorSelection($"akka.tcp://remote@127.0.0.1:{_port}/user/remote")
                     .Tell(message, ActorRefs.NoSender);
                 return true;
             }

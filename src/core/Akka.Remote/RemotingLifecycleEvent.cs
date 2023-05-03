@@ -58,7 +58,7 @@ namespace Akka.Remote
         public override string ToString()
         {
             var networkDirection = IsInbound ? "<-" : "->";
-            return string.Format("{0} [{1}] {2} {3}", EventName, LocalAddress, networkDirection, RemoteAddress);
+            return $"{EventName} [{LocalAddress}] {networkDirection} {RemoteAddress}";
         }
     }
 
@@ -196,7 +196,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("{0}: Error [{1}] [{2}]", base.ToString(), Cause.Message, Cause.StackTrace);
+            return $"{base.ToString()}: Error [{Cause.Message}] [{Cause.StackTrace}]";
         }
     }
 
@@ -234,8 +234,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("Remoting now listens on addresses: [{0}]",
-                ListenAddresses.Select(x => x.ToString()).Join(","));
+            return $"Remoting now listens on addresses: [{ListenAddresses.Select(x => x.ToString()).Join(",")}]";
         }
     }
 
@@ -291,7 +290,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("Remoting error: [{0}] [{1}]", Cause.Message, Cause.StackTrace);
+            return $"Remoting error: [{Cause.Message}] [{Cause.StackTrace}]";
         }
     }
 
@@ -337,10 +336,7 @@ namespace Akka.Remote
         public override string ToString()
         {
             return
-                string.Format(
-                    "Association to [{0}] having UID [{1}] is irrecoverably failed. UID is now quarantined and all " +
-                    "messages to this UID will be delivered to dead letters. Remote actorsystem must be restarted to recover " +
-                    "from this situation.", Address, Uid);
+                $"Association to [{Address}] having UID [{Uid}] is irrecoverably failed. UID is now quarantined and all " + "messages to this UID will be delivered to dead letters. Remote actorsystem must be restarted to recover " + "from this situation.";
         }
     }
 
@@ -385,7 +381,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("The remote system {0} has quarantined this system {1}.", RemoteAddress, LocalAddress);
+            return $"The remote system {RemoteAddress} has quarantined this system {LocalAddress}.";
         }
     }
 

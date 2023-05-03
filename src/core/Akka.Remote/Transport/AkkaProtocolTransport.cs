@@ -126,8 +126,7 @@ namespace Akka.Remote.Transport
             get
             {
                 if (string.IsNullOrEmpty(_managerName))
-                    _managerName = string.Format("akkaprotocolmanager.{0}.{1}", WrappedTransport.SchemeIdentifier,
-                        UniqueId.GetAndIncrement());
+                    _managerName = $"akkaprotocolmanager.{WrappedTransport.SchemeIdentifier}.{UniqueId.GetAndIncrement()}";
                 return _managerName;
             }
         }
@@ -259,7 +258,7 @@ namespace Akka.Remote.Transport
 
         private string ActorNameFor(Address remoteAddress)
         {
-            return string.Format("akkaProtocol-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), NextId());
+            return $"akkaProtocol-{AddressUrlEncoder.Encode(remoteAddress)}-{NextId()}";
         }
 
         private void CreateOutboundStateActor(Address remoteAddress,

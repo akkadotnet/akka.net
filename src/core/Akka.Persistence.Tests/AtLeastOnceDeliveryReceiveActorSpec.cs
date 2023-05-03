@@ -336,7 +336,7 @@ namespace Akka.Persistence.Tests
                     // this is not supported currently, so expecting exception
                     try
                     {
-                        Deliver(Context.ActorSelection("*"), id => string.Format("{0}{1}", message, id));
+                        Deliver(Context.ActorSelection("*"), id => $"{message}{id}");
                     }
                     catch (Exception ex)
                     {

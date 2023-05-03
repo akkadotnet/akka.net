@@ -223,7 +223,7 @@ namespace Akka.Persistence.Journal
 
         private void SendIdentify(Address address)
         {
-            var sel = Context.ActorSelection(string.Format("{0}/system/{1}", new RootActorPath(address), _targetPluginId));
+            var sel = Context.ActorSelection($"{new RootActorPath(address)}/system/{_targetPluginId}");
             if (_log.IsInfoEnabled)
                 _log.Info("Trying to identify target + {0} at {1}", _pluginType.Qualifier, sel);
             sel.Tell(new Identify(_targetPluginId));

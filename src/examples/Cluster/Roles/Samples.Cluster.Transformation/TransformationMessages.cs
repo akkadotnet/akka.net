@@ -35,7 +35,7 @@ namespace Samples.Cluster.Transformation
 
             public override string ToString()
             {
-                return string.Format("TransformationResult({0})", Text);
+                return $"TransformationResult({Text})";
             }
         }
 
@@ -53,7 +53,7 @@ namespace Samples.Cluster.Transformation
 
             public override string ToString()
             {
-                return string.Format("JobFailed({0})", Reason);
+                return $"JobFailed({Reason})";
             }
         }
 

@@ -393,7 +393,7 @@ namespace Akka.Persistence.Tests
         {
             // after some time we start the system a-new
             // and the adapter originally used for adapting A is missing from the configuration!
-            var journalPath = string.Format("akka.persistence.journal.{0}", _journalName);
+            var journalPath = $"akka.persistence.journal.{_journalName}";
 
             // TODO when WithoutPath is added
             // var missingAdapterConfig = AdaptersConfig.WithoutPath(...)

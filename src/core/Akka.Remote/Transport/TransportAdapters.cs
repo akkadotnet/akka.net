@@ -151,7 +151,7 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public string AugmentScheme(string originalScheme)
         {
-            return string.Format("{0}.{1}", AddedSchemeIdentifier, originalScheme);
+            return $"{AddedSchemeIdentifier}.{originalScheme}";
         }
 
         /// <summary>
@@ -172,7 +172,7 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public string RemoveScheme(string scheme)
         {
-            if (scheme.StartsWith(string.Format("{0}.", AddedSchemeIdentifier)))
+            if (scheme.StartsWith($"{AddedSchemeIdentifier}."))
                 return scheme.Remove(0, AddedSchemeIdentifier.Length + 1);
             return scheme;
         }

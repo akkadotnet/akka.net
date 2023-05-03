@@ -185,7 +185,7 @@ namespace Akka.Remote
             /// <returns>TBD</returns>
             public override string ToString()
             {
-                return string.Format("Remote message {0} -> {1}", SenderOption, Recipient);
+                return $"Remote message {SenderOption} -> {Recipient}";
             }
 
             private readonly SeqNo _seq;

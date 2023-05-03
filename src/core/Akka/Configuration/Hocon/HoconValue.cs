@@ -533,7 +533,7 @@ namespace Akka.Configuration.Hocon
             }
             if (IsArray())
             {
-                return string.Format("[{0}]", string.Join(",", GetArray().Select(e => e.ToString(indent + 1))));
+                return $"[{string.Join(",", GetArray().Select(e => e.ToString(indent + 1)))}]";
             }
             return "<<unknown value>>";
         }

@@ -55,9 +55,9 @@ namespace Helios.Concurrency
             NumThreads = numThreads;
             DeadlockTimeout = deadlockTimeout;
             if (deadlockTimeout.HasValue && deadlockTimeout.Value.TotalMilliseconds <= 0)
-                throw new ArgumentOutOfRangeException("deadlockTimeout", string.Format("deadlockTimeout must be null or at least 1ms. Was {0}.", deadlockTimeout));
+                throw new ArgumentOutOfRangeException("deadlockTimeout", $"deadlockTimeout must be null or at least 1ms. Was {deadlockTimeout}.");
             if (numThreads <= 0)
-                throw new ArgumentOutOfRangeException("numThreads", string.Format("numThreads must be at least 1. Was {0}", numThreads));
+                throw new ArgumentOutOfRangeException("numThreads", $"numThreads must be at least 1. Was {numThreads}");
         }
 
         /// <summary>
@@ -374,7 +374,7 @@ namespace Helios.Concurrency
                 };
 
                 if (pool.Settings.Name != null)
-                    thread.Name = string.Format("{0}_{1}", pool.Settings.Name, workerId);
+                    thread.Name = $"{pool.Settings.Name}_{workerId}";
 
                 thread.Start();
             }

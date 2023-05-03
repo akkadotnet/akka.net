@@ -278,12 +278,12 @@ namespace Akka.Cluster.Tests.MultiNode
                     {
                         if (!Sys.WhenTerminated.Wait(timeout)) // TestConductor.Shutdown called by First MUST terminate this actor system
                         {
-                            Assert.True(false, String.Format("Failed to stop [{0}] within [{1}]", Sys.Name, timeout));
+                            Assert.True(false, $"Failed to stop [{Sys.Name}] within [{timeout}]");
                         }
                     }
                     catch (TimeoutException)
                     {
-                        Assert.True(false, String.Format("Failed to stop [{0}] within [{1}]", Sys.Name, timeout));
+                        Assert.True(false, $"Failed to stop [{Sys.Name}] within [{timeout}]");
                     }
 
                     

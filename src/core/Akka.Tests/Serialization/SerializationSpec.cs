@@ -66,7 +66,7 @@ namespace Akka.Tests.Serialization
 
             public override string ToString()
             {
-                return string.Format("<UntypedContainerMessage {0}>", Contents);
+                return $"<UntypedContainerMessage {Contents}>";
             }
         }
         public class ContainerMessage<T>
