@@ -123,7 +123,7 @@ namespace Akka.Cluster.Metrics
                     if (m.Member.Status is MemberStatus.Up or MemberStatus.WeaklyUp)
                         AddMember(m.Member);
                     return true;
-                case object and ClusterEvent.IMemberEvent:
+                case ClusterEvent.IMemberEvent:
                     return true; // not interested in other types of MemberEvent
             }
 
