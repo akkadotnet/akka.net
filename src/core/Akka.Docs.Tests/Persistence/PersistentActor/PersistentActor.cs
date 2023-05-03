@@ -78,8 +78,8 @@ namespace DocsExamples.Persistence.PersistentActor
                     case Evt evt:
                         UpdateState(evt);
                         break;
-                    case SnapshotOffer snapshot when snapshot.Snapshot is ExampleState:
-                        _state = (ExampleState)snapshot.Snapshot;
+                    case SnapshotOffer snapshot when snapshot.Snapshot is ExampleState state:
+                        _state = state;
                         break;
                 }
             }

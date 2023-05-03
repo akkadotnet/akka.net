@@ -166,7 +166,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is Join && Equals((Join)obj);
+                return obj is Join join && Equals(join);
             }
 
             private bool Equals(Join other)
@@ -330,7 +330,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is InitJoinAck && Equals((InitJoinAck)obj);
+                return obj is InitJoinAck ack && Equals(ack);
             }
 
             private bool Equals(InitJoinAck other)
@@ -372,7 +372,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is InitJoinNack && Equals((InitJoinNack)obj);
+                return obj is InitJoinNack nack && Equals(nack);
             }
 
             private bool Equals(InitJoinNack other)
@@ -412,7 +412,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is ExitingConfirmed && Equals((ExitingConfirmed)obj);
+                return obj is ExitingConfirmed confirmed && Equals(confirmed);
             }
 
             /// <inheritdoc/>

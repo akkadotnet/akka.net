@@ -39,16 +39,16 @@ namespace Akka.Remote.Serialization
         /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
-            if (obj is Create) return CreateToProto((Create)obj);
-            if (obj is Recreate) return RecreateToProto((Recreate)obj);
+            if (obj is Create create) return CreateToProto(create);
+            if (obj is Recreate recreate) return RecreateToProto(recreate);
             if (obj is Suspend) return EmptyBytes;
-            if (obj is Resume) return ResumeToProto((Resume)obj);
+            if (obj is Resume resume) return ResumeToProto(resume);
             if (obj is Terminate) return EmptyBytes;
-            if (obj is Supervise) return SuperviseToProto((Supervise)obj);
-            if (obj is Watch) return WatchToProto((Watch)obj);
-            if (obj is Unwatch) return UnwatchToProto((Unwatch)obj);
-            if (obj is Failed) return FailedToProto((Failed)obj);
-            if (obj is DeathWatchNotification) return DeathWatchNotificationToProto((DeathWatchNotification)obj);
+            if (obj is Supervise supervise) return SuperviseToProto(supervise);
+            if (obj is Watch watch) return WatchToProto(watch);
+            if (obj is Unwatch unwatch) return UnwatchToProto(unwatch);
+            if (obj is Failed failed) return FailedToProto(failed);
+            if (obj is DeathWatchNotification notification) return DeathWatchNotificationToProto(notification);
             if (obj is NoMessage) throw new ArgumentException("NoMessage should never be serialized or deserialized");
 
             throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");

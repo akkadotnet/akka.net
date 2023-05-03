@@ -161,9 +161,8 @@ namespace Akka.Streams.Actors
                     Request(RequestStrategy.RequestDemand(RemainingRequested));
                 }
             }
-            else if (message is OnSubscribe)
+            else if (message is OnSubscribe onSubscribe)
             {
-                var onSubscribe = (OnSubscribe) message;
                 if (_subscription == null)
                 {
                     _subscription = onSubscribe.Subscription;

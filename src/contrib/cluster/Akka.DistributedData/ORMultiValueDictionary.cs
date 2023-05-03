@@ -282,7 +282,7 @@ namespace Akka.DistributedData
             Underlying.Select(x => new KeyValuePair<TKey, IImmutableSet<TValue>>(x.Key, x.Value.Elements)).GetEnumerator();
 
         public override bool Equals(object obj) =>
-            obj is ORMultiValueDictionary<TKey, TValue> && Equals((ORMultiValueDictionary<TKey, TValue>)obj);
+            obj is ORMultiValueDictionary<TKey, TValue> pairs && Equals(pairs);
 
         public override int GetHashCode() => Underlying.GetHashCode();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

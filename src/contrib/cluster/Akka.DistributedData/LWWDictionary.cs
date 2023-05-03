@@ -324,7 +324,7 @@ namespace Akka.DistributedData
 
         
         public override bool Equals(object obj) =>
-            obj is LWWDictionary<TKey, TValue> && Equals((LWWDictionary<TKey, TValue>)obj);
+            obj is LWWDictionary<TKey, TValue> pairs && Equals(pairs);
 
         
         public override int GetHashCode() => Underlying.GetHashCode();

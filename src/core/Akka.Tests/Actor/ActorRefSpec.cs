@@ -592,9 +592,8 @@ namespace Akka.Tests.Actor
         {
             protected override bool Receive(object message)
             {
-                if (message is int)
+                if (message is int i)
                 {
-                    var i = (int)message;
                     string msg = null;
                     if (i == 0) msg = "zero";
                     else if (i == 5) msg = "five";
