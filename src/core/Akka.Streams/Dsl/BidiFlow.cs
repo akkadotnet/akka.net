@@ -30,8 +30,8 @@ namespace Akka.Streams.Dsl
         public static BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat> FromGraph<TIn1, TOut1, TIn2, TOut2, TMat>(
             IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> graph)
         {
-            return graph is BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>
-                ? (BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>) graph
+            return graph is BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat> flow
+                ? flow
                 : new BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>(graph.Module);
         }
 

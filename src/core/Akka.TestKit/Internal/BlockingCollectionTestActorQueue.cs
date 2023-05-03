@@ -58,8 +58,7 @@ namespace Akka.TestKit.Internal
         /// <returns>An enumeration of all items removed from the queue.</returns>
         public IEnumerable<T> GetAll()
         {
-            T item;
-            while(_queue.TryTake(out item))
+            while(_queue.TryTake(out var item))
             {
                 yield return item;
             }

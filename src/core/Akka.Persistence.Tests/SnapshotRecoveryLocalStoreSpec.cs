@@ -42,8 +42,8 @@ namespace Akka.Persistence.Tests
             {
                 if (message is TakeSnapshot)
                     SaveSnapshot(_state);
-                else if (message is SaveSnapshotSuccess)
-                    _probe.Tell(((SaveSnapshotSuccess)message).Metadata.SequenceNr);
+                else if (message is SaveSnapshotSuccess success)
+                    _probe.Tell(success.Metadata.SequenceNr);
                 else if (message is GetState)
                     _probe.Tell(_state);
                 else return false;

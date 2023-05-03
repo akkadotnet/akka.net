@@ -16,16 +16,17 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 
 namespace Akka.Tests.Actor
 {
+    public class Tick { }
+
+    public class TransparentTick : INotInfluenceReceiveTimeout { }
+    
     public class ReceiveTimeoutSpec : AkkaSpec
     {
-        public class Tick { }
-
-        public class TransparentTick : INotInfluenceReceiveTimeout { }
-
         public class TimeoutActor : ActorBase
         {
             private TestLatch _timeoutLatch;
@@ -61,6 +62,38 @@ namespace Akka.Tests.Actor
 
                 return false;
             }
+        }
+        
+        public class AsyncTimeoutActor : ReceiveActor
+        {
+            public AsyncTimeoutActor(TestLatch timeoutLatch)
+                : this(timeoutLatch, TimeSpan.FromMilliseconds(500))
+            {
+            }
+
+            public AsyncTimeoutActor(TestLatch timeoutLatch, TimeSpan? timeout)
+            {
+                var log = Context.GetLogger();
+                
+                Context.SetReceiveTimeout(timeout.GetValueOrDefault());
+
+                ReceiveAsync<ReceiveTimeout>(async _ =>
+                {
+                    log.Info($"Received {nameof(ReceiveTimeout)}");
+                    timeoutLatch.Open();
+                });
+
+                ReceiveAsync<TransparentTick>(async _ =>
+                {
+                    log.Info($"Received {nameof(TransparentTick)}");
+                });
+
+                ReceiveAsync<Tick>(async _ =>
+                {
+                    log.Info($"Received {nameof(Tick)}");
+                });
+            }
+
         }
 
         public class TurnOffTimeoutActor : ActorBase
@@ -120,6 +153,10 @@ namespace Akka.Tests.Actor
             }
         }
 
+        public ReceiveTimeoutSpec(ITestOutputHelper output): base(output)
+        {
+        }
+        
         [Fact]
         public void An_actor_with_receive_timeout_must_get_timeout()
         {
@@ -179,6 +216,26 @@ namespace Akka.Tests.Actor
                 {
                     timeoutActor.Tell(new TransparentTick());
                     timeoutActor.Tell(new Identify(null));
+                });
+
+            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            cancelable.Cancel();
+            Sys.Stop(timeoutActor);
+        }
+
+        [Fact]
+        public void An_async_actor_with_receive_timeout_must_get_timeout_while_receiving_NotInfluenceReceiveTimeout_messages()
+        {
+            var timeoutLatch = new TestLatch();
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new AsyncTimeoutActor(timeoutLatch, TimeSpan.FromSeconds(1))));
+            
+            var cancelable = Sys.Scheduler.Advanced.ScheduleRepeatedlyCancelable(
+                TimeSpan.FromMilliseconds(100),
+                TimeSpan.FromMilliseconds(100),
+                () =>
+                {
+                    timeoutActor.Tell(new TransparentTick());
+                    //timeoutActor.Tell(new Identify(null));
                 });
 
             timeoutLatch.Ready(TestKitSettings.DefaultTimeout);

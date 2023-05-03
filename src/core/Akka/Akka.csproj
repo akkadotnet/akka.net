@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+      <PackageReference Include="Polyfill" Version="1.21.0" PrivateAssets="all" />
       <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="7.0.5" />
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
       <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />     
@@ -35,9 +36,5 @@
       <DependentUpon>PartialHandlerArgumentsCapture.tt</DependentUpon>
     </Compile>
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
 
 </Project>
