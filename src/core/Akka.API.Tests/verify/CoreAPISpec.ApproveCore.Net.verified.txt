@@ -4989,14 +4989,8 @@ namespace Akka.Util
     public sealed class FastLazy<T>
     {
         public FastLazy(System.Func<T> producer) { }
-        public bool IsValueCreated { get; }
         public T Value { get; }
-    }
-    public sealed class FastLazy<S, T>
-    {
-        public FastLazy(System.Func<S, T> producer, S state) { }
-        public bool IsValueCreated { get; }
-        public T Value { get; }
+        public bool IsValueCreated() { }
     }
     public interface ISurrogate
     {
