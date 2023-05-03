@@ -297,7 +297,8 @@ namespace Akka.IO
             get
             {
                 if (index >= _count) throw new IndexOutOfRangeException("Requested index is outside of the bounds of the ByteString");
-                var i = GetBufferFittingIndex(index, out var j);
+                int j;
+                var i = GetBufferFittingIndex(index, out j);
                 var buffer = _buffers[i];
                 return buffer.Array[buffer.Offset + j];
             }
@@ -331,17 +332,19 @@ namespace Akka.IO
         /// </summary>
         /// <param name="index">index inside current <see cref="ByteString"/>, from which slicing should start</param>
         /// <param name="count">Number of bytes to fit into new <see cref="ByteString"/>.</param>
-        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException">If index or count result in an invalid <see cref="ByteString"/>.</exception>
         public ByteString Slice(int index, int count)
         {
-            //TODO: this is really stupid, but previous impl didn't throw if arguments 
-            //      were out of range. We either have to round them to valid bounds or 
-            //      (future version, provide negative-arg slicing like i.e. Python).
-            if (index < 0) index = 0;
-            if (index >= _count) index = Math.Max(0, _count - 1);
-            if (count > _count - index) count = _count - index;
-            if (count <= 0) return Empty;
-
+            if(index < 0)
+                throw new ArgumentOutOfRangeException(nameof(index), "Index must be positive number");
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count), "Count must be positive number");
+            if (count == 0) return Empty;
+            if(index > _count)
+                throw new ArgumentOutOfRangeException(nameof(index), "Index is outside of the bounds of the ByteString");
+            if(index + count > _count)
+                throw new ArgumentOutOfRangeException(nameof(count), "Index + count is outside of the bounds of the ByteString");
+            
             if (index == 0 && count == _count) return this;
 
             var i = GetBufferFittingIndex(index, out var j);
@@ -430,7 +433,8 @@ namespace Akka.IO
         {
             if (from >= _count) return -1;
 
-            var i = GetBufferFittingIndex(from, out var j);
+            int j;
+            var i = GetBufferFittingIndex(from, out j);
             var idx = from;
             for (; i < _buffers.Length; i++)
             {
@@ -458,8 +462,8 @@ namespace Akka.IO
             // quick check: if subsequence is longer than remaining size, return false
             if (other.Count > _count - index) return false;
 
-            var otherIdx = 0;
-            var i = GetBufferFittingIndex(index, out var thisIdx);
+            int thisIdx = 0, otherIdx = 0;
+            var i = GetBufferFittingIndex(index, out thisIdx);
             var j = 0;
             while (j < other._buffers.Length)
             {
@@ -500,7 +504,7 @@ namespace Akka.IO
                 return Array.Empty<byte>();
 
             var copy = new byte[_count];
-            this.CopyTo(copy, 0, _count);
+            CopyTo(copy, 0, _count);
             return copy;
         }
 
