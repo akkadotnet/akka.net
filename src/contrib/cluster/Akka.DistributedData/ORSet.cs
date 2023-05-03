@@ -242,8 +242,7 @@ namespace Akka.DistributedData
                     var commonDots = rhsDots.Versions
                         .Where(kv =>
                         {
-                            long v;
-                            return rhsDots.Versions.TryGetValue(kv.Key, out v) && v == kv.Value;
+                            return rhsDots.Versions.TryGetValue(kv.Key, out var v) && v == kv.Value;
                         }).ToImmutableDictionary();
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUniqueDots = lhsDots.Versions.RemoveRange(commonDotKeys);

@@ -104,8 +104,7 @@ namespace Akka.DistributedData
         {
             if (!_withValueDeltas || Underlying.KeySet.Contains(key))
             {
-                ORSet<TValue> set;
-                if (Underlying.TryGetValue(key, out set))
+                if (Underlying.TryGetValue(key, out var set))
                 {
                     value = set.Elements;
                     return true;
@@ -224,8 +223,7 @@ namespace Akka.DistributedData
         public ORMultiValueDictionary<TKey, TValue> RemoveItem(UniqueAddress node, TKey key, TValue element)
         {
             var newUnderlying = Underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, _withValueDeltas, set => set.Remove(node, element));
-            ORSet<TValue> found;
-            if (newUnderlying.TryGetValue(key, out found) && found.IsEmpty)
+            if (newUnderlying.TryGetValue(key, out var found) && found.IsEmpty)
             {
                 if (_withValueDeltas)
                     newUnderlying = newUnderlying.RemoveKey(node, key);

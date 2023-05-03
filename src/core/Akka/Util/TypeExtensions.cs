@@ -58,8 +58,7 @@ namespace Akka.Util
         [InternalApi]
         public static string TypeQualifiedName(this Type type)
         {
-            string shortened;
-            if (ShortenedTypeNames.TryGetValue(type, out shortened))
+            if (ShortenedTypeNames.TryGetValue(type, out var shortened))
             {
                 return shortened;
             }

@@ -45,8 +45,7 @@ namespace Akka.Persistence.Sqlite
         /// <param name="connectionString">TBD</param>
         public static void Forget(string connectionString)
         {
-            SqliteConnection conn;
-            if (Remembered.TryRemove(connectionString, out conn))
+            if (Remembered.TryRemove(connectionString, out var conn))
             {
                 conn.Dispose();
             }
