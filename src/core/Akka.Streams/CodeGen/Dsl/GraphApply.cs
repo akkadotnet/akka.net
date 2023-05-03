@@ -25,7 +25,7 @@ namespace Akka.Streams.Dsl
         /// <returns>A graph with no materialized value.</returns>
         public static IGraph<TShape, NotUsed> Create<TShape>(Func<Builder<NotUsed>, TShape> buildBlock)
             where TShape : Shape
-            => CreateMaterialized<TShape, NotUsed>(buildBlock);
+            => CreateMaterialized(buildBlock);
 
         /// <summary>
         /// Creates a new <see cref="IGraph{TShape, TMat}"/> by passing a <see cref="Builder{TMat}"/> to the given create function.

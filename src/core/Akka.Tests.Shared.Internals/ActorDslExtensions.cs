@@ -15,7 +15,7 @@ namespace Akka.TestKit
     {
         public static void Receive(this IActorDsl config, string message, Action<string, IActorContext> handler)
         {
-            config.Receive<string>(m=>string.Equals(m,message,StringComparison.Ordinal), handler);
+            config.Receive(m=>string.Equals(m,message,StringComparison.Ordinal), handler);
         }
     }
 }

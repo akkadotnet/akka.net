@@ -421,7 +421,7 @@ namespace Akka.Actor
 
                         // note that tasks within same phase are performed in parallel
                         var recoverEnabled = Phases[phase].Recover;
-                        var result = Task.WhenAll<Done>(phaseTasks.Select(x =>
+                        var result = Task.WhenAll(phaseTasks.Select(x =>
                             {
                                 var taskName = x.Item1;
                                 var task = x.Item2;
@@ -493,7 +493,7 @@ namespace Akka.Actor
                             timeoutFunction = result;
                         }
 
-                        phaseResult = Task.WhenAny<Done>(result, timeoutFunction).Unwrap();
+                        phaseResult = Task.WhenAny(result, timeoutFunction).Unwrap();
                     }
 
                     if (!remaining.Any())
@@ -505,7 +505,7 @@ namespace Akka.Actor
                             var r = tr.Result;
                             return Loop(remaining);
                         })
-                        .Unwrap<Done>();
+                        .Unwrap();
                 }
 
                 var runningPhases = (fromPhase == null

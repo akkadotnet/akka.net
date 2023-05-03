@@ -70,11 +70,11 @@ namespace Akka.Cluster.Sharding.Tests
                 qr.ToString().Should().Be($"Queried [3] shards: [2] responsive, [1] failed after {timeout}.");
             }
 
-            Assert<ShardStats>(ImmutableHashSet.Create<(string shard, Task<ShardStats> task)>(
+            Assert(ImmutableHashSet.Create<(string shard, Task<ShardStats> task)>(
                 ("a", Task.FromResult(new ShardStats("a", 1))),
                 ("b", Task.FromResult(new ShardStats("b", 1)))));
 
-            Assert<CurrentShardState>(ImmutableHashSet.Create<(string shard, Task<CurrentShardState> task)>(
+            Assert(ImmutableHashSet.Create<(string shard, Task<CurrentShardState> task)>(
                 ("a", Task.FromResult(new CurrentShardState("a", ImmutableHashSet.Create("a1")))),
                 ("b", Task.FromResult(new CurrentShardState("b", ImmutableHashSet.Create("b1"))))));
         }
@@ -91,11 +91,11 @@ namespace Akka.Cluster.Sharding.Tests
                 qr.ToString().Should().Be($"Queried [3] shards of [4]: [2] responsive, [1] failed after {timeout}.");
             }
 
-            Assert<ShardStats>(ImmutableHashSet.Create<(string shard, Task<ShardStats> task)>(
+            Assert(ImmutableHashSet.Create<(string shard, Task<ShardStats> task)>(
                 ("a", Task.FromResult(new ShardStats("a", 1))),
                 ("b", Task.FromResult(new ShardStats("b", 1)))));
 
-            Assert<CurrentShardState>(ImmutableHashSet.Create<(string shard, Task<CurrentShardState> task)>(
+            Assert(ImmutableHashSet.Create<(string shard, Task<CurrentShardState> task)>(
                 ("a", Task.FromResult(new CurrentShardState("a", ImmutableHashSet.Create("a1")))),
                 ("b", Task.FromResult(new CurrentShardState("b", ImmutableHashSet.Create("b1"))))));
         }
