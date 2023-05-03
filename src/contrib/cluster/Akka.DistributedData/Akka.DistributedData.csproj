@@ -17,8 +17,4 @@
         <PackageReference Include="Hyperion" Version="$(HyperionVersion)"/>
     </ItemGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
-
 </Project>

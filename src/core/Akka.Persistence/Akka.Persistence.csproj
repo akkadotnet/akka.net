@@ -13,7 +13,4 @@
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
   </ItemGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
 </Project>

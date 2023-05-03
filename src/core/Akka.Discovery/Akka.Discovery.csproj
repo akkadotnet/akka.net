@@ -20,8 +20,4 @@
         <ProjectReference Include="..\Akka\Akka.csproj"/>
     </ItemGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
-
 </Project>

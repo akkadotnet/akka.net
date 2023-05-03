@@ -25,8 +25,4 @@
         <PackageReference Include="FSharp.Core" Version="$(FSharpVersion)"/>
     </ItemGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
-
 </Project>
