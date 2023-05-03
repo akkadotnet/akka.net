@@ -148,7 +148,7 @@ namespace Akka.Remote
             {
                 if (_settings.LogReceive)
                 {
-                    var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver, sender);
+                    var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
                     _log.Debug("received remote-destined message {0}", msgLog);
                 }
                 if (_provider.Transport.Addresses.Contains(recipientAddress))
@@ -1346,7 +1346,7 @@ namespace Akka.Remote
                         EndpointReader.ReaderProps(LocalAddress, RemoteAddress, Transport, Settings, _codec, _msgDispatcher,
                             Inbound, (int)handle.HandshakeInfo.Uid, _receiveBuffers, _reliableDeliverySupervisor)
                             .WithDeploy(Deploy.Local)),
-                    string.Format("endpointReader-{0}-{1}", AddressUrlEncoder.Encode(RemoteAddress), _readerId.Next()));
+                    $"endpointReader-{AddressUrlEncoder.Encode(RemoteAddress)}-{_readerId.Next()}");
             Context.Watch(newReader);
             handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(newReader));
             return newReader;
@@ -1483,11 +1483,7 @@ namespace Akka.Remote
                 if (pdu.Length > Transport.MaximumPayloadBytes)
                 {
                     var reason = new OversizedPayloadException(
-                        string.Format("Discarding oversized payload sent to {0}: max allowed size {1} bytes, actual size of encoded {2} was {3} bytes.",
-                            send.Recipient,
-                            Transport.MaximumPayloadBytes,
-                            send.Message.GetType(),
-                            pdu.Length));
+                        $"Discarding oversized payload sent to {send.Recipient}: max allowed size {Transport.MaximumPayloadBytes} bytes, actual size of encoded {send.Message.GetType()} was {pdu.Length} bytes.");
                     _log.Error(reason, "Transient association error (association remains live)");
                     return true;
                 }
@@ -1935,9 +1931,7 @@ namespace Akka.Remote
                 if (payload.Length > Transport.MaximumPayloadBytes)
                 {
                     var reason = new OversizedPayloadException(
-                        string.Format("Discarding oversized payload received: max allowed size {0} bytes, actual size {1} bytes.",
-                            Transport.MaximumPayloadBytes,
-                            payload.Length));
+                        $"Discarding oversized payload received: max allowed size {Transport.MaximumPayloadBytes} bytes, actual size {payload.Length} bytes.");
                     _log.Error(reason, "Transient error while reading from association (association remains live)");
                 }
                 else

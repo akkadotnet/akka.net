@@ -159,8 +159,8 @@ namespace Akka.Persistence.Tests
                 {
                     UpdateState(evt);
                     if (ChaosSupportExtensions.ShouldFail(_replayProcessingFailureRate))
-                        throw new TestException(DebugMessage(string.Format("replay failed at event {0}", evt)));
-                    Log.Debug(DebugMessage(string.Format("replayed event {0}", evt)));
+                        throw new TestException(DebugMessage($"replay failed at event {evt}"));
+                    Log.Debug(DebugMessage($"replayed event {evt}"));
                     return true;
                 }
 
@@ -214,8 +214,7 @@ namespace Akka.Persistence.Tests
 
             private string DebugMessage(string msg)
             {
-                return string.Format("[Sender] {0} (mode = {1}, seqNr = {2}, state = {3})",
-                    msg, IsRecovering ? "replay" : "live", LastSequenceNr, string.Join(", ", State));
+                return $"[Sender] {msg} (mode = {(IsRecovering ? "replay" : "live")}, seqNr = {LastSequenceNr}, state = {string.Join(", ", State)})";
             }
 
             private void Add(int i)

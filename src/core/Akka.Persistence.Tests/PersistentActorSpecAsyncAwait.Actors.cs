@@ -533,7 +533,7 @@ namespace Akka.Persistence.Tests
             protected override void OnPersistFailure(Exception cause, object @event, long sequenceNr)
             {
                 if (@event is Evt)
-                    Sender.Tell(string.Format("Failure: {0}", ((Evt)@event).Data));
+                    Sender.Tell($"Failure: {((Evt)@event).Data}");
                 else
                     base.OnPersistFailure(cause, @event, sequenceNr);
             }

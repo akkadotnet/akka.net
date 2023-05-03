@@ -194,7 +194,7 @@ namespace Akka.Persistence.TCK.Serialization
             public override byte[] ToBinary(object obj)
             {
                 if (obj is MyPayload2)
-                    return Encoding.UTF8.GetBytes(string.Format(".{0}:{1}", ((MyPayload2)obj).Data, ((MyPayload2)obj).N));
+                    return Encoding.UTF8.GetBytes($".{((MyPayload2)obj).Data}:{((MyPayload2)obj).N}");
                 return null;
             }
 

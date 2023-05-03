@@ -32,7 +32,7 @@ namespace Akka.Remote.Tests
 
             public override string ToString()
             {
-                return string.Format("MSG[{0}]]", Seq.RawValue);
+                return $"MSG[{Seq.RawValue}]]";
             }
         }
 
@@ -343,14 +343,14 @@ namespace Akka.Remote.Tests
                     {
                         var del = rcvBuf.Receive(msg).ExtractDeliverable();
                         rcvBuf = del.Buffer;
-                        dbLog(string.Format("{0} -- {1} --> {2}", sndBuf, msg, rcvBuf));
+                        dbLog($"{sndBuf} -- {msg} --> {rcvBuf}");
                         lastAck = del.Ack;
                         received.AddRange(del.Deliverables);
-                        dbLog(string.Format("R: {0}", string.Join(",", received.Select(x => x.ToString()))));
+                        dbLog($"R: {string.Join(",", received.Select(x => x.ToString()))}");
                     }
                     else
                     {
-                        dbLog(string.Format("{0} -- {1} --X {2}", sndBuf, msg, rcvBuf));
+                        dbLog($"{sndBuf} -- {msg} --X {rcvBuf}");
                     }
                 }
             };
@@ -360,11 +360,11 @@ namespace Akka.Remote.Tests
                 if (Happened(p))
                 {
                     sndBuf = sndBuf.Acknowledge(lastAck);
-                    dbLog(string.Format("{0} <-- {1} -- {2}", sndBuf, lastAck, rcvBuf));
+                    dbLog($"{sndBuf} <-- {lastAck} -- {rcvBuf}");
                 }
                 else
                 {
-                    dbLog(string.Format("{0} X-- {1} -- {2}", sndBuf, lastAck, rcvBuf));
+                    dbLog($"{sndBuf} X-- {lastAck} -- {rcvBuf}");
                 }
             };
 

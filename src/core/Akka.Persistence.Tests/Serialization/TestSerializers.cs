@@ -41,7 +41,7 @@ namespace Akka.Persistence.Tests.Serialization
             if (type == null)
                 throw new ArgumentException("no manifest");
             if (type == typeof (MyPayload))
-                return new MyPayload(string.Format("{0}.", Encoding.UTF8.GetString(bytes)));
+                return new MyPayload($"{Encoding.UTF8.GetString(bytes)}.");
             throw new ArgumentException("unexpected manifest " + type);
         }
     }

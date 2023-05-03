@@ -303,7 +303,7 @@ namespace Akka.Remote.Tests
         /// </summary>
         protected void ShouldBe(double actual, double expected, double epsilon = 0.001d)
         {
-            Assert.True(Math.Abs(actual - expected) <= epsilon, string.Format("Expected {0} but received {1}", expected, actual));
+            Assert.True(Math.Abs(actual - expected) <= epsilon, $"Expected {expected} but received {actual}");
         }
 
     }

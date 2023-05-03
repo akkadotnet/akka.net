@@ -74,7 +74,7 @@ namespace Akka.Persistence.Tests
                 if (IsCorrupt(readFromStore))
                 {
                     var promise = new TaskCompletionSource<object>();
-                    promise.SetException( new SimulatedException(string.Format("blahonga {0} {1}", fromSequenceNr, toSequenceNr)));
+                    promise.SetException( new SimulatedException($"blahonga {fromSequenceNr} {toSequenceNr}"));
                     return promise.Task;
                 }
                 readFromStore.ForEach(recoveryCallback);
@@ -241,7 +241,7 @@ namespace Akka.Persistence.Tests
                     var cmd = message as Cmd;
                     if (cmd != null)
                     {
-                        Persist(new Evt(string.Format("{0}", cmd.Data)), evt => UpdateState(evt));
+                        Persist(new Evt($"{cmd.Data}"), evt => UpdateState(evt));
                         if (cmd.Data.Equals("err"))
                             throw new SimulatedException("simulated exception");
                     }
@@ -264,7 +264,7 @@ namespace Akka.Persistence.Tests
                     var cmd = message as Cmd;
                     if (cmd != null)
                     {
-                        Persist(new Evt(string.Format("{0}", cmd.Data)), evt =>
+                        Persist(new Evt($"{cmd.Data}"), evt =>
                         {
                             if (cmd.Data.Equals("err"))
                                 throw new SimulatedException("simulated exception");

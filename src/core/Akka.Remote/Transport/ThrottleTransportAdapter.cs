@@ -95,7 +95,7 @@ namespace Akka.Remote.Transport
         {
             get
             {
-                return string.Format("throttlermanager.${0}${1}", WrappedTransport.SchemeIdentifier, UniqueId.GetAndIncrement());
+                return $"throttlermanager.${WrappedTransport.SchemeIdentifier}${UniqueId.GetAndIncrement()}";
             }
         }
 

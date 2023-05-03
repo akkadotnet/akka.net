@@ -22,13 +22,13 @@ namespace Akka.Persistence.Tests.Journal
     internal class WriteFailedException : TestException
     {
         public WriteFailedException(IEnumerable<AtomicWrite> ps)
-            : base(string.Format("write failed for payloads = [{0}]", string.Join(", ", ps.SelectMany(x => (IEnumerable<IPersistentRepresentation>)x.Payload)))) { }
+            : base($"write failed for payloads = [{string.Join(", ", ps.SelectMany(x => (IEnumerable<IPersistentRepresentation>)x.Payload))}]") { }
     }
 
     internal class ReplayFailedException : TestException
     {
         public ReplayFailedException(IEnumerable<IPersistentRepresentation> ps)
-            : base(string.Format("recovery failed after replaying payloads = [{0}]", string.Join(", ", ps.Select(x => x.Payload)))) { }
+            : base($"recovery failed after replaying payloads = [{string.Join(", ", ps.Select(x => x.Payload))}]") { }
     }
 
     internal class ReadHighestFailedException : TestException
