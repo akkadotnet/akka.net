@@ -181,7 +181,7 @@ namespace Akka.Streams.Actors
                     onSubscribe.Subscription.Cancel();
                 }
             }
-            else if (message is OnComplete || message is OnError)
+            else if (message is OnComplete or OnError)
             {
                 if (!_canceled)
                 {

@@ -1440,10 +1440,7 @@ namespace Akka.Cluster
         /// <inheritdoc cref="ActorBase.Unhandled"/>
         protected override void Unhandled(object message)
         {
-            if (message is InternalClusterAction.ITick
-                || message is GossipEnvelope
-                || message is GossipStatus
-                || message is InternalClusterAction.ExitingConfirmed)
+            if (message is InternalClusterAction.ITick or GossipEnvelope or GossipStatus or InternalClusterAction.ExitingConfirmed)
             {
                 //do nothing
             }
@@ -1703,7 +1700,7 @@ namespace Akka.Cluster
         public void Leaving(Address address)
         {
             // only try to update if the node is available (in the member ring)
-            if (LatestGossip.Members.Any(m => m.Address.Equals(address) && (m.Status == MemberStatus.Joining || m.Status == MemberStatus.WeaklyUp || m.Status == MemberStatus.Up)))
+            if (LatestGossip.Members.Any(m => m.Address.Equals(address) && m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp or MemberStatus.Up))
             {
                 // mark node as LEAVING
                 var newMembers = LatestGossip.Members.Select(m =>
@@ -2303,7 +2300,7 @@ namespace Akka.Cluster
             var localSeen = localOverview.Seen;
 
             bool enoughMembers = IsMinNrOfMembersFulfilled();
-            bool IsJoiningUp(Member m) => (m.Status == MemberStatus.Joining || m.Status == MemberStatus.WeaklyUp) && enoughMembers;
+            bool IsJoiningUp(Member m) => m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp && enoughMembers;
 
             var removedUnreachable =
                 localOverview.Reachability.AllUnreachableOrTerminated.Select(localGossip.GetMember)

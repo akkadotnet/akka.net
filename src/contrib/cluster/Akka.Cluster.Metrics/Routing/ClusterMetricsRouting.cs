@@ -227,7 +227,7 @@ namespace Akka.Cluster.Metrics
             if (!SupervisorStrategy.Equals(DefaultSupervisorStrategy))
                 return this;
 
-            if (routerConfig is FromConfig || routerConfig is NoRouter)
+            if (routerConfig is FromConfig or NoRouter)
                 return this; // NoRouter is the default, hence â€œneutralâ€
 
             if (routerConfig is AdaptiveLoadBalancingPool adaptiveLoadBalancingPool)

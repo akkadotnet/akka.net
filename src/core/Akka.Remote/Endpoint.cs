@@ -102,7 +102,7 @@ namespace Akka.Remote
             }
 
             //message is intended for a local recipient
-            else if ((recipient is ILocalRef || recipient is RepointableActorRef) && recipient.IsLocal)
+            else if (recipient is ILocalRef or RepointableActorRef && recipient.IsLocal)
             {
                 if (_settings.LogReceive)
                 {
@@ -143,7 +143,7 @@ namespace Akka.Remote
             }
 
             // message is intended for a remote-deployed recipient
-            else if ((recipient is IRemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal &&
+            else if (recipient is IRemoteRef or RepointableActorRef && !recipient.IsLocal &&
                      !_settings.UntrustedMode)
             {
                 if (_settings.LogReceive)

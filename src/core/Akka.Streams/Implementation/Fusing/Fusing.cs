@@ -329,7 +329,7 @@ namespace Akka.Streams.Implementation.Fusing
             int indent)
         {
 
-            var isAsync = module is GraphStageModule || module is GraphModule
+            var isAsync = module is GraphStageModule or GraphModule
                 ? module.Attributes.Contains(Attributes.AsyncBoundary.Instance)
                 : module.IsAtomic || module.Attributes.Contains(Attributes.AsyncBoundary.Instance);
             if (IsDebug)

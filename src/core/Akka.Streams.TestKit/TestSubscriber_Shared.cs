@@ -261,7 +261,7 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken = default)
             {
                 var message = await probe.FishForMessageAsync(
-                    isMessage: m => m is OnNext<T> || m is OnError, 
+                    isMessage: m => m is OnNext<T> or TestSubscriber.OnError, 
                     hint: "OnNext(_) or error", 
                     cancellationToken: cancellationToken);
 
@@ -277,7 +277,7 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken = default)
             {
                 var message = await probe.FishForMessageAsync(
-                    isMessage: m => m is OnNext<T> || m is OnComplete, 
+                    isMessage: m => m is OnNext<T> or TestSubscriber.OnComplete, 
                     hint: "OnNext(_) or OnComplete", 
                     cancellationToken: cancellationToken);
 
