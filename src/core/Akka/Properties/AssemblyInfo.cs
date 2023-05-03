@@ -42,6 +42,7 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools")]
 [assembly: InternalsVisibleTo("Akka.DistributedData")]
 [assembly: InternalsVisibleTo("Akka.Persistence")]
+[assembly: InternalsVisibleTo("Akka.Persistence.Tests")]
 [assembly: InternalsVisibleTo("Akka.Persistence.Sql.TestKit")]
 [assembly: InternalsVisibleTo("Akka.Streams")]
 [assembly: InternalsVisibleTo("Akka.Streams.Tests")]
