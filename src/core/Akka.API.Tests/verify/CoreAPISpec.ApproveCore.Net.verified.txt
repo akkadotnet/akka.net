@@ -2477,6 +2477,205 @@ namespace Akka.Configuration.Hocon
         public char Take() { }
     }
 }
+namespace Akka.Delivery
+{
+    public class static ConsumerController
+    {
+        public static Akka.Actor.Props Create<T>(Akka.Actor.IActorRefFactory actorRefFactory, Akka.Util.Option<Akka.Actor.IActorRef> producerControllerReference, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Delivery.ConsumerController.Settings settings = null) { }
+        public sealed class Confirmed
+        {
+            public static readonly Akka.Delivery.ConsumerController.Confirmed Instance;
+        }
+        public sealed class DeliverThenStop<T> : Akka.Delivery.ConsumerController.IConsumerCommand<T>
+        {
+            public static readonly Akka.Delivery.ConsumerController.DeliverThenStop<T> Instance;
+        }
+        public sealed class Delivery<T> : Akka.Delivery.ConsumerController.IConsumerCommand<T>, Akka.Delivery.Internal.IDeliverySerializable, Akka.Event.IDeadLetterSuppression
+        {
+            public Delivery(T message, Akka.Actor.IActorRef confirmTo, string producerId, long seqNr) { }
+            public Akka.Actor.IActorRef ConfirmTo { get; }
+            public T Message { get; }
+            public string ProducerId { get; }
+            public long SeqNr { get; }
+            public override string ToString() { }
+        }
+        public interface IConsumerCommand<T> { }
+        public sealed class RegisterToProducerController<T> : Akka.Delivery.ConsumerController.IConsumerCommand<T>
+        {
+            public RegisterToProducerController(Akka.Actor.IActorRef producerController) { }
+            public Akka.Actor.IActorRef ProducerController { get; }
+        }
+        [Akka.Annotations.InternalApiAttribute()]
+        public sealed class SequencedMessage<T> : Akka.Delivery.ConsumerController.IConsumerCommand<T>, Akka.Delivery.Internal.IDeliverySerializable, Akka.Event.IDeadLetterSuppression
+        {
+            public SequencedMessage(string producerId, long seqNr, Akka.Delivery.Internal.MessageOrChunk<T> messageOrChunk, bool first, bool ack) { }
+            public bool Ack { get; }
+            public bool First { get; }
+            public Akka.Delivery.Internal.MessageOrChunk<T> Message { get; }
+            public string ProducerId { get; }
+            public long SeqNr { get; }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+        }
+        public sealed class Settings : System.IEquatable<Akka.Delivery.ConsumerController.Settings>
+        {
+            public int FlowControlWindow { get; set; }
+            public bool OnlyFlowControl { get; set; }
+            public System.TimeSpan ResendIntervalMax { get; set; }
+            public System.TimeSpan ResendIntervalMin { get; set; }
+            public static Akka.Delivery.ConsumerController.Settings Create(Akka.Actor.ActorSystem actorSystem) { }
+            public static Akka.Delivery.ConsumerController.Settings Create(Akka.Configuration.Config config) { }
+            public override string ToString() { }
+        }
+        public sealed class Start<T> : Akka.Delivery.ConsumerController.IConsumerCommand<T>
+        {
+            public Start(Akka.Actor.IActorRef deliverTo) { }
+            public Akka.Actor.IActorRef DeliverTo { get; }
+        }
+    }
+    public class static DurableProducerQueue
+    {
+        public const string NoQualifier = "";
+        public interface IDurableProducerQueueCommand<T> { }
+        public sealed class LoadState<T> : Akka.Delivery.DurableProducerQueue.IDurableProducerQueueCommand<T>
+        {
+            public LoadState(Akka.Actor.IActorRef replyTo) { }
+            public Akka.Actor.IActorRef ReplyTo { get; }
+        }
+        public sealed class MessageSent<T> : Akka.Delivery.Internal.IDeliverySerializable, System.IEquatable<Akka.Delivery.DurableProducerQueue.MessageSent<T>>
+        {
+            public MessageSent(long seqNr, Akka.Delivery.Internal.MessageOrChunk<T> message, bool ack, string confirmationQualifier, long timestamp) { }
+            public bool Ack { get; }
+            public string ConfirmationQualifier { get; }
+            public Akka.Delivery.Internal.MessageOrChunk<T> Message { get; }
+            public long SeqNr { get; }
+            public long Timestamp { get; }
+            public void Deconstruct(out long seqNo, out Akka.Delivery.Internal.MessageOrChunk<T> message, out bool ack, out string qualifier, out long timestamp) { }
+            public bool Equals([System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                    2,
+                    0})] Akka.Delivery.DurableProducerQueue.MessageSent<T> other) { }
+            public override bool Equals(object obj) { }
+            public static Akka.Delivery.DurableProducerQueue.MessageSent<T> FromChunked(long seqNo, Akka.Delivery.Internal.ChunkedMessage chunkedMessage, bool ack, string confirmationQualifier, long timestamp) { }
+            public static Akka.Delivery.DurableProducerQueue.MessageSent<T> FromMessageOrChunked(long seqNo, Akka.Delivery.Internal.MessageOrChunk<T> messageOrChunk, bool ack, string confirmationQualifier, long timestamp) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+            public Akka.Delivery.DurableProducerQueue.MessageSent<T> WithQualifier(string qualifier) { }
+            public Akka.Delivery.DurableProducerQueue.MessageSent<T> WithTimestamp(long timestamp) { }
+        }
+        public struct State<T> : Akka.Delivery.Internal.IDeliverySerializable, System.IEquatable<Akka.Delivery.DurableProducerQueue.State<T>>
+        {
+            public State(long currentSeqNr, long highestConfirmedSeqNr, System.Collections.Immutable.ImmutableDictionary<string, System.ValueTuple<long, long>> confirmedSeqNr, System.Collections.Immutable.ImmutableList<Akka.Delivery.DurableProducerQueue.MessageSent<T>> unconfirmed) { }
+            public System.Collections.Immutable.ImmutableDictionary<string, System.ValueTuple<long, long>> ConfirmedSeqNr { get; set; }
+            public long CurrentSeqNr { get; set; }
+            public static Akka.Delivery.DurableProducerQueue.State<T> Empty { get; }
+            public long HighestConfirmedSeqNr { get; set; }
+            public System.Collections.Immutable.ImmutableList<Akka.Delivery.DurableProducerQueue.MessageSent<T>> Unconfirmed { get; set; }
+            public Akka.Delivery.DurableProducerQueue.State<T> AddConfirmed(long seqNr, string qualifier, long timestamp) { }
+            public Akka.Delivery.DurableProducerQueue.State<T> AddMessageSent(Akka.Delivery.DurableProducerQueue.MessageSent<T> messageSent) { }
+            public Akka.Delivery.DurableProducerQueue.State<T> CleanUp(System.Collections.Generic.ISet<string> confirmationQualifiers) { }
+            public Akka.Delivery.DurableProducerQueue.State<T> CleanUpPartialChunkedMessages() { }
+            public bool Equals(Akka.Delivery.DurableProducerQueue.State<T> other) { }
+            public override int GetHashCode() { }
+        }
+        public sealed class StoreMessageConfirmed<T> : Akka.Delivery.DurableProducerQueue.IDurableProducerQueueCommand<T>
+        {
+            public StoreMessageConfirmed(long seqNr, string confirmationQualifier, long timestamp) { }
+            public string ConfirmationQualifier { get; }
+            public long SeqNr { get; }
+            public long Timestamp { get; }
+        }
+        public sealed class StoreMessageSentAck
+        {
+            public StoreMessageSentAck(long storedSeqNo) { }
+            public long StoredSeqNo { get; }
+        }
+        public sealed class StoreMessageSent<T> : Akka.Delivery.DurableProducerQueue.IDurableProducerQueueCommand<T>
+        {
+            public StoreMessageSent(Akka.Delivery.DurableProducerQueue.MessageSent<T> messageSent, Akka.Actor.IActorRef replyTo) { }
+            public Akka.Delivery.DurableProducerQueue.MessageSent<T> MessageSent { get; }
+            public Akka.Actor.IActorRef ReplyTo { get; }
+        }
+    }
+    public class static ProducerController
+    {
+        public static Akka.Actor.Props Create<T>(Akka.Actor.IActorRefFactory actorRefFactory, string producerId, Akka.Util.Option<Akka.Actor.Props> durableProducerQueue, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Delivery.ProducerController.Settings settings = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0,
+                0})] System.Action<Akka.Delivery.ConsumerController.SequencedMessage<T>> sendAdapter = null) { }
+        public interface IProducerCommand<T> { }
+        public sealed class MessageWithConfirmation<T> : Akka.Delivery.ProducerController.IProducerCommand<T>
+        {
+            public MessageWithConfirmation(T message, Akka.Actor.IActorRef replyTo) { }
+            public T Message { get; }
+            public Akka.Actor.IActorRef ReplyTo { get; }
+        }
+        public sealed class RegisterConsumer<T> : Akka.Delivery.Internal.IDeliverySerializable, Akka.Delivery.ProducerController.IProducerCommand<T>
+        {
+            public RegisterConsumer(Akka.Actor.IActorRef consumerController) { }
+            public Akka.Actor.IActorRef ConsumerController { get; }
+        }
+        public sealed class RequestNext<T> : Akka.Actor.INoSerializationVerificationNeeded, Akka.Delivery.ProducerController.IProducerCommand<T>
+        {
+            public RequestNext(string producerId, long currentSeqNr, long confirmedSeqNr, Akka.Actor.IActorRef sendNextTo) { }
+            public long ConfirmedSeqNr { get; }
+            public long CurrentSeqNr { get; }
+            public string ProducerId { get; }
+            public Akka.Actor.IActorRef SendNextTo { get; }
+            public System.Threading.Tasks.Task<long> AskNextTo(T msg, System.Threading.CancellationToken cancellationToken = null) { }
+            public void AskNextTo(Akka.Delivery.ProducerController.MessageWithConfirmation<T> msgWithConfirmation) { }
+        }
+        [System.Runtime.CompilerServices.NullableAttribute(0)]
+        public sealed class Settings : System.IEquatable<Akka.Delivery.ProducerController.Settings>
+        {
+            public const int DefaultDeliveryBufferSize = 128;
+            public System.Nullable<int> ChunkLargeMessagesBytes { get; set; }
+            public System.TimeSpan DurableQueueRequestTimeout { get; set; }
+            public System.TimeSpan DurableQueueResendFirstInterval { get; set; }
+            public int DurableQueueRetryAttempts { get; set; }
+            public static Akka.Delivery.ProducerController.Settings Create(Akka.Actor.ActorSystem actorSystem) { }
+            public static Akka.Delivery.ProducerController.Settings Create(Akka.Configuration.Config config) { }
+        }
+        public sealed class Start<T> : Akka.Delivery.ProducerController.IProducerCommand<T>
+        {
+            public Start(Akka.Actor.IActorRef producer) { }
+            public Akka.Actor.IActorRef Producer { get; }
+        }
+    }
+}
+namespace Akka.Delivery.Internal
+{
+    [Akka.Annotations.InternalApiAttribute()]
+    public struct ChunkedMessage
+    {
+        public ChunkedMessage(Akka.IO.ByteString serializedMessage, bool firstChunk, bool lastChunk, int serializerId, string manifest) { }
+        public bool FirstChunk { get; }
+        public bool LastChunk { get; }
+        public string Manifest { get; }
+        public Akka.IO.ByteString SerializedMessage { get; }
+        public int SerializerId { get; }
+        public override string ToString() { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public interface IDeliverySerializable { }
+    [Akka.Annotations.InternalApiAttribute()]
+    public struct MessageOrChunk<T> : System.IEquatable<Akka.Delivery.Internal.MessageOrChunk<T>>
+    {
+        public MessageOrChunk(T message) { }
+        public MessageOrChunk(Akka.Delivery.Internal.ChunkedMessage chunkedMessage) { }
+        public System.Nullable<Akka.Delivery.Internal.ChunkedMessage> Chunk { get; }
+        public bool IsMessage { get; }
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public T Message { get; }
+        public bool Equals(Akka.Delivery.Internal.MessageOrChunk<T> other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+        public static Akka.Delivery.Internal.MessageOrChunk<T> op_Implicit(T message) { }
+        public static T op_Implicit(Akka.Delivery.Internal.MessageOrChunk<T> message) { }
+        public static Akka.Delivery.Internal.ChunkedMessage op_Implicit(Akka.Delivery.Internal.MessageOrChunk<T> message) { }
+        public static Akka.Delivery.Internal.MessageOrChunk<T> op_Implicit(Akka.Delivery.Internal.ChunkedMessage chunkedMessage) { }
+    }
+}
 namespace Akka.Dispatch
 {
     public sealed class ActionRunnable : Akka.Dispatch.IRunnable
