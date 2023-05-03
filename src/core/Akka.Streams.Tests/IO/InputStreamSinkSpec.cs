@@ -62,15 +62,15 @@ namespace Akka.Streams.Tests.IO
 
                 var result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
-                result.Item2.Should().BeEquivalentTo(_byteString.Slice(0, 2));
+                result.Item2.Should().BeEquivalentTo(_byteString[..2]);
 
                 result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
-                result.Item2.Should().BeEquivalentTo(Enumerable.Concat(_byteString.Slice(2), byteString2.Slice(0, 1)));
+                result.Item2.Should().BeEquivalentTo(Enumerable.Concat(_byteString[2..], byteString2[..1]));
 
                 result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
-                result.Item2.Should().BeEquivalentTo(byteString2.Slice(1));
+                result.Item2.Should().BeEquivalentTo(byteString2[1..]);
 
                 inputStream.Dispose();
                 return Task.CompletedTask;
@@ -169,8 +169,8 @@ namespace Akka.Streams.Tests.IO
                 while (!bytes.IsEmpty)
                 {
                     var max = Math.Min(bytes.Count, 3);
-                    var expected = bytes.Slice(0, max);
-                    bytes = bytes.Slice(max);
+                    var expected = bytes[..max];
+                    bytes = bytes[max..];
 
                     var result = ReadN(inputStream, max);
                     result.Item1.Should().Be(expected.Count);
@@ -236,11 +236,11 @@ namespace Akka.Streams.Tests.IO
 
                 var r1 = ReadN(inputStream, 15);
                 r1.Item1.Should().Be(15);
-                r1.Item2.Should().BeEquivalentTo(Enumerable.Concat(bytes1, bytes2.Slice(0, 5)));
+                r1.Item2.Should().BeEquivalentTo(Enumerable.Concat(bytes1, bytes2[..5]));
 
                 var r2 = ReadN(inputStream, 15);
                 r2.Item1.Should().Be(5);
-                r2.Item2.Should().BeEquivalentTo(bytes2.Slice(5));
+                r2.Item2.Should().BeEquivalentTo(bytes2[5..]);
 
                 inputStream.Dispose();
                 return Task.CompletedTask;

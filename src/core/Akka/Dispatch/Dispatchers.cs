@@ -547,7 +547,7 @@ namespace Akka.Dispatch
 
         private Config Config(string id, Config appConfig)
         {
-            var simpleName = id.Substring(id.LastIndexOf('.') + 1);
+            var simpleName = id[(id.LastIndexOf('.') + 1)..];
             return IdConfig(id)
                 .WithFallback(appConfig)
                 .WithFallback(ConfigurationFactory.ParseString($"name: {simpleName}"))

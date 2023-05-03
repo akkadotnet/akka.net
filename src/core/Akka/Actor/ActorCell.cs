@@ -493,7 +493,7 @@ namespace Akka.Actor
             var i = name.IndexOf('#');
             return i < 0
                 ? (name, UndefinedUid)
-                : (name.Substring(0, i), SpanHacks.Parse(name.AsSpan(i + 1)));
+                : (name[..i], SpanHacks.Parse(name.AsSpan(i + 1)));
         }
 
         /// <summary>

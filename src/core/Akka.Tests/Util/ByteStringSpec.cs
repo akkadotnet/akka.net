@@ -48,13 +48,13 @@ namespace Akka.Tests.Util
             var a = ByteString.FromBytes(new byte[]{ 1, 2, 3, 4, 5, 6, 7, 8, 9} );
             var b = ByteString.FromBytes(new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 });
 
-            (a + b).Slice(b.Count).Count.Should().Be(a.Count);
+            (a + b)[b.Count..].Count.Should().Be(a.Count);
         }
 
         [Fact]
         public void A_ByteString_must_be_sequential_when_slicing_from_start()
         {
-            Prop.ForAll((ByteString a, ByteString b) => (a + b).Slice(0, a.Count).SequenceEqual(a))
+            Prop.ForAll((ByteString a, ByteString b) => (a + b)[..a.Count].SequenceEqual(a))
                 .QuickCheckThrowOnFailure();
         }
         [Fact]
@@ -63,7 +63,7 @@ namespace Akka.Tests.Util
             var a = ByteString.FromBytes(new byte[]{ 1, 2, 3, 4, 5, 6, 7, 8, 9} );
             var b = ByteString.FromBytes(new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 });
 
-            (a + b).Slice(a.Count).Should().BeEquivalentTo(b);
+            (a + b)[a.Count..].Should().BeEquivalentTo(b);
         }
 
         [Fact]
@@ -80,10 +80,10 @@ namespace Akka.Tests.Util
         public void A_ByteString_must_be_equal_to_the_original_when_recombining()
         {
             var xs = ByteString.FromBytes(new byte[]{ 1, 2, 3, 4, 5, 6, 7, 8, 9} );
-            var tmp1 = xs.Slice(0, xs.Count / 2);
-            var tmp2 = xs.Slice(xs.Count / 2);
-            var tmp11 = tmp1.Slice(0, tmp1.Count / 2);
-            var tmp12 = tmp1.Slice(tmp1.Count / 2);
+            var tmp1 = xs[..(xs.Count / 2)];
+            var tmp2 = xs[(xs.Count / 2)..];
+            var tmp11 = tmp1[..(tmp1.Count / 2)];
+            var tmp12 = tmp1[(tmp1.Count / 2)..];
             (tmp11 + tmp12 + tmp2).Should().BeEquivalentTo(xs);
         }
 
@@ -179,12 +179,12 @@ namespace Akka.Tests.Util
 
             int halfExpected = expected.Length / 2;
 
-            string expectedLeft = expected.Substring(startIndex: 0, length: halfExpected);
+            string expectedLeft = expected[..halfExpected];
             string expectedRight = expected.Substring(startIndex: halfExpected, length: halfExpected);
 
             ByteString data = ByteString.FromString(expected, encoding);
 
-            string actualLeft = data.Slice(index: 0, count: halfExpected).ToString(encoding);
+            string actualLeft = data[..halfExpected].ToString(encoding);
             string actualRight = data.Slice(index: halfExpected, count: halfExpected).ToString(encoding);
 
             Assert.Equal(expectedLeft, actualLeft);
@@ -200,7 +200,7 @@ namespace Akka.Tests.Util
 
             int halfExpected = expected.Length / 2;
 
-            string expectedLeft = expected.Substring(startIndex: 0, length: halfExpected);
+            string expectedLeft = expected[..halfExpected];
             string expectedRight = expected.Substring(startIndex: halfExpected, length: halfExpected);
 
             ByteString data = ByteString.FromString(expected, encoding);

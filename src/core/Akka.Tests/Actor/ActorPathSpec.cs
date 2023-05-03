@@ -121,12 +121,12 @@ namespace Akka.Tests.Actor
 
             var uri1 = "/abc/def";
             ActorPath.TryParse(root, uri1, out newPath).ShouldBe(true);
-            newPath.ToStringWithAddress().ShouldBe($"{path}{uri1.Substring(1)}");
+            newPath.ToStringWithAddress().ShouldBe($"{path}{uri1[1..]}");
             newPath.ParentOf(-2).ShouldBe(root);
 
             var uri2 = "/def";
             ActorPath.TryParse(newPath, uri2, out newPath).ShouldBe(true);
-            newPath.ToStringWithAddress().ShouldBe($"{path}{uri1.Substring(1)}{uri2}");
+            newPath.ToStringWithAddress().ShouldBe($"{path}{uri1[1..]}{uri2}");
             newPath.ParentOf(-3).ShouldBe(root);
         }
 

@@ -395,7 +395,7 @@ namespace Akka.DistributedData
             foreach (var key in settings.DurableKeys)
             {
                 if (key.EndsWith("*"))
-                    durableWildcardsBuilder.Add(key.Substring(0, key.Length - 1));
+                    durableWildcardsBuilder.Add(key[..^1]);
                 else
                     durableKeysBuilder.Add(key);
             }

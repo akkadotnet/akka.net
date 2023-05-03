@@ -101,7 +101,7 @@ namespace Akka.Util
                     if (k == -1)
                         return (int.Parse(s), "");
                     else
-                        return (int.Parse(s.Substring(0, k)), s.Substring(k + 1));
+                        return (int.Parse(s[..k]), s[(k + 1)..]);
                 }
             }
 
@@ -120,7 +120,7 @@ namespace Akka.Util
 
                     try
                     {
-                        return (int.Parse(s.Substring(0, i)), s.Substring(i + 1));
+                        return (int.Parse(s[..i]), s[(i + 1)..]);
                     }
                     catch (FormatException)
                     {

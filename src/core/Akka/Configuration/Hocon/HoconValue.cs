@@ -481,8 +481,8 @@ namespace Akka.Configuration.Hocon
             if (index == -1 || index + 1 >= res.Length)
                 return long.Parse(res);
 
-            var value = res.Substring(0, index + 1);
-            var unit = res.Substring(index + 1).Trim();
+            var value = res[..(index + 1)];
+            var unit = res[(index + 1)..].Trim();
 
             for (var byteSizeIndex = 0; byteSizeIndex < ByteSizes.Length; byteSizeIndex++)
             {

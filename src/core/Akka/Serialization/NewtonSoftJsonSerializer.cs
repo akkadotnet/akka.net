@@ -388,8 +388,8 @@ namespace Akka.Serialization
 
         private static object GetValue(string V)
         {
-            var t = V.Substring(0, 1);
-            var v = V.Substring(1);
+            var t = V[..1];
+            var v = V[1..];
             if (t == "I")
                 return int.Parse(v, NumberFormatInfo.InvariantInfo);
             if (t == "F")

@@ -564,7 +564,7 @@ namespace Akka.Persistence.Tests
                             {
                                 PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)), evt =>
                                 {
-                                    Sender.Tell("a" + evt.Data.ToString().Substring(1));
+                                    Sender.Tell("a" + evt.Data.ToString()[1..]);
                                 });
                             }
                         });

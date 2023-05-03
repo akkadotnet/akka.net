@@ -73,7 +73,7 @@ namespace Akka.Util.Internal
                     i = path.IndexOf('.', j);
                     if (i == -1)
                     {
-                        yield return path.Substring(j);
+                        yield return path[j..];
                         yield break;
                     }
                     yield return path.Substring(j, i - j);

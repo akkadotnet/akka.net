@@ -121,7 +121,7 @@ namespace Akka.Streams.Tests.IO
                     var testLinesString = new string(_testLines.SelectMany(x => x).ToArray());
 
                     await AwaitAssertAsync(
-                        () => CheckFileContent(f, lastWriteString + testLinesString.Substring(100)),
+                        () => CheckFileContent(f, lastWriteString + testLinesString[100..]),
                         Remaining);
                 }, _materializer);
             });
