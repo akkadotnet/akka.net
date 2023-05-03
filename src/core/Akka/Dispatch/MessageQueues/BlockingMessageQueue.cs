@@ -88,8 +88,7 @@ namespace Akka.Dispatch.MessageQueues
         /// <returns>TBD</returns>
         public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
-            Envelope msg;
-            while (TryDequeue(out msg)) // lock gets acquired inside the TryDequeue method
+            while (TryDequeue(out var msg)) // lock gets acquired inside the TryDequeue method
             {
                 deadletters.Enqueue(owner, msg);
             }

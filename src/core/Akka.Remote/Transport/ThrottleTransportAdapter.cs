@@ -742,7 +742,7 @@ namespace Akka.Remote.Transport
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is TokenBucket && Equals((TokenBucket)obj);
+            return obj is TokenBucket bucket && Equals(bucket);
         }
 
         public override int GetHashCode()
@@ -825,7 +825,7 @@ namespace Akka.Remote.Transport
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is SetThrottle && Equals((SetThrottle)obj);
+            return obj is SetThrottle throttle && Equals(throttle);
         }
 
         

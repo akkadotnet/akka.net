@@ -201,8 +201,7 @@ namespace Akka.Cluster.Tools.Singleton
             // don't send cluster change events if this node is shutting its self down, just wait for SelfExiting
             if (!_cluster.IsTerminated)
             {
-                object change;
-                _changes = _changes.Dequeue(out change);
+                _changes = _changes.Dequeue(out var change);
                 Context.Parent.Tell(change);
             }
         }

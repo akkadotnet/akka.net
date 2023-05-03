@@ -192,10 +192,10 @@ namespace Akka.Persistence.Journal
 
         private bool Init(object message)
         {
-            if (message is TargetLocation)
+            if (message is TargetLocation location)
             {
                 Context.SetReceiveTimeout(TimeSpan.FromSeconds(1)); // for retries
-                Context.Become(Identifying(((TargetLocation)message).Address));
+                Context.Become(Identifying(location.Address));
             }
             else if (message is InitTimeout)
             {
@@ -233,9 +233,8 @@ namespace Akka.Persistence.Journal
         {
             return message =>
             {
-                if (message is ActorIdentity)
+                if (message is ActorIdentity ai)
                 {
-                    var ai = (ActorIdentity)message;
                     if (_targetPluginId.Equals(ai.MessageId))
                     {
                         var target = ai.Subject;
@@ -265,16 +264,15 @@ namespace Akka.Persistence.Journal
         {
             return message =>
             {
-                if (message is TargetLocation)
+                if (message is TargetLocation location)
                 {
-                    var address = ((TargetLocation)message).Address;
+                    var address = location.Address;
                     if (targetAtThisNode && !address.Equals(_selfAddress))
                         BecomeIdentifying(address);
                 }
-                else if (message is Terminated)
+                else if (message is Terminated terminated)
                 {
-                    var t = (Terminated)message;
-                    if (t.ActorRef.Equals(targetJournal))
+                    if (terminated.ActorRef.Equals(targetJournal))
                     {
                         Context.Unwatch(targetJournal);
                         Context.Become(InitTimedOut());
@@ -316,44 +314,38 @@ namespace Akka.Persistence.Journal
                             }
                         }
                     }
-                    else if (message is ReplayMessages)
+                    else if (message is ReplayMessages messages)
                     {
-                        var r = (ReplayMessages)message;
-                        r.PersistentActor.Tell(new ReplayMessagesFailure(TimeoutException()));
+                        messages.PersistentActor.Tell(new ReplayMessagesFailure(TimeoutException()));
                     }
-                    else if (message is DeleteMessagesTo)
+                    else if (message is DeleteMessagesTo to)
                     {
-                        var d = (DeleteMessagesTo)message;
-                        d.PersistentActor.Tell(new DeleteMessagesFailure(TimeoutException(), d.ToSequenceNr));
+                        to.PersistentActor.Tell(new DeleteMessagesFailure(TimeoutException(), to.ToSequenceNr));
                     }
                 }
                 else if (message is ISnapshotRequest)
                 {
                     // exhaustive match
-                    if (message is LoadSnapshot)
+                    if (message is LoadSnapshot snapshot)
                     {
-                        var l = (LoadSnapshot)message;
                         Sender.Tell(new LoadSnapshotFailed(TimeoutException()));
                     }
-                    else if (message is SaveSnapshot)
+                    else if (message is SaveSnapshot saveSnapshot)
                     {
-                        var s = (SaveSnapshot)message;
-                        Sender.Tell(new SaveSnapshotFailure(s.Metadata, TimeoutException()));
+                        Sender.Tell(new SaveSnapshotFailure(saveSnapshot.Metadata, TimeoutException()));
                     }
-                    else if (message is DeleteSnapshot)
+                    else if (message is DeleteSnapshot deleteSnapshot)
                     {
-                        var d = (DeleteSnapshot)message;
-                        Sender.Tell(new DeleteSnapshotFailure(d.Metadata, TimeoutException()));
+                        Sender.Tell(new DeleteSnapshotFailure(deleteSnapshot.Metadata, TimeoutException()));
                     }
-                    else if (message is DeleteSnapshots)
+                    else if (message is DeleteSnapshots snapshots)
                     {
-                        var d = (DeleteSnapshots)message;
-                        Sender.Tell(new DeleteSnapshotsFailure(d.Criteria, TimeoutException()));
+                        Sender.Tell(new DeleteSnapshotsFailure(snapshots.Criteria, TimeoutException()));
                     }
                 }
-                else if (message is TargetLocation)
+                else if (message is TargetLocation location)
                 {
-                    BecomeIdentifying(((TargetLocation)message).Address);
+                    BecomeIdentifying(location.Address);
                 }
                 else if (message is Terminated)
                 {

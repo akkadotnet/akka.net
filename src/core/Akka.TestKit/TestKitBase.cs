@@ -331,7 +331,7 @@ namespace Akka.TestKit
         /// <c>true</c> the message will be ignored by <see cref="TestActor"/>.</param>
         public void IgnoreMessages<TMsg>(Func<TMsg, bool> shouldIgnoreMessage)
         {
-            _testState.TestActor.Tell(new TestActor.SetIgnore(m => m is TMsg && shouldIgnoreMessage((TMsg)m)));
+            _testState.TestActor.Tell(new TestActor.SetIgnore(m => m is TMsg msg && shouldIgnoreMessage(msg)));
         }
 
         /// <summary>

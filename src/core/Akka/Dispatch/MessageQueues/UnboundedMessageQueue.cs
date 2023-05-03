@@ -42,8 +42,7 @@ namespace Akka.Dispatch.MessageQueues
         /// <inheritdoc cref="IMessageQueue"/>
         public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
-            Envelope msg;
-            while (TryDequeue(out msg))
+            while (TryDequeue(out var msg))
             {
                 deadletters.Enqueue(owner, msg);
             }

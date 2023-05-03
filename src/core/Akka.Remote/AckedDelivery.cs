@@ -171,7 +171,7 @@ namespace Akka.Remote
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is SeqNo && Equals((SeqNo) obj);
+            return obj is SeqNo no && Equals(no);
         }
 
         /// <inheritdoc/>

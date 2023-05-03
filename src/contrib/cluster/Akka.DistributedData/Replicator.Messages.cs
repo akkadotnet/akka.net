@@ -40,7 +40,7 @@ namespace Akka.DistributedData
 
         
         public override bool Equals(object obj) =>
-            obj is GetKeysIdsResult && Equals((GetKeysIdsResult)obj);
+            obj is GetKeysIdsResult result && Equals(result);
 
         
         public bool Equals(GetKeysIdsResult other)
@@ -96,7 +96,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is Get && Equals((Get)obj);
+        public override bool Equals(object obj) => obj is Get get && Equals(get);
 
         
         public override int GetHashCode()
@@ -191,7 +191,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is GetSuccess && Equals((GetSuccess)obj);
+        public override bool Equals(object obj) => obj is GetSuccess success && Equals(success);
 
         
         public override int GetHashCode()
@@ -211,7 +211,7 @@ namespace Akka.DistributedData
 
         public T Get<T>(IKey<T> key) where T : IReplicatedData
         {
-            if (Data is T) return (T)Data;
+            if (Data is T data) return data;
 
             throw new InvalidCastException($"Response returned for key '{Key}' is of type [{Data?.GetType()}] and cannot be casted using key '{key}' to type [{typeof(T)}]");
         }
@@ -242,7 +242,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is NotFound && Equals((NotFound)obj);
+        public override bool Equals(object obj) => obj is NotFound found && Equals(found);
 
         
         public override string ToString() => $"NotFound({Key}{(Request == null ? "" : ", req=" + Request)})";
@@ -292,7 +292,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is GetFailure && Equals((GetFailure)obj);
+        public override bool Equals(object obj) => obj is GetFailure failure && Equals(failure);
 
         
         public override int GetHashCode()
@@ -352,7 +352,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is Subscribe && Equals((Subscribe)obj);
+        public override bool Equals(object obj) => obj is Subscribe subscribe && Equals(subscribe);
 
         
         public override int GetHashCode()
@@ -393,7 +393,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is Unsubscribe && Equals((Unsubscribe)obj);
+        public override bool Equals(object obj) => obj is Unsubscribe unsubscribe && Equals(unsubscribe);
 
         
         public override int GetHashCode()
@@ -448,7 +448,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is Changed && Equals((Changed)obj);
+        public override bool Equals(object obj) => obj is Changed changed && Equals(changed);
 
         
         public override int GetHashCode()
@@ -572,7 +572,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is UpdateSuccess && Equals((UpdateSuccess)obj);
+        public override bool Equals(object obj) => obj is UpdateSuccess success && Equals(success);
 
         
         public override int GetHashCode()
@@ -631,7 +631,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is UpdateTimeout && Equals((UpdateTimeout)obj);
+        public override bool Equals(object obj) => obj is UpdateTimeout timeout && Equals(timeout);
 
         
         public override string ToString() => $"UpdateTimeout({Key}{(Request == null ? "" : ", req=" + Request)})";
@@ -738,7 +738,7 @@ namespace Akka.DistributedData
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is StoreFailure && Equals((StoreFailure)obj);
+            return obj is StoreFailure failure && Equals(failure);
         }
 
         
@@ -779,7 +779,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is Delete && Equals((Delete)obj);
+        public override bool Equals(object obj) => obj is Delete delete && Equals(delete);
 
         
         public override int GetHashCode()
@@ -853,7 +853,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is DeleteSuccess && Equals((DeleteSuccess)obj);
+        public override bool Equals(object obj) => obj is DeleteSuccess success && Equals(success);
 
         
         public override int GetHashCode() => Key.GetHashCode();
@@ -884,7 +884,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is ReplicationDeleteFailure && Equals((ReplicationDeleteFailure)obj);
+        public override bool Equals(object obj) => obj is ReplicationDeleteFailure failure && Equals(failure);
 
         
         public override int GetHashCode() => Key.GetHashCode();
@@ -920,7 +920,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is DataDeleted && Equals((DataDeleted)obj);
+        public override bool Equals(object obj) => obj is DataDeleted deleted && Equals(deleted);
 
         
         public override int GetHashCode() => Key.GetHashCode();
@@ -967,7 +967,7 @@ namespace Akka.DistributedData
         public bool Equals(ReplicaCount other) => other != null && N == other.N;
 
         
-        public override bool Equals(object obj) => obj is ReplicaCount && Equals((ReplicaCount)obj);
+        public override bool Equals(object obj) => obj is ReplicaCount count && Equals(count);
 
         
         public override int GetHashCode() => N.GetHashCode();
