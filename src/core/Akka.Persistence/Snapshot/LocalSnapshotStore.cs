@@ -289,8 +289,7 @@ namespace Akka.Persistence.Snapshot
                 var seqNrString = match.Groups[2].Value;
                 var timestampTicks = match.Groups[3].Value;
 
-                long sequenceNr, ticks;
-                if (long.TryParse(seqNrString, out sequenceNr) && long.TryParse(timestampTicks, out ticks))
+                if (long.TryParse(seqNrString, out var sequenceNr) && long.TryParse(timestampTicks, out var ticks))
                 {
                     return new SnapshotMetadata(pid, sequenceNr, new DateTime(ticks));
                 }

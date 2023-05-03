@@ -95,7 +95,7 @@ namespace Akka.Remote.Tests.Transport
                     else
                         Self.Tell("sendNext");
                 }
-                else if (message is int || message is long)
+                else if (message is int or long)
                 {
                     var seq = Convert.ToInt32(message);
                     if (seq > _maxSeq)
@@ -138,7 +138,7 @@ namespace Akka.Remote.Tests.Transport
             protected override void OnReceive(object message)
             {
                 //BUG: looks like the serializer will by default convert plain numerics sent over the wire into long integers
-                if (message is int || message is long)
+                if (message is int or long)
                 {
                     Sender.Tell(message);
                 }

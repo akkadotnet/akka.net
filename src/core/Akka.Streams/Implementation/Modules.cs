@@ -85,8 +85,7 @@ namespace Akka.Streams.Implementation
 
         IUntypedPublisher ISourceModule.Create(MaterializationContext context, out object materializer)
         {
-            TMat m;
-            var result = Create(context, out m);
+            var result = Create(context, out var m);
             materializer = m;
             return UntypedPublisher.FromTyped(result);
         }

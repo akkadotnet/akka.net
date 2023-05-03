@@ -210,9 +210,9 @@ namespace Akka.Persistence.Tests
 
             private bool FailingRecover(object message)
             {
-                if (message is Evt)
+                if (message is Evt evt)
                 {
-                    if (((Evt) message).Data.Equals("bad"))
+                    if (evt.Data.Equals("bad"))
                         throw new SimulatedException("Simulated exception from receiveRecover");
                 }
                 return true;

@@ -68,8 +68,8 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static object ToTyped(IUntypedPublisher untypedPublisher)
         {
-            if (untypedPublisher is UntypedPublisher)
-                return ((UntypedPublisher) untypedPublisher).Unwrap();
+            if (untypedPublisher is UntypedPublisher publisher)
+                return publisher.Unwrap();
             return untypedPublisher;
         }
 

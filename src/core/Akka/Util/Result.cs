@@ -65,7 +65,7 @@ namespace Akka.Util
         
         public override bool Equals(object obj)
         {
-            if (obj is Result<T>) return Equals((Result<T>) obj);
+            if (obj is Result<T> result) return Equals(result);
             return false;
         }
 

@@ -520,13 +520,13 @@ namespace Akka.Cluster.Sharding.Tests
 
             // do we get an answer here? shard crashes
             probe.ExpectNoMsg();
-            if (wayToFail is StopStore || wayToFail is CrashStore)
+            if (wayToFail is StopStore or CrashStore)
             {
                 // a new store should be started
                 shardStore = storeProbe.ExpectMsg<ShardStoreCreated>().Store;
             }
 
-            if (wayToFail is NoResponse || wayToFail is Delay || wayToFail is CrashStore)
+            if (wayToFail is NoResponse or Delay or CrashStore)
             {
                 // a new store should be started
                 shardStore = storeProbe.ExpectMsg<ShardStoreCreated>().Store;
@@ -741,7 +741,7 @@ namespace Akka.Cluster.Sharding.Tests
             sharding.Tell(new EntityEnvelope(1, "hello-1"), probe.Ref);
             probe.ExpectNoMsg(TimeSpan.FromSeconds(1)); // because shard cannot start while store failing
 
-            if (wayToFail is StopStore || wayToFail is CrashStore)
+            if (wayToFail is StopStore or CrashStore)
             {
                 // a new store should be started
                 coordinatorStore = storeProbe.ExpectMsg<CoordinatorStoreCreated>().Store;

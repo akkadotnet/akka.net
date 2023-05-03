@@ -502,7 +502,7 @@ namespace Akka.Routing
         /// <returns>The router configured with the auxiliary information.</returns>
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
-            if (routerConfig is FromConfig || routerConfig is NoRouter)
+            if (routerConfig is FromConfig or NoRouter)
             {
                 return OverrideUnsetConfig(routerConfig);
             }
@@ -752,7 +752,7 @@ namespace Akka.Routing
         /// <returns>The router configured with the auxiliary information.</returns>
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
-            if (routerConfig is FromConfig || routerConfig is NoRouter)
+            if (routerConfig is FromConfig or NoRouter)
             {
                 return base.WithFallback(routerConfig);
             }

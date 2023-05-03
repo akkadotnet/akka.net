@@ -242,8 +242,7 @@ namespace Akka.DistributedData
                     var commonDots = rhsDots.Versions
                         .Where(kv =>
                         {
-                            long v;
-                            return rhsDots.Versions.TryGetValue(kv.Key, out v) && v == kv.Value;
+                            return rhsDots.Versions.TryGetValue(kv.Key, out var v) && v == kv.Value;
                         }).ToImmutableDictionary();
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUniqueDots = lhsDots.Versions.RemoveRange(commonDotKeys);
@@ -446,7 +445,7 @@ namespace Akka.DistributedData
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         
-        public override bool Equals(object obj) => obj is ORSet<T> && Equals((ORSet<T>)obj);
+        public override bool Equals(object obj) => obj is ORSet<T> set && Equals(set);
 
         
         public override int GetHashCode()
@@ -570,9 +569,9 @@ namespace Akka.DistributedData
                 {
                     return new DeltaGroup(ImmutableArray.Create(this, other));
                 }
-                else if (other is DeltaGroup)
+                else if (other is DeltaGroup group)
                 {
-                    var vector = ((DeltaGroup)other).Operations;
+                    var vector = group.Operations;
                     return new DeltaGroup(vector.Add(this));
                 }
                 else throw new ArgumentException($"Unknown delta operation of type {other.GetType()}", nameof(other));
@@ -593,9 +592,9 @@ namespace Akka.DistributedData
                 {
                     return new DeltaGroup(ImmutableArray.Create(this, other));
                 }
-                else if (other is DeltaGroup)
+                else if (other is DeltaGroup group)
                 {
-                    var vector = ((DeltaGroup)other).Operations;
+                    var vector = group.Operations;
                     return new DeltaGroup(vector.Add(this));
                 }
                 else throw new ArgumentException($"Unknown delta operation of type {other.GetType()}", nameof(other));
@@ -650,7 +649,7 @@ namespace Akka.DistributedData
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is DeltaGroup && Equals((DeltaGroup)obj);
+                return obj is DeltaGroup group && Equals(group);
             }
 
             public override int GetHashCode()
