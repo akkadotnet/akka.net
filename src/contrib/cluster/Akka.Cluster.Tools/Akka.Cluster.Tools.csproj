@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\..\common.props"/>
+    <Import Project="..\..\..\common.props" />
 
     <PropertyGroup>
         <AssemblyTitle>Akka.Cluster.Tools</AssemblyTitle>
@@ -10,9 +10,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="Client\reference.conf;PublishSubscribe\reference.conf;Singleton\reference.conf"/>
-        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj"/>
-        <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj"/>
+        <EmbeddedResource Include="Client\reference.conf;PublishSubscribe\reference.conf;Singleton\reference.conf" />
+        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
+        <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj" />
     </ItemGroup>
 
 </Project>
