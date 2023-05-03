@@ -71,7 +71,7 @@ namespace Akka.Cluster.Tests
 
             public override bool IsAvailable
             {
-                get { return (_status == Status.Up || _status == Status.Unknown); }
+                get { return _status is Status.Up or Status.Unknown; }
             }
 
             public override bool IsMonitoring

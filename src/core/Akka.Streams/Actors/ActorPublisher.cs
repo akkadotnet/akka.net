@@ -243,7 +243,7 @@ namespace Akka.Streams.Actors
         /// is greater than zero.
         /// </summary>
         public bool IsActive
-            => _lifecycleState == LifecycleState.Active || _lifecycleState == LifecycleState.PreSubscriber;
+            => _lifecycleState is LifecycleState.Active or LifecycleState.PreSubscriber;
 
         /// <summary>
         /// Total number of requested elements from the stream subscriber.

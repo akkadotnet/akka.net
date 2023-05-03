@@ -46,7 +46,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// </param>
                 public EWMA(double value, double alpha)
                 {
-                    if (alpha < 0 || alpha > 1)
+                    if (alpha is < 0 or > 1)
                         throw new ArgumentException(nameof(alpha), "alpha must be between 0.0 and 1.0");
                     
                     value_ = value;

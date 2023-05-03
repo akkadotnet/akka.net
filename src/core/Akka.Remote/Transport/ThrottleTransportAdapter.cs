@@ -126,7 +126,7 @@ namespace Akka.Remote.Transport
                 });
             }
 
-            if (message is ForceDisassociate || message is ForceDisassociateExplicitly)
+            if (message is ForceDisassociate or ForceDisassociateExplicitly)
             {
                 return manager.Ask(message, AskTimeout).ContinueWith(r => r.Result is ForceDisassociateAck,
                     TaskContinuationOptions.ExecuteSynchronously);
@@ -509,7 +509,7 @@ namespace Akka.Remote.Transport
         private ThrottleMode GetInboundMode(Address nakedAddress)
         {
             if (_throttlingModes.TryGetValue(nakedAddress, out var mode))
-                if (mode.Item2 == ThrottleTransportAdapter.Direction.Both || mode.Item2 == ThrottleTransportAdapter.Direction.Receive)
+                if (mode.Item2 is ThrottleTransportAdapter.Direction.Both or ThrottleTransportAdapter.Direction.Receive)
                     return mode.Item1;
 
             return Unthrottled.Instance;
@@ -518,7 +518,7 @@ namespace Akka.Remote.Transport
         private ThrottleMode GetOutboundMode(Address nakedAddress)
         {
             if (_throttlingModes.TryGetValue(nakedAddress, out var mode))
-                if (mode.Item2 == ThrottleTransportAdapter.Direction.Both || mode.Item2 == ThrottleTransportAdapter.Direction.Send)
+                if (mode.Item2 is ThrottleTransportAdapter.Direction.Both or ThrottleTransportAdapter.Direction.Send)
                     return mode.Item1;
 
             return Unthrottled.Instance;
@@ -535,11 +535,9 @@ namespace Akka.Remote.Transport
         private Task<SetThrottleAck> SetMode(ThrottlerHandle handle, ThrottleMode mode,
             ThrottleTransportAdapter.Direction direction)
         {
-            if (direction == ThrottleTransportAdapter.Direction.Both ||
-                direction == ThrottleTransportAdapter.Direction.Send)
+            if (direction is ThrottleTransportAdapter.Direction.Both or ThrottleTransportAdapter.Direction.Send)
                 handle.OutboundThrottleMode.Value = mode;
-            if (direction == ThrottleTransportAdapter.Direction.Both ||
-                direction == ThrottleTransportAdapter.Direction.Receive)
+            if (direction is ThrottleTransportAdapter.Direction.Both or ThrottleTransportAdapter.Direction.Receive)
                 return AskModeWithDeathCompletion(handle.ThrottlerActor, mode, ActorTransportAdapter.AskTimeout);
             else
                 return Task.FromResult(SetThrottleAck.Instance);

@@ -958,7 +958,7 @@ namespace Akka.Cluster.Tools.Singleton
                 else if (e.FsmEvent is HandOverToMe)
                 {
                     var selfStatus = _cluster.SelfMember.Status;
-                    if (selfStatus == MemberStatus.Leaving || selfStatus == MemberStatus.Exiting)
+                    if (selfStatus is MemberStatus.Leaving or MemberStatus.Exiting)
                     {
                         Log.Info("Ignoring HandOverToMe in Younger from [{0}] because self is [{1}].",
                             Sender.Path.Address, selfStatus);
@@ -1361,7 +1361,7 @@ namespace Akka.Cluster.Tools.Singleton
                     Log.Info("Self removed, stopping ClusterSingletonManager");
                     return Stop();
                 }
-                if (e.FsmEvent is OldestChangedBuffer.OldestChanged || e.FsmEvent is HandOverToMe)
+                if (e.FsmEvent is OldestChangedBuffer.OldestChanged or HandOverToMe)
                 {
                     // not interested anymore - waiting for removal
                     return Stay();
@@ -1477,8 +1477,8 @@ namespace Akka.Cluster.Tools.Singleton
                     lease.Release().ContinueWith(r => new ReleaseLeaseResult(r.Result)).PipeTo(Self);
                 }
 
-                if (to == ClusterSingletonState.Younger || to == ClusterSingletonState.Oldest) GetNextOldestChanged();
-                if (to == ClusterSingletonState.Younger || to == ClusterSingletonState.End)
+                if (to is ClusterSingletonState.Younger or ClusterSingletonState.Oldest) GetNextOldestChanged();
+                if (to is ClusterSingletonState.Younger or ClusterSingletonState.End)
                 {
                     if (_removed.ContainsKey(_cluster.SelfUniqueAddress))
                     {

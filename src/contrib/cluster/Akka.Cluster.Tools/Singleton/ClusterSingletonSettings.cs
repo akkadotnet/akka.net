@@ -109,7 +109,7 @@ namespace Akka.Cluster.Tools.Singleton
             if (handOverRetryInterval <= TimeSpan.Zero)
                 throw new ArgumentException("ClusterSingletonManagerSettings.HandOverRetryInterval must be positive", nameof(handOverRetryInterval));
 
-            if (bufferSize < 0 || bufferSize > 10000)
+            if (bufferSize is < 0 or > 10000)
                 throw new ArgumentException("bufferSize must be >= 0 and <= 10000", nameof(bufferSize));
 
             Role = role;

@@ -466,7 +466,7 @@ namespace Akka.DistributedData
         protected override SupervisorStrategy SupervisorStrategy() => new OneForOneStrategy(e =>
         {
             var fromDurableStore = Equals(Sender, _durableStore) && !Equals(Sender, Context.System.DeadLetters);
-            if ((e is LoadFailedException || e is ActorInitializationException) && fromDurableStore)
+            if (e is LoadFailedException or ActorInitializationException && fromDurableStore)
             {
                 _log.Error(e,
                     "Stopping distributed-data Replicator due to load or startup failure in durable store, caused by: {0}",
@@ -628,7 +628,7 @@ namespace Akka.DistributedData
             }
             else
             {
-                var excludeExiting = consistency is ReadMajorityPlus || consistency is ReadAll;
+                var excludeExiting = consistency is ReadMajorityPlus or ReadAll;
 
                 Context.ActorOf(ReadAggregator.Props(key, consistency, req, NodesForReadWrite(excludeExiting), _unreachable, !_settings.PreferOldest, localValue, Sender)
                     .WithDispatcher(Context.Props.Dispatcher));
@@ -638,7 +638,7 @@ namespace Akka.DistributedData
         private bool IsLocalGet(IReadConsistency consistency)
         {
             if (consistency is ReadLocal) return true;
-            if (consistency is ReadAll || consistency is ReadMajority) return _nodes.Count == 0;
+            if (consistency is ReadAll or ReadMajority) return _nodes.Count == 0;
             return false;
         }
 
@@ -745,7 +745,7 @@ namespace Akka.DistributedData
                     // The order is also kept when prefer-oldest is enabled.
                     var shuffle = !(_settings.PreferOldest || (writeDelta?.RequiresCausalDeliveryOfDeltas) == true);
 
-                    var excludeExiting = consistency is WriteMajorityPlus || consistency is WriteAll;
+                    var excludeExiting = consistency is WriteMajorityPlus or WriteAll;
 
                     var writeAggregator = Context.ActorOf(WriteAggregator
                         .Props(key, writeEnvelope, writeDelta, consistency, request, NodesForReadWrite(excludeExiting), _unreachable, shuffle, Sender, durable)
@@ -773,7 +773,7 @@ namespace Akka.DistributedData
         private bool IsLocalUpdate(IWriteConsistency consistency)
         {
             if (consistency is WriteLocal) return true;
-            if (consistency is WriteAll || consistency is WriteMajority) return _nodes.Count == 0;
+            if (consistency is WriteAll or WriteMajority) return _nodes.Count == 0;
             return false;
         }
 
@@ -871,7 +871,7 @@ namespace Akka.DistributedData
                 }
                 else
                 {
-                    var excludeExiting = consistency is WriteMajorityPlus || consistency is WriteAll;
+                    var excludeExiting = consistency is WriteMajorityPlus or WriteAll;
 
                     var writeAggregator = Context.ActorOf(WriteAggregator
                         .Props(key, DeletedEnvelope, null, consistency, request, NodesForReadWrite(excludeExiting), _unreachable, !_settings.PreferOldest, Sender, durable)

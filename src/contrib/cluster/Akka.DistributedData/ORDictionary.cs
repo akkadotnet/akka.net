@@ -699,7 +699,7 @@ namespace Akka.DistributedData
                 {
                     var lastIndex = Operations.Length - 1;
                     var last = Operations[lastIndex];
-                    if (last is PutDeltaOperation || last is UpdateDeltaOperation)
+                    if (last is PutDeltaOperation or UpdateDeltaOperation)
                     {
                         var builder = Operations.ToList();
                         var merged = (IDeltaOperation)last.Merge(atomic);
