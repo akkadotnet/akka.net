@@ -17,8 +17,4 @@
     <PackageReference Include="Fsharp.Core" Version="$(FsharpVersion)" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-
 </Project>
