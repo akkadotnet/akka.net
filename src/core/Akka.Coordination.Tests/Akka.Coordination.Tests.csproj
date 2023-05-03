@@ -20,8 +20,4 @@
     <PackageReference Include="FsCheck.Xunit" Version="$(FsCheckVersion)" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-
 </Project>
