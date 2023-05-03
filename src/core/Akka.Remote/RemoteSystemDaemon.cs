@@ -123,7 +123,7 @@ namespace Akka.Remote
             if (message is IDaemonMsg)
             {
                 Log.Debug("Received command [{0}] to RemoteSystemDaemon on [{1}]", message, Path.Address);
-                if (message is DaemonMsgCreate) HandleDaemonMsgCreate((DaemonMsgCreate)message);
+                if (message is DaemonMsgCreate create) HandleDaemonMsgCreate(create);
             }
             else if (message is ActorSelectionMessage sel)
             {
@@ -172,9 +172,8 @@ namespace Akka.Remote
             }
             //Remote ActorSystem on another process / machine has died. 
             //Need to clean up any references to remote deployments here.
-            else if (message is AddressTerminated)
+            else if (message is AddressTerminated addressTerminated)
             {
-                var addressTerminated = (AddressTerminated)message;
                 //stop any remote actors that belong to this address
                 ForEachChild(@ref =>
                 {

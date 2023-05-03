@@ -232,16 +232,14 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public override Task<bool> ManagementCommand(object message)
         {
-            if (message is All)
+            if (message is All all)
             {
-                var all = message as All;
                 _allMode = all.Mode;
                 return Task.FromResult(true);
             }
             
-            if (message is One)
+            if (message is One one)
             {
-                var one = message as One;
                 //  don't care about the protocol part - we are injected in the stack anyway!
                 addressChaosTable.AddOrUpdate(NakedAddress(one.RemoteAddress), address => one.Mode, (address, mode) => one.Mode);
                 return Task.FromResult(true);
@@ -337,9 +335,8 @@ namespace Akka.Remote.Transport
         {
             var mode = ChaosMode(remoteAddress);
             if (mode is PassThru) return false;
-            if (mode is Drop)
+            if (mode is Drop drop)
             {
-                var drop = mode as Drop;
                 if (Rng.NextDouble() <= drop.InboundDropP)
                 {
                     if (_shouldDebugLog) _log.Debug("Dropping inbound [{0}] for [{1}] {2}", instance.GetType(),
@@ -362,9 +359,8 @@ namespace Akka.Remote.Transport
         {
             var mode = ChaosMode(remoteAddress);
             if (mode is PassThru) return false;
-            if (mode is Drop)
+            if (mode is Drop drop)
             {
-                var drop = mode as Drop;
                 if (Rng.NextDouble() <= drop.OutboundDropP)
                 {
                     if (_shouldDebugLog) 

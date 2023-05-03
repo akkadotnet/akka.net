@@ -53,9 +53,9 @@ namespace Akka.TestKit
             }
             catch(Exception ex)
             {
-                if(ex is T)
+                if(ex is T exception1)
                 {
-                    return (T) ex;
+                    return exception1;
                 }
                 exception = ex;
             }

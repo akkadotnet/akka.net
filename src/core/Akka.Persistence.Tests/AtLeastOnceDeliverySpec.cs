@@ -300,7 +300,7 @@ namespace Akka.Persistence.Tests
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
-                return obj is Action && Equals((Action)obj);
+                return obj is Action action && Equals(action);
             }
             public bool Equals(Action other)
             {

@@ -354,7 +354,7 @@ namespace Akka.Remote.Transport
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is HandshakeInfo && Equals((HandshakeInfo)obj);
+            return obj is HandshakeInfo info && Equals(info);
         }
 
         private bool Equals(HandshakeInfo other)

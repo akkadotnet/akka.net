@@ -445,7 +445,7 @@ namespace Akka.Streams.Dsl
         public bool Equals(Delay other) => !ReferenceEquals(other, null) && Equals(Duration, other.Duration);
 
        
-        public override bool Equals(object obj) => obj is Delay && Equals((Delay)obj);
+        public override bool Equals(object obj) => obj is Delay delay && Equals(delay);
 
        
         public override int GetHashCode() => Duration.GetHashCode();
