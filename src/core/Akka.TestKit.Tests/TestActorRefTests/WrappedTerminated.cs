@@ -11,14 +11,12 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class WrappedTerminated
     {
-        private readonly Terminated _terminated;
-
         public WrappedTerminated(Terminated terminated)
         {
-            _terminated = terminated;
+            Terminated = terminated;
         }
 
-        public Terminated Terminated { get { return _terminated; } }
+        public Terminated Terminated { get; }
     }
 }
 

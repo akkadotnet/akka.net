@@ -337,10 +337,7 @@ namespace Akka.Actor
     [InternalApi]
     public class UnstartedCell : ICell
     {
-        private readonly ActorSystemImpl _system;
         private readonly RepointableActorRef _self;
-        private readonly Props _props;
-        private readonly IInternalActorRef _supervisor;
         private readonly object _lock = new object();
 
         /* Both queues must be accessed via lock */
@@ -358,11 +355,11 @@ namespace Akka.Actor
         /// <param name="supervisor">TBD</param>
         public UnstartedCell(ActorSystemImpl system, RepointableActorRef self, Props props, IInternalActorRef supervisor)
         {
-            _system = system;
+            SystemImpl = system;
             _self = self;
-            _props = props;
-            _supervisor = supervisor;
-            _timeout = _system.Settings.UnstartedPushTimeout;
+            Props = props;
+            Parent = supervisor;
+            _timeout = SystemImpl.Settings.UnstartedPushTimeout;
         }
 
         private void DrainSysMsgQueue(ICell cell)
@@ -414,11 +411,12 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorSystem System { get { return _system; } }
+        public ActorSystem System { get { return SystemImpl; } }
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorSystemImpl SystemImpl { get { return _system; } }
+        public ActorSystemImpl SystemImpl { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -465,7 +463,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public IInternalActorRef Parent { get { return _supervisor; } }
+        public IInternalActorRef Parent { get; }
 
         /// <summary>
         /// TBD
@@ -551,8 +549,8 @@ namespace Akka.Actor
             }
             else
             {
-                _system.EventStream.Publish(new Warning(_self.Path.ToString(), GetType(), "Dropping message of type" + message.GetType() + " due to lock timeout"));
-                _system.DeadLetters.Tell(new DeadLetter(message, sender, _self), sender);
+                SystemImpl.EventStream.Publish(new Warning(_self.Path.ToString(), GetType(), "Dropping message of type" + message.GetType() + " due to lock timeout"));
+                SystemImpl.DeadLetters.Tell(new DeadLetter(message, sender, _self), sender);
             }
         }
 
@@ -643,7 +641,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public Props Props { get { return _props; } }
+        public Props Props { get; }
     }
 }
 

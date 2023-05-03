@@ -12,10 +12,6 @@ namespace Akka.Tools.MatchHandler
     /// </summary>
     internal class Argument
     {
-        private readonly PredicateAndHandler _predicateAndHandler;
-        private readonly object _value;
-        private readonly bool _valueIsActionOrFunc;
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -24,23 +20,25 @@ namespace Akka.Tools.MatchHandler
         /// <param name="valueIsActionOrFunc">TBD</param>
         public Argument(PredicateAndHandler predicateAndHandler, object value, bool valueIsActionOrFunc)
         {
-            _predicateAndHandler = predicateAndHandler;
-            _value = value;
-            _valueIsActionOrFunc = valueIsActionOrFunc;
+            PredicateAndHandler = predicateAndHandler;
+            Value = value;
+            ValueIsActionOrFunc = valueIsActionOrFunc;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public PredicateAndHandler PredicateAndHandler{get { return _predicateAndHandler; }}
+        public PredicateAndHandler PredicateAndHandler { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public object Value{get { return _value; }}
+        public object Value { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public bool ValueIsActionOrFunc{get { return _valueIsActionOrFunc; }}
+        public bool ValueIsActionOrFunc { get; }
     }
 }
 

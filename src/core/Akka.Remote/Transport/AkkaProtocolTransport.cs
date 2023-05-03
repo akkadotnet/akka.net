@@ -107,15 +107,10 @@ namespace Akka.Remote.Transport
         /// </summary>
         protected AkkaPduCodec Codec { get; private set; }
 
-        private readonly SchemeAugmenter _schemeAugmenter = new SchemeAugmenter(RemoteSettings.AkkaScheme);
-
         /// <summary>
         /// TBD
         /// </summary>
-        protected override SchemeAugmenter SchemeAugmenter
-        {
-            get { return _schemeAugmenter; }
-        }
+        protected override SchemeAugmenter SchemeAugmenter { get; } = new SchemeAugmenter(RemoteSettings.AkkaScheme);
 
         private string _managerName;
         /// <summary>

@@ -22,10 +22,6 @@ namespace Akka.Actor
     public class LocalActorRef : ActorRefWithCell, ILocalRef
     {
         private readonly ActorSystemImpl _system;
-        private readonly MessageDispatcher _dispatcher;
-        private readonly IInternalActorRef _supervisor;
-        private readonly ActorPath _path;
-        private ActorCell _cell;
 
         //This mimics what's done in Akka`s construction of an LocalActorRef.
         //The actorCell is created in the overridable newActorCell() during creation of the instance.
@@ -56,10 +52,10 @@ namespace Akka.Actor
             IInternalActorRef supervisor, ActorPath path)
         {
             _system = system;
-            _dispatcher = dispatcher;
+            Dispatcher = dispatcher;
             MailboxType = mailboxType;
-            _supervisor = supervisor;
-            _path = path;
+            Supervisor = supervisor;
+            Path = path;
 
             /*
              * Safe publication of this class’s fields is guaranteed by Mailbox.SetActor()
@@ -72,9 +68,9 @@ namespace Akka.Actor
              * object from another thread as soon as we run init.
              */
             // ReSharper disable once VirtualMemberCallInConstructor 
-            _cell = NewActorCell(_system, this, props, _dispatcher,
-                _supervisor); // _cell needs to be assigned before Init is called. 
-            _cell.Init(true, MailboxType);
+            Cell = NewActorCell(_system, this, props, Dispatcher,
+                Supervisor); // _cell needs to be assigned before Init is called. 
+            Cell.Init(true, MailboxType);
         }
 
         /// <summary>
@@ -95,49 +91,46 @@ namespace Akka.Actor
         
         public override ICell Underlying
         {
-            get { return _cell; }
+            get { return Cell; }
         }
 
         /// <inheritdoc/>
-        public ActorCell Cell
-        {
-            get { return _cell; }
-        }
+        public ActorCell Cell { get; }
 
         /// <inheritdoc cref="IActorRefProvider"/>
         public override IActorRefProvider Provider
         {
-            get { return _cell.SystemImpl.Provider; }
+            get { return Cell.SystemImpl.Provider; }
         }
 
         
         public override IInternalActorRef Parent
         {
-            get { return _cell.Parent; }
+            get { return Cell.Parent; }
         }
 
         
         public override IEnumerable<IActorRef> Children
         {
-            get { return _cell.GetChildren(); }
+            get { return Cell.GetChildren(); }
         }
 
         
         public override void Start()
         {
-            _cell.Start();
+            Cell.Start();
         }
 
         
         public override void Stop()
         {
-            _cell.Stop();
+            Cell.Stop();
         }
 
        
         public override void Suspend()
         {
-            _cell.Suspend();
+            Cell.Suspend();
         }
 
         
@@ -149,14 +142,11 @@ namespace Akka.Actor
         
         public override void SendSystemMessage(ISystemMessage message)
         {
-            _cell.SendSystemMessage(message);
+            Cell.SendSystemMessage(message);
         }
 
         /// <inheritdoc/>
-        public override ActorPath Path
-        {
-            get { return _path; }
-        }
+        public override ActorPath Path { get; }
 
         /// <summary>
         /// The <see cref="ActorSystem"/> to which this actor ref belongs.
@@ -166,20 +156,20 @@ namespace Akka.Actor
         /// <summary>
         /// The <see cref="Props"/> used to create this actor.
         /// </summary>
-        protected Props Props => _cell.Props;
+        protected Props Props => Cell.Props;
 
         /// <summary>
         /// The <see cref="MessageDispatcher"/> this actor will use to execute its message-processing.
         /// </summary>
-        protected MessageDispatcher Dispatcher => _dispatcher;
+        protected MessageDispatcher Dispatcher { get; }
 
         /// <summary>
         /// The actor's supervisor, typically its parent.
         /// </summary>
-        protected IInternalActorRef Supervisor => _supervisor;
+        protected IInternalActorRef Supervisor { get; }
 
-        
-        public override bool IsTerminated => _cell.IsTerminated;
+
+        public override bool IsTerminated => Cell.IsTerminated;
 
         /// <summary>
         /// The type of mailbox used by this actor
@@ -189,25 +179,25 @@ namespace Akka.Actor
         
         public override void Resume(Exception causedByFailure = null)
         {
-            _cell.Resume(causedByFailure);
+            Cell.Resume(causedByFailure);
         }
 
         
         public override void Restart(Exception cause)
         {
-            _cell.Restart(cause);
+            Cell.Restart(cause);
         }
 
         /// <inheritdoc/>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            _cell.SendMessage(sender, message);
+            Cell.SendMessage(sender, message);
         }
 
         
         public override IInternalActorRef GetSingleChild(string name)
         {
-            return _cell.GetSingleChild(name);
+            return Cell.GetSingleChild(name);
         }
 
         

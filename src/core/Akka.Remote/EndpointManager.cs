@@ -161,7 +161,7 @@ namespace Akka.Remote
                 Recipient = recipient;
                 SenderOption = senderOption;
                 Message = message;
-                _seq = seqOpt;
+                Seq = seqOpt;
             }
 
             /// <summary>
@@ -188,18 +188,10 @@ namespace Akka.Remote
                 return string.Format("Remote message {0} -> {1}", SenderOption, Recipient);
             }
 
-            private readonly SeqNo _seq;
-
             /// <summary>
             /// TBD
             /// </summary>
-            public SeqNo Seq
-            {
-                get
-                {
-                    return _seq;
-                }
-            }
+            public SeqNo Seq { get; }
 
             /// <summary>
             /// TBD

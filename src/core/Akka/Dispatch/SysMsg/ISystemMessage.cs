@@ -361,10 +361,6 @@ namespace Akka.Dispatch.SysMsg
     [InternalApi]
     public sealed class Failed : SystemMessage, IStashWhenFailed
     {
-        private readonly long _uid;
-        private readonly Exception _cause;
-        private readonly IActorRef _child;
-
         /// <summary>
         ///     Initializes a new instance of the <see cref="Failed" /> class.
         /// </summary>
@@ -373,27 +369,27 @@ namespace Akka.Dispatch.SysMsg
         /// <param name="uid">The uid</param>
         public Failed(IActorRef child, Exception cause, long uid)
         {
-            _uid = uid;
-            _child = child;
-            _cause = cause;
+            Uid = uid;
+            Child = child;
+            Cause = cause;
         }
 
         /// <summary>
         ///     Gets the child.
         /// </summary>
         /// <value>The child.</value>
-        public IActorRef Child { get { return _child; } }
+        public IActorRef Child { get; }
 
         /// <summary>
         ///     Gets the cause.
         /// </summary>
         /// <value>The cause.</value>
-        public Exception Cause { get { return _cause; } }
+        public Exception Cause { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public long Uid { get { return _uid; } }
+        public long Uid { get; }
 
         /// <summary>
         /// TBD
@@ -401,7 +397,7 @@ namespace Akka.Dispatch.SysMsg
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return "<Failed>: " + _child + " (" + _uid + ") " + (_cause != null ? ", Cause=" + _cause : "");
+            return "<Failed>: " + Child + " (" + Uid + ") " + (Cause != null ? ", Cause=" + Cause : "");
         }
     }
 
@@ -864,17 +860,11 @@ namespace Akka.Dispatch.SysMsg
     public sealed class RegisterTerminationHook
     {
         private RegisterTerminationHook() { }
-        private static readonly RegisterTerminationHook _instance = new RegisterTerminationHook();
+
         /// <summary>
         /// TBD
         /// </summary>
-        public static RegisterTerminationHook Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static RegisterTerminationHook Instance { get; } = new RegisterTerminationHook();
 
         /// <summary>
         /// TBD
@@ -892,17 +882,11 @@ namespace Akka.Dispatch.SysMsg
     public sealed class TerminationHook
     {
         private TerminationHook() { }
-        private static readonly TerminationHook _instance = new TerminationHook();
+
         /// <summary>
         /// TBD
         /// </summary>
-        public static TerminationHook Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static TerminationHook Instance { get; } = new TerminationHook();
 
         /// <summary>
         /// TBD
@@ -920,17 +904,11 @@ namespace Akka.Dispatch.SysMsg
     public sealed class TerminationHookDone
     {
         private TerminationHookDone() { }
-        private static readonly TerminationHookDone _instance = new TerminationHookDone();
+
         /// <summary>
         /// TBD
         /// </summary>
-        public static TerminationHookDone Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static TerminationHookDone Instance { get; } = new TerminationHookDone();
 
         /// <summary>
         /// TBD

@@ -215,8 +215,7 @@ namespace Akka.Streams.Implementation
     public class ResizableMultiReaderRingBuffer<T> : IStreamBuffer<T>
     {
         private readonly int _maxSizeBit;
-        private T[] _array;
-        
+
         /// <summary>
         /// Two counters counting the number of elements ever written and read; wrap-around is
         /// handled by always looking at differences or masked values
@@ -229,7 +228,7 @@ namespace Akka.Streams.Implementation
         /// Current array.length log2, we don't keep it as an extra field because <see cref="Int32Extensions.NumberOfTrailingZeros"/>
         /// is a JVM intrinsic compiling down to a `BSF` instruction on x86, which is very fast on modern CPUs
         /// </summary>
-        private int LengthBit => BitOperations.TrailingZeroCount(_array.LongLength);
+        private int LengthBit => BitOperations.TrailingZeroCount(UnderlyingArray.LongLength);
 
         // bit mask for converting a cursor into an array index
         private long Mask => long.MaxValue >> (63 - LengthBit);
@@ -251,7 +250,7 @@ namespace Akka.Streams.Implementation
             if ((maxSize & (maxSize - 1)) != 0 || maxSize <= 0 || maxSize > int.MaxValue / 2)
                 throw new ArgumentException("maxSize must be a power of 2 that is > 0 and < Int.MaxValue/2");
 
-            _array = new T[initialSize];
+            UnderlyingArray = new T[initialSize];
             _maxSizeBit = BitOperations.TrailingZeroCount(maxSize);
         }
 
@@ -263,7 +262,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        protected T[] UnderlyingArray => _array;
+        protected T[] UnderlyingArray { get; private set; }
 
         /// <summary>
         /// The number of elements currently in the buffer.
@@ -285,7 +284,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// The number of elements the buffer can still take without having to be resized.
         /// </summary>
-        public long ImmediatelyAvailable => _array.Length - Length;
+        public long ImmediatelyAvailable => UnderlyingArray.Length - Length;
 
         /// <summary>
         /// The maximum number of elements the buffer can still take.
@@ -313,10 +312,10 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public bool Write(T value)
         {
-            if (Length < _array.Length)
+            if (Length < UnderlyingArray.Length)
             {
                 // if we have space left we can simply write and be done
-                _array[_writeIndex & Mask] = value;
+                UnderlyingArray[_writeIndex & Mask] = value;
                 _writeIndex++;
                 return true;
             }
@@ -327,17 +326,17 @@ namespace Akka.Streams.Implementation
                 // in their natural order (removing potential wrap around) and rebase all indices to zero
                 var r = _readIndex & Mask;
 
-                var newLength = unchecked(_array.LongLength << 1);
+                var newLength = unchecked(UnderlyingArray.LongLength << 1);
                 if (newLength < 0)
                     newLength = long.MaxValue;
                 var newArray = new T[newLength];
 
-                Array.Copy(_array, r, newArray, 0, _array.Length - r);
-                Array.Copy(_array, 0, newArray, _array.Length - r, r);
+                Array.Copy(UnderlyingArray, r, newArray, 0, UnderlyingArray.Length - r);
+                Array.Copy(UnderlyingArray, 0, newArray, UnderlyingArray.Length - r, r);
                 RebaseCursors(Cursors.Cursors);
-                _array = newArray;
+                UnderlyingArray = newArray;
                 var w = Length;
-                _array[w & Mask] = value;
+                UnderlyingArray[w & Mask] = value;
                 _writeIndex = w + 1;
                 _readIndex = 0;
                 return true;
@@ -366,7 +365,7 @@ namespace Akka.Streams.Implementation
             if (c - _writeIndex < 0)
             {
                 cursor.Cursor += 1;
-                var ret = _array[c & Mask];
+                var ret = UnderlyingArray[c & Mask];
                 if(c == _readIndex)
                     UpdateReadIndex();
                 return ret;
@@ -390,7 +389,7 @@ namespace Akka.Streams.Implementation
             var newReadIx = _writeIndex + MinCursor(Cursors.Cursors, 0);
             while (_readIndex != newReadIx)
             {
-                _array[_readIndex & Mask] = default;
+                UnderlyingArray[_readIndex & Mask] = default;
                 _readIndex++;
             }
         }

@@ -190,18 +190,11 @@ namespace Akka.Remote.Transport
     {
         private ForceDisassociateAck() { }
         // ReSharper disable once InconsistentNaming
-        private static readonly ForceDisassociateAck _instance = new ForceDisassociateAck();
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static ForceDisassociateAck Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static ForceDisassociateAck Instance { get; } = new ForceDisassociateAck();
     }
 
     /// <summary>
@@ -604,18 +597,11 @@ namespace Akka.Remote.Transport
     {
         private Blackhole() { }
         // ReSharper disable once InconsistentNaming
-        private static readonly Blackhole _instance = new Blackhole();
 
         /// <summary>
         /// The singleton instance
         /// </summary>
-        public static Blackhole Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static Blackhole Instance { get; } = new Blackhole();
 
         /// <inheritdoc/>
         public override (ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens)
@@ -636,18 +622,11 @@ namespace Akka.Remote.Transport
     public class Unthrottled : ThrottleMode
     {
         private Unthrottled() { }
-        private static readonly Unthrottled _instance = new Unthrottled();
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static Unthrottled Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static Unthrottled Instance { get; } = new Unthrottled();
 
         /// <inheritdoc/>
         public override (ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens)
@@ -785,22 +764,20 @@ namespace Akka.Remote.Transport
     /// </summary>
     public sealed class SetThrottle
     {
-        readonly Address _address;
         /// <summary>
         /// The address of the remote node we'll be throttling
         /// </summary>
-        public Address Address { get { return _address; } }
+        public Address Address { get; }
 
-        readonly ThrottleTransportAdapter.Direction _direction;
         /// <summary>
         /// The direction of the throttle
         /// </summary>
-        public ThrottleTransportAdapter.Direction Direction { get { return _direction; } }
-        readonly ThrottleMode _mode;
+        public ThrottleTransportAdapter.Direction Direction { get; }
+
         /// <summary>
         /// The mode of the throttle
         /// </summary>
-        public ThrottleMode Mode { get { return _mode; } }
+        public ThrottleMode Mode { get; }
 
         /// <summary>
         /// Creates a new SetThrottle message.
@@ -810,14 +787,14 @@ namespace Akka.Remote.Transport
         /// <param name="mode">The mode of the throttle.</param>
         public SetThrottle(Address address, ThrottleTransportAdapter.Direction direction, ThrottleMode mode)
         {
-            _address = address;
-            _direction = direction;
-            _mode = mode;
+            Address = address;
+            Direction = direction;
+            Mode = mode;
         }
 
         private bool Equals(SetThrottle other)
         {
-            return Equals(_address, other._address) && _direction == other._direction && Equals(_mode, other._mode);
+            return Equals(Address, other.Address) && Direction == other.Direction && Equals(Mode, other.Mode);
         }
 
        
@@ -833,9 +810,9 @@ namespace Akka.Remote.Transport
         {
             unchecked
             {
-                var hashCode = (_address != null ? _address.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (int)_direction;
-                hashCode = (hashCode * 397) ^ (_mode != null ? _mode.GetHashCode() : 0);
+                var hashCode = (Address != null ? Address.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (int)Direction;
+                hashCode = (hashCode * 397) ^ (Mode != null ? Mode.GetHashCode() : 0);
                 return hashCode;
             }
         }
@@ -870,15 +847,11 @@ namespace Akka.Remote.Transport
     {
         private SetThrottleAck() { }
         // ReSharper disable once InconsistentNaming
-        private static readonly SetThrottleAck _instance = new SetThrottleAck();
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static SetThrottleAck Instance
-        {
-            get { return _instance; }
-        }
+        public static SetThrottleAck Instance { get; } = new SetThrottleAck();
     }
     /// <summary>
     /// INTERNAL API
@@ -1010,11 +983,10 @@ namespace Akka.Remote.Transport
         {
             private Uninitialized() { }
             // ReSharper disable once InconsistentNaming
-            private static readonly Uninitialized _instance = new Uninitialized();
             /// <summary>
             /// TBD
             /// </summary>
-            public static Uninitialized Instance { get { return _instance; } }
+            public static Uninitialized Instance { get; } = new Uninitialized();
         }
 
         /// <summary>

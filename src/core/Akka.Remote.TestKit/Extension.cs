@@ -55,29 +55,26 @@ namespace Akka.Remote.TestKit
             return system.WithExtension<TestConductor, TestConductorExtension>();
         }
 
-        readonly TestConductorSettings _settings;
-        public TestConductorSettings Settings {get { return _settings; }}
+        public TestConductorSettings Settings { get; }
 
-        readonly RemoteTransport _transport;
         /// <summary>
         /// Remote transport used by the actor ref provider.
         /// </summary>
-        public RemoteTransport Transport { get { return _transport; } }
+        public RemoteTransport Transport { get; }
 
-        readonly Address _address;
         /// <summary>
         /// Transport address of this Helios-like remote transport.
         /// </summary>
-        public Address Address { get { return _address; } }
+        public Address Address { get; }
 
         readonly ActorSystem _system;
 
         public TestConductor(ActorSystem system)
         {
-            _settings = new TestConductorSettings(system.Settings.Config.WithFallback(TestConductorConfigFactory.Default())
+            Settings = new TestConductorSettings(system.Settings.Config.WithFallback(TestConductorConfigFactory.Default())
                       .GetConfig("akka.testconductor"));
-            _transport = system.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<IRemoteActorRefProvider>().Transport;
-            _address = _transport.DefaultAddress;
+            Transport = system.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<IRemoteActorRefProvider>().Transport;
+            Address = Transport.DefaultAddress;
             _system = system;
         }
     }
@@ -87,43 +84,35 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public class TestConductorSettings
     {
-        readonly TimeSpan _connectTimeout;
-        public TimeSpan ConnectTimeout { get { return _connectTimeout; } }
+        public TimeSpan ConnectTimeout { get; }
 
-        readonly int _clientReconnects;
-        public int ClientReconnects { get { return _clientReconnects; } }
+        public int ClientReconnects { get; }
 
-        readonly TimeSpan _reconnectBackoff;
-        public TimeSpan ReconnectBackoff { get { return _reconnectBackoff; } }
+        public TimeSpan ReconnectBackoff { get; }
 
-        readonly TimeSpan _barrierTimeout;
-        public TimeSpan BarrierTimeout { get { return _barrierTimeout; } }
+        public TimeSpan BarrierTimeout { get; }
 
-        readonly TimeSpan _queryTimeout;
-        public TimeSpan QueryTimeout { get { return _queryTimeout; } }
+        public TimeSpan QueryTimeout { get; }
 
-        readonly TimeSpan _packetSplitThreshold;
-        public TimeSpan PacketSplitThreshold { get { return _packetSplitThreshold; } }
+        public TimeSpan PacketSplitThreshold { get; }
 
-        private readonly int _serverSocketWorkerPoolSize;
-        public int ServerSocketWorkerPoolSize{ get { return _serverSocketWorkerPoolSize; } }
+        public int ServerSocketWorkerPoolSize { get; }
 
-        private readonly int _clientSocketWorkerPoolSize;
-        public int ClientSocketWorkerPoolSize { get { return _clientSocketWorkerPoolSize; } }
+        public int ClientSocketWorkerPoolSize { get; }
 
         public TestConductorSettings(Config config)
         {
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<TestConductorSettings>();
 
-            _connectTimeout = config.GetTimeSpan("connect-timeout", null);
-            _clientReconnects = config.GetInt("client-reconnects", 0);
-            _reconnectBackoff = config.GetTimeSpan("reconnect-backoff", null);
-            _barrierTimeout = config.GetTimeSpan("barrier-timeout", null);
-            _queryTimeout = config.GetTimeSpan("query-timeout", null);
-            _packetSplitThreshold = config.GetTimeSpan("packet-split-threshold", null);
-            _serverSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.server-socket-worker-pool"));
-            _clientSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.client-socket-worker-pool"));
+            ConnectTimeout = config.GetTimeSpan("connect-timeout", null);
+            ClientReconnects = config.GetInt("client-reconnects", 0);
+            ReconnectBackoff = config.GetTimeSpan("reconnect-backoff", null);
+            BarrierTimeout = config.GetTimeSpan("barrier-timeout", null);
+            QueryTimeout = config.GetTimeSpan("query-timeout", null);
+            PacketSplitThreshold = config.GetTimeSpan("packet-split-threshold", null);
+            ServerSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.server-socket-worker-pool"));
+            ClientSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.client-socket-worker-pool"));
         }
 
         public int ComputeWps(Config config)

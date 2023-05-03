@@ -31,29 +31,28 @@ namespace Akka.Actor
         }
 
         // ReSharper disable once InconsistentNaming
-        private IActorRef _failed_DoNotUseMeDirectly;
-        private bool IsFailed { get { return _failed_DoNotUseMeDirectly != null; } }
+        private bool IsFailed { get { return Perpetrator != null; } }
         private void SetFailed(IActorRef perpetrator)
         {
-            _failed_DoNotUseMeDirectly = perpetrator;
+            Perpetrator = perpetrator;
         }
         private void ClearFailed()
         {
-            _failed_DoNotUseMeDirectly = null;
+            Perpetrator = null;
         }
-        private IActorRef Perpetrator { get { return _failed_DoNotUseMeDirectly; } }
+        private IActorRef Perpetrator { get; set; }
 
         /// <summary>Re-create the actor in response to a failure.</summary>
         private void FaultRecreate(Exception cause)
         {
-            if (_actor == null)
+            if (Actor == null)
             {
-                _systemImpl.EventStream.Publish(new Error(null, _self.Path.ToString(), GetType(), "Changing Recreate into Create after " + cause));
+                SystemImpl.EventStream.Publish(new Error(null, _self.Path.ToString(), GetType(), "Changing Recreate into Create after " + cause));
                 FaultCreate();
             } 
             else if (IsNormal)
             {
-                var failedActor = _actor;
+                var failedActor = Actor;
 
                 if (System.Settings.DebugLifecycle)
                     Publish(new Debug(_self.Path.ToString(), failedActor.GetType(), "Restarting"));
@@ -65,7 +64,7 @@ namespace Akka.Actor
                     failedActor.AroundPreRestart(cause, optionalMessage);
 
                     // run actor pre-incarnation plugin pipeline
-                    var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(failedActor.GetType());
+                    var pipeline = SystemImpl.ActorPipelineResolver.ResolvePipeline(failedActor.GetType());
                     pipeline.BeforeActorIncarnated(failedActor, this);
                 }
                 catch (Exception e)
@@ -78,7 +77,7 @@ namespace Akka.Actor
                 }
                 finally
                 {
-                    ClearActor(_actor);
+                    ClearActor(Actor);
                 }
 
                 global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended(), "Mailbox must be suspended during restart, status=" + Mailbox.CurrentStatus());
@@ -110,9 +109,9 @@ namespace Akka.Actor
         /// which prompted this action.</param>
         private void FaultResume(Exception causedByFailure)
         {
-            if (_actor == null)
+            if (Actor == null)
             {
-                _systemImpl.EventStream.Publish(new Error(null, _self.Path.ToString(), GetType(), "Changing Resume into Create after " + causedByFailure));
+                SystemImpl.EventStream.Publish(new Error(null, _self.Path.ToString(), GetType(), "Changing Resume into Create after " + causedByFailure));
                 FaultCreate();
             }
             //Akka Jvm does the following commented section as well, but we do not store the context inside the actor so it's not applicable
@@ -184,7 +183,7 @@ namespace Akka.Actor
             CancelReceiveTimeout();
 
             // prevent Deadletter(Terminated) messages
-            UnwatchWatchedActors(_actor);
+            UnwatchWatchedActors(Actor);
 
             // stop all children, which will turn childrenRefs into TerminatingChildrenContainer (if there are children)
             StopChildren();
@@ -247,7 +246,7 @@ namespace Akka.Actor
                 {
                     HandleNonFatalOrInterruptedException(() =>
                     {
-                        Publish(new Error(e, _self.Path.ToString(), _actor.GetType(), "Emergency stop: exception in failure handling for " + cause));
+                        Publish(new Error(e, _self.Path.ToString(), Actor.GetType(), "Emergency stop: exception in failure handling for " + cause));
                         try
                         {
                             StopChildren();
@@ -277,7 +276,7 @@ namespace Akka.Actor
             // 
             // Please note that if a parent is also a watcher then ChildTerminated and Terminated must be processed in this
             // specific order.
-            var a = _actor;
+            var a = Actor;
             try
             {
                 if (a != null)
@@ -285,7 +284,7 @@ namespace Akka.Actor
                     a.AroundPostStop();
 
                     // run actor pre-incarnation plugin pipeline
-                    var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(a.GetType());
+                    var pipeline = SystemImpl.ActorPipelineResolver.ResolvePipeline(a.GetType());
                     pipeline.BeforeActorIncarnated(a, this);
                 }
                 
@@ -320,7 +319,7 @@ namespace Akka.Actor
                                     ClearActor(a);
                                     ClearActorCell();
 
-                                    _actor = null;
+                                    Actor = null;
 
                                 }
                             }
@@ -340,7 +339,7 @@ namespace Akka.Actor
                 finally { ClearFailed(); }  // must happen in any case, so that failure is propagated
 
                 var freshActor = NewActor();
-                _actor = freshActor; // this must happen before postRestart has a chance to fail
+                Actor = freshActor; // this must happen before postRestart has a chance to fail
                 if (ReferenceEquals(freshActor, failedActor))
                     SetActorFields(freshActor); // If the creator returns the same instance, we need to restore our nulled out fields.
 
@@ -367,7 +366,7 @@ namespace Akka.Actor
             }
             catch (Exception e)
             {
-                ClearActor(_actor); // in order to prevent preRestart() from happening again
+                ClearActor(Actor); // in order to prevent preRestart() from happening again
                 HandleInvokeFailure(new PostRestartException(_self, e, cause), survivors);
             }
 
@@ -379,7 +378,7 @@ namespace Akka.Actor
             CurrentMessage = f;
             var failedChild = f.Child;
             var failedChildIsNobody = failedChild.IsNobody();
-            Sender = failedChildIsNobody ? _systemImpl.DeadLetters : failedChild;
+            Sender = failedChildIsNobody ? SystemImpl.DeadLetters : failedChild;
             //Only act upon the failure, if it comes from a currently known child;
             //the UID protects against reception of a Failed from a child which was
             //killed in preRestart and re-created in postRestart
@@ -389,18 +388,18 @@ namespace Akka.Actor
                 var statsUid = childStats.Child.Path.Uid;
                 if (statsUid == f.Uid)
                 {
-                    var handled = _actor.SupervisorStrategyInternal.HandleFailure(this, failedChild, f.Cause, childStats, ChildrenContainer.Stats);
+                    var handled = Actor.SupervisorStrategyInternal.HandleFailure(this, failedChild, f.Cause, childStats, ChildrenContainer.Stats);
                     if (!handled)
                         ExceptionDispatchInfo.Capture(f.Cause).Throw();
                 }
                 else
                 {
-                    Publish(new Debug(_self.Path.ToString(), _actor.GetType(), "Dropping Failed(" + f.Cause + ") from old child " + f.Child + " (uid=" + statsUid + " != " + f.Uid + ")"));
+                    Publish(new Debug(_self.Path.ToString(), Actor.GetType(), "Dropping Failed(" + f.Cause + ") from old child " + f.Child + " (uid=" + statsUid + " != " + f.Uid + ")"));
                 }
             }
             else
             {
-                Publish(new Debug(_self.Path.ToString(), _actor.GetType(), "Dropping Failed(" + f.Cause + ") from unknown child " + failedChild));
+                Publish(new Debug(_self.Path.ToString(), Actor.GetType(), "Dropping Failed(" + f.Cause + ") from unknown child " + failedChild));
             }
         }
 
@@ -411,17 +410,17 @@ namespace Akka.Actor
             //If this fails, we do nothing in case of terminating/restarting state,
             //otherwise tell the supervisor etc. (in that second case, the match
             //below will hit the empty default case, too)
-            if (_actor != null)
+            if (Actor != null)
             {
                 try
                 {
-                    _actor.SupervisorStrategyInternal.HandleChildTerminated(this, child, GetChildren());
+                    Actor.SupervisorStrategyInternal.HandleChildTerminated(this, child, GetChildren());
                 }
                 catch (Exception e)
                 {
                     HandleNonFatalOrInterruptedException(() =>
                     {
-                        Publish(new Error(e, _self.Path.ToString(), _actor.GetType(), "HandleChildTerminated failed"));
+                        Publish(new Error(e, _self.Path.ToString(), Actor.GetType(), "HandleChildTerminated failed"));
                         HandleInvokeFailure(e);
                     });
                 }
@@ -432,7 +431,7 @@ namespace Akka.Actor
             // then we are continuing the previously suspended recreate/create/terminate action
             if (status is SuspendReason.Recreation recreation)
             {
-                FinishRecreate(recreation.Cause, _actor);
+                FinishRecreate(recreation.Cause, Actor);
             }
             else if (status is SuspendReason.Creation)
             {

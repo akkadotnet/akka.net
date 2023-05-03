@@ -185,17 +185,14 @@ namespace Akka.TestKit.Internal
 
         private class Positioned
         {
-            private readonly T _value;
-            private readonly bool _first;
-
             public Positioned(T value, bool first = false)
             {
-                _value = value;
-                _first = first;
+                Value = value;
+                First = first;
             }
 
-            public T Value { get { return _value; } }
-            public bool First { get { return _first; } }
+            public T Value { get; }
+            public bool First { get; }
         }
 
         private class QueueWithAddFirst : IProducerConsumerCollection<Positioned>

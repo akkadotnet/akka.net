@@ -136,14 +136,13 @@ namespace Akka.Persistence.Tests
             private readonly ILoggingAdapter _log;
             private readonly IActorRef _testActor;
             private IActorRef _lastSnapshotAskedForBy;
-            private readonly string _name;
 
             public Receiver(IActorRef testActor, string name, TimeSpan redeliverInterval, int warn,
                 int redeliveryBurstLimit, bool isAsync, IDictionary<string, ActorPath> destinations)
                 : base(new PersistenceSettings.AtLeastOnceDeliverySettings(redeliverInterval, redeliveryBurstLimit, warn, 100000))
             {
                 _testActor = testActor;
-                _name = name;
+                PersistenceId = name;
                 _isAsync = isAsync;
                 _destinations = destinations;
                 _log = Context.GetLogger();
@@ -223,11 +222,7 @@ namespace Akka.Persistence.Tests
                 });
             }
 
-            public override string PersistenceId
-            {
-                get { return _name; }
-            }
-
+            public override string PersistenceId { get; }
 
 
             private void UpdateState(IEvt evt)
@@ -326,11 +321,9 @@ namespace Akka.Persistence.Tests
 
         private class DeliverToStarSelection : AtLeastOnceDeliveryReceiveActor
         {
-            private readonly string _name;
-
             public DeliverToStarSelection(string name)
             {
-                _name = name;
+                PersistenceId = name;
                 Command<object>(message =>
                 {
                     // this is not supported currently, so expecting exception
@@ -347,10 +340,7 @@ namespace Akka.Persistence.Tests
                 Recover<object>(message => {});
             }
 
-            public override string PersistenceId
-            {
-                get { return _name; }
-            }
+            public override string PersistenceId { get; }
         }
 
         #endregion

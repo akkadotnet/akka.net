@@ -245,7 +245,6 @@ namespace Akka.Streams.Stage
     public abstract class StatefulStage<TIn, TOut> : PushPullStage<TIn, TOut>
     {
         private bool _isEmitting;
-        private StageState<TIn, TOut> _current;
 
         /// <summary>
         /// TBD
@@ -253,7 +252,7 @@ namespace Akka.Streams.Stage
         /// <param name="current">TBD</param>
         protected StatefulStage(StageState<TIn, TOut> current)
         {
-            _current = current;
+            Current = current;
             Become(Initial);
         }
 
@@ -266,7 +265,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Current state.
         /// </summary>
-        public StageState<TIn, TOut> Current => _current;
+        public StageState<TIn, TOut> Current { get; private set; }
 
         /// <summary>
         /// Change the behavior to another <see cref="StageState{TIn,TOut}"/>.
@@ -279,7 +278,7 @@ namespace Akka.Streams.Stage
         {
             if (state == null)
                 throw new ArgumentNullException(nameof(state));
-            _current = state;
+            Current = state;
         }
 
         /// <summary>
@@ -288,14 +287,14 @@ namespace Akka.Streams.Stage
         /// <param name="element">TBD</param>
         /// <param name="context">TBD</param>
         /// <returns>TBD</returns>
-        public sealed override ISyncDirective OnPush(TIn element, IContext<TOut> context) => _current.OnPush(element, context);
+        public sealed override ISyncDirective OnPush(TIn element, IContext<TOut> context) => Current.OnPush(element, context);
 
         /// <summary>
         /// Invokes current state.
         /// </summary>
         /// <param name="context">TBD</param>
         /// <returns>TBD</returns>
-        public sealed override ISyncDirective OnPull(IContext<TOut> context) => _current.OnPull(context);
+        public sealed override ISyncDirective OnPull(IContext<TOut> context) => Current.OnPull(context);
 
         /// <summary>
         /// TBD
@@ -316,7 +315,7 @@ namespace Akka.Streams.Stage
         /// <param name="enumerator">TBD</param>
         /// <param name="context">TBD</param>
         /// <returns>TBD</returns>
-        public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context) => Emit(enumerator, context, _current);
+        public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context) => Emit(enumerator, context, Current);
 
         /// <summary>
         /// Can be used from <see cref="StageState{TIn,TOut}.OnPush"/> or <see cref="StageState{TIn,TOut}.OnPull"/> to push more than one

@@ -53,17 +53,13 @@ namespace Akka.Persistence.Sql.TestKit
         private abstract class TestReceivePersistentActor : ReceivePersistentActor
         {
             public readonly LinkedList<object> State = new LinkedList<object>();
-            private readonly string _persistenceId;
 
             protected TestReceivePersistentActor(string persistenceId)
             {
-                _persistenceId = persistenceId;
+                PersistenceId = persistenceId;
             }
 
-            public override string PersistenceId
-            {
-                get { return _persistenceId; }
-            }
+            public override string PersistenceId { get; }
         }
     }
 }

@@ -416,18 +416,11 @@ namespace Akka.Persistence.Journal
         public class InitTimeout
         {
             private InitTimeout() { }
-            private static readonly InitTimeout _instance = new InitTimeout();
 
             /// <summary>
             /// TBD
             /// </summary>
-            public static InitTimeout Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static InitTimeout Instance { get; } = new InitTimeout();
         }
     }
 

@@ -14,12 +14,11 @@ namespace Akka.IO
     /// </summary>
     public class InetAddressDnsProvider : IDnsProvider
     {
-        private readonly DnsBase _cache = new SimpleDnsCache();
-
         /// <summary>
         /// TBD
         /// </summary>
-        public DnsBase Cache { get { return _cache; }}
+        public DnsBase Cache { get; } = new SimpleDnsCache();
+
         /// <summary>
         /// TBD
         /// </summary>

@@ -112,7 +112,6 @@ namespace Akka.Streams.Implementation
         private ISubscription _upstream;
         private int _inputBufferElements;
         private int _nextInputElementCursor;
-        private bool _isUpstreamCompleted;
         private int _batchRemaining;
 
         /// <summary>
@@ -147,7 +146,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public override string ToString() => $"BatchingInputBuffer(Count={Count}, elems={_inputBufferElements}, completed={_isUpstreamCompleted}, remaining={_batchRemaining})";
+        public override string ToString() => $"BatchingInputBuffer(Count={Count}, elems={_inputBufferElements}, completed={IsClosed}, remaining={_batchRemaining})";
 
         /// <summary>
         /// TBD
@@ -164,7 +163,7 @@ namespace Akka.Streams.Implementation
             _inputBuffer[_nextInputElementCursor] = null;
 
             _batchRemaining--;
-            if (_batchRemaining == 0 && !_isUpstreamCompleted)
+            if (_batchRemaining == 0 && !IsClosed)
             {
                 _upstream.Request(RequestBatchSize);
                 _batchRemaining = RequestBatchSize;
@@ -198,9 +197,9 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public virtual void Cancel()
         {
-            if (!_isUpstreamCompleted)
+            if (!IsClosed)
             {
-                _isUpstreamCompleted = true;
+                IsClosed = true;
                 if (!ReferenceEquals(_upstream, null))
                     _upstream.Cancel();
                 Clear();
@@ -226,7 +225,8 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public bool IsClosed => _isUpstreamCompleted;
+        public bool IsClosed { get; private set; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -234,7 +234,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public bool AreInputsDepleted => _isUpstreamCompleted && _inputBufferElements == 0;
+        public bool AreInputsDepleted => IsClosed && _inputBufferElements == 0;
         /// <summary>
         /// TBD
         /// </summary>
@@ -245,7 +245,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         protected virtual void OnComplete()
         {
-            _isUpstreamCompleted = true;
+            IsClosed = true;
             SubReceive.Become(Completed);
             Pump.Pump();
         }
@@ -261,7 +261,7 @@ namespace Akka.Streams.Implementation
         {
             if (subscription == null) throw new ArgumentNullException(nameof(subscription), "OnSubscribe require subscription not to be null");
 
-            if (_isUpstreamCompleted)
+            if (IsClosed)
                 subscription.Cancel();
             else
             {
@@ -280,7 +280,7 @@ namespace Akka.Streams.Implementation
         /// <param name="e">TBD</param>
         protected virtual void OnError(Exception e)
         {
-            _isUpstreamCompleted = true;
+            IsClosed = true;
             SubReceive.Become(Completed);
             InputOnError(e);
         }

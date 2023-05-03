@@ -21,25 +21,20 @@ namespace Akka.Cluster.Tests.MultiNode
 {
     public class ClusterDeathWatchSpecConfig : MultiNodeConfig
     {
-        readonly RoleName _first;
-        public RoleName First { get { return _first; } }
-        readonly RoleName _second;
-        public RoleName Second { get { return _second; } }
-        readonly RoleName _third;
-        public RoleName Third { get { return _third; } }
-        readonly RoleName _fourth;
-        public RoleName Fourth { get { return _fourth; } }
-        readonly RoleName _fifth;
-        public RoleName Fifth { get { return _fifth; } }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public RoleName Fourth { get; }
+        public RoleName Fifth { get; }
 
         public ClusterDeathWatchSpecConfig()
         {
-            _first = Role("first");
-            _second = Role("second");
-            _third = Role("third");
-            _fourth = Role("fourth");
-            _fifth = Role("fifth");
-            DeployOn(_fourth, @"/hello.remote = ""@first@""");
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
+            Fourth = Role("fourth");
+            Fifth = Role("fifth");
+            DeployOn(Fourth, @"/hello.remote = ""@first@""");
             CommonConfig = ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s
                 akka.actor.debug.lifecycle = true")
                 .WithFallback(MultiNodeLoggingConfig.LoggingConfig)

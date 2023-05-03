@@ -16,15 +16,13 @@ namespace Akka.TestKit.TestEvent
     /// </summary>
     public sealed class Mute : INoSerializationVerificationNeeded
     {
-        private readonly IReadOnlyCollection<EventFilterBase> _filters;
-
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="filters">TBD</param>
         public Mute(params EventFilterBase[] filters)
         {
-            _filters = filters;
+            Filters = filters;
         }
 
         /// <summary>
@@ -33,13 +31,13 @@ namespace Akka.TestKit.TestEvent
         /// <param name="filters">TBD</param>
         public Mute(IReadOnlyCollection<EventFilterBase> filters)
         {
-            _filters = filters;
+            Filters = filters;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public IReadOnlyCollection<EventFilterBase> Filters { get { return _filters; } }
+        public IReadOnlyCollection<EventFilterBase> Filters { get; }
     }
 }

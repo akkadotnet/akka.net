@@ -22,8 +22,6 @@ namespace Akka.TestKit
     /// <typeparam name="TActor">The type of actor</typeparam>
     public abstract class TestActorRefBase<TActor> : ICanTell, IEquatable<IActorRef>, IInternalActorRef where TActor : ActorBase
     {
-        private readonly InternalTestActorRef _internalRef;
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -33,7 +31,7 @@ namespace Akka.TestKit
         /// <param name="name">TBD</param>
         protected TestActorRefBase(ActorSystem system, Props actorProps, IActorRef supervisor=null, string name=null)
         {
-            _internalRef = InternalTestActorRef.Create(system, actorProps, supervisor, name);
+            InternalRef = InternalTestActorRef.Create(system, actorProps, supervisor, name);
         }
 
         /// <summary>
@@ -49,7 +47,7 @@ namespace Akka.TestKit
         /// <param name="sender">The sender.</param>
         public void Receive(object message, IActorRef sender = null)
         {
-            _internalRef.Receive(message, sender);
+            InternalRef.Receive(message, sender);
         }
 
         /// <summary>
@@ -65,7 +63,7 @@ namespace Akka.TestKit
         /// <param name="sender">The sender.</param>
         public Task ReceiveAsync(object message, IActorRef sender = null)
         {
-            return _internalRef.ReceiveAsync(message, sender);
+            return InternalRef.ReceiveAsync(message, sender);
         }
         
         /// <summary>
@@ -73,29 +71,26 @@ namespace Akka.TestKit
         /// </summary>
         public IActorRef Ref
         {
-            get { return _internalRef; }
+            get { return InternalRef; }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected InternalTestActorRef InternalRef
-        {
-            get { return _internalRef; }
-        }
+        protected InternalTestActorRef InternalRef { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         public TActor UnderlyingActor
         {
-            get { return (TActor) _internalRef.UnderlyingActor; }
+            get { return (TActor) InternalRef.UnderlyingActor; }
         }
 
         /// <summary>
         /// Gets the path of this instance
         /// </summary>
-        public ActorPath Path { get { return _internalRef.Path; } }
+        public ActorPath Path { get { return InternalRef.Path; } }
 
         /// <summary>
         /// Sends a message to this actor. 
@@ -107,7 +102,7 @@ namespace Akka.TestKit
         /// <param name="message">The message.</param>
         public void Tell(object message)
         {
-            _internalRef.Tell(message);
+            InternalRef.Tell(message);
         }
 
 
@@ -120,7 +115,7 @@ namespace Akka.TestKit
         /// <param name="message">The message.</param>
         public void Forward(object message)
         {
-            _internalRef.Forward(message);
+            InternalRef.Forward(message);
         }
 
         /// <summary>
@@ -130,7 +125,7 @@ namespace Akka.TestKit
         /// <param name="sender">The sender</param>
         public void Tell(object message, IActorRef sender)
         {
-            _internalRef.Tell(message, sender);
+            InternalRef.Tell(message, sender);
 
         }
 
@@ -144,7 +139,7 @@ namespace Akka.TestKit
         /// <returns>Returns the same ActorRef that is provided to it, to allow for cleaner invocations.</returns>
         public void Watch(IActorRef subject)
         {
-            _internalRef.Watch(subject);
+            InternalRef.Watch(subject);
         }
 
         /// <summary>
@@ -157,37 +152,37 @@ namespace Akka.TestKit
         /// <param name="subject">The subject to unwatch.</param>
         public void Unwatch(IActorRef subject)
         {
-            _internalRef.Unwatch(subject);
+            InternalRef.Unwatch(subject);
         }
 
        
         public override string ToString()
         {
-            return _internalRef.ToString();
+            return InternalRef.ToString();
         }
 
         
         public override bool Equals(object obj)
         {
-            return _internalRef.Equals(obj);
+            return InternalRef.Equals(obj);
         }
 
         
         public override int GetHashCode()
         {
-            return _internalRef.GetHashCode();
+            return InternalRef.GetHashCode();
         }
 
         
         public int CompareTo(object obj)
         {
-            return ((IComparable) _internalRef).CompareTo(obj);
+            return ((IComparable) InternalRef).CompareTo(obj);
         }
 
         
         public bool Equals(IActorRef other)
         {
-            return _internalRef.Equals(other);
+            return InternalRef.Equals(other);
         }
 
         /// <summary>
@@ -245,68 +240,68 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public static IActorRef ToActorRef(TestActorRefBase<TActor> actorRef)
         {
-            return actorRef._internalRef;
+            return actorRef.InternalRef;
         }
 
         //ActorRef implementations
         int IComparable<IActorRef>.CompareTo(IActorRef other)
         {
-            return _internalRef.CompareTo(other);
+            return InternalRef.CompareTo(other);
         }
 
         bool IEquatable<IActorRef>.Equals(IActorRef other)
         {
-            return _internalRef.Equals(other);
+            return InternalRef.Equals(other);
         }
 
-        ActorPath IActorRef.Path { get { return _internalRef.Path; } }
+        ActorPath IActorRef.Path { get { return InternalRef.Path; } }
 
         void ICanTell.Tell(object message, IActorRef sender)
         {
-            _internalRef.Tell(message, sender);
+            InternalRef.Tell(message, sender);
         }
 
         ISurrogate ISurrogated.ToSurrogate(ActorSystem system)
         {
-            return _internalRef.ToSurrogate(system);
+            return InternalRef.ToSurrogate(system);
         }
 
-        bool IActorRefScope.IsLocal { get { return _internalRef.IsLocal; } }
+        bool IActorRefScope.IsLocal { get { return InternalRef.IsLocal; } }
 
-        IInternalActorRef IInternalActorRef.Parent { get { return _internalRef.Parent; } }
+        IInternalActorRef IInternalActorRef.Parent { get { return InternalRef.Parent; } }
 
-        IActorRefProvider IInternalActorRef.Provider { get { return _internalRef.Provider; } }
+        IActorRefProvider IInternalActorRef.Provider { get { return InternalRef.Provider; } }
 
-        bool IInternalActorRef.IsTerminated { get { return _internalRef.IsTerminated; } }
+        bool IInternalActorRef.IsTerminated { get { return InternalRef.IsTerminated; } }
 
         IActorRef IInternalActorRef.GetChild(IReadOnlyList<string> name)
         {
-            return _internalRef.GetChild(name);
+            return InternalRef.GetChild(name);
         }
 
         void IInternalActorRef.Resume(Exception causedByFailure)
         {
-            _internalRef.Resume(causedByFailure);
+            InternalRef.Resume(causedByFailure);
         }
 
         void IInternalActorRef.Start()
         {
-            _internalRef.Start();
+            InternalRef.Start();
         }
 
         void IInternalActorRef.Stop()
         {
-            _internalRef.Stop();
+            InternalRef.Stop();
         }
 
         void IInternalActorRef.Restart(Exception cause)
         {
-            _internalRef.Restart(cause);
+            InternalRef.Restart(cause);
         }
 
         void IInternalActorRef.Suspend()
         {
-            _internalRef.Suspend();
+            InternalRef.Suspend();
         }
 
         /// <summary>
@@ -316,7 +311,7 @@ namespace Akka.TestKit
         /// <param name="sender">TBD</param>
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
-            _internalRef.SendSystemMessage(message);
+            InternalRef.SendSystemMessage(message);
         }
 
         /// <summary>
@@ -325,7 +320,7 @@ namespace Akka.TestKit
         /// <param name="message">TBD</param>
         public void SendSystemMessage(ISystemMessage message)
         {
-            _internalRef.SendSystemMessage(message);
+            InternalRef.SendSystemMessage(message);
         }
     }
 }

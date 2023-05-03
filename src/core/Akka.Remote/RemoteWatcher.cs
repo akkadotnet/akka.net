@@ -63,9 +63,6 @@ namespace Akka.Remote
         /// </summary>
         public abstract class WatchCommand
         {
-            readonly IInternalActorRef _watchee;
-            readonly IInternalActorRef _watcher;
-
             /// <summary>
             /// TBD
             /// </summary>
@@ -73,19 +70,19 @@ namespace Akka.Remote
             /// <param name="watcher">TBD</param>
             protected WatchCommand(IInternalActorRef watchee, IInternalActorRef watcher)
             {
-                _watchee = watchee;
-                _watcher = watcher;
+                Watchee = watchee;
+                Watcher = watcher;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public IInternalActorRef Watchee => _watchee;
+            public IInternalActorRef Watchee { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public IInternalActorRef Watcher => _watcher;
+            public IInternalActorRef Watcher { get; }
         }
 
         /// <summary>
@@ -140,24 +137,19 @@ namespace Akka.Remote
         /// </summary>
         public class HeartbeatRsp : IPriorityMessage
         {
-            readonly int _addressUid;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="addressUid">TBD</param>
             public HeartbeatRsp(int addressUid)
             {
-                _addressUid = addressUid;
+                AddressUid = addressUid;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public int AddressUid
-            {
-                get { return _addressUid; }
-            }
+            public int AddressUid { get; }
         }
 
         // sent to self only
@@ -192,24 +184,19 @@ namespace Akka.Remote
         /// </summary>
         public sealed class ExpectedFirstHeartbeat
         {
-            readonly Address _from;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="from">TBD</param>
             public ExpectedFirstHeartbeat(Address @from)
             {
-                _from = @from;
+                From = @from;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public Address From
-            {
-                get { return _from; }
-            }
+            public Address From { get; }
         }
 
         // test purpose
@@ -223,7 +210,7 @@ namespace Akka.Remote
             {
                 var other = obj as Stats;
                 if (other == null) return false;
-                return _watching == other._watching && _watchingNodes == other._watchingNodes;
+                return Watching == other.Watching && WatchingNodes == other.WatchingNodes;
             }
 
             
@@ -232,8 +219,8 @@ namespace Akka.Remote
                 unchecked
                 {
                     var hash = 17;
-                    hash = hash * 23 + _watching.GetHashCode();
-                    hash = hash * 23 + _watchingNodes.GetHashCode();
+                    hash = hash * 23 + Watching.GetHashCode();
+                    hash = hash * 23 + WatchingNodes.GetHashCode();
 
                     return hash;
                 }
@@ -255,11 +242,6 @@ namespace Akka.Remote
                 return new Stats(watching, watchingNodes);
             }
 
-            readonly int _watching;
-            readonly int _watchingNodes;
-            readonly ImmutableHashSet<(IActorRef, IActorRef)> _watchingRefs;
-            readonly ImmutableHashSet<Address> _watchingAddresses;
-
             /// <summary>
             /// TBD
             /// </summary>
@@ -277,48 +259,48 @@ namespace Akka.Remote
             /// <param name="watchingAddresses">TBD</param>
             public Stats(int watching, int watchingNodes, ImmutableHashSet<(IActorRef, IActorRef)> watchingRefs, ImmutableHashSet<Address> watchingAddresses)
             {
-                _watching = watching;
-                _watchingNodes = watchingNodes;
-                _watchingRefs = watchingRefs;
-                _watchingAddresses = watchingAddresses;
+                Watching = watching;
+                WatchingNodes = watchingNodes;
+                WatchingRefs = watchingRefs;
+                WatchingAddresses = watchingAddresses;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public int Watching => _watching;
+            public int Watching { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public int WatchingNodes => _watchingNodes;
+            public int WatchingNodes { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public ImmutableHashSet<(IActorRef, IActorRef)> WatchingRefs => _watchingRefs;
+            public ImmutableHashSet<(IActorRef, IActorRef)> WatchingRefs { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public ImmutableHashSet<Address> WatchingAddresses => _watchingAddresses;
+            public ImmutableHashSet<Address> WatchingAddresses { get; }
 
-            
+
             public override string ToString()
             {
                 string FormatWatchingRefs()
                 {
-                    if (!_watchingRefs.Any()) return "";
-                    return $"{string.Join(", ", _watchingRefs.Select(r => r.Item2.Path.Name + "-> " + r.Item1.Path.Name))}";
+                    if (!WatchingRefs.Any()) return "";
+                    return $"{string.Join(", ", WatchingRefs.Select(r => r.Item2.Path.Name + "-> " + r.Item1.Path.Name))}";
                 }
 
                 string FormatWatchingAddresses()
                 {
-                    if (!_watchingAddresses.Any()) return "";
+                    if (!WatchingAddresses.Any()) return "";
                     return string.Join(",", WatchingAddresses);
                 }
 
-                return $"Stats(watching={_watching}, watchingNodes={_watchingNodes}, watchingRefs=[{FormatWatchingRefs()}], watchingAddresses=[{FormatWatchingAddresses()}])";
+                return $"Stats(watching={Watching}, watchingNodes={WatchingNodes}, watchingRefs=[{FormatWatchingRefs()}], watchingAddresses=[{FormatWatchingAddresses()}])";
             }
 
             /// <summary>

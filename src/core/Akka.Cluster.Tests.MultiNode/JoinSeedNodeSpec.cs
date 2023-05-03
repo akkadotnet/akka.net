@@ -17,28 +17,23 @@ namespace Akka.Cluster.Tests.MultiNode
 {
     public class JoinSeedNodeConfig : MultiNodeConfig
     {
-        private readonly RoleName _seed1;
-        public RoleName Seed1 { get { return _seed1; } }
+        public RoleName Seed1 { get; }
 
-        private readonly RoleName _seed2;
-        public RoleName Seed2 { get { return _seed2; } }
+        public RoleName Seed2 { get; }
 
-        private readonly RoleName _seed3;
-        public RoleName Seed3 { get { return _seed3; } }
+        public RoleName Seed3 { get; }
 
-        private readonly RoleName _ordinary1;
-        public RoleName Ordinary1 { get { return _ordinary1; } }
+        public RoleName Ordinary1 { get; }
 
-        private readonly RoleName _ordinary2;
-        public RoleName Ordinary2 { get { return _ordinary2; } }
+        public RoleName Ordinary2 { get; }
 
         public JoinSeedNodeConfig()
         {
-            _seed1 = Role("seed1");
-            _seed2 = Role("seed2");
-            _seed3 = Role("seed3");
-            _ordinary1 = Role("ordinary1");
-            _ordinary2 = Role("ordinary2");
+            Seed1 = Role("seed1");
+            Seed2 = Role("seed2");
+            Seed3 = Role("seed3");
+            Ordinary1 = Role("ordinary1");
+            Ordinary2 = Role("ordinary2");
 
             CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true))
                 .WithFallback(ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s"))

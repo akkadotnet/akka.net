@@ -219,26 +219,18 @@ namespace Akka.Actor
     /// </summary>
     public class OneForOneStrategy : SupervisorStrategy, IEquatable<OneForOneStrategy>
     {
-        private readonly int _maxNumberOfRetries;
-        private readonly int _withinTimeRangeMilliseconds;
         private readonly IDecider _decider;
 
         /// <summary>
         /// The number of times a child actor is allowed to be restarted, negative value means no limit,
         /// if the limit is exceeded the child actor is stopped.
         /// </summary>
-        public int MaxNumberOfRetries
-        {
-            get { return _maxNumberOfRetries; }
-        }
+        public int MaxNumberOfRetries { get; }
 
         /// <summary>
         /// The duration in milliseconds of the time window for <see cref="MaxNumberOfRetries"/>, negative values means no window.
         /// </summary>
-        public int WithinTimeRangeMilliseconds
-        {
-            get { return _withinTimeRangeMilliseconds; }
-        }
+        public int WithinTimeRangeMilliseconds { get; }
 
         /// <summary>
         /// The mapping from an <see cref="Exception"/> to <see cref="Directive"/>
@@ -303,8 +295,8 @@ namespace Akka.Actor
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
         public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, IDecider decider, bool loggingEnabled = true)
         {
-            _maxNumberOfRetries = maxNrOfRetries;
-            _withinTimeRangeMilliseconds = withinTimeMilliseconds;
+            MaxNumberOfRetries = maxNrOfRetries;
+            WithinTimeRangeMilliseconds = withinTimeMilliseconds;
             _decider = decider;
             LoggingEnabled = loggingEnabled;
         }
@@ -346,7 +338,7 @@ namespace Akka.Actor
 
         public OneForOneStrategy WithMaxNrOfRetries(int maxNrOfRetries)
         {
-            return new OneForOneStrategy(maxNrOfRetries, _withinTimeRangeMilliseconds, _decider);
+            return new OneForOneStrategy(maxNrOfRetries, WithinTimeRangeMilliseconds, _decider);
         }
 
         /// <summary>
@@ -485,34 +477,21 @@ namespace Akka.Actor
     /// </summary>
     public class AllForOneStrategy : SupervisorStrategy, IEquatable<AllForOneStrategy>
     {
-        private readonly IDecider _decider;
-        private readonly int _withinTimeRangeMilliseconds;
-        private readonly int _maxNumberOfRetries;
-
         /// <summary>
         /// The number of times a child actor is allowed to be restarted, negative value means no limit,
         /// if the limit is exceeded the child actor is stopped.
         /// </summary>
-        public int MaxNumberOfRetries
-        {
-            get { return _maxNumberOfRetries; }
-        }
+        public int MaxNumberOfRetries { get; }
 
         /// <summary>
         /// The duration in milliseconds of the time window for <see cref="MaxNumberOfRetries"/>, negative values means no window.
         /// </summary>
-        public int WithinTimeRangeMilliseconds
-        {
-            get { return _withinTimeRangeMilliseconds; }
-        }
+        public int WithinTimeRangeMilliseconds { get; }
 
         /// <summary>
         /// The mapping from an <see cref="Exception"/> to <see cref="Directive"/>
         /// </summary>
-        public override IDecider Decider
-        {
-            get { return _decider; }
-        }
+        public override IDecider Decider { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AllForOneStrategy"/> class.
@@ -570,9 +549,9 @@ namespace Akka.Actor
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
         public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, IDecider decider, bool loggingEnabled = true)
         {
-            _maxNumberOfRetries = maxNrOfRetries;
-            _withinTimeRangeMilliseconds = withinTimeMilliseconds;
-            _decider = decider;
+            MaxNumberOfRetries = maxNrOfRetries;
+            WithinTimeRangeMilliseconds = withinTimeMilliseconds;
+            Decider = decider;
             LoggingEnabled = loggingEnabled;
         }
 

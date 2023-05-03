@@ -12,8 +12,6 @@ namespace Akka.TestKit.Internal.StringMatcher
     /// </summary>
     public class MatchesAll : IStringMatcher
     {
-        private static readonly IStringMatcher _instance = new MatchesAll();
-
         private MatchesAll()
         {
         }
@@ -21,7 +19,7 @@ namespace Akka.TestKit.Internal.StringMatcher
         /// <summary>
         /// TBD
         /// </summary>
-        public static IStringMatcher Instance { get { return _instance; } }
+        public static IStringMatcher Instance { get; } = new MatchesAll();
 
         /// <summary>
         /// TBD

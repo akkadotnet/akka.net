@@ -18,16 +18,15 @@ namespace Akka.Persistence.Tests
 
         internal class TestPersistentActor : PersistentActor
         {
-            private readonly string _name;
             private readonly IActorRef _probe;
 
             public TestPersistentActor(string name, IActorRef probe)
             {
-                _name = name;
+                PersistenceId = name;
                 _probe = probe;
             }
 
-            public override string PersistenceId { get { return _name; } }
+            public override string PersistenceId { get; }
 
             protected override bool ReceiveRecover(object message)
             {

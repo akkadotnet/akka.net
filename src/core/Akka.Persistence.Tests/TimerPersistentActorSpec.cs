@@ -76,15 +76,13 @@ namespace Akka.Persistence.Tests
                 return Props.Create(() => new TestPersistentActor(name));
             }
 
-            private readonly string name;
-
-            public override string PersistenceId => name;
+            public override string PersistenceId { get; }
 
             public ITimerScheduler Timers { get; set; }
 
             public TestPersistentActor(string name)
             {
-                this.name = name;
+                this.PersistenceId = name;
             }
 
             protected override bool ReceiveRecover(object message)

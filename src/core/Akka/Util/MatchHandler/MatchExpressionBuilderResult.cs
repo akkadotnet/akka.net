@@ -14,9 +14,6 @@ namespace Akka.Tools.MatchHandler
     /// </summary>
     internal class MatchExpressionBuilderResult
     {
-        private readonly LambdaExpression _lambdaExpression;
-        private readonly object[] _arguments;
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -25,19 +22,19 @@ namespace Akka.Tools.MatchHandler
         /// <returns>TBD</returns>
         public MatchExpressionBuilderResult(LambdaExpression lambdaExpression, object[] arguments)
         {
-            _lambdaExpression = lambdaExpression;
-            _arguments = arguments;
+            LambdaExpression = lambdaExpression;
+            Arguments = arguments;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public LambdaExpression LambdaExpression { get { return _lambdaExpression; } }
+        public LambdaExpression LambdaExpression { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public object[] Arguments { get { return _arguments; } }
+        public object[] Arguments { get; }
     }
 }
 

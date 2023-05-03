@@ -91,8 +91,6 @@ namespace Akka.Streams.Tests.TCK
 
             private sealed class InfiniteEnumerator : IEnumerator<int>
             {
-                private int _current;
-
                 public void Dispose()
                 {
 
@@ -100,13 +98,13 @@ namespace Akka.Streams.Tests.TCK
 
                 public bool MoveNext()
                 {
-                    _current++;
+                    Current++;
                     return true;
                 }
 
-                public void Reset() => _current = 0;
+                public void Reset() => Current = 0;
 
-                public int Current => _current;
+                public int Current { get; private set; }
 
                 object IEnumerator.Current => Current;
             }

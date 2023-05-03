@@ -216,28 +216,25 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
-        private readonly ActorSystem _system;
-        private readonly ActorMaterializerSettings _settings;
         private readonly Dispatchers _dispatchers;
-        private readonly IActorRef _supervisor;
         private readonly AtomicBoolean _haveShutDown;
         private readonly EnumerableActorName _flowNames;
         private ILoggingAdapter _logger;
         
         public ActorMaterializerImpl(ActorSystem system, ActorMaterializerSettings settings, Dispatchers dispatchers, IActorRef supervisor, AtomicBoolean haveShutDown, EnumerableActorName flowNames)
         {
-            _system = system;
-            _settings = settings;
+            System = system;
+            Settings = settings;
             _dispatchers = dispatchers;
-            _supervisor = supervisor;
+            Supervisor = supervisor;
             _haveShutDown = haveShutDown;
             _flowNames = flowNames;
 
-            _executionContext = new Lazy<MessageDispatcher>(() => _dispatchers.Lookup(_settings.Dispatcher == Deploy.NoDispatcherGiven
+            _executionContext = new Lazy<MessageDispatcher>(() => _dispatchers.Lookup(Settings.Dispatcher == Deploy.NoDispatcherGiven
                 ? Dispatchers.DefaultDispatcherId
-                : _settings.Dispatcher));
+                : Settings.Dispatcher));
 
-            if (_settings.IsFuzzingMode && !_system.Settings.Config.HasPath("akka.stream.secret-test-fuzzing-warning-disable"))
+            if (Settings.IsFuzzingMode && !System.Settings.Config.HasPath("akka.stream.secret-test-fuzzing-warning-disable"))
                 Logger.Warning("Fuzzing mode is enabled on this system. If you see this warning on your production system then set 'akka.materializer.debug.fuzzing-mode' to off.");
         }
 
@@ -249,18 +246,18 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public override ActorMaterializerSettings Settings => _settings;
+        public override ActorMaterializerSettings Settings { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override ActorSystem System => _system;
+        public override ActorSystem System { get; }
 
         /// <summary>
         /// INTERNAL API
         /// </summary>
         [InternalApi]
-        public override IActorRef Supervisor => _supervisor;
+        public override IActorRef Supervisor { get; }
 
         /// <summary>
         /// INTERNAL API
@@ -274,14 +271,14 @@ namespace Akka.Streams.Implementation
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
         public override IMaterializer WithNamePrefix(string name)
-            => new ActorMaterializerImpl(_system, _settings, _dispatchers, _supervisor, _haveShutDown, _flowNames.Copy(name));
+            => new ActorMaterializerImpl(System, Settings, _dispatchers, Supervisor, _haveShutDown, _flowNames.Copy(name));
 
         private string CreateFlowName() => _flowNames.Next();
 
         private Attributes DefaultInitialAttributes =>
-            Attributes.CreateInputBuffer(_settings.InitialInputBufferSize, _settings.MaxInputBufferSize)
-                .And(ActorAttributes.CreateDispatcher(_settings.Dispatcher))
-                .And(ActorAttributes.CreateSupervisionStrategy(_settings.SupervisionDecider));
+            Attributes.CreateInputBuffer(Settings.InitialInputBufferSize, Settings.MaxInputBufferSize)
+                .And(ActorAttributes.CreateDispatcher(Settings.Dispatcher))
+                .And(ActorAttributes.CreateSupervisionStrategy(Settings.SupervisionDecider));
 
         /// <summary>
         /// TBD
@@ -309,7 +306,7 @@ namespace Akka.Streams.Implementation
         /// <param name="action">TBD</param>
         /// <returns>TBD</returns>
         public override ICancelable ScheduleOnce(TimeSpan delay, Action action)
-            => _system.Scheduler.Advanced.ScheduleOnceCancelable(delay, action);
+            => System.Scheduler.Advanced.ScheduleOnceCancelable(delay, action);
 
         /// <summary>
         /// TBD
@@ -319,7 +316,7 @@ namespace Akka.Streams.Implementation
         /// <param name="action">TBD</param>
         /// <returns>TBD</returns>
         public override ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
-            => _system.Scheduler.Advanced.ScheduleRepeatedlyCancelable(initialDelay, interval, action);
+            => System.Scheduler.Advanced.ScheduleRepeatedlyCancelable(initialDelay, interval, action);
 
         /// <summary>
         /// TBD
@@ -361,7 +358,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser, Attributes initialAttributes)
         {
-            var runnableGraph = _settings.IsAutoFusing
+            var runnableGraph = Settings.IsAutoFusing
                 ? Fusing.Fusing.Aggressive(runnable)
                 : runnable;
 
@@ -402,7 +399,7 @@ namespace Akka.Streams.Implementation
                 Supervisor.Tell(PoisonPill.Instance);
         }
 
-        private ILoggingAdapter GetLogger() => _system.Log;
+        private ILoggingAdapter GetLogger() => System.Log;
     }
 
     /// <summary>

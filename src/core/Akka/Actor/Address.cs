@@ -61,10 +61,6 @@ namespace Akka.Actor
         public static readonly Address AllSystems = new Address("akka", "all-systems");
 
         private string _toString;
-        private readonly string _host;
-        private readonly int? _port;
-        private readonly string _system;
-        private readonly string _protocol;
 
         /// <summary>
         /// TBD
@@ -75,32 +71,32 @@ namespace Akka.Actor
         /// <param name="port">TBD</param>
         public Address(string protocol, string system, string host = null, int? port = null)
         {
-            _protocol = protocol;
-            _system = system;
-            _host = host?.ToLowerInvariant();
-            _port = port;
+            Protocol = protocol;
+            System = system;
+            Host = host?.ToLowerInvariant();
+            Port = port;
             _toString = null;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string Host => _host;
+        public string Host { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public int? Port => _port;
+        public int? Port { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string System => _system;
+        public string System { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string Protocol => _protocol;
+        public string Protocol { get; }
 
         /// <summary>
         /// Returns true if this Address is only defined locally. It is not safe to send locally scoped addresses to remote

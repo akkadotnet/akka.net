@@ -22,9 +22,6 @@ namespace Akka.Cluster
     /// </summary>
     public sealed class ClusterSettings
     {
-        private readonly Config _failureDetectorConfig;
-        private readonly string _useDispatcher;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterSettings"/> class.
         /// </summary>
@@ -39,11 +36,11 @@ namespace Akka.Cluster
 
             LogInfoVerbose = clusterConfig.GetBoolean("log-info-verbose", false);
             LogInfo = LogInfoVerbose || clusterConfig.GetBoolean("log-info", false);
-            _failureDetectorConfig = clusterConfig.GetConfig("failure-detector");
-            FailureDetectorImplementationClass = _failureDetectorConfig.GetString("implementation-class", null);
-            HeartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
-            HeartbeatExpectedResponseAfter = _failureDetectorConfig.GetTimeSpan("expected-response-after", null);
-            MonitoredByNrOfMembers = _failureDetectorConfig.GetInt("monitored-by-nr-of-members", 0);
+            FailureDetectorConfig = clusterConfig.GetConfig("failure-detector");
+            FailureDetectorImplementationClass = FailureDetectorConfig.GetString("implementation-class", null);
+            HeartbeatInterval = FailureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
+            HeartbeatExpectedResponseAfter = FailureDetectorConfig.GetTimeSpan("expected-response-after", null);
+            MonitoredByNrOfMembers = FailureDetectorConfig.GetInt("monitored-by-nr-of-members", 0);
 
             SeedNodes = clusterConfig.GetStringList("seed-nodes", new string[] { }).Select(Address.Parse).ToImmutableList();
             SeedNodeTimeout = clusterConfig.GetTimeSpan("seed-node-timeout", null);
@@ -75,8 +72,8 @@ namespace Akka.Cluster
 
             MinNrOfMembers = clusterConfig.GetInt("min-nr-of-members", 0);
 
-            _useDispatcher = clusterConfig.GetString("use-dispatcher", null);
-            if (string.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.InternalDispatcherId;
+            UseDispatcher = clusterConfig.GetString("use-dispatcher", null);
+            if (string.IsNullOrEmpty(UseDispatcher)) UseDispatcher = Dispatchers.InternalDispatcherId;
             GossipDifferentViewProbability = clusterConfig.GetDouble("gossip-different-view-probability", 0);
             ReduceGossipDifferentViewProbability = clusterConfig.GetInt("reduce-gossip-different-view-probability", 0);
             SchedulerTickDuration = clusterConfig.GetTimeSpan("scheduler.tick-duration", null);
@@ -137,7 +134,7 @@ namespace Akka.Cluster
         /// <summary>
         /// The configuration for the underlying failure detector used by Akka.Cluster.
         /// </summary>
-        public Config FailureDetectorConfig => _failureDetectorConfig;
+        public Config FailureDetectorConfig { get; }
 
         /// <summary>
         /// The fully qualified type name of the failure detector class that will be used.
@@ -238,7 +235,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        public string UseDispatcher => _useDispatcher;
+        public string UseDispatcher { get; }
 
         /// <summary>
         /// TBD

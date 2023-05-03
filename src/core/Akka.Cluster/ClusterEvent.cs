@@ -70,12 +70,6 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class CurrentClusterState : INoSerializationVerificationNeeded
         {
-            private readonly ImmutableSortedSet<Member> _members;
-            private readonly ImmutableHashSet<Member> _unreachable;
-            private readonly ImmutableHashSet<Address> _seenBy;
-            private readonly Address _leader;
-            private readonly ImmutableDictionary<string, Address> _roleLeaderMap;
-
             /// <summary>
             /// Creates a new instance of the current cluster state.
             /// </summary>
@@ -102,60 +96,45 @@ namespace Akka.Cluster
                 Address leader,
                 ImmutableDictionary<string, Address> roleLeaderMap)
             {
-                _members = members;
-                _unreachable = unreachable;
-                _seenBy = seenBy;
-                _leader = leader;
-                _roleLeaderMap = roleLeaderMap;
+                Members = members;
+                Unreachable = unreachable;
+                SeenBy = seenBy;
+                Leader = leader;
+                RoleLeaderMap = roleLeaderMap;
             }
 
             /// <summary>
             /// Get current member list
             /// </summary>
-            public ImmutableSortedSet<Member> Members
-            {
-                get { return _members; }
-            }
+            public ImmutableSortedSet<Member> Members { get; }
 
             /// <summary>
             /// Get current unreachable set
             /// </summary>
-            public ImmutableHashSet<Member> Unreachable
-            {
-                get { return _unreachable; }
-            }
+            public ImmutableHashSet<Member> Unreachable { get; }
 
             /// <summary>
             /// Get current "seen-by" set
             /// </summary>
-            public ImmutableHashSet<Address> SeenBy
-            {
-                get { return _seenBy; }
-            }
+            public ImmutableHashSet<Address> SeenBy { get; }
 
             /// <summary>
             /// Get address of current leader, or null if noe
             /// </summary>
-            public Address Leader
-            {
-                get { return _leader; }
-            }
+            public Address Leader { get; }
 
             /// <summary>
             /// All node roles in the cluster
             /// </summary>
             public ImmutableHashSet<string> AllRoles
             {
-                get { return _roleLeaderMap.Keys.ToImmutableHashSet(); }
+                get { return RoleLeaderMap.Keys.ToImmutableHashSet(); }
             }
 
             /// <summary>
             /// Needed internally inside the <see cref="ClusterReadView"/>
             /// </summary>
-            internal ImmutableDictionary<string, Address> RoleLeaderMap
-            {
-                get { return _roleLeaderMap; }
-            }
+            internal ImmutableDictionary<string, Address> RoleLeaderMap { get; }
 
             /// <summary>
             /// Get address of current leader, if any, within the role set
@@ -164,7 +143,7 @@ namespace Akka.Cluster
             /// <returns>The address of the node who is the real leader, if any. Otherwise <c>null</c>.</returns>
             public Address RoleLeader(string role)
             {
-                return _roleLeaderMap.GetOrElse(role, null);
+                return RoleLeaderMap.GetOrElse(role, null);
             }
 
             /// <summary>
@@ -206,11 +185,11 @@ namespace Akka.Cluster
                 ImmutableDictionary<string, Address> roleLeaderMap = null)
             {
                 return new CurrentClusterState(
-                    members ?? _members,
-                    unreachable ?? _unreachable,
-                    seenBy ?? _seenBy,
-                    leader ?? (_leader != null ? (Address)_leader.Clone() : null),
-                    roleLeaderMap ?? _roleLeaderMap);
+                    members ?? Members,
+                    unreachable ?? Unreachable,
+                    seenBy ?? SeenBy,
+                    leader ?? (Leader != null ? (Address)Leader.Clone() : null),
+                    roleLeaderMap ?? RoleLeaderMap);
             }
         }
 
@@ -395,15 +374,10 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class MemberRemoved : MemberStatusChange
         {
-            readonly MemberStatus _previousStatus;
-
             /// <summary>
             /// The status of the node before the state change event.
             /// </summary>
-            public MemberStatus PreviousStatus
-            {
-                get { return _previousStatus; }
-            }
+            public MemberStatus PreviousStatus { get; }
 
             /// <summary>
             /// Initializes a new instance of the <see cref="MemberRemoved"/> class.
@@ -418,7 +392,7 @@ namespace Akka.Cluster
             {
                 if (member.Status != MemberStatus.Removed)
                     throw new ArgumentException($"Expected Removed status, got {member}");
-                _previousStatus = previousStatus;
+                PreviousStatus = previousStatus;
             }
 
             /// <inheritdoc/>
@@ -426,7 +400,7 @@ namespace Akka.Cluster
             {
                 var other = obj as MemberRemoved;
                 if (other == null) return false;
-                return _member.Equals(other._member) && _previousStatus == other._previousStatus;
+                return _member.Equals(other._member) && PreviousStatus == other.PreviousStatus;
             }
 
             /// <inheritdoc/>
@@ -436,7 +410,7 @@ namespace Akka.Cluster
                 {
                     var hash = 17;
                     hash = hash * +base.GetHashCode();
-                    hash = hash * 23 + _previousStatus.GetHashCode();
+                    hash = hash * 23 + PreviousStatus.GetHashCode();
                     return hash;
                 }
             }
@@ -448,31 +422,26 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class LeaderChanged : IClusterDomainEvent
         {
-            private readonly Address _leader;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="leader">TBD</param>
             public LeaderChanged(Address leader)
             {
-                _leader = leader;
+                Leader = leader;
             }
 
             /// <summary>
             /// Address of current leader, or null if none
             /// </summary>
-            public Address Leader
-            {
-                get { return _leader; }
-            }
+            public Address Leader { get; }
 
-           
+
             public override bool Equals(object obj)
             {
                 var other = obj as LeaderChanged;
                 if (other == null) return false;
-                return (_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader));
+                return (Leader == null && other.Leader == null) || (Leader != null && Leader.Equals(other.Leader));
             }
 
            
@@ -481,7 +450,7 @@ namespace Akka.Cluster
                 unchecked
                 {
                     var hash = 17;
-                    hash = hash * 23 + (_leader == null ? 0 : _leader.GetHashCode());
+                    hash = hash * 23 + (Leader == null ? 0 : Leader.GetHashCode());
                     return hash;
                 }
             }
@@ -499,9 +468,6 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class RoleLeaderChanged : IClusterDomainEvent
         {
-            private readonly Address _leader;
-            private readonly string _role;
-
             /// <summary>
             /// TBD
             /// </summary>
@@ -509,34 +475,28 @@ namespace Akka.Cluster
             /// <param name="leader">TBD</param>
             public RoleLeaderChanged(string role, Address leader)
             {
-                _role = role;
-                _leader = leader;
+                Role = role;
+                Leader = leader;
             }
 
             /// <summary>
             /// Address of current leader, or null if none
             /// </summary>
-            public Address Leader
-            {
-                get { return _leader; }
-            }
+            public Address Leader { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public string Role
-            {
-                get { return _role; }
-            }
+            public string Role { get; }
 
-           
+
             public override int GetHashCode()
             {
                 unchecked
                 {
                     var hash = 17;
-                    hash = hash * 23 + _role.GetHashCode();
-                    hash = hash * 23 + (_leader == null ? 0 : _leader.GetHashCode());
+                    hash = hash * 23 + Role.GetHashCode();
+                    hash = hash * 23 + (Leader == null ? 0 : Leader.GetHashCode());
                     return hash;
                 }
             }
@@ -546,8 +506,8 @@ namespace Akka.Cluster
             {
                 var other = obj as RoleLeaderChanged;
                 if (other == null) return false;
-                return _role.Equals(other._role)
-                    && ((_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader)));
+                return Role.Equals(other.Role)
+                    && ((Leader == null && other.Leader == null) || (Leader != null && Leader.Equals(other.Leader)));
             }
 
            
@@ -591,31 +551,26 @@ namespace Akka.Cluster
         /// </summary>
         public abstract class ReachabilityEvent : IReachabilityEvent
         {
-            private readonly Member _member;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="member">TBD</param>
             protected ReachabilityEvent(Member member)
             {
-                _member = member;
+                Member = member;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public Member Member
-            {
-                get { return _member; }
-            }
+            public Member Member { get; }
 
-           
+
             public override bool Equals(object obj)
             {
                 var other = obj as ReachabilityEvent;
                 if (other == null) return false;
-                return _member.Equals(other._member);
+                return Member.Equals(other.Member);
             }
 
            
@@ -624,7 +579,7 @@ namespace Akka.Cluster
                 unchecked
                 {
                     var hash = 17;
-                    hash = hash * 23 + _member.GetHashCode();
+                    hash = hash * 23 + Member.GetHashCode();
                     return hash;
                 }
             }
@@ -673,9 +628,6 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class SeenChanged : IClusterDomainEvent
         {
-            private readonly bool _convergence;
-            private readonly ImmutableHashSet<Address> _seenBy;
-
             /// <summary>
             /// TBD
             /// </summary>
@@ -683,32 +635,26 @@ namespace Akka.Cluster
             /// <param name="seenBy">TBD</param>
             public SeenChanged(bool convergence, ImmutableHashSet<Address> seenBy)
             {
-                _convergence = convergence;
-                _seenBy = seenBy;
+                Convergence = convergence;
+                SeenBy = seenBy;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public bool Convergence
-            {
-                get { return _convergence; }
-            }
+            public bool Convergence { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public ImmutableHashSet<Address> SeenBy
-            {
-                get { return _seenBy; }
-            }
+            public ImmutableHashSet<Address> SeenBy { get; }
 
             /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as SeenChanged;
                 if (other == null) return false;
-                return _convergence.Equals(other._convergence) && _seenBy.SequenceEqual(other._seenBy);
+                return Convergence.Equals(other.Convergence) && SeenBy.SequenceEqual(other.SeenBy);
             }
 
             /// <inheritdoc/>
@@ -717,9 +663,9 @@ namespace Akka.Cluster
                 unchecked
                 {
                     var hash = 17;
-                    hash = hash * 23 + _convergence.GetHashCode();
+                    hash = hash * 23 + Convergence.GetHashCode();
 
-                    foreach (var t in _seenBy)
+                    foreach (var t in SeenBy)
                     {
                         hash = hash * 23 + t.GetHashCode();
                     }
@@ -734,31 +680,26 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class ReachabilityChanged : IClusterDomainEvent
         {
-            private readonly Reachability _reachability;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="reachability">TBD</param>
             public ReachabilityChanged(Reachability reachability)
             {
-                _reachability = reachability;
+                Reachability = reachability;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public Reachability Reachability
-            {
-                get { return _reachability; }
-            }
+            public Reachability Reachability { get; }
 
             /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ReachabilityChanged;
                 if (other == null) return false;
-                return _reachability.Equals(other._reachability);
+                return Reachability.Equals(other.Reachability);
             }
 
             /// <inheritdoc/>
@@ -767,7 +708,7 @@ namespace Akka.Cluster
                 unchecked
                 {
                     var hash = 17;
-                    hash = hash * 23 + _reachability.GetHashCode();
+                    hash = hash * 23 + Reachability.GetHashCode();
                     return hash;
                 }
             }
@@ -778,9 +719,6 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class CurrentInternalStats : IClusterDomainEvent
         {
-            private readonly GossipStats _gossipStats;
-            private readonly VectorClockStats _vclockStats;
-
             /// <summary>
             /// TBD
             /// </summary>
@@ -788,25 +726,19 @@ namespace Akka.Cluster
             /// <param name="vclockStats">TBD</param>
             public CurrentInternalStats(GossipStats gossipStats, VectorClockStats vclockStats)
             {
-                _gossipStats = gossipStats;
-                _vclockStats = vclockStats;
+                GossipStats = gossipStats;
+                SeenBy = vclockStats;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public GossipStats GossipStats
-            {
-                get { return _gossipStats; }
-            }
+            public GossipStats GossipStats { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public VectorClockStats SeenBy
-            {
-                get { return _vclockStats; }
-            }
+            public VectorClockStats SeenBy { get; }
 
             /// <inheritdoc/>
             public override int GetHashCode()
@@ -814,8 +746,8 @@ namespace Akka.Cluster
                 unchecked
                 {
                     var hash = 17;
-                    hash = hash * 23 + _gossipStats.GetHashCode();
-                    hash = hash * 23 + _vclockStats.GetHashCode();
+                    hash = hash * 23 + GossipStats.GetHashCode();
+                    hash = hash * 23 + SeenBy.GetHashCode();
                     return hash;
                 }
             }
@@ -825,7 +757,7 @@ namespace Akka.Cluster
             {
                 var other = obj as CurrentInternalStats;
                 if (other == null) return false;
-                return _gossipStats.Equals(other._gossipStats) && _vclockStats.Equals(other._vclockStats);
+                return GossipStats.Equals(other.GossipStats) && SeenBy.Equals(other.SeenBy);
             }
         }
 

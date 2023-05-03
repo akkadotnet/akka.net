@@ -16,27 +16,25 @@ namespace Akka.Streams.Implementation
     /// </summary>
     public class SubReceive
     {
-        private Receive _currentReceive;
-
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="initial">TBD</param>
         public SubReceive(Receive initial)
         {
-            _currentReceive = initial;
+            CurrentReceive = initial;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Receive CurrentReceive => _currentReceive;
+        public Receive CurrentReceive { get; private set; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="receive">TBD</param>
-        public void Become(Receive receive) => _currentReceive = receive;
+        public void Become(Receive receive) => CurrentReceive = receive;
     }
 
     /// <summary>

@@ -23,12 +23,11 @@ namespace Akka.Persistence.Tests
 
         public class AnyPersistentActor : PersistentActor
         {
-            private readonly string _name;
             private IActorRef _lastSender = Context.System.DeadLetters;
 
             public AnyPersistentActor(string name)
             {
-                _name = name;
+                PersistenceId = name;
             }
 
             protected override bool ReceiveCommand(object message)
@@ -49,7 +48,7 @@ namespace Akka.Persistence.Tests
                 return false;
             }
 
-            public override string PersistenceId { get { return _name; } }
+            public override string PersistenceId { get; }
         }
 
         public class PickedSnapshotStorePersistentActor : AnyPersistentActor

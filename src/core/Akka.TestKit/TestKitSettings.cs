@@ -16,12 +16,6 @@ namespace Akka.TestKit
     /// </summary>
     public class TestKitSettings : IExtension
     {
-        private readonly TimeSpan _defaultTimeout;
-        private readonly TimeSpan _singleExpectDefault;
-        private readonly TimeSpan _testEventFilterLeeway;
-        private readonly double _timefactor;
-        private readonly bool _logTestKitCalls;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="TestKitSettings"/> class.
         /// </summary>
@@ -34,14 +28,14 @@ namespace Akka.TestKit
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<TestKitSettings>();
 
-            _defaultTimeout = config.GetTimeSpan("akka.test.default-timeout", null, allowInfinite:false);
-            _singleExpectDefault = config.GetTimeSpan("akka.test.single-expect-default", null, allowInfinite: false);
-            _testEventFilterLeeway = config.GetTimeSpan("akka.test.filter-leeway", null, allowInfinite: false);
-            _timefactor = config.GetDouble("akka.test.timefactor", 0);
-            _logTestKitCalls = config.GetBoolean("akka.test.testkit.debug", false);
+            DefaultTimeout = config.GetTimeSpan("akka.test.default-timeout", null, allowInfinite:false);
+            SingleExpectDefault = config.GetTimeSpan("akka.test.single-expect-default", null, allowInfinite: false);
+            TestEventFilterLeeway = config.GetTimeSpan("akka.test.filter-leeway", null, allowInfinite: false);
+            TestTimeFactor = config.GetDouble("akka.test.timefactor", 0);
+            LogTestKitCalls = config.GetBoolean("akka.test.testkit.debug", false);
 
-            if(_timefactor <= 0)
-                throw new ConfigurationException($@"Expected a positive value for ""akka.test.timefactor"" but found {_timefactor}");
+            if(TestTimeFactor <= 0)
+                throw new ConfigurationException($@"Expected a positive value for ""akka.test.timefactor"" but found {TestTimeFactor}");
         }
 
 
@@ -49,13 +43,13 @@ namespace Akka.TestKit
         /// Gets the default timeout as specified in the setting akka.test.default-timeout.
         /// Typically used for Ask-timeouts. It is always finite.
         /// </summary>
-        public TimeSpan DefaultTimeout { get { return _defaultTimeout; } }
+        public TimeSpan DefaultTimeout { get; }
 
         /// <summary>Gets the config value "akka.test.single-expect-default". It is always finite.</summary>
-        public TimeSpan SingleExpectDefault { get { return _singleExpectDefault; } }
+        public TimeSpan SingleExpectDefault { get; }
 
         /// <summary>Gets the config value "akka.test.filter-leeway".  It is always finite.</summary>
-        public TimeSpan TestEventFilterLeeway { get { return _testEventFilterLeeway; } }
+        public TimeSpan TestEventFilterLeeway { get; }
 
         /// <summary>
         /// Gets the timefactor by which all values are scaled by.
@@ -70,12 +64,12 @@ namespace Akka.TestKit
         /// <see cref="TestKitBase.Dilated">Testkit.Dilated</see>
         /// </para>
         /// </summary>
-        public double TestTimeFactor { get { return _timefactor; } }
+        public double TestTimeFactor { get; }
 
         /// <summary>
         /// If set to <c>true</c> calls to testkit will be logged.
         /// This is enabled by setting the configuration value "akka.test.testkit.debug" to a true.
         /// </summary>
-        public bool LogTestKitCalls { get { return _logTestKitCalls; } }
+        public bool LogTestKitCalls { get; }
     }
 }

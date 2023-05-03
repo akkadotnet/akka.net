@@ -54,15 +54,13 @@ namespace Akka.Actor.Internal
             }
         }
 
-        private readonly IImmutableDictionary<string, IChildStats> _children;
-
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="children">TBD</param>
         protected ChildrenContainerBase(IImmutableDictionary<string, IChildStats> children)
         {
-            _children = children;
+            InternalChildren = children;
         }
 
         /// <summary>
@@ -137,7 +135,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        protected IImmutableDictionary<string, IChildStats> InternalChildren { get { return _children; } }
+        protected IImmutableDictionary<string, IChildStats> InternalChildren { get; }
 
         /// <summary>
         /// TBD

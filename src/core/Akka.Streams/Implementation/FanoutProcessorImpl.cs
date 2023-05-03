@@ -21,8 +21,6 @@ namespace Akka.Streams.Implementation
     /// <typeparam name="TStreamBuffer">TBD</typeparam>
     internal class FanoutOutputs<T, TStreamBuffer> : SubscriberManagement<T, TStreamBuffer>, IOutputs where TStreamBuffer : IStreamBuffer<T>
     {
-        private long _downstreamBufferSpace;
-        private bool _downstreamCompleted;
         private readonly IActorRef _self;
         private readonly IPump _pump;
         private readonly Action _afterShutdown;
@@ -50,12 +48,12 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public bool IsDemandAvailable => _downstreamBufferSpace > 0;
+        public bool IsDemandAvailable => DemandCount > 0;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public long DemandCount => _downstreamBufferSpace;
+        public long DemandCount { get; private set; }
 
         /// <summary>
         /// TBD
@@ -135,7 +133,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="elements">TBD</param>
-        protected override void RequestFromUpstream(long elements) => _downstreamBufferSpace += elements;
+        protected override void RequestFromUpstream(long elements) => DemandCount += elements;
 
         private void SubscribePending()
             =>
@@ -156,7 +154,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        protected override void CancelUpstream() => _downstreamCompleted = true;
+        protected override void CancelUpstream() => IsClosed = true;
 
         /// <summary>
         /// TBD
@@ -165,7 +163,7 @@ namespace Akka.Streams.Implementation
         public void EnqueueOutputElement(object element)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(element);
-            _downstreamBufferSpace -= 1;
+            DemandCount -= 1;
             PushToDownstream((T) element);
         }
 
@@ -174,10 +172,10 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public void Complete()
         {
-            if (_downstreamCompleted)
+            if (IsClosed)
                 return;
 
-            _downstreamCompleted = true;
+            IsClosed = true;
             CompleteDownstream();
         }
 
@@ -192,10 +190,10 @@ namespace Akka.Streams.Implementation
         /// <param name="e">TBD</param>
         public void Error(Exception e)
         {
-            if (_downstreamCompleted)
+            if (IsClosed)
                 return;
 
-            _downstreamCompleted = true;
+            IsClosed = true;
             AbortDownstream(e);
 
             ExposedPublisher?.Shutdown(e);
@@ -204,7 +202,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public bool IsClosed => _downstreamCompleted;
+        public bool IsClosed { get; private set; }
 
         /// <summary>
         /// TBD

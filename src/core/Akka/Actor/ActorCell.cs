@@ -35,15 +35,11 @@ namespace Akka.Actor
         /// </summary>
         public const int UndefinedUid = 0;
 
-        private Props _props;
         private const int DefaultState = 0;
         private const int SuspendedState = 1;
         private const int SuspendedWaitForChildrenState = 2;
 
-        private ActorBase _actor;
-        private bool _actorHasBeenCleared;
         private volatile Mailbox _mailboxDoNotCallMeDirectly;
-        private readonly ActorSystemImpl _systemImpl;
         private ActorTaskScheduler _taskScheduler;
 
         // special system message stash, used when we aren't able to handle other system messages just yet
@@ -77,8 +73,8 @@ namespace Akka.Actor
         public ActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
         {
             _self = self;
-            _props = props;
-            _systemImpl = system;
+            Props = props;
+            SystemImpl = system;
             Parent = parent;
             Dispatcher = dispatcher;
 
@@ -104,7 +100,8 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        internal ActorBase Actor { get { return _actor; } }
+        internal ActorBase Actor { get; private set; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -120,15 +117,17 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorSystem System { get { return _systemImpl; } }
+        public ActorSystem System { get { return SystemImpl; } }
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorSystemImpl SystemImpl { get { return _systemImpl; } }
+        public ActorSystemImpl SystemImpl { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public Props Props { get { return _props; } }
+        public Props Props { get; private set; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -153,7 +152,8 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
+        internal bool ActorHasBeenCleared { get; private set; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -254,7 +254,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public ActorSelection ActorSelection(string path)
         {
-            return ActorRefFactoryShared.ActorSelection(path, _systemImpl, Self);
+            return ActorRefFactoryShared.ActorSelection(path, SystemImpl, Self);
         }
 
         /// <summary>
@@ -264,7 +264,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public ActorSelection ActorSelection(ActorPath path)
         {
-            return ActorRefFactoryShared.ActorSelection(path, _systemImpl);
+            return ActorRefFactoryShared.ActorSelection(path, SystemImpl);
         }
 
 
@@ -339,7 +339,7 @@ namespace Akka.Actor
                 instance = CreateNewActorInstance();
                 //TODO: this overwrites any already initialized supervisor strategy
                 //We should investigate what we can do to handle this better
-                instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
+                instance.SupervisorStrategyInternal = Props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
             });
             return instance;
@@ -351,10 +351,10 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected virtual ActorBase CreateNewActorInstance()
         {
-            var actor = _props.NewActor();
+            var actor = Props.NewActor();
 
             // Apply default of custom behaviors to actor.
-            var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
+            var pipeline = SystemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
 
             pipeline.AfterActorIncarnated(actor, this);
 
@@ -399,7 +399,7 @@ namespace Akka.Actor
 
             try
             {
-                var messageToDispatch = _systemImpl.Settings.SerializeAllMessages
+                var messageToDispatch = SystemImpl.Settings.SerializeAllMessages
                     ? SerializeAndDeserialize(message)
                     : message;
 
@@ -407,7 +407,7 @@ namespace Akka.Actor
             }
             catch (Exception e)
             {
-                _systemImpl.EventStream.Publish(new Error(e, _self.Parent.ToString(), ActorType, "Swallowing exception during message send"));
+                SystemImpl.EventStream.Publish(new Error(e, _self.Parent.ToString(), ActorType, "Swallowing exception during message send"));
             }
         }
 
@@ -427,7 +427,7 @@ namespace Akka.Actor
         protected void ClearActorCell()
         {
             UnstashAll();
-            _props = TerminatedProps;
+            Props = TerminatedProps;
         }
 
         /// <summary>
@@ -446,15 +446,15 @@ namespace Akka.Actor
                     }
                     catch (Exception e)
                     {
-                        _systemImpl.Log?.Error(e, "An error occurred while disposing {0} actor. Reason: {1}",
+                        SystemImpl.Log?.Error(e, "An error occurred while disposing {0} actor. Reason: {1}",
                             actor.GetType(), e.Message);
                     }
                 }
 
                 ReleaseActor(actor);
-                actor.Clear(_systemImpl.DeadLetters);
+                actor.Clear(SystemImpl.DeadLetters);
             }
-            _actorHasBeenCleared = true;
+            ActorHasBeenCleared = true;
             CurrentMessage = null;
 
             //TODO: semantics here? should all "_state" be cleared? or just behavior?
@@ -463,7 +463,7 @@ namespace Akka.Actor
 
         private void ReleaseActor(ActorBase a)
         {
-            _props.Release(a);
+            Props.Release(a);
         }
 
         /// <summary>
@@ -472,7 +472,7 @@ namespace Akka.Actor
         protected void PrepareForNewActor()
         {
             _state = _state.ClearBehaviorStack();
-            _actorHasBeenCleared = false;
+            ActorHasBeenCleared = false;
         }
         /// <summary>
         /// TBD
@@ -542,7 +542,7 @@ namespace Akka.Actor
 
         private object SerializeAndDeserializePayload(object obj)
         {
-            var serializer = _systemImpl.Serialization.FindSerializerFor(obj);
+            var serializer = SystemImpl.Serialization.FindSerializerFor(obj);
             var oldInfo = Serialization.Serialization.CurrentTransportInformation;
             try
             {
@@ -553,7 +553,7 @@ namespace Akka.Actor
                 var bytes = serializer.ToBinary(obj);
 
                 var manifest = Serialization.Serialization.ManifestFor(serializer, obj);
-                return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
+                return SystemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
             }
             finally
             {

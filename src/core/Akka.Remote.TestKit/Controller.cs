@@ -27,21 +27,16 @@ namespace Akka.Remote.TestKit
     {
         public sealed class ClientDisconnected : IDeadLetterSuppression
         {
-            private readonly RoleName _name;
-
             public ClientDisconnected(RoleName name)
             {
-                _name = name;
+                Name = name;
             }
 
-            public RoleName Name
-            {
-                get { return _name; }
-            }
+            public RoleName Name { get; }
 
             private bool Equals(ClientDisconnected other)
             {
-                return Equals(_name, other._name);
+                return Equals(Name, other.Name);
             }
 
             /// <inheritdoc/>
@@ -55,7 +50,7 @@ namespace Akka.Remote.TestKit
             /// <inheritdoc/>
             public override int GetHashCode()
             {
-                return (_name != null ? _name.GetHashCode() : 0);
+                return (Name != null ? Name.GetHashCode() : 0);
             }
 
             /// <summary>
@@ -111,29 +106,15 @@ namespace Akka.Remote.TestKit
         public class GetNodes
         {
             private GetNodes() { }
-            private static readonly GetNodes _instance = new GetNodes();
 
-            public static GetNodes Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static GetNodes Instance { get; } = new GetNodes();
         }
 
         public class GetSockAddr
         {
             private GetSockAddr() { }
-            private static readonly GetSockAddr _instance = new GetSockAddr();
 
-            public static GetSockAddr Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static GetSockAddr Instance { get; } = new GetSockAddr();
         }
 
         /// <summary>

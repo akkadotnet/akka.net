@@ -358,22 +358,19 @@ namespace Akka.Dispatch
         /// </summary>
         internal sealed class PriorityTaskScheduler : TaskScheduler, IDisposable
         {
-            readonly Channel<Task> _channel;
+            public Channel<Task> Channel { get; }
 
-            readonly TaskSchedulerPriority _priority;
-
-            public Channel<Task> Channel => _channel;
-            public TaskSchedulerPriority Priority => _priority;
+            public TaskSchedulerPriority Priority { get; }
 
             public PriorityTaskScheduler(Channel<Task> channel, TaskSchedulerPriority priority)
             {
-                _channel = channel;
-                _priority = priority;
+                Channel = channel;
+                Priority = priority;
             }
 
             protected override void QueueTask(Task task)
             {
-                if (!_channel.Writer.TryWrite(task))
+                if (!Channel.Writer.TryWrite(task))
                     throw new InvalidOperationException();
             }
 
@@ -391,7 +388,7 @@ namespace Akka.Dispatch
             {
                 // If this thread isn't already processing a task
                 // and the thread priority is higher, then we don't support inlining 
-                return (_threadPriority > TaskSchedulerPriority.None && _threadPriority <= _priority)
+                return (_threadPriority > TaskSchedulerPriority.None && _threadPriority <= Priority)
                     && TryExecuteTask(task);
             }
 
@@ -401,9 +398,9 @@ namespace Akka.Dispatch
             /// <returns>dequeued work count</returns>
             public int ExecuteAll()
             {
-                _threadPriority = _priority;
+                _threadPriority = Priority;
 
-                var reader = _channel.Reader;
+                var reader = Channel.Reader;
                 var count = 0;
 
                 while (reader.TryRead(out var task))
@@ -422,9 +419,9 @@ namespace Akka.Dispatch
             /// <returns>dequeued work count</returns>
             public int ExecuteMany(int maxTasks)
             {
-                _threadPriority = _priority;
+                _threadPriority = Priority;
 
-                var reader = _channel.Reader;
+                var reader = Channel.Reader;
                 int c;
 
                 for (c = 0; c < maxTasks && reader.TryRead(out var task); c++)
@@ -440,9 +437,9 @@ namespace Akka.Dispatch
             /// <returns>dequeued work count</returns>
             public int ExecuteSingle()
             {
-                _threadPriority = _priority;
+                _threadPriority = Priority;
 
-                if (_channel.Reader.TryRead(out var task))
+                if (Channel.Reader.TryRead(out var task))
                 {
                     TryExecuteTask(task);
                     return 1;
@@ -452,7 +449,7 @@ namespace Akka.Dispatch
 
             public void Dispose()
             {
-                _channel.Writer.TryComplete();
+                Channel.Writer.TryComplete();
             }
         }
     }

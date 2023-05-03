@@ -22,13 +22,12 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class ChildNameReserved : IChildStats
     {
-        private static readonly ChildNameReserved _instance = new ChildNameReserved();
         private ChildNameReserved() {/* Intentionally left blank */}
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static ChildNameReserved Instance { get { return _instance; } }
+        public static ChildNameReserved Instance { get; } = new ChildNameReserved();
 
         public override string ToString()
         {
@@ -42,10 +41,6 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class ChildRestartStats : IChildStats
     {
-        private readonly IInternalActorRef _child;
-        private uint _maxNrOfRetriesCount;
-        private long _restartTimeWindowStartTicks;
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -54,9 +49,9 @@ namespace Akka.Actor.Internal
         /// <param name="restartTimeWindowStartTicks">TBD</param>
         public ChildRestartStats(IInternalActorRef child, uint maxNrOfRetriesCount = 0, long restartTimeWindowStartTicks = 0)
         {
-            _child = child;
-            _maxNrOfRetriesCount = maxNrOfRetriesCount;
-            _restartTimeWindowStartTicks = restartTimeWindowStartTicks;
+            Child = child;
+            MaxNrOfRetriesCount = maxNrOfRetriesCount;
+            RestartTimeWindowStartTicks = restartTimeWindowStartTicks;
         }
 
         /// <summary>
@@ -67,17 +62,17 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public IInternalActorRef Child { get { return _child; } }
+        public IInternalActorRef Child { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public uint MaxNrOfRetriesCount { get { return _maxNrOfRetriesCount; } }
+        public uint MaxNrOfRetriesCount { get; private set; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public long RestartTimeWindowStartTicks { get { return _restartTimeWindowStartTicks; } }
+        public long RestartTimeWindowStartTicks { get; private set; }
 
         /// <summary>
         /// TBD
@@ -92,8 +87,8 @@ namespace Akka.Actor.Internal
             var windowIsDefined = withinTimeMilliseconds > 0;
             if (retriesIsDefined && !windowIsDefined)
             {
-                _maxNrOfRetriesCount++;
-                return _maxNrOfRetriesCount <= maxNrOfRetries;
+                MaxNrOfRetriesCount++;
+                return MaxNrOfRetriesCount <= maxNrOfRetries;
             }
             if (windowIsDefined)
             {
@@ -113,28 +108,28 @@ namespace Akka.Actor.Internal
             // Simple window algorithm: window is kept open for a certain time
             // after a restart and if enough restarts happen during this time, it
             // denies. Otherwise window closes and the scheme starts over.
-            var retriesDone = _maxNrOfRetriesCount + 1;
+            var retriesDone = MaxNrOfRetriesCount + 1;
             var now = MonotonicClock.Elapsed.Ticks;
             long windowStart;
-            if (_restartTimeWindowStartTicks == 0)
+            if (RestartTimeWindowStartTicks == 0)
             {
-                _restartTimeWindowStartTicks = now;
+                RestartTimeWindowStartTicks = now;
                 windowStart = now;
             }
             else
             {
-                windowStart = _restartTimeWindowStartTicks;
+                windowStart = RestartTimeWindowStartTicks;
             }
             var windowInTicks = windowInMilliseconds * TimeSpan.TicksPerMillisecond;
             var insideWindow = (now - windowStart) <= windowInTicks;
 
             if (insideWindow)
             {
-                _maxNrOfRetriesCount = retriesDone;
+                MaxNrOfRetriesCount = retriesDone;
                 return retriesDone <= retries;
             }
-            _maxNrOfRetriesCount = 1;
-            _restartTimeWindowStartTicks = now;
+            MaxNrOfRetriesCount = 1;
+            RestartTimeWindowStartTicks = now;
             return true;
         }
     }

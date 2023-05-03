@@ -53,15 +53,10 @@ namespace Akka.Cluster
         /// </summary>
         internal volatile ClusterEvent.CurrentInternalStats _latestStats;
 
-        readonly Address _selfAddress;
-
         /// <summary>
         /// TBD
         /// </summary>
-        public Address SelfAddress
-        {
-            get { return _selfAddress; }
-        }
+        public Address SelfAddress { get; }
 
         readonly IActorRef _eventBusListener;
 
@@ -77,7 +72,7 @@ namespace Akka.Cluster
             _state = new ClusterEvent.CurrentClusterState();
             _reachability = Reachability.Empty;
             _latestStats = new ClusterEvent.CurrentInternalStats(new GossipStats(), new VectorClockStats());
-            _selfAddress = cluster.SelfAddress;
+            SelfAddress = cluster.SelfAddress;
 
             _eventBusListener =
                 cluster.System.SystemActorOf(

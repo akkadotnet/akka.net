@@ -45,7 +45,6 @@ namespace Akka.Remote
     internal sealed class RARP : ExtensionIdProvider<RARP>,  IExtension
     {
         //this is why this extension is called "RARP"
-        private readonly IRemoteActorRefProvider _provider;
 
         /// <summary>
         /// Used as part of the <see cref="ExtensionIdProvider{RARP}"/>
@@ -54,7 +53,7 @@ namespace Akka.Remote
 
         private RARP(IRemoteActorRefProvider provider)
         {
-            _provider = provider;
+            Provider = provider;
         }
 
         /// <summary>
@@ -64,7 +63,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public Props ConfigureDispatcher(Props props)
         {
-            return _provider.RemoteSettings.ConfigureDispatcher(props);
+            return Provider.RemoteSettings.ConfigureDispatcher(props);
         }
 
         /// <summary>
@@ -80,10 +79,7 @@ namespace Akka.Remote
         /// <summary>
         /// The underlying remote actor reference provider.
         /// </summary>
-        public IRemoteActorRefProvider Provider
-        {
-            get { return _provider; }
-        }
+        public IRemoteActorRefProvider Provider { get; }
 
         #region Static methods
 

@@ -46,7 +46,7 @@ namespace Akka.Util.Internal.Collections
 
             public SliceEnumerator(ListSlice<T> array)
             {
-                _array = array._array;
+                _array = array.Array;
                 _start = array.Offset;
                 _end = _start + array.Count;
                 _current = _start - 1;
@@ -84,8 +84,6 @@ namespace Akka.Util.Internal.Collections
                 
             }
         }
-        
-        private readonly IReadOnlyList<T> _array;
 
         public ListSlice(IReadOnlyList<T> array)
         {
@@ -93,7 +91,7 @@ namespace Akka.Util.Internal.Collections
             if (array == null)
                 throw new ArgumentNullException(nameof(array));
 
-            _array = array;
+            Array = array;
             Offset = 0;
             Count = array.Count;
         }
@@ -107,14 +105,14 @@ namespace Akka.Util.Internal.Collections
             if (count < 0)
                 throw new ArgumentOutOfRangeException(nameof(count), "Cannot be below zero.");
             
-            _array = array;
+            Array = array;
             Offset = offset;
             Count = count;
         }
 
         public int Offset { get; }
 
-        public IReadOnlyList<T> Array => _array;
+        public IReadOnlyList<T> Array { get; }
 
         public IEnumerator<T> GetEnumerator()
         {
@@ -144,7 +142,7 @@ namespace Akka.Util.Internal.Collections
         public void CopyTo(T[] array, int arrayIndex)
         {
             var n = 0;
-            foreach (var i in _array.Skip(Offset).Take(Count))
+            foreach (var i in Array.Skip(Offset).Take(Count))
             {
                 array[arrayIndex + n++] = i;
             }
@@ -175,7 +173,7 @@ namespace Akka.Util.Internal.Collections
 
         public T this[int index]
         {
-            get => _array[Offset + index];
+            get => Array[Offset + index];
             set => throw new System.NotImplementedException();
         }
     }

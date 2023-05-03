@@ -383,7 +383,6 @@ namespace Akka.Streams.Implementation
     public sealed class ActorSubscriberSink<TIn> : SinkModule<TIn, IActorRef>
     {
         private readonly Props _props;
-        private readonly Attributes _attributes;
 
         /// <summary>
         /// TBD
@@ -395,13 +394,13 @@ namespace Akka.Streams.Implementation
             : base(shape)
         {
             _props = props;
-            _attributes = attributes;
+            Attributes = attributes;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override Attributes Attributes => _attributes;
+        public override Attributes Attributes { get; }
 
         /// <summary>
         /// TBD
@@ -417,7 +416,7 @@ namespace Akka.Streams.Implementation
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
         protected override SinkModule<TIn, IActorRef> NewInstance(SinkShape<TIn> shape)
-            => new ActorSubscriberSink<TIn>(_props, _attributes, shape);
+            => new ActorSubscriberSink<TIn>(_props, Attributes, shape);
 
         /// <summary>
         /// TBD

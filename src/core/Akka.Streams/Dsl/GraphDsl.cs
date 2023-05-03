@@ -30,8 +30,6 @@ namespace Akka.Streams.Dsl
             /// </summary>
             internal Builder() { }
 
-            private IModule _moduleInProgress = EmptyModule.Instance;
-
             /// <summary>
             /// TBD
             /// </summary>
@@ -41,7 +39,7 @@ namespace Akka.Streams.Dsl
             /// <param name="to">TBD</param>
             internal void AddEdge<T1, T2>(Outlet<T1> from, Inlet<T2> to) where T2 : T1
             {
-                _moduleInProgress = _moduleInProgress.Wire(from, to);
+                Module = Module.Wire(from, to);
             }
 
             /// <summary>
@@ -63,7 +61,7 @@ namespace Akka.Streams.Dsl
 #pragma warning restore CS0162 // Unreachable code detected
 
                 var copy = graph.Module.CarbonCopy();
-                _moduleInProgress = _moduleInProgress.Compose<TMat,TMat2,TMat2>(copy.TransformMaterializedValue(transform), Keep.Right);
+                Module = Module.Compose<TMat,TMat2,TMat2>(copy.TransformMaterializedValue(transform), Keep.Right);
                 return (TShape)graph.Shape.CopyFromPorts(copy.Shape.Inlets, copy.Shape.Outlets);
             }
 
@@ -87,7 +85,7 @@ namespace Akka.Streams.Dsl
 #pragma warning restore CS0162 // Unreachable code detected
 
                 var copy = graph.Module.CarbonCopy();
-                _moduleInProgress = _moduleInProgress.Compose(copy, combine);
+                Module = Module.Compose(copy, combine);
                 return (TShape)graph.Shape.CopyFromPorts(copy.Shape.Inlets, copy.Shape.Outlets);
             }
 
@@ -110,7 +108,7 @@ namespace Akka.Streams.Dsl
 #pragma warning restore CS0162 // Unreachable code detected
 
                 var copy = graph.Module.CarbonCopy();
-                _moduleInProgress = _moduleInProgress.Compose<object, TMat, object>(copy, Keep.Left);
+                Module = Module.Compose<object, TMat, object>(copy, Keep.Left);
                 return (TShape)graph.Shape.CopyFromPorts(copy.Shape.Inlets, copy.Shape.Outlets);
             }
 
@@ -142,11 +140,11 @@ namespace Akka.Streams.Dsl
                     * because that computation node would not be part of the tree and
                     * the source would not be triggered.
                     */
-                    if (_moduleInProgress is CopiedModule module)
-                        _moduleInProgress = CompositeModule.Create(module, module.Shape);
+                    if (Module is CopiedModule module)
+                        Module = CompositeModule.Create(module, module.Shape);
 
-                    var source = new MaterializedValueSource<T>(_moduleInProgress.MaterializedValueComputation);
-                    _moduleInProgress = _moduleInProgress.ComposeNoMaterialized(source.Module);
+                    var source = new MaterializedValueSource<T>(Module.MaterializedValueComputation);
+                    Module = Module.ComposeNoMaterialized(source.Module);
                     return source.Outlet;
                 }
             }
@@ -154,7 +152,7 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// TBD
             /// </summary>
-            public IModule Module => _moduleInProgress;
+            public IModule Module { get; private set; } = EmptyModule.Instance;
 
             /// <summary>
             /// TBD

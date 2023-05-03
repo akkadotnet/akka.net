@@ -146,7 +146,7 @@ namespace Akka.Cluster
             //create supervisor for daemons under path "/system/cluster"
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
-            _readView = new ClusterReadView(this);
+            ReadView = new ClusterReadView(this);
 
             // force the underlying system to start
             _clusterCore = GetClusterCoreRef().Result;
@@ -536,12 +536,12 @@ namespace Akka.Cluster
         /// <summary>
         /// The current snapshot state of the cluster.
         /// </summary>
-        public ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
+        public ClusterEvent.CurrentClusterState State { get { return ReadView._state; } }
 
         /// <summary>
         /// Access to the current member info for this node.
         /// </summary>
-        public Member SelfMember => _readView.Self;
+        public Member SelfMember => ReadView.Self;
 
         private readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
 
@@ -562,12 +562,11 @@ namespace Akka.Cluster
 
         private readonly Lazy<IDowningProvider> _downingProvider;
         private readonly ILoggingAdapter _log;
-        private readonly ClusterReadView _readView;
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal ClusterReadView ReadView { get { return _readView; } }
+        internal ClusterReadView ReadView { get; }
 
         /// <summary>
         /// The set of failure detectors used for monitoring one or more nodes in the cluster.
@@ -609,7 +608,7 @@ namespace Akka.Cluster
                 LogInfo("Shutting down...");
                 System.Stop(_clusterDaemons);
 
-                _readView?.Dispose();
+                ReadView?.Dispose();
 
                 LogInfo("Successfully shut down");
             }

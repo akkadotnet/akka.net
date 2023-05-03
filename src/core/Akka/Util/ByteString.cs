@@ -25,7 +25,7 @@ namespace Akka.IO
     /// when concatenating and slicing sequences of bytes,
     /// and also providing a thread safe way of working with bytes.
     /// </summary>
-    [DebuggerDisplay("(Count = {_count}, Buffers = {_buffers})")]
+    [DebuggerDisplay("(Count = {Count}, Buffers = {_buffers})")]
     public sealed class ByteString : IEquatable<ByteString>, IEnumerable<byte>
     {
         #region creation methods
@@ -244,31 +244,30 @@ namespace Akka.IO
 
         #endregion
 
-        private readonly int _count;
         private readonly ByteBuffer[] _buffers;
 
         private ByteString(ByteBuffer[] buffers, int count)
         {
             _buffers = buffers;
-            _count = count;
+            Count = count;
         }
 
         private ByteString(ByteBuffer buffer)
         {
             _buffers = new[] { buffer };
-            _count = buffer.Count;
+            Count = buffer.Count;
         }
 
         private ByteString(byte[] array, int offset, int count)
         {
             _buffers = new[] { new ByteBuffer(array, offset, count) };
-            _count = count;
+            Count = count;
         }
 
         /// <summary>
         /// Gets a total number of bytes stored inside this <see cref="ByteString"/>.
         /// </summary>
-        public int Count => _count;
+        public int Count { get; }
 
         /// <summary>
         /// Determines if current <see cref="ByteString"/> has compact representation.
@@ -281,7 +280,7 @@ namespace Akka.IO
         /// <summary>
         /// Determines if current <see cref="ByteString"/> is empty.
         /// </summary>
-        public bool IsEmpty => _count == 0;
+        public bool IsEmpty => Count == 0;
 
         /// <summary>
         /// Gets sequence of the buffers used underneat.
@@ -296,7 +295,7 @@ namespace Akka.IO
         {
             get
             {
-                if (index >= _count) throw new IndexOutOfRangeException("Requested index is outside of the bounds of the ByteString");
+                if (index >= Count) throw new IndexOutOfRangeException("Requested index is outside of the bounds of the ByteString");
                 int j;
                 var i = GetBufferFittingIndex(index, out j);
                 var buffer = _buffers[i];
@@ -323,7 +322,7 @@ namespace Akka.IO
         /// operation.
         /// </summary>
         /// <param name="index">index inside current <see cref="ByteString"/>, from which slicing should start</param>
-        public ByteString Slice(int index) => Slice(index, _count - index);
+        public ByteString Slice(int index) => Slice(index, Count - index);
 
         /// <summary>
         /// Slices current <see cref="ByteString"/>, creating a new <see cref="ByteString"/>
@@ -340,12 +339,12 @@ namespace Akka.IO
             if (count < 0)
                 throw new ArgumentOutOfRangeException(nameof(count), "Count must be positive number");
             if (count == 0) return Empty;
-            if(index > _count)
+            if(index > Count)
                 throw new ArgumentOutOfRangeException(nameof(index), "Index is outside of the bounds of the ByteString");
-            if(index + count > _count)
+            if(index + count > Count)
                 throw new ArgumentOutOfRangeException(nameof(count), "Index + count is outside of the bounds of the ByteString");
             
-            if (index == 0 && count == _count) return this;
+            if (index == 0 && count == Count) return this;
 
             var i = GetBufferFittingIndex(index, out var j);
             var init = _buffers[i];
@@ -431,7 +430,7 @@ namespace Akka.IO
         /// <returns></returns>
         public int IndexOf(byte b, int from)
         {
-            if (from >= _count) return -1;
+            if (from >= Count) return -1;
 
             int j;
             var i = GetBufferFittingIndex(from, out j);
@@ -460,7 +459,7 @@ namespace Akka.IO
         public bool HasSubstring(ByteString other, int index)
         {
             // quick check: if subsequence is longer than remaining size, return false
-            if (other.Count > _count - index) return false;
+            if (other.Count > Count - index) return false;
 
             int thisIdx = 0, otherIdx = 0;
             var i = GetBufferFittingIndex(index, out thisIdx);
@@ -500,11 +499,11 @@ namespace Akka.IO
         /// <returns>TBD</returns>
         public byte[] ToArray()
         {
-            if (_count == 0)
+            if (Count == 0)
                 return Array.Empty<byte>();
 
-            var copy = new byte[_count];
-            CopyTo(copy, 0, _count);
+            var copy = new byte[Count];
+            CopyTo(copy, 0, Count);
             return copy;
         }
 
@@ -521,7 +520,7 @@ namespace Akka.IO
             if (other.IsEmpty) return this;
             if (this.IsEmpty) return other;
 
-            var count = _count + other._count;
+            var count = Count + other.Count;
             var len1 = _buffers.Length;
             var len2 = other._buffers.Length;
             var array = new ByteBuffer[len1 + len2];
@@ -543,7 +542,7 @@ namespace Akka.IO
             if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
             if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
 
-            count = Math.Min(count, _count);
+            count = Math.Min(count, Count);
             var remaining = count;
             var position = index;
             foreach (var b in _buffers)
@@ -578,7 +577,7 @@ namespace Akka.IO
             if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
             if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
 
-            count = Math.Min(count, _count);
+            count = Math.Min(count, Count);
             var remaining = count;
             var position = index;
             foreach (var b in _buffers)
@@ -616,7 +615,7 @@ namespace Akka.IO
             if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
             if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
 
-            count = Math.Min(count, _count);
+            count = Math.Min(count, Count);
             var remaining = count;
             var position = index;
             foreach (var b in _buffers)
@@ -681,7 +680,7 @@ namespace Akka.IO
         {
             if (ReferenceEquals(other, this)) return true;
             if (ReferenceEquals(other, null)) return false;
-            if (_count != other._count) return false;
+            if (Count != other.Count) return false;
 
             using (var thisEnum = this.GetEnumerator())
             using (var otherEnum = other.GetEnumerator())

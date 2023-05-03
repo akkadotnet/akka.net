@@ -17,24 +17,20 @@ namespace Akka.Cluster.TestKit
 {
     public class ClientDowningNodeThatIsUpMultiNodeConfig : MultiNodeConfig
     {
-        private readonly RoleName _first;
-        public RoleName First { get { return _first; } }
+        public RoleName First { get; }
 
-        private readonly RoleName _second;
-        public RoleName Second { get { return _second; } }
+        public RoleName Second { get; }
 
-        private readonly RoleName _third;
-        public RoleName Third { get { return _third; } }
+        public RoleName Third { get; }
 
-        private readonly RoleName _fourth;
-        public RoleName Fourth { get { return _fourth; } }
+        public RoleName Fourth { get; }
 
         public ClientDowningNodeThatIsUpMultiNodeConfig(bool failureDetectorPuppet)
         {
-            _first = Role("first");
-            _second = Role("second");
-            _third = Role("third");
-            _fourth = Role("fourth");
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
+            Fourth = Role("fourth");
 
             CommonConfig= DebugConfig(false).WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
         }

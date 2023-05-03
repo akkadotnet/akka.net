@@ -151,26 +151,24 @@ namespace Akka.Streams.Dsl
     /// <typeparam name="TMat">TBD</typeparam>
     public class BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat> : IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat>
     {
-        private readonly IModule _module;
-
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="module">TBD</param>
         public BidiFlow(IModule module)
         {
-            _module = module;
+            Module = module;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public BidiShape<TIn1, TOut1, TIn2, TOut2> Shape => (BidiShape<TIn1, TOut1, TIn2, TOut2>)_module.Shape;
+        public BidiShape<TIn1, TOut1, TIn2, TOut2> Shape => (BidiShape<TIn1, TOut1, TIn2, TOut2>)Module.Shape;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IModule Module => _module;
+        public IModule Module { get; }
 
         /// <summary>
         /// TBD
@@ -179,7 +177,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> WithAttributes(Attributes attributes)
         {
-            return new BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>(_module.WithAttributes(attributes));
+            return new BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>(Module.WithAttributes(attributes));
         }
 
         /// <summary>

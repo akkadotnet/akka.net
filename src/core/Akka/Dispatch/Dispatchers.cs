@@ -326,7 +326,6 @@ namespace Akka.Dispatch
 
         private readonly ActorSystem _system;
         private Config _cachingConfig;
-        private readonly MessageDispatcher _defaultGlobalDispatcher;
         private readonly ILoggingAdapter _logger;
 
         /// <summary>
@@ -375,17 +374,14 @@ namespace Akka.Dispatch
             _system = system;
             Prerequisites = prerequisites;
             _cachingConfig = new CachingConfig(prerequisites.Settings.Config);
-            _defaultGlobalDispatcher = Lookup(DefaultDispatcherId);
+            DefaultGlobalDispatcher = Lookup(DefaultDispatcherId);
             _logger = logger;
 
             InternalDispatcher = Lookup(InternalDispatcherId);
         }
 
         /// <summary>Gets the one and only default dispatcher.</summary>
-        public MessageDispatcher DefaultGlobalDispatcher
-        {
-            get { return _defaultGlobalDispatcher; }
-        }
+        public MessageDispatcher DefaultGlobalDispatcher { get; }
 
         internal MessageDispatcher InternalDispatcher { get; }
 

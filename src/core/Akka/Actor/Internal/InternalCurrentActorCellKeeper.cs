@@ -17,17 +17,14 @@ namespace Akka.Actor.Internal
     /// </summary>
     public static class InternalCurrentActorCellKeeper
     {
-        [ThreadStatic]
-        private static ActorCell _current;
-
-
         /// <summary>
         /// TBD
         /// 
         /// INTERNAL!
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        public static ActorCell Current { get { return _current; } set { _current = value; } }
+        [field: ThreadStatic]
+        public static ActorCell Current { get; set; }
     }
 }
 

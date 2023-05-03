@@ -38,7 +38,6 @@ namespace Akka.Remote.TestKit
         Config _commonConf = ConfigurationFactory.Empty;
 
         ImmutableDictionary<RoleName, Config> _nodeConf = ImmutableDictionary.Create<RoleName, Config>();
-        ImmutableList<RoleName> _roles = ImmutableList.Create<RoleName>();
         ImmutableDictionary<RoleName, ImmutableList<string>> _deployments = ImmutableDictionary.Create<RoleName, ImmutableList<string>>();
         ImmutableList<string> _allDeploy = ImmutableList.Create<string>();
         bool _testTransport = false;
@@ -85,9 +84,9 @@ namespace Akka.Remote.TestKit
 
         public RoleName Role(string name)
         {
-            if (_roles.Exists(r => r.Name == name)) throw new ArgumentException("non-unique role name " + name);
+            if (Roles.Exists(r => r.Name == name)) throw new ArgumentException("non-unique role name " + name);
             var roleName = new RoleName(name);
-            _roles = _roles.Add(roleName);
+            Roles = Roles.Add(roleName);
             return roleName;
         }
 
@@ -123,15 +122,15 @@ namespace Akka.Remote.TestKit
             {
                 _myself = new Lazy<RoleName>(() =>
                 {
-                    if (MultiNodeSpec.SelfIndex > _roles.Count) throw new ArgumentException("not enough roles declared for this test");
-                    return _roles[MultiNodeSpec.SelfIndex];
+                    if (MultiNodeSpec.SelfIndex > Roles.Count) throw new ArgumentException("not enough roles declared for this test");
+                    return Roles[MultiNodeSpec.SelfIndex];
                 });
             }
             else
             {
                 _myself = new Lazy<RoleName>(() =>
                 {
-                    var myself = _roles.FirstOrDefault(r => r.Name.Equals(roleName, StringComparison.OrdinalIgnoreCase));
+                    var myself = Roles.FirstOrDefault(r => r.Name.Equals(roleName, StringComparison.OrdinalIgnoreCase));
                     if (myself == default(RoleName)) throw new ArgumentException($"cannot find {roleName} among configured roles");
                     return myself;
                 });
@@ -169,10 +168,7 @@ namespace Akka.Remote.TestKit
             return deployments == null ? _allDeploy : deployments.AddRange(_allDeploy);
         }
 
-        public ImmutableList<RoleName> Roles
-        {
-            get { return _roles; }
-        }
+        public ImmutableList<RoleName> Roles { get; private set; } = ImmutableList.Create<RoleName>();
     }
 
     //TODO: Applicable?
@@ -384,11 +380,9 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        private readonly RoleName _myself;
-        public RoleName Myself { get { return _myself; } }
+        public RoleName Myself { get; }
         private readonly ILoggingAdapter _log;
         private bool _isDisposed; //Automatically initialized to false;
-        private readonly ImmutableList<RoleName> _roles;
         private readonly Func<RoleName, ImmutableList<string>> _deployments;
         private readonly ImmutableDictionary<RoleName, Replacement> _replacements;
         private readonly Address _myAddress;
@@ -424,9 +418,9 @@ namespace Akka.Remote.TestKit
             Func<RoleName, ImmutableList<string>> deployments)
             : base(new XunitAssertions(), system, setup, null, null)
         {
-            _myself = myself;
+            Myself = myself;
             _log = Logging.GetLogger(Sys, this);
-            _roles = roles;
+            Roles = roles;
             _deployments = deployments;
 
             var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
@@ -434,7 +428,7 @@ namespace Akka.Remote.TestKit
 
             AttachConductor(new TestConductor(Sys));
 
-            _replacements = _roles.ToImmutableDictionary(r => r, r => new Replacement("@" + r.Name + "@", r, this));
+            _replacements = Roles.ToImmutableDictionary(r => r, r => new Replacement("@" + r.Name + "@", r, this));
 
             InjectDeployments(Sys, myself);
 
@@ -454,9 +448,9 @@ namespace Akka.Remote.TestKit
             // wait for all nodes to remove themselves before we shut the conductor down
             if (SelfIndex == 0)
             {
-                TestConductor.RemoveNode(_myself);
+                TestConductor.RemoveNode(Myself);
                 Within(TestConductor.Settings.BarrierTimeout, () =>
-                    AwaitCondition(() => TestConductor.GetNodes().Result.All(n => n.Equals(_myself))));
+                    AwaitCondition(() => TestConductor.GetNodes().Result.All(n => n.Equals(Myself))));
 
             }
             Shutdown(Sys);
@@ -490,7 +484,7 @@ namespace Akka.Remote.TestKit
         /// <summary>
         /// All registered roles
         /// </summary>
-        public ImmutableList<RoleName> Roles { get { return _roles; } }
+        public ImmutableList<RoleName> Roles { get; }
 
         /// <summary>
         /// MUST BE DEFINED BY USER.
@@ -540,7 +534,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public bool IsNode(params RoleName[] nodes)
         {
-            return nodes.Contains(_myself);
+            return nodes.Contains(Myself);
         }
 
         /// <summary>
@@ -588,9 +582,9 @@ namespace Akka.Remote.TestKit
             {
                 //TODO: Async stuff
                 if (SelfIndex == 0)
-                    tc.StartController(InitialParticipants, _myself, _controllerAddr).Wait(timeout);
+                    tc.StartController(InitialParticipants, Myself, _controllerAddr).Wait(timeout);
                 else
-                    tc.StartClient(_myself, _controllerAddr).Wait(timeout);
+                    tc.StartClient(Myself, _controllerAddr).Wait(timeout);
             }
             catch (Exception e)
             {
@@ -603,17 +597,15 @@ namespace Akka.Remote.TestKit
 
         sealed class Replacement
         {
-            readonly string _tag;
-            public string Tag { get { return _tag; } }
-            readonly RoleName _role;
-            public RoleName Role { get { return _role; } }
+            public string Tag { get; }
+            public RoleName Role { get; }
             readonly Lazy<string> _addr;
             public string Addr { get { return _addr.Value; } }
 
             public Replacement(string tag, RoleName role, MultiNodeSpec spec)
             {
-                _tag = tag;
-                _role = role;
+                Tag = tag;
+                Role = role;
                 _addr = new Lazy<string>(() => spec.Node(role).Address.ToString());
             }
         }
@@ -674,7 +666,7 @@ namespace Akka.Remote.TestKit
                 .WithFallback(Sys.Settings.Config);
 
             var system = ActorSystem.Create(Sys.Name, config);
-            InjectDeployments(system, _myself);
+            InjectDeployments(system, Myself);
             AttachConductor(new TestConductor(system));
             return system;
         }

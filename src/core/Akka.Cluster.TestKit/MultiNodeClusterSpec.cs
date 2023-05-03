@@ -82,40 +82,19 @@ namespace Akka.Cluster.TestKit
             public sealed class SendEnd
             {
                 private SendEnd() { }
-                private static readonly SendEnd _instance = new SendEnd();
-                public static SendEnd Instance
-                {
-                    get
-                    {
-                        return _instance;
-                    }
-                }
+                public static SendEnd Instance { get; } = new SendEnd();
             }
 
             public sealed class End
             {
                 private End() { }
-                private static readonly End _instance = new End();
-                public static End Instance
-                {
-                    get
-                    {
-                        return _instance;
-                    }
-                }
+                public static End Instance { get; } = new End();
             }
 
             public sealed class EndAck
             {
                 private EndAck() { }
-                private static readonly EndAck _instance = new EndAck();
-                public static EndAck Instance
-                {
-                    get
-                    {
-                        return _instance;
-                    }
-                }
+                public static EndAck Instance { get; } = new EndAck();
             }
 
             readonly IActorRef _testActor;

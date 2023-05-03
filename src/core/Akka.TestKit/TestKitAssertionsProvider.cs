@@ -14,20 +14,18 @@ namespace Akka.TestKit
     /// </summary>
     public class TestKitAssertionsProvider : IExtension
     {
-        private readonly ITestKitAssertions _assertions;
-
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="assertions">TBD</param>
         public TestKitAssertionsProvider(ITestKitAssertions assertions)
         {
-            _assertions = assertions;
+            Assertions = assertions;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public ITestKitAssertions Assertions { get { return _assertions; } }
+        public ITestKitAssertions Assertions { get; }
     }
 }

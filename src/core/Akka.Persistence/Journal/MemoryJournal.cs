@@ -68,14 +68,13 @@ namespace Akka.Persistence.Journal
     public class MemoryJournal : AsyncWriteJournal
     {
         private readonly LinkedList<IPersistentRepresentation> _allMessages = new();
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
         private readonly ConcurrentDictionary<string, long> _meta = new();
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
         
         /// <summary>
         /// TBD
         /// </summary>
-        protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
+        protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get; } = new();
 
         /// <summary>
         /// TBD

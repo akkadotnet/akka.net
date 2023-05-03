@@ -64,7 +64,6 @@ namespace Akka.Streams.Implementation
         private int _completedCounter;
 
         private int _preferredId;
-        private int _lastDequeuedId;
 
         /// <summary>
         /// TBD
@@ -141,7 +140,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        protected int LastDequeuedId => _lastDequeuedId;
+        protected int LastDequeuedId { get; private set; }
 
         /// <summary>
         /// TBD
@@ -308,7 +307,7 @@ namespace Akka.Streams.Implementation
             if (!IsPending(id))
                 throw new ArgumentException($"No pending input at {id}", nameof(id));
 
-            _lastDequeuedId = id;
+            LastDequeuedId = id;
             var input = _inputs[id];
             var element = input.DequeueInputElement();
 

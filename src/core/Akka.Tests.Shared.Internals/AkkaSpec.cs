@@ -29,35 +29,16 @@ namespace Akka.TestKit
     public abstract class AkkaSpec : Xunit2.TestKit    //AkkaSpec is not part of TestKit
     {
         private static Regex _nameReplaceRegex = new Regex("[^a-zA-Z0-9]", RegexOptions.Compiled);
-        private static readonly Config _akkaSpecConfig = ConfigurationFactory.ParseString(@"
-          akka {
-            loglevel = WARNING
-            stdout-loglevel = WARNING
-            serialize-messages = on
-            actor {
-              ask-timeout = 20s
-              #default-dispatcher {
-              #  executor = fork-join-executor
-              #  fork-join-executor {
-              #    parallelism-min = 8
-              #    parallelism-factor = 2.0
-              #    parallelism-max = 8
-              #  }
-              #}
-            }
-          }
-          # use random ports to avoid race conditions with binding contention
-          akka.remote.dot-netty.tcp.port = 0");
 
         private static int _systemNumber = 0;
 
         public AkkaSpec(string config, ITestOutputHelper output = null)
-            : this(ConfigurationFactory.ParseString(config).WithFallback(_akkaSpecConfig), output)
+            : this(ConfigurationFactory.ParseString(config).WithFallback(AkkaSpecConfig), output)
         {
         }
 
         public AkkaSpec(Config config = null, ITestOutputHelper output = null)
-            : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName(), output)
+            : base(config.SafeWithFallback(AkkaSpecConfig), GetCallerName(), output)
         {
             BeforeAll();
         }
@@ -69,7 +50,7 @@ namespace Akka.TestKit
         }
 
         public AkkaSpec(ITestOutputHelper output, Config config = null)
-            : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName(), output)
+            : base(config.SafeWithFallback(AkkaSpecConfig), GetCallerName(), output)
         {
             BeforeAll();
         }
@@ -117,7 +98,25 @@ namespace Akka.TestKit
             return name;
         }
 
-        public static Config AkkaSpecConfig { get { return _akkaSpecConfig; } }
+        public static Config AkkaSpecConfig { get; } = ConfigurationFactory.ParseString(@"
+          akka {
+            loglevel = WARNING
+            stdout-loglevel = WARNING
+            serialize-messages = on
+            actor {
+              ask-timeout = 20s
+              #default-dispatcher {
+              #  executor = fork-join-executor
+              #  fork-join-executor {
+              #    parallelism-min = 8
+              #    parallelism-factor = 2.0
+              #    parallelism-max = 8
+              #  }
+              #}
+            }
+          }
+          # use random ports to avoid race conditions with binding contention
+          akka.remote.dot-netty.tcp.port = 0");
 
         protected T ExpectMsgOf<T>(
             TimeSpan? timeout,

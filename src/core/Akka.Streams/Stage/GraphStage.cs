@@ -1757,7 +1757,6 @@ namespace Akka.Streams.Stage
             private readonly string _name;
             private IInHandler _handler;
             private Option<T> _elem;
-            private bool _closed;
             private bool _pulled;
             private readonly SubSink<T> _sink;
 
@@ -1772,7 +1771,7 @@ namespace Akka.Streams.Stage
                 _sink = new SubSink<T>(name, logic.GetAsyncCallback<IActorSubscriberMessage>(
                     msg =>
                     {
-                        if (_closed)
+                        if (IsClosed)
                             return;
 
                         if (msg is OnNext next)
@@ -1783,12 +1782,12 @@ namespace Akka.Streams.Stage
                         }
                         else if (msg is OnComplete)
                         {
-                            _closed = true;
+                            IsClosed = true;
                             _handler.OnUpstreamFinish();
                         }
                         else if (msg is OnError error)
                         {
-                            _closed = true;
+                            IsClosed = true;
                             _handler.OnUpstreamFailure(error.Cause);
                         }
                     }));
@@ -1813,7 +1812,7 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// TBD
             /// </summary>
-            public bool IsClosed => _closed;
+            public bool IsClosed { get; private set; }
 
             /// <summary>
             /// TBD
@@ -1847,7 +1846,7 @@ namespace Akka.Streams.Stage
             {
                 if (_pulled)
                     throw new IllegalStateException($"cannot pull port {this} twice");
-                if (_closed)
+                if (IsClosed)
                     throw new IllegalStateException($"cannot pull closed port {this}");
 
                 _pulled = true;
@@ -1864,7 +1863,7 @@ namespace Akka.Streams.Stage
             /// </summary>
             public void Cancel(Exception cause)
             {
-                _closed = true;
+                IsClosed = true;
                 _sink.CancelSubstream(cause);
             }
 
@@ -1898,8 +1897,6 @@ namespace Akka.Streams.Stage
             private readonly string _name;
             private readonly SubSource<T> _source;
             private IOutHandler _handler;
-            private bool _available;
-            private bool _closed;
 
             /// <summary>
             /// TBD
@@ -1914,18 +1911,18 @@ namespace Akka.Streams.Stage
                 {
                     if (command is SubSink.RequestOne)
                     {
-                        if (!_closed)
+                        if (!IsClosed)
                         {
-                            _available = true;
+                            IsAvailable = true;
                             _handler.OnPull();
                         }
                     }
                     else if (command is SubSink.Cancel cancel)
                     {
-                        if (!_closed)
+                        if (!IsClosed)
                         {
-                            _available = false;
-                            _closed = true;
+                            IsAvailable = false;
+                            IsClosed = true;
                             _handler.OnDownstreamFinish(SubscriptionWithCancelException.StageWasCompleted.Instance);
                         }
                     }
@@ -1940,7 +1937,7 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// Returns true if this output port can be pushed.
             /// </summary>
-            public bool IsAvailable => _available;
+            public bool IsAvailable { get; private set; }
 
             /// <summary>
             /// Returns true if this output port is closed, but caution
@@ -1948,7 +1945,7 @@ namespace Akka.Streams.Stage
             /// Due to possibly asynchronous shutdown it may not return
             /// true immediately after <see cref="Complete"/> or <see cref="Fail"/> have returned.
             /// </summary>
-            public bool IsClosed => _closed;
+            public bool IsClosed { get; private set; }
 
             /// <summary>
             /// Set the source into timed-out mode if it has not yet been materialized.
@@ -1957,7 +1954,7 @@ namespace Akka.Streams.Stage
             public void Timeout(TimeSpan d)
             {
                 if (_source.Timeout(d))
-                    _closed = true;
+                    IsClosed = true;
             }
 
             /// <summary>
@@ -1973,7 +1970,7 @@ namespace Akka.Streams.Stage
             /// <param name="elem">TBD</param>
             public void Push(T elem)
             {
-                _available = false;
+                IsAvailable = false;
                 _source.PushSubstream(elem);
             }
 
@@ -1982,8 +1979,8 @@ namespace Akka.Streams.Stage
             /// </summary>
             public void Complete()
             {
-                _available = false;
-                _closed = true;
+                IsAvailable = false;
+                IsClosed = true;
                 _source.CompleteSubstream();
             }
 
@@ -1993,8 +1990,8 @@ namespace Akka.Streams.Stage
             /// <param name="ex">TBD</param>
             public void Fail(Exception ex)
             {
-                _available = false;
-                _closed = true;
+                IsAvailable = false;
+                IsClosed = true;
                 _source.FailSubstream(ex);
             }
 

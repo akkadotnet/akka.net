@@ -18,32 +18,17 @@ namespace Akka.Cluster.Tests.MultiNode
 {
     public class InitialHeartbeatMultiNodeConfig : MultiNodeConfig
     {
-        private readonly RoleName _controller;
+        public RoleName Controller { get; }
 
-        public RoleName Controller
-        {
-            get { return _controller; }
-        }
+        public RoleName First { get; }
 
-        private readonly RoleName _first;
-
-        public RoleName First
-        {
-            get { return _first; }
-        }
-
-        private readonly RoleName _second;
-
-        public RoleName Second
-        {
-            get { return _second; }
-        }
+        public RoleName Second { get; }
 
         public InitialHeartbeatMultiNodeConfig()
         {
-            _controller = Role("controller");
-            _first = Role("first");
-            _second = Role("second");
+            Controller = Role("controller");
+            First = Role("first");
+            Second = Role("second");
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(MultiNodeLoggingConfig.LoggingConfig)

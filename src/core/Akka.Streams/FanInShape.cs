@@ -45,9 +45,6 @@ namespace Akka.Streams
         [Serializable]
         public sealed class InitName : IInit
         {
-            private readonly string _name;
-            private readonly Outlet<TOut> _outlet;
-
             /// <summary>
             /// TBD
             /// </summary>
@@ -57,14 +54,15 @@ namespace Akka.Streams
             {
                 if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
 
-                _name = name;
-                _outlet = new Outlet<TOut>(name + ".out");
+                Name = name;
+                Outlet = new Outlet<TOut>(name + ".out");
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public Outlet<TOut> Outlet => _outlet;
+            public Outlet<TOut> Outlet { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
@@ -72,7 +70,7 @@ namespace Akka.Streams
             /// <summary>
             /// TBD
             /// </summary>
-            public string Name => _name;
+            public string Name { get; }
         }
 
         /// <summary>
@@ -81,9 +79,6 @@ namespace Akka.Streams
         [Serializable]
         public sealed class InitPorts : IInit
         {
-            private readonly Outlet<TOut> _outlet;
-            private readonly IEnumerable<Inlet> _inlets;
-
             /// <summary>
             /// TBD
             /// </summary>
@@ -94,18 +89,20 @@ namespace Akka.Streams
                 if (outlet == null) throw new ArgumentNullException(nameof(outlet));
                 if (inlets == null) throw new ArgumentNullException(nameof(inlets));
 
-                _outlet = outlet;
-                _inlets = inlets;
+                Outlet = outlet;
+                Inlets = inlets;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public Outlet<TOut> Outlet => _outlet;
+            public Outlet<TOut> Outlet { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public IEnumerable<Inlet> Inlets => _inlets;
+            public IEnumerable<Inlet> Inlets { get; }
+
             /// <summary>
             /// TBD
             /// </summary>

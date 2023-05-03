@@ -18,15 +18,13 @@ namespace Akka.Cluster.Tests.MultiNode
 {
     public class JoinInProgressMultiNodeConfig : MultiNodeConfig
     {
-        readonly RoleName _first;
-        public RoleName First { get {return _first;} }
-        readonly RoleName _second;
-        public RoleName Second { get { return _second; } }
+        public RoleName First { get; }
+        public RoleName Second { get; }
 
         public JoinInProgressMultiNodeConfig()
         {
-            _first = Role("first");
-            _second = Role("second");
+            First = Role("first");
+            Second = Role("second");
 
             CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true)).WithFallback(
                 ConfigurationFactory.ParseString(@"

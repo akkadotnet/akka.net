@@ -100,17 +100,12 @@ namespace Akka.Persistence.Sql.TestKit
 
         public abstract class NamedPersistentActor : PersistentActor
         {
-            private readonly string _name;
-
             protected NamedPersistentActor(string name)
             {
-                _name = name;
+                PersistenceId = name;
             }
 
-            public override string PersistenceId
-            {
-                get { return _name; }
-            }
+            public override string PersistenceId { get; }
         }
     }
 }

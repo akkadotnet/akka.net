@@ -54,16 +54,15 @@ namespace Akka.Persistence.Tests
 
         internal class TestPersistentActor : NamedPersistentActor
         {
-            private readonly Recovery _recovery;
             private readonly IActorRef _probe;
             private string state = string.Empty;
 
-            public override Recovery Recovery => _recovery;
+            public override Recovery Recovery { get; }
 
             public TestPersistentActor(string name, Recovery recovery, IActorRef probe)
                 : base(name)
             {
-                _recovery = recovery;
+                Recovery = recovery;
                 _probe = probe;
             }
 

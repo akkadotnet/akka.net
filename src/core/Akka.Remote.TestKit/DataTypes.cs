@@ -65,27 +65,22 @@ namespace Akka.Remote.TestKit
 
     class ToClient<T> : IToClient where T : IClientOp, INetworkOp
     {
-        private readonly T _msg;
-
         public ToClient(T msg)
         {
-            _msg = msg;
+            Msg = msg;
         }
 
         object IToClient.Msg
         {
-            get { return _msg; }
+            get { return Msg; }
         }
 
-        public T Msg
-        {
-            get { return _msg; }
-        }
+        public T Msg { get; }
 
-        
+
         protected bool Equals(ToClient<T> other)
         {
-            return EqualityComparer<T>.Default.Equals(_msg, other._msg);
+            return EqualityComparer<T>.Default.Equals(Msg, other.Msg);
         }
 
         
@@ -100,7 +95,7 @@ namespace Akka.Remote.TestKit
         
         public override int GetHashCode()
         {
-            return EqualityComparer<T>.Default.GetHashCode(_msg);
+            return EqualityComparer<T>.Default.GetHashCode(Msg);
         }
 
         /// <summary>
@@ -136,27 +131,22 @@ namespace Akka.Remote.TestKit
 
     class ToServer<T> : IToServer where T : IServerOp, INetworkOp
     {
-        readonly T _msg;
-
         public ToServer(T msg)
         {
-            _msg = msg;
+            Msg = msg;
         }
 
-        public T Msg
-        {
-            get { return _msg; }
-        }
+        public T Msg { get; }
 
         object IToServer.Msg
         {
-            get { return _msg; }
+            get { return Msg; }
         }
 
         
         protected bool Equals(ToServer<T> other)
         {
-            return EqualityComparer<T>.Default.Equals(_msg, other._msg);
+            return EqualityComparer<T>.Default.Equals(Msg, other.Msg);
         }
 
         
@@ -171,7 +161,7 @@ namespace Akka.Remote.TestKit
         
         public override int GetHashCode()
         {
-            return EqualityComparer<T>.Default.GetHashCode(_msg);
+            return EqualityComparer<T>.Default.GetHashCode(Msg);
         }
 
         /// <summary>
@@ -228,12 +218,9 @@ namespace Akka.Remote.TestKit
     /// </summary>
     sealed class Hello : INetworkOp
     {
-        readonly string _name;
-        readonly Address _address;
-
         private bool Equals(Hello other)
         {
-            return string.Equals(_name, other._name) && Equals(_address, other._address);
+            return string.Equals(Name, other.Name) && Equals(Address, other.Address);
         }
 
         
@@ -249,7 +236,7 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                return ((_name != null ? _name.GetHashCode() : 0) * 397) ^ (_address != null ? _address.GetHashCode() : 0);
+                return ((Name != null ? Name.GetHashCode() : 0) * 397) ^ (Address != null ? Address.GetHashCode() : 0);
             }
         }
 
@@ -277,35 +264,26 @@ namespace Akka.Remote.TestKit
 
         public Hello(string name, Address address)
         {
-            _name = name;
-            _address = address;
+            Name = name;
+            Address = address;
         }
 
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name { get; }
 
-        public Address Address
-        {
-            get { return _address; }
-        }
+        public Address Address { get; }
     }
 
     sealed class EnterBarrier : IServerOp, INetworkOp
     {
-        readonly string _name;
-        readonly TimeSpan? _timeout;
-
         public EnterBarrier(string name, TimeSpan? timeout)
         {
-            _name = name;
-            _timeout = timeout;
+            Name = name;
+            Timeout = timeout;
         }
 
         private bool Equals(EnterBarrier other)
         {
-            return string.Equals(_name, other._name) && _timeout.Equals(other._timeout);
+            return string.Equals(Name, other.Name) && Timeout.Equals(other.Timeout);
         }
 
         
@@ -321,7 +299,7 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                return ((_name != null ? _name.GetHashCode() : 0) * 397) ^ _timeout.GetHashCode();
+                return ((Name != null ? Name.GetHashCode() : 0) * 397) ^ Timeout.GetHashCode();
             }
         }
 
@@ -347,34 +325,23 @@ namespace Akka.Remote.TestKit
             return !Equals(left, right);
         }
 
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name { get; }
 
-        public TimeSpan? Timeout
-        {
-            get { return _timeout; }
-        }
+        public TimeSpan? Timeout { get; }
     }
 
     sealed class FailBarrier : IServerOp, INetworkOp
     {
-        readonly string _name;
-
         public FailBarrier(string name)
         {
-            _name = name;
+            Name = name;
         }
 
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name { get; }
 
         private bool Equals(FailBarrier other)
         {
-            return string.Equals(_name, other._name);
+            return string.Equals(Name, other.Name);
         }
 
         
@@ -388,7 +355,7 @@ namespace Akka.Remote.TestKit
         
         public override int GetHashCode()
         {
-            return (_name != null ? _name.GetHashCode() : 0);
+            return (Name != null ? Name.GetHashCode() : 0);
         }
 
         /// <summary>
@@ -416,28 +383,19 @@ namespace Akka.Remote.TestKit
 
     sealed class BarrierResult : IUnconfirmedClientOp, INetworkOp
     {
-        readonly string _name;
-        readonly bool _success;
-
         public BarrierResult(string name, bool success)
         {
-            _name = name;
-            _success = success;
+            Name = name;
+            Success = success;
         }
 
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name { get; }
 
-        public bool Success
-        {
-            get { return _success; }
-        }
+        public bool Success { get; }
 
         bool Equals(BarrierResult other)
         {
-            return string.Equals(_name, other._name) && _success.Equals(other._success);
+            return string.Equals(Name, other.Name) && Success.Equals(other.Success);
         }
 
         
@@ -453,7 +411,7 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                return ((_name != null ? _name.GetHashCode() : 0) * 397) ^ _success.GetHashCode();
+                return ((Name != null ? Name.GetHashCode() : 0) * 397) ^ Success.GetHashCode();
             }
         }
 
@@ -482,42 +440,25 @@ namespace Akka.Remote.TestKit
 
     sealed class Throttle : ICommandOp
     {
-        readonly RoleName _node;
-        readonly RoleName _target;
-        readonly ThrottleTransportAdapter.Direction _direction;
-        readonly float _rateMBit;
-
         public Throttle(RoleName node, RoleName target, ThrottleTransportAdapter.Direction direction, float rateMBit)
         {
-            _node = node;
-            _target = target;
-            _direction = direction;
-            _rateMBit = rateMBit;
+            Node = node;
+            Target = target;
+            Direction = direction;
+            RateMBit = rateMBit;
         }
 
-        public RoleName Node
-        {
-            get { return _node; }
-        }
+        public RoleName Node { get; }
 
-        public RoleName Target
-        {
-            get { return _target; }
-        }
+        public RoleName Target { get; }
 
-        public ThrottleTransportAdapter.Direction Direction
-        {
-            get { return _direction; }
-        }
+        public ThrottleTransportAdapter.Direction Direction { get; }
 
-        public float RateMBit
-        {
-            get { return _rateMBit; }
-        }
+        public float RateMBit { get; }
 
         bool Equals(Throttle other)
         {
-            return Equals(_node, other._node) && Equals(_target, other._target) && Equals(_direction, other._direction) && _rateMBit.Equals(other._rateMBit);
+            return Equals(Node, other.Node) && Equals(Target, other.Target) && Equals(Direction, other.Direction) && RateMBit.Equals(other.RateMBit);
         }
 
         
@@ -533,10 +474,10 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                int hashCode = (_node != null ? _node.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (_target != null ? _target.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ _direction.GetHashCode();
-                hashCode = (hashCode * 397) ^ _rateMBit.GetHashCode();
+                int hashCode = (Node != null ? Node.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Target != null ? Target.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Direction.GetHashCode();
+                hashCode = (hashCode * 397) ^ RateMBit.GetHashCode();
                 return hashCode;
             }
         }
@@ -566,35 +507,22 @@ namespace Akka.Remote.TestKit
 
     sealed class ThrottleMsg : IConfirmedClientOp, INetworkOp
     {
-        readonly Address _target;
-        readonly ThrottleTransportAdapter.Direction _direction;
-        readonly float _rateMBit;
-
         public ThrottleMsg(Address target, ThrottleTransportAdapter.Direction direction, float rateMBit)
         {
-            _target = target;
-            _direction = direction;
-            _rateMBit = rateMBit;
+            Target = target;
+            Direction = direction;
+            RateMBit = rateMBit;
         }
 
-        public Address Target
-        {
-            get { return _target; }
-        }
+        public Address Target { get; }
 
-        public ThrottleTransportAdapter.Direction Direction
-        {
-            get { return _direction; }
-        }
+        public ThrottleTransportAdapter.Direction Direction { get; }
 
-        public float RateMBit
-        {
-            get { return _rateMBit; }
-        }
+        public float RateMBit { get; }
 
         bool Equals(ThrottleMsg other)
         {
-            return Equals(_target, other._target) && Equals(_direction, other._direction) && _rateMBit.Equals(other._rateMBit);
+            return Equals(Target, other.Target) && Equals(Direction, other.Direction) && RateMBit.Equals(other.RateMBit);
         }
 
         
@@ -610,9 +538,9 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                var hashCode = (_target != null ? _target.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ _direction.GetHashCode();
-                hashCode = (hashCode * 397) ^ _rateMBit.GetHashCode();
+                var hashCode = (Target != null ? Target.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Direction.GetHashCode();
+                hashCode = (hashCode * 397) ^ RateMBit.GetHashCode();
                 return hashCode;
             }
         }
@@ -642,35 +570,22 @@ namespace Akka.Remote.TestKit
 
     sealed class Disconnect : ICommandOp
     {
-        readonly RoleName _node;
-        readonly RoleName _target;
-        readonly bool _abort;
-
         public Disconnect(RoleName node, RoleName target, bool abort)
         {
-            _node = node;
-            _target = target;
-            _abort = abort;
+            Node = node;
+            Target = target;
+            Abort = abort;
         }
 
-        public RoleName Node
-        {
-            get { return _node; }
-        }
+        public RoleName Node { get; }
 
-        public RoleName Target
-        {
-            get { return _target; }
-        }
+        public RoleName Target { get; }
 
-        public bool Abort
-        {
-            get { return _abort; }
-        }
+        public bool Abort { get; }
 
         bool Equals(Disconnect other)
         {
-            return Equals(_node, other._node) && Equals(_target, other._target) && _abort.Equals(other._abort);
+            return Equals(Node, other.Node) && Equals(Target, other.Target) && Abort.Equals(other.Abort);
         }
 
         
@@ -686,9 +601,9 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                int hashCode = (_node != null ? _node.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (_target != null ? _target.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ _abort.GetHashCode();
+                int hashCode = (Node != null ? Node.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Target != null ? Target.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Abort.GetHashCode();
                 return hashCode;
             }
         }
@@ -718,28 +633,19 @@ namespace Akka.Remote.TestKit
 
     sealed class DisconnectMsg : IConfirmedClientOp, INetworkOp
     {
-        readonly Address _target;
-        readonly bool _abort;
-
         public DisconnectMsg(Address target, bool abort)
         {
-            _target = target;
-            _abort = abort;
+            Target = target;
+            Abort = abort;
         }
 
-        public Address Target
-        {
-            get { return _target; }
-        }
+        public Address Target { get; }
 
-        public bool Abort
-        {
-            get { return _abort; }
-        }
+        public bool Abort { get; }
 
         bool Equals(DisconnectMsg other)
         {
-            return Equals(_target, other._target) && _abort.Equals(other._abort);
+            return Equals(Target, other.Target) && Abort.Equals(other.Abort);
         }
 
         
@@ -755,7 +661,7 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                return ((_target != null ? _target.GetHashCode() : 0) * 397) ^ _abort.GetHashCode();
+                return ((Target != null ? Target.GetHashCode() : 0) * 397) ^ Abort.GetHashCode();
             }
         }
 
@@ -784,28 +690,19 @@ namespace Akka.Remote.TestKit
 
     sealed class Terminate : ICommandOp
     {
-        readonly RoleName _node;
-        readonly Either<bool, int> _shutdownOrExit;
-
         public Terminate(RoleName node, Either<bool, int> shutdownOrExit)
         {
-            _node = node;
-            _shutdownOrExit = shutdownOrExit;
+            Node = node;
+            ShutdownOrExit = shutdownOrExit;
         }
 
-        public RoleName Node
-        {
-            get { return _node; }
-        }
+        public RoleName Node { get; }
 
-        public Either<bool, int> ShutdownOrExit
-        {
-            get { return _shutdownOrExit; }
-        }
+        public Either<bool, int> ShutdownOrExit { get; }
 
         bool Equals(Terminate other)
         {
-            return Equals(_node, other._node) && Equals(_shutdownOrExit, other._shutdownOrExit);
+            return Equals(Node, other.Node) && Equals(ShutdownOrExit, other.ShutdownOrExit);
         }
 
         
@@ -821,7 +718,7 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                return ((_node != null ? _node.GetHashCode() : 0) * 397) ^ (_shutdownOrExit != null ? _shutdownOrExit.GetHashCode() : 0);
+                return ((Node != null ? Node.GetHashCode() : 0) * 397) ^ (ShutdownOrExit != null ? ShutdownOrExit.GetHashCode() : 0);
             }
         }
 
@@ -850,21 +747,16 @@ namespace Akka.Remote.TestKit
 
     sealed class TerminateMsg : IConfirmedClientOp, INetworkOp
     {
-        readonly Either<bool, int> _shutdownOrExit;
-
         public TerminateMsg(Either<bool, int> shutdownOrExit)
         {
-            _shutdownOrExit = shutdownOrExit;
+            ShutdownOrExit = shutdownOrExit;
         }
 
-        public Either<bool, int> ShutdownOrExit
-        {
-            get { return _shutdownOrExit; }
-        }
+        public Either<bool, int> ShutdownOrExit { get; }
 
         bool Equals(TerminateMsg other)
         {
-            return Equals(_shutdownOrExit, other._shutdownOrExit);
+            return Equals(ShutdownOrExit, other.ShutdownOrExit);
         }
 
         
@@ -878,7 +770,7 @@ namespace Akka.Remote.TestKit
         
         public override int GetHashCode()
         {
-            return (_shutdownOrExit != null ? _shutdownOrExit.GetHashCode() : 0);
+            return (ShutdownOrExit != null ? ShutdownOrExit.GetHashCode() : 0);
         }
 
         /// <summary>
@@ -906,21 +798,16 @@ namespace Akka.Remote.TestKit
 
     sealed class GetAddress : IServerOp, INetworkOp
     {
-        readonly RoleName _node;
-
         public GetAddress(RoleName node)
         {
-            _node = node;
+            Node = node;
         }
 
-        public RoleName Node
-        {
-            get { return _node; }
-        }
+        public RoleName Node { get; }
 
         bool Equals(GetAddress other)
         {
-            return Equals(_node, other._node);
+            return Equals(Node, other.Node);
         }
 
         
@@ -934,7 +821,7 @@ namespace Akka.Remote.TestKit
         
         public override int GetHashCode()
         {
-            return (_node != null ? _node.GetHashCode() : 0);
+            return (Node != null ? Node.GetHashCode() : 0);
         }
 
         /// <summary>
@@ -962,28 +849,19 @@ namespace Akka.Remote.TestKit
 
     sealed class AddressReply : IUnconfirmedClientOp, INetworkOp
     {
-        readonly RoleName _node;
-        readonly Address _addr;
-
         public AddressReply(RoleName node, Address addr)
         {
-            _node = node;
-            _addr = addr;
+            Node = node;
+            Addr = addr;
         }
 
-        public RoleName Node
-        {
-            get { return _node; }
-        }
+        public RoleName Node { get; }
 
-        public Address Addr
-        {
-            get { return _addr; }
-        }
+        public Address Addr { get; }
 
         bool Equals(AddressReply other)
         {
-            return Equals(_node, other._node) && Equals(_addr, other._addr);
+            return Equals(Node, other.Node) && Equals(Addr, other.Addr);
         }
 
         
@@ -999,7 +877,7 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                return ((_node != null ? _node.GetHashCode() : 0) * 397) ^ (_addr != null ? _addr.GetHashCode() : 0);
+                return ((Node != null ? Node.GetHashCode() : 0) * 397) ^ (Addr != null ? Addr.GetHashCode() : 0);
             }
         }
 
@@ -1029,34 +907,22 @@ namespace Akka.Remote.TestKit
     public class Done : IServerOp, IUnconfirmedClientOp, INetworkOp
     {
         private Done() { }
-        private static readonly Done _instance = new Done();
 
-        public static Done Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static Done Instance { get; } = new Done();
     }
 
     sealed class Remove : ICommandOp
     {
-        readonly RoleName _node;
-
         public Remove(RoleName node)
         {
-            _node = node;
+            Node = node;
         }
 
-        public RoleName Node
-        {
-            get { return _node; }
-        }
+        public RoleName Node { get; }
 
         bool Equals(Remove other)
         {
-            return Equals(_node, other._node);
+            return Equals(Node, other.Node);
         }
 
         
@@ -1070,7 +936,7 @@ namespace Akka.Remote.TestKit
         
         public override int GetHashCode()
         {
-            return (_node != null ? _node.GetHashCode() : 0);
+            return (Node != null ? Node.GetHashCode() : 0);
         }
 
         /// <summary>

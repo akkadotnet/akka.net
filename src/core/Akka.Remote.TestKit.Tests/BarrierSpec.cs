@@ -17,28 +17,19 @@ namespace Akka.Remote.TestKit.Tests
     {
         private sealed class Failed
         {
-            private readonly IActorRef _ref;
-            private readonly Exception _exception;
-
             public Failed(IActorRef @ref, Exception exception)
             {
-                _ref = @ref;
-                _exception = exception;
+                Ref = @ref;
+                Exception = exception;
             }
 
-            public IActorRef Ref
-            {
-                get { return _ref; }
-            }
+            public IActorRef Ref { get; }
 
-            public Exception Exception
-            {
-                get { return _exception; }
-            }
+            public Exception Exception { get; }
 
             private bool Equals(Failed other)
             {
-                return Equals(_ref, other._ref) && _exception.GetType() == other._exception.GetType();
+                return Equals(Ref, other.Ref) && Exception.GetType() == other.Exception.GetType();
             }
 
             public override bool Equals(object obj)
@@ -52,8 +43,8 @@ namespace Akka.Remote.TestKit.Tests
             {
                 unchecked
                 {
-                    return ((_ref != null ? _ref.GetHashCode() : 0)*397) ^
-                           (_exception != null ? _exception.GetHashCode() : 0);
+                    return ((Ref != null ? Ref.GetHashCode() : 0)*397) ^
+                           (Exception != null ? Exception.GetHashCode() : 0);
                 }
             }
 

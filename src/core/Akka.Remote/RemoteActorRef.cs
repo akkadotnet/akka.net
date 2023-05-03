@@ -34,8 +34,6 @@ namespace Akka.Remote
         /// </summary>
         private readonly Deploy _deploy;
 
-        private readonly ActorPath _path;
-
         /// <summary>
         /// The parent
         /// </summary>
@@ -59,7 +57,7 @@ namespace Akka.Remote
         {
             Remote = remote;
             LocalAddressToUse = localAddressToUse;
-            _path = path;
+            Path = path;
             _parent = parent;
             _props = props;
             _deploy = deploy;
@@ -159,7 +157,7 @@ namespace Akka.Remote
         public override bool IsLocal => false;
 
         /// <inheritdoc cref="IActorRef"/>
-        public override ActorPath Path => _path;
+        public override ActorPath Path { get; }
 
         private void HandleException(Exception ex)
         {

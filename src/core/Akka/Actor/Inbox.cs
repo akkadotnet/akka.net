@@ -315,12 +315,10 @@ namespace Akka.Actor
     /// </summary>
     internal class DeadlineComparer : IComparer<IQuery>
     {
-        private static readonly DeadlineComparer _instance = new DeadlineComparer();
-
         /// <summary>
         /// The singleton instance of this comparer
         /// </summary>
-        public static DeadlineComparer Instance { get { return _instance; } }
+        public static DeadlineComparer Instance { get; } = new DeadlineComparer();
 
         private DeadlineComparer()
         {

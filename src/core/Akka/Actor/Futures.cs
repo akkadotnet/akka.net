@@ -207,12 +207,11 @@ namespace Akka.Actor
         /// </summary>
         private PromiseActorRef(IActorRefProvider provider, TaskCompletionSource<object> promise, string mcn)
         {
-            _provider = provider;
+            Provider = provider;
             _promise = promise;
             _mcn = mcn;
         }
 
-        private readonly IActorRefProvider _provider;
         private readonly TaskCompletionSource<object> _promise;
 
         /// <summary>
@@ -422,10 +421,7 @@ namespace Akka.Actor
             return _watchedByDoNotCallMeDirectly.CompareAndSet(oldWatchedBy, newWatchedBy);
         }
 
-        public override IActorRefProvider Provider
-        {
-            get { return _provider; }
-        }
+        public override IActorRefProvider Provider { get; }
 
         /// <summary>
         /// Returns false if the <see cref="_promise"/> is already completed.

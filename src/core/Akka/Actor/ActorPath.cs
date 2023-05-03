@@ -137,13 +137,6 @@ namespace Akka.Actor
             return true;
         }
 
-        private readonly Address _address;
-        private readonly ActorPath _parent;
-        private readonly int _depth;
-
-        private readonly string _name;
-        private readonly long _uid;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorPath" /> class as root.
         /// </summary>
@@ -151,11 +144,11 @@ namespace Akka.Actor
         /// <param name="name"> The name. </param>
         protected ActorPath(Address address, string name)
         {
-            _address = address;
-            _parent = null;
-            _depth = 0;
-            _name = name;
-            _uid = ActorCell.UndefinedUid;
+            Address = address;
+            Parent = null;
+            Depth = 0;
+            Name = name;
+            Uid = ActorCell.UndefinedUid;
         }
 
         /// <summary>
@@ -166,41 +159,41 @@ namespace Akka.Actor
         /// <param name="uid"> The uid. </param>
         protected ActorPath(ActorPath parentPath, string name, long uid)
         {
-            _parent = parentPath;
-            _address = parentPath._address;
-            _depth = parentPath._depth + 1;
-            _name = name;
-            _uid = uid;
+            Parent = parentPath;
+            Address = parentPath.Address;
+            Depth = parentPath.Depth + 1;
+            Name = name;
+            Uid = uid;
         }
 
         /// <summary>
         /// Gets the name.
         /// </summary>
         /// <value> The name. </value>
-        public string Name => _name;
+        public string Name { get; }
 
         /// <summary>
         /// The Address under which this path can be reached; walks up the tree to
         /// the RootActorPath.
         /// </summary>
         /// <value> The address. </value>
-        public Address Address => _address;
+        public Address Address { get; }
 
         /// <summary>
         /// Gets the uid.
         /// </summary>
         /// <value> The uid. </value>
-        public long Uid => _uid;
+        public long Uid { get; }
 
         /// <summary>
         /// The path of the parent to this actor.
         /// </summary>
-        public ActorPath Parent => _parent;
+        public ActorPath Parent { get; }
 
         /// <summary>
         /// The the depth of the actor.
         /// </summary>
-        public int Depth => _depth;
+        public int Depth { get; }
 
         /// <summary>
         /// Gets the elements.
@@ -210,16 +203,16 @@ namespace Akka.Actor
         {
             get
             {
-                if (_depth == 0)
+                if (Depth == 0)
                     return ImmutableArray<string>.Empty;
 
-                var b = ImmutableArray.CreateBuilder<string>(_depth);
-                b.Count = _depth;
+                var b = ImmutableArray.CreateBuilder<string>(Depth);
+                b.Count = Depth;
                 var p = this;
-                for (var i = 0; i < _depth; i++)
+                for (var i = 0; i < Depth; i++)
                 {
-                    b[_depth - i - 1] = p._name;
-                    p = p._parent;
+                    b[Depth - i - 1] = p.Name;
+                    p = p.Parent;
                 }
                 return b.MoveToImmutable();
             }
@@ -237,16 +230,16 @@ namespace Akka.Actor
         {
             get
             {
-                if (_depth == 0)
+                if (Depth == 0)
                     return ImmutableArray<string>.Empty;
 
-                var b = ImmutableArray.CreateBuilder<string>(_depth);
-                b.Count = _depth;
+                var b = ImmutableArray.CreateBuilder<string>(Depth);
+                b.Count = Depth;
                 var p = this;
-                for (var i = 0; i < _depth; i++)
+                for (var i = 0; i < Depth; i++)
                 {
-                    b[_depth - i - 1] = i > 0 ? p._name : AppendUidFragment(p._name);
-                    p = p._parent;
+                    b[Depth - i - 1] = i > 0 ? p.Name : AppendUidFragment(p.Name);
+                    p = p.Parent;
                 }
                 return b.MoveToImmutable();
             }
@@ -260,7 +253,7 @@ namespace Akka.Actor
 
         public bool Equals(ActorPath other)
         {
-            if (other is null || _depth != other._depth)
+            if (other is null || Depth != other.Depth)
                 return false;
 
             if (ReferenceEquals(this, other))
@@ -277,19 +270,19 @@ namespace Akka.Actor
                     return true;
                 else if (a is null || b is null)
                     return false;
-                else if (a._name != b._name)
+                else if (a.Name != b.Name)
                     return false;
 
-                a = a._parent;
-                b = b._parent;
+                a = a.Parent;
+                b = b.Parent;
             }
         }
 
         public int CompareTo(ActorPath other)
         {
-            if (_depth == 0)
+            if (Depth == 0)
             {
-                if (other is null || other._depth > 0) return 1;
+                if (other is null || other.Depth > 0) return 1;
                 return StringComparer.Ordinal.Compare(ToString(), other.ToString());
             }
             return InternalCompareTo(this, other);
@@ -304,17 +297,17 @@ namespace Akka.Actor
             if (left is null)
                 return -1;
 
-            if (left._depth == 0)
+            if (left.Depth == 0)
                 return left.CompareTo(right);
 
-            if (right._depth == 0)
+            if (right.Depth == 0)
                 return -right.CompareTo(left);
 
-            var nameCompareResult = StringComparer.Ordinal.Compare(left._name, right._name);
+            var nameCompareResult = StringComparer.Ordinal.Compare(left.Name, right.Name);
             if (nameCompareResult != 0)
                 return nameCompareResult;
 
-            return InternalCompareTo(left._parent, right._parent);
+            return InternalCompareTo(left.Parent, right.Parent);
         }
 
         /// <summary>
@@ -324,13 +317,13 @@ namespace Akka.Actor
         /// <returns> ActorPath. </returns>
         public ActorPath WithUid(long uid)
         {
-            if (_depth == 0)
+            if (Depth == 0)
             {
                 if (uid != 0) throw new NotSupportedException("RootActorPath must have undefined Uid");
                 return this;
             }
 
-            return uid != _uid ? new ChildActorPath(_parent, Name, uid) : this;
+            return uid != Uid ? new ChildActorPath(Parent, Name, uid) : this;
         }
 
         /// <summary>
@@ -374,13 +367,13 @@ namespace Akka.Actor
             var current = this;
             if (depth >= 0)
             {
-                while (current._depth > depth)
-                    current = current._parent;
+                while (current.Depth > depth)
+                    current = current.Parent;
             }
             else
             {
-                for (var i = depth; i < 0 && current._depth > 0; i++)
-                    current = current._parent;
+                for (var i = depth; i < 0 && current.Depth > 0; i++)
+                    current = current.Parent;
             }
             return current;
         }
@@ -567,7 +560,7 @@ namespace Akka.Actor
                 SpanHacks.TryFormat(uid.Value, startPos+1, ref writeable, sizeHint);
             }
 
-            if (_depth == 0)
+            if (Depth == 0)
             {
                 Span<char> buffer = prefix.Length < 1024 ? stackalloc char[prefix.Length + 1] : new char[prefix.Length + 1];
                 prefix.CopyTo(buffer);
@@ -579,10 +572,10 @@ namespace Akka.Actor
                 // Resolve length of final string
                 var totalLength = prefix.Length;
                 var p = this;
-                while (p._depth > 0)
+                while (p.Depth > 0)
                 {
-                    totalLength += p._name.Length + 1;
-                    p = p._parent;
+                    totalLength += p.Name.Length + 1;
+                    p = p.Parent;
                 }
                 
                 // UID calculation
@@ -603,13 +596,13 @@ namespace Akka.Actor
                 AppendUidSpan(ref buffer, offset, uidSizeHint-1); // -1 for the '#'
                 
                 p = this;
-                while (p._depth > 0)
+                while (p.Depth > 0)
                 {
-                    var name = p._name.AsSpan();
+                    var name = p.Name.AsSpan();
                     offset -= name.Length + 1;
                     buffer[offset] = '/';
                     name.CopyTo(buffer.Slice(offset + 1, name.Length));
-                    p = p._parent;
+                    p = p.Parent;
                 }
                 return buffer.ToString(); //todo use string.Create() when available
             }
@@ -628,7 +621,7 @@ namespace Akka.Actor
 
         public override string ToString()
         {
-            return Join(_address.ToString().AsSpan());
+            return Join(Address.ToString().AsSpan());
         }
 
         /// <summary>
@@ -637,7 +630,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public string ToStringWithUid()
         {
-            return _uid != ActorCell.UndefinedUid ? $"{ToStringWithAddress()}#{_uid}" : ToStringWithAddress();
+            return Uid != ActorCell.UndefinedUid ? $"{ToStringWithAddress()}#{Uid}" : ToStringWithAddress();
         }
 
         /// <summary>
@@ -656,8 +649,8 @@ namespace Akka.Actor
             {
                 var hash = 17;
                 hash = (hash * 23) ^ Address.GetHashCode();
-                for (var p = this; !(p is null); p = p._parent)
-                    hash = (hash * 23) ^ p._name.GetHashCode();
+                for (var p = this; !(p is null); p = p.Parent)
+                    hash = (hash * 23) ^ p.Name.GetHashCode();
                 return hash;
             }
         }
@@ -695,12 +688,12 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithAddress()
         {
-            return ToStringWithAddress(_address, false);
+            return ToStringWithAddress(Address, false);
         }
 
         private string ToStringWithAddress(bool includeUid)
         {
-            return ToStringWithAddress(_address, includeUid);
+            return ToStringWithAddress(Address, includeUid);
         }
 
         /// <summary>
@@ -730,7 +723,7 @@ namespace Akka.Actor
 
         private string AppendUidFragment(string withAddress)
         {
-            return _uid != ActorCell.UndefinedUid ? $"{withAddress}#{_uid}" : withAddress;
+            return Uid != ActorCell.UndefinedUid ? $"{withAddress}#{Uid}" : withAddress;
         }
 
         /// <summary>
@@ -754,11 +747,11 @@ namespace Akka.Actor
             }
             
             long? uid = null;
-            if (includeUid && _uid != ActorCell.UndefinedUid)
-                uid = _uid;
+            if (includeUid && Uid != ActorCell.UndefinedUid)
+                uid = Uid;
             
-            if (_address.Host != null && _address.Port.HasValue)
-                return Join(_address.ToString().AsSpan(), uid);
+            if (Address.Host != null && Address.Port.HasValue)
+                return Join(Address.ToString().AsSpan(), uid);
 
             return Join(address.ToString().AsSpan(), uid);
         }

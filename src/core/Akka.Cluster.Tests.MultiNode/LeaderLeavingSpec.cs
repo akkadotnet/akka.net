@@ -17,32 +17,17 @@ namespace Akka.Cluster.Tests.MultiNode
 {
     public class LeaderLeavingSpecConfig : MultiNodeConfig
     {
-        private readonly RoleName _first;
+        public RoleName First { get; }
 
-        public RoleName First
-        {
-            get { return _first; }
-        }
+        public RoleName Second { get; }
 
-        private readonly RoleName _second;
-
-        public RoleName Second
-        {
-            get { return _second; }
-        }
-
-        private readonly RoleName _third;
-
-        public RoleName Third
-        {
-            get { return _third; }
-        }
+        public RoleName Third { get; }
 
         public LeaderLeavingSpecConfig()
         {
-            _first = Role("first");
-            _second = Role("second");
-            _third = Role("third");
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
 
             CommonConfig = MultiNodeLoggingConfig.LoggingConfig
                 .WithFallback(DebugConfig(true))

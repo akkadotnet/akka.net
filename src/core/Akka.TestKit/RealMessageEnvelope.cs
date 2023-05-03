@@ -14,9 +14,6 @@ namespace Akka.TestKit
     /// </summary>
     public class RealMessageEnvelope : MessageEnvelope
     {
-        private readonly object _message;
-        private readonly IActorRef _sender;
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -24,18 +21,19 @@ namespace Akka.TestKit
         /// <param name="sender">TBD</param>
         public RealMessageEnvelope(object message, IActorRef sender)
         {
-            _message = message;
-            _sender = sender;
+            Message = message;
+            Sender = sender;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override object Message { get { return _message; } }
+        public override object Message { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public override IActorRef Sender{get { return _sender; }}
+        public override IActorRef Sender { get; }
 
         /// <summary>
         /// TBD

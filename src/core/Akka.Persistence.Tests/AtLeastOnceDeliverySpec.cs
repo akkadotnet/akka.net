@@ -27,7 +27,6 @@ namespace Akka.Persistence.Tests
         class Sender : AtLeastOnceDeliveryActor
         {
             private readonly IActorRef _testActor;
-            private readonly string _name;
             private readonly bool _isAsync;
             private readonly IDictionary<string, ActorPath> _destinations;
             private readonly ILoggingAdapter _log;
@@ -37,13 +36,13 @@ namespace Akka.Persistence.Tests
                 : base(new PersistenceSettings.AtLeastOnceDeliverySettings(redeliverInterval, redeliveryBurstLimit, warn, 100000))
             {
                 _testActor = testActor;
-                _name = name;
+                PersistenceId = name;
                 _isAsync = isAsync;
                 _destinations = destinations;
                 _log = Context.GetLogger();
             }
 
-            public override string PersistenceId => _name;
+            public override string PersistenceId { get; }
 
             protected override bool ReceiveRecover(object message)
             {
@@ -350,11 +349,9 @@ namespace Akka.Persistence.Tests
         
         private class DeliverToStarSelection : AtLeastOnceDeliveryActor
         {
-            private readonly string _name;
-
             public DeliverToStarSelection(string name)
             {
-                _name = name;
+                PersistenceId = name;
             }
 
             protected override bool ReceiveCommand(object message)
@@ -376,7 +373,7 @@ namespace Akka.Persistence.Tests
                 return true;
             }
 
-            public override string PersistenceId => _name;
+            public override string PersistenceId { get; }
         }
 
         #endregion

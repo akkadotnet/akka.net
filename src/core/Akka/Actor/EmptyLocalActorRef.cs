@@ -18,7 +18,6 @@ namespace Akka.Actor
     public class EmptyLocalActorRef : MinimalActorRef
     {
         private readonly IActorRefProvider _provider;
-        private readonly ActorPath _path;
         private readonly EventStream _eventStream;
 
         /// <summary>
@@ -30,14 +29,14 @@ namespace Akka.Actor
         public EmptyLocalActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
         {
             _provider = provider;
-            _path = path;
+            Path = path;
             _eventStream = eventStream;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override ActorPath Path { get { return _path; } }
+        public override ActorPath Path { get; }
 
         /// <summary>
         /// TBD

@@ -41,7 +41,6 @@ namespace Akka.Cluster.Tools.Client
         private readonly ExtendedActorSystem _system;
         private readonly string _role;
         private readonly Config _config;
-        private readonly IActorRef _receptionist;
 
         /// <summary>
         /// TBD
@@ -56,7 +55,7 @@ namespace Akka.Cluster.Tools.Client
             _role = _config.GetString("role", null);
             if (string.IsNullOrEmpty(_role)) _role = null;
 
-            _receptionist = CreateReceptionist();
+            Underlying = CreateReceptionist();
         }
 
         /// <summary>
@@ -149,7 +148,7 @@ namespace Akka.Cluster.Tools.Client
         /// Returns the underlying receptionist actor, particularly so that its
         /// events can be observed via subscribe/unsubscribe.
         /// </summary>
-        public IActorRef Underlying => _receptionist;
+        public IActorRef Underlying { get; }
     }
 
     /// <summary>

@@ -177,7 +177,6 @@ namespace Akka.Streams.Dsl
             private readonly Dictionary<long, InputState> _demands = new Dictionary<long, InputState>();
             private Action _wakeupCallback;
             private bool _needWakeup;
-            private bool _shuttingDown;
 
             public HubLogic(MergeHub<T> stage, AtomicCounterLong producerCount) : base(stage.Shape)
             {
@@ -196,7 +195,7 @@ namespace Akka.Streams.Dsl
             public override void PostStop()
             {
                 // First announce that we are shutting down. This will notify late-comers to not even put anything in the queue
-                _shuttingDown = true;
+                IsShuttingDown = true;
 
                 // Anybody that missed the announcement needs to be notified.
                 while (_queue.TryDequeue(out var e))
@@ -305,7 +304,7 @@ namespace Akka.Streams.Dsl
                 }
             }
 
-            public bool IsShuttingDown => _shuttingDown;
+            public bool IsShuttingDown { get; private set; }
         }
 
         #endregion

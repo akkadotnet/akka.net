@@ -196,7 +196,6 @@ namespace Akka.Streams.Actors
     public abstract class ActorPublisher<T> : ActorBase
     {
         private readonly ActorPublisherState _state = ActorPublisherState.Instance.Apply(Context.System);
-        private long _demand;
         private LifecycleState _lifecycleState = LifecycleState.PreSubscriber;
         private ISubscriber<T> _subscriber;
         private ICancelable _scheduledSubscriptionTimeout = NoopSubscriptionTimeout.Instance;
@@ -250,7 +249,7 @@ namespace Akka.Streams.Actors
         /// This actor automatically keeps tracks of this amount based on
         /// incoming request messages and outgoing <see cref="OnNext"/>.
         /// </summary>
-        public long TotalDemand => _demand;
+        public long TotalDemand { get; private set; }
 
         /// <summary>
         /// The terminal state after calling <see cref="OnComplete"/>. It is not allowed to
@@ -297,9 +296,9 @@ namespace Akka.Streams.Actors
             {
                 case LifecycleState.Active:
                 case LifecycleState.PreSubscriber:
-                    if (_demand > 0)
+                    if (TotalDemand > 0)
                     {
-                        _demand--;
+                        TotalDemand--;
                         ReactiveStreamsCompliance.TryOnNext(_subscriber, element);
                     }
                     else
@@ -502,9 +501,9 @@ namespace Akka.Streams.Actors
                     }
                     else
                     {
-                        _demand += req.Count;
-                        if (_demand < 0)
-                            _demand = long.MaxValue; // long overflow: effectively unbounded
+                        TotalDemand += req.Count;
+                        if (TotalDemand < 0)
+                            TotalDemand = long.MaxValue; // long overflow: effectively unbounded
                         req.MarkProcessed();
                         base.AroundReceive(receive, req);
                     }
@@ -570,7 +569,7 @@ namespace Akka.Streams.Actors
             _lifecycleState = LifecycleState.Canceled;
             _subscriber = null;
             _onError = null;
-            _demand = 0L;
+            TotalDemand = 0L;
         }
 
         /// <summary>
@@ -595,7 +594,7 @@ namespace Akka.Streams.Actors
         public override void AroundPreRestart(Exception cause, object message)
         {
             // some state must survive restart
-            _state.Set(Self, new ActorPublisherState.State(UntypedSubscriber.FromTyped(_subscriber), _demand, _lifecycleState));
+            _state.Set(Self, new ActorPublisherState.State(UntypedSubscriber.FromTyped(_subscriber), TotalDemand, _lifecycleState));
             base.AroundPreRestart(cause, message);
         }
 
@@ -610,7 +609,7 @@ namespace Akka.Streams.Actors
             if (s != null)
             {
                 _subscriber = UntypedSubscriber.ToTyped<T>(s.Subscriber);
-                _demand = s.Demand;
+                TotalDemand = s.Demand;
                 _lifecycleState = s.LifecycleState;
             }
 

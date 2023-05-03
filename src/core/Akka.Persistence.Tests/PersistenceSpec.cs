@@ -39,12 +39,10 @@ namespace Akka.Persistence.Tests
 
         private readonly AtomicCounter _counter = new AtomicCounter(0);
 
-        private readonly string _name;
-
         protected PersistenceSpec(string config, ITestOutputHelper output = null)
             : base(config, output)
         {
-            _name = NamePrefix + "-" + _counter.GetAndIncrement();
+            Name = NamePrefix + "-" + _counter.GetAndIncrement();
             Clean = new Cleanup(this);
             Clean.Initialize();
         }
@@ -52,7 +50,7 @@ namespace Akka.Persistence.Tests
         protected PersistenceSpec(Config config = null, ITestOutputHelper output = null)
             : base(config, output)
         {
-            _name = NamePrefix + "-" + _counter.GetAndIncrement();
+            Name = NamePrefix + "-" + _counter.GetAndIncrement();
             Clean = new Cleanup(this);
             Clean.Initialize();
         }
@@ -60,7 +58,7 @@ namespace Akka.Persistence.Tests
         public PersistenceExtension Extension { get { return Persistence.Instance.Apply(Sys); } }
 
         public string NamePrefix { get { return Sys.Name; } }
-        public string Name { get { return _name; } }
+        public string Name { get; }
 
         protected override void AfterAll()
         {
@@ -131,17 +129,12 @@ namespace Akka.Persistence.Tests
 
     public abstract class NamedPersistentActor : PersistentActor
     {
-        private readonly string _name;
-
         protected NamedPersistentActor(string name)
         {
-            _name = name;
+            PersistenceId = name;
         }
 
-        public override string PersistenceId
-        {
-            get { return _name; }
-        }
+        public override string PersistenceId { get; }
     }
 
     internal sealed class GetState

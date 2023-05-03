@@ -27,18 +27,16 @@ namespace Samples.Akka.AspNetCore.Services
     /// </summary>
     public sealed class HashServiceImpl : IHashService
     {
-        private bool _isDisposed;
-
         public void Dispose()
         {
-            _isDisposed = true;
+            IsDisposed = true;
         }
 
-        public bool IsDisposed => _isDisposed;
+        public bool IsDisposed { get; private set; }
 
         public int Hash(string input)
         {
-           if(_isDisposed)
+           if(IsDisposed)
                throw new ObjectDisposedException("HashServiceImpl disposed");
 
            return MurmurHash.StringHash(input);

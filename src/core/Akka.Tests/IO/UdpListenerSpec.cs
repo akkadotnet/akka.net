@@ -150,8 +150,6 @@ namespace Akka.Tests.IO
         {
             private readonly TestKitBase _kit;
 
-            private readonly TestProbe _handler;
-            private readonly TestProbe _bindCommander;
             private readonly TestProbe _parent;
             private readonly TestActorRef<ListenerParent> _parentRef;
             private Socket _socket;
@@ -159,8 +157,8 @@ namespace Akka.Tests.IO
             public TestSetup(TestKitBase kit)
             {
                 _kit = kit;
-                _handler = kit.CreateTestProbe();
-                _bindCommander = kit.CreateTestProbe();
+                Handler = kit.CreateTestProbe();
+                BindCommander = kit.CreateTestProbe();
                 _parent = kit.CreateTestProbe();
                 _parentRef = new TestActorRef<ListenerParent>(kit.Sys, Props.Create(() => new ListenerParent(this)));
             }
@@ -175,7 +173,7 @@ namespace Akka.Tests.IO
             }
             public async Task BindListener()
             {
-                await _bindCommander.ExpectMsgAsync<Udp.Bound>();
+                await BindCommander.ExpectMsgAsync<Udp.Bound>();
             }
 
             public IPEndPoint SendDataToLocal(byte[] buffer)
@@ -196,9 +194,9 @@ namespace Akka.Tests.IO
             
             public IActorRef Listener { get { return _parentRef.UnderlyingActor.Listener; } }
             
-            public TestProbe BindCommander { get { return _bindCommander; } }
+            public TestProbe BindCommander { get; }
 
-            public TestProbe Handler { get { return _handler; } }
+            public TestProbe Handler { get; }
 
             public IPEndPoint LocalEndPoint => (IPEndPoint)_socket?.LocalEndPoint ?? throw new Exception("Socket not bound");
 
@@ -210,25 +208,25 @@ namespace Akka.Tests.IO
             class ListenerParent : ActorBase
             {
                 private readonly TestSetup _test;
-                private readonly IActorRef _listener;
+
                 public ListenerParent(TestSetup test)
                 {
                     _test = test;
 
-                    _listener = Context.ActorOf(Props.Create(() =>
+                    Listener = Context.ActorOf(Props.Create(() =>
                         new UdpListener(
                             Udp.Instance.Apply(Context.System),
-                            test._bindCommander.Ref,
+                            test.BindCommander.Ref,
                             new Udp.Bind(
-                                _test._handler.Ref, 
+                                _test.Handler.Ref, 
                                 new IPEndPoint(IPAddress.Loopback, 0), 
                                 new Inet.SocketOption[]{ new TestSocketOption(socket => _test.AfterBind(socket)) })))
                         .WithDeploy(Deploy.Local));
                     
-                    _test._parent.Watch(_listener);
+                    _test._parent.Watch(Listener);
                 }
 
-                internal IActorRef Listener { get { return _listener; } }
+                internal IActorRef Listener { get; }
 
                 protected override bool Receive(object message)
                 {

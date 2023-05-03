@@ -72,7 +72,6 @@ namespace Akka.Actor
     public class FutureActorRef<T> : MinimalActorRef
     {
         private readonly TaskCompletionSource<T> _result;
-        private readonly ActorPath _path;
         private readonly IActorRefProvider _provider;
 
         /// <summary>
@@ -84,14 +83,14 @@ namespace Akka.Actor
         public FutureActorRef(TaskCompletionSource<T> result, ActorPath path, IActorRefProvider provider)
         {
             _result = result;
-            _path = path;
+            Path = path;
             _provider = provider;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override ActorPath Path => _path;
+        public override ActorPath Path { get; }
 
         /// <summary>
         /// TBD
@@ -594,17 +593,16 @@ namespace Akka.Actor
 
         private const string fakeSystemName = "local";
 
-        private static readonly ActorPath path = new RootActorPath(new Address("akka", fakeSystemName)) / "ignore";
-        private static readonly string pathString = path.ToString();
+        private static readonly string pathString = StaticPath.ToString();
 
-        public static ActorPath StaticPath => path;
+        public static ActorPath StaticPath { get; } = new RootActorPath(new Address("akka", fakeSystemName)) / "ignore";
 
         public IgnoreActorRef(IActorRefProvider provider)
         {
             Provider = provider;
         }
 
-        public override ActorPath Path => path;
+        public override ActorPath Path => StaticPath;
 
         public override IActorRefProvider Provider { get; }
 
@@ -622,7 +620,7 @@ namespace Akka.Actor
         /// <param name="otherPath"></param>
         /// <returns></returns>
         public static bool IsIgnoreRefPath(ActorPath otherPath) =>
-            path.Equals(otherPath);
+            StaticPath.Equals(otherPath);
 
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
@@ -655,12 +653,11 @@ namespace Akka.Actor
         public static Nobody Instance = new Nobody();
 
         private static readonly NobodySurrogate SurrogateInstance = new NobodySurrogate();
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/Nobody");
 
         private Nobody() { }
 
         /// <inheritdoc cref="InternalActorRefBase"/>
-        public override ActorPath Path { get { return _path; } }
+        public override ActorPath Path { get; } = new RootActorPath(Address.AllSystems, "/Nobody");
 
         /// <summary>N/A</summary>
         /// <exception cref="NotSupportedException">
@@ -731,11 +728,6 @@ namespace Akka.Actor
     /// </summary>
     internal class VirtualPathContainer : MinimalActorRef
     {
-        private readonly IInternalActorRef _parent;
-        private readonly ILoggingAdapter _log;
-        private readonly IActorRefProvider _provider;
-        private readonly ActorPath _path;
-
         private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new ConcurrentDictionary<string, IInternalActorRef>();
 
         /// <summary>
@@ -747,43 +739,31 @@ namespace Akka.Actor
         /// <param name="log">TBD</param>
         public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
         {
-            _parent = parent;
-            _log = log;
-            _provider = provider;
-            _path = path;
+            Parent = parent;
+            Log = log;
+            Provider = provider;
+            Path = path;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override IActorRefProvider Provider
-        {
-            get { return _provider; }
-        }
+        public override IActorRefProvider Provider { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override IInternalActorRef Parent
-        {
-            get { return _parent; }
-        }
+        public override IInternalActorRef Parent { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override ActorPath Path
-        {
-            get { return _path; }
-        }
+        public override ActorPath Path { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public ILoggingAdapter Log
-        {
-            get { return _log; }
-        }
+        public ILoggingAdapter Log { get; }
 
         /// <summary>
         /// TBD

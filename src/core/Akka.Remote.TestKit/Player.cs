@@ -186,21 +186,19 @@ namespace Akka.Remote.TestKit
 
         internal class Data
         {
-            readonly IChannel _channel;
-            public IChannel Channel { get { return _channel; } }
-            readonly (string, IActorRef)? _runningOp;
-            public (string, IActorRef)? RunningOp => _runningOp;
+            public IChannel Channel { get; }
+            public (string, IActorRef)? RunningOp { get; }
 
             public Data(IChannel channel, (string, IActorRef)? runningOp)
             {
-                _channel = channel;
-                _runningOp = runningOp;
+                Channel = channel;
+                RunningOp = runningOp;
             }
 
             /// <inheritdoc/>
             protected bool Equals(Data other)
             {
-                return Equals(_channel, other._channel) && Equals(_runningOp, other._runningOp);
+                return Equals(Channel, other.Channel) && Equals(RunningOp, other.RunningOp);
             }
 
             /// <inheritdoc/>
@@ -217,8 +215,8 @@ namespace Akka.Remote.TestKit
             {
                 unchecked
                 {
-                    return ((_channel != null ? _channel.GetHashCode() : 0) * 397) 
-                        ^ (_runningOp != null ? _runningOp.GetHashCode() : 0);
+                    return ((Channel != null ? Channel.GetHashCode() : 0) * 397) 
+                        ^ (RunningOp != null ? RunningOp.GetHashCode() : 0);
                 }
             }
 
@@ -252,17 +250,16 @@ namespace Akka.Remote.TestKit
 
         internal class Connected : INoSerializationVerificationNeeded
         {
-            readonly IChannel _channel;
-            public IChannel Channel{get { return _channel; }}
+            public IChannel Channel { get; }
 
             public Connected(IChannel channel)
             {
-                _channel = channel;
+                Channel = channel;
             }
 
             protected bool Equals(Connected other)
             {
-                return Equals(_channel, other._channel);
+                return Equals(Channel, other.Channel);
             }
 
             /// <inheritdoc/>
@@ -277,7 +274,7 @@ namespace Akka.Remote.TestKit
             /// <inheritdoc/>
             public override int GetHashCode()
             {
-                return (_channel != null ? _channel.GetHashCode() : 0);
+                return (Channel != null ? Channel.GetHashCode() : 0);
             }
 
             /// <summary>
@@ -320,15 +317,8 @@ namespace Akka.Remote.TestKit
         internal class Disconnected
         {
             private Disconnected() { }
-            private static readonly Disconnected _instance = new Disconnected();
 
-            public static Disconnected Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }            
+            public static Disconnected Instance { get; } = new Disconnected();
         }
 
         private readonly ILoggingAdapter _log = Context.GetLogger();

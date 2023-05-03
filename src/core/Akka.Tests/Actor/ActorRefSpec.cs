@@ -631,14 +631,12 @@ namespace Akka.Tests.Actor
 
         private class EqualTestActorRef : ActorRefBase
         {
-            private ActorPath _path;
-
             public EqualTestActorRef(ActorPath path)
             {
-                _path = path;
+                Path = path;
             }
 
-            public override ActorPath Path { get { return _path; } }
+            public override ActorPath Path { get; }
 
             protected override void TellInternal(object message, IActorRef sender)
             {

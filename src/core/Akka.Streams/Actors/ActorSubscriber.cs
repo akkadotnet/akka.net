@@ -126,7 +126,6 @@ namespace Akka.Streams.Actors
         private readonly ActorSubscriberState _state = ActorSubscriberState.Instance.Apply(Context.System);
         private ISubscription _subscription;
         private long _requested;
-        private bool _canceled;
 
         /// <summary>
         /// TBD
@@ -136,7 +135,7 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// TBD
         /// </summary>
-        public bool IsCanceled => _canceled;
+        public bool IsCanceled { get; private set; }
 
         /// <summary>
         /// The number of stream elements that have already been requested from upstream
@@ -155,7 +154,7 @@ namespace Akka.Streams.Actors
             if (message is OnNext)
             {
                 _requested--;
-                if (!_canceled)
+                if (!IsCanceled)
                 {
                     base.AroundReceive(receive, message);
                     Request(RequestStrategy.RequestDemand(RemainingRequested));
@@ -166,7 +165,7 @@ namespace Akka.Streams.Actors
                 if (_subscription == null)
                 {
                     _subscription = onSubscribe.Subscription;
-                    if (_canceled)
+                    if (IsCanceled)
                     {
                         Context.Stop(Self);
                         onSubscribe.Subscription.Cancel();
@@ -183,9 +182,9 @@ namespace Akka.Streams.Actors
             }
             else if (message is OnComplete or OnError)
             {
-                if (!_canceled)
+                if (!IsCanceled)
                 {
-                    _canceled = true;
+                    IsCanceled = true;
                     base.AroundReceive(receive, message);
                 }
             }
@@ -221,7 +220,7 @@ namespace Akka.Streams.Actors
             {
                 _subscription = s.Subscription;
                 _requested = s.Requested;
-                _canceled = s.IsCanceled;
+                IsCanceled = s.IsCanceled;
             }
 
             base.AroundPostRestart(cause, message);
@@ -236,7 +235,7 @@ namespace Akka.Streams.Actors
         public override void AroundPreRestart(Exception cause, object message)
         {
             // some state must survive restart
-            _state.Set(Self, new ActorSubscriberState.State(_subscription, _requested, _canceled));
+            _state.Set(Self, new ActorSubscriberState.State(_subscription, _requested, IsCanceled));
             base.AroundPreRestart(cause, message);
         }
 
@@ -246,7 +245,7 @@ namespace Akka.Streams.Actors
         public override void AroundPostStop()
         {
             _state.Remove(Self);
-            if (!_canceled)
+            if (!IsCanceled)
                 _subscription?.Cancel();
             base.AroundPostStop();
         }
@@ -259,7 +258,7 @@ namespace Akka.Streams.Actors
         /// <param name="n">TBD</param>
         protected void Request(long n)
         {
-            if (n > 0 && !_canceled)
+            if (n > 0 && !IsCanceled)
             {
                 // if we don't have a subscription yet, it will be requested when it arrives
                 _subscription?.Request(n);
@@ -280,7 +279,7 @@ namespace Akka.Streams.Actors
         /// </summary>
         protected void Cancel()
         {
-            if (!_canceled)
+            if (!IsCanceled)
             {
                 if (_subscription != null)
                 {
@@ -289,7 +288,7 @@ namespace Akka.Streams.Actors
                 }
                 else
                 {
-                    _canceled = true;
+                    IsCanceled = true;
                 }
             }
         }

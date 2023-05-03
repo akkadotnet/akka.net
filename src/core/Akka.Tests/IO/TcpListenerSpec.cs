@@ -73,9 +73,6 @@ namespace Akka.Tests.IO
 
             private readonly TestProbe _handler;
             private readonly IActorRef _handlerRef;
-            private readonly TestProbe _bindCommander;
-            private readonly TestProbe _parent;
-            private readonly TestProbe _selectorRouter;
             private readonly TestActorRef<ListenerParent> _parentRef;
             
             public TestSetup(TestKitBase kit, bool pullMode)
@@ -85,9 +82,9 @@ namespace Akka.Tests.IO
 
                 _handler = kit.CreateTestProbe();
                 _handlerRef = _handler.Ref;
-                _bindCommander = kit.CreateTestProbe();
-                _parent = kit.CreateTestProbe();
-                _selectorRouter = kit.CreateTestProbe();
+                BindCommander = kit.CreateTestProbe();
+                Parent = kit.CreateTestProbe();
+                SelectorRouter = kit.CreateTestProbe();
 
                 _parentRef = new TestActorRef<ListenerParent>(kit.Sys, Props.Create(() => new ListenerParent(this, pullMode)));
             }
@@ -103,7 +100,7 @@ namespace Akka.Tests.IO
 
             public async Task BindListener()
             {
-                var bound = await _bindCommander.ExpectMsgAsync<Tcp.Bound>();
+                var bound = await BindCommander.ExpectMsgAsync<Tcp.Bound>();
                 LocalEndPoint = (IPEndPoint)bound.LocalAddress;
             }
 
@@ -115,13 +112,10 @@ namespace Akka.Tests.IO
 
             public IActorRef Listener { get { return _parentRef.UnderlyingActor.Listener; } }
 
-            public TestProbe SelectorRouter
-            {
-                get { return _selectorRouter; }
-            }
+            public TestProbe SelectorRouter { get; }
 
-            public TestProbe BindCommander { get { return _bindCommander; } }
-            public TestProbe Parent { get { return _parent; } }
+            public TestProbe BindCommander { get; }
+            public TestProbe Parent { get; }
 
             public IPEndPoint LocalEndPoint { get; private set; }
 
@@ -132,7 +126,6 @@ namespace Akka.Tests.IO
             {
                 private readonly TestSetup _test;
                 private readonly bool _pullMode;
-                private readonly IActorRef _listener;
 
                 public ListenerParent(TestSetup test, bool pullMode)
                 {
@@ -141,10 +134,10 @@ namespace Akka.Tests.IO
 
                     var endpoint = new IPEndPoint(IPAddress.Loopback, 0);
 
-                    _listener = Context.ActorOf(Props.Create(() =>
+                    Listener = Context.ActorOf(Props.Create(() =>
                         new TcpListener(
                             Tcp.Instance.Apply(Context.System),
-                            test._bindCommander.Ref,
+                            test.BindCommander.Ref,
                             new Tcp.Bind(
                                 _test._handler.Ref, 
                                 endpoint, 
@@ -153,14 +146,14 @@ namespace Akka.Tests.IO
                                 pullMode)))
                         .WithDeploy(Deploy.Local));
                     
-                    _test._parent.Watch(_listener);
+                    _test.Parent.Watch(Listener);
                 }
 
-                internal IActorRef Listener { get { return _listener; } }
+                internal IActorRef Listener { get; }
 
                 protected override bool Receive(object message)
                 {
-                    _test._parent.Forward(message);
+                    _test.Parent.Forward(message);
                     return true;
                 }
 

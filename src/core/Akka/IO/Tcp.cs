@@ -94,20 +94,18 @@ namespace Akka.IO
         /// </summary>
         public abstract class Command : Message
         {
-            private readonly CommandFailed _failureMessage;
-
             /// <summary>
             /// TBD
             /// </summary>
             protected Command()
             {
-                _failureMessage = new CommandFailed(this);
+                FailureMessage = new CommandFailed(this);
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public CommandFailed FailureMessage => _failureMessage;
+            public CommandFailed FailureMessage { get; }
         }
 
         /// <summary>
@@ -593,9 +591,6 @@ namespace Akka.IO
         /// </summary>
         public class CompoundWrite : WriteCommand, IEnumerable<SimpleWriteCommand>
         {
-            private readonly SimpleWriteCommand _head;
-            private readonly WriteCommand _tailCommand;
-
             /// <summary>
             /// TBD
             /// </summary>
@@ -603,8 +598,8 @@ namespace Akka.IO
             /// <param name="tailCommand">TBD</param>
             public CompoundWrite(SimpleWriteCommand head, WriteCommand tailCommand)
             {
-                _head = head;
-                _tailCommand = tailCommand;
+                Head = head;
+                TailCommand = tailCommand;
             }
 
             /// <summary>
@@ -645,12 +640,12 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public SimpleWriteCommand Head => _head;
+            public SimpleWriteCommand Head { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public WriteCommand TailCommand => _tailCommand;
+            public WriteCommand TailCommand { get; }
 
             public override string ToString() =>
                 $"CompoundWrite({Head}, {TailCommand})";

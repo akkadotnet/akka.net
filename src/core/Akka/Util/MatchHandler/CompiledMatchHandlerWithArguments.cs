@@ -14,9 +14,6 @@ namespace Akka.Tools.MatchHandler
     /// </summary>
     internal class CompiledMatchHandlerWithArguments
     {
-        private readonly Delegate _compiledDelegate;
-        private readonly object[] _delegateArguments;
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -24,19 +21,19 @@ namespace Akka.Tools.MatchHandler
         /// <param name="delegateArguments">TBD</param>
         public CompiledMatchHandlerWithArguments(Delegate compiledDelegate, object[] delegateArguments)
         {
-            _compiledDelegate = compiledDelegate;
-            _delegateArguments = delegateArguments;
+            CompiledDelegate = compiledDelegate;
+            DelegateArguments = delegateArguments;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Delegate CompiledDelegate { get { return _compiledDelegate; } }
+        public Delegate CompiledDelegate { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public object[] DelegateArguments { get { return _delegateArguments; } }
+        public object[] DelegateArguments { get; }
     }
 }
 

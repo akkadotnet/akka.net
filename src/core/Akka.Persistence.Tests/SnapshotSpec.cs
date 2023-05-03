@@ -85,14 +85,13 @@ namespace Akka.Persistence.Tests
 
         internal class LoadSnapshotTestActor : NamedPersistentActor
         {
-            private readonly Recovery _recovery;
             private readonly IActorRef _probe;
 
             public LoadSnapshotTestActor(string name, Recovery recovery, IActorRef probe)
                 : base(name)
             {
                 _probe = probe;
-                _recovery = recovery;
+                Recovery = recovery;
             }
 
             protected override bool ReceiveRecover(object message)
@@ -133,22 +132,18 @@ namespace Akka.Persistence.Tests
             protected override void PreStart() { }
 
 
-            public override Recovery Recovery
-            {
-                get { return _recovery; }
-            }
+            public override Recovery Recovery { get; }
         }
 
         internal class IgnoringSnapshotTestPersistentActor : NamedPersistentActor
         {
-            private readonly Recovery _recovery;
             private readonly IActorRef _probe;
 
             public IgnoringSnapshotTestPersistentActor(string name, Recovery recovery, IActorRef probe)
                 : base(name)
             {
                 _probe = probe;
-                _recovery = recovery;
+                Recovery = recovery;
             }
 
             protected override bool ReceiveRecover(object message)
@@ -181,7 +176,7 @@ namespace Akka.Persistence.Tests
                 }
             }
 
-            public override Recovery Recovery => _recovery; 
+            public override Recovery Recovery { get; }
         }
 
         public sealed class DeleteOne

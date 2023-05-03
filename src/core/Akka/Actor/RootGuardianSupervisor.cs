@@ -23,7 +23,6 @@ namespace Akka.Actor
         private readonly TaskCompletionSource<Status> _terminationPromise;
         private readonly ActorPath _path;
         private readonly Switch _stopped = new Switch(false);
-        private readonly IActorRefProvider _provider;
 
         private bool IsWalking => !_terminationPromise.Task.IsCompleted;
 
@@ -38,7 +37,7 @@ namespace Akka.Actor
         {
             _log = log;
             _terminationPromise = terminationPromise;
-            _provider = provider;
+            Provider = provider;
             _path = root / "_Root-guardian-supervisor";   //In akka this is root / "bubble-walker" 
         }
 
@@ -113,10 +112,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public override IActorRefProvider Provider
-        {
-            get { return _provider; }
-        }
+        public override IActorRefProvider Provider { get; }
     }
 }
 

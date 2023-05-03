@@ -16,9 +16,6 @@ namespace Akka.Tools.MatchHandler
     /// </summary>
     internal class TypeHandler
     {
-        private readonly Type _handlesType;
-        private readonly List<PredicateAndHandler> _handlers = new List<PredicateAndHandler>();
-
         /// <summary>
         /// Initializes a new instance of the <see cref="TypeHandler"/> class.
         /// </summary>
@@ -29,17 +26,18 @@ namespace Akka.Tools.MatchHandler
         public TypeHandler(Type handlesType)
         {
             if(handlesType == null) throw new ArgumentNullException(nameof(handlesType), "Type cannot be null");
-            _handlesType = handlesType;
+            HandlesType = handlesType;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Type HandlesType { get { return _handlesType; } }
+        public Type HandlesType { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public List<PredicateAndHandler> Handlers { get { return _handlers; } }
+        public List<PredicateAndHandler> Handlers { get; } = new List<PredicateAndHandler>();
 
         /// <summary>
         /// TBD
@@ -47,7 +45,7 @@ namespace Akka.Tools.MatchHandler
         /// <returns>TBD</returns>
         public IEnumerable<Argument> GetArguments()
         {
-            return _handlers.SelectMany(h => h.Arguments);
+            return Handlers.SelectMany(h => h.Arguments);
         } 
     }
 }

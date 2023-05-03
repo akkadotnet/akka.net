@@ -15,19 +15,17 @@ namespace Akka.Tools.MatchHandler
     /// </summary>
     internal class PredicateAndHandler
     {
-        private readonly HandlerKind _handlerKind;
-        private readonly bool _handlerFirstArgumentShouldBeBaseType;
-
         private PredicateAndHandler(HandlerKind handlerKind, bool handlerFirstArgumentShouldBeBaseType)
         {
-            _handlerKind = handlerKind;
-            _handlerFirstArgumentShouldBeBaseType = handlerFirstArgumentShouldBeBaseType;
+            HandlerKind = handlerKind;
+            HandlerFirstArgumentShouldBeBaseType = handlerFirstArgumentShouldBeBaseType;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public HandlerKind HandlerKind { get { return _handlerKind; } }
+        public HandlerKind HandlerKind { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -35,7 +33,7 @@ namespace Akka.Tools.MatchHandler
         /// <summary>
         /// TBD
         /// </summary>
-        public bool HandlerFirstArgumentShouldBeBaseType { get { return _handlerFirstArgumentShouldBeBaseType; } }
+        public bool HandlerFirstArgumentShouldBeBaseType { get; }
 
         /// <summary>
         /// TBD

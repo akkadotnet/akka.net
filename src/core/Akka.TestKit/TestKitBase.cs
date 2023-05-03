@@ -45,19 +45,6 @@ namespace Akka.TestKit
             public EventFilterFactory EventFilterFactory { get; set; }
         }
 
-        private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.Reference.conf");
-        private static readonly Config _fullDebugConfig = ConfigurationFactory.ParseString(@"
-                akka.log-dead-letters-during-shutdown = true
-                akka.actor.debug.receive = true
-                akka.actor.debug.autoreceive = true
-                akka.actor.debug.lifecycle = true
-                akka.actor.debug.event-stream = true
-                akka.actor.debug.unhandled = true
-                akka.actor.debug.fsm = true
-                akka.actor.debug.router-misconfiguration = true
-                akka.log-dead-letters = true
-                akka.loglevel = DEBUG
-                akka.stdout-loglevel = DEBUG");
         private static readonly AtomicCounter _testActorId = new AtomicCounter(0);
 
         private readonly ITestKitAssertions _assertions;
@@ -75,7 +62,7 @@ namespace Akka.TestKit
         /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
         /// </exception>
         protected TestKitBase(ITestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
-            : this(assertions, system, ActorSystemSetup.Empty.WithSetup(BootstrapSetup.Create().WithConfig(_defaultConfig)), null, testActorName)
+            : this(assertions, system, ActorSystemSetup.Empty.WithSetup(BootstrapSetup.Create().WithConfig(DefaultConfig)), null, testActorName)
         {
         }
 
@@ -135,13 +122,13 @@ namespace Akka.TestKit
             {
                 var bootstrap = config.Get<BootstrapSetup>();
                 var configWithDefaultFallback = bootstrap.HasValue
-                    ? bootstrap.Value.Config.Select(c => c == _defaultConfig ? c : c.WithFallback(_defaultConfig))
-                    : _defaultConfig;
+                    ? bootstrap.Value.Config.Select(c => c == DefaultConfig ? c : c.WithFallback(DefaultConfig))
+                    : DefaultConfig;
 
                 var newBootstrap = BootstrapSetup.Create().WithConfig(
                     configWithDefaultFallback.HasValue 
                         ? configWithDefaultFallback.Value 
-                        : _defaultConfig);
+                        : DefaultConfig);
                 if (bootstrap.FlatSelect(x => x.ActorRefProvider).HasValue)
                 {
                     newBootstrap =
@@ -151,7 +138,7 @@ namespace Akka.TestKit
             }
             else
             {
-                system.Settings.InjectTopLevelFallback(_defaultConfig);
+                system.Settings.InjectTopLevelFallback(DefaultConfig);
             }
 
             _testState.System = system;
@@ -249,12 +236,23 @@ namespace Akka.TestKit
         /// <summary>
         /// The default TestKit configuration.
         /// </summary>
-        public static Config DefaultConfig { get { return _defaultConfig; } }
+        public static Config DefaultConfig { get; } = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.Reference.conf");
 
         /// <summary>
         /// A full debugging configuration with all log settings enabled.
         /// </summary>
-        public static Config FullDebugConfig { get { return _fullDebugConfig; } }
+        public static Config FullDebugConfig { get; } = ConfigurationFactory.ParseString(@"
+                akka.log-dead-letters-during-shutdown = true
+                akka.actor.debug.receive = true
+                akka.actor.debug.autoreceive = true
+                akka.actor.debug.lifecycle = true
+                akka.actor.debug.event-stream = true
+                akka.actor.debug.unhandled = true
+                akka.actor.debug.fsm = true
+                akka.actor.debug.router-misconfiguration = true
+                akka.log-dead-letters = true
+                akka.loglevel = DEBUG
+                akka.stdout-loglevel = DEBUG");
 
         /// <summary>
         /// The current time.

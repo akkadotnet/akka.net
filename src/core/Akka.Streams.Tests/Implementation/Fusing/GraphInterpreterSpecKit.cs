@@ -29,12 +29,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public abstract class BaseBuilder
         {
-            private GraphInterpreter _interpreter;
             private readonly ILoggingAdapter _logger;
 
             protected BaseBuilder(ActorSystem system) => _logger = Logging.GetLogger(system, "InterpreterSpecKit");
 
-            public GraphInterpreter Interpreter => _interpreter;
+            public GraphInterpreter Interpreter { get; private set; }
 
             public void StepAll() => Interpreter.Execute(int.MaxValue);
 
@@ -147,12 +146,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     new Dictionary<IModule, object>(), s => { });
                 var connections = mat.Item1;
                 var logics = mat.Item2;
-                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
+                Interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
             }
 
             public AssemblyBuilder Builder(params IGraphStageWithMaterializedValue<Shape, object>[] stages)
             {
-                return new AssemblyBuilder(_logger, interpreter => _interpreter = interpreter, stages);
+                return new AssemblyBuilder(_logger, interpreter => Interpreter = interpreter, stages);
             }
         }
 

@@ -164,12 +164,8 @@ namespace Akka.Actor
     /// </summary>
     public sealed class LocalActorRefProvider : IActorRefProvider
     {
-        private readonly Settings _settings;
-        private readonly EventStream _eventStream;
-        private readonly Deployer _deployer;
         private readonly IInternalActorRef _deadLetters;
         private readonly RootActorPath _rootPath;
-        private readonly ILoggingAdapter _log;
         private readonly AtomicCounterLong _tempNumber;
         private readonly ActorPath _tempNode;
         private ActorSystemImpl _system;
@@ -179,9 +175,7 @@ namespace Akka.Actor
         private readonly SupervisorStrategyConfigurator _userGuardianStrategyConfigurator;
         private VirtualPathContainer _tempContainer;
         private RootGuardianActorRef _rootGuardian;
-        private LocalActorRef _userGuardian;    //This is called guardian in Akka
         private MailboxType _defaultMailbox;
-        private LocalActorRef _systemGuardian;
 
         /// <summary>
         /// TBD
@@ -205,13 +199,13 @@ namespace Akka.Actor
         /// <param name="deadLettersFactory">TBD</param>
         public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream, Deployer deployer, Func<ActorPath, IInternalActorRef> deadLettersFactory)
         {
-            _settings = settings;
-            _eventStream = eventStream;
-            _deployer = deployer ?? new Deployer(settings);
+            Settings = settings;
+            EventStream = eventStream;
+            Deployer = deployer ?? new Deployer(settings);
             _rootPath = new RootActorPath(new Address("akka", systemName));
-            _log = Logging.GetLogger(eventStream, "LocalActorRefProvider(" + _rootPath.Address + ")");
+            Log = Logging.GetLogger(eventStream, "LocalActorRefProvider(" + _rootPath.Address + ")");
             if (deadLettersFactory == null)
-                deadLettersFactory = p => new DeadLetterActorRef(this, p, _eventStream);
+                deadLettersFactory = p => new DeadLetterActorRef(this, p, EventStream);
             _deadLetters = deadLettersFactory(_rootPath / "deadLetters");
             IgnoreRef = new IgnoreActorRef(this);
 
@@ -232,7 +226,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public Deployer Deployer { get { return _deployer; } }
+        public Deployer Deployer { get; }
 
         /// <summary>
         /// TBD
@@ -247,12 +241,12 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public Settings Settings { get { return _settings; } }
+        public Settings Settings { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public LocalActorRef SystemGuardian { get { return _systemGuardian; } }
+        public LocalActorRef SystemGuardian { get; private set; }
 
         /// <summary>
         /// TBD
@@ -267,12 +261,12 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public LocalActorRef Guardian { get { return _userGuardian; } }
+        public LocalActorRef Guardian { get; private set; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public EventStream EventStream { get { return _eventStream; } }
+        public EventStream EventStream { get; }
 
         private MessageDispatcher InternalDispatcher => _system.Dispatchers.InternalDispatcher;
 
@@ -307,10 +301,10 @@ namespace Akka.Actor
 
         private RootGuardianActorRef CreateRootGuardian(ActorSystemImpl system)
         {
-            var supervisor = new RootGuardianSupervisor(_rootPath, this, _terminationPromise, _log);
+            var supervisor = new RootGuardianSupervisor(_rootPath, this, _terminationPromise, Log);
             var rootGuardianStrategy = new OneForOneStrategy(ex =>
             {
-                _log.Error(ex, "Guardian failed. Shutting down system");
+                Log.Error(ex, "Guardian failed. Shutting down system");
                 return Directive.Stop;
             });
             var props = Props.Create<GuardianActor>(rootGuardianStrategy);
@@ -419,17 +413,17 @@ namespace Akka.Actor
             var defaultDispatcher = system.Dispatchers.DefaultGlobalDispatcher;
             _defaultMailbox = system.Mailboxes.Lookup(Mailboxes.DefaultMailboxId);
             _rootGuardian = CreateRootGuardian(system);
-            _tempContainer = new VirtualPathContainer(system.Provider, _tempNode, _rootGuardian, _log);
+            _tempContainer = new VirtualPathContainer(system.Provider, _tempNode, _rootGuardian, Log);
             _rootGuardian.SetTempContainer(_tempContainer);
-            _userGuardian = CreateUserGuardian(_rootGuardian, "user");
-            _systemGuardian = CreateSystemGuardian(_rootGuardian, "system", _userGuardian);
+            Guardian = CreateUserGuardian(_rootGuardian, "user");
+            SystemGuardian = CreateSystemGuardian(_rootGuardian, "system", Guardian);
             //End of lazy val
 
             _rootGuardian.Start();
             // chain death watchers so that killing guardian stops the application
-            _systemGuardian.SendSystemMessage(new Watch(_userGuardian, _systemGuardian));
-            _rootGuardian.SendSystemMessage(new Watch(_systemGuardian, _rootGuardian));
-            _eventStream.StartDefaultLoggers(_system);
+            SystemGuardian.SendSystemMessage(new Watch(Guardian, SystemGuardian));
+            _rootGuardian.SendSystemMessage(new Watch(SystemGuardian, _rootGuardian));
+            EventStream.StartDefaultLoggers(_system);
         }
 
         /// <summary>
@@ -442,7 +436,7 @@ namespace Akka.Actor
             if (ActorPath.TryParse(path, out var actorPath) && actorPath.Address == _rootPath.Address)
                 return ResolveActorRef(_rootGuardian, actorPath.Elements);
 
-            _log.Debug("Resolve of unknown path [{0}] failed. Invalid format.", path);
+            Log.Debug("Resolve of unknown path [{0}] failed. Invalid format.", path);
             return _deadLetters;
         }
 
@@ -455,7 +449,7 @@ namespace Akka.Actor
         {
             if (path.Root == _rootPath)
                 return ResolveActorRef(_rootGuardian, path.Elements);
-            _log.Debug("Resolve of foreign ActorPath [{0}] failed", path);
+            Log.Debug("Resolve of foreign ActorPath [{0}] failed", path);
             return _deadLetters;
 
             //Used to be this, but the code above is what Akka has
@@ -488,14 +482,14 @@ namespace Akka.Actor
         {
             if (pathElements.Count == 0)
             {
-                _log.Debug("Resolve of empty path sequence fails (per definition)");
+                Log.Debug("Resolve of empty path sequence fails (per definition)");
                 return _deadLetters;
             }
             var child = actorRef.GetChild(pathElements);
             if (child.IsNobody())
             {
-                _log.Debug("Resolve of path sequence [/{0}] failed", ActorPath.FormatPathElements(pathElements));
-                return new EmptyLocalActorRef(_system.Provider, actorRef.Path / pathElements, _eventStream);
+                Log.Debug("Resolve of path sequence [/{0}] failed", ActorPath.FormatPathElements(pathElements));
+                return new EmptyLocalActorRef(_system.Provider, actorRef.Path / pathElements, EventStream);
             }
             return (IInternalActorRef)child;
         }
@@ -658,7 +652,7 @@ namespace Akka.Actor
         /// <summary>
         /// The built-in logger for the ActorRefProvider
         /// </summary>
-        public ILoggingAdapter Log { get { return _log; } }
+        public ILoggingAdapter Log { get; }
     }
 }
 

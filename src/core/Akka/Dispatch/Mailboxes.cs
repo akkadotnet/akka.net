@@ -31,7 +31,6 @@ namespace Akka.Dispatch
         /// </summary>
         private readonly ActorSystem _system;
 
-        private readonly DeadLetterMailbox _deadLetterMailbox;
         /// <summary>
         /// TBD
         /// </summary>
@@ -54,7 +53,7 @@ namespace Akka.Dispatch
         public Mailboxes(ActorSystem system)
         {
             _system = system;
-            _deadLetterMailbox = new DeadLetterMailbox(system.DeadLetters);
+            DeadLetterMailbox = new DeadLetterMailbox(system.DeadLetters);
             var mailboxConfig = system.Settings.Config.GetConfig("akka.actor.mailbox");
             if (mailboxConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<Mailboxes>("akka.actor.mailbox");
@@ -79,7 +78,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// TBD
         /// </summary>
-        public DeadLetterMailbox DeadLetterMailbox { get { return _deadLetterMailbox; } }
+        public DeadLetterMailbox DeadLetterMailbox { get; }
 
         /// <summary>
         /// Check if this actor class can have a required message queue type.

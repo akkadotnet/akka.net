@@ -128,13 +128,9 @@ namespace Akka.Remote
         }
 
         private readonly LocalActorRefProvider _local;
-        private Internals _internals;
         private ActorSystemImpl _system;
 
-        private Internals RemoteInternals
-        {
-            get { return _internals; }
-        }
+        private Internals RemoteInternals { get; set; }
 
         private Internals CreateInternals()
         {
@@ -241,8 +237,7 @@ namespace Akka.Remote
             return _local.CreateFutureRef(tcs);
         }
 
-        private IActorRef _remotingTerminator;        
-        private IActorRef _remoteWatcher;
+        private IActorRef _remotingTerminator;
 
         private ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
         private ActorPathThreadLocalCache _actorPathThreadLocalCache;
@@ -250,7 +245,8 @@ namespace Akka.Remote
         /// <summary>
         /// The remote death watcher.
         /// </summary>
-        public IActorRef RemoteWatcher => _remoteWatcher;
+        public IActorRef RemoteWatcher { get; private set; }
+
         private IActorRef _remoteDeploymentWatcher;
 
         /// <inheritdoc/>
@@ -268,12 +264,12 @@ namespace Akka.Remote
                     RemoteSettings.ConfigureDispatcher(Props.Create(() => new RemotingTerminator(_local.SystemGuardian))),
                     "remoting-terminator");
 
-            _internals = CreateInternals();                              
+            RemoteInternals = CreateInternals();                              
 
             _remotingTerminator.Tell(RemoteInternals);
 
             Transport.Start();
-            _remoteWatcher = CreateRemoteWatcher(system);
+            RemoteWatcher = CreateRemoteWatcher(system);
             _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(system);
         }
 

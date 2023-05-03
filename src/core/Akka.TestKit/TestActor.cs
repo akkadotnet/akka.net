@@ -43,18 +43,16 @@ namespace Akka.TestKit
         /// </summary>
         public class SetIgnore : INoSerializationVerificationNeeded
         {
-            private readonly Ignore _ignore;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="ignore">TBD</param>
-            public SetIgnore(Ignore ignore) { _ignore = ignore; }
+            public SetIgnore(Ignore ignore) { Ignore = ignore; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public Ignore Ignore { get { return _ignore; } }
+            public Ignore Ignore { get; }
         }
 
         /// <summary>
@@ -64,18 +62,16 @@ namespace Akka.TestKit
         /// </summary>
         public class Watch : INoSerializationVerificationNeeded
         {
-            private readonly IActorRef _actorToWatch;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="actorToWatch">TBD</param>
-            public Watch(IActorRef actorToWatch) { _actorToWatch = actorToWatch; }
+            public Watch(IActorRef actorToWatch) { Actor = actorToWatch; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef Actor { get { return _actorToWatch; } }
+            public IActorRef Actor { get; }
         }
 
         /// <summary>
@@ -84,18 +80,16 @@ namespace Akka.TestKit
         /// </summary>
         public class Unwatch : INoSerializationVerificationNeeded
         {
-            private readonly IActorRef _actorToUnwatch;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="actorToUnwatch">TBD</param>
-            public Unwatch(IActorRef actorToUnwatch) { _actorToUnwatch = actorToUnwatch; }
+            public Unwatch(IActorRef actorToUnwatch) { Actor = actorToUnwatch; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef Actor { get { return _actorToUnwatch; } }
+            public IActorRef Actor { get; }
         }
 
         /// <summary>
@@ -106,18 +100,16 @@ namespace Akka.TestKit
         /// </summary>
         public class SetAutoPilot : INoSerializationVerificationNeeded
         {
-            private readonly AutoPilot _autoPilot;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="autoPilot">TBD</param>
-            public SetAutoPilot(AutoPilot autoPilot) { _autoPilot = autoPilot; }
+            public SetAutoPilot(AutoPilot autoPilot) { AutoPilot = autoPilot; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public AutoPilot AutoPilot { get { return _autoPilot; } }
+            public AutoPilot AutoPilot { get; }
         }
 
         /// <summary>

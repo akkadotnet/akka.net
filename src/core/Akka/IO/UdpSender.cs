@@ -20,21 +20,18 @@ namespace Akka.IO
     
     class UdpSender : WithUdpSend, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
-        private readonly UdpExt _udp;
         private readonly IActorRef _commander;
         private readonly IEnumerable<Inet.SocketOption> _options;
-
-        private readonly Socket _socket;
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
         
         public UdpSender(UdpExt udp, IActorRef commander, IEnumerable<Inet.SocketOption> options)
         {
-            _udp = udp;
+            Udp = udp;
             _commander = commander;
             _options = options;
 
-            _socket = new Func<Socket>(() =>
+            Socket = new Func<Socket>(() =>
             {
                 var socket = new Socket(SocketType.Dgram, ProtocolType.Udp) { Blocking = false };
                 _options.ForEach(x => x.BeforeDatagramBind(socket));
@@ -45,9 +42,9 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        protected override UdpExt Udp => _udp;
+        protected override UdpExt Udp { get; }
 
-        protected override Socket Socket => _socket;
+        protected override Socket Socket { get; }
 
         public override void AroundPreStart()
         {

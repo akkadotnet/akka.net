@@ -534,7 +534,6 @@ namespace Akka.Tests.IO
             private readonly AkkaSpec _spec;
             private readonly bool _shouldBindServer;
             private readonly TestProbe _bindHandler;
-            private IPEndPoint _endpoint;
 
             public TestSetup(AkkaSpec spec, bool shouldBindServer = true)
             {
@@ -549,13 +548,13 @@ namespace Akka.Tests.IO
             {
                 var bindCommander = _spec.CreateTestProbe();
                 bindCommander.Send(_spec.Sys.Tcp(), new Tcp.Bind(_bindHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0), options: BindOptions));
-                await bindCommander.ExpectMsgAsync<Tcp.Bound>(bound => _endpoint = (IPEndPoint) bound.LocalAddress);
+                await bindCommander.ExpectMsgAsync<Tcp.Bound>(bound => Endpoint = (IPEndPoint) bound.LocalAddress);
             }
 
             public async Task<ConnectionDetail> EstablishNewClientConnectionAsync(bool registerClientHandler = true)
             {
                 var connectCommander = _spec.CreateTestProbe("connect-commander-probe");
-                connectCommander.Send(_spec.Sys.Tcp(), new Tcp.Connect(_endpoint, options: ConnectOptions));
+                connectCommander.Send(_spec.Sys.Tcp(), new Tcp.Connect(Endpoint, options: ConnectOptions));
                 await connectCommander.ExpectMsgAsync<Tcp.Connected>();
                 
                 var clientHandler = _spec.CreateTestProbe($"client-handler-probe");
@@ -595,7 +594,7 @@ namespace Akka.Tests.IO
             public IEnumerable<Inet.SocketOption> BindOptions { get; set; }
             public IEnumerable<Inet.SocketOption> ConnectOptions { get; set; }
 
-            public IPEndPoint Endpoint { get { return _endpoint; } }
+            public IPEndPoint Endpoint { get; private set; }
 
             public async Task RunAsync(Func<TestSetup, Task> asyncAction)
             {

@@ -32,15 +32,11 @@ namespace Akka.Actor
         }
 
         private LocalScope() { }
-        private static readonly LocalScope _instance = new LocalScope();
 
         /// <summary>
         /// The singleton instance of this scope.
         /// </summary>
-        public static LocalScope Instance
-        {
-            get { return _instance; }
-        }
+        public static LocalScope Instance { get; } = new LocalScope();
 
         /// <summary>
         /// Creates a new <see cref="Akka.Actor.Scope" /> from this scope using another <see cref="Akka.Actor.Scope" />

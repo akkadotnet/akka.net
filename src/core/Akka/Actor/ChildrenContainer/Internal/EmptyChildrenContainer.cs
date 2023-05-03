@@ -17,7 +17,6 @@ namespace Akka.Actor.Internal
     public class EmptyChildrenContainer : IChildrenContainer
     {
         private static readonly ImmutableDictionary<string, IChildStats> _emptyStats = ImmutableDictionary<string, IChildStats>.Empty;
-        private static readonly IChildrenContainer _instance = new EmptyChildrenContainer();
 
         /// <summary>
         /// TBD
@@ -30,7 +29,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static IChildrenContainer Instance { get { return _instance; } }
+        public static IChildrenContainer Instance { get; } = new EmptyChildrenContainer();
 
         /// <summary>
         /// TBD

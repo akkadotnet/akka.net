@@ -90,17 +90,12 @@ namespace Akka.Tests.Actor
 
         private class DummyActorRef : MinimalActorRef
         {
-            private readonly ActorPath _path;
-
             public DummyActorRef(ActorPath path)
             {
-                _path = path;
+                Path = path;
             }
 
-            public override ActorPath Path
-            {
-                get { return _path; }
-            }
+            public override ActorPath Path { get; }
 
             public override IActorRefProvider Provider
             {

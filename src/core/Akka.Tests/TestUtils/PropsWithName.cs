@@ -11,18 +11,15 @@ namespace Akka.Tests.TestUtils
 {
     public class PropsWithName
     {
-        private readonly Props _props;
-        private readonly string _name;
-
         public PropsWithName(Props props, string name)
         {
-            _props = props;
-            _name = name;
+            Props = props;
+            Name = name;
         }
 
-        public Props Props { get { return _props; } }
+        public Props Props { get; }
 
-        public string Name { get { return _name; } }
+        public string Name { get; }
     }
 }
 

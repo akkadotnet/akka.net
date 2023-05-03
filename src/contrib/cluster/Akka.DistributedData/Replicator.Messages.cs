@@ -698,19 +698,18 @@ namespace Akka.DistributedData
     public sealed class StoreFailure : IUpdateFailure, IDeleteResponse, IEquatable<StoreFailure>
     {
         private readonly IKey _key;
-        private readonly object _request;
 
         public StoreFailure(IKey key, object request = null)
         {
             _key = key;
-            _request = request;
+            Request = request;
         }
 
         IKey IUpdateResponse.Key => _key;
         bool IDeleteResponse.IsSuccessful => false;
 
         public bool AlreadyDeleted => false;
-        public object Request => _request;
+        public object Request { get; }
 
         IKey IDeleteResponse.Key => _key;
         bool IUpdateResponse.IsSuccessful => false;
@@ -723,14 +722,14 @@ namespace Akka.DistributedData
         public Exception Cause => new Exception($"Failed to store value under the key {_key}");
 
         
-        public override string ToString() => $"StoreFailure({_key}{(_request == null ? "" : ", req=" + _request)})";
+        public override string ToString() => $"StoreFailure({_key}{(Request == null ? "" : ", req=" + Request)})";
 
         
         public bool Equals(StoreFailure other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(_key, other._key) && Equals(_request, other._request);
+            return Equals(_key, other._key) && Equals(Request, other.Request);
         }
 
         
@@ -746,7 +745,7 @@ namespace Akka.DistributedData
         {
             unchecked
             {
-                return (_key.GetHashCode() * 397) ^ (_request?.GetHashCode() ?? 0);
+                return (_key.GetHashCode() * 397) ^ (Request?.GetHashCode() ?? 0);
             }
         }
     }
