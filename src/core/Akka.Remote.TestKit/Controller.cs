@@ -49,7 +49,7 @@ namespace Akka.Remote.TestKit
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is ClientDisconnected && Equals((ClientDisconnected) obj);
+                return obj is ClientDisconnected disconnected && Equals(disconnected);
             }
 
             /// <inheritdoc/>

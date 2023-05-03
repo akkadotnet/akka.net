@@ -418,9 +418,8 @@ namespace Akka.Streams.Stage
                         _isEmitting = false;
 
                         if (andThen is StatefulStage.Stay) ;
-                        else if (andThen is StatefulStage.Become<TIn, TOut>)
+                        else if (andThen is StatefulStage.Become<TIn, TOut> become)
                         {
-                            var become = andThen as StatefulStage.Become<TIn, TOut>;
                             Become(become.State);
                         }
                         else if (andThen is StatefulStage.Finish)

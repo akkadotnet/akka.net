@@ -486,9 +486,8 @@ namespace Akka.Streams.Actors
         /// <returns>TBD</returns>
         protected internal override bool AroundReceive(Receive receive, object message)
         {
-            if (message is Request)
+            if (message is Request req)
             {
-                var req = (Request) message;
                 if (req.IsProcessed)
                 {
                     // it's an unstashed Request, demand is already handled
@@ -507,13 +506,12 @@ namespace Akka.Streams.Actors
                         if (_demand < 0)
                             _demand = long.MaxValue; // long overflow: effectively unbounded
                         req.MarkProcessed();
-                        base.AroundReceive(receive, message);
+                        base.AroundReceive(receive, req);
                     }
                 }
             }
-            else if (message is Subscribe<T>)
+            else if (message is Subscribe<T> sub)
             {
-                var sub = (Subscribe<T>) message;
                 var subscriber = sub.Subscriber;
                 switch (_lifecycleState)
                 {

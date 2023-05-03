@@ -111,7 +111,7 @@ namespace Akka.Persistence.Tests
 
             public object ToJournal(object evt)
             {
-                if (evt is IAppModel) return new Json((evt as IAppModel).Payload);
+                if (evt is IAppModel model) return new Json(model.Payload);
                 return null;
             }
 
@@ -138,7 +138,7 @@ namespace Akka.Persistence.Tests
 
             public object ToJournal(object evt)
             {
-                if (evt is IAppModel) return new Json((evt as IAppModel).Payload);
+                if (evt is IAppModel model) return new Json(model.Payload);
                 return null;
             }
 
@@ -165,7 +165,7 @@ namespace Akka.Persistence.Tests
 
             public object ToJournal(object evt)
             {
-                if (evt is IAppModel) return new Json((evt as IAppModel).Payload);
+                if (evt is IAppModel model) return new Json(model.Payload);
                 return null;
             }
 
@@ -192,7 +192,7 @@ namespace Akka.Persistence.Tests
 
             public object ToJournal(object evt)
             {
-                if (evt is IAppModel) return new Json((evt as IAppModel).Payload);
+                if (evt is IAppModel model) return new Json(model.Payload);
                 return null;
             }
 
