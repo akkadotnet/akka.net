@@ -139,8 +139,7 @@ namespace Akka.DistributedData
 
         public bool HasDeltaEntries(string key)
         {
-            ImmutableSortedDictionary<long, IReplicatedData> entries;
-            if (_deltaEntries.TryGetValue(key, out entries))
+            if (_deltaEntries.TryGetValue(key, out var entries))
             {
                 return !entries.IsEmpty;
             }

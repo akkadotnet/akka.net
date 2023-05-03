@@ -258,8 +258,7 @@ namespace Akka.Remote
             var supervisor = (IInternalActorRef) message.Supervisor;
             var parent = supervisor;
             Props props = message.Props;
-            ActorPath childPath;
-            if(ActorPath.TryParse(message.Path, out childPath))
+            if(ActorPath.TryParse(message.Path, out var childPath))
             {
                 IEnumerable<string> subPath = childPath.ElementsWithUid.Drop(1); //drop the /remote
                 ActorPath p = Path/subPath;
