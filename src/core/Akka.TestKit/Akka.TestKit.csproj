@@ -26,11 +26,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />
-        <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
-        <PackageReference Include="Nito.AsyncEx.Context" Version="5.1.2" />
-        <PackageReference Include="System.Linq.Async" Version="6.0.1" />
-        <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+        <PackageReference Include="Nito.AsyncEx.Coordination" />
+        <PackageReference Include="Nito.AsyncEx.Context" />
+        <PackageReference Include="System.Linq.Async" />
+        <PackageReference Include="FluentAssertions" />
     </ItemGroup>
 
 </Project>
