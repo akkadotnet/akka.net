@@ -9,7 +9,7 @@ using pb = global::Google.Protobuf;
 using pbc = global::Google.Protobuf.Collections;
 using pbr = global::Google.Protobuf.Reflection;
 using scg = global::System.Collections.Generic;
-namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
+namespace Akka.Cluster.Serialization.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from ReliableDelivery.proto</summary>
   internal static partial class ReliableDeliveryReflection {
@@ -24,51 +24,50 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     static ReliableDeliveryReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "ChZSZWxpYWJsZURlbGl2ZXJ5LnByb3RvEi1Ba2thLkNsdXN0ZXIuU2hhcmRp",
-            "bmcuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2caFkNvbnRhaW5lckZvcm1hdHMu",
-            "cHJvdG8iIgoOVHlwZURlc2NyaXB0b3ISEAoIdHlwZU5hbWUYASABKAkiuAIK",
-            "EFNlcXVlbmNlZE1lc3NhZ2USEgoKcHJvZHVjZXJJZBgBIAEoCRINCgVzZXFO",
-            "chgCIAEoAxINCgVmaXJzdBgDIAEoCBILCgNhY2sYBCABKAgSHQoVcHJvZHVj",
-            "ZXJDb250cm9sbGVyUmVmGAUgASgJEj0KB21lc3NhZ2UYBiABKAsyLC5Ba2th",
-            "LlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEhIKCmZp",
-            "cnN0Q2h1bmsYByABKAgSEQoJbGFzdENodW5rGAggASgIEk8KCHR5cGVJbmZv",
-            "GAkgASgLMj0uQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLlR5cGVEZXNjcmlwdG9yEg8KB2lzQ2h1bmsYCiABKAgiggEK",
-            "EFJlZ2lzdGVyQ29uc3VtZXISHQoVY29uc3VtZXJDb250cm9sbGVyUmVmGAEg",
-            "ASgJEk8KCHR5cGVJbmZvGAIgASgLMj0uQWtrYS5DbHVzdGVyLlNoYXJkaW5n",
-            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlR5cGVEZXNjcmlwdG9yImYKB1Jl",
-            "cXVlc3QSFgoOY29uZmlybWVkU2VxTnIYASABKAMSGAoQcmVxdWVzdFVwVG9T",
-            "ZXFOchgCIAEoAxIVCg1zdXBwb3J0UmVzZW5kGAMgASgIEhIKCnZpYVRpbWVv",
-            "dXQYBCABKAgiGwoGUmVzZW5kEhEKCWZyb21TZXFOchgBIAEoAyIdCgNBY2sS",
-            "FgoOY29uZmlybWVkU2VxTnIYASABKAMiqwIKBVN0YXRlEhQKDGN1cnJlbnRT",
-            "ZXFOchgBIAEoAxIdChVoaWdoZXN0Q29uZmlybWVkU2VxTnIYAiABKAMSSwoJ",
-            "Y29uZmlybWVkGAMgAygLMjguQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNlcmlh",
-            "bGl6YXRpb24uUHJvdG8uTXNnLkNvbmZpcm1lZBJPCgt1bmNvbmZpcm1lZBgE",
-            "IAMoCzI6LkFra2EuQ2x1c3Rlci5TaGFyZGluZy5TZXJpYWxpemF0aW9uLlBy",
-            "b3RvLk1zZy5NZXNzYWdlU2VudBJPCgh0eXBlSW5mbxgFIAEoCzI9LkFra2Eu",
-            "Q2x1c3Rlci5TaGFyZGluZy5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5UeXBl",
-            "RGVzY3JpcHRvciJACglDb25maXJtZWQSDQoFc2VxTnIYASABKAMSEQoJcXVh",
-            "bGlmaWVyGAIgASgJEhEKCXRpbWVzdGFtcBgDIAEoAyKXAgoLTWVzc2FnZVNl",
-            "bnQSDQoFc2VxTnIYASABKAMSEQoJcXVhbGlmaWVyGAIgASgJEgsKA2FjaxgD",
-            "IAEoCBIRCgl0aW1lc3RhbXAYBCABKAMSPQoHbWVzc2FnZRgFIAEoCzIsLkFr",
-            "a2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQSEgoK",
-            "Zmlyc3RDaHVuaxgGIAEoCBIRCglsYXN0Q2h1bmsYByABKAgSTwoIdHlwZUlu",
-            "Zm8YCCABKAsyPS5Ba2thLkNsdXN0ZXIuU2hhcmRpbmcuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuVHlwZURlc2NyaXB0b3ISDwoHaXNDaHVuaxgJIAEoCCId",
-            "CgdDbGVhbnVwEhIKCnF1YWxpZmllcnMYASADKAlCAkgBYgZwcm90bzM="));
+            "ChZSZWxpYWJsZURlbGl2ZXJ5LnByb3RvEiRBa2thLkNsdXN0ZXIuU2VyaWFs",
+            "aXphdGlvbi5Qcm90by5Nc2caFkNvbnRhaW5lckZvcm1hdHMucHJvdG8iIgoO",
+            "VHlwZURlc2NyaXB0b3ISEAoIdHlwZU5hbWUYASABKAkirwIKEFNlcXVlbmNl",
+            "ZE1lc3NhZ2USEgoKcHJvZHVjZXJJZBgBIAEoCRINCgVzZXFOchgCIAEoAxIN",
+            "CgVmaXJzdBgDIAEoCBILCgNhY2sYBCABKAgSHQoVcHJvZHVjZXJDb250cm9s",
+            "bGVyUmVmGAUgASgJEj0KB21lc3NhZ2UYBiABKAsyLC5Ba2thLlJlbW90ZS5T",
+            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEhIKCmZpcnN0Q2h1bmsY",
+            "ByABKAgSEQoJbGFzdENodW5rGAggASgIEkYKCHR5cGVJbmZvGAkgASgLMjQu",
+            "QWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlR5cGVEZXNj",
+            "cmlwdG9yEg8KB2lzQ2h1bmsYCiABKAgieQoQUmVnaXN0ZXJDb25zdW1lchId",
+            "ChVjb25zdW1lckNvbnRyb2xsZXJSZWYYASABKAkSRgoIdHlwZUluZm8YAiAB",
+            "KAsyNC5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVHlw",
+            "ZURlc2NyaXB0b3IiZgoHUmVxdWVzdBIWCg5jb25maXJtZWRTZXFOchgBIAEo",
+            "AxIYChByZXF1ZXN0VXBUb1NlcU5yGAIgASgDEhUKDXN1cHBvcnRSZXNlbmQY",
+            "AyABKAgSEgoKdmlhVGltZW91dBgEIAEoCCIbCgZSZXNlbmQSEQoJZnJvbVNl",
+            "cU5yGAEgASgDIh0KA0FjaxIWCg5jb25maXJtZWRTZXFOchgBIAEoAyKQAgoF",
+            "U3RhdGUSFAoMY3VycmVudFNlcU5yGAEgASgDEh0KFWhpZ2hlc3RDb25maXJt",
+            "ZWRTZXFOchgCIAEoAxJCCgljb25maXJtZWQYAyADKAsyLy5Ba2thLkNsdXN0",
+            "ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQ29uZmlybWVkEkYKC3VuY29u",
+            "ZmlybWVkGAQgAygLMjEuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJv",
+            "dG8uTXNnLk1lc3NhZ2VTZW50EkYKCHR5cGVJbmZvGAUgASgLMjQuQWtrYS5D",
+            "bHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlR5cGVEZXNjcmlwdG9y",
+            "IkAKCUNvbmZpcm1lZBINCgVzZXFOchgBIAEoAxIRCglxdWFsaWZpZXIYAiAB",
+            "KAkSEQoJdGltZXN0YW1wGAMgASgDIo4CCgtNZXNzYWdlU2VudBINCgVzZXFO",
+            "chgBIAEoAxIRCglxdWFsaWZpZXIYAiABKAkSCwoDYWNrGAMgASgIEhEKCXRp",
+            "bWVzdGFtcBgEIAEoAxI9CgdtZXNzYWdlGAUgASgLMiwuQWtrYS5SZW1vdGUu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUGF5bG9hZBISCgpmaXJzdENodW5r",
+            "GAYgASgIEhEKCWxhc3RDaHVuaxgHIAEoCBJGCgh0eXBlSW5mbxgIIAEoCzI0",
+            "LkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5UeXBlRGVz",
+            "Y3JpcHRvchIPCgdpc0NodW5rGAkgASgIIh0KB0NsZWFudXASEgoKcXVhbGlm",
+            "aWVycxgBIAMoCUICSAFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor.Parser, new[]{ "TypeName" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.SequencedMessage), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.SequencedMessage.Parser, new[]{ "ProducerId", "SeqNr", "First", "Ack", "ProducerControllerRef", "Message", "FirstChunk", "LastChunk", "TypeInfo", "IsChunk" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.RegisterConsumer), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.RegisterConsumer.Parser, new[]{ "ConsumerControllerRef", "TypeInfo" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Request), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Request.Parser, new[]{ "ConfirmedSeqNr", "RequestUpToSeqNr", "SupportResend", "ViaTimeout" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Resend), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Resend.Parser, new[]{ "FromSeqNr" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Ack), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Ack.Parser, new[]{ "ConfirmedSeqNr" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.State), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.State.Parser, new[]{ "CurrentSeqNr", "HighestConfirmedSeqNr", "Confirmed", "Unconfirmed", "TypeInfo" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Confirmed), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Confirmed.Parser, new[]{ "SeqNr", "Qualifier", "Timestamp" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent.Parser, new[]{ "SeqNr", "Qualifier", "Ack", "Timestamp", "Message", "FirstChunk", "LastChunk", "TypeInfo", "IsChunk" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Cleanup), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Cleanup.Parser, new[]{ "Qualifiers" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor), global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor.Parser, new[]{ "TypeName" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.SequencedMessage), global::Akka.Cluster.Serialization.Proto.Msg.SequencedMessage.Parser, new[]{ "ProducerId", "SeqNr", "First", "Ack", "ProducerControllerRef", "Message", "FirstChunk", "LastChunk", "TypeInfo", "IsChunk" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.RegisterConsumer), global::Akka.Cluster.Serialization.Proto.Msg.RegisterConsumer.Parser, new[]{ "ConsumerControllerRef", "TypeInfo" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Request), global::Akka.Cluster.Serialization.Proto.Msg.Request.Parser, new[]{ "ConfirmedSeqNr", "RequestUpToSeqNr", "SupportResend", "ViaTimeout" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Resend), global::Akka.Cluster.Serialization.Proto.Msg.Resend.Parser, new[]{ "FromSeqNr" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Ack), global::Akka.Cluster.Serialization.Proto.Msg.Ack.Parser, new[]{ "ConfirmedSeqNr" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.State), global::Akka.Cluster.Serialization.Proto.Msg.State.Parser, new[]{ "CurrentSeqNr", "HighestConfirmedSeqNr", "Confirmed", "Unconfirmed", "TypeInfo" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Confirmed), global::Akka.Cluster.Serialization.Proto.Msg.Confirmed.Parser, new[]{ "SeqNr", "Qualifier", "Timestamp" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.MessageSent), global::Akka.Cluster.Serialization.Proto.Msg.MessageSent.Parser, new[]{ "SeqNr", "Qualifier", "Ack", "Timestamp", "Message", "FirstChunk", "LastChunk", "TypeInfo", "IsChunk" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Cleanup), global::Akka.Cluster.Serialization.Proto.Msg.Cleanup.Parser, new[]{ "Qualifiers" }, null, null, null, null)
           }));
     }
     #endregion
@@ -92,7 +91,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[0]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[0]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -284,7 +283,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[1]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -421,10 +420,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "typeInfo" field.</summary>
     public const int TypeInfoFieldNumber = 9;
-    private global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
+    private global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
+    public global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
       get { return typeInfo_; }
       set {
         typeInfo_ = value;
@@ -674,7 +673,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       }
       if (other.typeInfo_ != null) {
         if (typeInfo_ == null) {
-          TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+          TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
         }
         TypeInfo.MergeFrom(other.TypeInfo);
       }
@@ -733,7 +732,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 74: {
             if (typeInfo_ == null) {
-              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+              TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
             }
             input.ReadMessage(TypeInfo);
             break;
@@ -794,7 +793,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 74: {
             if (typeInfo_ == null) {
-              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+              TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
             }
             input.ReadMessage(TypeInfo);
             break;
@@ -827,7 +826,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[2]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -872,10 +871,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "typeInfo" field.</summary>
     public const int TypeInfoFieldNumber = 2;
-    private global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
+    private global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
+    public global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
       get { return typeInfo_; }
       set {
         typeInfo_ = value;
@@ -985,7 +984,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       }
       if (other.typeInfo_ != null) {
         if (typeInfo_ == null) {
-          TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+          TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
         }
         TypeInfo.MergeFrom(other.TypeInfo);
       }
@@ -1010,7 +1009,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 18: {
             if (typeInfo_ == null) {
-              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+              TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
             }
             input.ReadMessage(TypeInfo);
             break;
@@ -1036,7 +1035,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 18: {
             if (typeInfo_ == null) {
-              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+              TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
             }
             input.ReadMessage(TypeInfo);
             break;
@@ -1065,7 +1064,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[3]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1368,7 +1367,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1560,7 +1559,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[5]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1752,7 +1751,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[6]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[6]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1812,32 +1811,32 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "confirmed" field.</summary>
     public const int ConfirmedFieldNumber = 3;
-    private static readonly pb::FieldCodec<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Confirmed> _repeated_confirmed_codec
-        = pb::FieldCodec.ForMessage(26, global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Confirmed.Parser);
-    private readonly pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Confirmed> confirmed_ = new pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Confirmed>();
+    private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.Confirmed> _repeated_confirmed_codec
+        = pb::FieldCodec.ForMessage(26, global::Akka.Cluster.Serialization.Proto.Msg.Confirmed.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Confirmed> confirmed_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Confirmed>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Confirmed> Confirmed {
+    public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Confirmed> Confirmed {
       get { return confirmed_; }
     }
 
     /// <summary>Field number for the "unconfirmed" field.</summary>
     public const int UnconfirmedFieldNumber = 4;
-    private static readonly pb::FieldCodec<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent> _repeated_unconfirmed_codec
-        = pb::FieldCodec.ForMessage(34, global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent.Parser);
-    private readonly pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent> unconfirmed_ = new pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent>();
+    private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.MessageSent> _repeated_unconfirmed_codec
+        = pb::FieldCodec.ForMessage(34, global::Akka.Cluster.Serialization.Proto.Msg.MessageSent.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.MessageSent> unconfirmed_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.MessageSent>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent> Unconfirmed {
+    public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.MessageSent> Unconfirmed {
       get { return unconfirmed_; }
     }
 
     /// <summary>Field number for the "typeInfo" field.</summary>
     public const int TypeInfoFieldNumber = 5;
-    private global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
+    private global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
+    public global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
       get { return typeInfo_; }
       set {
         typeInfo_ = value;
@@ -1975,7 +1974,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       unconfirmed_.Add(other.unconfirmed_);
       if (other.typeInfo_ != null) {
         if (typeInfo_ == null) {
-          TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+          TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
         }
         TypeInfo.MergeFrom(other.TypeInfo);
       }
@@ -2012,7 +2011,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 42: {
             if (typeInfo_ == null) {
-              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+              TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
             }
             input.ReadMessage(TypeInfo);
             break;
@@ -2050,7 +2049,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 42: {
             if (typeInfo_ == null) {
-              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+              TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
             }
             input.ReadMessage(TypeInfo);
             break;
@@ -2079,7 +2078,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[7]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[7]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2345,7 +2344,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[8]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[8]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2469,10 +2468,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "typeInfo" field.</summary>
     public const int TypeInfoFieldNumber = 8;
-    private global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
+    private global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
+    public global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
       get { return typeInfo_; }
       set {
         typeInfo_ = value;
@@ -2706,7 +2705,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       }
       if (other.typeInfo_ != null) {
         if (typeInfo_ == null) {
-          TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+          TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
         }
         TypeInfo.MergeFrom(other.TypeInfo);
       }
@@ -2761,7 +2760,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 66: {
             if (typeInfo_ == null) {
-              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+              TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
             }
             input.ReadMessage(TypeInfo);
             break;
@@ -2818,7 +2817,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 66: {
             if (typeInfo_ == null) {
-              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+              TypeInfo = new global::Akka.Cluster.Serialization.Proto.Msg.TypeDescriptor();
             }
             input.ReadMessage(TypeInfo);
             break;
@@ -2851,7 +2850,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[9]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[9]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package Akka.Cluster.Sharding.Serialization.Proto.Msg;
+package Akka.Cluster.Serialization.Proto.Msg;
 option optimize_for = SPEED;
 
 import "ContainerFormats.proto";

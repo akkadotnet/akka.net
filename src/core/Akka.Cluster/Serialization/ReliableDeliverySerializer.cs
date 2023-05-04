@@ -12,16 +12,16 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
+using Akka.Cluster.Serialization.Proto.Msg;
 using Akka.Delivery;
+using Akka.Delivery.Internal;
 using Akka.Remote.Serialization;
+using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Akka.Util;
-using Akka.Cluster.Sharding.Serialization.Proto.Msg;
-using Akka.Delivery.Internal;
-using Akka.Remote.Serialization.Proto.Msg;
 using Google.Protobuf;
 
-namespace Akka.Cluster.Sharding.Delivery.Serialization;
+namespace Akka.Cluster.Serialization;
 
 /// <summary>
 /// INTERNAL API
