@@ -15,6 +15,7 @@
     </PackageVersion>
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
     <PackageVersion Include="NBench" Version="$(NBenchVersion)" />
+    <PackageVersion Include="FluentDateTime" Version="2.1.0" />
   </ItemGroup>
   <!-- Test dependencies -->  
   <ItemGroup>
