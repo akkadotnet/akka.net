@@ -13,7 +13,9 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Delivery;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.Util;
+using Akka.Util.Internal;
 using static Akka.Delivery.DurableProducerQueue;
 
 namespace Akka.Persistence.Delivery;
@@ -24,7 +26,7 @@ namespace Akka.Persistence.Delivery;
 /// sending the message to the destination and one event for the confirmation that the message has been
 /// delivered and processed.
 /// </summary>
-public class EventSourcedProducerQueue
+public static class EventSourcedProducerQueue
 {
     /// <summary>
     /// <see cref="EventSourcedProducerQueue"/> settings.
@@ -85,6 +87,40 @@ public class EventSourcedProducerQueue
         {
         }
     }
+
+    /// <summary>
+    /// Creates <see cref="Props"/> for an <see cref="EventSourcedProducerQueue{T}"/> that can be passed
+    /// to a <see cref="ProducerController"/> for reliable message delivery.
+    /// </summary>
+    /// <param name="persistentId">The Akka.Persistence id used by this actor - must be globally unique.</param>
+    /// <param name="settings">The settings for this producer queue.</param>
+    /// <typeparam name="T">The type of message that is supported by the <see cref="ProducerController"/>.</typeparam>
+    public static Props Create<T>(string persistentId, Settings settings)
+    {
+        var childProps = Props.Create(() => new EventSourcedProducerQueue<T>(persistentId, settings, null));
+        var backoffSupervisorProps = Backoff.OnStop(childProps, "producer-queue",
+            TimeSpan.FromSeconds(1).Min(settings.RestartMaxBackoff), settings.RestartMaxBackoff, 0.1, 100);
+        return backoffSupervisorProps.Props;
+    }
+
+    /// <summary>
+    /// Creates <see cref="Props"/> for an <see cref="EventSourcedProducerQueue{T}"/> that can be passed
+    /// to a <see cref="ProducerController"/> for reliable message delivery.
+    /// </summary>
+    /// <param name="persistentId">The Akka.Persistence id used by this actor - must be globally unique.</param>
+    /// <param name="system">The <see cref="ActorSystem"/> or <see cref="IActorContext"/> this actor might be created under.
+    /// This value is only used to load the <see cref="Settings"/>.
+    /// </param>
+    /// <typeparam name="T">The type of message that is supported by the <see cref="ProducerController"/>.</typeparam>
+    public static Props Create<T>(string persistentId, IActorRefFactory system)
+    {
+        return system switch
+        {
+            IActorContext context => Create<T>(persistentId, Settings.Create(context.System)),
+            ActorSystem actorSystem => Create<T>(persistentId, Settings.Create(actorSystem)),
+            _ => throw new ArgumentOutOfRangeException(nameof(system), $"Unknown IActorRefFactory {system}")
+        };
+    }
 }
 
 /// <summary>
@@ -93,17 +129,18 @@ public class EventSourcedProducerQueue
 /// <typeparam name="T">The types of messages that can be handled by the <see cref="ProducerController"/>.</typeparam>
 internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWithTimers, IWithStash
 {
-    public EventSourcedProducerQueue(string persistenceId, EventSourcedProducerQueue.Settings settings, ITimeProvider? timeProvider = null)
+    public EventSourcedProducerQueue(string persistenceId, EventSourcedProducerQueue.Settings? settings = null,
+        ITimeProvider? timeProvider = null)
     {
         PersistenceId = persistenceId;
-        Settings = settings;
+        Settings = settings ?? EventSourcedProducerQueue.Settings.Create(Context.System);
         _timeProvider = timeProvider ?? DateTimeOffsetNowTimeProvider.Instance;
-        JournalPluginId = settings.JournalPluginId;
-        SnapshotPluginId = settings.SnapshotPluginId;
+        JournalPluginId = Settings.JournalPluginId;
+        SnapshotPluginId = Settings.SnapshotPluginId;
         Self.Tell(EventSourcedProducerQueue.CleanupTick.Instance);
         Timers.StartPeriodicTimer(EventSourcedProducerQueue.CleanupTick.Instance,
             EventSourcedProducerQueue.CleanupTick.Instance,
-            TimeSpan.FromMilliseconds(settings.CleanupUnusedAfter.TotalMilliseconds / 2));
+            TimeSpan.FromMilliseconds(Settings.CleanupUnusedAfter.TotalMilliseconds / 2));
     }
 
     public EventSourcedProducerQueue.Settings Settings { get; }
@@ -120,7 +157,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
 
     protected override void OnCommand(object message)
     {
-        if(!_initialCleanupDone)
+        if (!_initialCleanupDone)
             OnCommandBeforeInitialCleanup(message);
 
         switch (message)
@@ -152,6 +189,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
                     _log.Debug("Ignoring unexpected seqNr [{0}], currentSeqNr [{1}]", sent.SeqNr, currentSeqNr);
                     Unhandled(message); // no reply, request will time out
                 }
+
                 break;
             }
             case StoreMessageConfirmed(var seqNr, var confirmationQualifier, var timestamp):
@@ -169,11 +207,10 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
 
                 if (seqNr > previousConfirmedSeqNr)
                 {
-                    Persist(new Confirmed(seqNr, confirmationQualifier, timestamp), e =>
-                    {
-                        State = State.AddConfirmed(e.SeqNr, e.Qualifier, e.Timestamp);
-                    });
+                    Persist(new Confirmed(seqNr, confirmationQualifier, timestamp),
+                        e => { State = State.AddConfirmed(e.SeqNr, e.Qualifier, e.Timestamp); });
                 }
+
                 break;
             }
             case LoadState(var replyTo):
@@ -188,14 +225,16 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
             }
             case SaveSnapshotSuccess saveSnapshotSuccess:
             {
-                if(Settings.DeleteEvents)
+                if (Settings.DeleteEvents)
                     DeleteMessages(saveSnapshotSuccess.Metadata.SequenceNr);
-                DeleteSnapshots(new SnapshotSelectionCriteria((saveSnapshotSuccess.Metadata.SequenceNr - 1) - Settings.KeepNSnapshots * Settings.SnapshotEvery));
+                DeleteSnapshots(new SnapshotSelectionCriteria((saveSnapshotSuccess.Metadata.SequenceNr - 1) -
+                                                              Settings.KeepNSnapshots * Settings.SnapshotEvery));
                 break;
             }
             case SaveSnapshotFailure failure:
             {
-                _log.Warning(failure.Cause, "Failed to save snapshot, sequence number [{0}]", failure.Metadata.SequenceNr);
+                _log.Warning(failure.Cause, "Failed to save snapshot, sequence number [{0}]",
+                    failure.Metadata.SequenceNr);
                 break;
             }
             default:
@@ -206,7 +245,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
 
     private void TakeSnapshotWhenReady()
     {
-        if(LastSequenceNr % Settings.SnapshotEvery == 0 && LastSequenceNr != 0)
+        if (LastSequenceNr % Settings.SnapshotEvery == 0 && LastSequenceNr != 0)
             SaveSnapshot(State);
     }
 
@@ -225,16 +264,17 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
                 }
                 else
                 {
-                    if(_log.IsDebugEnabled)
+                    if (_log.IsDebugEnabled)
                         _log.Debug("Initial cleanup [{0}]", string.Join(", ", old));
                     var e = new Cleanup(old);
-                    
+
                     Persist(e, cleanup =>
                     {
                         State = State.CleanUp(cleanup.ConfirmationQualifiers);
                         Stash.UnstashAll();
                     });
                 }
+
                 break;
             }
             default:
@@ -277,23 +317,21 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
     {
         var oldUnconfirmed = OldUnconfirmedToCleanup(State);
         if (oldUnconfirmed.IsEmpty)
-             return; // early exit
-        
-        if(_log.IsDebugEnabled)
+            return; // early exit
+
+        if (_log.IsDebugEnabled)
             _log.Debug("Periodic cleanup [{0}]", string.Join(",", oldUnconfirmed));
-        
+
         var e = new Cleanup(oldUnconfirmed);
-        Persist(e, cleanup =>
-        {
-            State = State.CleanUp(cleanup.ConfirmationQualifiers);
-        });
+        Persist(e, cleanup => { State = State.CleanUp(cleanup.ConfirmationQualifiers); });
     }
-    
+
     private ImmutableHashSet<string> OldUnconfirmedToCleanup(State<T> state)
     {
         var now = _timeProvider.Now.Ticks;
         var oldUnconfirmed = state.ConfirmedSeqNr.Where(c => now - c.Value.Item2 >= Settings.CleanupUnusedAfter.Ticks
-            && !state.Unconfirmed.Any(m => m.ConfirmationQualifier.Equals(c.Key)))
+                                                             && !state.Unconfirmed.Any(m =>
+                                                                 m.ConfirmationQualifier.Equals(c.Key)))
             .Select(c => c.Key).ToImmutableHashSet();
         return oldUnconfirmed;
     }

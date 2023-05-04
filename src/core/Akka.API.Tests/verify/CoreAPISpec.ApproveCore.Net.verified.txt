@@ -2558,10 +2558,10 @@ namespace Akka.Delivery
         public const string NoQualifier = "";
         public interface IDurableProducerQueueCommand { }
         [System.Runtime.CompilerServices.NullableAttribute(0)]
-        public sealed class LoadState<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : Akka.Delivery.DurableProducerQueue.IDurableProducerQueueCommand
+        public sealed class LoadState : Akka.Delivery.DurableProducerQueue.IDurableProducerQueueCommand, System.IEquatable<Akka.Delivery.DurableProducerQueue.LoadState>
         {
-            public LoadState(Akka.Actor.IActorRef replyTo) { }
-            public Akka.Actor.IActorRef ReplyTo { get; }
+            public LoadState(Akka.Actor.IActorRef ReplyTo) { }
+            public Akka.Actor.IActorRef ReplyTo { get; set; }
         }
         [System.Runtime.CompilerServices.NullableAttribute(0)]
         public sealed class MessageSent<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : Akka.Delivery.Internal.IDeliverySerializable, System.IEquatable<Akka.Delivery.DurableProducerQueue.MessageSent<T>>
