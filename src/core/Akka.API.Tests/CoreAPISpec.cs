@@ -5,6 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
@@ -20,7 +23,6 @@ using Akka.Persistence.Query.InMemory;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams;
-using VerifyTests;
 using VerifyXunit;
 
 namespace Akka.API.Tests
@@ -28,18 +30,9 @@ namespace Akka.API.Tests
     [UsesVerify]
     public class CoreAPISpec
     {
-        static CoreAPISpec()
-        {
-            VerifierSettings.ScrubLinesContaining("[assembly: ReleaseDateAttribute(");
-            VerifyDiffPlex.Initialize();
-        }
-
         static Task VerifyAssembly<T>()
         {
-            var settings = new VerifySettings() { };
-            settings.UniqueForRuntime();
-            settings.UseDirectory("verify");
-            return Verifier.Verify(GeneratePublicApi(typeof(T).Assembly), settings);
+            return Verifier.Verify(GeneratePublicApi(typeof(T).Assembly));
         }
 
         [Fact]
@@ -77,7 +70,7 @@ namespace Akka.API.Tests
         {
             return VerifyAssembly<SqlReadJournal>();
         }
-        
+
         [Fact]
         public Task ApprovePersistenceInMemoryQuery()
         {

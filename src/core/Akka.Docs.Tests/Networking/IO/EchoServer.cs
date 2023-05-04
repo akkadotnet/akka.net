@@ -22,9 +22,8 @@ namespace DocsExamples.Networking.IO
 
         protected override void OnReceive(object message)
         {
-            if (message is Tcp.Bound)
+            if (message is Tcp.Bound bound)
             {
-                var bound = message as Tcp.Bound;
                 Console.WriteLine("Listening on {0}", bound.LocalAddress);
             }
             else if (message is Tcp.Connected)

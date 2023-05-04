@@ -207,7 +207,7 @@ namespace Akka.Cluster.Routing
         internal static int GetMaxTotalNrOfInstances(Config config)
         {
             int number = config.GetInt("nr-of-instances", 0);
-            if (number == 0 || number == 1)
+            if (number is 0 or 1)
             {
                 return config.GetInt("cluster.max-nr-of-instances-per-node");
             }
@@ -607,7 +607,7 @@ namespace Akka.Cluster.Routing
         /// <returns>TBD</returns>
         public bool IsAvailable(Member member)
         {
-            return (member.Status == MemberStatus.Up || member.Status == MemberStatus.WeaklyUp) && 
+            return member.Status is MemberStatus.Up or MemberStatus.WeaklyUp && 
                    SatisfiesRole(member.Roles) &&
                    (Settings.AllowLocalRoutees || member.Address != Cluster.SelfAddress);
         }

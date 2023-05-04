@@ -39,8 +39,7 @@ namespace Akka.TestKit.Internal.StringMatcher
             if (String.Equals(_path, path, StringComparison.OrdinalIgnoreCase)) return true;
             if(!_canBeRelative)return false;
 
-            ActorPath actorPath;
-            if (!ActorPath.TryParse(path, out actorPath)) return false;
+            if (!ActorPath.TryParse(path, out var actorPath)) return false;
             var pathWithoutAddress = actorPath.ToStringWithoutAddress();
             return String.Equals(_path, pathWithoutAddress, StringComparison.OrdinalIgnoreCase);
         }

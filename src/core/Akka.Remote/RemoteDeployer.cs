@@ -46,8 +46,7 @@ namespace Akka.Remote
 
             var remote = deploy.Config.GetString("remote", null);
 
-            ActorPath actorPath;
-            if(ActorPath.TryParse(remote, out actorPath))
+            if(ActorPath.TryParse(remote, out var actorPath))
             {
                 var address = actorPath.Address;
                 //can have remotely deployed routers that remotely deploy routees

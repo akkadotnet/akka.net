@@ -114,7 +114,7 @@ namespace Akka.Actor
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Identify && Equals((Identify)obj);
+            return obj is Identify identify && Equals(identify);
         }
 
         
@@ -169,7 +169,7 @@ namespace Akka.Actor
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is ActorIdentity && Equals((ActorIdentity)obj);
+            return obj is ActorIdentity identity && Equals(identity);
         }
 
         

@@ -36,19 +36,16 @@ namespace Akka.Tests.Performance.Actor
 
             protected override void OnReceive(object message)
             {
-                if (message is string)
+                if (message is string stringMessage)
                 {
-                    string stringMessage = (string)message;
                     IncrementAndCheck();
                 }
-                else if (message is int)
+                else if (message is int intMessage)
                 {
-                    int intMessage = (int)message;
                     IncrementAndCheck();
                 }
-                else if (message is SimpleData)
+                else if (message is SimpleData simpleDataMessage)
                 {
-                    SimpleData simpleDataMessage = (SimpleData)message;
                     if (simpleDataMessage.Age > 20)
                     {
                         IncrementAndCheck();

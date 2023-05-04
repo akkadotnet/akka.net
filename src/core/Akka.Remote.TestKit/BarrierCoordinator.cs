@@ -96,7 +96,7 @@ namespace Akka.Remote.TestKit
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is Data && Equals((Data) obj);
+                return obj is Data data && Equals(data);
             }
 
             /// <inheritdoc/>
@@ -155,7 +155,7 @@ namespace Akka.Remote.TestKit
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is BarrierTimeoutException && Equals((BarrierTimeoutException) obj);
+                return obj is BarrierTimeoutException exception && Equals(exception);
             }
 
             /// <inheritdoc/>
@@ -207,7 +207,7 @@ namespace Akka.Remote.TestKit
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is FailedBarrierException && Equals((FailedBarrierException) obj);
+                return obj is FailedBarrierException exception && Equals(exception);
             }
 
             /// <inheritdoc/>
@@ -262,7 +262,7 @@ namespace Akka.Remote.TestKit
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is DuplicateNodeException && Equals((DuplicateNodeException) obj);
+                return obj is DuplicateNodeException exception && Equals(exception);
             }
 
             /// <inheritdoc/>
@@ -323,7 +323,7 @@ namespace Akka.Remote.TestKit
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is WrongBarrierException && Equals((WrongBarrierException) obj);
+                return obj is WrongBarrierException exception && Equals(exception);
             }
 
             /// <inheritdoc/>
@@ -381,7 +381,7 @@ namespace Akka.Remote.TestKit
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is BarrierEmptyException && Equals((BarrierEmptyException) obj);
+                return obj is BarrierEmptyException exception && Equals(exception);
             }
 
             /// <inheritdoc/>
@@ -436,7 +436,7 @@ namespace Akka.Remote.TestKit
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is ClientLostException && Equals((ClientLostException) obj);
+                return obj is ClientLostException exception && Equals(exception);
             }
 
             /// <inheritdoc/>

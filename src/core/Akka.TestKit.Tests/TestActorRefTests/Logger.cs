@@ -17,10 +17,10 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         protected override bool Receive(object message)
         {
             var warning = message as Warning;
-            if(warning != null && warning.Message is string)
+            if(warning != null && warning.Message is string warningMessage)
             {
                 _count++;
-                _msg = (string)warning.Message;
+                _msg = warningMessage;
                 return true;
             }
             return false;

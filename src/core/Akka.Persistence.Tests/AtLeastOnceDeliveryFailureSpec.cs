@@ -199,15 +199,13 @@ namespace Akka.Persistence.Tests
 
             private void UpdateState(IEvt evt)
             {
-                if (evt is MsgSent)
+                if (evt is MsgSent msg)
                 {
-                    var msg = (MsgSent)evt;
                     Add(msg.I);
                     Deliver(_destination.Path, deliveryId => new Msg(deliveryId, msg.I));
                 }
-                else if (evt is MsgConfirmed)
+                else if (evt is MsgConfirmed confirmation)
                 {
-                    var confirmation = (MsgConfirmed)evt;
                     ConfirmDelivery(confirmation.DeliveryId);
                 }
             }

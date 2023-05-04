@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <Import Project="..\..\..\common.props" />
-
     <PropertyGroup>
         <AssemblyTitle>Akka.DependencyInjection</AssemblyTitle>
         <Description>Dependency injection support for Akka.NET</Description>

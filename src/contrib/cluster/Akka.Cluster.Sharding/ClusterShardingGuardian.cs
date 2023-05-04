@@ -331,7 +331,7 @@ namespace Akka.Cluster.Sharding
 
         private IActorRef Replicator(ClusterShardingSettings settings)
         {
-            if (settings.StateStoreMode == StateStoreMode.DData || settings.StateStoreMode == StateStoreMode.Custom)
+            if (settings.StateStoreMode is StateStoreMode.DData or StateStoreMode.Custom)
             {
                 // one replicator per role
                 var role = settings.Role ?? string.Empty;

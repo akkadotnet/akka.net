@@ -195,7 +195,7 @@ namespace Akka.Pattern
             {
                 if (_minBackoff <= TimeSpan.Zero) throw new ArgumentException("MinBackoff must be greater than 0");
                 if (_maxBackoff < _minBackoff) throw new ArgumentException("MaxBackoff must be greater than MinBackoff");
-                if (_randomFactor < 0.0 || _randomFactor > 1.0) throw new ArgumentException("RandomFactor must be between 0.0 and 1.0");
+                if (_randomFactor is < 0.0 or > 1.0) throw new ArgumentException("RandomFactor must be between 0.0 and 1.0");
                 
                 if (_reset is AutoReset autoReset)
                 {

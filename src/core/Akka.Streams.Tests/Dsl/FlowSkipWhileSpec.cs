@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() => {
                 await Source.From(Enumerable.Range(1, 4)).SkipWhile(x =>                                                                         
                 {                                                                             
-                    if (x == 1 || x == 3)                                                                                 
+                    if (x is 1 or 3)                                                                                 
                         return true;                                                                             
                     if (x == 4)                                                                                 
                         return false;                                                                             

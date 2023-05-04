@@ -76,7 +76,7 @@ namespace Akka.Streams.Implementation
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
-            => DefaultReceive(message) || RequestElement(message) || (message is T && ReceiveElement((T)message));
+            => DefaultReceive(message) || RequestElement(message) || (message is T message1 && ReceiveElement(message1));
 
         /// <summary>
         /// TBD
