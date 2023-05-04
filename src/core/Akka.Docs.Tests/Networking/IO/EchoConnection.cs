@@ -23,9 +23,8 @@ namespace DocsExamples.Networking.IO
 
         protected override void OnReceive(object message)
         {
-            if (message is Tcp.Received)
+            if (message is Tcp.Received received)
             {
-                var received = message as Tcp.Received;
                 if (received.Data[0] == 'x')
                     Context.Stop(Self);
                 else

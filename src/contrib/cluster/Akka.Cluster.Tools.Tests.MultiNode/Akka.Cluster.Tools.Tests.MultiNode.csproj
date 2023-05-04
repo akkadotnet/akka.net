@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\common.props" />
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Tools.Tests.MultiNode</AssemblyTitle>
@@ -23,7 +22,4 @@
       </PackageReference>
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
 </Project>

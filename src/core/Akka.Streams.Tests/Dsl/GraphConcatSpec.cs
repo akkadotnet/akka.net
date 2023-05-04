@@ -125,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
                 foreach (var i in Enumerable.Range(1, 4))
                 {
                     var result = subscriber2.ExpectNextOrError();
-                    if (result is int && (int)result == i)
+                    if (result is int result1 && result1 == i)
                         continue;
                     if (result.Equals(TestException()))
                         return;
@@ -145,7 +145,7 @@ namespace Akka.Streams.Tests.Dsl
                 foreach (var i in Enumerable.Range(1, 4))
                 {
                     var result = subscriber.ExpectNextOrError();
-                    if (result is int && (int)result == i)
+                    if (result is int result1 && result1 == i)
                         continue;
                     if (result.Equals(TestException()))
                         return;

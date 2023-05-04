@@ -201,9 +201,9 @@ namespace Akka.Cluster.Metrics
             /// <param name="processorsNumber">The number of available processors</param>
             public Cpu(Actor.Address address, long timestamp, double cpuProcessUsage, double cpuTotalUsage, int processorsNumber)
             {
-                if (cpuProcessUsage < 0 || cpuProcessUsage > 1)
+                if (cpuProcessUsage is < 0 or > 1)
                     throw new ArgumentException(nameof(cpuProcessUsage), $"{nameof(cpuProcessUsage)} must be between [0.0 - 1.0], was {cpuProcessUsage}" );
-                if (cpuTotalUsage < 0 || cpuTotalUsage > 1)
+                if (cpuTotalUsage is < 0 or > 1)
                     throw new ArgumentException(nameof(cpuTotalUsage), $"{nameof(cpuTotalUsage)} must be between [0.0 - 1.0], was {cpuTotalUsage}" );
                 
                 Address = address;

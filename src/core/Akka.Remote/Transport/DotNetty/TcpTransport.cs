@@ -72,7 +72,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var se = exception as SocketException;
 
-            if (se?.SocketErrorCode == SocketError.OperationAborted || se?.SocketErrorCode == SocketError.ConnectionAborted)
+            if (se?.SocketErrorCode is SocketError.OperationAborted or SocketError.ConnectionAborted)
             {
                 Log.Info("Socket read operation aborted. Connection is about to be closed. Channel [{0}->{1}](Id={2})",
                     context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);

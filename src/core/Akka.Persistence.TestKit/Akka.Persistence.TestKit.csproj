@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\common.props" />
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.TestKit</AssemblyTitle>
@@ -18,10 +17,6 @@
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
 
   <PropertyGroup>
     <!-- WORKAROUND: for some reason starting at Akka.NET 1.3.2 this package was determined as "unpackable" by default via DOTNET CLI -->

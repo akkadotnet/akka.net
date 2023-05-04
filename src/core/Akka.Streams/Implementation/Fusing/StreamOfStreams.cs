@@ -1243,8 +1243,8 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 else if (status is OnComplete)
                     CompleteStage();
-                else if (status is OnError)
-                    FailStage(((OnError) status).Cause);
+                else if (status is OnError error)
+                    FailStage(error.Cause);
                 else if (status is Action<IActorSubscriberMessage>)
                     throw new IllegalStateException("Substream Source cannot be materialized more than once");
             }
@@ -1255,10 +1255,10 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     if (msg is OnComplete)
                         CompleteStage();
-                    else if (msg is OnError)
-                        FailStage(((OnError) msg).Cause);
-                    else if (msg is OnNext)
-                        Push(_stage._out, (T) ((OnNext) msg).Element);
+                    else if (msg is OnError error)
+                        FailStage(error.Cause);
+                    else if (msg is OnNext next)
+                        Push(_stage._out, (T) next.Element);
                 });
                 SetCallback(ourOwnCallback);
             }

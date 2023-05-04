@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\..\common.props"/>
     <PropertyGroup>
         <AssemblyTitle>Akka.Serialization.Hyperion</AssemblyTitle>
         <Description>Hyperion serializer for Akka.NET</Description>
@@ -17,7 +16,4 @@
         <PackageReference Include="System.Runtime" Version="4.3.1"/>
     </ItemGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
 </Project>

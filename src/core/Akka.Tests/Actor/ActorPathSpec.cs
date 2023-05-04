@@ -36,8 +36,7 @@ namespace Akka.Tests.Actor
 
         private ActorPath ActorPathParse(string path)
         {
-            ActorPath actorPath;
-            if (ActorPath.TryParse(path, out actorPath))
+            if (ActorPath.TryParse(path, out var actorPath))
                 return actorPath;
             throw new UriFormatException();
         }
@@ -244,10 +243,8 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Paths_with_different_addresses_and_same_elements_should_not_be_equal()
         {
-            ActorPath path1 = null;
-            ActorPath path2 = null;
-            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out path1);
-            ActorPath.TryParse("akka://remotesystem/user", out path2);
+            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out var path1);
+            ActorPath.TryParse("akka://remotesystem/user", out var path2);
 
             Assert.NotEqual(path2, path1);
         }
@@ -255,10 +252,8 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Paths_with_same_addresses_and_same_elements_should_not_be_equal()
         {
-            ActorPath path1 = null;
-            ActorPath path2 = null;
-            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out path1);
-            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out path2);
+            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out var path1);
+            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out var path2);
 
             Assert.Equal(path2, path1);
         }

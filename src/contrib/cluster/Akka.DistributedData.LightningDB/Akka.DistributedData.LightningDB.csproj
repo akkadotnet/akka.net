@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\..\common.props"/>
 
     <PropertyGroup>
         <AssemblyTitle>Akka.DistributedData.LightningDB</AssemblyTitle>
@@ -17,9 +16,5 @@
     <ItemGroup>
         <PackageReference Include="LightningDB" Version="0.15.0"/>
     </ItemGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
 
 </Project>

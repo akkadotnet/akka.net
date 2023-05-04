@@ -429,9 +429,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             var serializer = Serialization.FindSerializerForType(snapshotType);
 
             string manifest = "";
-            if (serializer is SerializerWithStringManifest)
+            if (serializer is SerializerWithStringManifest stringManifest)
             {
-                manifest = ((SerializerWithStringManifest)serializer).Manifest(snapshot);
+                manifest = stringManifest.Manifest(snapshot);
             }
             else
             {

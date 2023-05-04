@@ -44,8 +44,6 @@ namespace Akka.Remote.Serialization
 
         protected override ActorPath Compute(string k)
         {
-            ActorPath actorPath;
-
             var path = k.AsSpan();
 
             if (!ActorPath.TryParseParts(path, out var addressSpan, out var absoluteUri))
@@ -70,7 +68,7 @@ namespace Akka.Remote.Serialization
             }
 
             //try lookup root in cache
-            if (!TryGet(rootPath, out actorPath))
+            if (!TryGet(rootPath, out var actorPath))
             {
                 if (!Address.TryParse(addressSpan, out var address))
                     return null;

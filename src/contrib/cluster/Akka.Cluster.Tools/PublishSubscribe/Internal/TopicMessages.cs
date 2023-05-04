@@ -424,7 +424,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is SendToOneSubscriber && Equals((SendToOneSubscriber)obj);
+            return obj is SendToOneSubscriber subscriber && Equals(subscriber);
         }
 
         public override int GetHashCode()

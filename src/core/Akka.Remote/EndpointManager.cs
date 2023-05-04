@@ -599,7 +599,7 @@ namespace Akka.Remote
                     case ActorInitializationException i when i.InnerException is HopelessAssociation h2:
                         return Hopeless(h2);
                     default:
-                        if (ex is EndpointDisassociatedException || ex is EndpointAssociationException) { } //no logging
+                        if (ex is EndpointDisassociatedException or EndpointAssociationException) { } //no logging
                         else { _log.Error(ex, ex.Message); }
                         _endpoints.MarkAsFailed(Sender, Deadline.Now + _settings.RetryGateClosedFor);
                         return Directive.Stop;

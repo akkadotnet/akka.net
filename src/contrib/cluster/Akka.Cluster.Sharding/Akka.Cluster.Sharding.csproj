@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\..\common.props"/>
 
     <PropertyGroup>
         <AssemblyTitle>Akka.Cluster.Sharding</AssemblyTitle>
@@ -17,9 +16,5 @@
         <ProjectReference Include="..\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj"/>
         <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj"/>
     </ItemGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
 
 </Project>

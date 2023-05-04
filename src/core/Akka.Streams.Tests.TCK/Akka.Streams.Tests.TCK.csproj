@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-<Import Project="..\..\common.props" />
   <Import Project="..\..\xunitSettings.props" />
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests.TCK</AssemblyName>
@@ -31,7 +30,4 @@
     <DefineConstants>$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
 </Project>

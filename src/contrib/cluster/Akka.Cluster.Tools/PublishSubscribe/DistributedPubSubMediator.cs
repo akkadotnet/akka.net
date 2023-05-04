@@ -166,9 +166,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Send>(send =>
             {
                 var routees = new List<Routee>();
-                ValueHolder valueHolder;
                 if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket) &&
-                    bucket.Content.TryGetValue(send.Path, out valueHolder) &&
+                    bucket.Content.TryGetValue(send.Path, out var valueHolder) &&
                     send.LocalAffinity)
                 {
                     var routee = valueHolder.Routee;

@@ -761,8 +761,8 @@ namespace Akka.Streams
                 return false;
             if (ReferenceEquals(obj, this))
                 return true;
-            if (obj is StreamSubscriptionTimeoutSettings)
-                return Equals((StreamSubscriptionTimeoutSettings) obj);
+            if (obj is StreamSubscriptionTimeoutSettings settings)
+                return Equals(settings);
 
             return false;
         }

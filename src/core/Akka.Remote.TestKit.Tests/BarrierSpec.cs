@@ -45,7 +45,7 @@ namespace Akka.Remote.TestKit.Tests
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is Failed && Equals((Failed) obj);
+                return obj is Failed failed && Equals(failed);
             }
 
             public override int GetHashCode()

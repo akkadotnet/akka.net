@@ -137,7 +137,7 @@ namespace Akka.DistributedData.Internal
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is Write && Equals((Write)obj);
+        public override bool Equals(object obj) => obj is Write write && Equals(write);
 
         /// <inheritdoc/>
         public override int GetHashCode()
@@ -245,7 +245,7 @@ namespace Akka.DistributedData.Internal
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is Read && Equals((Read)obj);
+        public override bool Equals(object obj) => obj is Read read && Equals(read);
 
         /// <inheritdoc/>
         public override int GetHashCode() => Key?.GetHashCode() ?? 0;
@@ -284,7 +284,7 @@ namespace Akka.DistributedData.Internal
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is ReadResult && Equals((ReadResult)obj);
+        public override bool Equals(object obj) => obj is ReadResult result && Equals(result);
 
         /// <inheritdoc/>
         public override int GetHashCode() => Envelope?.GetHashCode() ?? 0;
@@ -329,7 +329,7 @@ namespace Akka.DistributedData.Internal
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is ReadRepair && Equals((ReadRepair)obj);
+        public override bool Equals(object obj) => obj is ReadRepair repair && Equals(repair);
 
         /// <inheritdoc/>
         public override int GetHashCode()
@@ -715,7 +715,7 @@ namespace Akka.DistributedData.Internal
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is Status && Equals((Status)obj);
+        public override bool Equals(object obj) => obj is Status status && Equals(status);
 
         /// <inheritdoc/>
         public override int GetHashCode()
@@ -795,7 +795,7 @@ namespace Akka.DistributedData.Internal
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is Gossip && Equals((Gossip)obj);
+        public override bool Equals(object obj) => obj is Gossip gossip && Equals(gossip);
 
         /// <inheritdoc/>
         public override int GetHashCode()
@@ -847,7 +847,7 @@ namespace Akka.DistributedData.Internal
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Delta && Equals((Delta)obj);
+            return obj is Delta delta && Equals(delta);
         }
 
         public override int GetHashCode()
@@ -920,7 +920,7 @@ namespace Akka.DistributedData.Internal
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is DeltaPropagation && Equals((DeltaPropagation)obj);
+            return obj is DeltaPropagation propagation && Equals(propagation);
         }
 
         public override int GetHashCode()

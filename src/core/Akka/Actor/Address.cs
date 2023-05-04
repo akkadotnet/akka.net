@@ -355,7 +355,7 @@ namespace Akka.Actor
             if (firstColonPos == -1) // not an absolute Uri
                 return false;
 
-            if (firstColonPos < 4 || 255 < firstColonPos)
+            if (firstColonPos is < 4 or > 255)
             {
                 //invalid scheme length
                 return false;

@@ -519,7 +519,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var names = ReceiveWhile(x => "hello all".Equals(x) ? LastSender.Path.Name : null, msgs: 2);
-                    names.All(x => x == "u8" || x == "u9").Should().BeTrue();
+                    names.All(x => x is "u8" or "u9").Should().BeTrue();
                 }, _first);
 
                 RunOn(() =>

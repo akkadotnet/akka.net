@@ -125,7 +125,7 @@ namespace Akka.DistributedData.Durable
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is DurableDataEnvelope && Equals((DurableDataEnvelope) obj);
+            return obj is DurableDataEnvelope envelope && Equals(envelope);
         }
     }
 }
