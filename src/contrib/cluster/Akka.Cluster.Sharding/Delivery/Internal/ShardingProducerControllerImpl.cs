@@ -611,7 +611,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         var loadTimeout = Settings.ProducerControllerSettings.DurableQueueRequestTimeout;
         durableProducerQueue.OnSuccess(@ref =>
         {
-            DurableProducerQueue.LoadState<T> Mapper(IActorRef r) => new(r);
+            DurableProducerQueue.LoadState Mapper(IActorRef r) => new(r);
 
             var self = Self;
             @ref.Ask<DurableProducerQueue.State<T>>(Mapper, timeout: loadTimeout, cancellationToken: default)

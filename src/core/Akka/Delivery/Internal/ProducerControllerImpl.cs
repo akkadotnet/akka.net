@@ -568,9 +568,9 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         var timeout = Settings.DurableQueueRequestTimeout;
         durableProducerQueue.OnSuccess(@ref =>
         {
-            DurableProducerQueue.LoadState<T> Mapper(IActorRef r)
+            DurableProducerQueue.LoadState Mapper(IActorRef r)
             {
-                return new DurableProducerQueue.LoadState<T>(r);
+                return new DurableProducerQueue.LoadState(r);
             }
 
             var self = Self;

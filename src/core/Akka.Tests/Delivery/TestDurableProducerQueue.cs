@@ -79,7 +79,7 @@ public class TestDurableProducerQueue<T> : ReceiveActor
 
     private void Active()
     {
-        Receive<LoadState<T>>(cmd =>
+        Receive<LoadState>(cmd =>
         {
             MaybeFail(cmd);
             if (_delay == TimeSpan.Zero)

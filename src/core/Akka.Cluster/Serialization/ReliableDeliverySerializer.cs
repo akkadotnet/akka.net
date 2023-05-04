@@ -415,7 +415,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
     {
         return new Confirmed
         {
-            SeqNr = confirmed.SeqNo, Qualifier = confirmed.Qualifier, Timestamp = confirmed.Timestamp
+            SeqNr = confirmed.SeqNr, Qualifier = confirmed.Qualifier, Timestamp = confirmed.Timestamp
         };
     }
     

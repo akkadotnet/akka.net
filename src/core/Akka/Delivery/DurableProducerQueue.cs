@@ -29,15 +29,7 @@ public static class DurableProducerQueue
     /// <summary>
     ///     Request used at startup to retrieve the unconfirmed messages and current sequence number.
     /// </summary>
-    public sealed class LoadState<T> : IDurableProducerQueueCommand
-    {
-        public LoadState(IActorRef replyTo)
-        {
-            ReplyTo = replyTo;
-        }
-
-        public IActorRef ReplyTo { get; }
-    }
+    public sealed record LoadState(IActorRef ReplyTo) : IDurableProducerQueueCommand;
 
     /// <summary>
     ///     Store the fact that a message is to be sent. Replies with <see cref="StoreMessageSentAck" />
@@ -237,24 +229,11 @@ public static class DurableProducerQueue
     ///     INTERNAL API
     ///     The fact that a message has been confirmed to be delivered and processed.
     /// </summary>
-    internal sealed class Confirmed : IDurableProducerQueueEvent
+    internal sealed record Confirmed(long SeqNr, string Qualifier, long Timestamp) : IDurableProducerQueueEvent
     {
-        public Confirmed(long seqNo, string qualifier, long timestamp)
-        {
-            SeqNo = seqNo;
-            Qualifier = qualifier;
-            Timestamp = timestamp;
-        }
-
-        public long SeqNo { get; }
-
-        public string Qualifier { get; }
-
-        public long Timestamp { get; }
-
         public override string ToString()
         {
-            return $"Confirmed({SeqNo}, {Qualifier}, {Timestamp})";
+            return $"Confirmed({SeqNr}, {Qualifier}, {Timestamp})";
         }
     }
 
