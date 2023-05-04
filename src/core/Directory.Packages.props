@@ -25,10 +25,12 @@
     <PackageVersion Include="DotNetty.Handlers" Version="0.6.0"/>
     <PackageVersion Include="Reactive.Streams" Version="1.0.2" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
-    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />    
+    <PackageVersion Include="Reactive.Streams.TCK" Version="1.0.2" />
   </ItemGroup>
   <!-- Test dependencies -->  
   <ItemGroup>
+    <PackageVersion Include="NUnit3TestAdapter" Version="4.4.2" />
     <PackageVersion Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageVersion Include="xunit" Version="$(XunitVersion)" />
