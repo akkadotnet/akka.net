@@ -350,7 +350,8 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
     private ImmutableHashSet<string> OldUnconfirmedToCleanup(State<T> state)
     {
         var now = _timeProvider.Now.Ticks;
-        var oldUnconfirmed = state.ConfirmedSeqNr.Where(c => now - c.Value.Item2 >= Settings.CleanupUnusedAfter.Ticks
+        var oldUnconfirmed = state.ConfirmedSeqNr.Where(c => 
+                now - c.Value.Item2 >= Settings.CleanupUnusedAfter.Ticks
                                                              && !state.Unconfirmed.Any(m =>
                                                                  m.ConfirmationQualifier.Equals(c.Key)))
             .Select(c => c.Key).ToImmutableHashSet();
