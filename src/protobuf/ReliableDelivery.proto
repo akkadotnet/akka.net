@@ -74,6 +74,7 @@ message MessageSent {
   bool firstChunk = 6;
   bool lastChunk = 7;
   TypeDescriptor typeInfo = 8;
+  bool isChunk = 9;
 }
 
 // DurableProducerQueue
