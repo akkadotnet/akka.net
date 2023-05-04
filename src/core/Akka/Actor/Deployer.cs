@@ -141,8 +141,9 @@ namespace Akka.Actor
             if(routerTypeName == null)
             {
                 var message = $"Could not find type mapping for router alias [{routerTypeAlias}].";
-                if (routerTypeAlias == "cluster-metrics-adaptive-group" ||
-                    routerTypeAlias == "cluster-metrics-adaptive-pool")
+                if (routerTypeAlias is
+                    "cluster-metrics-adaptive-group" or
+                    "cluster-metrics-adaptive-pool")
                     message += " Please install Akka.Cluster.Metrics extension nuget package.";
                 else
                     message += " Did you forgot to install a specific router extension?";
@@ -158,8 +159,7 @@ namespace Akka.Actor
             catch (ArgumentNullException e)
             {
                 var message = $"Could not find extension Type [{routerTypeAlias}] for router alias [{routerTypeAlias}].";
-                if (routerTypeAlias == "cluster-metrics-adaptive-group" ||
-                    routerTypeAlias == "cluster-metrics-adaptive-pool")
+                if (routerTypeAlias is "cluster-metrics-adaptive-group" or "cluster-metrics-adaptive-pool")
                     message += " Please install Akka.Cluster.Metrics extension nuget package.";
                 else
                     message += " Did you forgot to install a specific router extension?";

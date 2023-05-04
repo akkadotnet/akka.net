@@ -177,8 +177,7 @@ namespace Akka.Remote.Transport.DotNetty
         public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
             EndPoint listenAddress;
-            IPAddress ip;
-            if (IPAddress.TryParse(Settings.Hostname, out ip))
+            if (IPAddress.TryParse(Settings.Hostname, out var ip))
                 listenAddress = new IPEndPoint(ip, Settings.Port);
             else
                 listenAddress = new DnsEndPoint(Settings.Hostname, Settings.Port);
@@ -439,8 +438,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         private static string SafeMapHostName(string hostName)
         {
-            IPAddress ip;
-            return !string.IsNullOrEmpty(hostName) && IPAddress.TryParse(hostName, out ip) ? SafeMapIPv6(ip) : hostName;
+            return !string.IsNullOrEmpty(hostName) && IPAddress.TryParse(hostName, out var ip) ? SafeMapIPv6(ip) : hostName;
         }
 
         private static string SafeMapIPv6(IPAddress ip) => ip.AddressFamily == AddressFamily.InterNetworkV6 ? "[" + ip + "]" : ip.ToString();
@@ -449,8 +447,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (!address.Port.HasValue) throw new ArgumentNullException(nameof(address), $"Address port must not be null: {address}");
 
-            IPAddress ip;
-            return IPAddress.TryParse(address.Host, out ip)
+            return IPAddress.TryParse(address.Host, out var ip)
                 ? (EndPoint)new IPEndPoint(ip, address.Port.Value)
                 : new DnsEndPoint(address.Host, address.Port.Value);
         }
@@ -465,8 +462,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (address.Port == null) throw new ArgumentException($"address port must not be null: {address}");
             EndPoint listenAddress;
-            IPAddress ip;
-            if (IPAddress.TryParse(address.Host, out ip))
+            if (IPAddress.TryParse(address.Host, out var ip))
             {
                 listenAddress = new IPEndPoint(ip, (int)address.Port);
             }

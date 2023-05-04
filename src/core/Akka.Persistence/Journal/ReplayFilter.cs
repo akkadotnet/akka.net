@@ -131,11 +131,10 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is ReplayedMessage)
+            if (message is ReplayedMessage value)
             {
-                var r = (ReplayedMessage) message;
                 if (DebugEnabled && _log.IsDebugEnabled)
-                    _log.Debug($"Replay: {r.Persistent}");
+                    _log.Debug($"Replay: {value.Persistent}");
 
                 try
                 {
@@ -146,13 +145,13 @@ namespace Akka.Persistence.Journal
                         PersistentActor.Tell(msg.Value, ActorRefs.NoSender);
                     }
 
-                    if (r.Persistent.WriterGuid.Equals(_writerUuid))
+                    if (value.Persistent.WriterGuid.Equals(_writerUuid))
                     {
                         // from same writer
-                        if (r.Persistent.SequenceNr < _sequenceNr)
+                        if (value.Persistent.SequenceNr < _sequenceNr)
                         {
-                            var errMsg = $@"Invalid replayed event [sequenceNr={r.Persistent.SequenceNr}, writerUUID={r.Persistent.WriterGuid}] as
-                                            the sequenceNr should be equal to or greater than already-processed event [sequenceNr={_sequenceNr}, writerUUID={_writerUuid}] from the same writer, for the same persistenceId [{r.Persistent.PersistenceId}].
+                            var errMsg = $@"Invalid replayed event [sequenceNr={value.Persistent.SequenceNr}, writerUUID={value.Persistent.WriterGuid}] as
+                                            the sequenceNr should be equal to or greater than already-processed event [sequenceNr={_sequenceNr}, writerUUID={_writerUuid}] from the same writer, for the same persistenceId [{value.Persistent.PersistenceId}].
                                             Perhaps, events were journaled out of sequence, or duplicate PersistentId for different entities?";
                             LogIssue(errMsg);
                             switch (Mode)
@@ -163,7 +162,7 @@ namespace Akka.Persistence.Journal
                                 case ReplayFilterMode.Fail:
                                     throw new IllegalStateException(errMsg);
                                 case ReplayFilterMode.Warn:
-                                    _buffer.AddLast(r);
+                                    _buffer.AddLast(value);
                                     break;
                                 case ReplayFilterMode.Disabled:
                                     throw new ArgumentException("Mode must not be Disabled");
@@ -172,15 +171,15 @@ namespace Akka.Persistence.Journal
                         else
                         {
                             // note that it is alright with == _sequenceNr, since such may be emitted by EventSeq
-                            _buffer.AddLast(r);
-                            _sequenceNr = r.Persistent.SequenceNr;
+                            _buffer.AddLast(value);
+                            _sequenceNr = value.Persistent.SequenceNr;
                         }
                     }
-                    else if (_oldWriters.Contains(r.Persistent.WriterGuid))
+                    else if (_oldWriters.Contains(value.Persistent.WriterGuid))
                     {
                         // from old writer
-                        var errMsg = $@"Invalid replayed event [sequenceNr={r.Persistent.SequenceNr}, writerUUID={r.Persistent.WriterGuid}].
-                                        There was already a newer writer whose last replayed event was [sequenceNr={_sequenceNr}, writerUUID={_writerUuid}] for the same persistenceId [{r.Persistent.PersistenceId}].
+                        var errMsg = $@"Invalid replayed event [sequenceNr={value.Persistent.SequenceNr}, writerUUID={value.Persistent.WriterGuid}].
+                                        There was already a newer writer whose last replayed event was [sequenceNr={_sequenceNr}, writerUUID={_writerUuid}] for the same persistenceId [{value.Persistent.PersistenceId}].
                                         Perhaps, the old writer kept journaling messages after the new writer created, or duplicate PersistentId for different entities?";
                         LogIssue(errMsg);
                         switch (Mode)
@@ -191,7 +190,7 @@ namespace Akka.Persistence.Journal
                             case ReplayFilterMode.Fail:
                                 throw new IllegalStateException(errMsg);
                             case ReplayFilterMode.Warn:
-                                _buffer.AddLast(r);
+                                _buffer.AddLast(value);
                                 break;
                             case ReplayFilterMode.Disabled:
                                 throw new ArgumentException("Mode must not be Disabled");
@@ -204,8 +203,8 @@ namespace Akka.Persistence.Journal
                             _oldWriters.AddLast(_writerUuid);
                         if (_oldWriters.Count > MaxOldWriters)
                             _oldWriters.RemoveFirst();
-                        _writerUuid = r.Persistent.WriterGuid;
-                        _sequenceNr = r.Persistent.SequenceNr;
+                        _writerUuid = value.Persistent.WriterGuid;
+                        _sequenceNr = value.Persistent.SequenceNr;
 
                         // clear the buffer from messages from other writers with higher SequenceNr
                         var node = _buffer.First;
@@ -215,8 +214,8 @@ namespace Akka.Persistence.Journal
                             var msg = node.Value;
                             if (msg.Persistent.SequenceNr >= _sequenceNr)
                             {
-                                var errMsg = $@"Invalid replayed event [sequenceNr=${r.Persistent.SequenceNr}, writerUUID=${r.Persistent.WriterGuid}] from a new writer.
-                                                An older writer already sent an event [sequenceNr=${msg.Persistent.SequenceNr}, writerUUID=${msg.Persistent.WriterGuid}] whose sequence number was equal or greater for the same persistenceId [${r.Persistent.PersistenceId}].
+                                var errMsg = $@"Invalid replayed event [sequenceNr=${value.Persistent.SequenceNr}, writerUUID=${value.Persistent.WriterGuid}] from a new writer.
+                                                An older writer already sent an event [sequenceNr=${msg.Persistent.SequenceNr}, writerUUID=${msg.Persistent.WriterGuid}] whose sequence number was equal or greater for the same persistenceId [${value.Persistent.PersistenceId}].
                                                 Perhaps, the new writer journaled the event out of sequence, or duplicate PersistentId for different entities?";
                                 LogIssue(errMsg);
                                 switch (Mode)
@@ -236,7 +235,7 @@ namespace Akka.Persistence.Journal
                             }
                             node = next;
                         }
-                        _buffer.AddLast(r);
+                        _buffer.AddLast(value);
                     }
 
                 }
@@ -248,7 +247,7 @@ namespace Akka.Persistence.Journal
                         throw;
                 }
             }
-            else if (message is RecoverySuccess || message is ReplayMessagesFailure)
+            else if (message is RecoverySuccess or ReplayMessagesFailure)
             {
                 if (DebugEnabled)
                     _log.Debug($"Replay completed: {message}");
@@ -296,7 +295,7 @@ namespace Akka.Persistence.Journal
                 {
                     // discard
                 }
-                else if (message is RecoverySuccess || message is ReplayMessagesFailure)
+                else if (message is RecoverySuccess or ReplayMessagesFailure)
                 {
                     Context.Stop(Self);
                 }

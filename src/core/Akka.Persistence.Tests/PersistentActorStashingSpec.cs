@@ -36,9 +36,8 @@ namespace Akka.Persistence.Tests
             {
                 if (!UnstashBehavior(message))
                 {
-                    if (message is Cmd)
+                    if (message is Cmd cmd)
                     {
-                        var cmd = message as Cmd;
                         if (cmd.Data.ToString() == "a")
                         {
                             if (!_stashed)
@@ -64,9 +63,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool UnstashBehavior(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     if (cmd.Data.ToString() == "c")
                     {
                         Stash.UnstashAll();
@@ -87,9 +85,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool UnstashBehavior(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     if (cmd.Data.ToString() == "c")
                     {
                         Persist(new Evt("c"), e =>
@@ -128,7 +125,7 @@ namespace Akka.Persistence.Tests
                                 Context.Become(ProcessC);
                             });
                         }
-                        else if (data == "b-1" || data == "b-2")
+                        else if (data is "b-1" or "b-2")
                         {
                             Persist(new Evt(cmd.Data.ToString()), UpdateStateHandler);
                         }
@@ -377,9 +374,9 @@ namespace Akka.Persistence.Tests
             {
                 if (!CommonBehavior(message) && !UnstashBehavior(message))
                 {
-                    if (message is Cmd)
+                    if (message is Cmd cmd)
                     {
-                        var data = ((Cmd) message).Data;
+                        var data = cmd.Data;
                         if (data.Equals("a"))
                         {
                             PersistAsync(new Evt("a"), UpdateStateHandler);

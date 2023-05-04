@@ -373,8 +373,7 @@ namespace Akka.Cluster.TestKit
             var leader = ClusterView.Leader;
             var isLeader = leader == ClusterView.SelfAddress;
             _assertions.AssertTrue(isLeader == IsNode(expectedLeader), "expected leader {0}, got leader {1}, members{2}", expectedLeader, leader, ClusterView.Members);
-            _assertions.AssertTrue(ClusterView.Status == MemberStatus.Up ||
-                                   ClusterView.Status == MemberStatus.Leaving,
+            _assertions.AssertTrue(ClusterView.Status is MemberStatus.Up or MemberStatus.Leaving,
                 "Expected cluster view status Up or Leaving but got {0}", ClusterView.Status);
         }
 

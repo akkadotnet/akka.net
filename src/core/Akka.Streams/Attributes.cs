@@ -63,7 +63,7 @@ namespace Akka.Streams
                 Value = value;
             }
             public bool Equals(Name other) => !ReferenceEquals(other, null) && Equals(Value, other.Value);
-            public override bool Equals(object obj) => obj is Name && Equals((Name)obj);
+            public override bool Equals(object obj) => obj is Name name && Equals(name);
             public override int GetHashCode() => Value.GetHashCode();
             public override string ToString() => $"Name({Value})";
         }
@@ -103,7 +103,7 @@ namespace Akka.Streams
                 return Initial == other.Initial && Max == other.Max;
             }
 
-            public override bool Equals(object obj) => obj is InputBuffer && Equals((InputBuffer)obj);
+            public override bool Equals(object obj) => obj is InputBuffer buffer && Equals(buffer);
             public override int GetHashCode()
             {
                 unchecked
@@ -159,7 +159,7 @@ namespace Akka.Streams
 
                 return OnElement == other.OnElement && OnFinish == other.OnFinish && OnFailure == other.OnFailure;
             }
-            public override bool Equals(object obj) => obj is LogLevels && Equals((LogLevels)obj);
+            public override bool Equals(object obj) => obj is LogLevels levels && Equals(levels);
             public override int GetHashCode()
             {
                 unchecked
@@ -303,8 +303,7 @@ namespace Akka.Streams
         internal bool IsAsync
             => _attributes.Length > 0 &&
                 _attributes.Any(
-                    attr => attr is AsyncBoundary ||
-                    attr is ActorAttributes.Dispatcher);
+                    attr => attr is AsyncBoundary or ActorAttributes.Dispatcher);
 
         /// <summary>
         /// Get all attributes of a given type (or subtypes thereof).

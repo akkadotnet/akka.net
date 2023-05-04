@@ -161,9 +161,8 @@ namespace Akka.Streams.Actors
                     Request(RequestStrategy.RequestDemand(RemainingRequested));
                 }
             }
-            else if (message is OnSubscribe)
+            else if (message is OnSubscribe onSubscribe)
             {
-                var onSubscribe = (OnSubscribe) message;
                 if (_subscription == null)
                 {
                     _subscription = onSubscribe.Subscription;
@@ -182,7 +181,7 @@ namespace Akka.Streams.Actors
                     onSubscribe.Subscription.Cancel();
                 }
             }
-            else if (message is OnComplete || message is OnError)
+            else if (message is OnComplete or OnError)
             {
                 if (!_canceled)
                 {
@@ -450,8 +449,7 @@ namespace Akka.Streams.Actors
         /// <returns>TBD</returns>
         public State Remove(IActorRef actorRef)
         {
-            State s;
-            return _state.TryRemove(actorRef, out s) ? s : null;
+            return _state.TryRemove(actorRef, out var s) ? s : null;
         }
 
         /// <summary>

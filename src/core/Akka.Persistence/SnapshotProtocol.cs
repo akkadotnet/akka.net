@@ -767,7 +767,7 @@ namespace Akka.Persistence
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is LoadSnapshotFailed && Equals((LoadSnapshotFailed)obj);
+            return obj is LoadSnapshotFailed failed && Equals(failed);
         }
 
         public override int GetHashCode() => Cause?.GetHashCode() ?? 0;

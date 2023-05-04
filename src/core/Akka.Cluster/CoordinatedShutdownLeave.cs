@@ -63,8 +63,7 @@ namespace Akka.Cluster
                 }
                 else if (s.Members.Any(m => m.UniqueAddress.Equals(_cluster.SelfUniqueAddress)
                                        &&
-                                       (m.Status == MemberStatus.Leaving || m.Status == MemberStatus.Exiting ||
-                                        m.Status == MemberStatus.Down)))
+                                       m.Status is MemberStatus.Leaving or MemberStatus.Exiting or MemberStatus.Down))
                 {
                     replyTo.Tell(Done.Instance);
                     Context.Stop(Self);

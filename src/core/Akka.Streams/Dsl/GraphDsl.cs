@@ -142,8 +142,8 @@ namespace Akka.Streams.Dsl
                     * because that computation node would not be part of the tree and
                     * the source would not be triggered.
                     */
-                    if (_moduleInProgress is CopiedModule)
-                        _moduleInProgress = CompositeModule.Create((Module) _moduleInProgress, _moduleInProgress.Shape);
+                    if (_moduleInProgress is CopiedModule module)
+                        _moduleInProgress = CompositeModule.Create(module, module.Shape);
 
                     var source = new MaterializedValueSource<T>(_moduleInProgress.MaterializedValueComputation);
                     _moduleInProgress = _moduleInProgress.ComposeNoMaterialized(source.Module);

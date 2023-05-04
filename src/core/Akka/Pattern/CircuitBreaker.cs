@@ -195,7 +195,7 @@ namespace Akka.Pattern
         public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout, TimeSpan maxResetTimeout, double exponentialBackoffFactor, double randomFactor)
         {
             if (exponentialBackoffFactor < 1.0) throw new ArgumentException("factor must be >= 1.0", nameof(exponentialBackoffFactor));
-            if (randomFactor < 0.0 || randomFactor > 1.0) throw new ArgumentException("randomFactor must be between 0.0 and 1.0", nameof(randomFactor));
+            if (randomFactor is < 0.0 or > 1.0) throw new ArgumentException("randomFactor must be between 0.0 and 1.0", nameof(randomFactor));
 
             Scheduler = scheduler;
             MaxFailures = maxFailures;

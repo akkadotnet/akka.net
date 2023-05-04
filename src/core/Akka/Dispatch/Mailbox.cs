@@ -176,7 +176,7 @@ namespace Akka.Dispatch
         internal bool CanBeScheduledForExecution(bool hasMessageHint, bool hasSystemMessageHint)
         {
             var currentStatus = CurrentStatus();
-            if (currentStatus == MailboxStatus.Open || currentStatus == MailboxStatus.Scheduled)
+            if (currentStatus is MailboxStatus.Open or MailboxStatus.Scheduled)
                 return hasMessageHint || hasSystemMessageHint || HasSystemMessages || HasMessages;
             if (currentStatus == MailboxStatus.Closed) return false;
             return hasSystemMessageHint || HasSystemMessages;

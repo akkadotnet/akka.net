@@ -29,7 +29,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         protected override bool ReceiveMessage(object message)
         {
-            if(message is string && ((string)message) == "sendKill")
+            if(message is string s && s == "sendKill")
             {
                 _child.Tell(Kill.Instance);
                 return true;
