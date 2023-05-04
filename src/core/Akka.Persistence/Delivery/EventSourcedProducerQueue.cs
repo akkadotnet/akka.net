@@ -38,9 +38,17 @@ public static class EventSourcedProducerQueue
         /// </summary>
         public static Settings Create(ActorSystem sys)
         {
-            var config =
-                sys.Settings.Config.GetConfig("akka.reliable-delivery.producer-controller.event-sourced-durable-queue");
-            return Create(config);
+            if (sys.Settings.Config.HasPath("akka.reliable-delivery.producer-controller.event-sourced-durable-queue"))
+            {
+                var config =
+                    sys.Settings.Config.GetConfig("akka.reliable-delivery.producer-controller.event-sourced-durable-queue");
+                return Create(config);
+            }
+
+            // in case Akka.Persistence hasn't been loaded into the ActorSystem yet
+            return Create(Persistence.DefaultConfig()
+                .GetConfig("akka.reliable-delivery.producer-controller.event-sourced-durable-queue"));
+
         }
 
         /// <summary>
@@ -157,7 +165,11 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
     protected override void OnCommand(object message)
     {
         if (!_initialCleanupDone)
+        {
             OnCommandBeforeInitialCleanup(message);
+            return;
+        }
+            
 
         switch (message)
         {
@@ -181,7 +193,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
                 {
                     // already stored - could be a retry after timeout
                     _log.Debug("Duplicate seqNr [{0}], currentSeqNr [{1}]", sent.SeqNr, currentSeqNr);
-                    Sender.Tell(new StoreMessageSentAck(sent.SeqNr));
+                    replyTo.Tell(new StoreMessageSentAck(sent.SeqNr));
                 }
                 else
                 {
