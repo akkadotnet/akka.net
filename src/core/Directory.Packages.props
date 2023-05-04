@@ -23,6 +23,9 @@
     <PackageVersion Include="Fsharp.Core" Version="$(FsharpVersion)" />
     <PackageVersion Include="Google.Protobuf" Version="$(ProtobufVersion)" />
     <PackageVersion Include="DotNetty.Handlers" Version="0.6.0"/>
+    <PackageVersion Include="Reactive.Streams" Version="1.0.2" />
+    <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />
   </ItemGroup>
   <!-- Test dependencies -->  
   <ItemGroup>
