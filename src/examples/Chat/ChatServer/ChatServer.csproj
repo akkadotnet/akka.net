@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\..\..\common.props" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>$(NetTestVersion)</TargetFramework>
