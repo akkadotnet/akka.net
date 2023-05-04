@@ -357,7 +357,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             DurableQueueRef.OnSuccess(d =>
             {
                 // Storing the confirmedSeqNr can be "write behind", at-least-once delivery
-                d.Tell(new DurableProducerQueue.StoreMessageConfirmed<T>(confirmed.Last().TotalSeqNr, outState.EntityId,
+                d.Tell(new DurableProducerQueue.StoreMessageConfirmed(confirmed.Last().TotalSeqNr, outState.EntityId,
                     _timeProvider.Now.Ticks));
             });
         }
