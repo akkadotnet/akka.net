@@ -444,7 +444,7 @@ Target "Protobuf" <| fun _ ->
         ("ClusterClientMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/Client/Serialization/Proto/");
         ("DistributedPubSubMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/PublishSubscribe/Serialization/Proto/");
         ("ClusterShardingMessages.proto", "/src/contrib/cluster/Akka.Cluster.Sharding/Serialization/Proto/");
-        ("ReliableDelivery.proto", "/src/contrib/cluster/Akka.Cluster.Sharding/Serialization/Proto/");
+        ("ReliableDelivery.proto", "/src/core/Akka.Cluster/Serialization/Proto/");
         ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/");
         ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/");
         ("StreamRefMessages.proto", "/src/core/Akka.Streams/Serialization/Proto/");
