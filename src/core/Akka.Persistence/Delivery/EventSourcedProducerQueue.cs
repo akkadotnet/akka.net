@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="EventSourcedProducerQueue.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="EventSourcedProducerQueue.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 #nullable enable
 using System;
@@ -14,7 +14,6 @@ using Akka.Configuration;
 using Akka.Delivery;
 using Akka.Event;
 using Akka.Pattern;
-using Akka.Util;
 using Akka.Util.Internal;
 using static Akka.Delivery.DurableProducerQueue;
 
@@ -175,6 +174,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
                     {
                         State = State.AddMessageSent(e);
                         replyTo.Tell(new StoreMessageSentAck(e.SeqNr));
+                        TakeSnapshotWhenReady();
                     });
                 }
                 else if (sent.SeqNr == currentSeqNr - 1)
@@ -208,7 +208,11 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
                 if (seqNr > previousConfirmedSeqNr)
                 {
                     Persist(new Confirmed(seqNr, confirmationQualifier, timestamp),
-                        e => { State = State.AddConfirmed(e.SeqNr, e.Qualifier, e.Timestamp); });
+                        e =>
+                        {
+                            State = State.AddConfirmed(e.SeqNr, e.Qualifier, e.Timestamp); 
+                            TakeSnapshotWhenReady();
+                        });
                 }
 
                 break;
@@ -272,6 +276,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
                     {
                         State = State.CleanUp(cleanup.ConfirmationQualifiers);
                         Stash.UnstashAll();
+                        TakeSnapshotWhenReady();
                     });
                 }
 
@@ -323,7 +328,11 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
             _log.Debug("Periodic cleanup [{0}]", string.Join(",", oldUnconfirmed));
 
         var e = new Cleanup(oldUnconfirmed);
-        Persist(e, cleanup => { State = State.CleanUp(cleanup.ConfirmationQualifiers); });
+        Persist(e, cleanup =>
+        {
+            State = State.CleanUp(cleanup.ConfirmationQualifiers); 
+            TakeSnapshotWhenReady();
+        });
     }
 
     private ImmutableHashSet<string> OldUnconfirmedToCleanup(State<T> state)
