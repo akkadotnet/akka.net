@@ -1,0 +1,27 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <!-- App dependencies -->
+  <ItemGroup>
+    <PackageVersion Include="Polyfill" Version="1.21.0" />
+    <PackageVersion Include="Microsoft.Extensions.ObjectPool" Version="7.0.5" />
+    <PackageVersion Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
+    <PackageVersion Include="System.Reflection.Emit" Version="4.7.0" />
+    <PackageVersion Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
+    <PackageVersion Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
+    <PackageVersion Include="System.Configuration.ConfigurationManager">
+      <Version>$(ConfigurationManagerVersion)</Version>
+    </PackageVersion>
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
+  </ItemGroup>
+  <!-- Test dependencies -->  
+  <ItemGroup>
+	
+  </ItemGroup>
+	<!-- SourceLink support for all Akka.NET projects -->
+	<ItemGroup>
+		
+	</ItemGroup>
+	
+</Project>
