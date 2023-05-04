@@ -150,7 +150,7 @@ public static class ProducerController
 
 
     /// <summary>
-    ///     Commands that are specific to the producer side of the <see cref="RdConfig" /> pattern.
+    ///     Commands that are specific to the producer side of the reliable delivery pattern.
     /// </summary>
     /// <typeparam name="T">The type of messages the producer manages.</typeparam>
     public interface IProducerCommand<T>

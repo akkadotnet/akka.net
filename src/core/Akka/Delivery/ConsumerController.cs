@@ -74,7 +74,7 @@ public static class ConsumerController
     }
     
     /// <summary>
-    ///     Commands that are specific to the consumer side of the <see cref="RdConfig" /> pattern.
+    ///     Commands that are specific to the consumer side of the reliable delivery pattern.
     /// </summary>
     /// <typeparam name="T">The type of messages the consumer manages.</typeparam>
     public interface IConsumerCommand<T>
