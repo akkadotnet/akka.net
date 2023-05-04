@@ -519,7 +519,7 @@ namespace Akka.Actor
         public static bool TryParseParts(ReadOnlySpan<char> path, out ReadOnlySpan<char> address, out ReadOnlySpan<char> absoluteUri)
         {
             var firstAtPos = path.IndexOf(':');
-            if (firstAtPos < 4 || 255 < firstAtPos)
+            if (firstAtPos is < 4 or > 255)
             {
                 //missing or invalid scheme
                 address = default;

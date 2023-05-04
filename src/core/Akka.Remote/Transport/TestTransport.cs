@@ -465,8 +465,7 @@ namespace Akka.Remote.Transport
         {
             get
             {
-                Func<TIn, Task<TOut>> behavior;
-                if (_behaviorStack.TryPeek(out behavior))
+                if (_behaviorStack.TryPeek(out var behavior))
                     return behavior;
                 return DefaultBehavior; //otherwise, return the default behavior
             }

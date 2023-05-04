@@ -278,10 +278,9 @@ namespace Akka.Tests.Actor
 
                 When(FsmState.Initial, @event =>
                 {
-                    if (@event.FsmEvent is FsmState)
+                    if (@event.FsmEvent is FsmState name)
                     {
-                        var s = (FsmState)@event.FsmEvent;
-                        switch (s)
+                        switch (name)
                         {
                             case FsmState.TestSingleTimer:
                                 SetTimer("tester", Tick.Instance, 500.Milliseconds(), false);
@@ -292,7 +291,7 @@ namespace Akka.Tests.Actor
                             case FsmState.TestStateTimeoutOverride:
                                 return GoTo(FsmState.TestStateTimeout).ForMax(TimeSpan.MaxValue);
                             default:
-                                return GoTo(s);
+                                return GoTo(name);
                         }
                     }
                     return null;
@@ -454,9 +453,8 @@ namespace Akka.Tests.Actor
 
                 When(FsmState.Initial, evt =>
                 {
-                    if (evt.FsmEvent is FsmState)
+                    if (evt.FsmEvent is FsmState state)
                     {
-                        var state = (FsmState)evt.FsmEvent;
                         if (state == FsmState.TestStoppingActorStateTimeout)
                         {
                             Context.Stop(Self);

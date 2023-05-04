@@ -120,10 +120,10 @@ namespace Akka.Cluster.Metrics
                 case ClusterEvent.MemberExited m: RemoveMember(m.Member); return true;
                 case ClusterEvent.UnreachableMember m: RemoveMember(m.Member); return true;
                 case ClusterEvent.ReachableMember m: 
-                    if (m.Member.Status == MemberStatus.Up || m.Member.Status == MemberStatus.WeaklyUp)
+                    if (m.Member.Status is MemberStatus.Up or MemberStatus.WeaklyUp)
                         AddMember(m.Member);
                     return true;
-                case object msg when msg is ClusterEvent.IMemberEvent:
+                case object and ClusterEvent.IMemberEvent:
                     return true; // not interested in other types of MemberEvent
             }
 
@@ -151,7 +151,7 @@ namespace Akka.Cluster.Metrics
         private void ReceiveState(ClusterEvent.CurrentClusterState state)
         {
             _nodes = state.Members.Except(state.Unreachable)
-                .Where(m => m.Status == MemberStatus.Up || m.Status == MemberStatus.WeaklyUp)
+                .Where(m => m.Status is MemberStatus.Up or MemberStatus.WeaklyUp)
                 .Select(m => m.Address)
                 .ToImmutableSortedSet();
         }

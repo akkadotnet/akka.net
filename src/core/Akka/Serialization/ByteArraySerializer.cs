@@ -42,8 +42,8 @@ namespace Akka.Serialization
         {
             if (obj == null)
                 return null;
-            if (obj is byte[])
-                return (byte[]) obj;
+            if (obj is byte[] bytes)
+                return bytes;
             throw new NotSupportedException("The object to convert is not a byte array.");
         }
 

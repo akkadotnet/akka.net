@@ -399,26 +399,19 @@ namespace Akka.Actor
             // runtime from inside the finalizer and you should not reference
             // other objects. Only unmanaged resources can be disposed.
 
-            try
+            //Make sure Dispose does not get called more than once, by checking the disposed field
+            if (!_isDisposed)
             {
-                //Make sure Dispose does not get called more than once, by checking the disposed field
-                if (!_isDisposed)
+                if (disposing)
                 {
-                    if (disposing)
-                    {
-                        Log.Debug("Disposing system");
-                        Terminate().Wait(); // System needs to be disposed before method returns
-                    }
-
-                    //Clean up unmanaged resources
+                    Log.Debug("Disposing system");
+                    Terminate().Wait(); // System needs to be disposed before method returns
                 }
 
-                _isDisposed = true;
+                //Clean up unmanaged resources
             }
-            finally
-            {
 
-            }
+            _isDisposed = true;
         }
 
         /// <summary>
