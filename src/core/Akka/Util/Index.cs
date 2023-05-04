@@ -192,8 +192,7 @@ namespace Akka.Util
         /// <returns>An enumerable collection of <typeparamref name="TValue"/> if the key exists. An empty collection otherwise.</returns>
         public IEnumerable<TValue> Remove(TKey key)
         {
-            ConcurrentSet<TValue> set;
-            if (_container.TryRemove(key, out set))
+            if (_container.TryRemove(key, out var set))
             {
                 // grab a shallow copy of the set
                 var ret = set.ToArray();

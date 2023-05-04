@@ -57,8 +57,7 @@ namespace Akka.TestKit
                     si.DeliveryCount++;
                 }
 
-                ConcurrentQueue<ScheduledItem> removed;
-                _scheduledWork.TryRemove(t.Key, out removed);
+                _scheduledWork.TryRemove(t.Key, out var removed);
 
                 foreach (var i in removed.Where(r => r.Repeating && (r.Cancelable == null || !r.Cancelable.IsCancellationRequested)))
                 {

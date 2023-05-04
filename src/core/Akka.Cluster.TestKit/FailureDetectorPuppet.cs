@@ -56,7 +56,7 @@ namespace Akka.Cluster.Tests.MultiNode
             get
             {
                 var status = _status.Value;
-                return status == Status.Up || status == Status.Unknown;
+                return status is Status.Up or Status.Unknown;
             }
         }
 

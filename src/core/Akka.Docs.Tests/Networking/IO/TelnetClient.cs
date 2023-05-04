@@ -25,9 +25,8 @@ namespace DocsExamples.Networking.IO
 
         protected override void OnReceive(object message)
         {
-            if (message is Tcp.Connected)
+            if (message is Tcp.Connected connected)
             {
-                var connected = message as Tcp.Connected;
                 Console.WriteLine("Connected to {0}", connected.RemoteAddress);
 
                 // Register self as connection handler
@@ -46,14 +45,13 @@ namespace DocsExamples.Networking.IO
         {
             return message =>
             {
-                if (message is Tcp.Received)  // data received from network
+                if (message is Tcp.Received received)  // data received from network
                 {
-                    var received = message as Tcp.Received;
                     Console.WriteLine(Encoding.ASCII.GetString(received.Data.ToArray()));
                 }
-                else if (message is string)   // data received from console
+                else if (message is string s)   // data received from console
                 {
-                    connection.Tell(Tcp.Write.Create(ByteString.FromString((string)message + "\n")));
+                    connection.Tell(Tcp.Write.Create(ByteString.FromString(s + "\n")));
                     ReadConsoleAsync();
                 }
                 else if (message is Tcp.PeerClosed)

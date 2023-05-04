@@ -71,8 +71,7 @@ namespace RemotePingPong
         private static async Task Main(params string[] args)
         {
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
-            uint timesToRun;
-            if (args.Length == 0 || !uint.TryParse(args[0], out timesToRun))
+            if (args.Length == 0 || !uint.TryParse(args[0], out var timesToRun))
             {
                 timesToRun = 1u;
             }

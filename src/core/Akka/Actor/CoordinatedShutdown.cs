@@ -91,7 +91,7 @@ namespace Akka.Actor
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Phase && Equals((Phase)obj);
+            return obj is Phase phase && Equals(phase);
         }
 
         /// <inheritdoc/>

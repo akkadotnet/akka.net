@@ -50,8 +50,8 @@ namespace Akka.Tests.Actor
 
         public static string ExtractHost(EndPoint endpoint)
         {
-            if (endpoint is IPEndPoint)
-                return ((IPEndPoint)endpoint).Address.ToString();
+            if (endpoint is IPEndPoint point)
+                return point.Address.ToString();
             return ((DnsEndPoint)endpoint).Host;
         }
 

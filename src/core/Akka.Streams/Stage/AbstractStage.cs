@@ -18,7 +18,9 @@ namespace Akka.Streams.Stage
     /// <typeparam name="TOut">TBD</typeparam>
     internal class PushPullGraphLogic<TIn, TOut> : GraphStageLogic, IDetachedContext<TOut>
     {
+#pragma warning disable CS0618 // Type or member is obsolete
         private AbstractStage<TIn, TOut> _currentStage;
+#pragma warning restore CS0618 // Type or member is obsolete
         private readonly FlowShape<TIn, TOut> _shape;
 
         /// <summary>
@@ -30,7 +32,9 @@ namespace Akka.Streams.Stage
         public PushPullGraphLogic(
             FlowShape<TIn, TOut> shape,
             Attributes attributes,
+#pragma warning disable CS0618 // Type or member is obsolete
             AbstractStage<TIn, TOut> stage)
+#pragma warning restore CS0618 // Type or member is obsolete
             : base(shape)
         {
             Attributes = attributes;
@@ -59,7 +63,9 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
+#pragma warning disable CS0618 // Type or member is obsolete
         public AbstractStage<TIn, TOut> Stage { get; }
+#pragma warning restore CS0618 // Type or member is obsolete
 
         IMaterializer ILifecycleContext.Materializer => Materializer;
 
@@ -283,7 +289,9 @@ namespace Akka.Streams.Stage
                 case Directive.Restart:
                     ResetAfterSupervise();
                     _currentStage.PostStop();
+#pragma warning disable CS0618 // Type or member is obsolete
                     _currentStage = (AbstractStage<TIn, TOut>)_currentStage.Restart();
+#pragma warning restore CS0618 // Type or member is obsolete
                     _currentStage.PreStart(Context);
                     break;
                 default:
@@ -316,14 +324,18 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
+#pragma warning disable CS0618 // Type or member is obsolete
         public readonly Func<Attributes, (IStage<TIn, TOut>, TMat)> Factory;
+#pragma warning restore CS0618 // Type or member is obsolete
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="factory">TBD</param>
         /// <param name="stageAttributes">TBD</param>
+#pragma warning disable CS0618 // Type or member is obsolete
         public PushPullGraphStageWithMaterializedValue(Func<Attributes, (IStage<TIn, TOut>, TMat)> factory, Attributes stageAttributes)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             InitialAttributes = stageAttributes;
             Factory = factory;
@@ -350,10 +362,12 @@ namespace Akka.Streams.Stage
         public override ILogicAndMaterializedValue<TMat> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var stageAndMat = Factory(inheritedAttributes);
+#pragma warning disable CS0618 // Type or member is obsolete
             return
                 new LogicAndMaterializedValue<TMat>(
                     new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes,
                         (AbstractStage<TIn, TOut>) stageAndMat.Item1), stageAndMat.Item2);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         /// <summary>
@@ -376,7 +390,9 @@ namespace Akka.Streams.Stage
         /// <param name="factory">TBD</param>
         /// <param name="stageAttributes">TBD</param>
         /// <returns>TBD</returns>
+#pragma warning disable CS0618 // Type or member is obsolete
         public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes) : base(attributes => (factory(attributes), NotUsed.Instance), stageAttributes)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
         }
     }

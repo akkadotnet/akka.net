@@ -48,18 +48,16 @@ namespace Akka.Remote.TestKit
 
             var wrapper = new Proto.Msg.Wrapper();
 
-            if (message is Hello)
+            if (message is Hello hello)
             {
-                var hello = (Hello)message;
                 wrapper.Hello = new Proto.Msg.Hello
                 {
                     Name = hello.Name,
                     Address = AddressMessageBuilder(hello.Address)
                 };
             }
-            else if (message is EnterBarrier)
+            else if (message is EnterBarrier enterBarrier)
             {
-                var enterBarrier = (EnterBarrier)message;
                 wrapper.Barrier = new Proto.Msg.EnterBarrier
                 {
                     Name = enterBarrier.Name,
@@ -67,9 +65,8 @@ namespace Akka.Remote.TestKit
                     Op = Proto.Msg.EnterBarrier.Types.BarrierOp.Enter,
                 };
             }
-            else if (message is BarrierResult)
+            else if (message is BarrierResult barrierResult)
             {
-                var barrierResult = (BarrierResult)message;
                 wrapper.Barrier = new Proto.Msg.EnterBarrier
                 {
                     Name = barrierResult.Name,
@@ -78,18 +75,16 @@ namespace Akka.Remote.TestKit
                         : Proto.Msg.EnterBarrier.Types.BarrierOp.Failed
                 };
             }
-            else if (message is FailBarrier)
+            else if (message is FailBarrier failBarrier)
             {
-                var failBarrier = (FailBarrier)message;
                 wrapper.Barrier = new Proto.Msg.EnterBarrier
                 {
                     Name = failBarrier.Name,
                     Op = Proto.Msg.EnterBarrier.Types.BarrierOp.Fail
                 };
             }
-            else if (message is ThrottleMsg)
+            else if (message is ThrottleMsg throttleMsg)
             {
-                var throttleMsg = (ThrottleMsg)message;
                 wrapper.Failure = new Proto.Msg.InjectFailure
                 {
                     Address = AddressMessageBuilder(throttleMsg.Target),
@@ -98,9 +93,8 @@ namespace Akka.Remote.TestKit
                     RateMBit = throttleMsg.RateMBit
                 };
             }
-            else if (message is DisconnectMsg)
+            else if (message is DisconnectMsg disconnectMsg)
             {
-                var disconnectMsg = (DisconnectMsg)message;
                 wrapper.Failure = new Proto.Msg.InjectFailure
                 {
                     Address = AddressMessageBuilder(disconnectMsg.Target),
@@ -109,9 +103,8 @@ namespace Akka.Remote.TestKit
                         : Proto.Msg.InjectFailure.Types.FailType.Disconnect
                 };
             }
-            else if (message is TerminateMsg)
+            else if (message is TerminateMsg terminate)
             {
-                var terminate = (TerminateMsg)message;
                 if (terminate.ShutdownOrExit.IsRight)
                 {
                     wrapper.Failure = new Proto.Msg.InjectFailure()
@@ -135,14 +128,12 @@ namespace Akka.Remote.TestKit
                     };
                 }
             }
-            else if (message is GetAddress)
+            else if (message is GetAddress getAddress)
             {
-                var getAddress = (GetAddress)message;
                 wrapper.Addr = new Proto.Msg.AddressRequest { Node = getAddress.Node.Name };
             }
-            else if (message is AddressReply)
+            else if (message is AddressReply addressReply)
             {
-                var addressReply = (AddressReply)message;
                 wrapper.Addr = new Proto.Msg.AddressRequest
                 {
                     Node = addressReply.Node.Name,

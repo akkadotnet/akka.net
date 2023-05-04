@@ -423,7 +423,7 @@ namespace Akka.Tests.MatchHandler
             //Handle a string with one action
             var typeHandlers = new List<TypeHandler>();
             var stringHandler = new TypeHandler(typeof(string));
-            Action<object> action = s => { updatedValue = s is string ? "WasString:" + (string)s : "WasNotString" + s.ToString(); };
+            Action<object> action = s => { updatedValue = s is string s1 ? "WasString:" + s1 : "WasNotString" + s.ToString(); };
             var handler = PredicateAndHandler.CreateAction(action, handlerFirstArgumentShouldBeBaseType: true);
             stringHandler.Handlers.Add(handler);
             typeHandlers.Add(stringHandler);
