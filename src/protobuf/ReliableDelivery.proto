@@ -27,6 +27,7 @@ message SequencedMessage {
 // ProducerController
 message RegisterConsumer {
   string consumerControllerRef = 1;
+  TypeDescriptor typeInfo = 2;
 }
 
 // ProducerController

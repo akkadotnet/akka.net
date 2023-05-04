@@ -312,7 +312,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         var seq1 = (ConsumerController.SequencedMessage<TestConsumer.Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
             .Message;
         seq1.Message.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-1"));
-        seq1.ProducerController.Tell(new ProducerController.Request(confirmedSeqNo: 0L, requestUpToSeqNo: 5L, true,
+        seq1.ProducerController.Tell(new ProducerController.Request(confirmedSeqNr: 0L, requestUpToSeqNr: 5L, true,
             false));
 
         var next2 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
@@ -359,7 +359,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         var seq7 = (ConsumerController.SequencedMessage<TestConsumer.Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
             .Message;
         seq7.Message.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-7"));
-        seq7.ProducerController.Tell(new ProducerController.Request(confirmedSeqNo: 0L, requestUpToSeqNo: 5L, true,
+        seq7.ProducerController.Tell(new ProducerController.Request(confirmedSeqNr: 0L, requestUpToSeqNr: 5L, true,
             false));
 
         var next8 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
@@ -368,7 +368,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             .BeEquivalentTo(ImmutableDictionary<string, int>.Empty.Add("entity-1", 1));
 
         // when new demand the buffered messages will be sent
-        seq5.ProducerController.Tell(new ProducerController.Request(confirmedSeqNo: 5L, requestUpToSeqNo: 10L, true,
+        seq5.ProducerController.Tell(new ProducerController.Request(confirmedSeqNr: 5L, requestUpToSeqNr: 10L, true,
             false));
         var seq6 = (ConsumerController.SequencedMessage<TestConsumer.Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
             .Message;
@@ -398,7 +398,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         var seq1 = (ConsumerController.SequencedMessage<TestConsumer.Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
             .Message;
         seq1.Message.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-1"));
-        seq1.ProducerController.Tell(new ProducerController.Request(confirmedSeqNo: 0L, requestUpToSeqNo: 5L, true,
+        seq1.ProducerController.Tell(new ProducerController.Request(confirmedSeqNr: 0L, requestUpToSeqNr: 5L, true,
             false));
 
         (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(

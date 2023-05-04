@@ -344,7 +344,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
 
         Receive<StoreMessageSentFailed<T>>(ReceiveStoreMessageSentFailed);
 
-        Receive<Request>(r => { ReceiveRequest(r.ConfirmedSeqNo, r.RequestUpToSeqNo, r.SupportResend, r.ViaTimeout); });
+        Receive<Request>(r => { ReceiveRequest(r.ConfirmedSeqNr, r.RequestUpToSeqNr, r.SupportResend, r.ViaTimeout); });
 
         Receive<Ack>(ack => ReceiveAck(ack.ConfirmedSeqNr));
 

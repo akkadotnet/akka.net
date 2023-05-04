@@ -52,6 +52,12 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
                 return SequencedMessageToProto(sequencedMessage).ToByteArray();
             case ProducerController.Ack ack:
                 return AckToProto(ack).ToByteArray();
+            case ProducerController.Request request:
+                return RequestToProto(request).ToByteArray();
+            case ProducerController.Resend resend:
+                return ResendToProto(resend).ToByteArray();
+            case ProducerController.IRegisterConsumer registerConsumer:
+                return RegisterConsumerToProto(registerConsumer).ToByteArray();
         }
     }
 
@@ -63,7 +69,12 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
                 return SequencedMessageFromBinary(bytes);
             case AckManifest:
                 return AckFromProto(Ack.Parser.ParseFrom(bytes));
-            
+            case RequestManifest:
+                return RequestFromProto(Request.Parser.ParseFrom(bytes));
+            case ResendManifest:
+                return ResendFromProto(Resend.Parser.ParseFrom(bytes));
+            case RegisterConsumerManifest:
+                return RegisterConsumerFromProto(RegisterConsumer.Parser.ParseFrom(bytes));
         }
     }
 
@@ -146,11 +157,48 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
     }
     
     // create method to convert Ack to Proto
-    private Ack AckToProto(ProducerController.Ack ack)
+    private static Ack AckToProto(ProducerController.Ack ack)
     {
         var builder = new Ack();
         builder.ConfirmedSeqNr = ack.ConfirmedSeqNr;
         return builder;
+    }
+    
+    // create method to convert Request to Proto
+    private static Request RequestToProto(ProducerController.Request request)
+    {
+        var builder = new Request();
+        builder.RequestUpToSeqNr = request.RequestUpToSeqNr;
+        builder.ConfirmedSeqNr = request.ConfirmedSeqNr;
+        builder.SupportResend = request.SupportResend;
+        builder.ViaTimeout = request.ViaTimeout;
+        return builder;
+    }
+    
+    // create method to convert Resend to Proto
+    private static Resend ResendToProto(ProducerController.Resend resend)
+    {
+        var builder = new Resend();
+        builder.FromSeqNr = resend.FromSeqNr;
+        return builder;
+    }
+    
+    // create method to convert RegisterConsumer to Proto
+    private RegisterConsumer RegisterConsumerToProto(ProducerController.IRegisterConsumer registerConsumer)
+    {
+        MethodInfo method = typeof(ReliableDeliverySerializer).GetMethod(nameof(RegisterConsumerToProtoGeneric), BindingFlags.NonPublic | BindingFlags.Instance)!;
+        MethodInfo generic = method.MakeGenericMethod(registerConsumer.ConsumerType);
+        return (RegisterConsumer)generic.Invoke(this, new object[] { registerConsumer });
+    }
+    
+    private static RegisterConsumer RegisterConsumerToProtoGeneric<T>(ProducerController.IRegisterConsumer uncasted)
+    {
+        var registerConsumer = (ProducerController.RegisterConsumer<T>)uncasted;
+        var registerConsumerBuilder = new RegisterConsumer();
+        var typeDescriptor = GetTypeDescriptor(typeof(T));
+        registerConsumerBuilder.TypeInfo = typeDescriptor;
+        registerConsumerBuilder.ConsumerControllerRef = Akka.Serialization.Serialization.SerializedActorPath(registerConsumer.ConsumerController);
+        return registerConsumerBuilder;
     }
 
     #endregion
@@ -195,9 +243,30 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         return system.Provider.ResolveActorRef(path);
     }
     
-    private ProducerController.Ack AckFromProto(Ack ack)
+    private static ProducerController.Ack AckFromProto(Ack ack)
     {
         return new ProducerController.Ack(ack.ConfirmedSeqNr);
+    }
+    
+    private static ProducerController.Request RequestFromProto(Request request)
+    {
+        return new ProducerController.Request(request.ConfirmedSeqNr, request.RequestUpToSeqNr, request.SupportResend, request.ViaTimeout);
+    }
+    
+    private static ProducerController.Resend ResendFromProto(Resend resend)
+    {
+        return new ProducerController.Resend(resend.FromSeqNr);
+    }
+    
+    private ProducerController.IRegisterConsumer RegisterConsumerFromProto(RegisterConsumer registerConsumer)
+    {
+        var type = GetTypeFromDescriptor(registerConsumer.TypeInfo);
+        
+        var actorRef = ResolveActorRef(registerConsumer.ConsumerControllerRef);
+        
+        // make a generic ProducerController.RegisterConsumer<T> and return it
+        var genericRegisterConsumer = typeof(ProducerController.RegisterConsumer<>).MakeGenericType(type);
+        return (ProducerController.IRegisterConsumer)Activator.CreateInstance(genericRegisterConsumer, actorRef);
     }
 
     #endregion

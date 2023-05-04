@@ -380,28 +380,28 @@ public static class ProducerController
     /// </summary>
     internal sealed class Request : IInternalCommand, IDeadLetterSuppression, IDeliverySerializable
     {
-        public Request(long confirmedSeqNo, long requestUpToSeqNo, bool supportResend, bool viaTimeout)
+        public Request(long confirmedSeqNr, long requestUpToSeqNr, bool supportResend, bool viaTimeout)
         {
-            ConfirmedSeqNo = confirmedSeqNo;
-            RequestUpToSeqNo = requestUpToSeqNo;
+            ConfirmedSeqNr = confirmedSeqNr;
+            RequestUpToSeqNr = requestUpToSeqNr;
             SupportResend = supportResend;
             ViaTimeout = viaTimeout;
 
             // assert that ConfirmedSeqNo <= RequestUpToSeqNo by throwing an ArgumentOutOfRangeException
-            if (ConfirmedSeqNo > RequestUpToSeqNo)
-                throw new ArgumentOutOfRangeException(nameof(confirmedSeqNo), confirmedSeqNo,
-                    $"ConfirmedSeqNo [{confirmedSeqNo}] must be less than or equal to RequestUpToSeqNo [{requestUpToSeqNo}]");
+            if (ConfirmedSeqNr > RequestUpToSeqNr)
+                throw new ArgumentOutOfRangeException(nameof(confirmedSeqNr), confirmedSeqNr,
+                    $"ConfirmedSeqNo [{confirmedSeqNr}] must be less than or equal to RequestUpToSeqNo [{requestUpToSeqNr}]");
         }
 
         /// <summary>
         ///     Sequence numbers confirmed by the ConsumerController.
         /// </summary>
-        public long ConfirmedSeqNo { get; }
+        public long ConfirmedSeqNr { get; }
 
         /// <summary>
         ///     The next requested max sequence number.
         /// </summary>
-        public long RequestUpToSeqNo { get; }
+        public long RequestUpToSeqNr { get; }
 
         /// <summary>
         ///     Set to <c>false </c> in pull-mode.
@@ -415,7 +415,7 @@ public static class ProducerController
 
         private bool Equals(Request other)
         {
-            return ConfirmedSeqNo == other.ConfirmedSeqNo && RequestUpToSeqNo == other.RequestUpToSeqNo &&
+            return ConfirmedSeqNr == other.ConfirmedSeqNr && RequestUpToSeqNr == other.RequestUpToSeqNr &&
                    SupportResend == other.SupportResend && ViaTimeout == other.ViaTimeout;
         }
 
@@ -428,8 +428,8 @@ public static class ProducerController
         {
             unchecked
             {
-                var hashCode = ConfirmedSeqNo.GetHashCode();
-                hashCode = (hashCode * 397) ^ RequestUpToSeqNo.GetHashCode();
+                var hashCode = ConfirmedSeqNr.GetHashCode();
+                hashCode = (hashCode * 397) ^ RequestUpToSeqNr.GetHashCode();
                 hashCode = (hashCode * 397) ^ SupportResend.GetHashCode();
                 hashCode = (hashCode * 397) ^ ViaTimeout.GetHashCode();
                 return hashCode;
@@ -438,7 +438,7 @@ public static class ProducerController
 
         public override string ToString()
         {
-            return $"Request({ConfirmedSeqNo}, {RequestUpToSeqNo}, {SupportResend}, {ViaTimeout})";
+            return $"Request({ConfirmedSeqNr}, {RequestUpToSeqNr}, {SupportResend}, {ViaTimeout})";
         }
     }
 
