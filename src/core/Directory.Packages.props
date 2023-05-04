@@ -9,6 +9,7 @@
     <PackageVersion Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageVersion Include="System.Reflection.Emit" Version="4.7.0" />
     <PackageVersion Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
+    <PackageVersion Include="System.Collections.Specialized" Version="4.3.0" />
     <PackageVersion Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
     <PackageVersion Include="System.Configuration.ConfigurationManager">
       <Version>$(ConfigurationManagerVersion)</Version>
