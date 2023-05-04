@@ -21,6 +21,7 @@
     <PackageVersion Include="FsPickler" Version="5.3.2"/>
     <PackageVersion Include="Fsharp.Core" Version="$(FsharpVersion)" />
     <PackageVersion Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+    <PackageVersion Include="DotNetty.Handlers" Version="0.6.0"/>
   </ItemGroup>
   <!-- Test dependencies -->  
   <ItemGroup>
