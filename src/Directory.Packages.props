@@ -17,6 +17,7 @@
   </ItemGroup>
   <!-- Test dependencies -->  
   <ItemGroup>
+    <PackageVersion Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageVersion Include="xunit" Version="$(XunitVersion)" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
