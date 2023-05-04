@@ -5,6 +5,11 @@ option optimize_for = SPEED;
 
 import "ContainerFormats.proto";
 
+// used to help instantiate back into generics
+message TypeDescriptor{
+  string typeName = 1;
+}
+
 // ConsumerController
 message SequencedMessage {
   string producerId = 1;
@@ -13,8 +18,9 @@ message SequencedMessage {
   bool ack = 4;
   string producerControllerRef = 5;
   .Akka.Remote.Serialization.Proto.Msg.Payload message = 6;
-  optional bool firstChunk = 7;
-  optional bool lastChunk = 8;
+  bool firstChunk = 7;
+  bool lastChunk = 8;
+  TypeDescriptor typeInfo = 9;
 }
 
 // ProducerController
@@ -46,6 +52,7 @@ message State {
   int64 highestConfirmedSeqNr = 2;
   repeated Confirmed confirmed = 3;
   repeated MessageSent unconfirmed = 4;
+  TypeDescriptor typeInfo = 5;
 }
 
 // DurableProducerQueue
@@ -62,8 +69,9 @@ message MessageSent {
   bool ack = 3;
   int64 timestamp = 4;
   .Akka.Remote.Serialization.Proto.Msg.Payload message = 5;
-  optional bool firstChunk = 6;
-  optional bool lastChunk = 7;
+  bool firstChunk = 6;
+  bool lastChunk = 7;
+  TypeDescriptor typeInfo = 8;
 }
 
 // DurableProducerQueue

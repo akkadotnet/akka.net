@@ -26,40 +26,46 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           string.Concat(
             "ChZSZWxpYWJsZURlbGl2ZXJ5LnByb3RvEi1Ba2thLkNsdXN0ZXIuU2hhcmRp",
             "bmcuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2caFkNvbnRhaW5lckZvcm1hdHMu",
-            "cHJvdG8i/QEKEFNlcXVlbmNlZE1lc3NhZ2USEgoKcHJvZHVjZXJJZBgBIAEo",
-            "CRINCgVzZXFOchgCIAEoAxINCgVmaXJzdBgDIAEoCBILCgNhY2sYBCABKAgS",
-            "HQoVcHJvZHVjZXJDb250cm9sbGVyUmVmGAUgASgJEj0KB21lc3NhZ2UYBiAB",
-            "KAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXls",
-            "b2FkEhcKCmZpcnN0Q2h1bmsYByABKAhIAIgBARIWCglsYXN0Q2h1bmsYCCAB",
-            "KAhIAYgBAUINCgtfZmlyc3RDaHVua0IMCgpfbGFzdENodW5rIjEKEFJlZ2lz",
-            "dGVyQ29uc3VtZXISHQoVY29uc3VtZXJDb250cm9sbGVyUmVmGAEgASgJImYK",
-            "B1JlcXVlc3QSFgoOY29uZmlybWVkU2VxTnIYASABKAMSGAoQcmVxdWVzdFVw",
-            "VG9TZXFOchgCIAEoAxIVCg1zdXBwb3J0UmVzZW5kGAMgASgIEhIKCnZpYVRp",
-            "bWVvdXQYBCABKAgiGwoGUmVzZW5kEhEKCWZyb21TZXFOchgBIAEoAyIdCgNB",
-            "Y2sSFgoOY29uZmlybWVkU2VxTnIYASABKAMi2gEKBVN0YXRlEhQKDGN1cnJl",
-            "bnRTZXFOchgBIAEoAxIdChVoaWdoZXN0Q29uZmlybWVkU2VxTnIYAiABKAMS",
-            "SwoJY29uZmlybWVkGAMgAygLMjguQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNl",
-            "cmlhbGl6YXRpb24uUHJvdG8uTXNnLkNvbmZpcm1lZBJPCgt1bmNvbmZpcm1l",
-            "ZBgEIAMoCzI6LkFra2EuQ2x1c3Rlci5TaGFyZGluZy5TZXJpYWxpemF0aW9u",
-            "LlByb3RvLk1zZy5NZXNzYWdlU2VudCJACglDb25maXJtZWQSDQoFc2VxTnIY",
-            "ASABKAMSEQoJcXVhbGlmaWVyGAIgASgJEhEKCXRpbWVzdGFtcBgDIAEoAyLc",
-            "AQoLTWVzc2FnZVNlbnQSDQoFc2VxTnIYASABKAMSEQoJcXVhbGlmaWVyGAIg",
-            "ASgJEgsKA2FjaxgDIAEoCBIRCgl0aW1lc3RhbXAYBCABKAMSPQoHbWVzc2Fn",
-            "ZRgFIAEoCzIsLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
-            "LlBheWxvYWQSFwoKZmlyc3RDaHVuaxgGIAEoCEgAiAEBEhYKCWxhc3RDaHVu",
-            "axgHIAEoCEgBiAEBQg0KC19maXJzdENodW5rQgwKCl9sYXN0Q2h1bmsiHQoH",
-            "Q2xlYW51cBISCgpxdWFsaWZpZXJzGAEgAygJQgJIAWIGcHJvdG8z"));
+            "cHJvdG8iIgoOVHlwZURlc2NyaXB0b3ISEAoIdHlwZU5hbWUYASABKAkipwIK",
+            "EFNlcXVlbmNlZE1lc3NhZ2USEgoKcHJvZHVjZXJJZBgBIAEoCRINCgVzZXFO",
+            "chgCIAEoAxINCgVmaXJzdBgDIAEoCBILCgNhY2sYBCABKAgSHQoVcHJvZHVj",
+            "ZXJDb250cm9sbGVyUmVmGAUgASgJEj0KB21lc3NhZ2UYBiABKAsyLC5Ba2th",
+            "LlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEhIKCmZp",
+            "cnN0Q2h1bmsYByABKAgSEQoJbGFzdENodW5rGAggASgIEk8KCHR5cGVJbmZv",
+            "GAkgASgLMj0uQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLlR5cGVEZXNjcmlwdG9yIjEKEFJlZ2lzdGVyQ29uc3VtZXIS",
+            "HQoVY29uc3VtZXJDb250cm9sbGVyUmVmGAEgASgJImYKB1JlcXVlc3QSFgoO",
+            "Y29uZmlybWVkU2VxTnIYASABKAMSGAoQcmVxdWVzdFVwVG9TZXFOchgCIAEo",
+            "AxIVCg1zdXBwb3J0UmVzZW5kGAMgASgIEhIKCnZpYVRpbWVvdXQYBCABKAgi",
+            "GwoGUmVzZW5kEhEKCWZyb21TZXFOchgBIAEoAyIdCgNBY2sSFgoOY29uZmly",
+            "bWVkU2VxTnIYASABKAMiqwIKBVN0YXRlEhQKDGN1cnJlbnRTZXFOchgBIAEo",
+            "AxIdChVoaWdoZXN0Q29uZmlybWVkU2VxTnIYAiABKAMSSwoJY29uZmlybWVk",
+            "GAMgAygLMjguQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLkNvbmZpcm1lZBJPCgt1bmNvbmZpcm1lZBgEIAMoCzI6LkFr",
+            "a2EuQ2x1c3Rlci5TaGFyZGluZy5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5N",
+            "ZXNzYWdlU2VudBJPCgh0eXBlSW5mbxgFIAEoCzI9LkFra2EuQ2x1c3Rlci5T",
+            "aGFyZGluZy5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5UeXBlRGVzY3JpcHRv",
+            "ciJACglDb25maXJtZWQSDQoFc2VxTnIYASABKAMSEQoJcXVhbGlmaWVyGAIg",
+            "ASgJEhEKCXRpbWVzdGFtcBgDIAEoAyKGAgoLTWVzc2FnZVNlbnQSDQoFc2Vx",
+            "TnIYASABKAMSEQoJcXVhbGlmaWVyGAIgASgJEgsKA2FjaxgDIAEoCBIRCgl0",
+            "aW1lc3RhbXAYBCABKAMSPQoHbWVzc2FnZRgFIAEoCzIsLkFra2EuUmVtb3Rl",
+            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQSEgoKZmlyc3RDaHVu",
+            "axgGIAEoCBIRCglsYXN0Q2h1bmsYByABKAgSTwoIdHlwZUluZm8YCCABKAsy",
+            "PS5Ba2thLkNsdXN0ZXIuU2hhcmRpbmcuU2VyaWFsaXphdGlvbi5Qcm90by5N",
+            "c2cuVHlwZURlc2NyaXB0b3IiHQoHQ2xlYW51cBISCgpxdWFsaWZpZXJzGAEg",
+            "AygJQgJIAWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.SequencedMessage), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.SequencedMessage.Parser, new[]{ "ProducerId", "SeqNr", "First", "Ack", "ProducerControllerRef", "Message", "FirstChunk", "LastChunk" }, new[]{ "FirstChunk", "LastChunk" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor.Parser, new[]{ "TypeName" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.SequencedMessage), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.SequencedMessage.Parser, new[]{ "ProducerId", "SeqNr", "First", "Ack", "ProducerControllerRef", "Message", "FirstChunk", "LastChunk", "TypeInfo" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.RegisterConsumer), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.RegisterConsumer.Parser, new[]{ "ConsumerControllerRef" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Request), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Request.Parser, new[]{ "ConfirmedSeqNr", "RequestUpToSeqNr", "SupportResend", "ViaTimeout" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Resend), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Resend.Parser, new[]{ "FromSeqNr" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Ack), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Ack.Parser, new[]{ "ConfirmedSeqNr" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.State), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.State.Parser, new[]{ "CurrentSeqNr", "HighestConfirmedSeqNr", "Confirmed", "Unconfirmed" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.State), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.State.Parser, new[]{ "CurrentSeqNr", "HighestConfirmedSeqNr", "Confirmed", "Unconfirmed", "TypeInfo" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Confirmed), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Confirmed.Parser, new[]{ "SeqNr", "Qualifier", "Timestamp" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent.Parser, new[]{ "SeqNr", "Qualifier", "Ack", "Timestamp", "Message", "FirstChunk", "LastChunk" }, new[]{ "FirstChunk", "LastChunk" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MessageSent.Parser, new[]{ "SeqNr", "Qualifier", "Ack", "Timestamp", "Message", "FirstChunk", "LastChunk", "TypeInfo" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Cleanup), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Cleanup.Parser, new[]{ "Qualifiers" }, null, null, null, null)
           }));
     }
@@ -67,6 +73,198 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
   #region Messages
+  /// <summary>
+  /// used to help instantiate back into generics
+  /// </summary>
+  internal sealed partial class TypeDescriptor : pb::IMessage<TypeDescriptor>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<TypeDescriptor> _parser = new pb::MessageParser<TypeDescriptor>(() => new TypeDescriptor());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<TypeDescriptor> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[0]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TypeDescriptor() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TypeDescriptor(TypeDescriptor other) : this() {
+      typeName_ = other.typeName_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TypeDescriptor Clone() {
+      return new TypeDescriptor(this);
+    }
+
+    /// <summary>Field number for the "typeName" field.</summary>
+    public const int TypeNameFieldNumber = 1;
+    private string typeName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TypeName {
+      get { return typeName_; }
+      set {
+        typeName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as TypeDescriptor);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(TypeDescriptor other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TypeName != other.TypeName) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TypeName.Length != 0) hash ^= TypeName.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (TypeName.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TypeName);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (TypeName.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TypeName);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (TypeName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TypeName);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(TypeDescriptor other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TypeName.Length != 0) {
+        TypeName = other.TypeName;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            TypeName = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            TypeName = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
   /// <summary>
   /// ConsumerController
   /// </summary>
@@ -77,7 +275,6 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
   {
     private static readonly pb::MessageParser<SequencedMessage> _parser = new pb::MessageParser<SequencedMessage>(() => new SequencedMessage());
     private pb::UnknownFieldSet _unknownFields;
-    private int _hasBits0;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pb::MessageParser<SequencedMessage> Parser { get { return _parser; } }
@@ -85,7 +282,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[0]; }
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[1]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -105,7 +302,6 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public SequencedMessage(SequencedMessage other) : this() {
-      _hasBits0 = other._hasBits0;
       producerId_ = other.producerId_;
       seqNr_ = other.seqNr_;
       first_ = other.first_;
@@ -114,6 +310,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       message_ = other.message_ != null ? other.message_.Clone() : null;
       firstChunk_ = other.firstChunk_;
       lastChunk_ = other.lastChunk_;
+      typeInfo_ = other.typeInfo_ != null ? other.typeInfo_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -201,23 +398,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public bool FirstChunk {
-      get { if ((_hasBits0 & 1) != 0) { return firstChunk_; } else { return false; } }
+      get { return firstChunk_; }
       set {
-        _hasBits0 |= 1;
         firstChunk_ = value;
       }
-    }
-    /// <summary>Gets whether the "firstChunk" field is set</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool HasFirstChunk {
-      get { return (_hasBits0 & 1) != 0; }
-    }
-    /// <summary>Clears the value of the "firstChunk" field</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void ClearFirstChunk() {
-      _hasBits0 &= ~1;
     }
 
     /// <summary>Field number for the "lastChunk" field.</summary>
@@ -226,23 +410,22 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public bool LastChunk {
-      get { if ((_hasBits0 & 2) != 0) { return lastChunk_; } else { return false; } }
+      get { return lastChunk_; }
       set {
-        _hasBits0 |= 2;
         lastChunk_ = value;
       }
     }
-    /// <summary>Gets whether the "lastChunk" field is set</summary>
+
+    /// <summary>Field number for the "typeInfo" field.</summary>
+    public const int TypeInfoFieldNumber = 9;
+    private global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool HasLastChunk {
-      get { return (_hasBits0 & 2) != 0; }
-    }
-    /// <summary>Clears the value of the "lastChunk" field</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void ClearLastChunk() {
-      _hasBits0 &= ~2;
+    public global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
+      get { return typeInfo_; }
+      set {
+        typeInfo_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -268,6 +451,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (!object.Equals(Message, other.Message)) return false;
       if (FirstChunk != other.FirstChunk) return false;
       if (LastChunk != other.LastChunk) return false;
+      if (!object.Equals(TypeInfo, other.TypeInfo)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -281,8 +465,9 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (Ack != false) hash ^= Ack.GetHashCode();
       if (ProducerControllerRef.Length != 0) hash ^= ProducerControllerRef.GetHashCode();
       if (message_ != null) hash ^= Message.GetHashCode();
-      if (HasFirstChunk) hash ^= FirstChunk.GetHashCode();
-      if (HasLastChunk) hash ^= LastChunk.GetHashCode();
+      if (FirstChunk != false) hash ^= FirstChunk.GetHashCode();
+      if (LastChunk != false) hash ^= LastChunk.GetHashCode();
+      if (typeInfo_ != null) hash ^= TypeInfo.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -325,13 +510,17 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
         output.WriteRawTag(50);
         output.WriteMessage(Message);
       }
-      if (HasFirstChunk) {
+      if (FirstChunk != false) {
         output.WriteRawTag(56);
         output.WriteBool(FirstChunk);
       }
-      if (HasLastChunk) {
+      if (LastChunk != false) {
         output.WriteRawTag(64);
         output.WriteBool(LastChunk);
+      }
+      if (typeInfo_ != null) {
+        output.WriteRawTag(74);
+        output.WriteMessage(TypeInfo);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -367,13 +556,17 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
         output.WriteRawTag(50);
         output.WriteMessage(Message);
       }
-      if (HasFirstChunk) {
+      if (FirstChunk != false) {
         output.WriteRawTag(56);
         output.WriteBool(FirstChunk);
       }
-      if (HasLastChunk) {
+      if (LastChunk != false) {
         output.WriteRawTag(64);
         output.WriteBool(LastChunk);
+      }
+      if (typeInfo_ != null) {
+        output.WriteRawTag(74);
+        output.WriteMessage(TypeInfo);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -403,11 +596,14 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (message_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Message);
       }
-      if (HasFirstChunk) {
+      if (FirstChunk != false) {
         size += 1 + 1;
       }
-      if (HasLastChunk) {
+      if (LastChunk != false) {
         size += 1 + 1;
+      }
+      if (typeInfo_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(TypeInfo);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -442,11 +638,17 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
         }
         Message.MergeFrom(other.Message);
       }
-      if (other.HasFirstChunk) {
+      if (other.FirstChunk != false) {
         FirstChunk = other.FirstChunk;
       }
-      if (other.HasLastChunk) {
+      if (other.LastChunk != false) {
         LastChunk = other.LastChunk;
+      }
+      if (other.typeInfo_ != null) {
+        if (typeInfo_ == null) {
+          TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+        }
+        TypeInfo.MergeFrom(other.TypeInfo);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -496,6 +698,13 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 64: {
             LastChunk = input.ReadBool();
+            break;
+          }
+          case 74: {
+            if (typeInfo_ == null) {
+              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+            }
+            input.ReadMessage(TypeInfo);
             break;
           }
         }
@@ -548,6 +757,13 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             LastChunk = input.ReadBool();
             break;
           }
+          case 74: {
+            if (typeInfo_ == null) {
+              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+            }
+            input.ReadMessage(TypeInfo);
+            break;
+          }
         }
       }
     }
@@ -572,7 +788,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[2]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -764,7 +980,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1067,7 +1283,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[3]; }
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1259,7 +1475,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1451,7 +1667,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[5]; }
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[6]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1475,6 +1691,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       highestConfirmedSeqNr_ = other.highestConfirmedSeqNr_;
       confirmed_ = other.confirmed_.Clone();
       unconfirmed_ = other.unconfirmed_.Clone();
+      typeInfo_ = other.typeInfo_ != null ? other.typeInfo_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1530,6 +1747,18 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       get { return unconfirmed_; }
     }
 
+    /// <summary>Field number for the "typeInfo" field.</summary>
+    public const int TypeInfoFieldNumber = 5;
+    private global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
+      get { return typeInfo_; }
+      set {
+        typeInfo_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1549,6 +1778,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (HighestConfirmedSeqNr != other.HighestConfirmedSeqNr) return false;
       if(!confirmed_.Equals(other.confirmed_)) return false;
       if(!unconfirmed_.Equals(other.unconfirmed_)) return false;
+      if (!object.Equals(TypeInfo, other.TypeInfo)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1560,6 +1790,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (HighestConfirmedSeqNr != 0L) hash ^= HighestConfirmedSeqNr.GetHashCode();
       hash ^= confirmed_.GetHashCode();
       hash ^= unconfirmed_.GetHashCode();
+      if (typeInfo_ != null) hash ^= TypeInfo.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1588,6 +1819,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       }
       confirmed_.WriteTo(output, _repeated_confirmed_codec);
       unconfirmed_.WriteTo(output, _repeated_unconfirmed_codec);
+      if (typeInfo_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(TypeInfo);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1608,6 +1843,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       }
       confirmed_.WriteTo(ref output, _repeated_confirmed_codec);
       unconfirmed_.WriteTo(ref output, _repeated_unconfirmed_codec);
+      if (typeInfo_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(TypeInfo);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1626,6 +1865,9 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       }
       size += confirmed_.CalculateSize(_repeated_confirmed_codec);
       size += unconfirmed_.CalculateSize(_repeated_unconfirmed_codec);
+      if (typeInfo_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(TypeInfo);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -1646,6 +1888,12 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       }
       confirmed_.Add(other.confirmed_);
       unconfirmed_.Add(other.unconfirmed_);
+      if (other.typeInfo_ != null) {
+        if (typeInfo_ == null) {
+          TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+        }
+        TypeInfo.MergeFrom(other.TypeInfo);
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -1675,6 +1923,13 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 34: {
             unconfirmed_.AddEntriesFrom(input, _repeated_unconfirmed_codec);
+            break;
+          }
+          case 42: {
+            if (typeInfo_ == null) {
+              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+            }
+            input.ReadMessage(TypeInfo);
             break;
           }
         }
@@ -1708,6 +1963,13 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             unconfirmed_.AddEntriesFrom(ref input, _repeated_unconfirmed_codec);
             break;
           }
+          case 42: {
+            if (typeInfo_ == null) {
+              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+            }
+            input.ReadMessage(TypeInfo);
+            break;
+          }
         }
       }
     }
@@ -1732,7 +1994,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[6]; }
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[7]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1991,7 +2253,6 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
   {
     private static readonly pb::MessageParser<MessageSent> _parser = new pb::MessageParser<MessageSent>(() => new MessageSent());
     private pb::UnknownFieldSet _unknownFields;
-    private int _hasBits0;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pb::MessageParser<MessageSent> Parser { get { return _parser; } }
@@ -1999,7 +2260,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[7]; }
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[8]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2019,7 +2280,6 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public MessageSent(MessageSent other) : this() {
-      _hasBits0 = other._hasBits0;
       seqNr_ = other.seqNr_;
       qualifier_ = other.qualifier_;
       ack_ = other.ack_;
@@ -2027,6 +2287,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       message_ = other.message_ != null ? other.message_.Clone() : null;
       firstChunk_ = other.firstChunk_;
       lastChunk_ = other.lastChunk_;
+      typeInfo_ = other.typeInfo_ != null ? other.typeInfo_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -2102,23 +2363,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public bool FirstChunk {
-      get { if ((_hasBits0 & 1) != 0) { return firstChunk_; } else { return false; } }
+      get { return firstChunk_; }
       set {
-        _hasBits0 |= 1;
         firstChunk_ = value;
       }
-    }
-    /// <summary>Gets whether the "firstChunk" field is set</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool HasFirstChunk {
-      get { return (_hasBits0 & 1) != 0; }
-    }
-    /// <summary>Clears the value of the "firstChunk" field</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void ClearFirstChunk() {
-      _hasBits0 &= ~1;
     }
 
     /// <summary>Field number for the "lastChunk" field.</summary>
@@ -2127,23 +2375,22 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public bool LastChunk {
-      get { if ((_hasBits0 & 2) != 0) { return lastChunk_; } else { return false; } }
+      get { return lastChunk_; }
       set {
-        _hasBits0 |= 2;
         lastChunk_ = value;
       }
     }
-    /// <summary>Gets whether the "lastChunk" field is set</summary>
+
+    /// <summary>Field number for the "typeInfo" field.</summary>
+    public const int TypeInfoFieldNumber = 8;
+    private global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor typeInfo_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool HasLastChunk {
-      get { return (_hasBits0 & 2) != 0; }
-    }
-    /// <summary>Clears the value of the "lastChunk" field</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void ClearLastChunk() {
-      _hasBits0 &= ~2;
+    public global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor TypeInfo {
+      get { return typeInfo_; }
+      set {
+        typeInfo_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2168,6 +2415,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (!object.Equals(Message, other.Message)) return false;
       if (FirstChunk != other.FirstChunk) return false;
       if (LastChunk != other.LastChunk) return false;
+      if (!object.Equals(TypeInfo, other.TypeInfo)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -2180,8 +2428,9 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (Ack != false) hash ^= Ack.GetHashCode();
       if (Timestamp != 0L) hash ^= Timestamp.GetHashCode();
       if (message_ != null) hash ^= Message.GetHashCode();
-      if (HasFirstChunk) hash ^= FirstChunk.GetHashCode();
-      if (HasLastChunk) hash ^= LastChunk.GetHashCode();
+      if (FirstChunk != false) hash ^= FirstChunk.GetHashCode();
+      if (LastChunk != false) hash ^= LastChunk.GetHashCode();
+      if (typeInfo_ != null) hash ^= TypeInfo.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -2220,13 +2469,17 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
         output.WriteRawTag(42);
         output.WriteMessage(Message);
       }
-      if (HasFirstChunk) {
+      if (FirstChunk != false) {
         output.WriteRawTag(48);
         output.WriteBool(FirstChunk);
       }
-      if (HasLastChunk) {
+      if (LastChunk != false) {
         output.WriteRawTag(56);
         output.WriteBool(LastChunk);
+      }
+      if (typeInfo_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(TypeInfo);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -2258,13 +2511,17 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
         output.WriteRawTag(42);
         output.WriteMessage(Message);
       }
-      if (HasFirstChunk) {
+      if (FirstChunk != false) {
         output.WriteRawTag(48);
         output.WriteBool(FirstChunk);
       }
-      if (HasLastChunk) {
+      if (LastChunk != false) {
         output.WriteRawTag(56);
         output.WriteBool(LastChunk);
+      }
+      if (typeInfo_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(TypeInfo);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -2291,11 +2548,14 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (message_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Message);
       }
-      if (HasFirstChunk) {
+      if (FirstChunk != false) {
         size += 1 + 1;
       }
-      if (HasLastChunk) {
+      if (LastChunk != false) {
         size += 1 + 1;
+      }
+      if (typeInfo_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(TypeInfo);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2327,11 +2587,17 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
         }
         Message.MergeFrom(other.Message);
       }
-      if (other.HasFirstChunk) {
+      if (other.FirstChunk != false) {
         FirstChunk = other.FirstChunk;
       }
-      if (other.HasLastChunk) {
+      if (other.LastChunk != false) {
         LastChunk = other.LastChunk;
+      }
+      if (other.typeInfo_ != null) {
+        if (typeInfo_ == null) {
+          TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+        }
+        TypeInfo.MergeFrom(other.TypeInfo);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -2377,6 +2643,13 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           }
           case 56: {
             LastChunk = input.ReadBool();
+            break;
+          }
+          case 66: {
+            if (typeInfo_ == null) {
+              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+            }
+            input.ReadMessage(TypeInfo);
             break;
           }
         }
@@ -2425,6 +2698,13 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             LastChunk = input.ReadBool();
             break;
           }
+          case 66: {
+            if (typeInfo_ == null) {
+              TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
+            }
+            input.ReadMessage(TypeInfo);
+            break;
+          }
         }
       }
     }
@@ -2449,7 +2729,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[8]; }
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ReliableDeliveryReflection.Descriptor.MessageTypes[9]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
