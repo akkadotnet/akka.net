@@ -26,39 +26,39 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           string.Concat(
             "ChZSZWxpYWJsZURlbGl2ZXJ5LnByb3RvEi1Ba2thLkNsdXN0ZXIuU2hhcmRp",
             "bmcuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2caFkNvbnRhaW5lckZvcm1hdHMu",
-            "cHJvdG8iIgoOVHlwZURlc2NyaXB0b3ISEAoIdHlwZU5hbWUYASABKAkipwIK",
+            "cHJvdG8iIgoOVHlwZURlc2NyaXB0b3ISEAoIdHlwZU5hbWUYASABKAkiuAIK",
             "EFNlcXVlbmNlZE1lc3NhZ2USEgoKcHJvZHVjZXJJZBgBIAEoCRINCgVzZXFO",
             "chgCIAEoAxINCgVmaXJzdBgDIAEoCBILCgNhY2sYBCABKAgSHQoVcHJvZHVj",
             "ZXJDb250cm9sbGVyUmVmGAUgASgJEj0KB21lc3NhZ2UYBiABKAsyLC5Ba2th",
             "LlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEhIKCmZp",
             "cnN0Q2h1bmsYByABKAgSEQoJbGFzdENodW5rGAggASgIEk8KCHR5cGVJbmZv",
             "GAkgASgLMj0uQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLlR5cGVEZXNjcmlwdG9yIjEKEFJlZ2lzdGVyQ29uc3VtZXIS",
-            "HQoVY29uc3VtZXJDb250cm9sbGVyUmVmGAEgASgJImYKB1JlcXVlc3QSFgoO",
-            "Y29uZmlybWVkU2VxTnIYASABKAMSGAoQcmVxdWVzdFVwVG9TZXFOchgCIAEo",
-            "AxIVCg1zdXBwb3J0UmVzZW5kGAMgASgIEhIKCnZpYVRpbWVvdXQYBCABKAgi",
-            "GwoGUmVzZW5kEhEKCWZyb21TZXFOchgBIAEoAyIdCgNBY2sSFgoOY29uZmly",
-            "bWVkU2VxTnIYASABKAMiqwIKBVN0YXRlEhQKDGN1cnJlbnRTZXFOchgBIAEo",
-            "AxIdChVoaWdoZXN0Q29uZmlybWVkU2VxTnIYAiABKAMSSwoJY29uZmlybWVk",
-            "GAMgAygLMjguQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLkNvbmZpcm1lZBJPCgt1bmNvbmZpcm1lZBgEIAMoCzI6LkFr",
-            "a2EuQ2x1c3Rlci5TaGFyZGluZy5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5N",
-            "ZXNzYWdlU2VudBJPCgh0eXBlSW5mbxgFIAEoCzI9LkFra2EuQ2x1c3Rlci5T",
-            "aGFyZGluZy5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5UeXBlRGVzY3JpcHRv",
-            "ciJACglDb25maXJtZWQSDQoFc2VxTnIYASABKAMSEQoJcXVhbGlmaWVyGAIg",
-            "ASgJEhEKCXRpbWVzdGFtcBgDIAEoAyKGAgoLTWVzc2FnZVNlbnQSDQoFc2Vx",
-            "TnIYASABKAMSEQoJcXVhbGlmaWVyGAIgASgJEgsKA2FjaxgDIAEoCBIRCgl0",
-            "aW1lc3RhbXAYBCABKAMSPQoHbWVzc2FnZRgFIAEoCzIsLkFra2EuUmVtb3Rl",
-            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQSEgoKZmlyc3RDaHVu",
-            "axgGIAEoCBIRCglsYXN0Q2h1bmsYByABKAgSTwoIdHlwZUluZm8YCCABKAsy",
-            "PS5Ba2thLkNsdXN0ZXIuU2hhcmRpbmcuU2VyaWFsaXphdGlvbi5Qcm90by5N",
-            "c2cuVHlwZURlc2NyaXB0b3IiHQoHQ2xlYW51cBISCgpxdWFsaWZpZXJzGAEg",
-            "AygJQgJIAWIGcHJvdG8z"));
+            "UHJvdG8uTXNnLlR5cGVEZXNjcmlwdG9yEg8KB2lzQ2h1bmsYCiABKAgiMQoQ",
+            "UmVnaXN0ZXJDb25zdW1lchIdChVjb25zdW1lckNvbnRyb2xsZXJSZWYYASAB",
+            "KAkiZgoHUmVxdWVzdBIWCg5jb25maXJtZWRTZXFOchgBIAEoAxIYChByZXF1",
+            "ZXN0VXBUb1NlcU5yGAIgASgDEhUKDXN1cHBvcnRSZXNlbmQYAyABKAgSEgoK",
+            "dmlhVGltZW91dBgEIAEoCCIbCgZSZXNlbmQSEQoJZnJvbVNlcU5yGAEgASgD",
+            "Ih0KA0FjaxIWCg5jb25maXJtZWRTZXFOchgBIAEoAyKrAgoFU3RhdGUSFAoM",
+            "Y3VycmVudFNlcU5yGAEgASgDEh0KFWhpZ2hlc3RDb25maXJtZWRTZXFOchgC",
+            "IAEoAxJLCgljb25maXJtZWQYAyADKAsyOC5Ba2thLkNsdXN0ZXIuU2hhcmRp",
+            "bmcuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQ29uZmlybWVkEk8KC3VuY29u",
+            "ZmlybWVkGAQgAygLMjouQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNlcmlhbGl6",
+            "YXRpb24uUHJvdG8uTXNnLk1lc3NhZ2VTZW50Ek8KCHR5cGVJbmZvGAUgASgL",
+            "Mj0uQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNlcmlhbGl6YXRpb24uUHJvdG8u",
+            "TXNnLlR5cGVEZXNjcmlwdG9yIkAKCUNvbmZpcm1lZBINCgVzZXFOchgBIAEo",
+            "AxIRCglxdWFsaWZpZXIYAiABKAkSEQoJdGltZXN0YW1wGAMgASgDIoYCCgtN",
+            "ZXNzYWdlU2VudBINCgVzZXFOchgBIAEoAxIRCglxdWFsaWZpZXIYAiABKAkS",
+            "CwoDYWNrGAMgASgIEhEKCXRpbWVzdGFtcBgEIAEoAxI9CgdtZXNzYWdlGAUg",
+            "ASgLMiwuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUGF5",
+            "bG9hZBISCgpmaXJzdENodW5rGAYgASgIEhEKCWxhc3RDaHVuaxgHIAEoCBJP",
+            "Cgh0eXBlSW5mbxgIIAEoCzI9LkFra2EuQ2x1c3Rlci5TaGFyZGluZy5TZXJp",
+            "YWxpemF0aW9uLlByb3RvLk1zZy5UeXBlRGVzY3JpcHRvciIdCgdDbGVhbnVw",
+            "EhIKCnF1YWxpZmllcnMYASADKAlCAkgBYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor.Parser, new[]{ "TypeName" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.SequencedMessage), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.SequencedMessage.Parser, new[]{ "ProducerId", "SeqNr", "First", "Ack", "ProducerControllerRef", "Message", "FirstChunk", "LastChunk", "TypeInfo" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.SequencedMessage), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.SequencedMessage.Parser, new[]{ "ProducerId", "SeqNr", "First", "Ack", "ProducerControllerRef", "Message", "FirstChunk", "LastChunk", "TypeInfo", "IsChunk" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.RegisterConsumer), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.RegisterConsumer.Parser, new[]{ "ConsumerControllerRef" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Request), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Request.Parser, new[]{ "ConfirmedSeqNr", "RequestUpToSeqNr", "SupportResend", "ViaTimeout" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Resend), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.Resend.Parser, new[]{ "FromSeqNr" }, null, null, null, null),
@@ -311,6 +311,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       firstChunk_ = other.firstChunk_;
       lastChunk_ = other.lastChunk_;
       typeInfo_ = other.typeInfo_ != null ? other.typeInfo_.Clone() : null;
+      isChunk_ = other.isChunk_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -428,6 +429,18 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "isChunk" field.</summary>
+    public const int IsChunkFieldNumber = 10;
+    private bool isChunk_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool IsChunk {
+      get { return isChunk_; }
+      set {
+        isChunk_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -452,6 +465,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (FirstChunk != other.FirstChunk) return false;
       if (LastChunk != other.LastChunk) return false;
       if (!object.Equals(TypeInfo, other.TypeInfo)) return false;
+      if (IsChunk != other.IsChunk) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -468,6 +482,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (FirstChunk != false) hash ^= FirstChunk.GetHashCode();
       if (LastChunk != false) hash ^= LastChunk.GetHashCode();
       if (typeInfo_ != null) hash ^= TypeInfo.GetHashCode();
+      if (IsChunk != false) hash ^= IsChunk.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -522,6 +537,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
         output.WriteRawTag(74);
         output.WriteMessage(TypeInfo);
       }
+      if (IsChunk != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(IsChunk);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -568,6 +587,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
         output.WriteRawTag(74);
         output.WriteMessage(TypeInfo);
       }
+      if (IsChunk != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(IsChunk);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -604,6 +627,9 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       }
       if (typeInfo_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(TypeInfo);
+      }
+      if (IsChunk != false) {
+        size += 1 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -649,6 +675,9 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
           TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
         }
         TypeInfo.MergeFrom(other.TypeInfo);
+      }
+      if (other.IsChunk != false) {
+        IsChunk = other.IsChunk;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -707,6 +736,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             input.ReadMessage(TypeInfo);
             break;
           }
+          case 80: {
+            IsChunk = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -762,6 +795,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
               TypeInfo = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.TypeDescriptor();
             }
             input.ReadMessage(TypeInfo);
+            break;
+          }
+          case 80: {
+            IsChunk = input.ReadBool();
             break;
           }
         }

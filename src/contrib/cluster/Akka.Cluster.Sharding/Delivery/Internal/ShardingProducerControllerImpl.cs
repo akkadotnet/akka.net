@@ -234,7 +234,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
 
         Receive<WrappedRequestNext<T>>(ReceiveWrappedRequestNext);
         
-        Receive<ShardingProducerController.ResendFirstUnconfirmed>(_ => ResendFirstUnconfirmed());
+        Receive<ResendFirstUnconfirmed>(_ => ResendFirstUnconfirmed());
         
         Receive<CleanupUnused>(_ => ReceiveCleanupUnused());
 

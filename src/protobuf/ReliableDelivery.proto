@@ -21,6 +21,7 @@ message SequencedMessage {
   bool firstChunk = 7;
   bool lastChunk = 8;
   TypeDescriptor typeInfo = 9;
+  bool isChunk = 10;
 }
 
 // ProducerController
