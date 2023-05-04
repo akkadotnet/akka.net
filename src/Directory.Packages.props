@@ -23,6 +23,9 @@
     <PackageVersion Include="PublicApiGenerator" Version="9.3.0" />
     <PackageVersion Include="Verify.Xunit" Version="19.14.1" />
     <PackageVersion Include="Verify.DiffPlex" Version="2.2.1" />
+    <PackageVersion Include="FsCheck.Xunit" Version="$(FsCheckVersion)" />
+    <PackageVersion Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageVersion Include="Fsharp.Core" Version="$(FsharpVersion)" />
   </ItemGroup>
 	<!-- SourceLink support for all Akka.NET projects -->
 	<ItemGroup>
