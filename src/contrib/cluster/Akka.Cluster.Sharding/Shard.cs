@@ -1460,7 +1460,7 @@ namespace Akka.Cluster.Sharding
                 case RememberingStart _:
                     _entities.RememberingStart(entityId, ackTo);
                     break;
-                case EntityState state when state is RememberedButNotCreated || state is WaitingForRestart:
+                case EntityState state and (RememberedButNotCreated or WaitingForRestart):
                     // already remembered or waiting for backoff to restart, just start it -
                     // this is the normal path for initially remembered entities getting started
                     Log.Debug("{0}: Request to start entity [{1}] (in state [{2}])", _typeName, entityId, state);
@@ -1787,7 +1787,7 @@ namespace Akka.Cluster.Sharding
                             case Passivating _:
                                 AppendToMessageBuffer(entityId, msg, snd);
                                 break;
-                            case EntityState state when state is WaitingForRestart || state is RememberedButNotCreated:
+                            case EntityState state and (WaitingForRestart or RememberedButNotCreated):
                                 if (_verboseDebug)
                                     Log.Debug("{0}: Delivering message of type [{1}] to [{2}] (starting because [{3}])",
                                         _typeName,

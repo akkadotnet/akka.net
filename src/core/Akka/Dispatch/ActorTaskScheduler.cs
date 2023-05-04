@@ -162,7 +162,7 @@ namespace Akka.Dispatch
                                   if (exception == null)
                                   {
                                       dispatcher.Resume(context);
-                                      context.CheckReceiveTimeout();
+                                      context.CheckReceiveTimeout(context.CurrentMessage is not INotInfluenceReceiveTimeout);
                                   }
                                   else
                                   {

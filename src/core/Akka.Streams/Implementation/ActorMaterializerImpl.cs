@@ -650,9 +650,8 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is Materialize)
+            if (message is Materialize materialize)
             {
-                var materialize = (Materialize) message;
                 Sender.Tell(Context.ActorOf(materialize.Props, materialize.Name));
             }
             else if (message is GetChildren)

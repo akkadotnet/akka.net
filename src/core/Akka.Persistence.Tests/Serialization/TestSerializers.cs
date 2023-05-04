@@ -31,8 +31,8 @@ namespace Akka.Persistence.Tests.Serialization
 
         public override byte[] ToBinary(object obj)
         {
-            if (obj is MyPayload)
-                return Encoding.UTF8.GetBytes("." + ((MyPayload) obj).Data);
+            if (obj is MyPayload payload)
+                return Encoding.UTF8.GetBytes("." + payload.Data);
             return null;
         }
 

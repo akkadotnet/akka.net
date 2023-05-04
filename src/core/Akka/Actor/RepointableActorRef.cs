@@ -521,8 +521,8 @@ namespace Akka.Actor
         /// <param name="message">TBD</param>
         public void SendMessage(IActorRef sender, object message)
         {
-            if (message is ISystemMessage)
-                SendSystemMessage((ISystemMessage)message);
+            if (message is ISystemMessage systemMessage)
+                SendSystemMessage(systemMessage);
             else
                 SendMessage(message, sender);
         }

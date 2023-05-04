@@ -183,7 +183,7 @@ namespace Akka.Persistence
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is AtomicWrite && Equals((AtomicWrite)obj);
+            return obj is AtomicWrite write && Equals(write);
         }
 
         

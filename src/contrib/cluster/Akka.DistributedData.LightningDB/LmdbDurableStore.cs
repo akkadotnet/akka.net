@@ -75,9 +75,7 @@ namespace Akka.DistributedData.LightningDB
 
             var useWriteBehind = _config.GetString("write-behind-interval", "").ToLowerInvariant();
             _writeBehindInterval = 
-                useWriteBehind == "off" ||
-                useWriteBehind == "false" ||
-                useWriteBehind == "no" ? 
+                useWriteBehind is "off" or "false" or "no" ? 
                     TimeSpan.Zero :
                     _config.GetTimeSpan("write-behind-interval");
 

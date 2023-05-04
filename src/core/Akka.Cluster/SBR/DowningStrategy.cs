@@ -155,7 +155,7 @@ namespace Akka.Cluster.SBR
 
         // all Joining and WeaklyUp members
         public ImmutableSortedSet<Member> Joining =>
-            AllMembers.Where(m => m.Status == MemberStatus.Joining || m.Status == MemberStatus.WeaklyUp)
+            AllMembers.Where(m => m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp)
                 .ToImmutableSortedSet(Ordering);
 
         // all members, both joining and up.
@@ -258,7 +258,7 @@ namespace Akka.Cluster.SBR
 
         public bool IsAllUnreachableDownOrExiting =>
             Unreachable.IsEmpty ||
-            UnreachableMembers.All(m => m.Status == MemberStatus.Down || m.Status == MemberStatus.Exiting);
+            UnreachableMembers.All(m => m.Status is MemberStatus.Down or MemberStatus.Exiting);
 
         public Lease Lease { get; protected set; }
 
@@ -368,8 +368,7 @@ namespace Akka.Cluster.SBR
         {
             // skip records with Reachability.Reachable, and skip records related to other DC
             Reachability = r.FilterRecords(record =>
-                record.Status == Reachability.ReachabilityStatus.Unreachable ||
-                record.Status == Reachability.ReachabilityStatus.Terminated
+                record.Status is Reachability.ReachabilityStatus.Unreachable or Reachability.ReachabilityStatus.Terminated
             );
         }
 

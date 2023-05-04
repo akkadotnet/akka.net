@@ -192,14 +192,12 @@ namespace Akka.DistributedData.Tests
             var delta = m1.Delta as ORDictionary<string, GSet<string>>.PutDeltaOperation;
             if (delta != null)
             {
-                VersionVector v;
                 var addDelta = delta.Underlying as ORSet<string>.AddDeltaOperation;
-                if (addDelta != null && addDelta.Underlying.ElementsMap.TryGetValue("a", out v))
+                if (addDelta != null && addDelta.Underlying.ElementsMap.TryGetValue("a", out var v))
                     deltaVersion = v.VersionAt(_node1);
             }
 
-            VersionVector v2;
-            var fullVersion = !m1.KeySet.ElementsMap.TryGetValue("a", out v2)
+            var fullVersion = !m1.KeySet.ElementsMap.TryGetValue("a", out var v2)
                 ? default(long?)
                 : v2.VersionAt(_node1);
 

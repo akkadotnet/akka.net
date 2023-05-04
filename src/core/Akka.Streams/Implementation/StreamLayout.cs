@@ -268,7 +268,7 @@ namespace Akka.Streams.Implementation
             var atomics = Atomics(module.MaterializedValueComputation);
             var graphValues =
                 module.SubModules.SelectMany(
-                    m => m is GraphModule ? ((GraphModule) m).MaterializedValueIds : Enumerable.Empty<IModule>());
+                    m => m is GraphModule graphModule ? graphModule.MaterializedValueIds : Enumerable.Empty<IModule>());
             var nonExistent = atomics.Except(module.SubModules).Except(graphValues).Except(new[] {module});
             if (nonExistent.Any())
                 problems.Add("computation refers to non-existent modules " + string.Join(", ", nonExistent));

@@ -286,9 +286,9 @@ namespace Akka.Dispatch
         public override string GetString(string path, string @default = null)
         {
             var pathEntry = GetPathEntry(path);
-            if (pathEntry is StringPathEntry)
+            if (pathEntry is StringPathEntry entry)
             {
-                return ((StringPathEntry)pathEntry).Value;
+                return entry.Value;
             }
             else
             {
