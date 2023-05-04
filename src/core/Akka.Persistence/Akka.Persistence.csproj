@@ -11,6 +11,6 @@
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+    <PackageReference Include="Google.Protobuf"/>
   </ItemGroup>
 </Project>
