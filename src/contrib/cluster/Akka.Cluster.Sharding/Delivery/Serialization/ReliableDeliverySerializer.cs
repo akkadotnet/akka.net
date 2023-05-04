@@ -8,6 +8,8 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Reflection;
 using Akka.Actor;
 using Akka.Delivery;
@@ -58,6 +60,16 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
                 return ResendToProto(resend).ToByteArray();
             case ProducerController.IRegisterConsumer registerConsumer:
                 return RegisterConsumerToProto(registerConsumer).ToByteArray();
+            case DurableProducerQueue.IMessageSent messageSent:
+                return DurableQueueMessageSentToProto(messageSent).ToByteArray();
+            case DurableProducerQueue.Confirmed confirmed:
+                return DurableQueueConfirmedToProto(confirmed).ToByteArray();
+            case DurableProducerQueue.IState state:
+                return DurableQueueStateToProto(state).ToByteArray();
+            case DurableProducerQueue.Cleanup cleanup:
+                return DurableQueueCleanupToProto(cleanup).ToByteArray();
+            default:
+                throw new ArgumentException($"Unimplemented serialization of message [{obj.GetType()}] in [{GetType()}]");
         }
     }
 
@@ -75,6 +87,16 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
                 return ResendFromProto(Resend.Parser.ParseFrom(bytes));
             case RegisterConsumerManifest:
                 return RegisterConsumerFromProto(RegisterConsumer.Parser.ParseFrom(bytes));
+            case DurableQueueMessageSentManifest:
+                return DurableQueueMessageSentFromProto(MessageSent.Parser.ParseFrom(bytes));
+            case DurableQueueConfirmedManifest:
+                return DurableQueueConfirmedFromProto(Confirmed.Parser.ParseFrom(bytes));
+            case DurableQueueStateManifest:
+                return DurableQueueStateFromProto(State.Parser.ParseFrom(bytes));
+            case DurableQueueCleanupManifest:
+                return DurableQueueCleanupFromProto(Cleanup.Parser.ParseFrom(bytes));
+            default:
+                throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
         }
     }
 
@@ -235,6 +257,43 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         return messageSentBuilder;
     }
 
+    // create method to convert DurableQueue.State to proto
+    private State DurableQueueStateToProto(DurableProducerQueue.IState state)
+    {
+        var type = state.MessageType;
+        var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(DurableQueueStateToProtoGeneric),
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var generic = method.MakeGenericMethod(type);
+        return (State)generic.Invoke(this, new object[] { state });
+    }
+
+    private State DurableQueueStateToProtoGeneric<T>(DurableProducerQueue.IState uncast)
+    {
+        var state = (DurableProducerQueue.State<T>)uncast;
+        var stateBuilder = new State();
+        var typeDescriptor = GetTypeDescriptor(typeof(T));
+        stateBuilder.TypeInfo = typeDescriptor;
+        stateBuilder.CurrentSeqNr = state.CurrentSeqNr;
+        stateBuilder.HighestConfirmedSeqNr = state.HighestConfirmedSeqNr;
+        stateBuilder.Confirmed.AddRange(state.ConfirmedSeqNr.Select(c =>
+            new Confirmed() { Qualifier = c.Key, SeqNr = c.Value.Item1, Timestamp = c.Value.Item2 }));
+        stateBuilder.Unconfirmed.AddRange(state.Unconfirmed.Select(DurableQueueMessageSentToProtoGeneric<T>));
+        return stateBuilder;
+    }
+    
+    private static DurableProducerQueue.Confirmed DurableQueueConfirmedFromProto(Confirmed parseFrom)
+    {
+        return new DurableProducerQueue.Confirmed(parseFrom.SeqNr, parseFrom.Qualifier, parseFrom.Timestamp);
+    }
+    
+    private static Cleanup DurableQueueCleanupToProto(DurableProducerQueue.Cleanup cleanup)
+    {
+        return new Cleanup
+        {
+            Qualifiers = { cleanup.ConfirmationQualifiers}
+        };
+    }
+
     #endregion
 
     #region FromBinary
@@ -314,10 +373,54 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         return (DurableProducerQueue.IMessageSent)generic.Invoke(this, new object[] { messageSent });
     }
 
-    private DurableProducerQueue.IMessageSent DurableQueueMessageSentFromProtoGeneric<T>(MessageSent messageSent)
+    private DurableProducerQueue.MessageSent<T> DurableQueueMessageSentFromProtoGeneric<T>(MessageSent messageSent)
     {
-        var message = (T)_payloadSupport.PayloadFrom(messageSent.Message);
-        return new DurableProducerQueue.MessageSent<T>(messageSent.SeqNr,);
+        if (messageSent.IsChunk)
+        {
+            var chunk = new ChunkedMessage(IO.ByteString.CopyFrom(messageSent.Message.Message.ToByteArray()),
+                messageSent.FirstChunk,
+                messageSent.LastChunk, messageSent.Message.SerializerId,
+                messageSent.Message.MessageManifest.ToString());
+            return DurableProducerQueue.MessageSent<T>.FromChunked(messageSent.SeqNr, chunk, messageSent.Ack,
+                messageSent.Qualifier, messageSent.Timestamp);
+        }
+
+        var msg = (T)_payloadSupport.PayloadFrom(messageSent.Message);
+        return new DurableProducerQueue.MessageSent<T>(messageSent.SeqNr, msg, messageSent.Ack,
+            messageSent.Qualifier, messageSent.Timestamp);
+    }
+
+    // create method to convert DurableQueue.State from proto
+    private DurableProducerQueue.IState DurableQueueStateFromProto(State state)
+    {
+        var type = GetTypeFromDescriptor(state.TypeInfo);
+        var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(DurableQueueStateFromProtoGeneric),
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var generic = method.MakeGenericMethod(type);
+        return (DurableProducerQueue.IState)generic.Invoke(this, new object[] { state });
+    }
+
+    private DurableProducerQueue.IState DurableQueueStateFromProtoGeneric<T>(State state)
+    {
+        var stateBuilder = new DurableProducerQueue.State<T>(state.CurrentSeqNr, state.HighestConfirmedSeqNr,
+            state.Confirmed.Select(c =>
+                new KeyValuePair<string, (long, long)>(c.Qualifier,
+                    (c.SeqNr, c.Timestamp))).ToImmutableDictionary(),
+            state.Unconfirmed.Select(DurableQueueMessageSentFromProtoGeneric<T>).ToImmutableList());
+        return stateBuilder;
+    }
+
+    private static Confirmed DurableQueueConfirmedToProto(DurableProducerQueue.Confirmed confirmed)
+    {
+        return new Confirmed
+        {
+            SeqNr = confirmed.SeqNo, Qualifier = confirmed.Qualifier, Timestamp = confirmed.Timestamp
+        };
+    }
+    
+    private static DurableProducerQueue.Cleanup DurableQueueCleanupFromProto(Cleanup parseFrom)
+    {
+        return new DurableProducerQueue.Cleanup(parseFrom.Qualifiers.ToImmutableHashSet());
     }
 
     #endregion
