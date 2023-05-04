@@ -33,6 +33,8 @@
     <PackageVersion Include="Verify.DiffPlex" Version="2.2.1" />
     <PackageVersion Include="FsCheck.Xunit" Version="$(FsCheckVersion)" />
     <PackageVersion Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageVersion Include="TeamCity.ServiceMessages" Version="3.0.13" />
+    <PackageVersion Include="xunit.runner.utility" Version="$(XunitVersion)" />
   </ItemGroup>
 	<!-- SourceLink support for all Akka.NET projects -->
 	<ItemGroup>
