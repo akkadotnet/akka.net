@@ -32,6 +32,7 @@
     <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
     <PackageVersion Include="System.Net.Sockets" Version="4.3.0" />
     <PackageVersion Include="System.Runtime.Extensions" Version="4.3.1" />
+    <PackageVersion Include="System.Diagnostics.StackTrace" Version="4.3.0" />
   </ItemGroup>
   <!-- Test dependencies -->  
   <ItemGroup>
