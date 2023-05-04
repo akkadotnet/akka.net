@@ -16,7 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)"/>
+        <PackageReference Include="FluentAssertions"/>
     </ItemGroup>
 
 </Project>
