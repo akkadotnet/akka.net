@@ -4,7 +4,7 @@
 //      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
