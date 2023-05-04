@@ -91,7 +91,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public Mailbox Mailbox => Volatile.Read(ref _mailboxDoNotCallMeDirectly);
+        public Mailbox Mailbox => _mailboxDoNotCallMeDirectly;
 
         /// <summary>
         /// TBD

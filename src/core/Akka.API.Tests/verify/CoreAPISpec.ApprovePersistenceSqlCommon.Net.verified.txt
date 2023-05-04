@@ -43,8 +43,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string HighestSequenceNrSql { get; }
         protected virtual string HighestTagOrderingSql { get; }
         protected virtual string InsertEventSql { get; }
-        [System.ObsoleteAttribute()]
-        protected string QueryEventsSql { get; }
         public System.Data.IsolationLevel ReadIsolationLevel { get; }
         protected virtual string UpdateSequenceNrSql { get; }
         public System.Data.IsolationLevel WriteIsolationLevel { get; }
