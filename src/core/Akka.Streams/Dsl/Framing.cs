@@ -61,7 +61,7 @@ namespace Akka.Streams.Dsl
         public static Flow<ByteString, ByteString, NotUsed> LengthField(int fieldLength, int maximumFramelength,
             int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
         {
-            if (fieldLength < 1 || fieldLength > 4)
+            if (fieldLength is < 1 or > 4)
                 throw new ArgumentException("Length field length must be 1,2,3 or 4", nameof(fieldLength));
 
             return Flow.Create<ByteString>()
@@ -98,7 +98,7 @@ namespace Akka.Streams.Dsl
             ByteOrder byteOrder,
             Func<IReadOnlyList<byte>, int, int> computeFrameSize)
         {
-            if (fieldLength < 1 || fieldLength > 4)
+            if (fieldLength is < 1 or > 4)
                 throw new ArgumentException("Length field length must be 1,2,3 or 4", nameof(fieldLength));
 
             return Flow.Create<ByteString>()

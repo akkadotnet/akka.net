@@ -44,7 +44,7 @@ namespace Akka.Persistence.Serialization
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Snapshot && Equals((Snapshot)obj);
+            return obj is Snapshot snapshot && Equals(snapshot);
         }
 
        

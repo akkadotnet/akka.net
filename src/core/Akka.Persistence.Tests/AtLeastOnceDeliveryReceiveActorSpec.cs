@@ -56,7 +56,7 @@ namespace Akka.Persistence.Tests
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
-                return obj is Action && Equals((Action) obj);
+                return obj is Action action && Equals(action);
             }
 
             public override int GetHashCode()
@@ -585,8 +585,8 @@ namespace Akka.Persistence.Tests
             ExpectMsg(ReqAck.Instance);
 
             UnconfirmedDelivery[] unconfirmed = ReceiveWhile(TimeSpan.FromSeconds(3), x =>
-                x is UnconfirmedWarning
-                    ? ((UnconfirmedWarning) x).UnconfirmedDeliveries
+                x is UnconfirmedWarning warning
+                    ? warning.UnconfirmedDeliveries
                     : Enumerable.Empty<UnconfirmedDelivery>())
                 .SelectMany(e => e).ToArray();
 

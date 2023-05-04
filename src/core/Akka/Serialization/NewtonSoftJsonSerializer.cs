@@ -461,7 +461,7 @@ namespace Akka.Serialization
             /// <param name="serializer">The calling serializer.</param>
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
             {
-                if (value is int || value is decimal || value is float)
+                if (value is int or decimal or float)
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("$");
@@ -486,12 +486,12 @@ namespace Akka.Serialization
 
             private object GetString(object value)
             {
-                if (value is int)
-                    return "I" + ((int)value).ToString(NumberFormatInfo.InvariantInfo);
-                if (value is float)
-                    return "F" + ((float)value).ToString(NumberFormatInfo.InvariantInfo);
-                if (value is decimal)
-                    return "M" + ((decimal)value).ToString(NumberFormatInfo.InvariantInfo);
+                if (value is int i)
+                    return "I" + i.ToString(NumberFormatInfo.InvariantInfo);
+                if (value is float f)
+                    return "F" + f.ToString(NumberFormatInfo.InvariantInfo);
+                if (value is decimal value1)
+                    return "M" + value1.ToString(NumberFormatInfo.InvariantInfo);
                 throw new NotSupportedException();
             }
         }

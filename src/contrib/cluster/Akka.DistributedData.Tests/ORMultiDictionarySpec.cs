@@ -182,8 +182,7 @@ namespace Akka.DistributedData.Tests
                 .AddItem(_node1, "a", "A2")
                 .AddItem(_node1, "b", "B1");
 
-            IImmutableSet<string> a;
-            m.TryGetValue("a", out a);
+            m.TryGetValue("a", out var a);
             Assert.Equal(ImmutableHashSet.Create("A1", "A2"), a);
 
             var m2 = m.SetItems(_node1, "a", a.Remove("A1"));
@@ -200,8 +199,7 @@ namespace Akka.DistributedData.Tests
             var m = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node1, "a", "A");
 
-            IImmutableSet<string> v;
-            m.TryGetValue("a", out v).Should().BeTrue();
+            m.TryGetValue("a", out var v).Should().BeTrue();
             v.Should().BeEquivalentTo("A");
 
             m.TryGetValue("b", out v).Should().BeFalse();

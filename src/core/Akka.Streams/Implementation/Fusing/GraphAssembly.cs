@@ -202,9 +202,9 @@ namespace Akka.Streams.Implementation.Fusing
                 }
 
                 var stage = Stages[i];
-                if (stage is IMaterializedValueSource)
+                if (stage is IMaterializedValueSource source)
                 {
-                    var copy = ((IMaterializedValueSource) stage).CopySource();
+                    var copy = source.CopySource();
                     register(copy);
                     stage = (IGraphStageWithMaterializedValue<Shape, object>)copy;
                 }

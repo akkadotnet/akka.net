@@ -230,7 +230,7 @@ namespace Akka.Streams.Implementation
             }
             else
             {
-                if (_endOfStream is SubscriberManagement.NotReached || _endOfStream is SubscriberManagement.Completed)
+                if (_endOfStream is SubscriberManagement.NotReached or SubscriberManagement.Completed)
                 {
                     var d = subscription.TotalDemand + elements;
                     // Long overflow, Reactive Streams Spec 3:17: effectively unbounded

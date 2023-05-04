@@ -113,7 +113,7 @@ namespace Akka.DistributedData
         public override string ToString() => $"PNCounter({Value})";
 
         
-        public override bool Equals(object obj) => obj is PNCounter && Equals((PNCounter)obj);
+        public override bool Equals(object obj) => obj is PNCounter counter && Equals(counter);
 
         
         public override int GetHashCode() => Increments.GetHashCode() ^ Decrements.GetHashCode();

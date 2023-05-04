@@ -41,7 +41,7 @@ namespace Akka.Tests
 
             protected override void OnReceive(object message)
             {
-                if (message is string && (string)message == "status")
+                if (message is string s && s == "status")
                 {
                     testActor.Tell(("OK",id,CurrentGeneration));
                 }
@@ -89,7 +89,7 @@ namespace Akka.Tests
 
             protected override void OnReceive(object message)
             {
-                if (message is string && (string)message == "status")
+                if (message is string s && s == "status")
                 {
                     testActor.Tell(("OK", id, CurrentGeneration));
                 }

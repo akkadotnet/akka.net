@@ -1,4 +1,5 @@
 ﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.API.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
@@ -4995,14 +4996,8 @@ namespace Akka.Util
     public sealed class FastLazy<T>
     {
         public FastLazy(System.Func<T> producer) { }
-        public bool IsValueCreated { get; }
         public T Value { get; }
-    }
-    public sealed class FastLazy<S, T>
-    {
-        public FastLazy(System.Func<S, T> producer, S state) { }
-        public bool IsValueCreated { get; }
-        public T Value { get; }
+        public bool IsValueCreated() { }
     }
     public interface ISurrogate
     {

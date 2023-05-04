@@ -66,9 +66,9 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is DeleteTo)
+                if (message is DeleteTo to)
                 {
-                    DeleteMessages(((DeleteTo)message).N);
+                    DeleteMessages(to.N);
                     return true;
                 }
                 return false;
@@ -95,8 +95,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is DeleteTo)
-                    DeleteMessages(((DeleteTo)message).N);
+                if (message is DeleteTo to)
+                    DeleteMessages(to.N);
                 if (message is DeleteMessagesFailure)
                     _probe.Tell(message);
                 else return false;

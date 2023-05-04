@@ -465,15 +465,14 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is IPersistentRepresentation) _replayCallback(message as IPersistentRepresentation);
+            if (message is IPersistentRepresentation representation) _replayCallback(representation);
             else if (message is AsyncWriteTarget.ReplaySuccess)
             {
                 _replayCompletionPromise.SetResult(new object());
                 Context.Stop(Self);
             }
-            else if (message is AsyncWriteTarget.ReplayFailure)
+            else if (message is AsyncWriteTarget.ReplayFailure failure)
             {
-                var failure = message as AsyncWriteTarget.ReplayFailure;
                 _replayCompletionPromise.SetException(failure.Cause);
                 Context.Stop(Self);
             }
