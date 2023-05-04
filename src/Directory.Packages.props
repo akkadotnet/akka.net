@@ -17,7 +17,12 @@
   </ItemGroup>
   <!-- Test dependencies -->  
   <ItemGroup>
-	
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageVersion Include="xunit" Version="$(XunitVersion)" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
+    <PackageVersion Include="PublicApiGenerator" Version="9.3.0" />
+    <PackageVersion Include="Verify.Xunit" Version="19.14.1" />
+    <PackageVersion Include="Verify.DiffPlex" Version="2.2.1" />
   </ItemGroup>
 	<!-- SourceLink support for all Akka.NET projects -->
 	<ItemGroup>
