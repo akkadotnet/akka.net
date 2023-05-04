@@ -254,6 +254,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         messageSentBuilder.Qualifier = messageSent.ConfirmationQualifier;
         messageSentBuilder.Timestamp = messageSent.Timestamp;
         messageSentBuilder.Ack = messageSent.Ack;
+        messageSentBuilder.IsChunk = !messageSent.Message.IsMessage;
         return messageSentBuilder;
     }
 
@@ -322,7 +323,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         {
             var chunk = new ChunkedMessage(IO.ByteString.CopyFrom(seqMsg.Message.Message.ToByteArray()),
                 seqMsg.FirstChunk,
-                seqMsg.LastChunk, seqMsg.Message.SerializerId, seqMsg.Message.MessageManifest.ToString()!);
+                seqMsg.LastChunk, seqMsg.Message.SerializerId, seqMsg.Message.MessageManifest.IsEmpty ? "" : seqMsg.Message.MessageManifest.ToStringUtf8());
             return ConsumerController.SequencedMessage<T>.FromChunkedMessage(seqMsg.ProducerId, seqMsg.SeqNr, chunk,
                 seqMsg.First, seqMsg.Ack, ResolveActorRef(seqMsg.ProducerControllerRef));
         }
@@ -380,7 +381,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
             var chunk = new ChunkedMessage(IO.ByteString.CopyFrom(messageSent.Message.Message.ToByteArray()),
                 messageSent.FirstChunk,
                 messageSent.LastChunk, messageSent.Message.SerializerId,
-                messageSent.Message.MessageManifest.ToString()!);
+                messageSent.Message.MessageManifest.IsEmpty ? "" : messageSent.Message.MessageManifest.ToStringUtf8()!);
             return DurableProducerQueue.MessageSent<T>.FromChunked(messageSent.SeqNr, chunk, messageSent.Ack,
                 messageSent.Qualifier, messageSent.Timestamp);
         }
