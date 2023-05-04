@@ -52,10 +52,6 @@ namespace Akka.Util
         private readonly List<WrappedEnvelope> _data;
         private readonly WrappedEnvelopeComparator comparator;
 
-        /// <summary>
-        /// The default priority generator.
-        /// </summary>
-        internal static readonly Func<object, int> DefaultPriorityCalculator = message => 1;
         private int sequenceNumber;
 
         /// <summary>

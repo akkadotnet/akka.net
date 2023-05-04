@@ -598,8 +598,6 @@ namespace Akka.Actor
                 }
             }
 
-            private static readonly Action<object> ExecuteRunnableWithState = r => ((IRunnable)r).Run();
-
             /// <summary>
             /// Execute all <see cref="SchedulerRegistration"/>s that are due by or after <paramref name="deadline"/>.
             /// </summary>

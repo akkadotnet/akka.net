@@ -43,7 +43,6 @@ namespace Akka.Util
         }
         
         private const char Negative = '-';
-        private static readonly char[] Numbers = { '0','1','2','3','4','5','6','7','8','9' };
 
         /// <summary>
         /// Can replace with int64.TryFormat in later versions of .NET.
@@ -170,23 +169,6 @@ namespace Akka.Util
 #else
             return int.TryParse(str, out returnValue);
 #endif
-        }
-
-        /// <summary>
-        /// Performs <see cref="string.ToLowerInvariant"/> without having to
-        /// allocate a new <see cref="string"/> first.
-        /// </summary>
-        /// <param name="input">The set of characters to be lower-cased</param>
-        /// <returns>A new string.</returns>
-        public static string ToLowerInvariant(ReadOnlySpan<char> input)
-        {
-            Span<char> output = stackalloc char[input.Length];
-            for (var i = 0; i < input.Length; i++)
-            {
-                output[i] = char.ToLowerInvariant(input[i]);
-            }
-
-            return output.ToString();
         }
     }
 }

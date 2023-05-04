@@ -77,7 +77,6 @@ namespace Akka.Streams.Tests
 
         private class DataSource : ReceiveActor
         {
-            public static IActorRef DataReceiverActorRef { get; set; }
             public DataSource()
             {
                 Receive<MeasurementsSinkReady>(request =>
