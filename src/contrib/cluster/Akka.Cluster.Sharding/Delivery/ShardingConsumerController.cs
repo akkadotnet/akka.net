@@ -19,7 +19,7 @@ namespace Akka.Cluster.Sharding.Delivery;
 ///
 /// <see cref="ShardingConsumerController"/> is the entity actor that is initialized via <see cref="ClusterSharding"/>.
 /// It will manage the lifecycle and message delivery to the destination consumer actor (your actor type specified via <see cref="Props"/>
-/// in the <see cref="ShardingConsumerController.Create{T}(Props,ShardingConsumerController.Settings)"/> method.)
+/// in the <see cref="ShardingConsumerController.Create{T}(System.Func{Akka.Actor.IActorRef,Akka.Actor.Props},Settings)"/> method.)
 ///
 /// The destination consumer actor will start the flow by sending an initial <see cref="ConsumerController.Start{T}"/>
 /// message to the <see cref="ShardingConsumerController"/>, its parent actor.
