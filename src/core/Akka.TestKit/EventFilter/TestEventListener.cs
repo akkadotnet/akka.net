@@ -74,16 +74,7 @@ namespace Akka.TestKit
                 case DeadLetter letter:
                     HandleDeadLetter(letter);
                     break;
-                
-                case UnhandledMessage un:
-                {
-                    var rcp = un.Recipient;
-                    var info = new Info(rcp.Path.ToString(), rcp.GetType(), "Unhandled message from " + un.Sender + ": " + un.Message);
-                    if (!ShouldFilter(info))
-                        Print(info);
-                    break;
-                }
-                
+
                 default:
                     Print(new Debug(Context.System.Name,GetType(),message));
                     break;
