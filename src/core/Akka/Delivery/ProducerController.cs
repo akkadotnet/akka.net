@@ -260,16 +260,19 @@ public static class ProducerController
     }
 
     /// <summary>
+    /// INTERNAL API - used for serializaiton
+    /// </summary>
+    internal interface IRegisterConsumer
+    {
+        public Type ConsumerType { get; }
+    }
+
+    /// <summary>
     ///     Registers a ConsumerController with a ProducerController.
     /// </summary>
-    public sealed class RegisterConsumer<T> : IProducerCommand<T>, IDeliverySerializable
+    public sealed record RegisterConsumer<T>(IActorRef ConsumerController) : IProducerCommand<T>, IDeliverySerializable, IRegisterConsumer
     {
-        public RegisterConsumer(IActorRef consumerController)
-        {
-            ConsumerController = consumerController;
-        }
-
-        public IActorRef ConsumerController { get; }
+        Type IRegisterConsumer.ConsumerType => typeof(T);
     }
 
     /// <summary>

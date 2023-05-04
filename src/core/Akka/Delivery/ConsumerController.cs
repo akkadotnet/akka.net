@@ -108,10 +108,18 @@ public static class ConsumerController
     }
 
     /// <summary>
+    /// INTERNAL API - used by serialization system
+    /// </summary>
+    internal interface ISequencedMessage
+    {
+        Type PayloadType { get; }
+    }
+
+    /// <summary>
     ///     A sequenced message that is delivered to the consumer via the ProducerController.
     /// </summary>
     [InternalApi]
-    public sealed class SequencedMessage<T> : IConsumerCommand<T>, IDeliverySerializable, IDeadLetterSuppression
+    public sealed record SequencedMessage<T>(string ProducerId, long SeqNr, MessageOrChunk<T> Message, bool First, bool Ack) : IConsumerCommand<T>, IDeliverySerializable, IDeadLetterSuppression, ISequencedMessage
     {
         internal SequencedMessage(string producerId, long seqNr, MessageOrChunk<T> messageOrChunk, bool first, bool ack,
             IActorRef producerController)
@@ -120,27 +128,15 @@ public static class ConsumerController
             ProducerController = producerController;
         }
 
-        public SequencedMessage(string producerId, long seqNr, MessageOrChunk<T> messageOrChunk, bool first, bool ack)
-        {
-            SeqNr = seqNr;
-            Message = messageOrChunk;
-            First = first;
-            Ack = ack;
-            ProducerId = producerId;
-        }
-
-        public long SeqNr { get; }
-
-        public string ProducerId { get; }
-        public MessageOrChunk<T> Message { get; }
-
-        public bool First { get; }
-
-        public bool Ack { get; }
-
         internal bool IsFirstChunk => Message.Chunk is { FirstChunk: true } || Message.IsMessage;
 
         internal bool IsLastChunk => Message.Chunk is { LastChunk: true } || Message.IsMessage;
+        
+        
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        Type ISequencedMessage.PayloadType => typeof(T);
 
         /// <summary>
         /// TESTING ONLY
@@ -160,17 +156,7 @@ public static class ConsumerController
         {
             return new(ProducerId, SeqNr, Message, true, Ack, ProducerController);
         }
-
-        private bool Equals(SequencedMessage<T> other)
-        {
-            return SeqNr == other.SeqNr && ProducerId == other.ProducerId && Message.Equals(other.Message) && First == other.First && Ack == other.Ack;
-        }
-
-        public override bool Equals(object? obj)
-        {
-            return ReferenceEquals(this, obj) || obj is SequencedMessage<T> other && Equals(other);
-        }
-
+        
         public override int GetHashCode()
         {
             unchecked
@@ -188,23 +174,8 @@ public static class ConsumerController
     /// <summary>
     ///     Sent from the consumer controller to the consumer.
     /// </summary>
-    public sealed class Delivery<T> : IConsumerCommand<T>, IDeliverySerializable, IDeadLetterSuppression
+    public sealed record Delivery<T>(T Message, IActorRef ConfirmTo, string ProducerId, long SeqNr) : IConsumerCommand<T>, IDeliverySerializable, IDeadLetterSuppression
     {
-        public Delivery(T message, IActorRef confirmTo, string producerId, long seqNr)
-        {
-            SeqNr = seqNr;
-            Message = message;
-            ConfirmTo = confirmTo;
-            ProducerId = producerId;
-        }
-
-        public long SeqNr { get; }
-
-        public string ProducerId { get; }
-        public T Message { get; }
-        
-        public IActorRef ConfirmTo { get; }
-
         public override string ToString()
         {
             return $"Delivery({Message}, {ConfirmTo}, {ProducerId}, {SeqNr})";

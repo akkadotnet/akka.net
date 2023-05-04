@@ -46,9 +46,9 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
         var consumerControllerProbe = CreateTestProbe();
 
         var durable = CreateProps(TimeSpan.Zero,
-            new DurableProducerQueue.State<Job>(currentSeqNr: 5, highestConfirmedSeqNr: 2,
-                confirmedSeqNr: ImmutableDictionary<string, (long, long)>.Empty.Add(NoQualifier, (2L, TestTimestamp)),
-                unconfirmed: ImmutableList<MessageSent<Job>>.Empty
+            new DurableProducerQueue.State<Job>(CurrentSeqNr: 5, HighestConfirmedSeqNr: 2,
+                ConfirmedSeqNr: ImmutableDictionary<string, (long, long)>.Empty.Add(NoQualifier, (2L, TestTimestamp)),
+                Unconfirmed: ImmutableList<MessageSent<Job>>.Empty
                     .Add(new MessageSent<Job>(3, new Job("msg-3"), false, NoQualifier, TestTimestamp))
                     .Add(new MessageSent<Job>(4, new Job("msg-4"), false, NoQualifier, TestTimestamp))), _ => false);
 
@@ -225,9 +225,9 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
         var consumerControllerProbe = CreateTestProbe();
 
         var durable = CreateProps(TimeSpan.Zero,
-            new DurableProducerQueue.State<Job>(currentSeqNr: 5, highestConfirmedSeqNr: 2,
-                confirmedSeqNr: ImmutableDictionary<string, (long, long)>.Empty.Add(NoQualifier, (2L, TestTimestamp)),
-                unconfirmed: ImmutableList<MessageSent<Job>>.Empty
+            new DurableProducerQueue.State<Job>(CurrentSeqNr: 5, HighestConfirmedSeqNr: 2,
+                ConfirmedSeqNr: ImmutableDictionary<string, (long, long)>.Empty.Add(NoQualifier, (2L, TestTimestamp)),
+                Unconfirmed: ImmutableList<MessageSent<Job>>.Empty
                     .Add(MessageSent<Job>.FromChunked(3,
                         new ChunkedMessage(ByteString.FromString("abc"), true, true, 20, ""), false, NoQualifier,
                         TestTimestamp))

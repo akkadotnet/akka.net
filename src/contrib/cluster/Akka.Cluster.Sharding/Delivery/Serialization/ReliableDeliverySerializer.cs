@@ -50,7 +50,26 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
     {
         switch (o)
         {
-            case ConsumerController.SequencedMessage<_>
+            case ConsumerController.ISequencedMessage _:
+                return SequencedMessageManifest;
+            case ProducerController.Ack _:
+                return AckManifest;
+            case ProducerController.Request _:
+                return RequestManifest;
+            case ProducerController.Resend _:
+                return ResendManifest;
+            case ProducerController.IRegisterConsumer _:
+                return RegisterConsumerManifest;
+            case DurableProducerQueue.IMessageSent _:
+                return DurableQueueMessageSentManifest;
+            case DurableProducerQueue.Confirmed _:
+                return DurableQueueConfirmedManifest;
+            case DurableProducerQueue.IState _:
+                return DurableQueueStateManifest;
+            case DurableProducerQueue.Cleanup _:
+                return DurableQueueCleanupManifest;
+            default:
+                throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{GetType()}]");
         }
     }
 }

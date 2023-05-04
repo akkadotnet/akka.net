@@ -39,12 +39,12 @@ public static class TestDurableProducerQueue
     public const long TestTimestamp = long.MaxValue;
 
     public static Props CreateProps<T>(TimeSpan delay, AtomicReference<DurableProducerQueueStateHolder<T>> initialState,
-        Predicate<IDurableProducerQueueCommand<T>> failWhen)
+        Predicate<IDurableProducerQueueCommand> failWhen)
     {
         return Props.Create(() => new TestDurableProducerQueue<T>(delay, failWhen, initialState));
     }
 
-    public static Props CreateProps<T>(TimeSpan delay, State<T> initialState, Predicate<IDurableProducerQueueCommand<T>> failWhen)
+    public static Props CreateProps<T>(TimeSpan delay, State<T> initialState, Predicate<IDurableProducerQueueCommand> failWhen)
     {
         return Props.Create(() => new TestDurableProducerQueue<T>(delay, _ => false, new AtomicReference<DurableProducerQueueStateHolder<T>>(initialState)));
     }
@@ -58,7 +58,7 @@ public class TestDurableProducerQueue<T> : ReceiveActor
 {
     private readonly ILoggingAdapter _log = Context.GetLogger();
     private readonly TimeSpan _delay;
-    private readonly Predicate<IDurableProducerQueueCommand<T>> _failWhen;
+    private readonly Predicate<IDurableProducerQueueCommand> _failWhen;
 
     private AtomicReference<DurableProducerQueueStateHolder<T>> _internalState;
 
@@ -68,7 +68,7 @@ public class TestDurableProducerQueue<T> : ReceiveActor
         private set => _internalState.Value = value;
     }
 
-    public TestDurableProducerQueue(TimeSpan delay, Predicate<IDurableProducerQueueCommand<T>> failWhen,
+    public TestDurableProducerQueue(TimeSpan delay, Predicate<IDurableProducerQueueCommand> failWhen,
         AtomicReference<DurableProducerQueueStateHolder<T>> initialState)
     {
         _delay = delay;
@@ -122,7 +122,7 @@ public class TestDurableProducerQueue<T> : ReceiveActor
             }
         });
 
-        Receive<StoreMessageConfirmed<T>>(cmd =>
+        Receive<StoreMessageConfirmed>(cmd =>
         {
             _log.Info("StoreMessageConfirmed seqNr [{0}], confirmationQualifier [{1}]", cmd.SeqNr,
                 cmd.ConfirmationQualifier);
@@ -132,7 +132,7 @@ public class TestDurableProducerQueue<T> : ReceiveActor
         });
     }
 
-    private void MaybeFail(IDurableProducerQueueCommand<T> cmd)
+    private void MaybeFail(IDurableProducerQueueCommand cmd)
     {
         if (_failWhen(cmd))
             throw new Exception($"TestDurableProducerQueue failed at {cmd}");
