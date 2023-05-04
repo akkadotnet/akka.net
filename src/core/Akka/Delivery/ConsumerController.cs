@@ -141,7 +141,7 @@ public static class ConsumerController
         /// <summary>
         /// TESTING ONLY
         /// </summary>
-        internal IActorRef ProducerController { get; } = ActorRefs.Nobody;
+        internal IActorRef ProducerController { get; init; } = ActorRefs.Nobody;
 
         internal static SequencedMessage<T> FromChunkedMessage(string producerId, long seqNr,
             ChunkedMessage chunkedMessage, bool first, bool ack, IActorRef producerController)
@@ -154,15 +154,27 @@ public static class ConsumerController
         /// </summary>
         internal SequencedMessage<T> AsFirst()
         {
-            return new(ProducerId, SeqNr, Message, true, Ack, ProducerController);
+            return this with { First = true };
         }
-        
+
+        public bool Equals(SequencedMessage<T>? other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return ProducerId == other.ProducerId 
+                   && SeqNr == other.SeqNr 
+                   && Message.Equals(other.Message) 
+                   && First == other.First 
+                   && Ack == other.Ack
+                   && ProducerController.Equals(other.ProducerController);
+        }
+
         public override int GetHashCode()
         {
             unchecked
             {
-                var hashCode = SeqNr.GetHashCode();
-                hashCode = (hashCode * 397) ^ ProducerId.GetHashCode();
+                var hashCode = ProducerId.GetHashCode();
+                hashCode = (hashCode * 397) ^ SeqNr.GetHashCode();
                 hashCode = (hashCode * 397) ^ Message.GetHashCode();
                 hashCode = (hashCode * 397) ^ First.GetHashCode();
                 hashCode = (hashCode * 397) ^ Ack.GetHashCode();

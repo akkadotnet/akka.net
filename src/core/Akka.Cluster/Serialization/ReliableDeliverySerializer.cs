@@ -143,7 +143,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         MethodInfo method = typeof(ReliableDeliverySerializer).GetMethod(nameof(SequencedMessageToProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         MethodInfo generic = method.MakeGenericMethod(msgType);
-        return (SequencedMessage)generic.Invoke(this, new object[] { sequencedMessage });
+        return (SequencedMessage)generic.Invoke(this, new object[] { sequencedMessage })!;
     }
 
     private SequencedMessage SequencedMessageToProtoGeneric<T>(ConsumerController.ISequencedMessage uncasted)
@@ -212,10 +212,10 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         MethodInfo method = typeof(ReliableDeliverySerializer).GetMethod(nameof(RegisterConsumerToProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         MethodInfo generic = method.MakeGenericMethod(registerConsumer.ConsumerType);
-        return (RegisterConsumer)generic.Invoke(this, new object[] { registerConsumer });
+        return ((RegisterConsumer)generic.Invoke(this, new object[] { registerConsumer })!);
     }
 
-    private static RegisterConsumer RegisterConsumerToProtoGeneric<T>(ProducerController.IRegisterConsumer uncasted)
+    private RegisterConsumer RegisterConsumerToProtoGeneric<T>(ProducerController.IRegisterConsumer uncasted)
     {
         var registerConsumer = (ProducerController.RegisterConsumer<T>)uncasted;
         var registerConsumerBuilder = new RegisterConsumer();
@@ -233,7 +233,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(DurableQueueMessageSentToProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         var generic = method.MakeGenericMethod(type);
-        return (MessageSent)generic.Invoke(this, new object[] { messageSent });
+        return ((MessageSent)generic.Invoke(this, new object[] { messageSent })!);
     }
 
     private MessageSent DurableQueueMessageSentToProtoGeneric<T>(DurableProducerQueue.IMessageSent uncasted)
@@ -264,7 +264,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(DurableQueueStateToProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         var generic = method.MakeGenericMethod(type);
-        return (State)generic.Invoke(this, new object[] { state });
+        return ((State)generic.Invoke(this, new object[] { state })!);
     }
 
     private State DurableQueueStateToProtoGeneric<T>(DurableProducerQueue.IState uncast)
@@ -302,7 +302,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
     {
         // if we can't find the type, blow up
         var type = Type.GetType(t.TypeName, true);
-        return type;
+        return type!;
     }
 
     private ConsumerController.ISequencedMessage SequencedMessageFromBinary(byte[] bytes)
@@ -313,7 +313,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(SequencedMessageFromProto),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         var generic = method.MakeGenericMethod(type);
-        return (ConsumerController.ISequencedMessage)generic.Invoke(this, new object[] { seqMsg });
+        return ((ConsumerController.ISequencedMessage)generic.Invoke(this, new object[] { seqMsg })!);
     }
 
     private ConsumerController.ISequencedMessage SequencedMessageFromProto<T>(SequencedMessage seqMsg)
@@ -322,7 +322,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         {
             var chunk = new ChunkedMessage(IO.ByteString.CopyFrom(seqMsg.Message.Message.ToByteArray()),
                 seqMsg.FirstChunk,
-                seqMsg.LastChunk, seqMsg.Message.SerializerId, seqMsg.Message.MessageManifest.ToString());
+                seqMsg.LastChunk, seqMsg.Message.SerializerId, seqMsg.Message.MessageManifest.ToString()!);
             return ConsumerController.SequencedMessage<T>.FromChunkedMessage(seqMsg.ProducerId, seqMsg.SeqNr, chunk,
                 seqMsg.First, seqMsg.Ack, ResolveActorRef(seqMsg.ProducerControllerRef));
         }
@@ -361,7 +361,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
 
         // make a generic ProducerController.RegisterConsumer<T> and return it
         var genericRegisterConsumer = typeof(ProducerController.RegisterConsumer<>).MakeGenericType(type);
-        return (ProducerController.IRegisterConsumer)Activator.CreateInstance(genericRegisterConsumer, actorRef);
+        return ((ProducerController.IRegisterConsumer)Activator.CreateInstance(genericRegisterConsumer, actorRef)!)!;
     }
 
     private DurableProducerQueue.IMessageSent DurableQueueMessageSentFromProto(MessageSent messageSent)
@@ -370,7 +370,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(DurableQueueMessageSentFromProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         var generic = method.MakeGenericMethod(type);
-        return (DurableProducerQueue.IMessageSent)generic.Invoke(this, new object[] { messageSent });
+        return ((DurableProducerQueue.IMessageSent)generic.Invoke(this, new object[] { messageSent })!)!;
     }
 
     private DurableProducerQueue.MessageSent<T> DurableQueueMessageSentFromProtoGeneric<T>(MessageSent messageSent)
@@ -380,7 +380,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
             var chunk = new ChunkedMessage(IO.ByteString.CopyFrom(messageSent.Message.Message.ToByteArray()),
                 messageSent.FirstChunk,
                 messageSent.LastChunk, messageSent.Message.SerializerId,
-                messageSent.Message.MessageManifest.ToString());
+                messageSent.Message.MessageManifest.ToString()!);
             return DurableProducerQueue.MessageSent<T>.FromChunked(messageSent.SeqNr, chunk, messageSent.Ack,
                 messageSent.Qualifier, messageSent.Timestamp);
         }
@@ -397,7 +397,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(DurableQueueStateFromProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         var generic = method.MakeGenericMethod(type);
-        return (DurableProducerQueue.IState)generic.Invoke(this, new object[] { state });
+        return (DurableProducerQueue.IState)generic.Invoke(this, new object[] { state })!;
     }
 
     private DurableProducerQueue.IState DurableQueueStateFromProtoGeneric<T>(State state)
