@@ -32,7 +32,7 @@ public static class DurableProducerQueue
     public sealed record LoadState(IActorRef ReplyTo) : IDurableProducerQueueCommand;
 
     /// <summary>
-    ///     Store the fact that a message is to be sent. Replies with <see cref="StoreMessageSentAck" />
+    ///     Store the fact that a message is to be sent. Replies with StoreMessageSentAck
     ///     when the message has been successfully stored.
     /// </summary>
     /// <remarks>
