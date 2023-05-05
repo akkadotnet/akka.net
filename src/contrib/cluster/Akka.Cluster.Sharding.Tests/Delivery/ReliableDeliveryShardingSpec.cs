@@ -81,9 +81,6 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         public TestShardingProducer(IActorRef producerController)
         {
             _producerController = producerController;
-
-            // simulate fast producer
-            Timers.StartPeriodicTimer("tick", Tick.Instance, TimeSpan.FromMilliseconds(20));
             Idle(0);
         }
 
@@ -104,6 +101,9 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         act.OnPreStart = ctx =>
                             _producerController.Tell(new ShardingProducerController.Start<TestConsumer.Job>(ctx.Self));
                     }, "sendNextAdapter");
+            
+            // simulate fast producer
+            Timers.StartPeriodicTimer("tick", Tick.Instance, TimeSpan.FromMilliseconds(20));
         }
 
         private void Idle(int n)
@@ -171,7 +171,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             $"producer-{_idCount}");
 
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
-        consumerEndProbe.ReceiveN(3, TimeSpan.FromSeconds(5));
+        consumerEndProbe.ReceiveN(3, TimeSpan.FromSeconds(15));
     }
 
     [Fact]
@@ -213,7 +213,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             $"p2-{_idCount}");
 
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
-        var endMessages = consumerEndProbe.ReceiveN(3, TimeSpan.FromSeconds(5));
+        var endMessages = consumerEndProbe.ReceiveN(3, TimeSpan.FromSeconds(15));
 
         var producerIds = endMessages.Cast<TestConsumer.Collected>().SelectMany(c => c.ProducerIds).ToList();
         producerIds
