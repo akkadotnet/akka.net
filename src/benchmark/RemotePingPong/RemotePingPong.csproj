@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-<Import Project="..\..\common.props" />
 <PropertyGroup>
   <Description>Akka.Remote x-plat performance benchmark</Description>
   <Copyright>Copyright (c) Akka.NET Team</Copyright>

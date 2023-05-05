@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\..\common.props" />
-    
+
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Sharding.Tests.MultiNode</AssemblyTitle>
     <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
