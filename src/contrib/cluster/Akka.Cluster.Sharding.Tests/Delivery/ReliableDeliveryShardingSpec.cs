@@ -1,3 +1,10 @@
+//-----------------------------------------------------------------------
+// <copyright file="ReliableDeliveryShardingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Immutable;
 using System.Linq;
@@ -8,7 +15,6 @@ using Akka.Cluster.Sharding.Delivery;
 using Akka.Configuration;
 using Akka.Delivery;
 using Akka.Event;
-using Akka.Tests.Delivery;
 using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -27,110 +33,19 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         akka.reliable-delivery.consumer-controller.flow-control-window = 20
     ";
 
+    private int _idCount;
+
     public ReliableDeliveryShardingSpec(ITestOutputHelper output) : base(
         Configuration.WithFallback(ClusterSharding.DefaultConfig()), output: output)
     {
     }
 
-    private class ProbeWrapper : UntypedActor
-    {
-        private readonly IActorRef _probeRef;
-        private readonly IActorRef _consumerController;
-
-        public ProbeWrapper(IActorRef probeRef, IActorRef consumerController)
-        {
-            _probeRef = probeRef;
-            _consumerController = consumerController;
-        }
-
-        protected override void OnReceive(object message)
-        {
-            switch (message)
-            {
-                case Terminated:
-                    Context.Stop(Self);
-                    break;
-                default:
-                    _probeRef.Forward(message);
-                    break;
-            }
-        }
-
-        protected override void PreStart()
-        {
-            _consumerController.Tell(new ConsumerController.Start<TestConsumer.Job>(Self));
-            Context.Watch(_probeRef);
-        }
-    }
-
-    private class TestShardingProducer : ReceiveActor, IWithTimers
-    {
-        public sealed class Tick
-        {
-            public static Tick Instance { get; } = new();
-
-            private Tick()
-            {
-            }
-        }
-
-        public sealed record RequestNext(IActorRef SendNextTo);
-
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-
-        public TestShardingProducer(IActorRef producerController)
-        {
-            _producerController = producerController;
-            Idle(0);
-        }
-
-        public ITimerScheduler Timers { get; set; } = null!;
-        private IActorRef _sendNextAdapter;
-        private readonly IActorRef _producerController;
-
-        protected override void PreStart()
-        {
-            var self = Self;
-            _sendNextAdapter =
-                Context.ActorOf(
-                    act =>
-                    {
-                        act.Receive<ShardingProducerController.RequestNext<TestConsumer.Job>>((next, _) =>
-                            self.Tell(new RequestNext(next.SendNextTo)));
-
-                        act.OnPreStart = ctx =>
-                            _producerController.Tell(new ShardingProducerController.Start<TestConsumer.Job>(ctx.Self));
-                    }, "sendNextAdapter");
-            
-            // simulate fast producer
-            Timers.StartPeriodicTimer("tick", Tick.Instance, TimeSpan.FromMilliseconds(20));
-        }
-
-        private void Idle(int n)
-        {
-            Receive<Tick>(_ => { }); // ignore
-            Receive<RequestNext>(next => { Become(() => Active(n + 1, next.SendNextTo)); });
-        }
-
-        private void Active(int n, IActorRef sendTo)
-        {
-            Receive<Tick>(_ =>
-            {
-                var msg = $"msg-{n}";
-                var entityId = $"entity-{n % 3}";
-                _log.Info("Sending {0} to {1}", msg, entityId);
-                sendTo.Tell(new ShardingEnvelope(entityId, new TestConsumer.Job(msg)));
-                Become(() => Idle(n));
-            });
-
-            Receive<RequestNext>(next => { }); // already active
-        }
-    }
-
-    private int _idCount = 0;
-    private int NextId() => _idCount++;
-
     private string ProducerId => $"p-{_idCount}";
+
+    private int NextId()
+    {
+        return _idCount++;
+    }
 
     private async Task JoinCluster()
     {
@@ -147,8 +62,8 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
 
         var consumerEndProbe = CreateTestProbe();
         var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
-                ShardingConsumerController.Create<TestConsumer.Job>(c =>
-                        TestConsumer.PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
+                ShardingConsumerController.Create<Job>(c =>
+                        PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
                 o =>
@@ -165,7 +80,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
 
         var producerController =
             Sys.ActorOf(
-                ShardingProducerController.Create<TestConsumer.Job>(ProducerId, region, Option<Props>.None,
+                ShardingProducerController.Create<Job>(ProducerId, region, Option<Props>.None,
                     ShardingProducerController.Settings.Create(Sys)), $"shardingController-{_idCount}");
         var producer = Sys.ActorOf(Props.Create(() => new TestShardingProducer(producerController)),
             $"producer-{_idCount}");
@@ -183,7 +98,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         var consumerEndProbe = CreateTestProbe();
         var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
                 ShardingConsumerController.Create<Job>(c =>
-                        TestConsumer.PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
+                        PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
                 o =>
@@ -207,7 +122,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
 
         var shardingController2 =
             Sys.ActorOf(
-                ShardingProducerController.Create<TestConsumer.Job>($"p2-{_idCount}", region, Option<Props>.None,
+                ShardingProducerController.Create<Job>($"p2-{_idCount}", region, Option<Props>.None,
                     ShardingProducerController.Settings.Create(Sys)), $"shardingController2-{_idCount}");
         var producer2 = Sys.ActorOf(Props.Create(() => new TestShardingProducer(shardingController2)),
             $"p2-{_idCount}");
@@ -215,17 +130,10 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
         var endMessages = consumerEndProbe.ReceiveN(3, TimeSpan.FromSeconds(15));
 
-        var producerIds = endMessages.Cast<TestConsumer.Collected>().SelectMany(c => c.ProducerIds).ToList();
+        var producerIds = endMessages.Cast<Collected>().SelectMany(c => c.ProducerIds).ToList();
         producerIds
-            .Should().BeEquivalentTo(new[]
-            {
-                $"p1-{_idCount}-entity-0",
-                $"p1-{_idCount}-entity-1",
-                $"p1-{_idCount}-entity-2",
-                $"p2-{_idCount}-entity-0",
-                $"p2-{_idCount}-entity-1",
-                $"p2-{_idCount}-entity-2"
-            });
+            .Should().BeEquivalentTo($"p1-{_idCount}-entity-0", $"p1-{_idCount}-entity-1", $"p1-{_idCount}-entity-2",
+                $"p2-{_idCount}-entity-0", $"p2-{_idCount}-entity-1", $"p2-{_idCount}-entity-2");
     }
 
     [Fact]
@@ -236,8 +144,8 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
 
         var consumerEndProbe = CreateTestProbe();
         var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
-                ShardingConsumerController.Create<TestConsumer.Job>(c =>
-                        TestConsumer.PropsFor(DefaultConsumerDelay, 3, consumerEndProbe.Ref, c),
+                ShardingConsumerController.Create<Job>(c =>
+                        PropsFor(DefaultConsumerDelay, 3, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
                 o =>
@@ -254,37 +162,37 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
 
         var producerController =
             Sys.ActorOf(
-                ShardingProducerController.Create<TestConsumer.Job>(ProducerId, region, Option<Props>.None,
+                ShardingProducerController.Create<Job>(ProducerId, region, Option<Props>.None,
                     ShardingProducerController.Settings.Create(Sys)), $"shardingController-{_idCount}");
 
         var producerProbe = CreateTestProbe();
-        producerController.Tell(new ShardingProducerController.Start<TestConsumer.Job>(producerProbe.Ref));
+        producerController.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
 
         var replyProbe = CreateTestProbe();
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>())
-            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<TestConsumer.Job>("entity-0", new TestConsumer.Job("msg-1"),
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>())
+            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<Job>("entity-0", new Job("msg-1"),
                 replyProbe.Ref));
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>())
-            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<TestConsumer.Job>("entity-0", new TestConsumer.Job("msg-2"),
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>())
+            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<Job>("entity-0", new Job("msg-2"),
                 replyProbe.Ref));
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>())
-            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<TestConsumer.Job>("entity-1", new TestConsumer.Job("msg-3"),
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>())
+            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<Job>("entity-1", new Job("msg-3"),
                 replyProbe.Ref));
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>())
-            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<TestConsumer.Job>("entity-0", new TestConsumer.Job("msg-4"),
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>())
+            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<Job>("entity-0", new Job("msg-4"),
                 replyProbe.Ref));
 
-        await consumerEndProbe.ExpectMsgAsync<TestConsumer.Collected>(); // entity-0 received 3 messages
+        await consumerEndProbe.ExpectMsgAsync<Collected>(); // entity-0 received 3 messages
         await consumerEndProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>())
-            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<TestConsumer.Job>("entity-1", new TestConsumer.Job("msg-5"),
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>())
+            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<Job>("entity-1", new Job("msg-5"),
                 replyProbe.Ref));
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>())
-            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<TestConsumer.Job>("entity-1", new TestConsumer.Job("msg-6"),
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>())
+            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<Job>("entity-1", new Job("msg-6"),
                 replyProbe.Ref));
 
-        await consumerEndProbe.ExpectMsgAsync<TestConsumer.Collected>(); // entity-1 received 3 messages
+        await consumerEndProbe.ExpectMsgAsync<Collected>(); // entity-1 received 3 messages
     }
 
     [Fact]
@@ -296,86 +204,86 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         var shardingProbe = CreateTestProbe();
         var producerController =
             Sys.ActorOf(
-                ShardingProducerController.Create<TestConsumer.Job>(ProducerId, shardingProbe.Ref, Option<Props>.None,
+                ShardingProducerController.Create<Job>(ProducerId, shardingProbe.Ref, Option<Props>.None,
                     ShardingProducerController.Settings.Create(Sys)), $"shardingController-{_idCount}");
         var producerProbe = CreateTestProbe();
-        producerController.Tell(new ShardingProducerController.Start<TestConsumer.Job>(producerProbe.Ref));
+        producerController.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
 
-        var next1 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
+        var next1 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
         next1.EntitiesWithDemand.IsEmpty.Should().BeTrue();
         next1.BufferedForEntitiesWithoutDemand.Should().BeEquivalentTo(ImmutableDictionary<string, int>.Empty);
 
-        next1.SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-1")));
+        next1.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job("msg-1")));
         // for the first message, no RequestNext until initial roundtrip
         await producerProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
-        var seq1 = (ConsumerController.SequencedMessage<TestConsumer.Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
+        var seq1 = (ConsumerController.SequencedMessage<Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
             .Message;
-        seq1.Message.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-1"));
-        seq1.ProducerController.Tell(new ProducerController.Request(confirmedSeqNr: 0L, requestUpToSeqNr: 5L, true,
+        seq1.Message.Message.Should().BeEquivalentTo(new Job("msg-1"));
+        seq1.ProducerController.Tell(new ProducerController.Request(0L, 5L, true,
             false));
 
-        var next2 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
-        next2.EntitiesWithDemand.Should().BeEquivalentTo(new[] { "entity-1" });
+        var next2 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
+        next2.EntitiesWithDemand.Should().BeEquivalentTo("entity-1");
         next2.BufferedForEntitiesWithoutDemand.Should().BeEquivalentTo(ImmutableDictionary<string, int>.Empty);
 
-        next2.SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-2")));
-        var next3 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
+        next2.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job("msg-2")));
+        var next3 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
         // could be sent immediately since had demand, and Request(requestUpToSeqNr-5)
-        next3.EntitiesWithDemand.Should().BeEquivalentTo(new[] { "entity-1" });
+        next3.EntitiesWithDemand.Should().BeEquivalentTo("entity-1");
         next3.BufferedForEntitiesWithoutDemand.Should().BeEquivalentTo(ImmutableDictionary<string, int>.Empty);
 
-        next3.SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-3")));
-        var next4 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
-        next4.EntitiesWithDemand.Should().BeEquivalentTo(new[] { "entity-1" });
+        next3.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job("msg-3")));
+        var next4 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
+        next4.EntitiesWithDemand.Should().BeEquivalentTo("entity-1");
         next4.BufferedForEntitiesWithoutDemand.Should().BeEquivalentTo(ImmutableDictionary<string, int>.Empty);
 
-        next4.SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-4")));
-        var next5 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
-        next5.EntitiesWithDemand.Should().BeEquivalentTo(new[] { "entity-1" });
+        next4.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job("msg-4")));
+        var next5 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
+        next5.EntitiesWithDemand.Should().BeEquivalentTo("entity-1");
         next5.BufferedForEntitiesWithoutDemand.Should().BeEquivalentTo(ImmutableDictionary<string, int>.Empty);
 
-        next5.SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-5")));
+        next5.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job("msg-5")));
         // no more demand Request(requestUpToSeqNr-5)
         await producerProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         // but we can send more, which will be buffered
-        next5.SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-6")));
+        next5.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job("msg-6")));
 
         var m1 = await shardingProbe.ExpectMsgAsync<ShardingEnvelope>();
         var m2 = await shardingProbe.ExpectMsgAsync<ShardingEnvelope>();
         var m3 = await shardingProbe.ExpectMsgAsync<ShardingEnvelope>();
-        var seq5 = (ConsumerController.SequencedMessage<TestConsumer.Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
+        var seq5 = (ConsumerController.SequencedMessage<Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
             .Message;
-        seq5.Message.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-5"));
+        seq5.Message.Message.Should().BeEquivalentTo(new Job("msg-5"));
 
-        var next6 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
+        var next6 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
         next6.EntitiesWithDemand.IsEmpty.Should().BeTrue();
         next6.BufferedForEntitiesWithoutDemand.Should()
             .BeEquivalentTo(ImmutableDictionary<string, int>.Empty.Add("entity-1", 1));
 
         // and we can send to another entity
-        next6.SendNextTo.Tell(new ShardingEnvelope("entity-2", new TestConsumer.Job("msg-7")));
+        next6.SendNextTo.Tell(new ShardingEnvelope("entity-2", new Job("msg-7")));
         await producerProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
-        var seq7 = (ConsumerController.SequencedMessage<TestConsumer.Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
+        var seq7 = (ConsumerController.SequencedMessage<Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
             .Message;
-        seq7.Message.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-7"));
-        seq7.ProducerController.Tell(new ProducerController.Request(confirmedSeqNr: 0L, requestUpToSeqNr: 5L, true,
+        seq7.Message.Message.Should().BeEquivalentTo(new Job("msg-7"));
+        seq7.ProducerController.Tell(new ProducerController.Request(0L, 5L, true,
             false));
 
-        var next8 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
-        next8.EntitiesWithDemand.Should().BeEquivalentTo(new[] { "entity-2" });
+        var next8 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
+        next8.EntitiesWithDemand.Should().BeEquivalentTo("entity-2");
         next8.BufferedForEntitiesWithoutDemand.Should()
             .BeEquivalentTo(ImmutableDictionary<string, int>.Empty.Add("entity-1", 1));
 
         // when new demand the buffered messages will be sent
-        seq5.ProducerController.Tell(new ProducerController.Request(confirmedSeqNr: 5L, requestUpToSeqNr: 10L, true,
+        seq5.ProducerController.Tell(new ProducerController.Request(5L, 10L, true,
             false));
-        var seq6 = (ConsumerController.SequencedMessage<TestConsumer.Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
+        var seq6 = (ConsumerController.SequencedMessage<Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
             .Message;
-        seq6.Message.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-6"));
+        seq6.Message.Message.Should().BeEquivalentTo(new Job("msg-6"));
 
-        var next9 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
-        next9.EntitiesWithDemand.Should().BeEquivalentTo(new[] { "entity-1", "entity-2" });
+        var next9 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
+        next9.EntitiesWithDemand.Should().BeEquivalentTo("entity-1", "entity-2");
         next9.BufferedForEntitiesWithoutDemand.Should().BeEquivalentTo(ImmutableDictionary<string, int>.Empty);
     }
 
@@ -388,32 +296,32 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         var shardingProbe = CreateTestProbe();
         var producerController =
             Sys.ActorOf(
-                ShardingProducerController.Create<TestConsumer.Job>(ProducerId, shardingProbe.Ref, Option<Props>.None,
+                ShardingProducerController.Create<Job>(ProducerId, shardingProbe.Ref, Option<Props>.None,
                     ShardingProducerController.Settings.Create(Sys)), $"shardingController-{_idCount}");
         var producerProbe = CreateTestProbe();
-        producerController.Tell(new ShardingProducerController.Start<TestConsumer.Job>(producerProbe.Ref));
+        producerController.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
 
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(
-            new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-1")));
-        var seq1 = (ConsumerController.SequencedMessage<TestConsumer.Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-1")));
+        var seq1 = (ConsumerController.SequencedMessage<Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
             .Message;
-        seq1.Message.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-1"));
-        seq1.ProducerController.Tell(new ProducerController.Request(confirmedSeqNr: 0L, requestUpToSeqNr: 5L, true,
+        seq1.Message.Message.Should().BeEquivalentTo(new Job("msg-1"));
+        seq1.ProducerController.Tell(new ProducerController.Request(0L, 5L, true,
             false));
 
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(
-            new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-2")));
-        shardingProbe.ExpectMsg<ShardingEnvelope>().Message.As<ConsumerController.SequencedMessage<TestConsumer.Job>>().Message
-            .Should().BeEquivalentTo(new TestConsumer.Job("msg-2"));
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-2")));
+        shardingProbe.ExpectMsg<ShardingEnvelope>().Message.As<ConsumerController.SequencedMessage<Job>>().Message
+            .Should().BeEquivalentTo(new Job("msg-2"));
 
         // restart producer, new Start
         var producerProbe2 = CreateTestProbe();
-        producerController.Tell(new ShardingProducerController.Start<TestConsumer.Job>(producerProbe2.Ref));
+        producerController.Tell(new ShardingProducerController.Start<Job>(producerProbe2.Ref));
 
-        (await producerProbe2.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(
-            new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-3")));
-        shardingProbe.ExpectMsg<ShardingEnvelope>().Message.As<ConsumerController.SequencedMessage<TestConsumer.Job>>().Message
-            .Should().BeEquivalentTo(new TestConsumer.Job("msg-3"));
+        (await producerProbe2.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-3")));
+        shardingProbe.ExpectMsg<ShardingEnvelope>().Message.As<ConsumerController.SequencedMessage<Job>>().Message
+            .Should().BeEquivalentTo(new Job("msg-3"));
     }
 
     [Fact]
@@ -429,7 +337,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         var consumerProbes = Enumerable.Range(0, 3).Select(c => CreateTestProbe()).ToList();
 
         var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
-                ShardingConsumerController.Create<TestConsumer.Job>(c =>
+                ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new ProbeWrapper(consumerProbes[consumerIncarnation.GetAndIncrement()], c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
@@ -451,51 +359,51 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         };
         var shardingProducerController =
             Sys.ActorOf(
-                ShardingProducerController.Create<TestConsumer.Job>(ProducerId, region, Option<Props>.None,
+                ShardingProducerController.Create<Job>(ProducerId, region, Option<Props>.None,
                     shardingProducerSettings), $"shardingController-{_idCount}");
         var producerProbe = CreateTestProbe();
-        shardingProducerController.Tell(new ShardingProducerController.Start<TestConsumer.Job>(producerProbe.Ref));
+        shardingProducerController.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
 
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(
-            new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-1")));
-        var delivery1 = await consumerProbes[0].ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery1.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-1"));
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-1")));
+        var delivery1 = await consumerProbes[0].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery1.Message.Should().BeEquivalentTo(new Job("msg-1"));
         delivery1.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
 
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(
-            new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-2")));
-        var delivery2 = await consumerProbes[0].ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery2.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-2"));
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-2")));
+        var delivery2 = await consumerProbes[0].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery2.Message.Should().BeEquivalentTo(new Job("msg-2"));
         delivery2.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
 
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(
-            new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-3")));
-        var delivery3 = await consumerProbes[0].ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-3")));
+        var delivery3 = await consumerProbes[0].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
         // msg-3 is not confirmed
 
         // terminate the probe
         await consumerProbes[0].GracefulStop(RemainingOrDefault);
 
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(
-            new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-4")));
-        var delivery3b = await consumerProbes[1].ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-4")));
+        var delivery3b = await consumerProbes[1].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
         // msg-3 is re-delivered
-        delivery3b.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-3"));
+        delivery3b.Message.Should().BeEquivalentTo(new Job("msg-3"));
         delivery3b.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
 
-        var delivery3cor4 = await consumerProbes[1].ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
+        var delivery3cor4 = await consumerProbes[1].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
 
-        if (delivery3cor4.Message.Equals(new TestConsumer.Job("msg-3")))
+        if (delivery3cor4.Message.Equals(new Job("msg-3")))
         {
             /*
              * It is possible the ProducerController re-sends msg-3 again before it has processed its acknowledgement.
              * If the ConsumerController restarts between sending the acknowledgement and receiving that re-sent msg-3,
              * it will deliver msg-3 a second time. We then expect msg-4 next:
              */
-            var delivery4 = await consumerProbes[1].ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-            delivery4.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-4"));
+            var delivery4 = await consumerProbes[1].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+            delivery4.Message.Should().BeEquivalentTo(new Job("msg-4"));
         }
-        else if (delivery3cor4.Message.Equals(new TestConsumer.Job("msg-4")))
+        else if (delivery3cor4.Message.Equals(new Job("msg-4")))
         {
             // OK!
         }
@@ -503,12 +411,12 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         {
             throw new Exception($"Unexpected message {delivery3cor4.Message}");
         }
-        
+
         // redeliver also when no more messages are sent to the entity
         await consumerProbes[1].GracefulStop(RemainingOrDefault);
-        
-        var delivery4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery4b.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-4"));
+
+        var delivery4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery4b.Message.Should().BeEquivalentTo(new Job("msg-4"));
     }
 
     [Fact]
@@ -522,7 +430,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
 
         var consumerEndProbe = CreateTestProbe();
         var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
-                ShardingConsumerController.Create<TestConsumer.Job>(c =>
+                ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
@@ -537,51 +445,54 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         return se.Message;
                     return o;
                 }));
-        
+
         var shardingProducerSettings = ShardingProducerController.Settings.Create(Sys) with
         {
             CleanupUnusedAfter = TimeSpan.FromSeconds(1)
         };
         var shardingProducerController =
             Sys.ActorOf(
-                ShardingProducerController.Create<TestConsumer.Job>(ProducerId, region, Option<Props>.None,
+                ShardingProducerController.Create<Job>(ProducerId, region, Option<Props>.None,
                     shardingProducerSettings), $"shardingController-{_idCount}");
         var producerProbe = CreateTestProbe();
-        shardingProducerController.Tell(new ShardingProducerController.Start<TestConsumer.Job>(producerProbe.Ref));
-        
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-1")));
-        var delivery1 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery1.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-1"));
+        shardingProducerController.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
+
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-1")));
+        var delivery1 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery1.Message.Should().BeEquivalentTo(new Job("msg-1"));
         delivery1.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
-        
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-2")));
-        var delivery2 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery2.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-2"));
+
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-2")));
+        var delivery2 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery2.Message.Should().BeEquivalentTo(new Job("msg-2"));
         delivery2.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
-        
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(new ShardingEnvelope("entity-2", new TestConsumer.Job("msg-3")));
-        var delivery3 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery3.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-3"));
+
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-2", new Job("msg-3")));
+        var delivery3 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery3.Message.Should().BeEquivalentTo(new Job("msg-3"));
         // msg-3 not Confirmed
-        
-        var next4 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
-        next4.EntitiesWithDemand.Should().BeEquivalentTo(new[] { "entity-1", "entity-2" });
+
+        var next4 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
+        next4.EntitiesWithDemand.Should().BeEquivalentTo("entity-1", "entity-2");
 
         await Task.Delay(TimeSpan.FromSeconds(2));
-        
-        next4.SendNextTo.Tell(new ShardingEnvelope("entity-2", new TestConsumer.Job("msg-4")));
-        var next5 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
-        next5.EntitiesWithDemand.Should().BeEquivalentTo(new[] { "entity-2" }); // entity-1 removed
-        
+
+        next4.SendNextTo.Tell(new ShardingEnvelope("entity-2", new Job("msg-4")));
+        var next5 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
+        next5.EntitiesWithDemand.Should().BeEquivalentTo("entity-2"); // entity-1 removed
+
         delivery3.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
-        var delivery4 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery4.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-4"));
+        var delivery4 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery4.Message.Should().BeEquivalentTo(new Job("msg-4"));
         delivery4.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
-        
+
         // send to entity-1 again
-        next5.SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-5")));
-        var delivery5 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery5.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-5"));
+        next5.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job("msg-5")));
+        var delivery5 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery5.Message.Should().BeEquivalentTo(new Job("msg-5"));
         delivery5.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
     }
 
@@ -596,7 +507,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
 
         var consumerEndProbe = CreateTestProbe();
         var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
-                ShardingConsumerController.Create<TestConsumer.Job>(c =>
+                ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
@@ -611,45 +522,145 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         return se.Message;
                     return o;
                 }));
-        
+
         var shardingProducerController1 =
             Sys.ActorOf(
-                ShardingProducerController.Create<TestConsumer.Job>(ProducerId, region, Option<Props>.None,
+                ShardingProducerController.Create<Job>(ProducerId, region, Option<Props>.None,
                     ShardingProducerController.Settings.Create(Sys)), $"shardingController-{_idCount}");
         var producerProbe = CreateTestProbe();
-        shardingProducerController1.Tell(new ShardingProducerController.Start<TestConsumer.Job>(producerProbe.Ref));
-        
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-1")));
-        var delivery1 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery1.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-1"));
+        shardingProducerController1.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
+
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-1")));
+        var delivery1 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery1.Message.Should().BeEquivalentTo(new Job("msg-1"));
         delivery1.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
-        
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-2")));
-        var delivery2 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery2.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-2"));
+
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-2")));
+        var delivery2 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery2.Message.Should().BeEquivalentTo(new Job("msg-2"));
         delivery2.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
-        await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>();
+        await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
 
         await shardingProducerController1.GracefulStop(RemainingOrDefault);
-        
+
         var shardingProducerController2 =
             Sys.ActorOf(
-                ShardingProducerController.Create<TestConsumer.Job>(ProducerId, region, Option<Props>.None,
+                ShardingProducerController.Create<Job>(ProducerId, region, Option<Props>.None,
                     ShardingProducerController.Settings.Create(Sys)), $"shardingController2-{_idCount}");
-        shardingProducerController2.Tell(new ShardingProducerController.Start<TestConsumer.Job>(producerProbe.Ref));
-        
-        await EventFilter.Debug(start:"Starting ConsumerController").ExpectAsync(1, async () =>
-        {
-            (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-3")));
-        });
-        
-        var delivery3 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery3.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-3"));
+        shardingProducerController2.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
+
+        await EventFilter.Debug(start: "Starting ConsumerController").ExpectAsync(1,
+            async () =>
+            {
+                (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+                    new ShardingEnvelope("entity-1", new Job("msg-3")));
+            });
+
+        var delivery3 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery3.Message.Should().BeEquivalentTo(new Job("msg-3"));
         delivery3.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
-        
-        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<TestConsumer.Job>>()).SendNextTo.Tell(new ShardingEnvelope("entity-1", new TestConsumer.Job("msg-4")));
-        var delivery4 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<TestConsumer.Job>>();
-        delivery4.Message.Should().BeEquivalentTo(new TestConsumer.Job("msg-4"));
+
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
+            new ShardingEnvelope("entity-1", new Job("msg-4")));
+        var delivery4 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        delivery4.Message.Should().BeEquivalentTo(new Job("msg-4"));
         delivery4.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
+    }
+
+    private class ProbeWrapper : UntypedActor
+    {
+        private readonly IActorRef _consumerController;
+        private readonly IActorRef _probeRef;
+
+        public ProbeWrapper(IActorRef probeRef, IActorRef consumerController)
+        {
+            _probeRef = probeRef;
+            _consumerController = consumerController;
+        }
+
+        protected override void OnReceive(object message)
+        {
+            switch (message)
+            {
+                case Terminated:
+                    Context.Stop(Self);
+                    break;
+                default:
+                    _probeRef.Forward(message);
+                    break;
+            }
+        }
+
+        protected override void PreStart()
+        {
+            _consumerController.Tell(new ConsumerController.Start<Job>(Self));
+            Context.Watch(_probeRef);
+        }
+    }
+
+    private class TestShardingProducer : ReceiveActor, IWithTimers
+    {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly IActorRef _producerController;
+        private IActorRef _sendNextAdapter;
+
+        public TestShardingProducer(IActorRef producerController)
+        {
+            _producerController = producerController;
+            Idle(0);
+        }
+
+        public ITimerScheduler Timers { get; set; } = null!;
+
+        protected override void PreStart()
+        {
+            var self = Self;
+            _sendNextAdapter =
+                Context.ActorOf(
+                    act =>
+                    {
+                        act.Receive<ShardingProducerController.RequestNext<Job>>((next, _) =>
+                            self.Tell(new RequestNext(next.SendNextTo)));
+
+                        act.OnPreStart = ctx =>
+                            _producerController.Tell(new ShardingProducerController.Start<Job>(ctx.Self));
+                    }, "sendNextAdapter");
+
+            // simulate fast producer
+            Timers.StartPeriodicTimer("tick", Tick.Instance, TimeSpan.FromMilliseconds(20));
+        }
+
+        private void Idle(int n)
+        {
+            Receive<Tick>(_ => { }); // ignore
+            Receive<RequestNext>(next => { Become(() => Active(n + 1, next.SendNextTo)); });
+        }
+
+        private void Active(int n, IActorRef sendTo)
+        {
+            Receive<Tick>(_ =>
+            {
+                var msg = $"msg-{n}";
+                var entityId = $"entity-{n % 3}";
+                _log.Info("Sending {0} to {1}", msg, entityId);
+                sendTo.Tell(new ShardingEnvelope(entityId, new Job(msg)));
+                Become(() => Idle(n));
+            });
+
+            Receive<RequestNext>(next => { }); // already active
+        }
+
+        public sealed class Tick
+        {
+            private Tick()
+            {
+            }
+
+            public static Tick Instance { get; } = new();
+        }
+
+        public sealed record RequestNext(IActorRef SendNextTo);
     }
 }
