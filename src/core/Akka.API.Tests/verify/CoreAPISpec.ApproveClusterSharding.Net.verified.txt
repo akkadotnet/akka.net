@@ -265,11 +265,16 @@ namespace Akka.Cluster.Sharding
         public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithRole(string role) { }
         public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithShardingSettings(Akka.Cluster.Sharding.ClusterShardingSettings shardingSettings) { }
     }
-    public sealed class ShardingEnvelope : Akka.Actor.IWrappedMessage
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class ShardingEnvelope : Akka.Actor.IWrappedMessage, Akka.Cluster.Sharding.IClusterShardingSerializable, System.IEquatable<Akka.Cluster.Sharding.ShardingEnvelope>
     {
         public ShardingEnvelope(string entityId, object message) { }
         public string EntityId { get; }
         public object Message { get; }
+        public bool Equals(Akka.Cluster.Sharding.ShardingEnvelope other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
     }
     public enum StateStoreMode
     {
