@@ -25,6 +25,7 @@ namespace Akka.Cluster.Sharding.Tests.Delivery;
 public class DurableShardingSpec : AkkaSpec
 {
     public static readonly Config Config = @"
+        akka.loglevel = DEBUG
         akka.actor.provider = cluster
         akka.remote.dot-netty.tcp.port = 0
         akka.reliable-delivery.consumer-controller.flow-control-window = 20
@@ -110,7 +111,9 @@ public class DurableShardingSpec : AkkaSpec
         await Task.Delay(1000);
         
         Sys.Log.Info("Stopping [{0}]", shardingProducerController);
+        Watch(shardingProducerController);
         Sys.Stop(shardingProducerController);
+        await ExpectTerminatedAsync(shardingProducerController);
         
         var shardingProducerController2 =
             Sys.ActorOf(
@@ -133,13 +136,13 @@ public class DurableShardingSpec : AkkaSpec
         // now the unconfirmed are re-delivered
         var redelivery3 = await consumerProbe.ExpectMsgAsync<JobDelivery>();
         redelivery3.Msg.Should().Be(new Job("msg-3"));
-        redelivery3.SeqNr.Should().Be(3);
+        redelivery3.SeqNr.Should().Be(1); // new ProducerController and there starting at 1
         redelivery3.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         // TODO: need journal operations queries here to verify that the Confirmed was persisted
         
         var redelivery4 = await consumerProbe.ExpectMsgAsync<JobDelivery>();
         redelivery4.Msg.Should().Be(new Job("msg-4"));
-        redelivery4.SeqNr.Should().Be(4);
+        redelivery4.SeqNr.Should().Be(2);
         redelivery4.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         // TODO: need journal operations queries here to verify that the Confirmed was persisted
         

@@ -136,13 +136,17 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
     {
         Timers.StartPeriodicTimer(CleanupUnused.Instance, CleanupUnused.Instance,
             TimeSpan.FromMilliseconds(Settings.CleanupUnusedAfter.TotalMilliseconds / 2));
-        Timers.StartPeriodicTimer(ShardingProducerController.ResendFirstUnconfirmed.Instance, ShardingProducerController.ResendFirstUnconfirmed.Instance,
+        Timers.StartPeriodicTimer(ShardingProducerController.ResendFirstUnconfirmed.Instance,
+            ShardingProducerController.ResendFirstUnconfirmed.Instance,
             TimeSpan.FromMilliseconds(Settings.ResendFirstUnconfirmedIdleTimeout.TotalMilliseconds / 2));
 
         // resend unconfirmed before other stashed messages
         initialState.OnSuccess(s =>
         {
-            var unconfirmedDeliveries = s.Unconfirmed.Select(c => new Envelope(c, Self));
+            var unconfirmedDeliveries = s.Unconfirmed.Select(c =>
+                new Envelope(new Msg(
+                    new ShardingEnvelope(c.ConfirmationQualifier,
+                        c.Message.IsMessage ? c.Message.Message : c.Message.Chunk), AlreadyStored:c.SeqNr), Self));
             Stash.Prepend(unconfirmedDeliveries);
         });
 
@@ -167,8 +171,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
 
         CurrentState = CurrentState with
         {
-            Producer = producer,
-            CurrentSeqNr = initialState.HasValue ? initialState.Value.CurrentSeqNr : 0,
+            Producer = producer, CurrentSeqNr = initialState.HasValue ? initialState.Value.CurrentSeqNr : 0,
         };
 
         Become(Active);
@@ -196,7 +199,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                 StoreMessageSent(
                     new DurableProducerQueue.MessageSent<T>(CurrentState.CurrentSeqNr, (T)msg.Envelope.Message, false,
                         msg.Envelope.EntityId, _timeProvider.Now.Ticks), attempt: 1);
-                
+
                 CurrentState = CurrentState with { CurrentSeqNr = CurrentState.CurrentSeqNr + 1 };
             }
         });
@@ -204,7 +207,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         Receive<MessageWithConfirmation<T>>(messageWithConfirmation =>
         {
             var (entityId, message, replyTo) = messageWithConfirmation;
-            
+
             if (DurableQueueRef.IsEmpty)
             {
                 OnMsg(entityId, message, replyTo.AsOption(), CurrentState.CurrentSeqNr, CurrentState.ReplyAfterStore);
@@ -216,8 +219,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                 var newReplyAfterStore = CurrentState.ReplyAfterStore.SetItem(CurrentState.CurrentSeqNr, replyTo);
                 CurrentState = CurrentState with
                 {
-                    CurrentSeqNr = CurrentState.CurrentSeqNr + 1,
-                    ReplyAfterStore = newReplyAfterStore
+                    CurrentSeqNr = CurrentState.CurrentSeqNr + 1, ReplyAfterStore = newReplyAfterStore
                 };
             }
         });
@@ -233,9 +235,9 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         Receive<Ack>(ReceiveAck);
 
         Receive<WrappedRequestNext<T>>(ReceiveWrappedRequestNext);
-        
+
         Receive<ResendFirstUnconfirmed>(_ => ResendFirstUnconfirmed());
-        
+
         Receive<CleanupUnused>(_ => ReceiveCleanupUnused());
 
         Receive<Start<T>>(ReceiveStart);
@@ -250,11 +252,8 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         {
             throw new IllegalStateException("DurableQueue was unexpectedly terminated.");
         });
-        
-        ReceiveAny(_ =>
-        {
-            throw new InvalidOperationException($"Unexpected message [{_}] in Active state.");
-        });
+
+        ReceiveAny(_ => { throw new InvalidOperationException($"Unexpected message [{_}] in Active state."); });
     }
 
     #endregion
@@ -275,13 +274,14 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
 
                 CurrentState = CurrentState with
                 {
-                    OutStates = CurrentState.OutStates.SetItem(outKey, outState with
-                    {
-                        SeqNr = outState.SeqNr + 1,
-                        Unconfirmed = newUnconfirmed,
-                        NextTo = Option<IActorRef>.None,
-                        LastUsed = _timeProvider.Now.Ticks
-                    }),
+                    OutStates = CurrentState.OutStates.SetItem(outKey,
+                        outState with
+                        {
+                            SeqNr = outState.SeqNr + 1,
+                            Unconfirmed = newUnconfirmed,
+                            NextTo = Option<IActorRef>.None,
+                            LastUsed = _timeProvider.Now.Ticks
+                        }),
                     ReplyAfterStore = newReplyAfterStore
                 };
             }
@@ -299,10 +299,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                 var newBuffered = buffered.Add(new Buffered<T>(totalSeqNr, msg, replyTo));
                 var newS = CurrentState with
                 {
-                    OutStates = CurrentState.OutStates.SetItem(outKey, outState with
-                    {
-                        Buffered = newBuffered
-                    }),
+                    OutStates = CurrentState.OutStates.SetItem(outKey, outState with { Buffered = newBuffered }),
                     ReplyAfterStore = newReplyAfterStore
                 };
                 // send an updated RequestNext to indicate buffer usage
@@ -409,16 +406,9 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                 ? _timeProvider.Now.Ticks
                 : outState.LastUsed;
 
-            var newOutState = outState with
-            {
-                Unconfirmed = newUnconfirmed,
-                LastUsed = newUsedTime
-            };
+            var newOutState = outState with { Unconfirmed = newUnconfirmed, LastUsed = newUsedTime };
 
-            CurrentState = CurrentState with
-            {
-                OutStates = CurrentState.OutStates.SetItem(ack.OutKey, newOutState)
-            };
+            CurrentState = CurrentState with { OutStates = CurrentState.OutStates.SetItem(ack.OutKey, newOutState) };
         }
         else
         {
@@ -488,10 +478,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         ProducerController.AssertLocalProducer(start.Producer);
         _log.Debug("Register new Producer [{0}], currentSeqNr [{1}].", start.Producer, CurrentState.CurrentSeqNr);
         start.Producer.Tell(CreateRequestNext(CurrentState));
-        CurrentState = CurrentState with
-        {
-            Producer = start.Producer
-        };
+        CurrentState = CurrentState with { Producer = start.Producer };
     }
 
     private void ResendFirstUnconfirmed()
@@ -533,10 +520,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
 
         if (removeOutKeys.Any())
         {
-            CurrentState = CurrentState with
-            {
-                OutStates = CurrentState.OutStates.RemoveRange(removeOutKeys)
-            };
+            CurrentState = CurrentState with { OutStates = CurrentState.OutStates.RemoveRange(removeOutKeys) };
         }
     }
 
@@ -546,7 +530,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         DurableProducerQueue.StoreMessageSent<T> Mapper(IActorRef r) => new(messageSent, r);
 
         var self = Self;
-        
+
         DurableQueueRef.Value.Ask<DurableProducerQueue.StoreMessageSentAck>(Mapper,
                 askTimeout, cancellationToken: default)
             .PipeTo(self, success: ack => new StoreMessageSentCompleted<T>(messageSent),
