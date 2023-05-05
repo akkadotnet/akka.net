@@ -27,7 +27,7 @@ namespace Akka.Streams.Util
             return
                 type
                     .GetInterfaces()
-                    .Single(i => i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof (ISubscriber<>))
+                    .Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (ISubscriber<>))
                     .GetGenericArguments()
                     .First();
         }
@@ -42,7 +42,7 @@ namespace Akka.Streams.Util
             return
                 type
                     .GetInterfaces()
-                    .Single(i => i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof (IPublisher<>))
+                    .Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (IPublisher<>))
                     .GetGenericArguments()
                     .First();
         }
