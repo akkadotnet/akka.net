@@ -448,7 +448,7 @@ namespace Akka.Tests.MatchHandler
         {
             for(int i = 0; i < delegateArguments.Length; i++)
             {
-                if(delegateArguments[i].GetType().GetTypeInfo().IsValueType)
+                if(delegateArguments[i].GetType().IsValueType)
                     Assert.Equal(delegateArguments[i], updatedArgs[i]);
                 else
                     Assert.Same(delegateArguments[i], updatedArgs[i]);

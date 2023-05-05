@@ -562,11 +562,11 @@ namespace Akka.Tests.Serialization
 
         private static string LegacyTypeQualifiedName(Type type)
         {
-            string coreAssemblyName = typeof(object).GetTypeInfo().Assembly.GetName().Name;
-            var assemblyName = type.GetTypeInfo().Assembly.GetName().Name;
+            string coreAssemblyName = typeof(object).Assembly.GetName().Name;
+            var assemblyName = type.Assembly.GetName().Name;
             var shortened = assemblyName.Equals(coreAssemblyName)
-                ? type.GetTypeInfo().FullName
-                : $"{type.GetTypeInfo().FullName}, {assemblyName}";
+                ? type.FullName
+                : $"{type.FullName}, {assemblyName}";
             return shortened;
         }
 
