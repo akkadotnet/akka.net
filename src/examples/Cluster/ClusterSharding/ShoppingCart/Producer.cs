@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Sharding.Delivery;

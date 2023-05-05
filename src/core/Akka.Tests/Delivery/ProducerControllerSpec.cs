@@ -223,6 +223,61 @@ public class ProducerControllerSpec : TestKit.Xunit2.TestKit
         producerController.Tell(new ProducerController.Request(5L, 15L, true, false));
         await replyTo.ExpectMsgAsync(5L);
     }
+    
+    [Fact]
+    public async Task ProducerController_should_reply_to_MessageWithConfirmation_when_Chunking()
+    {
+        NextId();
+        var consumerControllerProbe = CreateTestProbe();
+
+        var producerController =
+            Sys.ActorOf(
+                ProducerController.Create<Job>(Sys, ProducerId, Option<Props>.None,
+                    ProducerController.Settings.Create(Sys) with { ChunkLargeMessagesBytes = 1}),
+                $"producerController-{_idCount}");
+        
+        var producerProbe = CreateTestProbe();
+        var replyProbe = CreateTestProbe();
+        producerController.Tell(new ProducerController.Start<Job>(producerProbe.Ref));
+        
+        producerController.Tell(new ProducerController.RegisterConsumer<Job>(consumerControllerProbe.Ref));
+
+        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>())
+            .AskNextTo(new ProducerController.MessageWithConfirmation<Job>(new Job("abc"), replyProbe.Ref));
+        
+        // gather all 3 chunks
+        var seqMsg1 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        seqMsg1.Message.IsMessage.Should().BeFalse();
+        seqMsg1.Message.Chunk.HasValue.Should().BeTrue();
+        seqMsg1.IsFirstChunk.Should().BeTrue();
+        seqMsg1.IsLastChunk.Should().BeFalse();
+        seqMsg1.SeqNr.Should().Be(1);
+        
+        producerController.Tell(new ProducerController.Request(0L, 10L, true, false));
+        await replyProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100)); // no reply yet
+
+        var seqMsg2 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        seqMsg2.Message.IsMessage.Should().BeFalse();
+        seqMsg2.Message.Chunk.HasValue.Should().BeTrue();
+        seqMsg2.IsFirstChunk.Should().BeFalse();
+        seqMsg2.IsLastChunk.Should().BeFalse();
+        seqMsg2.SeqNr.Should().Be(2);
+        
+        producerController.Tell(new ProducerController.Request(0L, 10L, true, false));
+        
+        var seqMsg3 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        seqMsg3.Message.IsMessage.Should().BeFalse();
+        seqMsg3.Message.Chunk.HasValue.Should().BeTrue();
+        seqMsg3.IsFirstChunk.Should().BeFalse();
+        seqMsg3.IsLastChunk.Should().BeTrue();
+        seqMsg3.SeqNr.Should().Be(3);
+        
+        // confirm all 3
+        producerController.Tell(new ProducerController.Request(3L, 10L, true, false));
+        
+        // expect confirmation to come to reply probe
+        await replyProbe.ExpectMsgAsync(3L);
+    }
 
     [Fact]
     public async Task ProducerController_should_allow_restart_of_producer()
