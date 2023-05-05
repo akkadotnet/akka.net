@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\common.props"/>
     <PropertyGroup>
         <Description>Remoting support for Akka.NET. Allows actors to communicate over the network.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>

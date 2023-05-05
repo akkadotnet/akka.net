@@ -36,7 +36,7 @@ namespace DocsExamples.Actor.FiniteStateMachine
 
             When(State.Active, state =>
             {
-                if ((state.FsmEvent is Flush || state.FsmEvent is StateTimeout) 
+                if (state.FsmEvent is Flush or StateTimeout 
                     && state.StateData is Todo t)
                 {
                     return GoTo(State.Idle).Using(t.Copy(ImmutableList<object>.Empty));

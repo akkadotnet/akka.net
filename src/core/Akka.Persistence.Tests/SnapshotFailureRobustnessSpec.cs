@@ -100,17 +100,16 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = (Cmd) message;
                     Persist(cmd.Payload, _ => SaveSnapshot(cmd.Payload));
                 }
-                else if (message is DeleteSnapshot)
-                    DeleteSnapshot(((DeleteSnapshot)message).SequenceNr);
-                else if (message is DeleteSnapshots)
-                    DeleteSnapshots(((DeleteSnapshots)message).Criteria);
-                else if (message is SaveSnapshotSuccess)
-                    _probe.Tell(((SaveSnapshotSuccess)message).Metadata.SequenceNr);
+                else if (message is DeleteSnapshot snapshot)
+                    DeleteSnapshot(snapshot.SequenceNr);
+                else if (message is DeleteSnapshots snapshots)
+                    DeleteSnapshots(snapshots.Criteria);
+                else if (message is SaveSnapshotSuccess success)
+                    _probe.Tell(success.Metadata.SequenceNr);
                 else
                     _probe.Tell(message);
                 return true;
@@ -137,17 +136,16 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = (Cmd) message;
                     Persist(cmd.Payload, _ => SaveSnapshot(cmd.Payload));
                 }
-                else if (message is DeleteSnapshot)
-                    DeleteSnapshot(((DeleteSnapshot)message).SequenceNr);
-                else if (message is DeleteSnapshots)
-                    DeleteSnapshots(((DeleteSnapshots)message).Criteria);
-                else if (message is SaveSnapshotSuccess)
-                    _probe.Tell(((SaveSnapshotSuccess)message).Metadata.SequenceNr);
+                else if (message is DeleteSnapshot snapshot)
+                    DeleteSnapshot(snapshot.SequenceNr);
+                else if (message is DeleteSnapshots snapshots)
+                    DeleteSnapshots(snapshots.Criteria);
+                else if (message is SaveSnapshotSuccess success)
+                    _probe.Tell(success.Metadata.SequenceNr);
                 else
                     _probe.Tell(message);
                 return true;

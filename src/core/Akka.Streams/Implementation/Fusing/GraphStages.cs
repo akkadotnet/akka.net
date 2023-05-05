@@ -410,8 +410,8 @@ namespace Akka.Streams.Implementation.Fusing
             get
             {
                 var value = Value;
-                if (value is T)
-                    return new FlowMonitor.Received<T>((T)value);
+                if (value is T value1)
+                    return new FlowMonitor.Received<T>(value1);
 
                 return value as FlowMonitor.IStreamState;
             }

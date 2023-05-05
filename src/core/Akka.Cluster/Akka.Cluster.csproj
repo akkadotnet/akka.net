@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\common.props"/>
 
     <PropertyGroup>
         <Description>Clustering support for Akka.NET actors. Used to build highly-available, distributed applications.</Description>

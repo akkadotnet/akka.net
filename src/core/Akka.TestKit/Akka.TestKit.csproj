@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\common.props"/>
 
     <PropertyGroup>
         <Description>You need a Akka.TestKit.* package! Add the one appropriate for the test framework you use instead. For example: Akka.TestKit.Xunit or Akka.TestKit.VsTest. This package only contains base functionality for writing tests for the Akka.NET framework.</Description>

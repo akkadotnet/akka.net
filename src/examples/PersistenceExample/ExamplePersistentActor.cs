@@ -103,10 +103,10 @@ namespace PersistenceExample
                 case Command cmd:
                     Persist(new Event(cmd.Data + "-" + EventsCount), UpdateState);
                     return true;
-                case string msg when msg == "snap":
+                case string and "snap":
                     SaveSnapshot(State);
                     return true;
-                case string msg when msg == "print":
+                case string and "print":
                     Console.WriteLine(State);
                     return true;
                 case SaveSnapshotSuccess _:

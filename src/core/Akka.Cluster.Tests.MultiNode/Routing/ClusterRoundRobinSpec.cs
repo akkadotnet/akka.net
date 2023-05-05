@@ -437,7 +437,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 var notUsedAddress = Roles.Select(c => GetAddress(c)).Except(routeeAddresses()).First();
                 var downAddress = routeeAddresses().Find(c => c != GetAddress(_config.First));
                 var downRouteeRef = routees()
-                    .Where(c => c is ActorRefRoutee && ((ActorRefRoutee)c).Actor.Path.Address == downAddress)
+                    .Where(c => c is ActorRefRoutee routee && routee.Actor.Path.Address == downAddress)
                     .Select(c => ((ActorRefRoutee)c).Actor).First();
 
                 Cluster.Down(downAddress);

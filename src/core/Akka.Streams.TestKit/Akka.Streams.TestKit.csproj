@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\common.props" />
 
   <PropertyGroup>
     <Description>Testkit for Reactive stream support for Akka.NET</Description>

@@ -277,8 +277,7 @@ namespace Akka.Streams.Dsl
 
         internal static EndPoint CreateEndpoint(string host, int port)
         {
-            IPAddress address;
-            return IPAddress.TryParse(host, out address)
+            return IPAddress.TryParse(host, out var address)
                 ? (EndPoint) new IPEndPoint(address, port)
                 : new DnsEndPoint(host, port);
         }

@@ -195,12 +195,10 @@ namespace Akka.Tools.MatchHandler
 
         private void AddHandler(Type handlesType, PredicateAndHandler predicateAndHandler)
         {
-            TypeHandler typeHandler;
-
             //if the previous handler handles the same type, we don't need an entirely new TypeHandler,
             //we can just add the handler to its' list of handlers
 
-            if(!TryGetPreviousTypeHandlerIfItHandlesSameType(handlesType, out typeHandler))
+            if(!TryGetPreviousTypeHandlerIfItHandlesSameType(handlesType, out var typeHandler))
             {
                 //Either no previous handler had been added, or it handled a different type.
                 //Create a new handler and store it.

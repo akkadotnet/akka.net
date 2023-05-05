@@ -43,8 +43,8 @@ namespace Akka.Actor
         {
             if (message is Terminated)
                 Context.Stop(Self);
-            else if (message is StopChild)
-                Context.Stop(((StopChild)message).Child);
+            else if (message is StopChild child)
+                Context.Stop(child.Child);
             else
                 Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
             return true;

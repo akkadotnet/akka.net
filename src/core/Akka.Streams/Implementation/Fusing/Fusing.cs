@@ -294,10 +294,10 @@ namespace Akka.Streams.Implementation.Fusing
             outOwnersB3.CopyTo(outOwners, outStart);
 
             var firstModule = group.First();
-            if(!(firstModule is CopiedModule))
+            if(!(firstModule is CopiedModule module))
                 throw new ArgumentException("unexpected module structure");
-            var asyncAttrs = IsAsync((CopiedModule) firstModule) ? new Attributes(Attributes.AsyncBoundary.Instance) : Attributes.None;
-            var dispatcher = GetDispatcher(firstModule);
+            var asyncAttrs = IsAsync(module) ? new Attributes(Attributes.AsyncBoundary.Instance) : Attributes.None;
+            var dispatcher = GetDispatcher(module);
             var dispatcherAttrs = dispatcher == null ? Attributes.None : new Attributes(dispatcher);
             var attr = asyncAttrs.And(dispatcherAttrs);
 
@@ -329,7 +329,7 @@ namespace Akka.Streams.Implementation.Fusing
             int indent)
         {
 
-            var isAsync = module is GraphStageModule || module is GraphModule
+            var isAsync = module is GraphStageModule or GraphModule
                 ? module.Attributes.Contains(Attributes.AsyncBoundary.Instance)
                 : module.IsAtomic || module.Attributes.Contains(Attributes.AsyncBoundary.Instance);
             if (IsDebug)
@@ -820,9 +820,9 @@ namespace Akka.Streams.Implementation.Fusing
 
             if (IsCopiedModuleWithGraphStageAndMaterializedValue(copy))
                 PushMaterializationSource((CopiedModule) copy);
-            else if (copy is GraphModule)
+            else if (copy is GraphModule graphModule)
             {
-                var mvids = ((GraphModule) copy).MaterializedValueIds;
+                var mvids = graphModule.MaterializedValueIds;
                 foreach (IModule mvid in mvids)
                 {
                     if (IsCopiedModuleWithGraphStageAndMaterializedValue(mvid))
@@ -906,7 +906,7 @@ namespace Akka.Streams.Implementation.Fusing
             Type stageType;
             return copiedModule != null
                 && (graphStageModule = copiedModule.CopyOf as GraphStageModule) != null
-                && (stageType = graphStageModule.Stage.GetType()).GetTypeInfo().IsGenericType
+                && (stageType = graphStageModule.Stage.GetType()).IsGenericType
                 && stageType.GetGenericTypeDefinition() == typeof(MaterializedValueSource<>);
         }
 
