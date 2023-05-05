@@ -31,7 +31,7 @@ namespace Akka.Cluster.Sharding.Serialization
 
         #region manifests
 
-        private const string ShardEnvelopeManifest = "a";
+        private const string ShardingEnvelopeManifest = "a";
         private const string CoordinatorStateManifest = "AA";
         private const string ShardRegionRegisteredManifest = "AB";
         private const string ShardRegionProxyRegisteredManifest = "AC";
@@ -95,6 +95,7 @@ namespace Akka.Cluster.Sharding.Serialization
             _payloadSupport = new WrappedPayloadSupport(system);
             _fromBinaryMap = new Dictionary<string, Func<byte[], object>>
             {
+                {  ShardingEnvelopeManifest, bytes => ShardingEnvelopeFromBinary(bytes) },
                 { EntityStateManifest, bytes => EntityStateFromBinary(bytes) },
                 { EntityStartedManifest, bytes => EntityStartedFromBinary(bytes) },
                 { EntitiesStartedManifest, bytes => EntitiesStartedFromBinary(bytes) },
@@ -145,6 +146,13 @@ namespace Akka.Cluster.Sharding.Serialization
                 { EventSourcedRememberShardsMigrationMarkerManifest, bytes => EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker.Instance},
                 { EventSourcedRememberShardsState, bytes => RememberShardsStateFromBinary(bytes) }
             };
+        }
+
+        private ShardingEnvelope ShardingEnvelopeFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.ShardingEnvelope.Parser.ParseFrom(bytes);
+            var payload = _payloadSupport.PayloadFrom(proto.Message);
+            return new ShardingEnvelope(proto.EntityId, payload);
         }
 
         /// <summary>
@@ -210,11 +218,6 @@ namespace Akka.Cluster.Sharding.Serialization
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
         }
 
-        private object ShardingEnvelopeToProto(ShardingEnvelope shardingEnvelope)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         /// Deserializes a byte array into an object using an optional <paramref name="manifest" /> (type hint).
         /// </summary>
@@ -246,6 +249,7 @@ namespace Akka.Cluster.Sharding.Serialization
         internal static string GetManifest(object o)
             => o switch
             {
+                ShardingEnvelope _ => ShardingEnvelopeManifest,
                 EventSourcedRememberEntitiesShardStore.State _ => EntityStateManifest,
                 EventSourcedRememberEntitiesShardStore.EntitiesStarted _ => EntitiesStartedManifest,
                 EventSourcedRememberEntitiesShardStore.EntitiesStopped _ => EntitiesStoppedManifest,
@@ -310,6 +314,18 @@ namespace Akka.Cluster.Sharding.Serialization
             if(ReferenceEquals(man, string.Empty))
                 throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{GetType()}]");
             return man;
+        }
+        
+        /// <summary>
+        /// ShardingEnvelope binary serialization
+        /// </summary>
+        private Proto.Msg.ShardingEnvelope ShardingEnvelopeToProto(ShardingEnvelope shardingEnvelope)
+        {
+            return new Proto.Msg.ShardingEnvelope
+            {
+                Message = _payloadSupport.PayloadToProto(shardingEnvelope.Message),
+                EntityId = shardingEnvelope.EntityId,
+            };
         }
 
         //

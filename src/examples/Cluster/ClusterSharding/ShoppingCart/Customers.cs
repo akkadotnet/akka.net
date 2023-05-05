@@ -8,9 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
-using Akka.Cluster.Sharding;
 using Akka.Delivery;
-using Akka.Persistence;
 
 namespace ShoppingCart
 {
