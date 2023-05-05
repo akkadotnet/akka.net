@@ -13,6 +13,7 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Sharding.Serialization.Proto.Msg;
+using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Google.Protobuf;
@@ -26,10 +27,11 @@ namespace Akka.Cluster.Sharding.Serialization
     /// </summary>
     public class ClusterShardingMessageSerializer : SerializerWithStringManifest
     {
-        private static readonly byte[] Empty = new byte[0];
+        private static readonly byte[] Empty = Array.Empty<byte>();
 
         #region manifests
 
+        private const string ShardEnvelopeManifest = "a";
         private const string CoordinatorStateManifest = "AA";
         private const string ShardRegionRegisteredManifest = "AB";
         private const string ShardRegionProxyRegisteredManifest = "AC";
@@ -82,6 +84,7 @@ namespace Akka.Cluster.Sharding.Serialization
         #endregion
 
         private readonly Dictionary<string, Func<byte[], object>> _fromBinaryMap;
+        private readonly WrappedPayloadSupport _payloadSupport;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterShardingMessageSerializer"/> class.
@@ -89,6 +92,7 @@ namespace Akka.Cluster.Sharding.Serialization
         /// <param name="system">The actor system to associate with this serializer.</param>
         public ClusterShardingMessageSerializer(ExtendedActorSystem system) : base(system)
         {
+            _payloadSupport = new WrappedPayloadSupport(system);
             _fromBinaryMap = new Dictionary<string, Func<byte[], object>>
             {
                 { EntityStateManifest, bytes => EntityStateFromBinary(bytes) },
@@ -155,6 +159,7 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             switch (obj)
             {
+                case ShardingEnvelope o: return ShardingEnvelopeToProto(o).ToByteArray();
                 case ShardCoordinator.CoordinatorState o: return CoordinatorStateToProto(o).ToByteArray();
                 case ShardCoordinator.ShardRegionRegistered o: return ActorRefMessageToProto(o.Region).ToByteArray();
                 case ShardCoordinator.ShardRegionProxyRegistered o: return ActorRefMessageToProto(o.RegionProxy).ToByteArray();
@@ -203,6 +208,11 @@ namespace Akka.Cluster.Sharding.Serialization
                 case EventSourcedRememberEntitiesCoordinatorStore.State o: return RememberShardsStateToProto(o).ToByteArray();
             }
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
+        }
+
+        private object ShardingEnvelopeToProto(ShardingEnvelope shardingEnvelope)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>

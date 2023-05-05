@@ -16,7 +16,7 @@ namespace Akka.Cluster.Sharding;
 /// and have the message types themselves carry identifiers.
 /// </para>
 /// </summary>
-public sealed class ShardingEnvelope: IWrappedMessage
+public sealed class ShardingEnvelope: IWrappedMessage, IClusterShardingSerializable
 {
     public string EntityId { get; }
     public object Message { get; }
