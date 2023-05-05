@@ -318,7 +318,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             var producer =
                 Context.ActorOf(
                     Props.Create(() => new ProducerController<T>(outKey, Option<Props>.None, customSend,
-                        Settings.ProducerControllerSettings, _timeProvider, null)), entityId);
+                        Settings.ProducerControllerSettings, _timeProvider, null)), Uri.EscapeUriString(entityId));
             producer.Tell(new ProducerController.Start<T>(RequestNextAdapter));
             CurrentState = CurrentState with
             {
