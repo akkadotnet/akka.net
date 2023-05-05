@@ -113,7 +113,7 @@ namespace ShoppingCart
         #region StartSendingMessage
         private static void ProduceMessages(ActorSystem system, IActorRef shardRegionProxy)
         {
-            var producerId = "ProducerId1" + Cluster.Get(system).SelfAddress;
+            var producerId = "ProducerId1" + MurmurHash.StringHash(Cluster.Get(system).SelfAddress.ToString());
             
             var shardingProducerController = system.ActorOf(ShardingProducerController.Create<Customer.ICustomerCommand>(
                 producerId,
