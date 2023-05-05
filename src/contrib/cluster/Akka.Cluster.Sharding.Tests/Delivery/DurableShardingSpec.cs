@@ -159,11 +159,55 @@ public class DurableShardingSpec : AkkaSpec
         // TODO: need journal operations queries here to verify that the Confirmed was persisted
     }
 
+    [Fact]
+    public async Task ReliableDelivery_with_sharding_and_durable_queue_must_reply_to_MessageWithConfirmation_after_storage()
+    {
+        await JoinCluster();
+        NextId();
+
+        var consumerProbe = CreateTestProbe();
+        var sharding = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+                ShardingConsumerController.Create<Job>(c =>
+                        Props.Create(() => new Consumer(c, consumerProbe)),
+                    ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
+            HashCodeMessageExtractor.Create(10,
+                o =>
+                {
+                    if (o is ShardingEnvelope se)
+                        return se.EntityId;
+                    return string.Empty;
+                }, o =>
+                {
+                    if (o is ShardingEnvelope se)
+                        return se.Message;
+                    return o;
+                }));
+
+        var durableQueueProps = EventSourcedProducerQueue.Create<Job>(ProducerId, Sys);
+        var shardingProducerController =
+            Sys.ActorOf(
+                ShardingProducerController.Create<Job>(ProducerId, sharding, durableQueueProps,
+                    ShardingProducerController.Settings.Create(Sys)), $"shardingProducerController-{_idCount}");
+        var producerProbe = CreateTestProbe();
+        shardingProducerController.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
+        
+        var replyProbe = CreateTestProbe();
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>())
+            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<Job>("entity-1", new Job("msg-1"),
+                replyProbe.Ref));
+        await replyProbe.ExpectMsgAsync<Done>();
+        
+        (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>())
+            .AskNextTo(new ShardingProducerController.MessageWithConfirmation<Job>("entity-2", new Job("msg-2"),
+                replyProbe.Ref));
+        await replyProbe.ExpectMsgAsync<Done>();
+    }
+
     private class Consumer : ReceiveActor
     {
-        private TestProbe _consumerProbe;
-        private IActorRef _consumerController;
-        private IActorRef _deliveryAdapter;
+        private readonly TestProbe _consumerProbe;
+        private readonly IActorRef _consumerController;
+        private readonly IActorRef _deliveryAdapter;
 
         public Consumer(IActorRef consumerController, TestProbe consumerProbe)
         {
