@@ -247,8 +247,8 @@ Target "RunTests" (fun _ ->
     let runSingleProject project =
         let arguments =
             match (hasTeamCity) with
-            | true -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 30s --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
-            | false -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 30s --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetFrameworkVersion outputTests)
+            | true -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 2m --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
+            | false -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 2m --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetFrameworkVersion outputTests)
 
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
@@ -278,8 +278,8 @@ Target "RunTestsNet" (fun _ ->
         let runSingleProject project =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 30s --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetVersion outputTests)
-                | false -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 30s --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetVersion outputTests)
+                | true -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 2m --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetVersion outputTests)
+                | false -> (sprintf "test -c Release --blame-crash --blame-hang-timeout 2m --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetVersion outputTests)
 
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"

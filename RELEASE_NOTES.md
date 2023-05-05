@@ -1,3 +1,26 @@
+#### 1.5.5 May 4th 2023 ####
+
+* [TestKit: Add new variant of `ExpectAll` that accepts predicates](https://github.com/akkadotnet/akka.net/pull/6668)
+* [FSharp: Downgrade FSharp to v6.0.5](https://github.com/akkadotnet/akka.net/pull/6688)
+* [Core: Bump Google.Protobuf from 3.22.1 to 3.22.3](https://github.com/akkadotnet/akka.net/pull/6648)
+* [Core: Fix ByteString to check for index bounds](https://github.com/akkadotnet/akka.net/pull/6709)
+* [Core: Fix ReceiveActor ReceiveAsync ReceiveTimeout bug](https://github.com/akkadotnet/akka.net/pull/6718)
+* [Core: Fix race condition inside FastLazy](https://github.com/akkadotnet/akka.net/pull/6707)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.5, click here](https://github.com/akkadotnet/akka.net/milestone/87?closed=1).
+
+7 contributors since release 1.5.4
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 16      | 68   | 34   | Ebere Abanonu       |
+| 9       | 598  | 1053 | Simon Cropp         |
+| 4       | 4    | 4    | dependabot[bot]     |
+| 2       | 229  | 5    | Gregorius Soedharmo |
+| 1       | 33   | 28   | Aaron Stannard      |
+| 1       | 256  | 3    | Malcolm Learner     |
+| 1       | 148  | 140  | Sergey Popov        |
+
 #### 1.5.4 April 25th 2023 ####
 
 * [Akka: Enhance IStash API and configuration](https://github.com/akkadotnet/akka.net/pull/6660)
