@@ -85,7 +85,7 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
                 _log.Debug("Starting ConsumerController for producerId {0}", seqMsg.ProducerId);
                 var cc = Context.ActorOf(
                     ConsumerController.Create<T>(Context, seqMsg.ProducerController.AsOption(),
-                        Settings.ConsumerControllerSettings), $"consumerController-{seqMsg.ProducerId}");
+                        Settings.ConsumerControllerSettings), Uri.EscapeUriString($"consumerController-{seqMsg.ProducerId}"));
                 Context.Watch(cc);
                 cc.Tell(new ConsumerController.Start<T>(_consumer));
                 cc.Tell(seqMsg);
