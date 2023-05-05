@@ -6,6 +6,8 @@
 // //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Sharding.Delivery;
@@ -66,6 +68,15 @@ public sealed class Producer : ReceiveActor, IWithTimers
 
         Receive<ShardingProducerController.RequestNext<Customer.ICustomerCommand>>(next =>
         {
+            // if (next.EntitiesWithDemand.Any())
+            // {
+            //     var customer = PickRandom(next.EntitiesWithDemand.ToList());
+            //     var item = PickRandom(Items);
+            //     var msg = new Customer.PurchaseItem(item);
+            //     SendNext.Tell(new ShardingEnvelope(customer, msg));
+            // }
+            
+            
             // no work to do yet, but update SendNext
             SendNext = next.SendNextTo;
         });
@@ -88,7 +99,7 @@ public sealed class Producer : ReceiveActor, IWithTimers
         });
     }
     
-    private static T PickRandom<T>(T[] items) => items[ThreadLocalRandom.Current.Next(items.Length)];
+    private static T PickRandom<T>(IReadOnlyList<T> items) => items[ThreadLocalRandom.Current.Next(items.Count)];
 }
 
 #endregion

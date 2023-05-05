@@ -25,7 +25,6 @@ namespace Akka.Cluster.Sharding.Tests.Delivery;
 public class DurableShardingSpec : AkkaSpec
 {
     public static readonly Config Config = @"
-        akka.loglevel = DEBUG
         akka.actor.provider = cluster
         akka.remote.dot-netty.tcp.port = 0
         akka.reliable-delivery.consumer-controller.flow-control-window = 20

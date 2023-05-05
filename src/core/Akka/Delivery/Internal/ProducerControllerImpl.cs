@@ -42,7 +42,6 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
     private readonly ILoggingAdapter _log = Context.GetLogger();
 
     private readonly Lazy<Serialization.Serialization> _serialization = new(() => Context.System.Serialization);
-    private readonly CancellationTokenSource _shutdownCancellation = new();
     private readonly ITimeProvider _timeProvider;
 
     /// <summary>
@@ -105,8 +104,6 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
     public Option<IActorRef> DurableProducerQueueRef { get; private set; }
 
     public ProducerController.Settings Settings { get; }
-
-    private CancellationToken ShutdownToken => _shutdownCancellation.Token;
 
     public ITimerScheduler Timers { get; set; } = null!;
 
@@ -289,7 +286,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             CheckReceiveMessageRemainingChunkState();
             var chunks = Chunk(sendNext.Message, true, _serialization.Value);
             var newReplyAfterStore =
-                CurrentState.ReplyAfterStore.SetItem(chunks.Last().SeqNr, sendNext.ReplyTo!);
+                CurrentState.ReplyAfterStore.SetItem(chunks.Last().SeqNr, sendNext.ReplyTo);
 
             if (DurableProducerQueueRef.IsEmpty)
             {
@@ -369,13 +366,6 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
     protected override void PreStart()
     {
         DurableProducerQueueRef = AskLoadState();
-    }
-
-    protected override void PostStop()
-    {
-        // terminate any in-flight requests
-        _shutdownCancellation.Cancel();
-        base.PostStop();
     }
 
     #endregion
@@ -751,7 +741,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
     internal static IEnumerable<ChunkedMessage> CreateChunks(T msg, int chunkSize,
         Serialization.Serialization serialization)
     {
-        var serializer = serialization.FindSerializerForType(typeof(T));
+        var serializer = serialization.FindSerializerFor(msg);
         var manifest = Serialization.Serialization.ManifestFor(serializer, msg);
         var serializerId = serializer.Identifier;
         var bytes = serialization.Serialize(msg);
