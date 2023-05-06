@@ -15,7 +15,7 @@ a component in the future. In a final system, the steps for connecting a device 
 
  1. The device connects through some protocol to our system.
  2. The component managing network connections accept the connection.
- 3. The ID of the device and the ID of the group that it belongs is acquired.
+ 3. The ID of the device and the ID of the group that it belongs to is acquired.
  4. The device manager component is asked to create a group and device actor for the given IDs (or return an existing
     one).
  5. The device actor (just been created or located) responds with an acknowledgment, at the same time exposing its
