@@ -131,12 +131,11 @@ public static class ShardingProducerController
             ResendFirstUnconfirmedIdleTimeout = resendFirstUnconfirmedIdleTimeout;
             ProducerControllerSettings = producerControllerSettings;
 
-            // TODO: enable chunking in Akka.Cluster.Sharding.ProducerController
-            if (ProducerControllerSettings.ChunkLargeMessagesBytes is { } or > 0)
+            if (ProducerControllerSettings.ChunkLargeMessagesBytes is > 0)
             {
                 throw new ArgumentException(
                     "ShardingProducerController does not support chunking large messages, " +
-                    "set `akka.reliable-delivery.producer-controller.chunk-large-messages-bytes` to 0");
+                    "set `akka.reliable-delivery.sharding.producer-controller.chunk-large-messages-bytes=off`.");
             }
         }
 
@@ -156,8 +155,9 @@ public static class ShardingProducerController
         /// </summary>
         public static Settings Create(ActorSystem system)
         {
-            return Create(system.Settings.Config.GetConfig("akka.reliable-delivery.sharding.producer-controller"),
-                system.Settings.Config.GetConfig("akka.reliable-delivery.producer-controller"));
+            var shardingConfig =
+                system.Settings.Config.GetConfig("akka.reliable-delivery.sharding.producer-controller");
+            return Create(shardingConfig, system.Settings.Config.GetConfig("akka.reliable-delivery.producer-controller")));
         }
 
         /// <summary>
