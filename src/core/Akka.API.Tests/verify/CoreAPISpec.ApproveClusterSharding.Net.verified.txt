@@ -390,7 +390,6 @@ namespace Akka.Cluster.Sharding.Delivery
         }
         public sealed class Settings : System.IEquatable<Akka.Cluster.Sharding.Delivery.ShardingProducerController.Settings>
         {
-            public Settings(int bufferSize, System.TimeSpan internalAskTimeout, System.TimeSpan cleanupUnusedAfter, System.TimeSpan resendFirstUnconfirmedIdleTimeout, Akka.Delivery.ProducerController.Settings producerControllerSettings) { }
             public int BufferSize { get; set; }
             public System.TimeSpan CleanupUnusedAfter { get; set; }
             public System.TimeSpan InternalAskTimeout { get; set; }

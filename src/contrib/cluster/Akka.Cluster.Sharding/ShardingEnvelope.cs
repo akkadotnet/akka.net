@@ -30,14 +30,14 @@ public sealed class ShardingEnvelope: IWrappedMessage, IClusterShardingSerializa
     
     public override string ToString() => $"ShardingEnvelope({EntityId}, {Message})";
 
-    public bool Equals(ShardingEnvelope other)
+    public bool Equals(ShardingEnvelope? other)
     {
         if (ReferenceEquals(null, other)) return false;
         if (ReferenceEquals(this, other)) return true;
         return EntityId == other.EntityId && Message.Equals(other.Message);
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return ReferenceEquals(this, obj) || obj is ShardingEnvelope other && Equals(other);
     }

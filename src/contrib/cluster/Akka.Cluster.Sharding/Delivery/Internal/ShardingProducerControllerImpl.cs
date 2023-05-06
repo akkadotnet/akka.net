@@ -146,7 +146,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             var unconfirmedDeliveries = s.Unconfirmed.Select(c =>
                 new Envelope(new Msg(
                     new ShardingEnvelope(c.ConfirmationQualifier,
-                        c.Message.IsMessage ? c.Message.Message : c.Message.Chunk), AlreadyStored:c.SeqNr), Self));
+                        (c.Message.IsMessage ? c.Message.Message : c.Message.Chunk)!), AlreadyStored:c.SeqNr), Self));
             Stash.Prepend(unconfirmedDeliveries);
         });
 
