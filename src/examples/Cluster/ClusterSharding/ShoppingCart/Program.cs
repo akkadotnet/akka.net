@@ -52,8 +52,6 @@ namespace ShoppingCart
                     # We need to tell Akka to provide us cluster enabled actors
                     akka.actor.provider = cluster
 
-                    akka.reliable-delivery.sharding.producer-controller.chunk-large-messages = 1b
-
                     # This tells Akka which role this node belongs to
                     akka.cluster.roles=[{role}]
 

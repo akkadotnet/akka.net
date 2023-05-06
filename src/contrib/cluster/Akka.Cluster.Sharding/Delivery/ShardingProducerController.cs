@@ -38,11 +38,13 @@ using EntityId = String;
 [ApiMayChange]
 public static class ShardingProducerController
 {
-    public static Props Create<T>(string producerId, IActorRef shardRegion, Option<Props> durableQueue, Settings settings)
+    public static Props Create<T>(string producerId, IActorRef shardRegion, Option<Props> durableQueue,
+        Settings settings)
     {
-        return Props.Create(() => new ShardingProducerController<T>(producerId, shardRegion, durableQueue, settings, null));
+        return Props.Create(() =>
+            new ShardingProducerController<T>(producerId, shardRegion, durableQueue, settings, null));
     }
-    
+
     /// <summary>
     /// Marker interface for all commands handled by the <see cref="ShardingProducerController"/>.
     /// </summary>
@@ -77,7 +79,8 @@ public static class ShardingProducerController
     /// but it's recommended to only send one message and wait for next <see cref="RequestNext{T}"/> before sending more messages.
     /// </summary>
     /// <typeparam name="T">The type of message that can be handled by the consumer actors.</typeparam>
-    public sealed record RequestNext<T>(IActorRef SendNextTo, IActorRef AskNextToRef, ImmutableHashSet<string> EntitiesWithDemand,
+    public sealed record RequestNext<T>(IActorRef SendNextTo, IActorRef AskNextToRef,
+        ImmutableHashSet<string> EntitiesWithDemand,
         ImmutableDictionary<string, int> BufferedForEntitiesWithoutDemand)
     {
         /// <summary>
@@ -119,7 +122,7 @@ public static class ShardingProducerController
 
     public sealed record Settings
     {
-        public Settings(int bufferSize, TimeSpan internalAskTimeout, TimeSpan cleanupUnusedAfter,
+        private Settings(int bufferSize, TimeSpan internalAskTimeout, TimeSpan cleanupUnusedAfter,
             TimeSpan resendFirstUnconfirmedIdleTimeout, ProducerController.Settings producerControllerSettings)
         {
             BufferSize = bufferSize;
@@ -127,6 +130,14 @@ public static class ShardingProducerController
             CleanupUnusedAfter = cleanupUnusedAfter;
             ResendFirstUnconfirmedIdleTimeout = resendFirstUnconfirmedIdleTimeout;
             ProducerControllerSettings = producerControllerSettings;
+
+            // TODO: enable chunking in Akka.Cluster.Sharding.ProducerController
+            if (ProducerControllerSettings.ChunkLargeMessagesBytes is { } or > 0)
+            {
+                throw new ArgumentException(
+                    "ShardingProducerController does not support chunking large messages, " +
+                    "set `akka.reliable-delivery.producer-controller.chunk-large-messages-bytes` to 0");
+            }
         }
 
         public int BufferSize { get; init; }
@@ -158,7 +169,8 @@ public static class ShardingProducerController
                 internalAskTimeout: config.GetTimeSpan("internal-ask-timeout"),
                 cleanupUnusedAfter: config.GetTimeSpan("cleanup-unused-after"),
                 resendFirstUnconfirmedIdleTimeout: config.GetTimeSpan("resend-first-unconfirmed-idle-timeout"),
-                producerControllerSettings: ProducerController.Settings.Create(config.WithFallback(producerControllerConfig)));
+                producerControllerSettings: ProducerController.Settings.Create(
+                    config.WithFallback(producerControllerConfig)));
         }
     }
 
@@ -194,7 +206,7 @@ public static class ShardingProducerController
 
     internal sealed class DurableQueueTerminated
     {
-        public static readonly DurableQueueTerminated Instance = new DurableQueueTerminated();
+        public static readonly DurableQueueTerminated Instance = new();
 
         private DurableQueueTerminated()
         {
@@ -203,7 +215,7 @@ public static class ShardingProducerController
 
     internal sealed class ResendFirstUnconfirmed
     {
-        public static readonly ResendFirstUnconfirmed Instance = new ResendFirstUnconfirmed();
+        public static readonly ResendFirstUnconfirmed Instance = new();
 
         private ResendFirstUnconfirmed()
         {
@@ -212,7 +224,7 @@ public static class ShardingProducerController
 
     internal sealed class CleanupUnused
     {
-        public static readonly CleanupUnused Instance = new CleanupUnused();
+        public static readonly CleanupUnused Instance = new();
 
         private CleanupUnused()
         {
@@ -249,13 +261,12 @@ public static class ShardingProducerController
         public long LastUsed { get; init; }
     };
 
-    internal record struct State<T>(long CurrentSeqNr, IActorRef Producer,
+    internal readonly record struct State<T>(long CurrentSeqNr, IActorRef Producer,
         ImmutableDictionary<string, OutState<T>> OutStates, ImmutableDictionary<long, IActorRef> ReplyAfterStore)
     {
         public long BufferSize => OutStates.Values.Aggregate(0L, (acc, outState) => acc + outState.Buffered.Count);
-        
+
         public static readonly State<T> Empty = new(0, ActorRefs.Nobody, ImmutableDictionary<string, OutState<T>>.Empty,
             ImmutableDictionary<long, IActorRef>.Empty);
-
     }
 }
