@@ -157,7 +157,7 @@ public static class ShardingProducerController
         {
             var shardingConfig =
                 system.Settings.Config.GetConfig("akka.reliable-delivery.sharding.producer-controller");
-            return Create(shardingConfig, system.Settings.Config.GetConfig("akka.reliable-delivery.producer-controller")));
+            return Create(shardingConfig, system.Settings.Config.GetConfig("akka.reliable-delivery.producer-controller"));
         }
 
         /// <summary>
