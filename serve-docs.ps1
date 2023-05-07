@@ -18,4 +18,4 @@ $env:MSBuildExtensionsPath = $MSBuildExtensionsPath;
 $env:MSBuildSDKsPath = $MSBuildSDKsPath;
 
 # Build our docs
-& .\tools\docfx.console\tools\docfx @args
+& .\tools\docfx @args

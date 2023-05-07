@@ -491,10 +491,12 @@ Target "DocFx" (fun _ ->
                 OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2"
 
     let docsPath = FullName "./docs"
-    let docFxPath = FullName(findToolInSubPath "docfx.exe" "tools/docfx.console/tools")
+    let docFxPath = FullName(findToolInSubPath "docfx.exe" "tools")
     
     let args = StringBuilder()
                 |> append (docsPath @@ "docfx.json" )
+                //|> append ("--Docfx_Git_Timeout")
+                //|> append "30000"
                 |> append ("--warningsAsErrors")
                 |> toText
     
