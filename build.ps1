@@ -93,7 +93,7 @@ $DocfxExePath = Join-Path $ToolPath "docfx.exe"
 if (!(Test-Path $DocfxExePath)) {
     Write-Host "Installing Docfx..."
 	##Invoke-Expression "&dotnet new tool-manifest --force"
-    dotnet tool install docfx --version $DocfxVersion --tool-path "$ToolPath" --output "$ToolPath"
+    dotnet tool install docfx --version $DocfxVersion --tool-path "$ToolPath"
 }
 
 ###########################################################################
