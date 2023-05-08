@@ -72,7 +72,7 @@ namespace Akka.Tools.MatchHandler
                 }
                 else
                 {
-                    if(handlesType.GetTypeInfo().IsValueType)
+                    if(handlesType.IsValueType)
                     {
                         //For value types we cannot use as-operator and check for nu, s0 we create the following code:
                         //  if(inputVariable is HandlesType)

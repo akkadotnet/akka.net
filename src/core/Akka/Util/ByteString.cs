@@ -240,7 +240,7 @@ namespace Akka.IO
         /// <summary>
         /// An empty <see cref="ByteString"/>.
         /// </summary>
-        public static ByteString Empty { get; } = new ByteString(new ByteBuffer(new byte[0], 0, 0));
+        public static ByteString Empty { get; } = new(new ByteBuffer(Array.Empty<byte>(), 0, 0));
 
         #endregion
 

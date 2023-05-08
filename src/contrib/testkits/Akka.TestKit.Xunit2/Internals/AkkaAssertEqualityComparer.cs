@@ -22,7 +22,7 @@ namespace Akka.TestKit.Xunit2.Internals
     public class AkkaAssertEqualityComparer<T> : IEqualityComparer<T>
     {
         private static readonly IEqualityComparer DefaultInnerComparer = new AkkaAssertEqualityComparerAdapter<object>(new AkkaAssertEqualityComparer<object>());
-        private static readonly TypeInfo NullableTypeInfo = typeof(Nullable<>).GetTypeInfo();
+        private static readonly Type NullableType = typeof(Nullable<>);
 
         private readonly Func<IEqualityComparer> _innerComparerFactory;
         private readonly bool _skipTypeCheck;
@@ -43,10 +43,10 @@ namespace Akka.TestKit.Xunit2.Internals
        
         public bool Equals(T x, T y)
         {
-            var typeInfo = typeof(T).GetTypeInfo();
+            var type = typeof(T);
 
             // Null?
-            if(!typeInfo.IsValueType || (typeInfo.IsGenericType && typeInfo.GetGenericTypeDefinition().GetTypeInfo().IsAssignableFrom(NullableTypeInfo)))
+            if(!type.IsValueType || (type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableFrom(NullableType)))
             {
                 if(object.Equals(x, default(T)))
                     return object.Equals(y, default(T));

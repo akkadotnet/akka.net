@@ -114,3 +114,8 @@ message RememberedShardState {
     repeated string shardId = 1;
     bool marker = 2;
 }
+
+message ShardingEnvelope{
+  string entityId = 1;
+  .Akka.Remote.Serialization.Proto.Msg.Payload message = 2;
+}
