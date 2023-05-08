@@ -491,7 +491,7 @@ Target "DocFx" (fun _ ->
                 OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2"
 
     let docsPath = FullName "./docs"
-    let docFxPath = FullName(findToolInSubPath "docfx" "tools")
+    let docFxPath = FullName(findToolInSubPath "docfx.exe" "tools/docfx/")
     
     let args = StringBuilder()
                 |> append (docsPath @@ "docfx.json" )

@@ -89,11 +89,14 @@ if (!(Test-Path $ProtobufExePath)) {
 ###########################################################################
 
 # Make sure Docfx has been installed.
-$DocfxExePath = Join-Path $ToolPath "docfx.exe"
-if (!(Test-Path $DocfxExePath)) {
+# Make sure the Incrementalist has been installed
+if (Get-Command docfx -ErrorAction SilentlyContinue) {
+    Write-Host "Found docfx. Skipping install."
+}
+else{
+    $DocfxExePath = Join-Path $ToolPath "docfx"
     Write-Host "Installing Docfx..."
-	##Invoke-Expression "&dotnet new tool-manifest --force"
-    dotnet tool install docfx --version $DocfxVersion --tool-path "$ToolPath"
+	dotnet tool install docfx --version $DocfxVersion --tool-path "$DocfxExePath"
 }
 
 ###########################################################################
