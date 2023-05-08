@@ -1476,7 +1476,7 @@ namespace Akka.Remote
                 }
 
                 var pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
-                    this.SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+                    SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
 
                 _remoteMetrics.LogPayloadBytes(send.Message, pdu.Length);
 
@@ -1526,7 +1526,7 @@ namespace Akka.Remote
             }
             catch (Exception ex)
             {
-                PublishAndThrow(new EndpointException("Failed to write message to the transport", ex),
+                PublishAndThrow(new EndpointException($"Failed to write message [{send.Message}] to the transport", ex),
                     LogLevel.ErrorLevel);
             }
 
