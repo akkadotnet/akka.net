@@ -13,7 +13,7 @@
                 "**/*Tests*.csproj",
                 "**/*Tests.*.csproj"
             ],
-            "src": "../src"
+            "cwd": "../src"
         }],
         "dest": "api",
         "filter": "filterConfig.yml"
@@ -23,7 +23,7 @@
             "files": [
                 "api/**.yml",
                 "api/index.md"
-            ]
+            ]			
         }, {
             "files": [
                 "articles/**.md",
