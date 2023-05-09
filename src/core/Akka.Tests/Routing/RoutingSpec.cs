@@ -184,8 +184,8 @@ namespace Akka.Tests.Routing
 
                 var res = await ReceiveWhileAsync(100.Milliseconds(), x =>
                 {
-                    if (x is IActorRef)
-                        return x.AsInstanceOf<IActorRef>();
+                    if (x is IActorRef actorRef)
+                        return actorRef;
 
                     return null;
                 }, msgs: 2).ToListAsync();

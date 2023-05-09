@@ -1120,11 +1120,10 @@ namespace Akka.Remote.Transport
                         // Invalidate exposed but still unfinished promise. The underlying association disappeared, so after
                         // registration immediately signal a disassociate
                         Disassociated disassociateNotification;
-                        if (@event.Reason is Failure && @event.Reason.AsInstanceOf<Failure>().Cause is DisassociateInfo)
+                        if (@event.Reason is Failure { Cause: DisassociateInfo disassociateInfo })
                         {
                             disassociateNotification =
-                                new Disassociated(@event.Reason.AsInstanceOf<Failure>().Cause
-                                    .AsInstanceOf<DisassociateInfo>());
+                                new Disassociated(disassociateInfo);
                         }
                         else
                         {
@@ -1140,10 +1139,10 @@ namespace Akka.Remote.Transport
                     case ListenerReady lr:
                     {
                         Disassociated disassociateNotification;
-                        if (@event.Reason is Failure failure && failure.Cause is DisassociateInfo)
+                        if (@event.Reason is Failure { Cause: DisassociateInfo disassociateInfo })
                         {
                             disassociateNotification =
-                                new Disassociated(failure.Cause.AsInstanceOf<DisassociateInfo>());
+                                new Disassociated(disassociateInfo);
                         }
                         else
                         {
