@@ -1,6 +1,6 @@
 # docfx.ps1
-$VisualStudioVersion = "15.0";
-$DotnetSDKVersion = "2.0.0";
+$VisualStudioVersion = "17.5.0";
+$DotnetSDKVersion = "7.0.203";
 
 # Get dotnet paths
 $MSBuildExtensionsPath = "C:\Program Files\dotnet\sdk\" + $DotnetSDKVersion;
@@ -18,4 +18,4 @@ $env:MSBuildExtensionsPath = $MSBuildExtensionsPath;
 $env:MSBuildSDKsPath = $MSBuildSDKsPath;
 
 # Build our docs
-& .\tools\docfx.console\tools\docfx @args
+& .\tools\docfx\docfx @args
