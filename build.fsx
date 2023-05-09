@@ -484,11 +484,11 @@ Target "DocFx" (fun _ ->
     DotNetCli.Build (fun p -> { p with Project = docsTutorialsProject; Configuration = configuration })
 
     // install MSDN references
-    //NugetInstall (fun p ->
-          //  { p with
-           //     ExcludeVersion = true
-           //     Version = "0.1.0-alpha-1611021200"
-            //    OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2" 
+    NugetInstall (fun p ->
+            { p with
+                ExcludeVersion = true
+                Version = "0.1.0-alpha-1611021200"
+                OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2" 
 
     let docsPath = FullName "./docs"
     let docFxPath = FullName(findToolInSubPath "docfx.exe" "tools/docfx/")
