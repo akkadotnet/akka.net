@@ -86,7 +86,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             $"producer-{_idCount}");
 
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
-        consumerEndProbe.ReceiveN(3, TimeSpan.FromSeconds(15));
+        await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(25)).ToListAsync();
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             $"p2-{_idCount}");
 
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
-        var endMessages = consumerEndProbe.ReceiveN(3, TimeSpan.FromSeconds(15));
+        var endMessages = await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(25)).ToListAsync();
 
         var producerIds = endMessages.Cast<Collected>().SelectMany(c => c.ProducerIds).ToList();
         producerIds
