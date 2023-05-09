@@ -22,7 +22,7 @@ public class ConsumerControllerSpecs : TestKit.Xunit2.TestKit
     }";
 
     public ConsumerControllerSpecs(ITestOutputHelper outputHelper) : base(
-        Config.WithFallback(TestSerializer.Config), output: outputHelper)
+        Config.WithFallback(TestSerializer.Config).WithFallback(ZeroLengthSerializer.Config), output: outputHelper)
     {
     }
 
@@ -647,5 +647,29 @@ public class ConsumerControllerSpecs : TestKit.Xunit2.TestKit
         consumerController.Tell(SequencedMessage(ProducerId, 35, producerControllerProbe));
         (await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>()).SeqNr.Should().Be(35);
         consumerController.Tell(ConsumerController.Confirmed.Instance);
+    }
+
+    /// <summary>
+    /// Reproduction for https://github.com/akkadotnet/akka.net/issues/6748
+    /// </summary>
+    [Fact]
+    public async Task ConsumerController_can_process_zero_length_Chunk()
+    {
+        NextId();
+        var consumerController = Sys.ActorOf(ConsumerController.Create<ZeroLengthSerializer.TestMsg>(Sys, Option<IActorRef>.None),
+            $"consumerController-{_idCount}");
+        var producerControllerProbe = CreateTestProbe();
+
+        var consumerProbe = CreateTestProbe();
+        consumerController.Tell(new ConsumerController.Start<ZeroLengthSerializer.TestMsg>(consumerProbe));
+
+        // one chunk for each letter, "123" is 3 chunks
+        var chunks1 =
+            ProducerController<ZeroLengthSerializer.TestMsg>.CreateChunks(ZeroLengthSerializer.TestMsg.Instance, chunkSize: 1, Sys.Serialization);
+        var seqMessages1 = chunks1.Select((c, i) =>
+            ConsumerController.SequencedMessage<ZeroLengthSerializer.TestMsg>.FromChunkedMessage(ProducerId, 1 + i, c, i == 0, false,
+                producerControllerProbe)).ToList();
+        consumerController.Tell(seqMessages1.First());
+        (await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<ZeroLengthSerializer.TestMsg>>()).Message.Should().Be(ZeroLengthSerializer.TestMsg.Instance);
     }
 }
