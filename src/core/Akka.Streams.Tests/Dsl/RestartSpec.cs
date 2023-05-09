@@ -792,7 +792,7 @@ namespace Akka.Streams.Tests.Dsl
                 var created = new AtomicCounter(0);
                 const int restarts = 4;
             
-                var flow = RestartFlowFactory<int, int, NotUsed>(() =>
+                var flow = RestartFlowFactory(() =>
                     {
                         created.IncrementAndGet();
                         return Flow.Create<int>()

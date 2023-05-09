@@ -1,3 +1,7 @@
+#### 1.5.7-beta1 May 9th 2023 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.6 May 8th 2023 ####
 
 Version 1.5.6 is a patch with a few minor bug fix
