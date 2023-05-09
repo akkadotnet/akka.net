@@ -1,5 +1,5 @@
 # docfx.ps1
-$VisualStudioVersion = "17.50";
+$VisualStudioVersion = "17.5.0";
 $DotnetSDKVersion = "7.0.203";
 
 # Get dotnet paths
