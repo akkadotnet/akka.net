@@ -66,7 +66,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var input = GenInput(0, 10);
 
-            Func<Record, bool> f = record => record.Key.EndsWith("2");
+            Func<Record, bool> f = record => record.Key.EndsWith('2');
             
             var expectedOffsets = input.Where(cm => f(cm.Record)).Select(cm => new Offset(cm.Offset.Offset)).ToArray();
             expectedOffsets = expectedOffsets.Take(expectedOffsets.Length - 1).ToArray();

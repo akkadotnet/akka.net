@@ -106,7 +106,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static bool IsValidPathElement(string s)
         {
-            return !string.IsNullOrEmpty(s) && !s.StartsWith("$") && Validate(s);
+            return !string.IsNullOrEmpty(s) && !s.StartsWith('$') && Validate(s);
         }
 
         private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
