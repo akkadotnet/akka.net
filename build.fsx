@@ -495,9 +495,6 @@ Target "DocFx" (fun _ ->
     
     let args = StringBuilder()
                 |> append (docsPath @@ "docfx.json" )
-                //|> append ("--Docfx_Git_Timeout")
-                //|> append "30000"
-                //|> append ("--warningsAsErrors")
                 |> toText
     
     let result = ExecProcess(fun info ->

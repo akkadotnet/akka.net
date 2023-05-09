@@ -78,6 +78,7 @@
         ],
         "postProcessors": ["ExtractSearchIndex"],
         "noLangKeyword": false,
+		    "warningsAsErrors": true,
         "Docfx_Git_Timeout": 30000
     }
 }
