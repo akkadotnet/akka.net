@@ -439,7 +439,7 @@ namespace Akka.Persistence
         protected void Recover<T>(Action<T> handler, Predicate<T> shouldHandle = null)
         {
             EnsureMayConfigureRecoverHandlers();
-            _matchRecoverBuilders.Peek().Match<T>(handler, shouldHandle);
+            _matchRecoverBuilders.Peek().Match(handler, shouldHandle);
         }
 
         /// <summary>
@@ -450,7 +450,7 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         protected void Recover<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
-            Recover<T>(handler, shouldHandle);
+            Recover(handler, shouldHandle);
         }
 
         /// <summary>
@@ -484,7 +484,7 @@ namespace Akka.Persistence
         protected void Recover<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureRecoverHandlers();
-            _matchRecoverBuilders.Peek().Match<T>(handler);
+            _matchRecoverBuilders.Peek().Match(handler);
         }
 
         /// <summary>
@@ -609,7 +609,7 @@ namespace Akka.Persistence
         protected void Command<T>(Action<T> handler, Predicate<T> shouldHandle = null)
         {
             EnsureMayConfigureCommandHandlers();
-            _matchCommandBuilders.Peek().Match<T>(handler, shouldHandle);
+            _matchCommandBuilders.Peek().Match(handler, shouldHandle);
         }
 
         /// <summary>
@@ -620,7 +620,7 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         protected void Command<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
-            Command<T>(handler, shouldHandle);
+            Command(handler, shouldHandle);
         }
 
         /// <summary>
@@ -654,7 +654,7 @@ namespace Akka.Persistence
         protected void Command<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
-            _matchCommandBuilders.Peek().Match<T>(handler);
+            _matchCommandBuilders.Peek().Match(handler);
         }
 
         /// <summary>

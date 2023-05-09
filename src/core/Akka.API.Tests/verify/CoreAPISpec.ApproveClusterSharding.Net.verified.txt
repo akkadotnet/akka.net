@@ -265,11 +265,16 @@ namespace Akka.Cluster.Sharding
         public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithRole(string role) { }
         public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithShardingSettings(Akka.Cluster.Sharding.ClusterShardingSettings shardingSettings) { }
     }
-    public sealed class ShardingEnvelope : Akka.Actor.IWrappedMessage
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class ShardingEnvelope : Akka.Actor.IWrappedMessage, Akka.Cluster.Sharding.IClusterShardingSerializable, System.IEquatable<Akka.Cluster.Sharding.ShardingEnvelope>
     {
         public ShardingEnvelope(string entityId, object message) { }
         public string EntityId { get; }
         public object Message { get; }
+        public bool Equals(Akka.Cluster.Sharding.ShardingEnvelope other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
     }
     public enum StateStoreMode
     {
@@ -343,6 +348,61 @@ namespace Akka.Cluster.Sharding
         public Akka.Cluster.Sharding.TuningParameters WithSnapshotAfter(int snapshotAfter) { }
         public Akka.Cluster.Sharding.TuningParameters WithUpdatingStateTimeout(System.TimeSpan updatingStateTimeout) { }
         public Akka.Cluster.Sharding.TuningParameters WithWaitingForStateTimeout(System.TimeSpan waitingForStateTimeout) { }
+    }
+}
+namespace Akka.Cluster.Sharding.Delivery
+{
+    [Akka.Annotations.ApiMayChangeAttribute()]
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static ShardingConsumerController
+    {
+        public static Akka.Actor.Props Create<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<Akka.Actor.IActorRef, Akka.Actor.Props> consumerProps, Akka.Cluster.Sharding.Delivery.ShardingConsumerController.Settings settings) { }
+        [System.Runtime.CompilerServices.NullableAttribute(0)]
+        public sealed class Settings : System.IEquatable<Akka.Cluster.Sharding.Delivery.ShardingConsumerController.Settings>
+        {
+            public int BufferSize { get; set; }
+            public Akka.Delivery.ConsumerController.Settings ConsumerControllerSettings { get; set; }
+            public static Akka.Cluster.Sharding.Delivery.ShardingConsumerController.Settings Create(Akka.Actor.ActorSystem system) { }
+            public override string ToString() { }
+        }
+    }
+    [Akka.Annotations.ApiMayChangeAttribute()]
+    public class static ShardingProducerController
+    {
+        public static Akka.Actor.Props Create<T>(string producerId, Akka.Actor.IActorRef shardRegion, Akka.Util.Option<Akka.Actor.Props> durableQueue, Akka.Cluster.Sharding.Delivery.ShardingProducerController.Settings settings) { }
+        public interface IShardingProducerControllerCommand<T> { }
+        public sealed class MessageWithConfirmation<T> : Akka.Cluster.Sharding.Delivery.ShardingProducerController.IShardingProducerControllerCommand<T>, System.IEquatable<Akka.Cluster.Sharding.Delivery.ShardingProducerController.MessageWithConfirmation<T>>
+        {
+            public MessageWithConfirmation(string EntityId, T Message, Akka.Actor.IActorRef ReplyTo) { }
+            public string EntityId { get; set; }
+            public T Message { get; set; }
+            public Akka.Actor.IActorRef ReplyTo { get; set; }
+        }
+        public sealed class RequestNext<T> : System.IEquatable<Akka.Cluster.Sharding.Delivery.ShardingProducerController.RequestNext<T>>
+        {
+            public RequestNext(Akka.Actor.IActorRef SendNextTo, Akka.Actor.IActorRef AskNextToRef, System.Collections.Immutable.ImmutableHashSet<string> EntitiesWithDemand, System.Collections.Immutable.ImmutableDictionary<string, int> BufferedForEntitiesWithoutDemand) { }
+            public Akka.Actor.IActorRef AskNextToRef { get; set; }
+            public System.Collections.Immutable.ImmutableDictionary<string, int> BufferedForEntitiesWithoutDemand { get; set; }
+            public System.Collections.Immutable.ImmutableHashSet<string> EntitiesWithDemand { get; set; }
+            public Akka.Actor.IActorRef SendNextTo { get; set; }
+            public System.Threading.Tasks.Task<long> AskNextTo(string entityId, T msg, System.Threading.CancellationToken cancellationToken = null) { }
+            public void AskNextTo(Akka.Cluster.Sharding.Delivery.ShardingProducerController.MessageWithConfirmation<T> msgWithConfirmation) { }
+        }
+        public sealed class Settings : System.IEquatable<Akka.Cluster.Sharding.Delivery.ShardingProducerController.Settings>
+        {
+            public int BufferSize { get; set; }
+            public System.TimeSpan CleanupUnusedAfter { get; set; }
+            public System.TimeSpan InternalAskTimeout { get; set; }
+            public Akka.Delivery.ProducerController.Settings ProducerControllerSettings { get; set; }
+            public System.TimeSpan ResendFirstUnconfirmedIdleTimeout { get; set; }
+            public static Akka.Cluster.Sharding.Delivery.ShardingProducerController.Settings Create(Akka.Actor.ActorSystem system) { }
+            public static Akka.Cluster.Sharding.Delivery.ShardingProducerController.Settings Create(Akka.Configuration.Config config, Akka.Configuration.Config producerControllerConfig) { }
+        }
+        public sealed class Start<T> : Akka.Cluster.Sharding.Delivery.ShardingProducerController.IShardingProducerControllerCommand<T>
+        {
+            public Start(Akka.Actor.IActorRef producer) { }
+            public Akka.Actor.IActorRef Producer { get; }
+        }
     }
 }
 namespace Akka.Cluster.Sharding.External

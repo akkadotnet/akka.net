@@ -61,7 +61,7 @@ namespace Akka.Tests.Routing
         {
             int n = 100;
             Sys.ActorOf(new RoundRobinPool(n).Props(Props.Create(() => new ForwardActor(TestActor))));
-            var gotIt = await ReceiveWhileAsync<string>(msg =>
+            var gotIt = await ReceiveWhileAsync(msg =>
             {
                 if (msg.Equals("two"))
                 {
