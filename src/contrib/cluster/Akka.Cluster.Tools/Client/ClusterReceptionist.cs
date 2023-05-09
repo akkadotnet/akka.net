@@ -625,7 +625,7 @@ namespace Akka.Cluster.Tools.Client
         private bool IsAsk()
         {
             var pathElements = _client.Path.Elements;
-            return pathElements.Count == 2 && pathElements[0] == "temp" && pathElements.Last().StartsWith("$");
+            return pathElements.Count == 2 && pathElements[0] == "temp" && pathElements.Last().StartsWith('$');
         }
     }
 }
