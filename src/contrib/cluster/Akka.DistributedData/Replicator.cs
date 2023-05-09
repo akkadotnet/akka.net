@@ -394,7 +394,7 @@ namespace Akka.DistributedData
             var durableWildcardsBuilder = ImmutableHashSet<string>.Empty.ToBuilder();
             foreach (var key in settings.DurableKeys)
             {
-                if (key.EndsWith("*"))
+                if (key.EndsWith('*'))
                     durableWildcardsBuilder.Add(key.Substring(0, key.Length - 1));
                 else
                     durableKeysBuilder.Add(key);
