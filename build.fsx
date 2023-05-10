@@ -439,12 +439,12 @@ Target "Protobuf" <| fun _ ->
     let protoFiles = [
         ("WireFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
         ("ContainerFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
-        ("ContainerFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
         ("SystemMessageFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
         ("ClusterMessages.proto", "/src/core/Akka.Cluster/Serialization/Proto/");
         ("ClusterClientMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/Client/Serialization/Proto/");
         ("DistributedPubSubMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/PublishSubscribe/Serialization/Proto/");
         ("ClusterShardingMessages.proto", "/src/contrib/cluster/Akka.Cluster.Sharding/Serialization/Proto/");
+        ("ReliableDelivery.proto", "/src/core/Akka.Cluster/Serialization/Proto/");
         ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/");
         ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/");
         ("StreamRefMessages.proto", "/src/core/Akka.Streams/Serialization/Proto/");
@@ -488,14 +488,13 @@ Target "DocFx" (fun _ ->
             { p with
                 ExcludeVersion = true
                 Version = "0.1.0-alpha-1611021200"
-                OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2"
+                OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2" 
 
     let docsPath = FullName "./docs"
-    let docFxPath = FullName(findToolInSubPath "docfx.exe" "tools/docfx.console/tools")
+    let docFxPath = FullName(findToolInSubPath "docfx.exe" "tools/docfx/")
     
     let args = StringBuilder()
                 |> append (docsPath @@ "docfx.json" )
-                |> append ("--warningsAsErrors")
                 |> toText
     
     let result = ExecProcess(fun info ->

@@ -42,7 +42,7 @@ akka {
                 while (true)
                 {
                     var input = Console.ReadLine();
-                    if (input.StartsWith("/"))
+                    if (input.StartsWith('/'))
                     {
                         var parts = input.Split(' ');
                         var cmd = parts[0].ToLowerInvariant();
