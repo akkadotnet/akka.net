@@ -69,7 +69,7 @@ namespace Akka.Remote.TestKit
                     continue;
                 }
 
-                var tokens = arg.Substring(2).Split('=');
+                var tokens = arg[2..].Split('=');
 
                 if (tokens.Length == 2)
                 {
