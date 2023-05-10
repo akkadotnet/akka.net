@@ -747,7 +747,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         var bytes = serialization.Serialize(msg);
         if (bytes.Length <= chunkSize)
         {
-            var chunkedMessage = new ChunkedMessage(ByteString.CopyFrom(bytes), true, true, serializerId, manifest);
+            var chunkedMessage = new ChunkedMessage(ByteString.FromBytes(bytes), true, true, serializerId, manifest);
             yield return chunkedMessage;
         }
         else
