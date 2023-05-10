@@ -133,7 +133,7 @@ public class ReliableDeliverySpecs : TestKit.Xunit2.TestKit
         
         var consumerEndProbe2 = CreateTestProbe();
         var consumerController2 = Sys.ActorOf(ConsumerController.Create<Job>(Sys, Option<IActorRef>.None), $"consumerController2-{_idCount}");
-        var testConsumer2 = Sys.ActorOf(TestConsumer.PropsFor(DefaultConsumerDelay, 42, consumerEndProbe2.Ref, consumerController2), $"destination2-{_idCount}");
+        var testConsumer2 = Sys.ActorOf(TestConsumer.PropsFor(DefaultConsumerDelay, 42, consumerEndProbe2.Ref, consumerController2, supportsRestarts:true), $"destination2-{_idCount}");
         
         consumerController2.Tell(new ConsumerController.RegisterToProducerController<Job>(producerController));
         

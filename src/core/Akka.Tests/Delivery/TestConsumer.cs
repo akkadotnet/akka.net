@@ -34,15 +34,17 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
 
     private readonly ILoggingAdapter _log = Context.GetLogger();
     private ImmutableHashSet<(string, long)> _processed = ImmutableHashSet<(string, long)>.Empty;
+    private readonly bool _supportRestarts = false;
     private int _messageCount = 0;
 
     public TestConsumer(TimeSpan delay, Func<SomeAsyncJob, bool> endCondition, IActorRef endReplyTo,
-        IActorRef consumerController)
+        IActorRef consumerController, bool supportRestarts = false)
     {
         Delay = delay;
         EndCondition = endCondition;
         EndReplyTo = endReplyTo;
         ConsumerController = consumerController;
+        _supportRestarts = supportRestarts;
         
         Active();
     }
@@ -73,13 +75,13 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
             _log.Info("processed [{0}] [msg: {1}] from [{2}]", job.SeqNr, job.Msg.Payload, job.ProducerId);
             job.ConfirmTo.Tell(global::Akka.Delivery.ConsumerController.Confirmed.Instance);
 
-            if (EndCondition(job) && _messageCount > 0)
+            if (EndCondition(job) && (_messageCount > 0 || _supportRestarts))
             {
                 _log.Debug("End at [{0}]", job.SeqNr);
                 EndReplyTo.Tell(new Collected(_processed.Select(c => c.Item1).ToImmutableHashSet(), _messageCount + 1));
                 Context.Stop(Self);
             }
-            else if (EndCondition(job))
+            else if (!_supportRestarts && EndCondition(job))
             {
                 // BugFix: TestConsumer was recreated by a message sent by the Sharding system, but the EndCondition was already met
                 // and we don't want to send another Collected that is missing some of the figures. Ignore.
@@ -187,12 +189,12 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
 
     private static Func<SomeAsyncJob, bool> ConsumerEndCondition(long seqNr) => msg => msg.SeqNr >= seqNr;
 
-    public static Props PropsFor(TimeSpan delay, long seqNr, IActorRef endReplyTo, IActorRef consumerController) =>
-        Props.Create(() => new TestConsumer(delay, ConsumerEndCondition(seqNr), endReplyTo, consumerController));
+    public static Props PropsFor(TimeSpan delay, long seqNr, IActorRef endReplyTo, IActorRef consumerController, bool supportsRestarts = false) =>
+        Props.Create(() => new TestConsumer(delay, ConsumerEndCondition(seqNr), endReplyTo, consumerController, supportsRestarts));
 
     public static Props PropsFor(TimeSpan delay, Func<SomeAsyncJob, bool> endCondition, IActorRef endReplyTo,
-        IActorRef consumerController) =>
-        Props.Create(() => new TestConsumer(delay, endCondition, endReplyTo, consumerController));
+        IActorRef consumerController, bool supportsRestarts = false) =>
+        Props.Create(() => new TestConsumer(delay, endCondition, endReplyTo, consumerController, supportsRestarts));
 
     public ITimerScheduler Timers { get; set; } = null!;
 }
