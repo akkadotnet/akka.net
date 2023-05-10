@@ -73,11 +73,17 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
             _log.Info("processed [{0}] [msg: {1}] from [{2}]", job.SeqNr, job.Msg.Payload, job.ProducerId);
             job.ConfirmTo.Tell(global::Akka.Delivery.ConsumerController.Confirmed.Instance);
 
-            if (EndCondition(job))
+            if (EndCondition(job) && _messageCount > 0)
             {
                 _log.Debug("End at [{0}]", job.SeqNr);
                 EndReplyTo.Tell(new Collected(_processed.Select(c => c.Item1).ToImmutableHashSet(), _messageCount + 1));
                 Context.Stop(Self);
+            }
+            else if (EndCondition(job))
+            {
+                // BugFix: TestConsumer was recreated by a message sent by the Sharding system, but the EndCondition was already met
+                // and we don't want to send another Collected that is missing some of the figures. Ignore.
+                
             }
             else
             {
