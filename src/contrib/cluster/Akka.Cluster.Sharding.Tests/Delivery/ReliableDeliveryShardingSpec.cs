@@ -413,7 +413,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         }
 
         // redeliver also when no more messages are sent to the entity
-        await consumerProbes[1].GracefulStop(RemainingOrDefault);
+        Sys.Stop(consumerProbes[1]); // don't wait for termination
 
         var delivery4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
         delivery4b.Message.Should().BeEquivalentTo(new Job("msg-4"));
