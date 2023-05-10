@@ -1,3 +1,25 @@
+#### 1.5.7-beta1 May 9th 2023 ####
+
+*Placeholder for nightlies*
+
+#### 1.5.6 May 8th 2023 ####
+
+Version 1.5.6 is a patch with a few minor bug fix
+
+* [TestKit: Remove duplicate info log for unhandled messages](https://github.com/akkadotnet/akka.net/pull/6730)
+* [Core: Change logging DateTime formatter from 12 hour to 24 hour format](https://github.com/akkadotnet/akka.net/pull/6734)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.6, click here](https://github.com/akkadotnet/akka.net/milestone/88?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 2       | 4    | 4    | Aaron Stannard      |
+| 2       | 33   | 84   | Simon Cropp         |
+| 2       | 2    | 2    | dependabot[bot]     |
+| 2       | 2    | 2    | Richard Smith       |
+| 1       | 2    | 2    | Gregorius Soedharmo |
+| 1       | 2    | 12   | Sergey Popov        |
+
 #### 1.5.5 May 4th 2023 ####
 
 * [TestKit: Add new variant of `ExpectAll` that accepts predicates](https://github.com/akkadotnet/akka.net/pull/6668)

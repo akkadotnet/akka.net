@@ -76,12 +76,12 @@ namespace Akka.Remote.Tests.MultiNode
                 Sys.ActorOf(Props.Create(() => new Parent()), "parent")
                     .Tell(new ParentMessage(Props.Create(() => new Hello()), "hello"));
 
-                ExpectMsg<string>("HelloParent", TimeSpan.FromSeconds(15));
+                ExpectMsg("HelloParent", TimeSpan.FromSeconds(15));
             }, _config.Second);
 
             RunOn(() =>
             {
-                ExpectMsg<string>("PreStart", TimeSpan.FromSeconds(15));
+                ExpectMsg("PreStart", TimeSpan.FromSeconds(15));
                 
             }, _config.First);
 

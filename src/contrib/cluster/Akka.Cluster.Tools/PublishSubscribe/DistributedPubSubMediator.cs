@@ -467,8 +467,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     var value = kv.Value;
                     if (key.StartsWith(topicPrefix))
                     {
-                        var topic = key[(topicPrefix.Length + 1)..];
-                        if (!topic.Contains("/"))
+                        var topic = key.Substring(topicPrefix.Length + 1);
+                        if (!topic.Contains('/'))
                         {
                             yield return Uri.EscapeDataString(topic);
                         }

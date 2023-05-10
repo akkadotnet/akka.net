@@ -98,14 +98,14 @@ namespace Akka.Streams.Tests.Dsl
         public async Task A_UnfoldResourceSource_must_continue_when_strategy_is_resume_and_exception_happened()
         {
             await this.AssertAllStagesStoppedAsync(async() => {
-                var p = Source.UnfoldResource(_open, reader =>                                                                         
-                {                                                                             
-                    var s = reader.ReadLine();                                                                             
-                    if (s != null && s.Contains("b"))                                                                                 
-                        throw new TestException("");                                                                             
-                    return s ?? Option<string>.None;                                                                         
-                }, Close)                                                                         
-                .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))                                                                         
+                var p = Source.UnfoldResource(_open, reader =>
+                {
+                    var s = reader.ReadLine();
+                    if (s != null && s.Contains('b'))
+                        throw new TestException("");
+                    return s ?? Option<string>.None;
+                }, Close)
+                .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<string>();
 
@@ -127,14 +127,14 @@ namespace Akka.Streams.Tests.Dsl
         public async Task A_UnfoldResourceSource_must_close_and_open_stream_again_when_strategy_is_restart()
         {
             await this.AssertAllStagesStoppedAsync(async() => {
-                var p = Source.UnfoldResource(_open, reader =>                                                                         
-                {                                                                             
-                    var s = reader.ReadLine();                                                                             
-                    if (s != null && s.Contains("b"))                                                                                 
-                        throw new TestException("");                                                                             
-                    return s ?? Option<string>.None;                                                                         
-                }, Close)                                                                         
-                .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))                                                                         
+                var p = Source.UnfoldResource(_open, reader =>
+                {
+                    var s = reader.ReadLine();
+                    if (s != null && s.Contains('b'))
+                        throw new TestException("");
+                    return s ?? Option<string>.None;
+                }, Close)
+                .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<string>();
 

@@ -92,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var source = Source.From(new[] { "Aaa", "Abb", "Bcc", "Cdd", "Cee" })
-                    .GroupBy(3, s => s[..1])
+                    .GroupBy(3, s => s.Substring(0, 1))
                     .Grouped(10)
                     .MergeSubstreams()
                     .Grouped(10);
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var source = (Source<IEnumerable<string>, NotUsed>)Source.From(new[] { "Aaa", "Abb", "Bcc", "Cdd", "Cee" })
-                    .GroupBy(3, s => s.StartsWith("A") ? null : s[..1])
+                    .GroupBy(3, s => s.StartsWith('A') ? null : s.Substring(0, 1))
                     .Grouped(10)
                     .MergeSubstreams();
                 var down = source.RunWith(this.SinkProbe<IEnumerable<string>>(), Materializer);

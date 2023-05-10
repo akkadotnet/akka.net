@@ -729,6 +729,28 @@ namespace Akka.Persistence
         public static Akka.Persistence.WriteMessagesSuccessful Instance { get; }
     }
 }
+namespace Akka.Persistence.Delivery
+{
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static EventSourcedProducerQueue
+    {
+        public static Akka.Actor.Props Create<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(string persistentId, Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings settings) { }
+        public static Akka.Actor.Props Create<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(string persistentId, Akka.Actor.IActorRefFactory system) { }
+        [System.Runtime.CompilerServices.NullableAttribute(0)]
+        public class Settings : System.IEquatable<Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings>
+        {
+            public System.TimeSpan CleanupUnusedAfter { get; set; }
+            public bool DeleteEvents { get; set; }
+            public string JournalPluginId { get; set; }
+            public int KeepNSnapshots { get; set; }
+            public System.TimeSpan RestartMaxBackoff { get; set; }
+            public int SnapshotEvery { get; set; }
+            public string SnapshotPluginId { get; set; }
+            public static Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings Create(Akka.Actor.ActorSystem sys) { }
+            public static Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings Create(Akka.Configuration.Config config) { }
+        }
+    }
+}
 namespace Akka.Persistence.Fsm
 {
     public class static PersistentFSM
