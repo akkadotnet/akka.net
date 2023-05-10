@@ -64,9 +64,9 @@ namespace Akka.Remote
             var nodes = deploy.Config.GetStringList("target.nodes", new string[] { }).Select(Address.Parse).ToList();
             if (nodes.Any() && deploy.RouterConfig != null)
             {
-                if (deploy.RouterConfig is Pool)
+                if (deploy.RouterConfig is Pool pool)
                     return
-                        deploy.WithRouterConfig(new RemoteRouterConfig(deploy.RouterConfig.AsInstanceOf<Pool>(), nodes));
+                        deploy.WithRouterConfig(new RemoteRouterConfig(pool, nodes));
                 return deploy.WithScope(scope: Deploy.NoScopeGiven);
             }
             else
