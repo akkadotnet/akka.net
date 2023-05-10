@@ -914,7 +914,7 @@ akka.remote.default-remote-dispatcher {
                     CreateResultAggregator(title, expectedResults: currentRoles.Length, true);
                     RunOn(() =>
                     {
-                        ReportResult<bool>(() =>
+                        ReportResult(() =>
                         {
                             RunOn(() =>
                             {
@@ -1050,7 +1050,7 @@ akka.remote.default-remote-dispatcher {
 
                     RunOn(() =>
                     {
-                        ReportResult<bool>(() =>
+                        ReportResult(() =>
                         {
                             RunOn(() =>
                             {
@@ -1101,7 +1101,7 @@ akka.remote.default-remote-dispatcher {
 
                     RunOn(() =>
                     {
-                        ReportResult<bool>(() =>
+                        ReportResult(() =>
                         {
                             var startTime = MonotonicClock.GetTicks();
                             AwaitMembersUp(currentRoles.Length, timeout:RemainingOrDefault);

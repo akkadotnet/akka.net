@@ -240,7 +240,7 @@ namespace Akka.IO
         /// <summary>
         /// An empty <see cref="ByteString"/>.
         /// </summary>
-        public static ByteString Empty { get; } = new ByteString(new ByteBuffer(new byte[0], 0, 0));
+        public static ByteString Empty { get; } = new(new ByteBuffer(Array.Empty<byte>(), 0, 0));
 
         #endregion
 
@@ -539,6 +539,7 @@ namespace Akka.IO
         /// <returns>TBD</returns>
         public int CopyTo(byte[] buffer, int index, int count)
         {
+            if(buffer.Length == 0 && count == 0) return 0; // edge case for no-copy
             if (buffer == null) throw new ArgumentNullException(nameof(buffer));
             if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
             if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
@@ -575,6 +576,7 @@ namespace Akka.IO
         /// <returns>The number of bytes copied</returns>
         public int CopyTo(ref Memory<byte> buffer, int index, int count)
         {
+            if(buffer.Length == 0 && count == 0) return 0; // edge case for no-copy
             if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
             if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
 
@@ -613,6 +615,7 @@ namespace Akka.IO
         /// <returns>The number of bytes copied</returns>
         public int CopyTo(ref Span<byte> buffer, int index, int count)
         {
+            if(buffer.Length == 0 && count == 0) return 0; // edge case for no-copy
             if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
             if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
 

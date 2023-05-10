@@ -6,6 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\..\core\Akka.Tests\Delivery\TestConsumer.cs">
+      <Link>Delivery\TestConsumer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\core\Akka.Tests\Delivery\TestProducer.cs">
+      <Link>Delivery\TestProducer.cs</Link>
+    </Compile>
     <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\AsyncWriteProxyEx.cs" Link="AsyncWriteProxyEx.cs" />
     <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\MemoryJournalShared.cs" Link="MemoryJournalShared.cs" />
     <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\MemorySnapshotStoreShared.cs" Link="MemorySnapshotStoreShared.cs" />
