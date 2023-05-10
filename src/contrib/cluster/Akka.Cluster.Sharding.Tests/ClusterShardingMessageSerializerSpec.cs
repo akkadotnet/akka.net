@@ -8,12 +8,16 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Actor.Dsl;
+using Akka.Cluster.Configuration;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Sharding.Serialization;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Delivery;
 using Akka.Serialization;
 using Akka.TestKit;
+using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Google.Protobuf;
@@ -30,7 +34,7 @@ namespace Akka.Cluster.Sharding.Tests
         private IActorRef regionProxy2;
 
         private static Config SpecConfig =>
-            ClusterSingletonManager.DefaultConfig().WithFallback(ClusterSharding.DefaultConfig());
+            ClusterSingletonManager.DefaultConfig().WithFallback(ClusterSharding.DefaultConfig()).WithFallback(ClusterConfigFactory.Default());
 
         public ClusterShardingMessageSerializerSpec() : base(SpecConfig)
         {
@@ -47,7 +51,7 @@ namespace Akka.Cluster.Sharding.Tests
             serializer.Should().BeOfType<ClusterShardingMessageSerializer>();
             var blob = serializer.ToBinary(obj);
             var reference = serializer.FromBinary(blob, serializer.Manifest(obj));
-            reference.Should().Be(obj);
+            reference.Should().BeEquivalentTo(obj);
         }
 
         [Fact]
@@ -211,5 +215,16 @@ namespace Akka.Cluster.Sharding.Tests
                 ImmutableHashSet.Create("14", "15")
                 ));
         }
+
+        [Fact]
+        public void ClusterShardingMessageSerializer_must_serialize_ShardingEnvelope()
+        {
+            var producer = Sys.ActorOf(BlackHoleActor.Props, "fakeProducer");
+            CheckSerialization(new ShardingEnvelope("entity-1", 11));
+            CheckSerialization(new ShardingEnvelope("entity-1", new ConsumerController.SequencedMessage<string>("p1", 11, "msg-1", true, false, producer)));
+            CheckSerialization(new ShardingEnvelope("entity-1", new ConsumerController.SequencedMessage<TestJob>("p1", 11, new TestJob("foo1"), true, false, producer)));
+        }
+
+        private record TestJob(string Job);
     }
 }

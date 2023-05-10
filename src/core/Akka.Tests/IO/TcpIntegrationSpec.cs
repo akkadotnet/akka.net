@@ -195,7 +195,7 @@ namespace Akka.Tests.IO
             var testData = ByteString.FromString(str);
             clientEp.Tell(Tcp.Write.Create(testData, Ack.Instance), clientHandler);
             await clientHandler.ExpectMsgAsync<Ack>();
-            var received = await serverHandler.ReceiveWhileAsync<Tcp.Received>(o =>
+            var received = await serverHandler.ReceiveWhileAsync(o =>
             {
                 return o as Tcp.Received;
             }, RemainingOrDefault, TimeSpan.FromSeconds(0.5)).ToListAsync();
@@ -219,7 +219,7 @@ namespace Akka.Tests.IO
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
 
-                var serverMsgs = await actors.ServerHandler.ReceiveWhileAsync<Tcp.Received>(o =>
+                var serverMsgs = await actors.ServerHandler.ReceiveWhileAsync(o =>
                 {
                     return o as Tcp.Received;
                 }, RemainingOrDefault, TimeSpan.FromSeconds(2)).ToListAsync();

@@ -124,7 +124,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool AroundReceive(Receive receive, object message)
+        protected internal override bool AroundReceive(Receive receive, object message)
         {
             if (_isInitialized)
             {

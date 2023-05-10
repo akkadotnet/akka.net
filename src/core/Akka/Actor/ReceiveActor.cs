@@ -211,7 +211,7 @@ namespace Akka.Actor
         protected void Receive<T>(Action<T> handler, Predicate<T> shouldHandle = null)
         {
             EnsureMayConfigureMessageHandlers();
-            _matchHandlerBuilders.Peek().Match<T>(handler, shouldHandle);
+            _matchHandlerBuilders.Peek().Match(handler, shouldHandle);
         }
 
         /// <summary>
@@ -227,7 +227,7 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
-            Receive<T>(handler, shouldHandle);
+            Receive(handler, shouldHandle);
         }
 
         /// <summary>
@@ -279,7 +279,7 @@ namespace Akka.Actor
         protected void Receive<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureMessageHandlers();
-            _matchHandlerBuilders.Peek().Match<T>(handler);
+            _matchHandlerBuilders.Peek().Match(handler);
         }
 
         /// <summary>

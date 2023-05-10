@@ -141,7 +141,7 @@ namespace Akka.Cluster.Sharding.Internal
 
                         if (result1.Count > 0)
                         {
-                            return Task.FromResult<IImmutableSet<ShardId>>(result1);
+                            return Task.FromResult(result1);
                         }
                         else
                         {
