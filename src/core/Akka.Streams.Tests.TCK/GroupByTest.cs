@@ -20,7 +20,7 @@ namespace Akka.Streams.Tests.TCK
 
             var flow = (Source<Source<int, NotUsed>, NotUsed>)
                 Source.From(Enumerate(elements))
-                    .GroupBy(1, elem => "all")
+                    .GroupBy(1, _ => "all")
                     .PrefixAndTail(0)
                     .Select(tuple => tuple.Item2)
                     .ConcatSubstream();

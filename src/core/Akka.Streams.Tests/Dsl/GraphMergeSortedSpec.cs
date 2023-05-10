@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var random = new Random();
             var gen = Enumerable.Range(1, 10)
-                .Select(i => Enumerable.Range(1, 1000)
+                .Select(_ => Enumerable.Range(1, 1000)
                     .Select(_ => random.Next(1, 3) == 2).ToList());
             foreach (var picks in gen)
             {

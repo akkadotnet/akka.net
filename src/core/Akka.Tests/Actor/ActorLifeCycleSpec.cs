@@ -385,7 +385,7 @@ namespace Akka.Tests
         {
             var broken = ActorOf(c =>
             {
-                c.Receive<string>((m, context) =>
+                c.Receive<string>((_, _) =>
                 {
                     throw new MyCustomException();
                 });

@@ -806,7 +806,7 @@ namespace Akka.Streams.Actors
         /// </summary>
         /// <param name="actorRef">TBD</param>
         /// <param name="s">TBD</param>
-        public void Set(IActorRef actorRef, State s) => _state.AddOrUpdate(actorRef, s, (@ref, oldState) => s);
+        public void Set(IActorRef actorRef, State s) => _state.AddOrUpdate(actorRef, s, (_, _) => s);
 
         /// <summary>
         /// TBD

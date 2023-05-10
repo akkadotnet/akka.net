@@ -241,7 +241,7 @@ namespace Akka.Remote.Transport
             if (message is One one)
             {
                 //  don't care about the protocol part - we are injected in the stack anyway!
-                addressChaosTable.AddOrUpdate(NakedAddress(one.RemoteAddress), address => one.Mode, (address, mode) => one.Mode);
+                addressChaosTable.AddOrUpdate(NakedAddress(one.RemoteAddress), _ => one.Mode, (_, _) => one.Mode);
                 return Task.FromResult(true);
             }
 
@@ -291,8 +291,8 @@ namespace Akka.Remote.Transport
                WrappedTransport.Associate(remoteAddress).ContinueWith(tr =>
                {
                    var handle = tr.Result;
-                   addressChaosTable.AddOrUpdate(NakedAddress(handle.RemoteAddress), address => PassThru.Instance,
-                       (address, mode) => PassThru.Instance);
+                   addressChaosTable.AddOrUpdate(NakedAddress(handle.RemoteAddress), _ => PassThru.Instance,
+                       (_, _) => PassThru.Instance);
                    statusPromise.SetResult(new FailureInjectorHandle(handle, this));
                }, TaskContinuationOptions.ExecuteSynchronously);
             }

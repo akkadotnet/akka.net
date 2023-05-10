@@ -196,7 +196,7 @@ namespace Akka.Serialization
             if (system != null)
             {
                 var settingsSetup = system.Settings.Setup.Get<NewtonSoftJsonSerializerSetup>()
-                    .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => {}));
+                    .GetOrElse(NewtonSoftJsonSerializerSetup.Create(_ => {}));
 
                 settingsSetup.ApplySettings(Settings);
             }

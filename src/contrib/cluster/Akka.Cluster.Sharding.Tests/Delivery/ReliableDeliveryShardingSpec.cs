@@ -61,7 +61,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerEndProbe = CreateTestProbe();
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -96,7 +96,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerEndProbe = CreateTestProbe();
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -143,7 +143,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerEndProbe = CreateTestProbe();
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         PropsFor(DefaultConsumerDelay, 3, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -334,9 +334,9 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerIncarnation = new AtomicCounter(0);
-        var consumerProbes = Enumerable.Range(0, 3).Select(c => CreateTestProbe()).ToList();
+        var consumerProbes = Enumerable.Range(0, 3).Select(_ => CreateTestProbe()).ToList();
 
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new ProbeWrapper(consumerProbes[consumerIncarnation.GetAndIncrement()], c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -429,7 +429,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerEndProbe = CreateTestProbe();
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -506,7 +506,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerEndProbe = CreateTestProbe();
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -649,7 +649,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                 Become(() => Idle(n));
             });
 
-            Receive<RequestNext>(next => { }); // already active
+            Receive<RequestNext>(_ => { }); // already active
         }
 
         public sealed class Tick

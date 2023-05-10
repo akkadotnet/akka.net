@@ -31,7 +31,7 @@ namespace Akka.Persistence.Sqlite
         {
             if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException(nameof(connectionString), "No connection string with connection to remember");
 
-            var conn = Remembered.GetOrAdd(connectionString, s => new SqliteConnection(connectionString));
+            var conn = Remembered.GetOrAdd(connectionString, _ => new SqliteConnection(connectionString));
 
             if (conn.State != ConnectionState.Open)
                 conn.Open();

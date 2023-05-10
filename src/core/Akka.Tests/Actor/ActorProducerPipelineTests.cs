@@ -105,7 +105,7 @@ namespace Akka.Tests.Actor
         {
             public StashingActor()
             {
-                Receive<StashStatus>(status => Sender.Tell("actor stash is " + (Stash != null ? "initialized" : "uninitialized")));
+                Receive<StashStatus>(_ => Sender.Tell("actor stash is " + (Stash != null ? "initialized" : "uninitialized")));
                 ReceiveAny(_ => Stash.Stash());
             }
 

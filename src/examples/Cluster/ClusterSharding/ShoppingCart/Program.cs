@@ -28,12 +28,12 @@ namespace ShoppingCart
             #region Console shutdown setup
             
             var exitEvent = new ManualResetEvent(false);
-            Console.CancelKeyPress += (sender, eventArgs) =>
+            Console.CancelKeyPress += (_, eventArgs) =>
             {
                 eventArgs.Cancel = true;
                 exitEvent.Set();
             };
-            AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) =>
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
                 exitEvent.Set();
             };

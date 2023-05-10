@@ -1111,7 +1111,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TSeed, TMat> ConflateWithSeed<T, TMat, TSeed>(this IFlow<T, TMat> flow, Func<T, TSeed> seed,
             Func<TSeed, T, TSeed> aggregate)
         {
-            return flow.Via(new Fusing.Batch<T, TSeed>(1L, elem => 0L, seed, aggregate));
+            return flow.Via(new Fusing.Batch<T, TSeed>(1L, _ => 0L, seed, aggregate));
         }
 
         /// <summary>
@@ -1286,7 +1286,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TOut, TMat> Transform<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<IStage<TIn, TOut>> stageFactory)
         {
-            return flow.Via(new PushPullGraphStage<TIn, TOut>(attr => stageFactory(), Attributes.None));
+            return flow.Via(new PushPullGraphStage<TIn, TOut>(_ => stageFactory(), Attributes.None));
         }
 
         /// <summary>

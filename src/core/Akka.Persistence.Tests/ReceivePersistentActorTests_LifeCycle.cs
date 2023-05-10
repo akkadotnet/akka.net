@@ -70,7 +70,7 @@ namespace Akka.Persistence.Tests
             {
                 Recover<int>(i => State.AddLast(i));
 
-                Command<string>(s => s == "CRASH", s => { throw new Exception("Crash!"); });
+                Command<string>(s => s == "CRASH", _ => { throw new Exception("Crash!"); });
                 Command<string>(s => s == "BECOME", _ => BecomeStacked(State2));
                 Command<string>(s => s == "BECOME-DISCARD", _ => BecomeStacked(State2));
                 Command<string>(s => Sender.Tell("1:"+s));
@@ -78,7 +78,7 @@ namespace Akka.Persistence.Tests
 
             private void State2()
             {
-                Command<string>(s => s == "CRASH", s => { throw new Exception("Crash!"); });
+                Command<string>(s => s == "CRASH", _ => { throw new Exception("Crash!"); });
                 Command<string>(s => Sender.Tell("2:" + s));
             }
         }

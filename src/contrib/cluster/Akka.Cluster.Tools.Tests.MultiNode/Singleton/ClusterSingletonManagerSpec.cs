@@ -267,7 +267,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             _queue = queue;
             _delegateTo = delegateTo;
 
-            Receive<int>(n => n <= _current, n => Context.Stop(Self));
+            Receive<int>(n => n <= _current, _ => Context.Stop(Self));
             Receive<int>(n =>
             {
                 _current = n;
@@ -622,7 +622,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 // mute logging of deadLetters during shutdown of systems
                 if (!Log.IsDebugEnabled)
-                    Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(s => true), new PredicateMatcher(s => true))));
+                    Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(_ => true), new PredicateMatcher(_ => true))));
                 EnterBarrier("logs-muted");
 
                 Crash(_second);

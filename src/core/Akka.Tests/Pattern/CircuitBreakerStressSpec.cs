@@ -109,7 +109,7 @@ namespace Akka.Tests.Pattern
         public async Task A_CircuitBreaker_stress_test()
         {
             var breaker = new CircuitBreaker(Sys.Scheduler, 5, TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(200));
-            var stressActors = Enumerable.Range(0, 3).Select(i => Sys.ActorOf(Props.Create<StressActor>(breaker))).ToList();
+            var stressActors = Enumerable.Range(0, 3).Select(_ => Sys.ActorOf(Props.Create<StressActor>(breaker))).ToList();
 
             for (var i = 0; i < 1000; i++)
                 foreach (var stressActor in stressActors)

@@ -48,7 +48,7 @@ namespace Akka.Benchmarks.Cluster
             using var subjects = baseReachability.Versions.Keys.ToList().GetContinuousEnumerator();
             return observers.Aggregate(baseReachability, (r, o) =>
             {
-                return Enumerable.Range(1, 5).Aggregate(r, (r2, i) =>
+                return Enumerable.Range(1, 5).Aggregate(r, (r2, _) =>
                 {
                     subjects.MoveNext();
                     return r2.Unreachable(o, subjects.Current);

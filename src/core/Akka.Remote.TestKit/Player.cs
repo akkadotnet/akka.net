@@ -628,7 +628,7 @@ namespace Akka.Remote.TestKit
         {
             _log.Debug("Connecting...");
             _nextAttempt = Deadline.Now + _backoff;
-            RemoteConnection.CreateConnection(Role.Client, _server, _poolSize, this).ContinueWith(tr =>
+            RemoteConnection.CreateConnection(Role.Client, _server, _poolSize, this).ContinueWith(_ =>
             {
                 _log.Debug("Failed to connect.... Retrying again in {0}s. {1} attempts left.", _nextAttempt.TimeLeft,_reconnects);
                 if (_reconnects > 0)

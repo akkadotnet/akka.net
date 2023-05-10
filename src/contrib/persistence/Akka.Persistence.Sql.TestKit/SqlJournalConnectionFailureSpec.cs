@@ -41,7 +41,7 @@ namespace Akka.Persistence.Sql.TestKit
             {
                 Command<string>(str => str.StartsWith('s'), e =>
                 {
-                    Persist(e, h =>
+                    Persist(e, _ =>
                     {
                         Sender.Tell("persisted:" + e);
                     });

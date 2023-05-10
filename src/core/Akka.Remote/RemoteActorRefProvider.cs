@@ -756,7 +756,7 @@ namespace Akka.Remote
                     {
                         _log.Info("Remote daemon shut down; proceeding with flushing remote transports.");
                         @event.StateData.Transport.Shutdown()
-                            .ContinueWith(t => TransportShutdown.Instance,
+                            .ContinueWith(_ => TransportShutdown.Instance,
                                 TaskContinuationOptions.ExecuteSynchronously)
                             .PipeTo(Self);
                         return GoTo(TerminatorState.WaitTransportShutdown);
@@ -765,7 +765,7 @@ namespace Akka.Remote
                     return null;
                 });
 
-                When(TerminatorState.WaitTransportShutdown, @event =>
+                When(TerminatorState.WaitTransportShutdown, _ =>
                 {
                     _log.Info("Remoting shut down.");
                     _systemGuardian.Tell(TerminationHookDone.Instance);

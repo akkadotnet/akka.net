@@ -272,7 +272,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task Bugfix5204_should_allow_null_response_without_error()
         {
-            var actor = Sys.ActorOf(act => act.ReceiveAny((o, context) =>
+            var actor = Sys.ActorOf(act => act.ReceiveAny((_, context) =>
             {
                 context.Sender.Tell(null);
             }));
@@ -304,7 +304,7 @@ namespace Akka.Tests.Actor
             {
                 var childCounter = 0;
                 // ReSharper disable once PossibleNullReferenceException
-                container.ForEachChild(x => childCounter++);
+                container.ForEachChild(_ => childCounter++);
                 Assert.True(childCounter == 0, "Temp actors not all removed.");
             });
 

@@ -60,7 +60,7 @@ public class DurableShardingSpec : AkkaSpec
         NextId();
 
         var consumerProbe = CreateTestProbe();
-        var sharding = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var sharding = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new Consumer(c, consumerProbe)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -165,7 +165,7 @@ public class DurableShardingSpec : AkkaSpec
         NextId();
 
         var consumerProbe = CreateTestProbe();
-        var sharding = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var sharding = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new Consumer(c, consumerProbe)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -217,7 +217,7 @@ public class DurableShardingSpec : AkkaSpec
             _deliveryAdapter = Context.ActorOf(
                 act =>
                 {
-                    act.Receive<ConsumerController.Delivery<Job>>((delivery, ctx) =>
+                    act.Receive<ConsumerController.Delivery<Job>>((delivery, _) =>
                     {
                         self.Forward(new JobDelivery(delivery.Message, delivery.ConfirmTo, delivery.ProducerId,
                             delivery.SeqNr));

@@ -511,7 +511,7 @@ namespace Akka.Persistence.Tests.Fsm
                     {
                         return Stop()
                             .Applying(new OrderDiscarded())
-                            .AndThen(cart =>
+                            .AndThen(_ =>
                             {
                                 reportActor.Tell(new ShoppingCardDiscarded());
                                 SaveStateSnapshot();
@@ -544,7 +544,7 @@ namespace Akka.Persistence.Tests.Fsm
                     {
                         return Stop()
                             .Applying(new OrderDiscarded())
-                            .AndThen(cart => reportActor.Tell(new ShoppingCardDiscarded()));
+                            .AndThen(_ => reportActor.Tell(new ShoppingCardDiscarded()));
                     }
 
                     return state;
@@ -623,7 +623,7 @@ namespace Akka.Persistence.Tests.Fsm
         {
             StartWith(Init.Instance, "");
 
-            When(Init.Instance, (evt, state) =>
+            When(Init.Instance, (evt, _) =>
             {
                 if (evt.FsmEvent is StateTimeout)
                 {
@@ -661,7 +661,7 @@ namespace Akka.Persistence.Tests.Fsm
 
             StartWith(LookingAround.Instance, new EmptyShoppingCart());
 
-            When(LookingAround.Instance, (evt, state) =>
+            When(LookingAround.Instance, (evt, _) =>
             {
                 if (evt.FsmEvent.Equals("stay"))
                 {
@@ -976,7 +976,7 @@ namespace Akka.Persistence.Tests.Fsm
         {
             StartWith(PersistSingleAtOnce.Instance, null);
 
-            When(PersistSingleAtOnce.Instance, (evt, state) =>
+            When(PersistSingleAtOnce.Instance, (evt, _) =>
             {
                 if (evt.FsmEvent is int i)
                 {
@@ -994,7 +994,7 @@ namespace Akka.Persistence.Tests.Fsm
                 return Stay();
             });
 
-            When(Persist4xAtOnce.Instance, (evt, state) =>
+            When(Persist4xAtOnce.Instance, (evt, _) =>
             {
                 if (evt.FsmEvent is int i)
                 {
@@ -1038,7 +1038,7 @@ namespace Akka.Persistence.Tests.Fsm
         public AndThenTestActor()
         {
             StartWith(Init.Instance, new Data());
-            When(Init.Instance, (evt, state) =>
+            When(Init.Instance, (evt, _) =>
             {
                 switch (evt.FsmEvent)
                 {

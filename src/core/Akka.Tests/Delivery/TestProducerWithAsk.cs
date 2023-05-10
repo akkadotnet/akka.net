@@ -92,7 +92,7 @@ public sealed class TestProducerWithAsk : ReceiveActor, IWithTimers
             Become(Idle);
         });
         
-        Receive<ProducerController.RequestNext<TestConsumer.Job>>(next =>
+        Receive<ProducerController.RequestNext<TestConsumer.Job>>(_ =>
         {
             throw new IllegalStateException("Unexpected RequestNext, already got one");
         });
