@@ -493,23 +493,6 @@ public class ProducerControllerSpec : TestKit.Xunit2.TestKit
         seqMsg2.IsFirstChunk.Should().BeFalse();
         seqMsg2.IsLastChunk.Should().BeFalse();
         seqMsg2.SeqNr.Should().Be(2);
-        
-        // producerController.Tell(new ProducerController.Request(0L, 10L, true, false));
-        //
-        // var seqMsg3 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
-        // seqMsg3.Message.IsMessage.Should().BeFalse();
-        // seqMsg3.Message.Chunk.HasValue.Should().BeTrue();
-        // seqMsg3.IsFirstChunk.Should().BeFalse();
-        // seqMsg3.IsLastChunk.Should().BeTrue();
-        // seqMsg3.SeqNr.Should().Be(3);
-        //
-        // (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>())
-        //     .SendNextTo.Tell(new Job("d"));
-        // var seqMsg4 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
-        // seqMsg4.Message.IsMessage.Should().BeFalse();
-        // seqMsg4.Message.Chunk.HasValue.Should().BeTrue();
-        // seqMsg4.IsFirstChunk.Should().BeTrue();
-        // seqMsg4.IsLastChunk.Should().BeTrue();
-        // seqMsg4.SeqNr.Should().Be(4);
+       
     }
 }
