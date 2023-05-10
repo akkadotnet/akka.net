@@ -488,14 +488,13 @@ Target "DocFx" (fun _ ->
             { p with
                 ExcludeVersion = true
                 Version = "0.1.0-alpha-1611021200"
-                OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2"
+                OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2" 
 
     let docsPath = FullName "./docs"
-    let docFxPath = FullName(findToolInSubPath "docfx.exe" "tools/docfx.console/tools")
+    let docFxPath = FullName(findToolInSubPath "docfx.exe" "tools/docfx/")
     
     let args = StringBuilder()
                 |> append (docsPath @@ "docfx.json" )
-                |> append ("--warningsAsErrors")
                 |> toText
     
     let result = ExecProcess(fun info ->

@@ -74,7 +74,7 @@ namespace Akka.Remote.Tests.Serialization
 
             protected override bool IsCacheable(string v)
             {
-                return !v.StartsWith("#");
+                return !v.StartsWith('#');
             }
 
             public int InternalProbeDistanceOf(int idealSlot, int actualSlot)

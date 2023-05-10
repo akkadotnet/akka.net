@@ -192,6 +192,70 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
 }
 
 /// <summary>
+/// For testing purposes
+/// </summary>
+public sealed class ZeroLengthSerializer : SerializerWithStringManifest
+{
+    public static readonly Config Config = ConfigurationFactory.ParseString(@"
+        akka.actor {
+            serializers {
+                delivery-zero-length = ""Akka.Tests.Delivery.ZeroLengthSerializer, Akka.Tests""
+            }
+            serialization-bindings {
+                ""Akka.Tests.Delivery.ZeroLengthSerializer+TestMsg, Akka.Tests"" = delivery-zero-length
+            }
+        }");
+    
+    public class TestMsg
+    {
+        private TestMsg()
+        {
+        }
+        public static readonly TestMsg Instance = new();
+    }
+
+    public ZeroLengthSerializer(ExtendedActorSystem system) : base(system)
+    {
+    }
+
+    public override byte[] ToBinary(object obj)
+    {
+        switch (obj)
+        {
+            case TestMsg _:
+                return Array.Empty<byte>();
+            default:
+                throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}]");
+        }
+    }
+
+    public override object FromBinary(byte[] bytes, string manifest)
+    {
+        switch (manifest)
+        {
+            case "A":
+                return TestMsg.Instance;
+            default:
+                throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
+        }
+       
+    }
+
+    public override string Manifest(object obj)
+    {
+        switch (obj)
+        {
+            case TestMsg _:
+                return "A";
+            default:
+                throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}]");
+        }
+    }
+    
+    public override int Identifier => 919191;
+}
+
+/// <summary>
 /// INTERNAL API
 /// </summary>
 public sealed class TestSerializer : SerializerWithStringManifest
