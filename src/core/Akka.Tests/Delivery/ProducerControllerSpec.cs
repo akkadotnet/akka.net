@@ -6,6 +6,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -452,5 +453,63 @@ public class ProducerControllerSpec : TestKit.Xunit2.TestKit
         // Ack(5) lost, but eventually a Request will trigger the reply
         producerController.Tell(new ProducerController.Request(5L, 15L, false, false));
         await replyTo.ExpectMsgAsync(5L);
+    }
+
+    /// <summary>
+    /// Reproduction for https://github.com/akkadotnet/akka.net/issues/6754
+    /// </summary>
+    [Fact]
+    public async Task Repro6754()
+    {
+        NextId();
+        var consumerControllerProbe = CreateTestProbe();
+
+        var msg = new string('*', 10_000); // 10k char length string
+        var producerController =
+            Sys.ActorOf(
+                ProducerController.Create<Job>(Sys, ProducerId, Option<Props>.None,
+                    ProducerController.Settings.Create(Sys) with { ChunkLargeMessagesBytes = 1024}),
+                $"producerController-{_idCount}");
+        
+        var producerProbe = CreateTestProbe();
+        producerController.Tell(new ProducerController.Start<Job>(producerProbe.Ref));
+        
+        producerController.Tell(new ProducerController.RegisterConsumer<Job>(consumerControllerProbe.Ref));
+        
+        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>())
+            .SendNextTo.Tell(new Job(msg));
+        var seqMsg1 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        seqMsg1.Message.IsMessage.Should().BeFalse();
+        seqMsg1.Message.Chunk.HasValue.Should().BeTrue();
+        seqMsg1.IsFirstChunk.Should().BeTrue();
+        seqMsg1.IsLastChunk.Should().BeFalse();
+        seqMsg1.SeqNr.Should().Be(1);
+        
+        producerController.Tell(new ProducerController.Request(0L, 10L, true, false));
+        
+        var seqMsg2 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        seqMsg2.Message.IsMessage.Should().BeFalse();
+        seqMsg2.Message.Chunk.HasValue.Should().BeTrue();
+        seqMsg2.IsFirstChunk.Should().BeFalse();
+        seqMsg2.IsLastChunk.Should().BeFalse();
+        seqMsg2.SeqNr.Should().Be(2);
+        
+        // producerController.Tell(new ProducerController.Request(0L, 10L, true, false));
+        //
+        // var seqMsg3 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        // seqMsg3.Message.IsMessage.Should().BeFalse();
+        // seqMsg3.Message.Chunk.HasValue.Should().BeTrue();
+        // seqMsg3.IsFirstChunk.Should().BeFalse();
+        // seqMsg3.IsLastChunk.Should().BeTrue();
+        // seqMsg3.SeqNr.Should().Be(3);
+        //
+        // (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>())
+        //     .SendNextTo.Tell(new Job("d"));
+        // var seqMsg4 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        // seqMsg4.Message.IsMessage.Should().BeFalse();
+        // seqMsg4.Message.Chunk.HasValue.Should().BeTrue();
+        // seqMsg4.IsFirstChunk.Should().BeTrue();
+        // seqMsg4.IsLastChunk.Should().BeTrue();
+        // seqMsg4.SeqNr.Should().Be(4);
     }
 }

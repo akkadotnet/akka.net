@@ -757,7 +757,8 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             for (var i = 0; i < chunkCount; i++)
             {
                 var isLast = i == chunkCount - 1;
-                var chunkedMessage = new ChunkedMessage(ByteString.CopyFrom(bytes, i * chunkSize, chunkSize), first,
+                var nextChunk = Math.Min(chunkSize, bytes.Length - i * chunkSize); // needs to be the next chunkSize or remaining bytes, whichever is smaller.
+                var chunkedMessage = new ChunkedMessage(ByteString.FromBytes(bytes, i * chunkSize, nextChunk), first,
                     isLast, serializerId, manifest);
 
                 first = false;
