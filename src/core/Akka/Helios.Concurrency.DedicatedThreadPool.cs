@@ -87,11 +87,6 @@ namespace Helios.Concurrency
         /// TBD
         /// </summary>
         public Action<Exception> ExceptionHandler { get; private set; }
-
-        /// <summary>
-        /// Gets the thread stack size, 0 represents the default stack size.
-        /// </summary>
-        public int ThreadMaxStackSize { get; private set; }
     }
 
     /// <summary>
@@ -331,23 +326,6 @@ namespace Helios.Concurrency
         public void Dispose()
         {
             _workQueue.CompleteAdding();
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public void WaitForThreadsExit()
-        {
-            WaitForThreadsExit(Timeout.InfiniteTimeSpan);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="timeout">TBD</param>
-        public void WaitForThreadsExit(TimeSpan timeout)
-        {
-            Task.WaitAll(_workers.Select(worker => worker.ThreadExit).ToArray(), timeout);
         }
 
 #region Pool worker implementation

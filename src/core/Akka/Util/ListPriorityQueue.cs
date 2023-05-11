@@ -23,11 +23,6 @@ namespace Akka.Util
         private Func<object, int> _priorityCalculator;
 
         /// <summary>
-        /// The default priority generator.
-        /// </summary>
-        internal static readonly Func<object, int> DefaultPriorityCalculator = message => 1;
-        
-        /// <summary>
         /// Creates a new priority queue.
         /// </summary>
         /// <param name="initialCapacity">The initial capacity of the queue.</param>
@@ -114,25 +109,5 @@ namespace Akka.Util
             s += "count = " + _data.Count;
             return s;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public bool IsConsistent()
-        {
-            // is the heap property true for all data?
-            if (_data.Count == 0) return true;
-            var li = _data.Count - 1; // last index
-            for (var pi = 0; pi < _data.Count; ++pi) // each parent index
-            {
-                var lci = 2 * pi + 1; // left child index
-                var rci = 2 * pi + 2; // right child index
-
-                if (lci <= li && _priorityCalculator(_data[pi].Message).CompareTo(_priorityCalculator(_data[lci].Message)) > 0) return false; // if lc exists and it's greater than parent then bad.
-                if (rci <= li && _priorityCalculator(_data[pi].Message).CompareTo(_priorityCalculator(_data[rci].Message)) > 0) return false; // check the right child too.
-            }
-            return true; // passed all checks
-        } // IsConsistent
     } // ListPriorityQueue
 }

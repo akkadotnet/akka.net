@@ -120,11 +120,6 @@ namespace Akka.IO.Buffers
         private readonly ConcurrentStack<ByteBuffer> _buffers = new ConcurrentStack<ByteBuffer>();
         private readonly List<byte[]> _segments;
 
-        /// <summary>
-        /// Total size of all buffers.
-        /// </summary>
-        private int TotalBufferSize => _segments.Count * _segmentSize;
-
         public DirectBufferPool(ExtendedActorSystem system, Config config) : this(
                   bufferSize: config.GetInt("buffer-size", 256),
                   buffersPerSegment: config.GetInt("buffers-per-segment", 250),

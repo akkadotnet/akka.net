@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -33,10 +32,6 @@ namespace Akka.Util.Reflection
     }
     internal static class ExpressionBasedParser
     {
-        private static readonly ConcurrentDictionary<ConstructorInfo, string[]>
-            paramNameDictionary =
-                new ConcurrentDictionary<ConstructorInfo, string[]>();
-
         private static readonly Type _objectType = typeof(object);
 
         private static readonly Type _multicastDelegateType =
