@@ -60,7 +60,7 @@ h2:before{
     <div class="container">
         <!-- FEATURED BOXES 3 -->
         <div class="row featured-box-minimal">
-		   <div class="col-md-4 col-sm-6 col-xs-12">
+            <div class="col-md-4 col-sm-6 col-xs-12">
                 <h4><i class="fa fa-arrows-alt"></i> Simple Concurrency &amp; Distribution</h4>
                 <p>Asynchronous and Distributed by design. High-level abstractions like Actors and FSM.</p>
             </div>
@@ -85,7 +85,7 @@ h2:before{
                 <p>Akka.NET is released under the Apache 2 license</p>
             </div>
         </div>
-	</div>
+    </div>
 </section>
 <!-- /WELCOME -->
 <br>
