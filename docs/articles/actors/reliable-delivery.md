@@ -9,7 +9,7 @@ By [default Akka.NET uses "at most once" message delivery between actors](xref:m
 
 This is where Akka.Delivery can be helpful - it provides a robust set of tools for ensuring message delivery over the network, across actor restarts, and even across process restarts.
 
-Akka.Delivery will utlimately support two different modes of reliable delivery:
+Akka.Delivery will ultimately support two different modes of reliable delivery:
 
 * **Point-to-point delivery** - this works similarly to [Akka.Persistence's `AtLeastOnceDeliveryActor`](xref:at-least-once-delivery); messages are pushed by the producer to the consumer in real-time.
 * **Pull-based delivery** - this is not yet implemented in Akka.Delivery.
@@ -27,7 +27,7 @@ An Akka.Delivery relationship consists of 4 actors typically:
 * **`Producer`** - this is a user-defined actor that is responsible for the production of messages. It receives [`ProducerController.RequestNext<T>`](xref:Akka.Delivery.ProducerController.RequestNext`1) messages from the `ProducerController` when capacity is available to deliver additional messages.
 * **`ProducerController`** - this actor is built into Akka.Delivery and does most of the work. The `ProducerController` sequences all incoming messages from the `Producer`, delivers them to the `ConsumerController`, waits for acknowledgements that messages have been processed, and subsequently requests more messages from the `Producer`.
 * **`ConsumerController`** - this actor is also built into Akka.Delivery and typically resides on the opposite site of the network from the `ProducerController`. The `ConsumerController` is responsible for buffering unprocessed messages, delivering messages for processing via [`ConsumerController.Delivery<T>`](xref:Akka.Delivery.ConsumerController.Delivery`1) to the `Consumer`, receiving confirmation that the `Consumer` has successfully processed the most recent message, and then subsequently requesting additional messages from the `ProducerController`.
-* **`Consumer`** - this is a user-defined actor that is ultimately responsible for consuming messages of type `T` and sending `ConsumerController.Confirmation` messages back to the `ConsumerController` once it has succesfully processed each `ConsumerController.Delivery<T>`.
+* **`Consumer`** - this is a user-defined actor that is ultimately responsible for consuming messages of type `T` and sending `ConsumerController.Confirmation` messages back to the `ConsumerController` once it has successfully processed each `ConsumerController.Delivery<T>`.
 
 ### Registration Flow
 
