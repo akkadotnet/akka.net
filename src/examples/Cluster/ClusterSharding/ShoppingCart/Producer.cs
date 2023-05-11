@@ -67,15 +67,6 @@ public sealed class Producer : ReceiveActor, IWithTimers
 
         Receive<ShardingProducerController.RequestNext<Customer.ICustomerCommand>>(next =>
         {
-            // if (next.EntitiesWithDemand.Any())
-            // {
-            //     var customer = PickRandom(next.EntitiesWithDemand.ToList());
-            //     var item = PickRandom(Items);
-            //     var msg = new Customer.PurchaseItem(item);
-            //     SendNext.Tell(new ShardingEnvelope(customer, msg));
-            // }
-            
-            
             // no work to do yet, but update SendNext
             SendNext = next.SendNextTo;
         });

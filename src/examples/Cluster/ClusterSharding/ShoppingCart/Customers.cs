@@ -16,6 +16,7 @@ namespace ShoppingCart
 
     public class Customer : ReceiveActor
     {
+        // <MessageProtocol>
         /// <summary>
         /// Marker interface used for grouping all Customer-entity messages
         /// </summary>
@@ -32,6 +33,7 @@ namespace ShoppingCart
                 ItemName = itemName;
             }
         }
+        // </MessageProtocol>
 
         private readonly List<string> _purchasedItems = new List<string>();
         private readonly IActorRef _consumerController; // use to guarantee reliable delivery of messages
@@ -39,6 +41,7 @@ namespace ShoppingCart
         public Customer(string persistenceId, IActorRef consumerController)
         {
             _consumerController = consumerController;
+            // <Delivery>
             Receive<ConsumerController.Delivery<ICustomerCommand>>(purchase =>
             {
                 if (purchase.Message is PurchaseItem p)
@@ -58,6 +61,7 @@ All items: [{string.Join(", ", _purchasedItems)}]
                 
                 purchase.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
             });
+            // </Delivery>
         }
 
         protected override void PreStart()
