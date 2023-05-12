@@ -86,7 +86,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             $"producer-{_idCount}");
 
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
-        consumerEndProbe.ReceiveN(3, TimeSpan.FromSeconds(15));
+        await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(5)).ToListAsync();
     }
 
     [Fact]
@@ -128,12 +128,13 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             $"p2-{_idCount}");
 
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
-        var endMessages = consumerEndProbe.ReceiveN(3, TimeSpan.FromSeconds(15));
+        var endMessages = await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(5)).ToListAsync();
 
         var producerIds = endMessages.Cast<Collected>().SelectMany(c => c.ProducerIds).ToList();
         producerIds
             .Should().BeEquivalentTo($"p1-{_idCount}-entity-0", $"p1-{_idCount}-entity-1", $"p1-{_idCount}-entity-2",
                 $"p2-{_idCount}-entity-0", $"p2-{_idCount}-entity-1", $"p2-{_idCount}-entity-2");
+       
     }
 
     [Fact]
@@ -413,7 +414,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         }
 
         // redeliver also when no more messages are sent to the entity
-        await consumerProbes[1].GracefulStop(RemainingOrDefault);
+        Sys.Stop(consumerProbes[1]); // don't wait for termination
 
         var delivery4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
         delivery4b.Message.Should().BeEquivalentTo(new Job("msg-4"));

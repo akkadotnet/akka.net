@@ -34,15 +34,17 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
 
     private readonly ILoggingAdapter _log = Context.GetLogger();
     private ImmutableHashSet<(string, long)> _processed = ImmutableHashSet<(string, long)>.Empty;
+    private readonly bool _supportRestarts = false;
     private int _messageCount = 0;
 
     public TestConsumer(TimeSpan delay, Func<SomeAsyncJob, bool> endCondition, IActorRef endReplyTo,
-        IActorRef consumerController)
+        IActorRef consumerController, bool supportRestarts = false)
     {
         Delay = delay;
         EndCondition = endCondition;
         EndReplyTo = endReplyTo;
         ConsumerController = consumerController;
+        _supportRestarts = supportRestarts;
         
         Active();
     }
@@ -73,11 +75,17 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
             _log.Info("processed [{0}] [msg: {1}] from [{2}]", job.SeqNr, job.Msg.Payload, job.ProducerId);
             job.ConfirmTo.Tell(global::Akka.Delivery.ConsumerController.Confirmed.Instance);
 
-            if (EndCondition(job))
+            if (EndCondition(job) && (_messageCount > 0 || _supportRestarts))
             {
                 _log.Debug("End at [{0}]", job.SeqNr);
                 EndReplyTo.Tell(new Collected(_processed.Select(c => c.Item1).ToImmutableHashSet(), _messageCount + 1));
                 Context.Stop(Self);
+            }
+            else if (!_supportRestarts && EndCondition(job))
+            {
+                // BugFix: TestConsumer was recreated by a message sent by the Sharding system, but the EndCondition was already met
+                // and we don't want to send another Collected that is missing some of the figures. Ignore.
+                
             }
             else
             {
@@ -181,14 +189,78 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
 
     private static Func<SomeAsyncJob, bool> ConsumerEndCondition(long seqNr) => msg => msg.SeqNr >= seqNr;
 
-    public static Props PropsFor(TimeSpan delay, long seqNr, IActorRef endReplyTo, IActorRef consumerController) =>
-        Props.Create(() => new TestConsumer(delay, ConsumerEndCondition(seqNr), endReplyTo, consumerController));
+    public static Props PropsFor(TimeSpan delay, long seqNr, IActorRef endReplyTo, IActorRef consumerController, bool supportsRestarts = false) =>
+        Props.Create(() => new TestConsumer(delay, ConsumerEndCondition(seqNr), endReplyTo, consumerController, supportsRestarts));
 
     public static Props PropsFor(TimeSpan delay, Func<SomeAsyncJob, bool> endCondition, IActorRef endReplyTo,
-        IActorRef consumerController) =>
-        Props.Create(() => new TestConsumer(delay, endCondition, endReplyTo, consumerController));
+        IActorRef consumerController, bool supportsRestarts = false) =>
+        Props.Create(() => new TestConsumer(delay, endCondition, endReplyTo, consumerController, supportsRestarts));
 
     public ITimerScheduler Timers { get; set; } = null!;
+}
+
+/// <summary>
+/// For testing purposes
+/// </summary>
+public sealed class ZeroLengthSerializer : SerializerWithStringManifest
+{
+    public static readonly Config Config = ConfigurationFactory.ParseString(@"
+        akka.actor {
+            serializers {
+                delivery-zero-length = ""Akka.Tests.Delivery.ZeroLengthSerializer, Akka.Tests""
+            }
+            serialization-bindings {
+                ""Akka.Tests.Delivery.ZeroLengthSerializer+TestMsg, Akka.Tests"" = delivery-zero-length
+            }
+        }");
+    
+    public class TestMsg
+    {
+        private TestMsg()
+        {
+        }
+        public static readonly TestMsg Instance = new();
+    }
+
+    public ZeroLengthSerializer(ExtendedActorSystem system) : base(system)
+    {
+    }
+
+    public override byte[] ToBinary(object obj)
+    {
+        switch (obj)
+        {
+            case TestMsg _:
+                return Array.Empty<byte>();
+            default:
+                throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}]");
+        }
+    }
+
+    public override object FromBinary(byte[] bytes, string manifest)
+    {
+        switch (manifest)
+        {
+            case "A":
+                return TestMsg.Instance;
+            default:
+                throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
+        }
+       
+    }
+
+    public override string Manifest(object obj)
+    {
+        switch (obj)
+        {
+            case TestMsg _:
+                return "A";
+            default:
+                throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}]");
+        }
+    }
+    
+    public override int Identifier => 919191;
 }
 
 /// <summary>

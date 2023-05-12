@@ -1438,8 +1438,8 @@ namespace Akka.Remote
             var send = message as EndpointManager.Send;
             if (send != null && send.Message is IPriorityMessage)
                 _prioBuffer.AddLast(send);
-            else if (send != null && send.Message is ActorSelectionMessage &&
-                     send.Message.AsInstanceOf<ActorSelectionMessage>().Message is IPriorityMessage)
+            else if (send != null && send.Message is ActorSelectionMessage actorSelectionMessage &&
+                     actorSelectionMessage.Message is IPriorityMessage)
             {
                 _prioBuffer.AddLast(send);
             }

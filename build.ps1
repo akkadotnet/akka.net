@@ -33,7 +33,7 @@ $FakeVersion = "4.63.0"
 $NugetVersion = "5.8.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
 $ProtobufVersion = "3.21.5"
-$DocfxVersion = "2.59.4"
+$DocfxVersion = "2.67.0"
 
 $IncrementalistVersion = "0.8.0";
 
@@ -89,13 +89,14 @@ if (!(Test-Path $ProtobufExePath)) {
 ###########################################################################
 
 # Make sure Docfx has been installed.
-$DocfxExePath = Join-Path $ToolPath "docfx.console/tools/docfx.exe"
-if (!(Test-Path $DocfxExePath)) {
+# Make sure the Incrementalist has been installed
+if (Get-Command docfx -ErrorAction SilentlyContinue) {
+    Write-Host "Found docfx. Skipping install."
+}
+else{
+    $DocfxExePath = Join-Path $ToolPath "docfx"
     Write-Host "Installing Docfx..."
-    Invoke-Expression "&`"$NugetPath`" install docfx.console -ExcludeVersion -Version $DocfxVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
-    if ($LASTEXITCODE -ne 0) {
-        Throw "An error occured while restoring docfx.console from NuGet."
-    }
+	dotnet tool install docfx --version $DocfxVersion --tool-path "$DocfxExePath"
 }
 
 ###########################################################################

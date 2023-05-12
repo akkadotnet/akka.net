@@ -39,7 +39,7 @@ namespace Akka.Persistence.Sql.TestKit
         {
             public ReceiveAnyPersistentActor(string pid) : base(pid)
             {
-                Command<string>(str => str.StartsWith("s"), e =>
+                Command<string>(str => str.StartsWith('s'), e =>
                 {
                     Persist(e, h =>
                     {
