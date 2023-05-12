@@ -4,7 +4,7 @@
   </PropertyGroup>
   <!-- App dependencies -->
   <ItemGroup>
-    <PackageVersion Include="Polyfill" Version="1.21.0" />
+    <PackageVersion Include="Polyfill" Version="1.22.0" />
     <PackageVersion Include="Microsoft.Extensions.ObjectPool" Version="7.0.5" />
     <PackageVersion Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageVersion Include="System.Reflection.Emit" Version="4.7.0" />

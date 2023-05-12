@@ -20,7 +20,6 @@
       <PackageReference Include="System.Collections.Immutable" />
       <PackageReference Include="System.Threading.Channels" />
       <PackageReference Include="System.Configuration.ConfigurationManager"/>
-      <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
