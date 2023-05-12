@@ -236,7 +236,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+            public ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
             public ITimerScheduler Timers { get; set; }
 

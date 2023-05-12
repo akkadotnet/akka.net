@@ -561,9 +561,9 @@ namespace Akka.Serialization
 
             var path = actorRef.Path;
             ExtendedActorSystem originalSystem = null;
-            if (actorRef is ActorRefWithCell)
+            if (actorRef is ActorRefWithCell actorRefWithCell)
             {
-                originalSystem = actorRef.AsInstanceOf<ActorRefWithCell>().Underlying.System.AsInstanceOf<ExtendedActorSystem>();
+                originalSystem = actorRefWithCell.Underlying.System.AsInstanceOf<ExtendedActorSystem>();
             }
 
             if (CurrentTransportInformation == null)

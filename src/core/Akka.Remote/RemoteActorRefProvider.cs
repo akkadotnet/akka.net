@@ -378,9 +378,9 @@ namespace Akka.Remote
                 .Aggregate(Deploy.None, (deploy1, deploy2) => deploy2.WithFallback(deploy1));
 
             //match for remote scope
-            if (propsDeploy.Scope is RemoteScope)
+            if (propsDeploy.Scope is RemoteScope remoteScope)
             {
-                var addr = propsDeploy.Scope.AsInstanceOf<RemoteScope>().Address;
+                var addr = remoteScope.Address;
 
                 //Even if this actor is in RemoteScope, it might still be a local address
                 if (HasAddress(addr))

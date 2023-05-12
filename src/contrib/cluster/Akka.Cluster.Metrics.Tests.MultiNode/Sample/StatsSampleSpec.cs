@@ -25,7 +25,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         public readonly RoleName Second;
         public readonly RoleName Third;
 
-        public IImmutableSet<RoleName> NodeList => ImmutableHashSet.Create<RoleName>(First, Second, Third);
+        public IImmutableSet<RoleName> NodeList => ImmutableHashSet.Create(First, Second, Third);
 
         public StatsSampleSpecConfig()
         {

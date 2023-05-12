@@ -35,7 +35,7 @@ namespace Akka.Remote.Configuration
         /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
-            var assembly = typeof(RemoteConfigFactory).GetTypeInfo().Assembly;
+            var assembly = typeof(RemoteConfigFactory).Assembly;
 
             using (var stream = assembly.GetManifestResourceStream(resourceName))
             {
