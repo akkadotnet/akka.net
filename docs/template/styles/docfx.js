@@ -51,7 +51,7 @@ $(function () {
   // Styling for tables in conceptual documents using Bootstrap.
   // See http://getbootstrap.com/css/#tables
   function renderTables() {
-    $('table').addClass('table table-bordered table-condensed').wrap('<div class=\"table-responsive\"></div>');
+    $('table').addClass('table table-bordered table-striped table-condensed').wrap('<div class=\"table-responsive\"></div>');
   }
 
   // Styling for alerts.
@@ -82,7 +82,7 @@ $(function () {
   // Enable highlight.js
   function highlight() {
     $('pre code').each(function (i, block) {
-      hljs.highlightElement(block);
+      hljs.highlightBlock(block);
     });
     $('pre code[highlight-lines]').each(function (i, block) {
       if (block.innerHTML === "") return;
@@ -127,7 +127,7 @@ $(function () {
       return;
     }
     try {
-      var worker = new Worker(relHref + 'styles/search-worker.min.js');
+      var worker = new Worker(relHref + 'styles/search-worker.js');
       if (!worker && !window.worker) {
         localSearch();
       } else {
@@ -721,20 +721,20 @@ $(function () {
     function initFooter() {
       if (needFooter()) {
         shiftUpBottomCss();
-        $("footer").show();
+        // $("footer").show();
       } else {
         resetBottomCss();
-        $("footer").hide();
+        // $("footer").hide();
       }
     }
 
     function showFooterCore() {
       if (needFooter()) {
         shiftUpBottomCss();
-        $("footer").fadeIn();
+        // $("footer").fadeIn();
       } else {
         resetBottomCss();
-        $("footer").fadeOut();
+        // $("footer").fadeOut();
       }
     }
 
@@ -747,11 +747,29 @@ $(function () {
     function resetBottomCss() {
       $(".sidetoc").removeClass("shiftup");
       $(".sideaffix").removeClass("shiftup");
+      
+      $(".sidetoc").css({ "bottom": 0 });
+      $(".sideaffix").css({ "bottom": 0 });
     }
 
     function shiftUpBottomCss() {
       $(".sidetoc").addClass("shiftup");
       $(".sideaffix").addClass("shiftup");
+      var footheight = $('footer').height();
+
+
+      $(".sidetoc").css({ "bottom": footheight });
+      $(".sideaffix").css({ "bottom": footheight });
+
+      
+      var footheight = $('footer').height();
+      var sideberheight = $('.sidetoc.shiftup').height();
+      var vh = (sideberheight -  footheight)-120;
+
+      console.log(vh);
+
+      // $('.sidetoc.shiftup').css({ "height": vh + '%' });
+
     }
   }
 
@@ -1143,7 +1161,7 @@ $(function () {
      * If the jQuery element contains tags, this function will not change the element.
      */
     $.fn.breakWord = function () {
-      if (!this.html().match(/(<\w*)((\s\/>)|(.*<\/\w*>))/g)) {
+      if (this.html() == this.text()) {
         this.html(function (index, text) {
           return breakPlainText(text);
         })
