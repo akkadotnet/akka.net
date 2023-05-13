@@ -63,9 +63,9 @@ jobs:
         submodules: recursive # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules
         persistCredentials: true
       - task: UseDotNet@2
-        displayName: "Use .NET 7 SDK 7.0.100"
+        displayName: "Use .NET 7 SDK 7.0.203"
         inputs:
-          version: 7.0.100
+          version: 7.0.203
       - task: BatchScript@1
         displayName: Windows Build
         inputs:
