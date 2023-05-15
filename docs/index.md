@@ -60,31 +60,41 @@ h2:before{
     <div class="container">
         <!-- FEATURED BOXES 3 -->
         <div class="row featured-box-minimal">
+
             <div class="col-md-4 col-sm-6 col-xs-12">
                 <h4><i class="fa fa-arrows-alt"></i> Simple Concurrency &amp; Distribution</h4>
                 <p>Asynchronous and Distributed by design. High-level abstractions like Actors and FSM.</p>
             </div>
+
             <div class="col-md-4 col-sm-6 col-xs-12">
                 <h4><i class="fa fa-flash"></i> High Performance</h4>
                 <p>50 million msg/sec on a single machine. Small memory footprint; ~2.5 million actors per GB of heap.</p>
             </div>
+
             <div class="col-md-4 col-sm-6 col-xs-12">
                 <h4><i class="fa fa-shield"></i> Resilient by Design</h4>
                 <p>Write systems that self-heal. Remote and/or local supervisor hierarchies.</p>
             </div>
+
+
             <div class="col-md-4 col-sm-6 col-xs-12">
                 <h4><i class="fa fa-th-large"></i> Elastic & Decentralized</h4>
                 <p>Adaptive load balancing, routing, partitioning and configuration-driven remoting.</p>
             </div>
+
             <div class="col-md-4 col-sm-6 col-xs-12">
                 <h4><i class="fa fa-plus-circle"></i> Extensible</h4>
                 <p>Use Akka.NET Extensions to adapt Akka to fit your needs.</p>
             </div>
+
             <div class="col-md-4 col-sm-6 col-xs-12">
                 <h4><i class="fa fa-exclamation"></i> Open Source </h4>
                 <p>Akka.NET is released under the Apache 2 license</p>
             </div>
+
         </div>
+        <!-- /FEATURED BOXES 3 -->
+
     </div>
 </section>
 <!-- /WELCOME -->
@@ -93,6 +103,7 @@ h2:before{
 <!-- PREMIUM -->
 <section class="alternate">
     <div class="container">
+
         <div class="row">
             <div class="col-md-6">
 <h2><strong>Actor</strong> Model</h2>
@@ -101,7 +112,9 @@ The Actor Model provides a higher level of abstraction for writing concurrent an
                 <p>Actors were defined in the 1973 paper by <a href="http://en.wikipedia.org/wiki/Carl_Hewitt">Carl Hewitt</a> but have been popularized by the Erlang language, and used for example at Ericsson with great success to build highly concurrent and reliable telecom systems.</p>
                 <p><a href="/articles/intro/what-problems-does-actor-model-solve.html">Read more</a></p>
             </div>
+
             <div class="col-md-6 text-center">
+
                 <img class="img-responsive img-rounded appear-animation" data-animation="fadeIn" style="border:2px solid white;width:100%;border-radius:10px" src="/images/actor.png" alt="" />
             </div>
         </div>
@@ -115,6 +128,7 @@ Everything in Akka.NET is designed to work in a distributed setting: all interac
                 </p>
                 <p><a href="/articles/Remoting">Read more</a></p>
             </div>
+
             <div class="col-md-6 text-center">
                 <img class="img-responsive img-rounded appear-animation" data-animation="fadeIn" style="border:2px solid white;width:100%;border-radius:10px" src="/images/network.png" alt="" />
             </div>
@@ -129,10 +143,10 @@ As a parent, the actor is responsible for handling its children’s failures (so
 This enables a clean set of semantics for managing failures in a concurrent, distributed system and allows for writing highly fault-tolerant systems that self-heal.</p>
 <p><a href="/articles/concepts/supervision.html">Read more</a></p>
             </div>
+
             <div class="col-md-6 text-center">
                 <img class="img-responsive img-rounded appear-animation" data-animation="fadeIn" style="border:2px solid white;width:100%;border-radius:10px" src="/images/supervision.png" alt="" />
             </div>
         </div>
     </div>
 </section>
-<div style="height:90px;"></div>

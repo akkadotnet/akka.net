@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-2023 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.7</VersionPrefix>
+    <VersionPrefix>1.5.4</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
@@ -40,7 +40,7 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Placeholder for nightlies*</PackageReleaseNotes>
+    <PackageReleaseNotes>placeholder for nightlies*</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
