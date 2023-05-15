@@ -33,7 +33,7 @@ An Akka.Delivery relationship consists of 4 actors typically:
 
 Akka.Delivery uses a .NET generic-typed protocol and the `ProducerController` and `ConsumerController` are also both strongly typed. This means that end-users need to organize their messages into "protocol groups" in order to be effective, like so:
 
-[!code-csharp[Customers](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Customers.cs?name=MessageProtocol)]
+[!code-csharp[Message Protocol](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=MessageProtocol)]
 
 The common interface that all of the messages in this protocol implement is typically the type you'll want to use for your generic argument `T` in the Akka.Delivery or [Akka.Cluster.Sharding.Delivery](xref:cluster-sharding-delivery) method calls and types, as shown below:
 
@@ -55,4 +55,21 @@ Once the registration flow is completed, all that's needed is for the `Producer`
 
 ![Akka.Delivery message production flow](/images/actor/delivery/3-delivery-message-production.png)
 
-The `ProducerController` and `Producer` are both responsible for managing backpressure inside the 
+1. The `ProducerController` sends a `ProducerController.RequestNext<T>` message to the `Producer` when delivery capacity is available;
+2. The `Producer` messages the `IActorRef` stored at `ProducerController.RequestNext<T>.SendNextTo` with a message of type `T`; 
+3. The `ProducerController` will sequence (and optionally chunk) the incoming messages and deliver them to the `ConsumerController` on the other side of the network;
+4. The `ConsumerController` will transmit the received messages in the order in which they were received to the `Consumer` via a `ConsumerController.Delivery<T>` message.
+
+
+
+
+
+Now it's the job of the `Consumer`, a user-defined actor, to mark the messages it's received as processed so the reliable delivery system can move forward and deliver the next message in the sequence:
+
+![Akka.Delivery message consumption flow](/images/actor/delivery/4-delivery-message-consumption.png)
+
+1. The `Consumer` receives the `ConsumerController.Delivery<T>` message from the `ConsumerController`;
+2. The `Consumer` replies to the `IActorRef` stored inside `ConsumerController.Delivery<T>.DeliverTo` with a `ConsumerController.Confirmed` message - this marks the message as "processed"
+
+
+The `ProducerController` and `Producer` are both responsible for managing backpressure inside the delivery system:
