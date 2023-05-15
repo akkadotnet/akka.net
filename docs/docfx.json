@@ -74,12 +74,9 @@
         "fileMetadataFiles": [],
         "template": [
             "default",
-			      "modern",
-			      "template"
+            "template"
         ],
         "postProcessors": ["ExtractSearchIndex"],
-        "noLangKeyword": false,
-        "warningsAsErrors": true,
-        "Docfx_Git_Timeout": 30000
+        "noLangKeyword": false
     }
 }
