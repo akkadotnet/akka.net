@@ -78,6 +78,8 @@
 			      "template"
         ],
         "postProcessors": ["ExtractSearchIndex"],
-        "noLangKeyword": false
+        "noLangKeyword": false,
+        "warningsAsErrors": true,
+        "Docfx_Git_Timeout": 30000
     }
 }
