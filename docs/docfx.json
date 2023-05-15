@@ -13,7 +13,7 @@
                 "**/*Tests*.csproj",
                 "**/*Tests.*.csproj"
             ],
-            "cwd": "../src"
+            "src": "../src"
         }],
         "dest": "api",
         "filter": "filterConfig.yml"
@@ -23,7 +23,7 @@
             "files": [
                 "api/**.yml",
                 "api/index.md"
-            ]			
+            ]
         }, {
             "files": [
                 "articles/**.md",
@@ -74,11 +74,12 @@
         "fileMetadataFiles": [],
         "template": [
             "default",
-            "template"
+			      "modern",
+			      "template"
         ],
         "postProcessors": ["ExtractSearchIndex"],
         "noLangKeyword": false,
-		    "warningsAsErrors": true,
+        "warningsAsErrors": true,
         "Docfx_Git_Timeout": 30000
     }
 }
