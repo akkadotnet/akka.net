@@ -14,17 +14,44 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Akka.Util;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace DocsExamples.Delivery;
 
 public class DeliveryDocSpecs : TestKit
 {
+    public DeliveryDocSpecs(ITestOutputHelper output) : base(output: output)
+    {
+    }
+
+    [Fact]
     public async Task ProducerController_and_ConsumerController_should_send_messages()
     {
-        IActorRef producer = CreateTestProbe();
-        IActorRef producerController = Sys.ActorOf(ProducerController.Create<ICustomerProtocol>(Sys, producerId: "producer-1",
+        // <ProducerRegistration>
+        IActorRef producer = Sys.ActorOf(Props.Create(() => new ProducerActor()), "producer");
+        IActorRef producerController = Sys.ActorOf(ProducerController.Create<ICustomerProtocol>(Sys,
+            producerId: "producerController",
             durableProducerQueue: Option<Props>.None));
-        producerController.Tell();
+        producerController.Tell(new ProducerController.Start<ICustomerProtocol>(producer));
+        // </ProducerRegistration>
+
+        
+        // <ConsumerRegistration>
+        TestProbe endProbe = CreateTestProbe();
+
+        // stop after 3 messages
+        IActorRef consumer = Sys.ActorOf(
+            Props.Create(() => new CustomerActor("customer1", endProbe, 3)), "consumer1");
+        IActorRef consumerController =
+            Sys.ActorOf(ConsumerController.Create<ICustomerProtocol>(Sys, Option<IActorRef>.None),
+                "consumerController");
+
+        consumerController.Tell(new ConsumerController.Start<ICustomerProtocol>(consumer));
+        consumerController.Tell(new ConsumerController.RegisterToProducerController<ICustomerProtocol>(producerController));
+        // </ConsumerRegistration>
+        
+        await endProbe.ExpectMsgAsync<List<string>>(TimeSpan.FromSeconds(10));
     }
 
     // <MessageProtocol>
@@ -55,18 +82,21 @@ public class DeliveryDocSpecs : TestKit
         {
             switch (message)
             {
+                // <ConsumerDelivery>
                 case ConsumerController.Delivery<ICustomerProtocol> { Message: PurchaseItem purchase } delivery:
                     _purchasedItems.Add(purchase.ItemName);
                     _log.Info($"'{_customerId}' purchased '{purchase.ItemName}'");
                     delivery.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
-                    
+
                     // terminate after receiving enough messages
                     if (_purchasedItems.Count == _endMessages)
                     {
                         _endProbe.Tell(_purchasedItems);
                         Context.Stop(Self);
                     }
+
                     break;
+                // </ConsumerDelivery>
                 default:
                     Unhandled(message);
                     break;
@@ -79,7 +109,11 @@ public class DeliveryDocSpecs : TestKit
     public sealed class ProducerActor : UntypedActor, IWithTimers, IWithStash
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly IReadOnlyList<string> _items;
+
+        private static readonly IReadOnlyList<string> Items = new[]
+        {
+            "cheeseburger", "hamburger", "pizza", "cola", "fries", "ice cream"
+        };
 
         private class Tick
         {
@@ -90,22 +124,19 @@ public class DeliveryDocSpecs : TestKit
             public static Tick Instance { get; } = new();
         }
 
-        public ProducerActor(IReadOnlyList<string> items)
-        {
-            _items = items;
-        }
-
         protected override void PreStart()
         {
-            Timers.StartPeriodicTimer("Tick", Tick.Instance, TimeSpan.FromSeconds(1));
+            Timers.StartPeriodicTimer("Tick", Tick.Instance, TimeSpan.FromSeconds(0.25));
         }
 
+        // <ProducerDelivery>
         protected override void OnReceive(object message)
         {
             switch (message)
             {
                 case ProducerController.RequestNext<ICustomerProtocol> requestNext:
                 {
+                    // deliver next item once timer Tick is received
                     Become(Active(requestNext.SendNextTo));
                     break;
                 }
@@ -119,6 +150,7 @@ public class DeliveryDocSpecs : TestKit
                     break;
             }
         }
+        // </ProducerDelivery>
 
         private Receive Active(IActorRef sendNextTo)
         {
@@ -146,8 +178,9 @@ public class DeliveryDocSpecs : TestKit
             };
         }
 
-        private string GetRandomItem() => _items[ThreadLocalRandom.Current.Next(_items.Count)];
+        private string GetRandomItem() => Items[ThreadLocalRandom.Current.Next(Items.Count)];
         public ITimerScheduler Timers { get; set; }
         public IStash Stash { get; set; }
     }
+    // </Producer>
 }
