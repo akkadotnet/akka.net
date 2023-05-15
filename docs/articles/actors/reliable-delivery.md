@@ -37,7 +37,7 @@ Akka.Delivery uses a .NET generic-typed protocol and the `ProducerController` an
 
 The common interface that all of the messages in this protocol implement is typically the type you'll want to use for your generic argument `T` in the Akka.Delivery or [Akka.Cluster.Sharding.Delivery](xref:cluster-sharding-delivery) method calls and types, as shown below:
 
-[!code-csharp[Customers](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Program.cs?name=StartSendingMessage)]
+[!code-csharp[Starting Typed Actors](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ProducerRegistration)]
 
 ### Registration Flow
 
@@ -49,7 +49,16 @@ In order for the `ProducerController` and the `ConsumerController` to begin exch
 2. The `Consumer` must send a [`ConsumerController.Start<T>`](xref:Akka.Delivery.ConsumerController.Start`1) message to the `ConsumerController` in order to receive `ConsumerController.Delivery<T>` messages; and
 3. The `ConsumerController` needs to register with the `ProducerController` - this can be accomplished either by sending a reference to the `ProducerController` to the `ConsumerController` via a [`ConsumerController.RegisterToProducerController<T>`](xref:Akka.Delivery.ConsumerController.RegisterToProducerController`1) message or by sending the `ProducerController` a [`ProducerController.RegisterConsumer<T>`](xref:Akka.Delivery.ProducerController.RegisterConsumer`1) message. Either one will work.
 
-### Messaging Flow
+The `ProducerController` registration flow is pretty simple:
+
+[!code-csharp[Starting Typed Actors](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ProducerRegistration)]
+
+As is the `ConsumerController` registration flow:
+
+[!code-csharp[Starting Typed Actors](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ConsumerRegistration)]
+
+
+### Message Production
 
 Once the registration flow is completed, all that's needed is for the `Producer` to begin delivering messages to the `ProducerController` after it receives an initial [`ProducerController.RequestNext<T>` message](xref:Akka.Delivery.ProducerController.RequestNext`1).
 
@@ -61,15 +70,28 @@ Once the registration flow is completed, all that's needed is for the `Producer`
 4. The `ConsumerController` will transmit the received messages in the order in which they were received to the `Consumer` via a `ConsumerController.Delivery<T>` message.
 
 
+The `Producer` actor is ultimately responsible for managing back-pressure inside the Akka.Delivery system - a message of type `T` cannot be sent to the `ProducerController` until the `Producer` receives a message of type `ProducerController.RequestNext<T>`:
 
+[!code-csharp[Starting Typed Actors](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ProducerDelivery)]
 
+> [!IMPORTANT]
+> If a `Producer` tries to send a message of type `T` to the `ProducerController` before receiving a `ProducerController.RequestNext<T>` message, the `ProducerController` will log an error and crash. The appropriate way to handle this backpressure is typically through a combination of [actor behavior switching](xref:receive-actor-api#becomeunbecome) and [stashing](xref:receive-actor-api#stash).
 
-Now it's the job of the `Consumer`, a user-defined actor, to mark the messages it's received as processed so the reliable delivery system can move forward and deliver the next message in the sequence:
+The `ProducerController` maintains a buffer of unacknowledged messages - in the event that the `ConsumerController` restarts the `ProducerController` will re-deliver all unacknowledged messages to it and restart the delivery process.
+
+> [!NOTE]
+> `ProducerController.RequestNext<T>` messages aren't sent 1:1 with messages successfully consumed by the `Consumer` - the Akka.Delivery system allows for some buffering inside the `ProducerController` and `ConsumerController`, but the system constrains it to 10s of messages in order to conserve memory across a large number of concurrent Akka.Delivery instances. In practice this means that the flow control of Akka.Delivery will always allow the `Producer` to run slightly ahead of a slower `Consumer`.
+
+### Message Consumption
+
+It's the job of the `Consumer`, a user-defined actor, to mark the messages it's received as processed so the reliable delivery system can move forward and deliver the next message in the sequence:
 
 ![Akka.Delivery message consumption flow](/images/actor/delivery/4-delivery-message-consumption.png)
 
 1. The `Consumer` receives the `ConsumerController.Delivery<T>` message from the `ConsumerController`;
-2. The `Consumer` replies to the `IActorRef` stored inside `ConsumerController.Delivery<T>.DeliverTo` with a `ConsumerController.Confirmed` message - this marks the message as "processed"
+2. The `Consumer` replies to the `IActorRef` stored inside `ConsumerController.Delivery<T>.DeliverTo` with a `ConsumerController.Confirmed` message - this marks the message as "processed;" and
+3. The `ConsumerController` marks the message as delivered, removes it from the buffer, and requests additional messages from the `ProducerController`.
 
+[!code-csharp[Starting Typed Actors](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ConsumerDelivery)]
 
-The `ProducerController` and `Producer` are both responsible for managing backpressure inside the delivery system:
+The `ConsumerController` also maintains a buffer of unacknowledged messages received from the `ProducerController` - those messages will be delivered to the `Consumer` each time a `ConsumerController.Confirmed` is received by the `ConsumerController`. There's no time limit
