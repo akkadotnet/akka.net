@@ -72,7 +72,7 @@ Once the registration flow is completed, all that's needed is for the `Producer`
 
 The `Producer` actor is ultimately responsible for managing back-pressure inside the Akka.Delivery system - a message of type `T` cannot be sent to the `ProducerController` until the `Producer` receives a message of type `ProducerController.RequestNext<T>`:
 
-[!code-csharp[Starting Typed Actors](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ProducerDelivery)]
+[!code-csharp[Akka.Delivery Message Production](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ProducerDelivery)]
 
 > [!IMPORTANT]
 > If a `Producer` tries to send a message of type `T` to the `ProducerController` before receiving a `ProducerController.RequestNext<T>` message, the `ProducerController` will log an error and crash. The appropriate way to handle this backpressure is typically through a combination of [actor behavior switching](xref:receive-actor-api#becomeunbecome) and [stashing](xref:receive-actor-api#stash).
@@ -92,6 +92,18 @@ It's the job of the `Consumer`, a user-defined actor, to mark the messages it's 
 2. The `Consumer` replies to the `IActorRef` stored inside `ConsumerController.Delivery<T>.DeliverTo` with a `ConsumerController.Confirmed` message - this marks the message as "processed;" and
 3. The `ConsumerController` marks the message as delivered, removes it from the buffer, and requests additional messages from the `ProducerController`.
 
-[!code-csharp[Starting Typed Actors](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ConsumerDelivery)]
+[!code-csharp[Akka.Delivery Message Consumption](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ConsumerDelivery)]
 
-The `ConsumerController` also maintains a buffer of unacknowledged messages received from the `ProducerController` - those messages will be delivered to the `Consumer` each time a `ConsumerController.Confirmed` is received by the `ConsumerController`. There's no time limit
+The `ConsumerController` also maintains a buffer of unacknowledged messages received from the `ProducerController` - those messages will be delivered to the `Consumer` each time a `ConsumerController.Confirmed` is received by the `ConsumerController`. 
+
+There's no time limit on how long the `Consumer` has to process each message - any additional messages sent or resent by the `ProducerController` to the `ConsumerController` will be buffered until the `Consumer` acknowledges the current message.
+
+> [!IMPORTANT]
+> In the event that the `Consumer` actor terminates, the `ConsumerController` actor delivering messages to it will also self-terminate. The `ProducerController`, however, will continue running while it waits for a new `ConsumerController` instance to register.
+
+## Chunking Large Messages
+
+## Durable Reliable Delivery
+
+By default the `ProducerController` will run using without any persistent storage - however, if you reference the [Akka.Persistence library](xref:persistence-architecture) in your Akka.NET application then you can make use of the [`EventSourcedProducerQueue`](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue) to ensure that your `ProducerController` saves and un-acknowledged messages to your Akka.Persistence Journal and SnapshotStore.
+
