@@ -83,6 +83,10 @@ As you may have seen in the examples above shard resolution algorithm is one of 
 
 By default re-balancing process always happens from nodes with the highest number of shards, to the ones with the smallest one. This can be configured into by specifying custom implementation of the `IShardAllocationStrategy` interface in `ClusterSharding.Start` parameters.
 
+## Reliable Delivery of Messages to Sharded Entity Actors
+
+If you are interested in ensuring that all messages are guaranteed to be delivered to your entity actors even across restarts, rebalancing operations, or crashes then please see "[Reliable Delivery over Akka.Cluster.Sharding](xref:cluster-sharding-delivery)."
+
 ## Passivation
 
 To reduce memory consumption, you may decide to stop entities after some period of inactivity using `Context.SetReceiveTimeout(timeout)`. In order to make cluster sharding aware of stopping entities, **DON'T use `Context.Stop(Self)` on the entities**, as this may result in losing messages. Instead send a `ShardRegion.Passivate` message to current entity `Context.Parent` (which is shard itself in this case). This will inform shard to stop forwarding messages to target entity, and buffer them instead until it's terminated. Once that happens, if there are still some messages buffered, entity will be reincarnated and messages flushed to it automatically.
