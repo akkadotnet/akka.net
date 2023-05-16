@@ -156,3 +156,8 @@ Once the `Consumer` has recieved the `ConsumerController.Delivery<T>` and sent a
 
 By default the `ProducerController` will run using without any persistent storage - however, if you reference the [Akka.Persistence library](xref:persistence-architecture) in your Akka.NET application then you can make use of the [`EventSourcedProducerQueue`](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue) to ensure that your `ProducerController` saves and un-acknowledged messages to your Akka.Persistence Journal and SnapshotStore.
 
+[!code-csharp[Starting ProducerController with EventSourcedProducerQueue enabled](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=DurableQueueProducer)]
+
+> [!TIP]
+> The `EventSourcedProducerQueue` can be customized via the [`EventSourcedProducerQueue.Settings` class](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings) - for instance, you can customize it to use a separate Akka.Persistence Journal and SnapshotStore.
+

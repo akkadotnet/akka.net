@@ -9,8 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Delivery;
 using Akka.Event;
+using Akka.Persistence.Delivery;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Akka.Util;
@@ -21,7 +23,15 @@ namespace DocsExamples.Delivery;
 
 public class DeliveryDocSpecs : TestKit
 {
-    public DeliveryDocSpecs(ITestOutputHelper output) : base(output: output)
+    private static readonly Config Config = @"
+        akka.reliable-delivery.consumer-controller.flow-control-window = 20
+        akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
+        akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
+        akka.persistence.journal.inmem.test-serialization = on # NOT IMPLEMENTED
+        akka.persistence.publish-plugin-commands = on
+    ";
+
+    public DeliveryDocSpecs(ITestOutputHelper output) : base(Config, output: output)
     {
     }
 
@@ -36,7 +46,7 @@ public class DeliveryDocSpecs : TestKit
         producerController.Tell(new ProducerController.Start<ICustomerProtocol>(producer));
         // </ProducerRegistration>
 
-        
+
         // <ConsumerRegistration>
         TestProbe endProbe = CreateTestProbe();
 
@@ -48,18 +58,19 @@ public class DeliveryDocSpecs : TestKit
                 "consumerController");
 
         consumerController.Tell(new ConsumerController.Start<ICustomerProtocol>(consumer));
-        consumerController.Tell(new ConsumerController.RegisterToProducerController<ICustomerProtocol>(producerController));
+        consumerController.Tell(
+            new ConsumerController.RegisterToProducerController<ICustomerProtocol>(producerController));
         // </ConsumerRegistration>
-        
+
         await endProbe.ExpectMsgAsync<List<string>>(TimeSpan.FromSeconds(10));
     }
-    
+
     [Fact]
     public async Task ProducerController_and_ConsumerController_should_send_messages_with_Chunking()
     {
         // <ChunkedProducerRegistration>
         IActorRef producer = Sys.ActorOf(Props.Create(() => new ProducerActor()), "producer");
-        
+
         ProducerController.Settings settings = ProducerController.Settings.Create(Sys) with
         {
             ChunkLargeMessagesBytes = 10 // chunk messages into 10b segments
@@ -71,7 +82,7 @@ public class DeliveryDocSpecs : TestKit
         producerController.Tell(new ProducerController.Start<ICustomerProtocol>(producer));
         // </ChunkedProducerRegistration>
 
-        
+
         TestProbe endProbe = CreateTestProbe();
 
         // stop after 3 messages
@@ -82,7 +93,56 @@ public class DeliveryDocSpecs : TestKit
                 "consumerController");
 
         consumerController.Tell(new ConsumerController.Start<ICustomerProtocol>(consumer));
-        consumerController.Tell(new ConsumerController.RegisterToProducerController<ICustomerProtocol>(producerController));
+        consumerController.Tell(
+            new ConsumerController.RegisterToProducerController<ICustomerProtocol>(producerController));
+
+        await endProbe.ExpectMsgAsync<List<string>>(TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
+    public async Task ProducerController_and_ConsumerController_should_send_messages_with_EventSourcedProducerQueue()
+    {
+        // <DurableQueueProducer>
+        TestProbe producerProbe = CreateTestProbe();
+
+        Props eventSourcedProducerQueue =
+            EventSourcedProducerQueue.Create<ICustomerProtocol>(persistentId: "durableQueue-1", Sys);
+        IActorRef producerController = Sys.ActorOf(ProducerController.Create<ICustomerProtocol>(Sys,
+            producerId: "producerController",
+            durableProducerQueue: eventSourcedProducerQueue));
+        producerController.Tell(new ProducerController.Start<ICustomerProtocol>(producerProbe.Ref));
+        // </DurableQueueProducer>
+
+
+        TestProbe endProbe = CreateTestProbe();
+
+        // stop after 3 messages
+        IActorRef consumer = Sys.ActorOf(
+            Props.Create(() => new CustomerActor("customer1", endProbe, 3)), "consumer1");
+        IActorRef consumerController =
+            Sys.ActorOf(ConsumerController.Create<ICustomerProtocol>(Sys, Option<IActorRef>.None),
+                "consumerController");
+
+        consumerController.Tell(new ConsumerController.Start<ICustomerProtocol>(consumer));
+        consumerController.Tell(
+            new ConsumerController.RegisterToProducerController<ICustomerProtocol>(producerController));
+        
+        // <ConfirmableMessages>
+        ProducerController.RequestNext<ICustomerProtocol> request1 = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>());
+        
+        // confirm that message was stored in durable queue (so we know it will be redelivered if needed)
+        long seqNo1 = await request1.AskNextTo(new PurchaseItem("Burger"));
+        // </ConfirmableMessages>
+        
+        ProducerController.RequestNext<ICustomerProtocol> request2 = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>());
+        
+        // confirm that message was stored in durable queue (so we know it will be redelivered if needed)
+        long seqNo2 = await request2.AskNextTo(new PurchaseItem("Burger"));
+        
+        ProducerController.RequestNext<ICustomerProtocol> request3 = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>());
+        
+        // confirm that message was stored in durable queue (so we know it will be redelivered if needed)
+        long seqNo3 = await request1.AskNextTo(new PurchaseItem("Burger"));
 
         await endProbe.ExpectMsgAsync<List<string>>(TimeSpan.FromSeconds(10));
     }
