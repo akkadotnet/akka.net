@@ -20,7 +20,7 @@ namespace Akka.TestKit
     {
         public void Receive<T>(T value, Action<T> handler) where T : IEquatable<T>
         {
-            Receive<T>(m => Equals(value, m), handler);
+            Receive(m => Equals(value, m), handler);
         }
        
     }

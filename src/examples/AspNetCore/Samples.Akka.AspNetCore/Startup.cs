@@ -34,7 +34,7 @@ namespace Samples.Akka.AspNetCore
             services.AddSingleton<IPublicHashingService, AkkaService>();
 
             // starts the IHostedService, which creates the ActorSystem and actors
-            services.AddHostedService<AkkaService>(sp => (AkkaService)sp.GetRequiredService<IPublicHashingService>());
+            services.AddHostedService(sp => (AkkaService)sp.GetRequiredService<IPublicHashingService>());
 
         }
         // </DiSetup>

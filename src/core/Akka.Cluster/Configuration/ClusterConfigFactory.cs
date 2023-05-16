@@ -35,7 +35,7 @@ namespace Akka.Cluster.Configuration
         /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
-            var assembly = typeof(ClusterConfigFactory).GetTypeInfo().Assembly;
+            var assembly = typeof(ClusterConfigFactory).Assembly;
 
             using (var stream = assembly.GetManifestResourceStream(resourceName))
             {
