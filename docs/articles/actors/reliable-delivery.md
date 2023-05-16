@@ -151,7 +151,7 @@ Once the last chunk has been received by the `ConsumerController` the original m
 Once the `Consumer` has received the `ConsumerController.Delivery<T>` and sent a `ConsumerController.Confirmed` to the `ConsumerController`, all chunks will be marked as received and freed from memory on both ends of the network.
 
 > [!TIP]
-> Your `akka.reliable-delvery.producer-controller.chunk-large-messages` size should always be smaller than your [`akka.remote.dot-netty.tcpmaximum-frame-size`](xref:akka-remote-configuration).
+> Your `akka.reliable-delvery.producer-controller.chunk-large-messages` size should always be smaller than your [`akka.remote.dot-netty.tcp.maximum-frame-size`](xref:akka-remote-configuration).
 
 ## Durable Reliable Delivery
 
