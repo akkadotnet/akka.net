@@ -33,7 +33,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="SourceRef{T}"/>
         [ApiMayChange]
         public static Sink<T, Task<ISourceRef<T>>> SourceRef<T>() =>
-            Sink.FromGraph<T, Task<ISourceRef<T>>>(new SinkRefStageImpl<T>(null));
+            Sink.FromGraph(new SinkRefStageImpl<T>(null));
 
         /// <summary>
         /// A local <see cref="Sink{TIn,TMat}"/> which materializes a <see cref="SinkRef{T}"/> which can be used by other streams (including remote ones),
@@ -46,7 +46,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="SinkRef{T}"/>
         [ApiMayChange]
         public static Source<T, Task<ISinkRef<T>>> SinkRef<T>() =>
-            Source.FromGraph<T, Task<ISinkRef<T>>>(new SourceRefStageImpl<T>(null));
+            Source.FromGraph(new SourceRefStageImpl<T>(null));
     }
 
     /// <summary>

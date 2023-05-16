@@ -74,25 +74,6 @@ namespace Akka.Cluster.Sharding
     }
 
     /// <summary>
-    /// <para>Default envelope type that may be used with Cluster Sharding.</para>
-    /// <para>
-    /// The alternative way of routing messages through sharding is to not use envelopes,
-    /// and have the message types themselves carry identifiers.
-    /// </para>
-    /// </summary>
-    public sealed class ShardingEnvelope: IWrappedMessage
-    {
-        public string EntityId { get; }
-        public object Message { get; }
-
-        public ShardingEnvelope(string entityId, object message)
-        {
-            EntityId = entityId;
-            Message = message;
-        }
-    }
-
-    /// <summary>
     /// <para>This extension runs a pre set number of actors in a cluster.</para>
     /// <para>
     /// The typical use case is when you have a task that can be divided in a number of workers, each doing a

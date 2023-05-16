@@ -1,3 +1,48 @@
+#### 1.5.7-beta1 May 9th 2023 ####
+
+*Placeholder for nightlies*
+
+#### 1.5.6 May 8th 2023 ####
+
+Version 1.5.6 is a patch with a few minor bug fix
+
+* [TestKit: Remove duplicate info log for unhandled messages](https://github.com/akkadotnet/akka.net/pull/6730)
+* [Core: Change logging DateTime formatter from 12 hour to 24 hour format](https://github.com/akkadotnet/akka.net/pull/6734)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.6, click here](https://github.com/akkadotnet/akka.net/milestone/88?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 2       | 4    | 4    | Aaron Stannard      |
+| 2       | 33   | 84   | Simon Cropp         |
+| 2       | 2    | 2    | dependabot[bot]     |
+| 2       | 2    | 2    | Richard Smith       |
+| 1       | 2    | 2    | Gregorius Soedharmo |
+| 1       | 2    | 12   | Sergey Popov        |
+
+#### 1.5.5 May 4th 2023 ####
+
+* [TestKit: Add new variant of `ExpectAll` that accepts predicates](https://github.com/akkadotnet/akka.net/pull/6668)
+* [FSharp: Downgrade FSharp to v6.0.5](https://github.com/akkadotnet/akka.net/pull/6688)
+* [Core: Bump Google.Protobuf from 3.22.1 to 3.22.3](https://github.com/akkadotnet/akka.net/pull/6648)
+* [Core: Fix ByteString to check for index bounds](https://github.com/akkadotnet/akka.net/pull/6709)
+* [Core: Fix ReceiveActor ReceiveAsync ReceiveTimeout bug](https://github.com/akkadotnet/akka.net/pull/6718)
+* [Core: Fix race condition inside FastLazy](https://github.com/akkadotnet/akka.net/pull/6707)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.5, click here](https://github.com/akkadotnet/akka.net/milestone/87?closed=1).
+
+7 contributors since release 1.5.4
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 16      | 68   | 34   | Ebere Abanonu       |
+| 9       | 598  | 1053 | Simon Cropp         |
+| 4       | 4    | 4    | dependabot[bot]     |
+| 2       | 229  | 5    | Gregorius Soedharmo |
+| 1       | 33   | 28   | Aaron Stannard      |
+| 1       | 256  | 3    | Malcolm Learner     |
+| 1       | 148  | 140  | Sergey Popov        |
+
 #### 1.5.4 April 25th 2023 ####
 
 * [Akka: Enhance IStash API and configuration](https://github.com/akkadotnet/akka.net/pull/6660)

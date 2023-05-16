@@ -118,7 +118,7 @@ namespace Akka.Persistence.Tests
             public IEventSequence FromJournal(object evt, string manifest)
             {
                 Json m;
-                if ((m = evt as Json) != null && m.Payload.ToString().StartsWith("a"))
+                if ((m = evt as Json) != null && m.Payload.ToString().StartsWith('a'))
                     return EventSequence.Single(new A(m.Payload));
                 else
                     return EventSequence.Empty;
@@ -145,7 +145,7 @@ namespace Akka.Persistence.Tests
             public IEventSequence FromJournal(object evt, string manifest)
             {
                 Json m;
-                if ((m = evt as Json) != null && m.Payload.ToString().StartsWith("a"))
+                if ((m = evt as Json) != null && m.Payload.ToString().StartsWith('a'))
                     return EventSequence.Single(new NewA(m.Payload));
                 else
                     return EventSequence.Empty;
@@ -172,7 +172,7 @@ namespace Akka.Persistence.Tests
             public IEventSequence FromJournal(object evt, string manifest)
             {
                 Json m;
-                if ((m = evt as Json) != null && m.Payload.ToString().StartsWith("b"))
+                if ((m = evt as Json) != null && m.Payload.ToString().StartsWith('b'))
                     return EventSequence.Single(new B(m.Payload));
                 else
                     return EventSequence.Empty;
@@ -199,7 +199,7 @@ namespace Akka.Persistence.Tests
             public IEventSequence FromJournal(object evt, string manifest)
             {
                 Json m;
-                if ((m = evt as Json) != null && m.Payload.ToString().StartsWith("b"))
+                if ((m = evt as Json) != null && m.Payload.ToString().StartsWith('b'))
                     return EventSequence.Single(new NewB(m.Payload));
                 else
                     return EventSequence.Empty;

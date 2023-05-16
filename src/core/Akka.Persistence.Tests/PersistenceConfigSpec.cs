@@ -37,7 +37,7 @@ namespace Akka.Persistence.Tests
                 _testValue = config.GetString("test-value", null);
             }
 
-            protected override bool AroundReceive(Receive receive, object message)
+            protected internal override bool AroundReceive(Receive receive, object message)
             {
                 if (message is TestRequest)
                 {
@@ -57,7 +57,7 @@ namespace Akka.Persistence.Tests
                 _testValue = config.GetString("test-value", null);
             }
 
-            protected override bool AroundReceive(Receive receive, object message)
+            protected internal override bool AroundReceive(Receive receive, object message)
             {
                 if (message is TestRequest)
                 {

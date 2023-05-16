@@ -51,7 +51,7 @@ akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "fal
         {
             var heartbeater = Sys.ActorOf(ClusterHeartbeatReceiver.Props(Cluster.Get(Sys)));
             heartbeater.Tell(new Heartbeat(Cluster.Get(Sys).SelfAddress, 1, 2));
-            await ExpectMsgAsync<HeartbeatRsp>(new HeartbeatRsp(Cluster.Get(Sys).SelfUniqueAddress, 1, 2));
+            await ExpectMsgAsync(new HeartbeatRsp(Cluster.Get(Sys).SelfUniqueAddress, 1, 2));
         }
         
         [Fact]
