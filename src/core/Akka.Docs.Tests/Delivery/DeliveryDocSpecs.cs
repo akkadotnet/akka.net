@@ -53,6 +53,39 @@ public class DeliveryDocSpecs : TestKit
         
         await endProbe.ExpectMsgAsync<List<string>>(TimeSpan.FromSeconds(10));
     }
+    
+    [Fact]
+    public async Task ProducerController_and_ConsumerController_should_send_messages_with_Chunking()
+    {
+        // <ChunkedProducerRegistration>
+        IActorRef producer = Sys.ActorOf(Props.Create(() => new ProducerActor()), "producer");
+        
+        ProducerController.Settings settings = ProducerController.Settings.Create(Sys) with
+        {
+            ChunkLargeMessagesBytes = 10 // chunk messages into 10b segments
+        };
+        IActorRef producerController = Sys.ActorOf(ProducerController.Create<ICustomerProtocol>(Sys,
+            producerId: "producerController",
+            durableProducerQueue: Option<Props>.None,
+            settings: settings));
+        producerController.Tell(new ProducerController.Start<ICustomerProtocol>(producer));
+        // </ChunkedProducerRegistration>
+
+        
+        TestProbe endProbe = CreateTestProbe();
+
+        // stop after 3 messages
+        IActorRef consumer = Sys.ActorOf(
+            Props.Create(() => new CustomerActor("customer1", endProbe, 3)), "consumer1");
+        IActorRef consumerController =
+            Sys.ActorOf(ConsumerController.Create<ICustomerProtocol>(Sys, Option<IActorRef>.None),
+                "consumerController");
+
+        consumerController.Tell(new ConsumerController.Start<ICustomerProtocol>(consumer));
+        consumerController.Tell(new ConsumerController.RegisterToProducerController<ICustomerProtocol>(producerController));
+
+        await endProbe.ExpectMsgAsync<List<string>>(TimeSpan.FromSeconds(10));
+    }
 
     // <MessageProtocol>
     public interface ICustomerProtocol

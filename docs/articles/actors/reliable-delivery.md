@@ -101,7 +101,56 @@ There's no time limit on how long the `Consumer` has to process each message - a
 > [!IMPORTANT]
 > In the event that the `Consumer` actor terminates, the `ConsumerController` actor delivering messages to it will also self-terminate. The `ProducerController`, however, will continue running while it waits for a new `ConsumerController` instance to register.
 
-## Chunking Large Messages
+### Guarantees, Constraints, and Caveats
+
+It's the goal of Akka.Delivery to ensure that all messages are successfully processed by the `Consumer` in the order that the `Producer` originally sent. 
+
+1. The [`ConsumerController.Settings.ResendIntervalMin`](xref:Akka.Delivery.ConsumerController.Settings) and `ConsumerController.Settings.ResendIntervalMax` will determine how often the `ConsumerController` re-requests messages from the `ProducerController`.
+2. The `ProducerController` buffers all messages (and can optionally persist them) until they are marked as consumed; and
+3. The `ProducerController` and the `ConsumerController` can both restart independently from each other - if the `ProducerController` has a durable (persistent) queue configured there will be no message loss in this event.
+4. The only scenario in which duplicates will be delivered to the `Consumer`: `ProducerController` with durable queue restarts before it can process confirmations from the `ConsumerController` - in that scenario (an edge case of an edge case) it's possible that previously confirmed messages will be re-delivered. However, they will be the first messages immediately received by the consumer upon the `ProducerController` restarting.
+5. The `Producer` can restart independently from the `ProducerController`.
+
+> [!NOTE]
+> The `Producer` and `ProducerController` must reside inside the same `ActorSystem` (the `ProducerController`) asserts this. Likewise, the `Consumer` and the `ConsumerController` must reside inside the same `ActorSystem` (the `ConsumerController` asserts this.) 
+
+### Chunking Large Messages
+
+One very useful feature of point-to-point message delivery is message chunking: the ability to break up large messages into an ordered sequence of fixed-size byte arrays. Akka.Delivery guarantees that chunks will be transmitted and received in-order over the wire - and when using the `DurableQueue` with the `ProducerController` chunked messages will be re-chunked and re-transmitted upon restart.
+
+**Chunking of messages is disabled by default**.
+
+> [!TIP]
+> This feature is _very_ useful for [eliminating head-of-line-blocking in Akka.Remote](https://petabridge.com/blog/large-messages-and-sockets-in-akkadotnet/).
+
+To enable message chunking you can set the following HOCON value in your `ActorSystem` configuration:
+
+```hocon
+akka.reliable-delvery.producer-controller.chunk-large-messages = 100b #100b chunks, off by default
+```
+
+Or by setting the [`ProducerController.Settiongs.ChunkLargeMessagesBytes`](xref:Akka.Delivery.ProducerController.Settings) property to a value greater than 0.
+
+[!code-csharp[Akka.Delivery ProducerController message chunking](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ChunkedProducerRegistration)]
+
+![ProducerController chunking messages into byte arrays](/images/actor/delivery/chunking-step-1.png)
+
+When chunking is enabled, the `ProducerController` will use [the Akka.NET serialization system](xref:serialization) to convert each message sent by the `Producer` into a `byte[]` which will be chunked into [1,N] `ProducerController.Settiongs.ChunkLargeMessagesBytes`-sized arrays.
+
+![ConsumerController receiving initial message chunks from ProducerController](/images/actor/delivery/chunking-step-2.png)
+
+Each of these chunks will be transmitted individually, in-order and subsequently buffered by the `ConsumerController`.
+
+![ConsumerController receiving final chunk from ProducerController](/images/actor/delivery/chunking-step-3.png)
+
+Once the last chunk has been received by the `ConsumerController` the original message will be deserialized using Akka.NET serialization again. Provided that serialization was successful, the message will be delivered just like a normal `ConsumerController.Delivery<T>` to the `Consumer`.
+
+![Consumer marking chunked message as Confirmed, ProducerController marks all chunks as delivered.](/images/actor/delivery/chunking-step-4.png)
+
+Once the `Consumer` has recieved the `ConsumerController.Delivery<T>` and sent a `ConsumerController.Confirmed` to the `ConsumerController`, all chunks will be marked as received and freed from memory on both ends of the network.
+
+> [!TIP]
+> Your `akka.reliable-delvery.producer-controller.chunk-large-messages` size should always be smaller than your [`akka.remote.dot-netty.tcpmaximum-frame-size`](xref:).
 
 ## Durable Reliable Delivery
 

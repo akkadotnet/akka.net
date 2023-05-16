@@ -7,6 +7,9 @@ title: Remote Messaging
 
 Once you [form an association between two `ActorSystem`s](xref:remote-overview#how-to-form-associations-between-remote-systems), you can now send messages transparently between actors regardless of where they are on the network.
 
+> [!IMPORTANT]
+> See "[Reliable Akka.NET Message Delivery with Akka.Delivery](xref:reliable-delivery)" for tips on how to achieve reliable messaging over Akka.Remote and Akka.Cluster.
+
 ## Serialization
 
 [Serialization of messages in Akka.NET is transparent](xref:serialization), but in order to achieve that transparency there are some practices you need to observe in how you design your project.
