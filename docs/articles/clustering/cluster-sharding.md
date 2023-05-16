@@ -85,7 +85,7 @@ By default re-balancing process always happens from nodes with the highest numbe
 
 ## Reliable Delivery of Messages to Sharded Entity Actors
 
-If you are interested in ensuring that all messages are guaranteed to be delivered to your entity actors even across restarts, rebalancing operations, or crashes then please see "[Reliable Delivery over Akka.Cluster.Sharding](xref:cluster-sharding-delivery)."
+If you are interested in ensuring that all messages are guaranteed to be delivered to your entity actors even across restarts, re-balancing operations, or crashes then please see "[Reliable Delivery over Akka.Cluster.Sharding](xref:cluster-sharding-delivery)."
 
 ## Passivation
 
