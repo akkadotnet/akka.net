@@ -755,7 +755,7 @@ namespace Akka.Remote
                         //the quarantine uid has lost the race with some failure, do nothing
                     }
                 }
-                else if (policy.Item1 is Quarantined && policy.Item2 != null && policy.Item1.AsInstanceOf<Quarantined>().Uid == policy.Item2.Value)
+                else if (policy.Item1 is Quarantined quarantined && policy.Item2 != null && quarantined.Uid == policy.Item2.Value)
                 {
                     // the UID to be quarantined already exists, do nothing
                 }

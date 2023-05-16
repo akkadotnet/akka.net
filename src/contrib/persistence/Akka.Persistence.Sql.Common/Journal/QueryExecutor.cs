@@ -501,11 +501,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                     @Tag,
                     @SerializerId
                 )";
-
-            QueryEventsSql = $@"
-                SELECT {allEventColumnNames}
-                FROM {Configuration.FullJournalTableName} e
-                WHERE ";
         }
 
         /// <summary>
@@ -557,12 +552,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         protected abstract string CreateMetaTableSql { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        [Obsolete]
-        protected string QueryEventsSql { get; }
-
+        
         /// <summary>
         /// TBD
         /// </summary>

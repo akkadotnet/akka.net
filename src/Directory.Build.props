@@ -16,11 +16,11 @@
   <PropertyGroup>
     <XunitVersion>2.4.2</XunitVersion>
     <XunitRunnerVersion>2.4.2</XunitRunnerVersion>
-    <TestSdkVersion>17.5.0</TestSdkVersion>
+    <TestSdkVersion>17.6.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.22.3</ProtobufVersion>
+    <ProtobufVersion>3.23.0</ProtobufVersion>
     <BenchmarkDotNetVersion>0.13.2</BenchmarkDotNetVersion>
     <NetTestVersion>net7.0</NetTestVersion>
     <FsharpVersion>6.0.5</FsharpVersion>
