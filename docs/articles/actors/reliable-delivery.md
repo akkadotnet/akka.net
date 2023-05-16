@@ -57,7 +57,6 @@ As is the `ConsumerController` registration flow:
 
 [!code-csharp[Starting Typed Actors](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ConsumerRegistration)]
 
-
 ### Message Production
 
 Once the registration flow is completed, all that's needed is for the `Producer` to begin delivering messages to the `ProducerController` after it receives an initial [`ProducerController.RequestNext<T>` message](xref:Akka.Delivery.ProducerController.RequestNext`1).
@@ -65,10 +64,9 @@ Once the registration flow is completed, all that's needed is for the `Producer`
 ![Akka.Delivery message production flow](/images/actor/delivery/3-delivery-message-production.png)
 
 1. The `ProducerController` sends a `ProducerController.RequestNext<T>` message to the `Producer` when delivery capacity is available;
-2. The `Producer` messages the `IActorRef` stored at `ProducerController.RequestNext<T>.SendNextTo` with a message of type `T`; 
+2. The `Producer` messages the `IActorRef` stored at `ProducerController.RequestNext<T>.SendNextTo` with a message of type `T`;
 3. The `ProducerController` will sequence (and optionally chunk) the incoming messages and deliver them to the `ConsumerController` on the other side of the network;
 4. The `ConsumerController` will transmit the received messages in the order in which they were received to the `Consumer` via a `ConsumerController.Delivery<T>` message.
-
 
 The `Producer` actor is ultimately responsible for managing back-pressure inside the Akka.Delivery system - a message of type `T` cannot be sent to the `ProducerController` until the `Producer` receives a message of type `ProducerController.RequestNext<T>`:
 
@@ -94,7 +92,7 @@ It's the job of the `Consumer`, a user-defined actor, to mark the messages it's 
 
 [!code-csharp[Akka.Delivery Message Consumption](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ConsumerDelivery)]
 
-The `ConsumerController` also maintains a buffer of unacknowledged messages received from the `ProducerController` - those messages will be delivered to the `Consumer` each time a `ConsumerController.Confirmed` is received by the `ConsumerController`. 
+The `ConsumerController` also maintains a buffer of unacknowledged messages received from the `ProducerController` - those messages will be delivered to the `Consumer` each time a `ConsumerController.Confirmed` is received by the `ConsumerController`.
 
 There's no time limit on how long the `Consumer` has to process each message - any additional messages sent or resent by the `ProducerController` to the `ConsumerController` will be buffered until the `Consumer` acknowledges the current message.
 
@@ -103,7 +101,7 @@ There's no time limit on how long the `Consumer` has to process each message - a
 
 ### Guarantees, Constraints, and Caveats
 
-It's the goal of Akka.Delivery to ensure that all messages are successfully processed by the `Consumer` in the order that the `Producer` originally sent. 
+It's the goal of Akka.Delivery to ensure that all messages are successfully processed by the `Consumer` in the order that the `Producer` originally sent.
 
 1. The [`ConsumerController.Settings.ResendIntervalMin`](xref:Akka.Delivery.ConsumerController.Settings) and `ConsumerController.Settings.ResendIntervalMax` will determine how often the `ConsumerController` re-requests messages from the `ProducerController`.
 2. The `ProducerController` buffers all messages (and can optionally persist them) until they are marked as consumed; and
@@ -112,7 +110,7 @@ It's the goal of Akka.Delivery to ensure that all messages are successfully proc
 5. The `Producer` can restart independently from the `ProducerController`.
 
 > [!NOTE]
-> The `Producer` and `ProducerController` must reside inside the same `ActorSystem` (the `ProducerController`) asserts this. Likewise, the `Consumer` and the `ConsumerController` must reside inside the same `ActorSystem` (the `ConsumerController` asserts this.) 
+> The `Producer` and `ProducerController` must reside inside the same `ActorSystem` (the `ProducerController`) asserts this. Likewise, the `Consumer` and the `ConsumerController` must reside inside the same `ActorSystem` (the `ConsumerController` asserts this.)
 
 ### Chunking Large Messages
 
@@ -147,7 +145,7 @@ Once the last chunk has been received by the `ConsumerController` the original m
 
 ![Consumer marking chunked message as Confirmed, ProducerController marks all chunks as delivered.](/images/actor/delivery/chunking-step-4.png)
 
-Once the `Consumer` has recieved the `ConsumerController.Delivery<T>` and sent a `ConsumerController.Confirmed` to the `ConsumerController`, all chunks will be marked as received and freed from memory on both ends of the network.
+Once the `Consumer` has received the `ConsumerController.Delivery<T>` and sent a `ConsumerController.Confirmed` to the `ConsumerController`, all chunks will be marked as received and freed from memory on both ends of the network.
 
 > [!TIP]
 > Your `akka.reliable-delvery.producer-controller.chunk-large-messages` size should always be smaller than your [`akka.remote.dot-netty.tcpmaximum-frame-size`](xref:).
@@ -173,7 +171,7 @@ If the `Producer` needs to confirm that all of its outbound messages have been s
 
 The `AskNextTo` method will return a `Task<long>` that will be completed once the message has been confirmed as stored inside the `EventSourcedProducerQueue` - the `long` in this case is the sequence number that has been assigned to this message via the `ProducerController`'s outbound queue.
 
-In addition to outbound deliveries, confirmation messages from the `ConsumerController` will also be persisted - and these will cause the `EventSourcedProducerQueue` to gradually compress its footprint in the Akka.Persistence journal by taking snapshots. 
+In addition to outbound deliveries, confirmation messages from the `ConsumerController` will also be persisted - and these will cause the `EventSourcedProducerQueue` to gradually compress its footprint in the Akka.Persistence journal by taking snapshots.
 
 > [!TIP]
 > By default the `EventSourcedProducerQueue` will take a new snapshot every 1000 events but this can be configured via the [`EventSourcedProducerQueue.Settings` class](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings).
