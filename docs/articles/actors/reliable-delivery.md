@@ -18,6 +18,9 @@ Akka.Delivery will ultimately support two different modes of reliable delivery:
 
 Point-to-point delivery is a great option for users who desire reliable, ordered delivery of messages over the network or across process restarts. Additionally, point to point delivery mode also supports "message chunking" - the ability to break up large messages into smaller, sequenced chunks that can be delivered over [Akka.Remote connections without head-of-line blocking](https://petabridge.com/blog/large-messages-and-sockets-in-akkadotnet/).
 
+> [!TIP]
+> If you're interested in using Akka.Delivery in combination with [Akka.Cluster.Sharding](xref:cluster-sharding), please see "[Reliable Delivery over Akka.Cluster.Sharding](xref:cluster-sharding-delivery)."
+
 ### Built-in Actors and Messages
 
 ![Overview of built-in Akka.Delivery actors](/images/actor/delivery/1-delivery-actors-overview.png)

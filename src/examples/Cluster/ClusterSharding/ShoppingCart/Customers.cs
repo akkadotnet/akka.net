@@ -64,11 +64,13 @@ All items: [{string.Join(", ", _purchasedItems)}]
             // </Delivery>
         }
 
+        // <ShardingConsumerRegistration>
         protected override void PreStart()
         {
             // signal that we're ready to consume messages
             _consumerController.Tell(new ConsumerController.Start<ICustomerCommand>(Self));
         }
+        // </ShardingConsumerRegistration>
     }
 
     #endregion
