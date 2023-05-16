@@ -588,7 +588,8 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class ActorTaskSchedulerMessage : SystemMessage
+    [InternalApi] 
+    public sealed class ActorTaskSchedulerMessage : SystemMessage
     {
         private readonly ActorTaskScheduler _scheduler;
         private readonly Task _task;
