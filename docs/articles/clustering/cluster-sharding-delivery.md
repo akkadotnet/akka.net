@@ -63,4 +63,65 @@ Next, we have to create our `Producer` and `ShardingProducerController` instance
 
 ### Message Production
 
+Once the `Producer` has been successfully registered with its `ProducerController`, it will begin to receive `ShardingProducerController.RequestNext<T>` messages - each time it receives one of these messages the `Producer` can send a burst of messages to the `ShardingProducerController`.
 
+[!code-csharp[Launching ShardRegion with ShardingConsumerController configured](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Producer.cs?name=MessageProduction)]
+
+> [!IMPORTANT]
+> It is crucial that the `Prodcuer` send its messages of type `T` wrapped inside a [`ShardingEnvelope`](xref:Akka.Cluster.Sharding.ShardingEnvelope) - otherwise the `ShardingProducerController` won't know which messages should be routed to which unique `entityId`. Additionally - your `HashCodeMessageExtractor` that you use with your `ShardRegion` must also be able to handle the `ShardingEnvelope` to ensure that this message is processed correctly on the receiving side. There is a proposal in-place to automate some of this work in a future release of Akka.NET: [#6717](https://github.com/akkadotnet/akka.net/issues/6717).
+
+One important distinction between [`ShardingProducerController.RequestNext<T>`](xref:Akka.Cluster.Sharding.Delivery.ShardingProducerController.RequestNext`1) and [`ProducerController.RequestNext<T>`](xref:Akka.Delivery.ProducerController.RequestNext`1) - because the `ShardingProducerController` has to deliver to multiple `Consumer`s, it retains a much larger outbound delivery buffer. You can check the status of which entities are currently buffered or which ones have active demand by inspecting the `ShardingProducerController.RequestNext<T>.BufferedForEntitiesWithoutDemand` or `ShardingProducerController.RequestNext<T>.EntitiesWithDemand` properties respectively.
+
+![Akka.Cluster.Sharding.Delivery message production cycle.](/images/cluster/delivery/2-sharding-message-production.png)
+
+Once the `ShardingProducerController` begins receiving messages of type `T` (wrapped in a `ShardingEnvelope`) from the `Producer`, it will spawn `ProducerController`s for each unique entity and begin routing those messages to the `ShardRegion`.
+
+### Message Consumption
+
+The `ProducerController`s will all send `ConsumerController.SequencedMessage<T>` over the wire, wrapped inside `ShardingEnvelope`s - the `ShardRegion` must be programmed to handle these types:
+
+![Akka.Cluster.Sharding.Delivery message consumption process.](/images/cluster/delivery/3-sharding-message-consumption.png)
+
+[!code-csharp[ShardRegion message exctractor](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/MessageExtractor.cs?name=ExtractorClass)]
+
+As the `ConsumerController.SequencedMessage<T>`s are delivered, the `ShardRegion` will spawn the `ShardingConsumerController` for each entity, which will in turn spawn the entity actor itself (the `Consumer`) as well as one `ConsumerController` per unique `ProducerId`. These actors are all cheap and maintain a finite amount of buffer space.
+
+1. The `Consumer` receives the `ConsumerController.Delivery<T>` message from the `ShardingConsumerController`;
+2. The `Consumer` replies to the `IActorRef` stored inside `ConsumerController.Delivery<T>.DeliverTo` with a `ConsumerController.Confirmed` message - this marks the message as "processed;"
+3. The `ConsumerController` marks the message as delivered, removes it from the buffer, and requests additional messages from the `ProducerController`; and
+4. This in turn causes the `ShardingProducerController` to update its aggregate state and send additional `ShardingProducerController.RequestNext<T>` demand to the `Producer`.
+
+### Guarantees, Constraints, and Caveats
+
+See ["Reliable Message Delivery with Akka.Delivery - Guarantees, Constraints, and Caveats"](xref:reliable-delivery#guarantees-constraints-and-caveats) - these are the same in Akka.Cluster.Sharding.Delivery.
+
+With one notable exception: **Akka.Cluster.Sharding.Delivery does not support message chunking** and there are no plans to add it at this time.
+
+## Durable Reliable Delivery over Akka.Cluster.Sharding
+
+By default the `ShardingProducerController` will run using without any persistent storage - however, if you reference the [Akka.Persistence library](xref:persistence-architecture) in your Akka.NET application then you can make use of the [`EventSourcedProducerQueue`](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue) to ensure that your `ShardingProducerController` saves and un-acknowledged messages to your Akka.Persistence Journal and SnapshotStore.
+
+[!code-csharp[Durable ShardingProducerController configuration](../../../src/contrib/Akka.Cluster.Sharding.Tests/Delivery/DurableShardingSpec.cs?name=SpawnDurableProducer)]
+
+> [!TIP]
+> The `EventSourcedProducerQueue` can be customized via the [`EventSourcedProducerQueue.Settings` class](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings) - for instance, you can customize it to use a separate Akka.Persistence Journal and SnapshotStore.
+
+Each time a message is sent to the `ShardingProducerController` it will persist a copy of the message to the Akka.Persistence journal.
+
+![ShardingProducerController persistence with EventSourcedProducerQueue.](/images/cluster/delivery/4-sharding-message-persistence.png)
+
+> [!TIP]
+> All messages for all entities are stored in the same `EventSourcedProducerQueue` instance.
+
+### Confirmation of Outbound Messages Persisted
+
+If the `Producer` needs to confirm that all of its outbound messages have been successfully persisted, this can be accomplished via the `ShardingProducerController.RequestNext<T>.AskNextTo` method:
+
+[!code-csharp[Starting ProducerController with EventSourcedProducerQueue enabled](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ConfirmableMessages)]
+
+The `AskNextTo` method will return a `Task<long>` that will be completed once the message has been confirmed as stored inside the `EventSourcedProducerQueue` - the `long` in this case is the sequence number that has been assigned to this message via the `ShardingProducerController`'s outbound queue.
+
+In addition to outbound deliveries, confirmation messages from the `ShardingConsumerController` will also be persisted - and these will cause the `EventSourcedProducerQueue` to gradually compress its footprint in the Akka.Persistence journal by taking snapshots.
+
+> [!TIP]
+> By default the `EventSourcedProducerQueue` will take a new snapshot every 1000 events but this can be configured via the [`EventSourcedProducerQueue.Settings` class](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings).

@@ -54,6 +54,7 @@ public sealed class Producer : ReceiveActor, IWithTimers
         Timers.StartPeriodicTimer("produce", Produce.Instance, TimeSpan.FromSeconds(1));
     }
 
+    // <MessageProduction>
     private void Active()
     {
         Receive<Produce>(_ =>
@@ -71,6 +72,7 @@ public sealed class Producer : ReceiveActor, IWithTimers
             SendNext = next.SendNextTo;
         });
     }
+    // </MessageProduction>
 
     /// <summary>
     /// Waiting for demand for messages to come from sharding system
