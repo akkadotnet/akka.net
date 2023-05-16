@@ -16,6 +16,8 @@
   href: cluster-client.md
 - name: Cluster Sharding
   href: cluster-sharding.md
+- name: Reliable Delivery over Cluster Sharding
+  href: cluster-sharding-delivery.md
 - name: Sharded Daemon Process
   href: cluster-sharded-daemon-process.md
 - name: Cluster Metrics
