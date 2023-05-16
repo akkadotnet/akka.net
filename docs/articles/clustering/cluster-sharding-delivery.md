@@ -14,7 +14,7 @@ If you're using [Akka.Cluster.Sharding](xref:cluster-sharding) to distribute sta
 
 Akka.Cluster.Sharding.Delivery only uses [point-to-point delivery mode from Akka.Delivery](xref:reliable-delivery) and **message chunking is not supported** in this mode.
 
-#### Typed Messaging Protocol
+### Typed Messaging Protocol
 
 Akka.Cluster.ShardingDelivery uses a .NET generic-typed protocol and the `ShardingProducerController` and `ShardingConsumerController` are also both strongly typed. This means that end-users need to organize their messages into "protocol groups" in order to be effective, like so:
 
