@@ -51,7 +51,7 @@ Do this for each entity type / `ShardRegion` you wish to guarantee delivery for 
 
 Next, we have to create our `Producer` and `ShardingProducerController` instances:
 
-[!code-csharp[Launching ShardRegion with ShardingConsumerController configured](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Program.cs?name=StartSendingMessages)]
+[!code-csharp[Launching ShardRegion with ShardingConsumerController configured](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Program.cs?name=StartSendingMessage)]
 
 1. We have to launch our `ShardingProducerController` and our `Producer` actors - each `ShardingProducerController` must have a *globally unique* `ProducerId` value (similar to a `PersistentId`).
 2. `ShardingProducerController`s can be optionally made persistent via the same [`EventSourcedProducerQueue`](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue) that can be used by an individual `ProducerController`.
@@ -82,7 +82,7 @@ The `ProducerController`s will all send `ConsumerController.SequencedMessage<T>`
 
 ![Akka.Cluster.Sharding.Delivery message consumption process.](/images/cluster/delivery/3-sharding-message-consumption.png)
 
-[!code-csharp[ShardRegion message exctractor](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/MessageExtractor.cs?name=ExtractorClass)]
+[!code-csharp[ShardRegion message extractor](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/MessageExtractor.cs?name=ExtractorClass)]
 
 As the `ConsumerController.SequencedMessage<T>`s are delivered, the `ShardRegion` will spawn the `ShardingConsumerController` for each entity, which will in turn spawn the entity actor itself (the `Consumer`) as well as one `ConsumerController` per unique `ProducerId`. These actors are all cheap and maintain a finite amount of buffer space.
 
@@ -101,7 +101,7 @@ With one notable exception: **Akka.Cluster.Sharding.Delivery does not support me
 
 By default the `ShardingProducerController` will run using without any persistent storage - however, if you reference the [Akka.Persistence library](xref:persistence-architecture) in your Akka.NET application then you can make use of the [`EventSourcedProducerQueue`](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue) to ensure that your `ShardingProducerController` saves and un-acknowledged messages to your Akka.Persistence Journal and SnapshotStore.
 
-[!code-csharp[Durable ShardingProducerController configuration](../../../src/contrib/Akka.Cluster.Sharding.Tests/Delivery/DurableShardingSpec.cs?name=SpawnDurableProducer)]
+[!code-csharp[Durable ShardingProducerController configuration](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/Delivery/DurableShardingSpec.cs?name=SpawnDurableProducer)]
 
 > [!TIP]
 > The `EventSourcedProducerQueue` can be customized via the [`EventSourcedProducerQueue.Settings` class](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings) - for instance, you can customize it to use a separate Akka.Persistence Journal and SnapshotStore.
