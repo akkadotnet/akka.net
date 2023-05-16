@@ -161,3 +161,19 @@ By default the `ProducerController` will run using without any persistent storag
 > [!TIP]
 > The `EventSourcedProducerQueue` can be customized via the [`EventSourcedProducerQueue.Settings` class](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings) - for instance, you can customize it to use a separate Akka.Persistence Journal and SnapshotStore.
 
+Each time a message is sent to the `ProducerController` it will persist a copy of the message to the Akka.Persistence journal.
+
+![ProducerController persisting messages to EventSourcedProducerQueue](/images/actor/delivery/5-delivery-message-persistence.png)
+
+### Confirmation of Outbound Messages Persisted
+
+If the `Producer` needs to confirm that all of its outbound messages have been successfully persisted, this can be accomplished via the `ProducerController.RequestNext<T>.AskNextTo` method:
+
+[!code-csharp[Starting ProducerController with EventSourcedProducerQueue enabled](../../../src/core/Akka.Docs.Tests/Delivery/DeliveryDocSpecs.cs?name=ConfirmableMessages)]
+
+The `AskNextTo` method will return a `Task<long>` that will be completed once the message has been confirmed as stored inside the `EventSourcedProducerQueue` - the `long` in this case is the sequence number that has been assigned to this message via the `ProducerController`'s outbound queue.
+
+In addition to outbound deliveries, confirmation messages from the `ConsumerController` will also be persisted - and these will cause the `EventSourcedProducerQueue` to gradually compress its footprint in the Akka.Persistence journal by taking snapshots. 
+
+> [!TIP]
+> By default the `EventSourcedProducerQueue` will take a new snapshot every 1000 events but this can be configured via the [`EventSourcedProducerQueue.Settings` class](xref:Akka.Persistence.Delivery.EventSourcedProducerQueue.Settings).
