@@ -86,14 +86,14 @@ namespace Akka.Actor
                     case null:
                     case "":
                         break;
-                    case "**":                        
+                    case "**":
                         list.Add(SelectChildRecursive.Instance);
                         hasDoubleWildcard = true;
                         break;
-                    case string e when e.Contains("?") || e.Contains("*"):
+                    case string e when e.Contains('?') || e.Contains('*'):
                         list.Add(new SelectChildPattern(e));
                         break;
-                    case string e when e == "..":
+                    case string and "..":
                         list.Add(SelectParent.Instance);
                         break;
                     default:

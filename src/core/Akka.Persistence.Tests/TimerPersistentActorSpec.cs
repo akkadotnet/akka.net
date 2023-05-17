@@ -33,7 +33,7 @@ namespace Akka.Persistence.Tests
         {
             var pa = ActorOf(TestPersistentActor.TestProps("p1"));
             pa.Tell("msg1");
-            ExpectMsg<string>("msg1");
+            ExpectMsg("msg1");
         }
 
         [Fact]

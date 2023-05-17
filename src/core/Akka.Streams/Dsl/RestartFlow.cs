@@ -203,7 +203,7 @@ namespace Akka.Streams.Dsl
                 : base(name, stage.Shape, stage.In, stage.Out, stage.Settings, stage.OnlyOnFailures)
             {
                 _inheritedAttributes = inheritedAttributes;
-                _delay = _inheritedAttributes.GetAttribute<RestartWithBackoffFlow.Delay>(new RestartWithBackoffFlow.Delay(TimeSpan.FromMilliseconds(50))).Duration;
+                _delay = _inheritedAttributes.GetAttribute(new RestartWithBackoffFlow.Delay(TimeSpan.FromMilliseconds(50))).Duration;
                 _stage = stage;
                 Backoff();
             }
@@ -445,7 +445,7 @@ namespace Akka.Streams.Dsl
         public bool Equals(Delay other) => !ReferenceEquals(other, null) && Equals(Duration, other.Duration);
 
        
-        public override bool Equals(object obj) => obj is Delay && Equals((Delay)obj);
+        public override bool Equals(object obj) => obj is Delay delay && Equals(delay);
 
        
         public override int GetHashCode() => Duration.GetHashCode();

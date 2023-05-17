@@ -599,7 +599,7 @@ namespace Akka.Remote
                     case ActorInitializationException i when i.InnerException is HopelessAssociation h2:
                         return Hopeless(h2);
                     default:
-                        if (ex is EndpointDisassociatedException || ex is EndpointAssociationException) { } //no logging
+                        if (ex is EndpointDisassociatedException or EndpointAssociationException) { } //no logging
                         else { _log.Error(ex, ex.Message); }
                         _endpoints.MarkAsFailed(Sender, Deadline.Now + _settings.RetryGateClosedFor);
                         return Directive.Stop;
@@ -755,7 +755,7 @@ namespace Akka.Remote
                         //the quarantine uid has lost the race with some failure, do nothing
                     }
                 }
-                else if (policy.Item1 is Quarantined && policy.Item2 != null && policy.Item1.AsInstanceOf<Quarantined>().Uid == policy.Item2.Value)
+                else if (policy.Item1 is Quarantined quarantined && policy.Item2 != null && quarantined.Uid == policy.Item2.Value)
                 {
                     // the UID to be quarantined already exists, do nothing
                 }

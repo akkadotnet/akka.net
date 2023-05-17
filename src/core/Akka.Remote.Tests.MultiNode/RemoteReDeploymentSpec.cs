@@ -47,7 +47,6 @@ namespace Akka.Remote.Tests.MultiNode
     public abstract class RemoteReDeploymentSpec : MultiNodeSpec
     {
         private readonly RemoteReDeploymentSpecConfig _config;
-        private readonly Func<RoleName, string, IActorRef> _identify;
 
         protected RemoteReDeploymentSpec(Type type) : this(new RemoteReDeploymentSpecConfig(), type)
         {
@@ -77,12 +76,12 @@ namespace Akka.Remote.Tests.MultiNode
                 Sys.ActorOf(Props.Create(() => new Parent()), "parent")
                     .Tell(new ParentMessage(Props.Create(() => new Hello()), "hello"));
 
-                ExpectMsg<string>("HelloParent", TimeSpan.FromSeconds(15));
+                ExpectMsg("HelloParent", TimeSpan.FromSeconds(15));
             }, _config.Second);
 
             RunOn(() =>
             {
-                ExpectMsg<string>("PreStart", TimeSpan.FromSeconds(15));
+                ExpectMsg("PreStart", TimeSpan.FromSeconds(15));
                 
             }, _config.First);
 

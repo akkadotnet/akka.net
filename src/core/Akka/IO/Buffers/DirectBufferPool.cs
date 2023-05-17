@@ -184,8 +184,7 @@ namespace Akka.IO.Buffers
         {
             for (int i = 0; i < Retries; i++)
             {
-                ByteBuffer buf;
-                if (_buffers.TryPop(out buf))
+                if (_buffers.TryPop(out var buf))
                     return buf;
                 AllocateSegment();
             }
@@ -202,10 +201,9 @@ namespace Akka.IO.Buffers
             {
                 for (int i = 0; i < Retries; i++)
                 {
-                    ByteBuffer buf;
                     while (received < buffersToGet)
                     {
-                        if (!_buffers.TryPop(out buf)) break;
+                        if (!_buffers.TryPop(out var buf)) break;
                         result[received] = buf;
                         received++;
                     }

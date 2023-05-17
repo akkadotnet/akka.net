@@ -326,7 +326,9 @@ namespace Akka.Actor
         /// </summary>
         public override IEnumerable<IActorRef> Children
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             get { return Lookup.GetChildren(); }
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
     }
@@ -521,8 +523,8 @@ namespace Akka.Actor
         /// <param name="message">TBD</param>
         public void SendMessage(IActorRef sender, object message)
         {
-            if (message is ISystemMessage)
-                SendSystemMessage((ISystemMessage)message);
+            if (message is ISystemMessage systemMessage)
+                SendSystemMessage(systemMessage);
             else
                 SendMessage(message, sender);
         }

@@ -1332,9 +1332,9 @@ namespace Akka.Actor
         {
             if (reason is Failure failure)
             {
-                if (failure.Cause is Exception)
+                if (failure.Cause is Exception exception)
                 {
-                    _log.Error(failure.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
+                    _log.Error(exception, "terminating due to Failure");
                 }
                 else
                 {

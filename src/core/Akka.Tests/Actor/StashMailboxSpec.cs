@@ -46,7 +46,9 @@ namespace Akka.Tests.Actor
         {
             public IStash Stash { get; set; }
         }
+#pragma warning disable CS0618 // Type or member is obsolete
         private class BoundedStashActor : BlackHoleActor, IWithBoundedStash
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             public IStash Stash { get; set; }
         }

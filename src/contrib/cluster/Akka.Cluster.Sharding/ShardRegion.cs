@@ -236,7 +236,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+            public ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
             public ITimerScheduler Timers { get; set; }
 
@@ -967,7 +967,7 @@ namespace Akka.Cluster.Sharding
                         sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress,
                             Option<IActorRef>.Create(entityRef)));
                     }
-                    catch (ActorNotFoundException ex)
+                    catch (ActorNotFoundException)
                     {
                         // entity does not exist
                         sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress,

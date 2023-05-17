@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\..\common.props" />
 
     <PropertyGroup>
         <AssemblyTitle>Akka.Persistence.Query.InMemory</AssemblyTitle>
@@ -17,8 +16,4 @@
       <EmbeddedResource Include="reference.conf" />
     </ItemGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
-    
 </Project>

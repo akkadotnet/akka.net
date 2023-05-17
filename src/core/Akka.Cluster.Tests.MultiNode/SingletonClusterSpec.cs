@@ -75,7 +75,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             RunOn(() =>
             {
-                var nodes = ImmutableList.Create<Address>(GetAddress(_config.First));
+                var nodes = ImmutableList.Create(GetAddress(_config.First));
                 Cluster.JoinSeedNodes(nodes);
                 AwaitMembersUp(1);
                 ClusterView.IsSingletonCluster.ShouldBeTrue();
@@ -102,7 +102,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
                 MarkNodeAsUnavailable(secondAddress);
 
-                AwaitMembersUp(1, ImmutableHashSet.Create<Address>(secondAddress), TimeSpan.FromSeconds(30));
+                AwaitMembersUp(1, ImmutableHashSet.Create(secondAddress), TimeSpan.FromSeconds(30));
                 ClusterView.IsSingletonCluster.ShouldBeTrue();
                 AwaitCondition(() => ClusterView.IsLeader);
             }, _config.First);

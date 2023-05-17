@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\..\common.props"/>
 
     <PropertyGroup>
         <AssemblyTitle>Akka.Persistence.Sql.Common</AssemblyTitle>
@@ -16,9 +15,5 @@
     <ItemGroup>
         <PackageReference Include="System.Data.Common" Version="4.3.0"/>
     </ItemGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
 
 </Project>

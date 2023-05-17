@@ -166,9 +166,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Send>(send =>
             {
                 var routees = new List<Routee>();
-                ValueHolder valueHolder;
                 if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket) &&
-                    bucket.Content.TryGetValue(send.Path, out valueHolder) &&
+                    bucket.Content.TryGetValue(send.Path, out var valueHolder) &&
                     send.LocalAffinity)
                 {
                     var routee = valueHolder.Routee;
@@ -469,7 +468,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     if (key.StartsWith(topicPrefix))
                     {
                         var topic = key.Substring(topicPrefix.Length + 1);
-                        if (!topic.Contains("/"))
+                        if (!topic.Contains('/'))
                         {
                             yield return Uri.EscapeDataString(topic);
                         }

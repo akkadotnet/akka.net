@@ -496,8 +496,8 @@ namespace Akka.Persistence.Tests
             pref.Tell("b");
 
             var msgs = ReceiveN(10).Select(m => m.ToString()).ToArray();
-            var amsgs = msgs.Where(m => m.StartsWith("a")).ToArray();
-            var bmsgs = msgs.Where(m => m.StartsWith("b")).ToArray();
+            var amsgs = msgs.Where(m => m.StartsWith('a')).ToArray();
+            var bmsgs = msgs.Where(m => m.StartsWith('b')).ToArray();
             amsgs.ShouldOnlyContainInOrder("a", "a-outer-1", "a-outer-2", "a-inner-1", "a-inner-2");
             bmsgs.ShouldOnlyContainInOrder("b", "b-outer-1", "b-outer-2", "b-inner-1", "b-inner-2");
         }

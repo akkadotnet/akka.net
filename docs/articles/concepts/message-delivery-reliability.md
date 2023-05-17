@@ -73,6 +73,9 @@ most expensive—and has consequently worst performance—because in addition to
 the second it requires state to be kept at the receiving end in order to filter
 out duplicate deliveries.
 
+> [!TIP]
+> Please see "[Reliable Message Delivery with Akka.Delivery](xref:reliable-delivery)" if you need a delivery guarantee that is more robust than "at most once" delivery of messages.
+
 ### Discussion: Why No Guaranteed Delivery?
 
 At the core of the problem lies the question what exactly this guarantee shall

@@ -69,7 +69,7 @@ namespace Akka.Remote.Tests.MultiNode
                 {
                     Sys.WhenTerminated.Wait(timeOut);
                 }
-                catch (TimeoutException ex)
+                catch (TimeoutException)
                 {
                     //TODO: add printTree
 

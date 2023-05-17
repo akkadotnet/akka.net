@@ -52,16 +52,16 @@ namespace Akka.Persistence.Tests
 
             protected override void OnPersistRejected(Exception cause, object @event, long sequenceNr)
             {
-                if (@event is Evt)
-                    Sender.Tell("Rejected: " + ((Evt)@event).Data);
+                if (@event is Evt evt)
+                    Sender.Tell("Rejected: " + evt.Data);
                 else
                     base.OnPersistRejected(cause, @event, sequenceNr);
             }
 
             protected override void OnPersistFailure(Exception cause, object @event, long sequenceNr)
             {
-                if (@event is Evt)
-                    Sender.Tell("Failure: " + ((Evt)@event).Data);
+                if (@event is Evt evt)
+                    Sender.Tell("Failure: " + evt.Data);
                 else
                     base.OnPersistFailure(cause, @event, sequenceNr);
             }
@@ -148,10 +148,10 @@ namespace Akka.Persistence.Tests
 
             protected bool UpdateState(object message)
             {
-                if (message is Evt)
-                    Events = Events.AddFirst((message as Evt).Data);
-                else if (message is IActorRef)
-                    AskedForDelete = (IActorRef)message;
+                if (message is Evt evt)
+                    Events = Events.AddFirst(evt.Data);
+                else if (message is IActorRef @ref)
+                    AskedForDelete = @ref;
                 else
                     return false;
                 return true;
@@ -412,10 +412,10 @@ namespace Akka.Persistence.Tests
             {
                 if (!base.ReceiveRecover(message))
                 {
-                    if (message is SnapshotOffer)
+                    if (message is SnapshotOffer offer)
                     {
                         Probe.Tell("offered");
-                        Events = (message as SnapshotOffer).Snapshot.AsInstanceOf<ImmutableArray<object>>();
+                        Events = offer.Snapshot.AsInstanceOf<ImmutableArray<object>>();
                     }
                     else return false;
                 }
@@ -425,7 +425,7 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveCommand(object message)
             {
                 if (CommonBehavior(message)) return true;
-                if (message is Cmd) HandleCmd(message as Cmd);
+                if (message is Cmd cmd) HandleCmd(cmd);
                 else if (message is SaveSnapshotSuccess) Probe.Tell("saved");
                 else if (message.ToString() == "snap") SaveSnapshot(Events);
                 else return false;
@@ -532,8 +532,8 @@ namespace Akka.Persistence.Tests
 
             protected override void OnPersistFailure(Exception cause, object @event, long sequenceNr)
             {
-                if (@event is Evt)
-                    Sender.Tell(string.Format("Failure: {0}", ((Evt)@event).Data));
+                if (@event is Evt evt)
+                    Sender.Tell(string.Format("Failure: {0}", evt.Data));
                 else
                     base.OnPersistFailure(cause, @event, sequenceNr);
             }
@@ -1215,8 +1215,7 @@ namespace Akka.Persistence.Tests
             {
                 var d = dWithDepth.Split('-')[0];
                 _probe.Tell(dWithDepth);
-                int currentDepth;
-                if (!_currentDepths.TryGetValue(d, out currentDepth)) currentDepth = 1;
+                if (!_currentDepths.TryGetValue(d, out var currentDepth)) currentDepth = 1;
                 if (currentDepth < _maxDepth)
                 {
                     _currentDepths[d] = currentDepth + 1;
@@ -1264,8 +1263,7 @@ namespace Akka.Persistence.Tests
             {
                 var d = dWithDepth.Split('-')[0];
                 _probe.Tell(dWithDepth);
-                int currentDepth;
-                if (!_currentDepths.TryGetValue(d, out currentDepth)) currentDepth = 1;
+                if (!_currentDepths.TryGetValue(d, out var currentDepth)) currentDepth = 1;
                 if (currentDepth < _maxDepth)
                 {
                     _currentDepths[d] = currentDepth + 1;

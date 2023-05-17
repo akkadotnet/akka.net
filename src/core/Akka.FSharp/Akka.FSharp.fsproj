@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\common.props"/>
 
     <PropertyGroup>
         <AssemblyTitle>Akka.FSharp</AssemblyTitle>
@@ -23,10 +22,7 @@
     <ItemGroup>
         <PackageReference Include="FSharp.Quotations.Evaluator" Version="2.1.0"/>
         <PackageReference Include="FsPickler" Version="5.3.2"/>
+        <PackageReference Include="FSharp.Core" Version="$(FSharpVersion)"/>
     </ItemGroup>
-
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
 
 </Project>

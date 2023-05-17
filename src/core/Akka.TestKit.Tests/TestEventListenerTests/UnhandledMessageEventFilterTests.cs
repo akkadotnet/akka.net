@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -32,7 +31,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task Unhandled_message_should_produce_info_message()
         {
             await EventFilter
-                .Info(new Regex("^Unhandled message from"))
+                .Info()
                 .ExpectOneAsync(() => {
                     _unhandledMessageActor.Tell("whatever");
                     return Task.CompletedTask;

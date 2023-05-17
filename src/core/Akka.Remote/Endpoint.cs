@@ -102,7 +102,7 @@ namespace Akka.Remote
             }
 
             //message is intended for a local recipient
-            else if ((recipient is ILocalRef || recipient is RepointableActorRef) && recipient.IsLocal)
+            else if (recipient is ILocalRef or RepointableActorRef && recipient.IsLocal)
             {
                 if (_settings.LogReceive)
                 {
@@ -143,7 +143,7 @@ namespace Akka.Remote
             }
 
             // message is intended for a remote-deployed recipient
-            else if ((recipient is IRemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal &&
+            else if (recipient is IRemoteRef or RepointableActorRef && !recipient.IsLocal &&
                      !_settings.UntrustedMode)
             {
                 if (_settings.LogReceive)
@@ -1438,8 +1438,8 @@ namespace Akka.Remote
             var send = message as EndpointManager.Send;
             if (send != null && send.Message is IPriorityMessage)
                 _prioBuffer.AddLast(send);
-            else if (send != null && send.Message is ActorSelectionMessage &&
-                     send.Message.AsInstanceOf<ActorSelectionMessage>().Message is IPriorityMessage)
+            else if (send != null && send.Message is ActorSelectionMessage actorSelectionMessage &&
+                     actorSelectionMessage.Message is IPriorityMessage)
             {
                 _prioBuffer.AddLast(send);
             }
@@ -1476,7 +1476,7 @@ namespace Akka.Remote
                 }
 
                 var pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
-                    this.SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+                    SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
 
                 _remoteMetrics.LogPayloadBytes(send.Message, pdu.Length);
 
@@ -1526,7 +1526,7 @@ namespace Akka.Remote
             }
             catch (Exception ex)
             {
-                PublishAndThrow(new EndpointException("Failed to write message to the transport", ex),
+                PublishAndThrow(new EndpointException($"Failed to write message [{send.Message}] to the transport", ex),
                     LogLevel.ErrorLevel);
             }
 

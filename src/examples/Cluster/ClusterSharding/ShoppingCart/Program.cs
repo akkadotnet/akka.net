@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Bootstrap.Docker;
 using Akka.Cluster;
 using Akka.Cluster.Sharding;
+using Akka.Cluster.Sharding.Delivery;
 using Akka.Configuration;
 using Akka.Util;
 
@@ -64,7 +65,7 @@ namespace ShoppingCart
             
             #region StartSharding
             // Starts and initialize cluster sharding
-            var sharding = ClusterSharding.Get(system);
+            var sharding = Akka.Cluster.Sharding.ClusterSharding.Get(system);
             #endregion
 
             #region StartShardRegion
@@ -76,7 +77,7 @@ namespace ShoppingCart
                         typeName: "customer",
                         role: BackEndRole,
                         messageExtractor: new MessageExtractor(10));
-                
+
                     // Register a callback for the "cluster is up" event
                     var cluster = Cluster.Get(system);
                     cluster.RegisterOnMemberUp(() =>
@@ -86,15 +87,22 @@ namespace ShoppingCart
                     break;
                 
                 case BackEndRole:
+                    // <LaunchShardRegion>
                     // Depending on the role, we will start a shard or a shard proxy
                     await sharding.StartAsync(
                         typeName: "customer",
-                        entityPropsFactory: e => Props.Create(() => new Customer(e)),
+                        entityPropsFactory: e => 
+                            // ShardingConsumerController guarantees processing of messages,
+                            // even across process restarts / shutdowns or shard rebalancing
+                            ShardingConsumerController.Create<Customer.ICustomerCommand>( 
+                                c => Props.Create(() => new Customer(e,c)), 
+                                ShardingConsumerController.Settings.Create(system)),
                         // .WithRole is important because we're dedicating a specific node role for
                         // the actors to be instantiated in; in this case, we're instantiating only
                         // in the "backend" roled nodes.
                         settings: ClusterShardingSettings.Create(system).WithRole(BackEndRole), 
                         messageExtractor: new MessageExtractor(10));
+                    // </LaunchShardRegion>
                     break;
             }
             #endregion
@@ -107,33 +115,19 @@ namespace ShoppingCart
         #region StartSendingMessage
         private static void ProduceMessages(ActorSystem system, IActorRef shardRegionProxy)
         {
-            var customers = new[]
-            {
-                "Yoda", "Obi-Wan", "Darth Vader", "Princess Leia", 
-                "Luke Skywalker", "R2D2", "Han Solo", "Chewbacca", "Jabba"
-            };
-            var items = new[]
-            {
-                "Yoghurt", "Fruits", "Lightsaber", "Fluffy toy", "Dreamcatcher", 
-                "Candies", "Cigars", "Chicken nuggets", "French fries"
-            };
+            var producerId = "ProducerId1" + MurmurHash.StringHash(Cluster.Get(system).SelfAddress.ToString());
+            
+            var shardingProducerController = system.ActorOf(ShardingProducerController.Create<Customer.ICustomerCommand>(
+                producerId,
+                shardRegionProxy,
+                Option<Props>.None, 
+                ShardingProducerController.Settings.Create(system)), "shardingProducerController-1");
 
-            // Start a timer that periodically sends messages to the shard
-            system.Scheduler.Advanced
-                .ScheduleRepeatedly(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(3), () =>
-                {
-                    var customer = PickRandom(customers);
-                    var item = PickRandom(items);
-                
-                    // A shard message needs to be wrapped inside an envelope so the system knows which
-                    // shard and actor it should route the message to.
-                    var message = new ShardEnvelope(customer, new Customer.PurchaseItem(item));
-
-                    shardRegionProxy.Tell(message);
-                });
+            var producer = system.ActorOf(Props.Create(() => new Producer()), "msg-producer");
+            shardingProducerController.Tell(new ShardingProducerController.Start<Customer.ICustomerCommand>(producer));
         }
         #endregion
 
-        private static T PickRandom<T>(T[] items) => items[ThreadLocalRandom.Current.Next(items.Length)];
+       
     }
 }

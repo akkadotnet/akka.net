@@ -257,7 +257,7 @@ To install `markdownlint-cli` execute this command to add it globally to your `n
 **Run**
 To run the markdown linting rules for Akka.NET's documentation, in the root directory of the Akka.NET GitHub repository:
 
-    markdownlint "docs/**/*.md" --rules "markdownlint-rule-titlecase"
+    markdownlint "docs/**/*.md"
 
 If there are any linting errors the exact filename, line number, and rule infraction will be listed there. This is the exact same command we run in Akka.NET's pull request validation system.
 

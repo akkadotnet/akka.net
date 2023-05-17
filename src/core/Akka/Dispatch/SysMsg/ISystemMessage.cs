@@ -543,7 +543,7 @@ namespace Akka.Dispatch.SysMsg
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Unwatch && Equals((Unwatch)obj);
+            return obj is Unwatch unwatch && Equals(unwatch);
         }
 
         public override int GetHashCode()
@@ -588,7 +588,8 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class ActorTaskSchedulerMessage : SystemMessage
+    [InternalApi] 
+    public sealed class ActorTaskSchedulerMessage : SystemMessage
     {
         private readonly ActorTaskScheduler _scheduler;
         private readonly Task _task;
@@ -840,7 +841,7 @@ namespace Akka.Dispatch.SysMsg
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Create && Equals((Create)obj);
+            return obj is Create create && Equals(create);
         }
 
         public override int GetHashCode()

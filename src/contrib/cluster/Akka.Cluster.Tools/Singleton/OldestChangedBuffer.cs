@@ -174,7 +174,7 @@ namespace Akka.Cluster.Tools.Singleton
                 .FirstOrDefault() ?? int.MaxValue;
 
             var oldest = _membersByAge.TakeWhile(m => m.UpNumber <= selfUpNumber).ToList();
-            var safeToBeOldest = !oldest.Any(m => m.Status == MemberStatus.Down || m.Status == MemberStatus.Exiting || m.Status == MemberStatus.Leaving);
+            var safeToBeOldest = !oldest.Any(m => m.Status is MemberStatus.Down or MemberStatus.Exiting or MemberStatus.Leaving);
             var initial = new InitialOldestState(oldest.Select(m => m.UniqueAddress).ToList(), safeToBeOldest);
             _changes = _changes.Enqueue(initial);
         }
@@ -201,8 +201,7 @@ namespace Akka.Cluster.Tools.Singleton
             // don't send cluster change events if this node is shutting its self down, just wait for SelfExiting
             if (!_cluster.IsTerminated)
             {
-                object change;
-                _changes = _changes.Dequeue(out change);
+                _changes = _changes.Dequeue(out var change);
                 Context.Parent.Tell(change);
             }
         }

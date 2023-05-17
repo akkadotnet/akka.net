@@ -435,9 +435,7 @@ namespace Akka.Cluster.Tools.Client
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is PublishSubscribe.Send
-                || message is PublishSubscribe.SendToAll
-                || message is PublishSubscribe.Publish)
+            if (message is PublishSubscribe.Send or PublishSubscribe.SendToAll or PublishSubscribe.Publish)
             {
                 var tunnel = ResponseTunnel(Sender);
                 tunnel.Tell(Ping.Instance); // keep alive
@@ -627,7 +625,7 @@ namespace Akka.Cluster.Tools.Client
         private bool IsAsk()
         {
             var pathElements = _client.Path.Elements;
-            return pathElements.Count == 2 && pathElements[0] == "temp" && pathElements.Last().StartsWith("$");
+            return pathElements.Count == 2 && pathElements[0] == "temp" && pathElements.Last().StartsWith('$');
         }
     }
 }
