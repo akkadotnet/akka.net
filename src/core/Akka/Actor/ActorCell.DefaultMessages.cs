@@ -14,7 +14,6 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Debug = Akka.Event.Debug;
 using System.Globalization;
-using Akka.Annotations;
 
 namespace Akka.Actor
 {
@@ -335,8 +334,7 @@ namespace Akka.Actor
             SysMsgInvokeAll(new EarliestFirstSystemMessageList((SystemMessage)envelope), CalculateState());
         }
 
-        [InternalApi]
-        protected virtual void HandleActorTaskSchedulerMessage(ActorTaskSchedulerMessage m)
+        private void HandleActorTaskSchedulerMessage(ActorTaskSchedulerMessage m)
         {
             //set the current message captured in the async operation
             //current message was cleared earlier when the async receive handler completed
