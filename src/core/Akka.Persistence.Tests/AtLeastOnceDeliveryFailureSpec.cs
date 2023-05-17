@@ -299,7 +299,7 @@ namespace Akka.Persistence.Tests
                     }
                 });
                 Receive<Ack>(x => _acks.Add(x.I));
-                Receive<Terminated>(x =>
+                Receive<Terminated>(_ =>
                 {
                     // snd will be stopped if recover or persist fail
                     _log.Debug("sender stopped, starting it again");

@@ -30,7 +30,7 @@ namespace Akka.Tests.Performance.Dispatch
         {
             MsgReceived = context.GetCounter("MsgReceived");
             System = ActorSystem.Create("PerfSys");
-            Action<IActorDsl> actor = d => d.ReceiveAny((o, c) =>
+            Action<IActorDsl> actor = d => d.ReceiveAny((_, _) =>
             {
                 MsgReceived.Increment();
             });

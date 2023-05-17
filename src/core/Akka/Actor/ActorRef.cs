@@ -803,7 +803,7 @@ namespace Akka.Actor
         /// <param name="actor">TBD</param>
         public void AddChild(string name, IInternalActorRef actor)
         {
-            _children.AddOrUpdate(name, actor, (k, v) =>
+            _children.AddOrUpdate(name, actor, (_, v) =>
             {
                 Log.Warning("{0} replacing child {1} ({2} -> {3})", name, actor, v, actor);
                 return v;

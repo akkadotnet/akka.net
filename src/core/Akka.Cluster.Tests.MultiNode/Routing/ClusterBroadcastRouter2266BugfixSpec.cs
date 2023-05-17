@@ -50,7 +50,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             public SomeActor(IRouteeType routeeType)
             {
                 _routeeType = routeeType;
-                Receive<string>(s => s == "hit", s =>
+                Receive<string>(s => s == "hit", _ =>
                 {
                     Sender.Tell(new Reply(_routeeType, Self));
                 });
@@ -121,7 +121,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
 
         private Dictionary<Address, int> ReceiveReplays(ClusterBroadcastGroupSpecConfig.IRouteeType routeeType, int expectedReplies)
         {
-            var zero = Roles.Select(GetAddress).ToDictionary(c => c, c => 0);
+            var zero = Roles.Select(GetAddress).ToDictionary(c => c, _ => 0);
             var replays = ReceiveWhile(5.Seconds(), msg =>
             {
                 if (msg is ClusterBroadcastGroupSpecConfig.Reply routee && routee.RouteeType.GetType() == routeeType.GetType())

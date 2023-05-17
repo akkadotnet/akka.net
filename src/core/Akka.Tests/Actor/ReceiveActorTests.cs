@@ -168,7 +168,7 @@ namespace Akka.Tests.Actor
         {
             public CallReceiveWhenHandlingMessageActor()
             {
-                Receive<object>(m =>
+                Receive<object>(_ =>
                 {
                     try
                     {

@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var s = this.CreateManualSubscriberProbe<int>();
             Source.FromEvent<EventHandler<int>, int>(
-                conversion: onNext => (sender, e) => onNext(e),
+                conversion: onNext => (_, e) => onNext(e),
                 addHandler: h => _event += h,
                 removeHandler: h => _event -= h)
                 .To(Sink.FromSubscriber(s))

@@ -125,7 +125,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         {
             public Singleton()
             {
-                ReceiveAny(o =>
+                ReceiveAny(_ =>
                 {
                     Sender.Tell(Cluster.Get(Context.System).SelfMember);
                 });

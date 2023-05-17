@@ -139,7 +139,7 @@ namespace Akka.Tests.IO
         {
             public MockUdpHandler()
             {
-                Receive<Udp.Received>(msg =>
+                Receive<Udp.Received>(_ =>
                 {
                     // Empty handler
                 });

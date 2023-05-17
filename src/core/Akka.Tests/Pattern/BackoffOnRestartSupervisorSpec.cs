@@ -53,15 +53,15 @@ namespace Akka.Tests.Pattern
 
                 _probe.Tell("STARTED");
 
-                Receive<string>(str => str.Equals("DIE"), msg => Context.Stop(Self));
+                Receive<string>(str => str.Equals("DIE"), _ => Context.Stop(Self));
 
-                Receive<string>(str => str.Equals("THROW"), msg =>
+                Receive<string>(str => str.Equals("THROW"), _ =>
                 {
                     throw new NormalException();
                     return;
                 });
 
-                Receive<string>(str => str.Equals("THROW_STOPPING_EXCEPTION"), msg =>
+                Receive<string>(str => str.Equals("THROW_STOPPING_EXCEPTION"), _ =>
                 {
                     throw new StoppingException();
                     return;
@@ -109,14 +109,14 @@ namespace Akka.Tests.Pattern
             {
                 _latch = latch;
 
-                Receive<string>(str => str.Equals("THROW"), msg =>
+                Receive<string>(str => str.Equals("THROW"), _ =>
                 {
                     Sender.Tell("THROWN");
                     throw new NormalException();
                     return;
                 });
 
-                Receive<string>(str => str.Equals("PING"), msg =>
+                Receive<string>(str => str.Equals("PING"), _ =>
                 {
                     Sender.Tell("PONG");
                 });

@@ -31,7 +31,7 @@ namespace Akka.Tests.Routing
                 _doneLatch = doneLatch;
                 _counter = counter;
 
-                Receive<string>(s => s == "end", c => _doneLatch.CountDown());
+                Receive<string>(s => s == "end", _ => _doneLatch.CountDown());
                 Receive<int>(msg => _counter.AddAndGet(msg));
             }
         }
@@ -69,7 +69,7 @@ namespace Akka.Tests.Routing
 
                 });
                 
-                ReceiveAnyAsync(async x =>
+                ReceiveAnyAsync(async _ =>
                 {
                     await Task.Delay(100 * _id);
                     Sender.Tell(_id);

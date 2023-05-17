@@ -54,7 +54,7 @@ namespace Akka.Tests.Routing
         {
             public Echo()
             {
-                ReceiveAny(c => Sender.Tell(Self));
+                ReceiveAny(_ => Sender.Tell(Self));
             }
         }
 
@@ -127,7 +127,7 @@ namespace Akka.Tests.Routing
         {
             public InlineRouterActor()
             {
-                ReceiveAsync<string>(s => s == "start", async c =>
+                ReceiveAsync<string>(s => s == "start", async _ =>
                 {
                     var actor = Context.ActorOf(new RoundRobinPool(2).Props(Props.Create<InlineReceiverActor>()));
                     await actor.Ask("hello").PipeTo(Sender);

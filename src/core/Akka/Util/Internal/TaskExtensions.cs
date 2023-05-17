@@ -36,9 +36,9 @@ namespace Akka.Util.Internal
 
             return Task.WhenAny(task, tcs.Task)
                 // Dispose subscription to cancellation token
-                .ContinueWith(t => { r.Dispose(); }, TaskContinuationOptions.ExecuteSynchronously)
+                .ContinueWith(_ => { r.Dispose(); }, TaskContinuationOptions.ExecuteSynchronously)
                 // Check cancellation, to return task in cancelled state instead of completed
-                .ContinueWith(t => { }, cancellationToken, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                .ContinueWith(_ => { }, cancellationToken, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
         /// <summary>

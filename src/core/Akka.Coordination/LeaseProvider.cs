@@ -122,7 +122,7 @@ namespace Akka.Coordination
         {
             var leaseKey = new LeaseKey(leaseName, configPath, ownerName);
 
-            return _leases.GetOrAdd(leaseKey, lk =>
+            return _leases.GetOrAdd(leaseKey, _ =>
             {
                 var leaseConfig = _system.Settings.Config
                     .GetConfig(configPath)

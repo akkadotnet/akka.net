@@ -105,7 +105,7 @@ namespace Akka.Routing
             var cancelable = new Cancelable(_scheduler);
 
             completion.Task
-                .ContinueWith(task => cancelable.Cancel(false));
+                .ContinueWith(_ => cancelable.Cancel(false));
 
             if (_routees.Length == 0)
             {

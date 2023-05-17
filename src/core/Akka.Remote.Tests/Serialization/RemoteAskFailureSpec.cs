@@ -108,7 +108,7 @@ akka.remote.dot-netty.tcp.port = {port}";
             {
                 _log = Context.GetLogger();
                 
-                ReceiveAsync<string>(async msg =>
+                ReceiveAsync<string>(async _ =>
                 {
                     await Task.Delay(2.Seconds());
                     Sender.Tell(new Status.Failure(new TestException("BOOM")));

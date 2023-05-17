@@ -47,14 +47,14 @@ namespace Akka.Streams.Supervision
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Decider StoppingDecider = cause => Directive.Stop;
+        public static readonly Decider StoppingDecider = _ => Directive.Stop;
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Decider ResumingDecider = cause => Directive.Resume;
+        public static readonly Decider ResumingDecider = _ => Directive.Resume;
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Decider RestartingDecider = cause => Directive.Restart;
+        public static readonly Decider RestartingDecider = _ => Directive.Restart;
     }
 }

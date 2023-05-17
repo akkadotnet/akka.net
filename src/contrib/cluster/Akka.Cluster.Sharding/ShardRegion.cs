@@ -292,7 +292,7 @@ namespace Akka.Cluster.Sharding
                         Context.Stop(Self);
                     }
                 });
-                Receive<StopTimeoutWarning>(s =>
+                Receive<StopTimeoutWarning>(_ =>
                 {
                     Log.Warning(
                         $"{{0}}: [{remaining.Count}] of the entities in shard [{{1}}] not stopped after [{{2}}]. " +
@@ -305,7 +305,7 @@ namespace Akka.Cluster.Sharding
                             "" // the region will be shutdown earlier so would be confusing to say more
                             : $"Waiting additional [{handoffTimeout}] before stopping the remaining entities.");
                 });
-                Receive<StopTimeout>(s =>
+                Receive<StopTimeout>(_ =>
                 {
                     Log.Warning("{0}: HandOffStopMessage[{1}] is not handled by some of the entities in shard [{2}] after [{3}], " +
                         "stopping the remaining [{4}] entities.",
@@ -1058,7 +1058,7 @@ namespace Akka.Cluster.Sharding
             }
 
             var tasks = _shards.Select(entity => (Entity: entity.Key, Task: entity.Value.Ask<T>(message, timeout))).ToImmutableList();
-            return Task.WhenAll(tasks.Select(i => i.Task)).ContinueWith(ps =>
+            return Task.WhenAll(tasks.Select(i => i.Task)).ContinueWith(_ =>
             {
                 var qr = ShardsQueryResult<T>.Create(tasks, _shards.Count, timeout);
                 if (qr.Failed.Count > 0)

@@ -202,7 +202,7 @@ namespace Akka.Dispatch
                 }
 
                 // add the new configurator to the mapping, or keep the existing if it was already added
-                _mailboxTypeConfigurators.AddOrUpdate(id, configurator, (s, type) => type);
+                _mailboxTypeConfigurators.AddOrUpdate(id, configurator, (_, type) => type);
             }
 
             return configurator;

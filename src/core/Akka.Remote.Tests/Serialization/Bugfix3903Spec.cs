@@ -67,7 +67,7 @@ namespace Akka.Remote.Tests.Serialization
             public EchoActor()
             {
                 // receive message that will cause this actor to fail
-                Receive<Fail>(s =>
+                Receive<Fail>(_ =>
                 {
                     throw new ApplicationException("fail");
                 });

@@ -1053,7 +1053,7 @@ namespace Akka.Streams.Implementation
                             Enqueue(message);
                         };
                     case OverflowStrategy.DropNew:
-                        return message =>
+                        return _ =>
                         {
                             /* do nothing */
                         };
@@ -1064,9 +1064,9 @@ namespace Akka.Streams.Implementation
                             Enqueue(message);
                         };
                     case OverflowStrategy.Fail:
-                        return message => FailStage(new BufferOverflowException($"{_stage.Outlet} buffer has been overflown"));
+                        return _ => FailStage(new BufferOverflowException($"{_stage.Outlet} buffer has been overflown"));
                     case OverflowStrategy.Backpressure:
-                        return message => throw new NotSupportedException("OverflowStrategy.Backpressure is not supported");
+                        return _ => throw new NotSupportedException("OverflowStrategy.Backpressure is not supported");
                     default: throw new NotSupportedException($"Unknown option: {overflowStrategy}");
                 }
             }

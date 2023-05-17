@@ -19,11 +19,11 @@ namespace Akka.Tests.Dispatch
         private IActorRef _replyTo;
         public ReceiveTimeoutAsyncActor()
         {
-            Receive<ReceiveTimeout>(t =>
+            Receive<ReceiveTimeout>(_ =>
             {
                 _replyTo.Tell("GotIt");
             });
-            ReceiveAsync<string>(async s =>
+            ReceiveAsync<string>(async _ =>
             {
                 _replyTo = Sender;
 
@@ -86,19 +86,19 @@ namespace Akka.Tests.Dispatch
                 Sender.Tell("done");
             });
 
-            ReceiveAsync<int>(async msg =>
+            ReceiveAsync<int>(async _ =>
             {
                 await Task.Yield();
                 Sender.Tell("handled");
             }, i => i > 10);
 
-            ReceiveAsync(typeof(double), async msg =>
+            ReceiveAsync(typeof(double), async _ =>
             {
                 await Task.Yield();
                 Sender.Tell("handled");
             });
 
-            ReceiveAnyAsync(async msg =>
+            ReceiveAnyAsync(async _ =>
             {
                 await Task.Yield();
                 Sender.Tell("receiveany");
@@ -230,13 +230,13 @@ namespace Akka.Tests.Dispatch
     {
         public AsyncTplActor()
         {
-            Receive<string>(m =>
+            Receive<string>(_ =>
             {
                 //this is also safe, all tasks complete in the actor context
                 RunTask(async () =>
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1))
-                        .ContinueWith(t => { Sender.Tell("done"); });
+                        .ContinueWith(_ => { Sender.Tell("done"); });
                 });
             });
         }
@@ -249,12 +249,12 @@ namespace Akka.Tests.Dispatch
         public AsyncTplExceptionActor(IActorRef callback)
         {
             _callback = callback;
-            Receive<string>(m =>
+            Receive<string>(_ =>
             {
                 RunTask(async () =>
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1))
-                   .ContinueWith(t => { throw new Exception("foo"); });
+                   .ContinueWith(_ => { throw new Exception("foo"); });
                 });
             });
         }
@@ -429,7 +429,7 @@ namespace Akka.Tests.Dispatch
             public AsyncFailingActor()
             {
 #pragma warning disable CS1998
-                ReceiveAsync<string>(async m =>
+                ReceiveAsync<string>(async _ =>
 #pragma warning restore CS1998
                 {
                     ThrowException();

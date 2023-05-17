@@ -108,7 +108,7 @@ namespace Akka.Persistence.TCK.Query
 
         private EventEnvelope ExpectEnvelope(TestSubscriber.Probe<EventEnvelope> probe, string persistenceId, long sequenceNr, string @event)
         {
-            var envelope = probe.ExpectNext<EventEnvelope>(e => true);
+            var envelope = probe.ExpectNext<EventEnvelope>(_ => true);
             envelope.PersistenceId.Should().Be(persistenceId);
             envelope.SequenceNr.Should().Be(sequenceNr);
             envelope.Event.Should().Be(@event);

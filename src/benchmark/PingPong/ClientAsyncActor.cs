@@ -32,7 +32,7 @@ namespace PingPong
                     latch.SetResult(true);
                 }
             });
-            Receive<Messages.Run>(r =>
+            Receive<Messages.Run>(_ =>
             {
                 var msg = new Messages.Msg();
                 for (int i = 0; i < Math.Min(1000, repeat); i++)

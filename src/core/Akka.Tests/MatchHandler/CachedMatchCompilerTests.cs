@@ -34,7 +34,7 @@ namespace Akka.Tests.MatchHandler
                 CompileResult = deleg,
             };
 
-            PartialAction<object> partialAction = item => true;
+            PartialAction<object> partialAction = _ => true;
             var partialActionBuilder = new DummyPartialActionBuilder()
             {
                 BuildResult = partialAction,
@@ -74,7 +74,7 @@ namespace Akka.Tests.MatchHandler
                 CompileResult = deleg,
             };
 
-            PartialAction<object> partialAction = item => true;
+            PartialAction<object> partialAction = _ => true;
             var partialActionBuilder = new DummyPartialActionBuilder()
             {
                 BuildResult = partialAction,
