@@ -59,6 +59,7 @@ public class DurableShardingSpec : AkkaSpec
         await JoinCluster();
         NextId();
 
+        // <SpawnDurableConsumer>
         var consumerProbe = CreateTestProbe();
         var sharding = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
@@ -76,7 +77,9 @@ public class DurableShardingSpec : AkkaSpec
                         return se.Message;
                     return o;
                 }));
+        // </SpawnDurableConsumer>
 
+        // <SpawnDurableProducer>
         var durableQueueProps = EventSourcedProducerQueue.Create<Job>(ProducerId, Sys);
         var shardingProducerController =
             Sys.ActorOf(
@@ -84,6 +87,7 @@ public class DurableShardingSpec : AkkaSpec
                     ShardingProducerController.Settings.Create(Sys)), $"shardingProducerController-{_idCount}");
         var producerProbe = CreateTestProbe();
         shardingProducerController.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
+        // </SpawnDurableProducer>
 
         for (var i = 1; i <= 4; i++)
         {
