@@ -152,7 +152,7 @@ namespace Akka.Actor
             var path = future.Path;
 
             //The future actor needs to be unregistered in the temp container
-            _ = result.Task.ContinueWith(t =>
+            _ = result.Task.ContinueWith(_ =>
             {
                 provider.UnregisterTempActor(path);
 

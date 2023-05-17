@@ -37,7 +37,7 @@ namespace DocsExamples.Debugging
             {
                 return Sys.ActorOf(act =>
                 {
-                    act.ReceiveAny((o, context) =>
+                    act.ReceiveAny((o, _) =>
                     {
                         actorRef.Forward(o);
                     });
@@ -78,7 +78,7 @@ namespace DocsExamples.Debugging
             {
                 return Sys.ActorOf(act =>
                 {
-                    act.ReceiveAny((o, context) =>
+                    act.ReceiveAny((o, _) =>
                     {
                         actorRef.Forward(o);
                     });
@@ -114,7 +114,7 @@ namespace DocsExamples.Debugging
             {
                 return Sys.ActorOf(act =>
                 {
-                    act.ReceiveAny((o, context) =>
+                    act.ReceiveAny((o, _) =>
                     {
                         actorRef.Forward(o);
                     });

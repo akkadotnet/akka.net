@@ -386,7 +386,7 @@ namespace Akka.Persistence.Fsm
         {
             get
             {
-                return (@event, state) =>
+                return (@event, _) =>
                 {
                     _log.Warning("unhandled event {0} in state {1}", @event.FsmEvent, StateName);
                     return Stay();
@@ -403,7 +403,7 @@ namespace Akka.Persistence.Fsm
         }
 
         // Termination handling
-        private Action<FSMBase.StopEvent<TState, TData>> _terminateEvent = @event => { };
+        private Action<FSMBase.StopEvent<TState, TData>> _terminateEvent = _ => { };
 
         // Transition handling
         private readonly IList<TransitionHandler> _transitionEvent = new List<TransitionHandler>();

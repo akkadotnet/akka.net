@@ -198,8 +198,8 @@ namespace Akka.DistributedData.Tests
         {
             Context.System.Log.Info("FakeDurableStore Initialising");
             Receive<Store>(store => { store.Reply?.ReplyTo.Tell(store.Reply.SuccessMessage); });
-            Receive<LoadAll>( load=> { Sender.Tell(LoadAllCompleted.Instance); });
-            Receive<InitFail>( init => { throw new LoadFailedException("failed to load durable distributed-data"); });
+            Receive<LoadAll>( _=> { Sender.Tell(LoadAllCompleted.Instance); });
+            Receive<InitFail>( _ => { throw new LoadFailedException("failed to load durable distributed-data"); });
         }
 
     }

@@ -217,7 +217,7 @@ namespace Akka.Streams.Tests.Dsl
             decider = decider ?? Deciders.StoppingDecider;
 
             var probe = Source.From(elements)
-                .ScanAsync(zero, (i, i1) => Task.FromResult(i1 != "null" ? i1 : null))
+                .ScanAsync(zero, (_, i1) => Task.FromResult(i1 != "null" ? i1 : null))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
                 .RunWith(this.SinkProbe<string>(), Materializer);
             probe.Request(elements.Count + 1)

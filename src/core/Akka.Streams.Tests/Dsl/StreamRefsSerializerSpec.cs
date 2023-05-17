@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests
         public ProducerActor(string data)
         {
             _data = data;
-            Receive<RequestStream>(request =>
+            Receive<RequestStream>(_ =>
             {
                 // create a source
                 StreamLogs()
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests
         {
             var sourceActor = Context.ActorSelection(sourceActorPath);
 
-            Receive<StartListening>((listening =>
+            Receive<StartListening>((_ =>
             {
                 sourceActor.Tell(new RequestStream(Self));
             }));

@@ -36,13 +36,13 @@ namespace Akka.Tests.Actor
 
             public SimpleActor()
             {
-                Receive<int>(i => i == 1, c => {
+                Receive<int>(i => i == 1, _ => {
                     lock (_lock)
                         Counter++;
                     throw new InvalidOperationException($"I'm dead. #{Counter}");
                 });
 
-                Receive<int>(i => i == 2, c => {
+                Receive<int>(i => i == 2, _ => {
                     Sender.Tell(2);
                 });
             }
@@ -58,13 +58,13 @@ namespace Akka.Tests.Actor
             {
                 _counter = counter;
 
-                Receive<int>(i => i == 1, c => {
+                Receive<int>(i => i == 1, _ => {
                     lock (_lock)
                         Counter++;
                     throw new InvalidOperationException($"I'm dead. #{Counter}");
                 });
 
-                Receive<int>(i => i == 2, c => {
+                Receive<int>(i => i == 2, _ => {
                     _counter.AddAndGet(1);
                     Sender.Tell(2);
                 });
@@ -86,7 +86,7 @@ namespace Akka.Tests.Actor
                     _children.Add(child);
                 }
 
-                ReceiveAsync<string>(str => str.Equals("spam-fails"), async m =>
+                ReceiveAsync<string>(str => str.Equals("spam-fails"), async _ =>
                 {
                     foreach (var child in _children)
                     {
@@ -95,7 +95,7 @@ namespace Akka.Tests.Actor
                     await Task.Delay(1000);
                 });
 
-                ReceiveAsync<string>(str => str.Equals("run-test"), async m =>
+                ReceiveAsync<string>(str => str.Equals("run-test"), async _ =>
                 {
                     for (var i = 0; i < 2; ++i)
                     {

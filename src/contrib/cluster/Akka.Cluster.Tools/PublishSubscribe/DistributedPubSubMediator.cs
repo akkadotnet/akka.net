@@ -244,18 +244,18 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 HandleRegisterTopic(register.TopicRef);
             });
-            Receive<NoMoreSubscribers>(msg =>
+            Receive<NoMoreSubscribers>(_ =>
             {
                 var key = Internal.Utils.MakeKey(Sender);
                 _buffer.InitializeGrouping(key);
                 Sender.Tell(TerminateRequest.Instance);
             });
-            Receive<NewSubscriberArrived>(msg =>
+            Receive<NewSubscriberArrived>(_ =>
             {
                 var key = Internal.Utils.MakeKey(Sender);
                 _buffer.ForwardMessages(key, Sender);
             });
-            Receive<GetTopics>(getTopics =>
+            Receive<GetTopics>(_ =>
             {
                 Sender.Tell(new CurrentTopics(GetCurrentTopics().ToImmutableHashSet()));
             });
@@ -417,7 +417,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private IEnumerable<Bucket> CollectDelta(IImmutableDictionary<Address, long> versions)
         {
             // missing entries are represented by version 0
-            var filledOtherVersions = OwnVersions.ToDictionary(c => c.Key, c => 0L);
+            var filledOtherVersions = OwnVersions.ToDictionary(c => c.Key, _ => 0L);
             foreach (var version in versions)
             {
                 filledOtherVersions[version.Key] = version.Value;

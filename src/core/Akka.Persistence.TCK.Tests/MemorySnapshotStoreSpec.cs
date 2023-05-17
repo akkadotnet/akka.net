@@ -140,7 +140,7 @@ namespace Akka.Persistence.TCK.Tests
                 {
                     _count += i;
 
-                    Persist(i, i1 =>
+                    Persist(i, _ =>
                     {
                         SaveSnapshot(i);
                     });
@@ -150,7 +150,7 @@ namespace Akka.Persistence.TCK.Tests
 
                 Command<SaveSnapshotFailure>(failure => reporter.Tell(failure));
 
-                Command<string>(str => str.Equals("get"), s =>
+                Command<string>(str => str.Equals("get"), _ =>
                 {
                     Sender.Tell(_count);
                 });

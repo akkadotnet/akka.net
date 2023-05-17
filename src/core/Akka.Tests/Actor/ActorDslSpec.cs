@@ -29,7 +29,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task A_lightweight_creator_must_support_become_stacked()
         {
-            var a = Sys.ActorOf(c => c.Become((msg, ctx) =>
+            var a = Sys.ActorOf(c => c.Become((msg, _) =>
             {
                 var message = msg as string;
                 if (message == null) return;
@@ -37,7 +37,7 @@ namespace Akka.Tests.Actor
                 if (message == "info")
                     TestActor.Tell("A");
                 else if (message == "switch")
-                    c.BecomeStacked((msg2, ctx2) =>
+                    c.BecomeStacked((msg2, _) =>
                     {
                         var message2 = msg2 as string;
                         if (message2 == null) return;
@@ -122,14 +122,14 @@ namespace Akka.Tests.Actor
                 var child = act.ActorOf(act2 =>
                 {
                     act2.OnPostStop = _ => TestActor.Tell("stopping child");
-                    act2.Receive("ping", (msg, _) => TestActor.Tell("pong"));
+                    act2.Receive("ping", (_, _) => TestActor.Tell("pong"));
                 }, "child");
-                act.OnPreRestart = (exc, msg, ctx) =>
+                act.OnPreRestart = (exc, msg, _) =>
                 {
                     TestActor.Tell("restarting parent");
                     act.DefaultPreRestart(exc, msg);    //Will stop the children
                 };
-                act.Receive("crash",(m,ctx)=>{throw new Exception("Received <crash>");});
+                act.Receive("crash",(_,_)=>{throw new Exception("Received <crash>");});
                 act.ReceiveAny((x, _) => child.Tell(x));
             }, "parent");
             
@@ -149,19 +149,19 @@ namespace Akka.Tests.Actor
                 var completedTask = Task.FromResult(true);
                 var child = act.ActorOf(act2 =>
                 {
-                    act2.ReceiveAsync<string>(m => m == "ping", (_, __) =>
+                    act2.ReceiveAsync<string>(m => m == "ping", (_, _) =>
                     {
                         TestActor.Tell("pong");
                         return completedTask;
                     });
 
-                    act2.ReceiveAsync<string>((_, __) =>
+                    act2.ReceiveAsync<string>((_, _) =>
                     {
                         TestActor.Tell("ping");
                         return completedTask;
                     }, msg => msg == "pong");
 
-                    act2.ReceiveAsync<string>((_, __) =>
+                    act2.ReceiveAsync<string>((_, _) =>
                     {
                         TestActor.Tell("hello");
                         return completedTask;

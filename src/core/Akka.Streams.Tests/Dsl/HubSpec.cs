@@ -590,7 +590,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var items = Enumerable.Range(1, 10).ToList();
                 var source = Source.From(items)
-                    .RunWith(PartitionHub.Sink<int>((size, e) => 0, 0, 8), Materializer);
+                    .RunWith(PartitionHub.Sink<int>((_, _) => 0, 0, 8), Materializer);
                 var result = await source.RunWith(Sink.Seq<int>(), Materializer).ShouldCompleteWithin(3.Seconds());
                 result.Should().BeEquivalentTo(items);
             }, Materializer);
@@ -623,7 +623,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(PartitionHub.StatefulSink<int>(() =>
                     {
                         var n = 0L;
-                        return ((info, e) =>
+                        return ((info, _) =>
                         {
                             n++;
                             return info.ConsumerByIndex((int)n % info.Size);
@@ -675,7 +675,7 @@ namespace Akka.Streams.Tests.Dsl
                 var items = Enumerable.Range(0, 999).ToList();
                 var source = Source.From(items)
                     .RunWith(
-                        PartitionHub.StatefulSink<int>(() => ((info, i) => info.ConsumerIds.Min(info.QueueSize)), 2, 4),
+                        PartitionHub.StatefulSink<int>(() => ((info, _) => info.ConsumerIds.Min(info.QueueSize)), 2, 4),
                         Materializer);
                 var result1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var result2 = source.Throttle(10, TimeSpan.FromMilliseconds(100), 10, ThrottleMode.Shaping)
@@ -738,7 +738,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var (testSource, hub) = this.SourceProbe<int>()
-                    .ToMaterialized(PartitionHub.Sink<int>((size, e) => (e % 3) % 2, 2, 8), Keep.Both)
+                    .ToMaterialized(PartitionHub.Sink<int>((_, e) => (e % 3) % 2, 2, 8), Keep.Both)
                     .Run(Materializer);
 
                 var probe0 = hub.RunWith(this.SinkProbe<int>(), Materializer);
@@ -777,7 +777,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var (testSource, hub) = this.SourceProbe<int>()
-                    .ToMaterialized(PartitionHub.Sink<int>((size, e) => 0, 2, 4), Keep.Both)
+                    .ToMaterialized(PartitionHub.Sink<int>((_, _) => 0, 2, 4), Keep.Both)
                     .Run(Materializer);
 
                 var probe0 = hub.RunWith(this.SinkProbe<int>(), Materializer);
@@ -891,7 +891,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var (sourceProbe, source) = this.SourceProbe<NotUsed>().ToMaterialized(PartitionHub.Sink<NotUsed>((s, e) => 0, 0), Keep.Both)
+                var (sourceProbe, source) = this.SourceProbe<NotUsed>().ToMaterialized(PartitionHub.Sink<NotUsed>((_, _) => 0, 0), Keep.Both)
                     .Run(Materializer);
                 var sinkProbe = source.RunWith(this.SinkProbe<NotUsed>(), Materializer);
 
@@ -919,7 +919,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var failure = new TestException("Fail!");
-                var source = Source.Failed<int>(failure).RunWith(PartitionHub.Sink<int>((s, e) => 0, 0), Materializer);
+                var source = Source.Failed<int>(failure).RunWith(PartitionHub.Sink<int>((_, _) => 0, 0), Materializer);
                 // Wait enough so the Hub gets the completion. This is racy, but this is fine because both
                 // cases should work in the end
                 await Task.Delay(50);

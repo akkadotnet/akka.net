@@ -85,11 +85,11 @@ namespace Akka.Tests.Performance.Actor
                 _maxExpectedMessages = maxExpectedMessages;
                 _resetEvent = resetEvent;
 
-                Receive<string>(stringMessage => IncrementAndCheck());
-                Receive<int>(intMessage => IncrementAndCheck());
-                Receive<SimpleData>(simpleDataMessage => simpleDataMessage.Age > 20, simpleDataMessage => IncrementAndCheck());
-                Receive<SimpleData>(simpleDataMessage => simpleDataMessage.Age <= 20, simpleDataMessage => IncrementAndCheck());
-                ReceiveAny(message => IncrementAndCheck());
+                Receive<string>(_ => IncrementAndCheck());
+                Receive<int>(_ => IncrementAndCheck());
+                Receive<SimpleData>(simpleDataMessage => simpleDataMessage.Age > 20, _ => IncrementAndCheck());
+                Receive<SimpleData>(simpleDataMessage => simpleDataMessage.Age <= 20, _ => IncrementAndCheck());
+                ReceiveAny(_ => IncrementAndCheck());
             }
 
             private void IncrementAndCheck()

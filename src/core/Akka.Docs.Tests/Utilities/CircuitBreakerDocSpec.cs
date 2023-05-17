@@ -49,12 +49,12 @@ namespace DocsExamples.Utilities.CircuitBreakers
 
             var dangerousCall = "This really isn't that dangerous of a call after all";
 
-            Receive<string>(str => str.Equals("is my middle name"), msg =>
+            Receive<string>(str => str.Equals("is my middle name"), _ =>
             {
                 breaker.WithCircuitBreaker(() => Task.FromResult(dangerousCall)).PipeTo(Sender);
             });
 
-            Receive<string>(str => str.Equals("block for me"), msg =>
+            Receive<string>(str => str.Equals("block for me"), _ =>
             {
                 Sender.Tell(breaker.WithSyncCircuitBreaker(() => dangerousCall));
             });

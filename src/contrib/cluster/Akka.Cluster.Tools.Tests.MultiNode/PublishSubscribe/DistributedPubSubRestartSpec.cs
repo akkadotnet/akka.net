@@ -44,7 +44,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
             public Shutdown()
             {
-                Receive<string>(str => str.Equals("shutdown"), evt =>
+                Receive<string>(str => str.Equals("shutdown"), _ =>
                 {
                     Context.System.Terminate();
                 });

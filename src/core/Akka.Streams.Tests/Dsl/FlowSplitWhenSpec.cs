@@ -267,7 +267,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () => {
                 await WithSubstreamsSupportAsync(5, 8,
-                    run: async (masterSubscriber, masterSubscription, getSubFlow) =>
+                    run: async (_, masterSubscription, getSubFlow) =>
                     {
                         var s1 = new StreamPuppet(getSubFlow()
                             .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
@@ -425,7 +425,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () => {
                 await WithSubstreamsSupportAsync(5, 8, SubstreamCancelStrategy.Propagate,
-                    async (masterSubscriber, masterSubscription, expectSubFlow) =>
+                    async (masterSubscriber, _, expectSubFlow) =>
                     {
                         var s1 = new StreamPuppet(expectSubFlow()
                             .RunWith(Sink.AsPublisher<int>(false), Materializer),

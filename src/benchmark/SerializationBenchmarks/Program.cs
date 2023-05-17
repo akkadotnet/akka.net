@@ -93,13 +93,13 @@ serialization-settings {{
         public void Pooling_MultiTasks()
         {
             Task.WaitAll(Enumerable.Repeat(0, 10)
-                .Select((l) => Task.Run(Pooling)).ToArray());
+                .Select((_) => Task.Run(Pooling)).ToArray());
         }
         [Benchmark]
         public void NoPooling_MultiTasks()
         {
             Task.WaitAll(Enumerable.Repeat(0, 10)
-                .Select((l) => Task.Run(NoPooling)).ToArray());
+                .Select((_) => Task.Run(NoPooling)).ToArray());
         }
     }
 

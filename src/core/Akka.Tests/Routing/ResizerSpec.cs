@@ -59,7 +59,7 @@ namespace Akka.Tests.Routing
                     Sender.Tell("done");
                 });
 
-                Receive<string>(s => s == "echo", s =>
+                Receive<string>(s => s == "echo", _ =>
                 {
                     Sender.Tell("reply");
                 });
@@ -76,7 +76,7 @@ namespace Akka.Tests.Routing
                     Sender.Tell("done");
                 });
 
-                ReceiveAsync<string>(s => s == "echo", s =>
+                ReceiveAsync<string>(s => s == "echo", _ =>
                 {
                     Sender.Tell("reply");
                     return Task.CompletedTask;

@@ -31,7 +31,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             _clusterSharding = ClusterSharding.Get(Sys);
             _cluster = Cluster.Get(Sys);
-            _shardRegion = _clusterSharding.Start("entity", s => EchoActor.Props(this, true),
+            _shardRegion = _clusterSharding.Start("entity", _ => EchoActor.Props(this, true),
                 ClusterShardingSettings.Create(Sys).WithRole("shard"), ExtractEntityId, ExtractShardId);
 
             var proxySysConfig = ConfigurationFactory.ParseString("akka.cluster.roles = [proxy]")

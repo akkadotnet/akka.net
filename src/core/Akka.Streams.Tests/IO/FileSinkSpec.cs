@@ -353,7 +353,7 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public async Task SynchronousFileSink_should_complete_with_failure_when_file_cannot_be_open()
         {
-            await TargetFileAsync(async f =>
+            await TargetFileAsync(async _ =>
             {
                 var completion = Source.Single(ByteString.FromString("42"))
                     .RunWith(FileIO.ToFile(new FileInfo("I-hope-this-file-doesnt-exist.txt"), FileMode.Open), _materializer);

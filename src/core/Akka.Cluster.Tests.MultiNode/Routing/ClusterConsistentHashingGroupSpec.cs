@@ -130,7 +130,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 CurrentRoutees(router).Members.Should().HaveCount(3);
             });
             var keys = new[] { "A", "B", "C", "D", "E", "F", "G" };
-            foreach (var key in Enumerable.Range(1, 10).SelectMany(i => keys))
+            foreach (var key in Enumerable.Range(1, 10).SelectMany(_ => keys))
             {
                 router.Tell(key, TestActor);
             }

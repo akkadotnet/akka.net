@@ -27,9 +27,9 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             public ExceptionActor()
             {
-                Receive<GiveError>((b) => throw new Exception("WAT"));
+                Receive<GiveError>((_) => throw new Exception("WAT"));
 
-                ReceiveAsync<GiveErrorAsync>(async (b) =>
+                ReceiveAsync<GiveErrorAsync>(async (_) =>
                 {
                     await Task.Delay(TimeSpan.FromSeconds(0.1));
                     throw new Exception("WATASYNC");

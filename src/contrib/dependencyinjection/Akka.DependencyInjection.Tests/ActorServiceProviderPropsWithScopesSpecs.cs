@@ -320,7 +320,7 @@ namespace Akka.DependencyInjection.Tests
                     Sender.Tell(new CurrentDependencies(new AkkaDiFixture.IDependency[] { _transient, _scoped, _singleton }));
                 });
 
-                Receive<string>(str =>
+                Receive<string>(_ =>
                 {
                     Sender.Tell(_arg1);
                     Sender.Tell(_arg2);

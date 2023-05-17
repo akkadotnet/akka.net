@@ -55,7 +55,7 @@ namespace Akka.Tests.Actor
         public async Task GracefulStopShouldThrowIfShutdownGoesOvertime()
         {
             // arrange
-            var actor = Sys.ActorOf(act => act.ReceiveAsync<CustomShutdown>(async (a, ctx) =>
+            var actor = Sys.ActorOf(act => act.ReceiveAsync<CustomShutdown>(async (_, ctx) =>
             {
                 await Task.Delay(200);
                 ctx.Stop(ctx.Self);

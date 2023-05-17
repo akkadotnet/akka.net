@@ -437,7 +437,7 @@ namespace Akka.Remote
     /// </summary>
     internal class TransportSupervisor : ReceiveActor
     {
-        private readonly SupervisorStrategy _strategy = new OneForOneStrategy(exception => Directive.Restart);
+        private readonly SupervisorStrategy _strategy = new OneForOneStrategy(_ => Directive.Restart);
         /// <summary>
         /// TBD
         /// </summary>

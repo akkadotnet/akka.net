@@ -161,7 +161,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             var batch = new Batch<int, int>(0, _ => 0, i => i, (agg, i) => agg + i);
             var ops = Enumerable.Range(1, ChainLength/10).Select(_ => batch).ToArray();
 
-            WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(ops, (lastEvents, upstream, _) =>
             {
                 lastEvents().Should().BeEquivalentTo(new RequestOne());
 

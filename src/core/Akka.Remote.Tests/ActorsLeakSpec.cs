@@ -75,7 +75,7 @@ namespace Akka.Remote.Tests
         {
             public StoppableActor()
             {
-                Receive<string>(str => str.Equals("stop"), s =>
+                Receive<string>(str => str.Equals("stop"), _ =>
                 {
                     Context.Stop(Self);
                 });

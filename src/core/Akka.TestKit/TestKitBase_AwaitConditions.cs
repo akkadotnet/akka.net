@@ -201,7 +201,7 @@ namespace Akka.TestKit
         public Task<bool> AwaitConditionNoThrowAsync(Func<Task<bool>> conditionIsFulfilled, TimeSpan max, TimeSpan? interval = null, CancellationToken cancellationToken = default)
         {
             var intervalDur = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
-            return InternalAwaitConditionAsync(conditionIsFulfilled, max, intervalDur, (f, a) => { }, cancellationToken);
+            return InternalAwaitConditionAsync(conditionIsFulfilled, max, intervalDur, (_, _) => { }, cancellationToken);
         }
         
         public Task<bool> AwaitConditionNoThrowAsync(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval = null, CancellationToken cancellationToken = default)

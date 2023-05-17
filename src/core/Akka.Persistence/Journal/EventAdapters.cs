@@ -338,7 +338,7 @@ namespace Akka.Persistence.Journal
 
             foreach (var pair in bindings)
             {
-                backing.AddOrUpdate(pair.Key, pair.Value, (type, adapter) => pair.Value);
+                backing.AddOrUpdate(pair.Key, pair.Value, (_, _) => pair.Value);
             }
 
             return new EventAdapters(backing, bindings, system.Log);

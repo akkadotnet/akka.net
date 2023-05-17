@@ -381,7 +381,7 @@ namespace Akka.Cluster
                 var rows = ObserverRows(observer);
                 if (rows == null) continue;
 
-                builder.AppendJoin(", ", rows, (b, row, index) =>
+                builder.AppendJoin(", ", rows, (b, row, _) =>
                     b.AppendFormat("[{0} -> {1}: {2} [{3}] ({4})]",
                         observer.Address, row.Key, row.Value.Status, Status(row.Key), row.Value.Version));
             }

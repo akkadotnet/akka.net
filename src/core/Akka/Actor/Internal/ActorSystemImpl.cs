@@ -336,7 +336,7 @@ namespace Akka.Actor.Internal
         {
             if (extension == null) return null;
 
-            _extensions.GetOrAdd(extension.ExtensionType, t => new Lazy<object>(() => extension.CreateExtension(this), LazyThreadSafetyMode.ExecutionAndPublication));
+            _extensions.GetOrAdd(extension.ExtensionType, _ => new Lazy<object>(() => extension.CreateExtension(this), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return extension.Get(this);
         }

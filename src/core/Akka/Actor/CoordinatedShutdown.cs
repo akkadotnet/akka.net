@@ -653,7 +653,7 @@ namespace Akka.Actor
 
                     if (terminateActorSystem)
                     {
-                        return system.FinalTerminate().ContinueWith(tr =>
+                        return system.FinalTerminate().ContinueWith(_ =>
                         {
                             if (exitClr && !coord._runningClrHook)
                             {
@@ -691,7 +691,7 @@ namespace Akka.Actor
                 var exitTask = TerminateOnClrExit(coord);
                 // run all hooks during termination sequence
                 AppDomain.CurrentDomain.ProcessExit += exitTask;
-                system.WhenTerminated.ContinueWith(tr =>
+                system.WhenTerminated.ContinueWith(_ =>
                 {
                     AppDomain.CurrentDomain.ProcessExit -= exitTask;
                 });
@@ -721,7 +721,7 @@ namespace Akka.Actor
 
         private static EventHandler TerminateOnClrExit(CoordinatedShutdown coord)
         {
-            return (sender, args) =>
+            return (_, _) =>
             {
                 // have to block, because if this method exits the process exits.
                 coord.RunClrHooks().Wait(coord.TotalTimeout);
