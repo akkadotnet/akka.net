@@ -42,7 +42,7 @@ namespace Akka.Remote.TestKit
             var fixedArgs = new List<string>();
             for (var i = 1; i < args.Length - 1; ++i)
             {
-                if (args[i].Equals("-Dmultinode") && args[i + 1].StartsWith('.'))
+                if (args[i].Equals("-Dmultinode") && args[i + 1].StartsWith("."))
                 {
                     fixedArgs.Add(args[i] + args[i+1]);
                     ++i;
