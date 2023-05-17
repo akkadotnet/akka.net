@@ -141,12 +141,12 @@ namespace Akka.Tests.Actor.Scheduler
 
             public MyScheduledActor()
             {
-                Receive<string>(str => str.Equals("get"), str =>
+                Receive<string>(str => str.Equals("get"), _ =>
                 {
                     Sender.Tell(_received);
                 });
 
-                Receive<string>(str => str.Equals("set"), str =>
+                Receive<string>(str => str.Equals("set"), _ =>
                 {
                     _received = true;
                 });

@@ -177,14 +177,14 @@ namespace Akka.Cluster.Sharding.Tests
                 .ContinueWith(r =>
                 {
                     if (r.IsCanceled)
-                        return (IImmutableList<Exception>)trueMsgs.Select(i => (Exception)new TimeoutException()).ToImmutableList();
+                        return (IImmutableList<Exception>)trueMsgs.Select(_ => (Exception)new TimeoutException()).ToImmutableList();
                     if (r.IsFaulted)
-                        return trueMsgs.Select(i => (Exception)r.Exception).ToImmutableList();
+                        return trueMsgs.Select(_ => (Exception)r.Exception).ToImmutableList();
 
                     return r.Result switch
                     {
-                        WriteMessageSuccess wms => trueMsgs.Select(i => (Exception)null).ToImmutableList(),
-                        WriteMessageFailure wmf => trueMsgs.Select(i => wmf.Cause).ToImmutableList(),
+                        WriteMessageSuccess wms => trueMsgs.Select(_ => (Exception)null).ToImmutableList(),
+                        WriteMessageFailure wmf => trueMsgs.Select(_ => wmf.Cause).ToImmutableList(),
                         _ => null
                     };
                 }, TaskContinuationOptions.ExecuteSynchronously);

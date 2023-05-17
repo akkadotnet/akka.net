@@ -19,20 +19,20 @@ namespace Akka.Tests.Actor
         {
             public Bug2182Actor()
             {
-                Receive<string>(str => str.Equals("init"), s => Become(Initialize));
-                ReceiveAny(o => Stash.Stash());
+                Receive<string>(str => str.Equals("init"), _ => Become(Initialize));
+                ReceiveAny(_ => Stash.Stash());
                 Self.Tell("init");
             }
 
             private void Initialize()
             {
                 Self.Tell("init2");
-                Receive<string>(str => str.Equals("init2"), s =>
+                Receive<string>(str => str.Equals("init2"), _ =>
                 {
                     Become(Set);
                     Stash.UnstashAll();
                 });
-                ReceiveAny(o => Stash.Stash());
+                ReceiveAny(_ => Stash.Stash());
             }
 
             private void Set()

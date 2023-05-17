@@ -129,7 +129,7 @@ namespace Akka.Streams.Implementation
                 if (!_done)
                 {
                     _done = true;
-                    _promise.Task.ContinueWith(t =>
+                    _promise.Task.ContinueWith(_ =>
                     {
                         if (!_promise.Task.Result.IsDefaultForType())
                         {

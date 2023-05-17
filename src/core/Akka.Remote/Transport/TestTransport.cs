@@ -91,12 +91,12 @@ namespace Akka.Remote.Transport
             SchemeIdentifier = schemeIdentifier;
             ListenBehavior =
                 new SwitchableLoggedBehavior<bool, (Address, TaskCompletionSource<IAssociationEventListener>)>(
-                    x => DefaultListen(), x => _registry.LogActivity(new ListenAttempt(LocalAddress)));
+                    _ => DefaultListen(), _ => _registry.LogActivity(new ListenAttempt(LocalAddress)));
             AssociateBehavior =
                 new SwitchableLoggedBehavior<Address, AssociationHandle>(DefaultAssociate,
                     address => registry.LogActivity(new AssociateAttempt(LocalAddress, address)));
-            ShutdownBehavior = new SwitchableLoggedBehavior<bool, bool>(x => DefaultShutdown(),
-                x => registry.LogActivity(new ShutdownAttempt(LocalAddress)));
+            ShutdownBehavior = new SwitchableLoggedBehavior<bool, bool>(_ => DefaultShutdown(),
+                _ => registry.LogActivity(new ShutdownAttempt(LocalAddress)));
             DisassociateBehavior = new SwitchableLoggedBehavior<TestAssociationHandle, bool>(DefaultDisassociate, remote => _registry.LogActivity(new DisassociateAttempt(remote.LocalAddress, remote.RemoteAddress)));
 
             WriteBehavior = new SwitchableLoggedBehavior<(TestAssociationHandle, ByteString), bool>(
@@ -489,7 +489,7 @@ namespace Akka.Remote.Transport
         /// <param name="result">The constant the Task will be completed with.</param>
         public void PushConstant(TOut result)
         {
-            Push(x => Task.FromResult(result));
+            Push(_ => Task.FromResult(result));
         }
 
         /// <summary>
@@ -498,7 +498,7 @@ namespace Akka.Remote.Transport
         /// <param name="e">The exception responsible for faulting this task</param>
         public void PushError(Exception e)
         {
-            Push(x => Task.Run(() =>
+            Push(_ => Task.Run(() =>
             {
                 throw e;
 #pragma warning disable 162
@@ -685,7 +685,7 @@ namespace Akka.Remote.Transport
         public void RegisterListenerPair((Address, Address) key,
             (IHandleEventListener, IHandleEventListener) listeners)
         {
-            _listenersTable.AddOrUpdate(key, x => listeners, (x, y) => listeners);
+            _listenersTable.AddOrUpdate(key, _ => listeners, (_, _) => listeners);
         }
 
         /// <summary>

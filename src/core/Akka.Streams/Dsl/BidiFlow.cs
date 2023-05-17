@@ -70,7 +70,7 @@ namespace Akka.Streams.Dsl
                 IGraph<FlowShape<TIn2, TOut2>, TMat2> flow2, Func<TMat1, TMat2, TMat> combine)
         {
             return FromGraph(GraphDsl.Create(flow1, flow2, combine,
-                 (builder, f1, f2) => new BidiShape<TIn1, TOut1, TIn2, TOut2>(f1.Inlet, f1.Outlet, f2.Inlet, f2.Outlet)));
+                 (_, f1, f2) => new BidiShape<TIn1, TOut1, TIn2, TOut2>(f1.Inlet, f1.Outlet, f2.Inlet, f2.Outlet)));
         }
 
         /// <summary>

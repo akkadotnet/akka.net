@@ -326,7 +326,7 @@ namespace Akka.Tests.Actor
 
             var a = system.ActorOf(actor =>
             {
-                actor.Receive<string>((msg, context) => { throw new Exception("Boom"); });
+                actor.Receive<string>((_, _) => { throw new Exception("Boom"); });
             });
 
             var probe = CreateTestProbe(system);
@@ -352,7 +352,7 @@ namespace Akka.Tests.Actor
 
             var a = system.ActorOf(actor =>
             {
-                actor.Receive<string>((msg, context) => { throw new Exception("Boom"); });
+                actor.Receive<string>((_, _) => { throw new Exception("Boom"); });
             });
 
             a.Tell("die");
@@ -504,7 +504,7 @@ namespace Akka.Tests.Actor
     {
         public Terminater()
         {
-            Receive<string>(s => "run".Equals(s), s => Context.Stop(Self));
+            Receive<string>(s => "run".Equals(s), _ => Context.Stop(Self));
         }
     }
 
@@ -512,7 +512,7 @@ namespace Akka.Tests.Actor
     {
         public override SupervisorStrategy Create()
         {
-            return new OneForOneStrategy(ex => Directive.Escalate);
+            return new OneForOneStrategy(_ => Directive.Escalate);
         }
     }
 

@@ -46,7 +46,7 @@ namespace Akka.Tests.Util.Internal
             //  Test that sharedVariable="updated"												 
             //  Test that updateWhenSignaled was called twice
 
-            Func<string, string> updateWhenSignaled = i =>
+            Func<string, string> updateWhenSignaled = _ =>
             {
                 numberOfCallsToUpdateWhenSignaled++;
                 hasEnteredUpdateMethod.Set();	//Signal THREAD 1 to update sharedVariable
@@ -90,7 +90,7 @@ namespace Akka.Tests.Util.Internal
             //  Test that sharedVariable="updated"												 
             //  Test that updateWhenSignaled was called twice
 
-            Func<string, (bool, string, string)> updateWhenSignaled = i =>
+            Func<string, (bool, string, string)> updateWhenSignaled = _ =>
             {
                 numberOfCallsToUpdateWhenSignaled++;
                 hasEnteredUpdateMethod.Set();	//Signal THREAD 1 to update sharedVariable

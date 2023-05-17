@@ -66,7 +66,7 @@ namespace Akka.Tests.Actor
         {
             public CrashActor()
             {
-                Receive<string>(s => s == "CRASH", s => { throw new Exception("Crash!"); });
+                Receive<string>(s => s == "CRASH", _ => { throw new Exception("Crash!"); });
                 Receive<string>(s => s == "BECOME", _ => BecomeStacked(State2));
                 Receive<string>(s => s == "BECOME-DISCARD", _ => BecomeStacked(State2));
                 Receive<string>(s => Sender.Tell("1:"+s));
@@ -74,7 +74,7 @@ namespace Akka.Tests.Actor
 
             private void State2()
             {
-                Receive<string>(s => s == "CRASH", s => { throw new Exception("Crash!"); });
+                Receive<string>(s => s == "CRASH", _ => { throw new Exception("Crash!"); });
                 Receive<string>(s => Sender.Tell("2:" + s));
             }
         }

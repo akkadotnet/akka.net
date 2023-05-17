@@ -82,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() => {
                 await Source.From(Enumerable.Range(1, 3))                                                                             
                 .Select(x => x)                                                                             
-                .SelectError(ex => Boom)                                                                             
+                .SelectError(_ => Boom)                                                                             
                 .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
                 .RequestNext(1)                                                                             
                 .RequestNext(2)                                                                             

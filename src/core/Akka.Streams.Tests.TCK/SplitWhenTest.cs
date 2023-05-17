@@ -21,7 +21,7 @@ namespace Akka.Streams.Tests.TCK
 
             var flow = (Source<Source<int, NotUsed>, NotUsed>)
                 Source.From(Enumerate(elements))
-                    .SplitWhen(elem => false)
+                    .SplitWhen(_ => false)
                     .PrefixAndTail(0)
                     .Select(tuple => tuple.Item2)
                     .ConcatSubstream();

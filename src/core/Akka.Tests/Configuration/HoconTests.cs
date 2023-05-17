@@ -763,7 +763,7 @@ test.value = 456
 x = 123
 y = hello
 ";
-            Func<string, HoconRoot> include = s => Parser.Parse(includeHocon, null);
+            Func<string, HoconRoot> include = _ => Parser.Parse(includeHocon, null);
             var config = ConfigurationFactory.ParseString(hocon,include);
 
             Assert.Equal(123,config.GetInt("a.b.x"));
@@ -781,7 +781,7 @@ y = hello
 x = 123
 y = ${x}
 ";
-            Func<string, HoconRoot> include = s => Parser.Parse(includeHocon, null);
+            Func<string, HoconRoot> include = _ => Parser.Parse(includeHocon, null);
             var config = ConfigurationFactory.ParseString(hocon, include);
 
             Assert.Equal(123, config.GetInt("a.b.x"));
@@ -807,8 +807,8 @@ x = 123
 y = ${x}
 ";
 
-            Func<string, HoconRoot> include2 = s => Parser.Parse(includeHocon2, null);
-            Func<string, HoconRoot> include = s => Parser.Parse(includeHocon, include2);
+            Func<string, HoconRoot> include2 = _ => Parser.Parse(includeHocon2, null);
+            Func<string, HoconRoot> include = _ => Parser.Parse(includeHocon, include2);
             var config = ConfigurationFactory.ParseString(hocon, include);
 
             Assert.Equal(123, config.GetInt("a.b.c.d.e.x"));

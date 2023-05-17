@@ -80,7 +80,7 @@ namespace Akka.Tests.Routing
         {
             public EchoProps()
             {
-                ReceiveAny(c => Sender.Tell(Context.Props));
+                ReceiveAny(_ => Sender.Tell(Context.Props));
             }
         }
 
@@ -97,7 +97,7 @@ namespace Akka.Tests.Routing
             public SendRefAtStartup(IActorRef testActor)
             {
                 testActor.Tell(Self);
-                ReceiveAny(c =>
+                ReceiveAny(_ =>
                 {
 
                 });

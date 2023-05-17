@@ -62,9 +62,9 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
             Stash.UnstashAll();
         });
 
-        Receive<ConsumerController.IConsumerCommand<T>>(command => { Stash.Stash(); });
+        Receive<ConsumerController.IConsumerCommand<T>>(_ => { Stash.Stash(); });
 
-        Receive<Terminated>(t =>
+        Receive<Terminated>(_ =>
         {
             _log.Debug("Consumer terminated before initialized.");
             Context.Stop(Self);
@@ -94,7 +94,7 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
             }
         });
 
-        Receive<Terminated>(t => t.ActorRef.Equals(_consumer), terminated =>
+        Receive<Terminated>(t => t.ActorRef.Equals(_consumer), _ =>
         {
             _log.Debug("Consumer terminated.");
             Context.Stop(Self);

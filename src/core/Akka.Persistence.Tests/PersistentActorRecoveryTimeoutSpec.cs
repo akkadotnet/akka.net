@@ -41,7 +41,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                Persist(message, x => Sender.Tell(message));
+                Persist(message, _ => Sender.Tell(message));
                 return true;
             }
 
@@ -78,7 +78,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                Persist(message, x => Sender.Tell(message));
+                Persist(message, _ => Sender.Tell(message));
                 return true;
             }
 

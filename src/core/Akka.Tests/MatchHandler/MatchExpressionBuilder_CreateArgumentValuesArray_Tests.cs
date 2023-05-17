@@ -46,7 +46,7 @@ namespace Akka.Tests.MatchHandler
         [Fact]
         public void Given_15_arguments_When_creating_Then_array_with_the_values_are_returned()
         {
-            var arguments = Enumerable.Range(1, 15).Select(i => new Argument(null, (Action<int>)(_ => { }), true)).ToList();
+            var arguments = Enumerable.Range(1, 15).Select(_ => new Argument(null, (Action<int>)(_ => { }), true)).ToList();
             var builder = new MatchExpressionBuilder<object>();
 
             var result = builder.CreateArgumentValuesArray(arguments);
@@ -63,7 +63,7 @@ namespace Akka.Tests.MatchHandler
         [Fact]
         public void Given_16_arguments_When_creating_Then_last_value_is_an_object_array_with_argument_14_and_15()
         {
-            var arguments = Enumerable.Range(1, 16).Select(i => new Argument(null, (Action<int>)(_ => { }), true)).ToList();
+            var arguments = Enumerable.Range(1, 16).Select(_ => new Argument(null, (Action<int>)(_ => { }), true)).ToList();
             var builder = new MatchExpressionBuilder<object>();
 
             var result = builder.CreateArgumentValuesArray(arguments);
@@ -86,7 +86,7 @@ namespace Akka.Tests.MatchHandler
         [Fact]
         public void Given_30_arguments_When_creating_Then_last_value_is_an_object_array_with_argument_14_to_29()
         {
-            var arguments = Enumerable.Range(1, 30).Select(i => new Argument(null, (Action<int>)(_ => { }), true)).ToList();
+            var arguments = Enumerable.Range(1, 30).Select(_ => new Argument(null, (Action<int>)(_ => { }), true)).ToList();
             var builder = new MatchExpressionBuilder<object>();
 
             var result = builder.CreateArgumentValuesArray(arguments);

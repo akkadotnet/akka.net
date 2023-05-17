@@ -133,7 +133,7 @@ namespace Akka.TestKit.Tests
                     Context.System.Scheduler.ScheduleTellRepeatedly(x.ScheduleOffset, x.ScheduleOffset, Sender, x, Self, _cancelable);
                 });
 
-                Receive<CancelMessage>(x =>
+                Receive<CancelMessage>(_ =>
                 {
                     _cancelable.Cancel();
                 });

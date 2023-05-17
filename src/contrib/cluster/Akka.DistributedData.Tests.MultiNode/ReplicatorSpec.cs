@@ -225,7 +225,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 var exception = new Exception("Test exception");
-                Func<IReplicatedData, IReplicatedData> update = x =>
+                Func<IReplicatedData, IReplicatedData> update = _ =>
                 {
                     throw exception;
                 };

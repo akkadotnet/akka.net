@@ -150,7 +150,7 @@ namespace Akka.Cluster
                 Init(state);
                 Become(Active);
             });
-            Receive<HeartbeatTick>(tick =>
+            Receive<HeartbeatTick>(_ =>
             {
                 _tickTimestamp = DateTime.UtcNow; // start checks when active
             }); //do nothing
@@ -158,7 +158,7 @@ namespace Akka.Cluster
 
         private void Active()
         {
-            Receive<HeartbeatTick>(tick => DoHeartbeat());
+            Receive<HeartbeatTick>(_ => DoHeartbeat());
             Receive<HeartbeatRsp>(rsp => DoHeartbeatRsp(rsp));
             Receive<ClusterEvent.MemberRemoved>(removed => RemoveMember(removed.Member));
             Receive<ClusterEvent.IMemberEvent>(evt => AddMember(evt.Member));

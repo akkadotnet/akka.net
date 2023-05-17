@@ -186,13 +186,13 @@ namespace Akka.Persistence.Tests
                     }
                 });
 
-                Command<Boom>(boom =>
+                Command<Boom>(_ =>
                 {
                     _log.Debug("Boom!");
                     throw new Exception("boom");
                 });
 
-                Command<SaveSnap>(save =>
+                Command<SaveSnap>(_ =>
                 {
                     _log.Debug("Save snapshot");
                     _lastSnapshotAskedForBy = Sender;
@@ -344,7 +344,7 @@ namespace Akka.Persistence.Tests
                     }
                 });
 
-                Recover<object>(message => {});
+                Recover<object>(_ => {});
             }
 
             public override string PersistenceId

@@ -55,7 +55,7 @@ namespace Akka.Util
         /// <summary>
         /// The default priority generator.
         /// </summary>
-        internal static readonly Func<object, int> DefaultPriorityCalculator = message => 1;
+        internal static readonly Func<object, int> DefaultPriorityCalculator = _ => 1;
         private int sequenceNumber;
 
         /// <summary>

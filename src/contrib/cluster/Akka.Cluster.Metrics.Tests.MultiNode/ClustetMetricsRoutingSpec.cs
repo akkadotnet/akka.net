@@ -350,7 +350,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
 
         private IImmutableDictionary<Address, int> ReceiveReplies(int expectedReplies)
         {
-            var zero = ImmutableDictionary<Address, int>.Empty.AddRange(Roles.ToDictionary(r => Node(r).Address, r => 0));
+            var zero = ImmutableDictionary<Address, int>.Empty.AddRange(Roles.ToDictionary(r => Node(r).Address, _ => 0));
             return ReceiveWhile(5.Seconds(), msg => (msg as AdaptiveLoadBalancingRouterConfig.Reply)?.Address, expectedReplies)
                 .Aggregate(zero, (replyDict, address) => replyDict.SetItem(address, replyDict[address] + 1));
         }

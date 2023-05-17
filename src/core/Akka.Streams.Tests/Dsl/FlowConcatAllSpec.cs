@@ -141,7 +141,7 @@ namespace Akka.Streams.Tests.Dsl
                 var publisher = this.CreateManualPublisherProbe<Source<int, NotUsed>>();
                 var subscriber = this.CreateManualSubscriberProbe<int>();
                 Source.FromPublisher(publisher)
-                    .ConcatMany<Source<int, NotUsed>, int, NotUsed>(x => { throw TestException; })
+                    .ConcatMany<Source<int, NotUsed>, int, NotUsed>(_ => { throw TestException; })
                     .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 

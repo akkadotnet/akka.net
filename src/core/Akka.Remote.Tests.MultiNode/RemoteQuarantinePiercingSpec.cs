@@ -36,8 +36,8 @@ namespace Akka.Remote.Tests.MultiNode
         {
             public Subject()
             {
-                Receive<string>(str => str == "shutdown", c => Context.System.Terminate());
-                Receive<string>(str => str == "identify", c =>
+                Receive<string>(str => str == "shutdown", _ => Context.System.Terminate());
+                Receive<string>(str => str == "identify", _ =>
                 {
                     Sender.Tell((AddressUidExtension.Uid(Context.System), Self));
                 });

@@ -71,7 +71,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             _systems = Enumerable.Range(1, 3).Select(n =>
                 ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($"akka.cluster.roles=[role-{n % 3}]").WithFallback(Sys.Settings.Config))).ToArray();
 
-            _probes = _systems.Select(i => CreateTestProbe()).ToArray();
+            _probes = _systems.Select(_ => CreateTestProbe()).ToArray();
         }
 
         public void Join(ActorSystem from, ActorSystem to, IActorRef probe)
