@@ -188,7 +188,7 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
             }
         });
 
-        Receive<Retry>(retry =>
+        Receive<Retry>(_ =>
         {
             ReceiveRetry(() =>
             {
@@ -253,7 +253,7 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
             }
         });
 
-        Receive<Retry>(r =>
+        Receive<Retry>(_ =>
         {
             ReceiveRetry(() =>
             {
@@ -275,7 +275,7 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
 
     private void WaitingForConfirmation(SequencedMessage<T> sequencedMessage)
     {
-        Receive<Confirmed>(c =>
+        Receive<Confirmed>(_ =>
         {
             var seqNr = sequencedMessage.SeqNr;
             if (_log.IsDebugEnabled)
@@ -396,7 +396,7 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
             ReceiveRegisterToProducerController(controller, () => WaitingForConfirmation(sequencedMessage));
         });
 
-        Receive<DeliverThenStop<T>>(stop =>
+        Receive<DeliverThenStop<T>>(_ =>
         {
             ReceiveDeliverThenStop(() => WaitingForConfirmation(sequencedMessage));
         });

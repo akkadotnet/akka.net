@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Performance
 
         private static void Execute(int numberOfIdentities)
         {
-            new GraphInterpreterSpecKit().WithTestSetup((setup, lastEvents) =>
+            new GraphInterpreterSpecKit().WithTestSetup((setup, _) =>
             {
                 var identities =
                     Enumerable.Range(1, numberOfIdentities)

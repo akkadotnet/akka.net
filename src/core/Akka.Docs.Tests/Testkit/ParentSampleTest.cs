@@ -24,11 +24,11 @@ namespace DocsExamples.Testkit
             public Parent()
             {
                 child = Context.ActorOf(Props.Create<Child>(), "child");
-                Receive<string>(str => str.Equals("pingit"), m =>
+                Receive<string>(str => str.Equals("pingit"), _ =>
                 {
                     child.Tell("ping");
                 });
-                Receive<string>(str => str.Equals("pong"), m =>
+                Receive<string>(str => str.Equals("pong"), _ =>
                 {
                     ponged = true;
                 });
@@ -39,7 +39,7 @@ namespace DocsExamples.Testkit
         {
             public Child()
             {
-                Receive<string>(str => str.Equals("ping"), m =>
+                Receive<string>(str => str.Equals("ping"), _ =>
                 {
                     Context.Parent.Tell("pong");
                 });
@@ -56,7 +56,7 @@ namespace DocsExamples.Testkit
             {
                 this.parent = parent;
 
-                Receive<string>(s => s.Equals("ping"), m =>
+                Receive<string>(s => s.Equals("ping"), _ =>
                 {
                     parent.Tell("pong", Self);
                 });
@@ -114,11 +114,11 @@ namespace DocsExamples.Testkit
                 child = childMaker(Context);
                 ponged = false;
 
-                Receive<string>(str => str.Equals("pingit"), m =>
+                Receive<string>(str => str.Equals("pingit"), _ =>
                 {
                     child.Tell("ping");
                 });
-                Receive<string>(str => str.Equals("pong"), m =>
+                Receive<string>(str => str.Equals("pong"), _ =>
                 {
                     ponged = true;
                 });

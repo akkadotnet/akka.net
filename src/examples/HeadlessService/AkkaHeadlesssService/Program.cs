@@ -14,13 +14,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 var host = new HostBuilder()
-                .ConfigureServices((hostContext, services) =>
+                .ConfigureServices((_, services) =>
                 {
                     services.AddLogging();
                     services.AddHostedService<AkkaService>();
 
                 })
-                .ConfigureLogging((hostContext, configLogging) =>
+                .ConfigureLogging((_, configLogging) =>
                 {
                     configLogging.AddConsole();
 

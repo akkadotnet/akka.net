@@ -189,7 +189,7 @@ namespace DocsExamples.Persistence.PersistentFSM
             #region persistent-fsm-setup
             StartWith(LookingAround.Instance, new EmptyShoppingCart());
 
-            When(LookingAround.Instance, (evt, state) =>
+            When(LookingAround.Instance, (evt, _) =>
             {
                 if (evt.FsmEvent is AddItem addItem)
                 {
@@ -205,7 +205,7 @@ namespace DocsExamples.Persistence.PersistentFSM
                 return Stay();
             });
 
-            When(Shopping.Instance, (evt, state) =>
+            When(Shopping.Instance, (evt, _) =>
             {
                 if (evt.FsmEvent is AddItem addItem)
                 {
@@ -232,7 +232,7 @@ namespace DocsExamples.Persistence.PersistentFSM
                 else if (evt.FsmEvent is Leave)
                 {
                     return Stop().Applying(OrderDiscarded.Instance)
-                        .AndThen(cart =>
+                        .AndThen(_ =>
                         {
                             reportActor.Tell(ShoppingCardDiscarded.Instance);
                             SaveStateSnapshot();
@@ -250,7 +250,7 @@ namespace DocsExamples.Persistence.PersistentFSM
                 return Stay();
             });
 
-            When(Inactive.Instance, (evt, state) =>
+            When(Inactive.Instance, (evt, _) =>
             {
                 if (evt.FsmEvent is AddItem addItem)
                 {
@@ -262,13 +262,13 @@ namespace DocsExamples.Persistence.PersistentFSM
                 {
                     return Stop()
                         .Applying(OrderDiscarded.Instance)
-                        .AndThen(cart => reportActor.Tell(ShoppingCardDiscarded.Instance));
+                        .AndThen(_ => reportActor.Tell(ShoppingCardDiscarded.Instance));
                 }
 
                 return Stay();
             });
 
-            When(Paid.Instance, (evt, state) =>
+            When(Paid.Instance, (evt, _) =>
             {
                 if (evt.FsmEvent is Leave)
                 {

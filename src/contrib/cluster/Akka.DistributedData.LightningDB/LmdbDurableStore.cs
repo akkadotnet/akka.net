@@ -179,7 +179,7 @@ namespace Akka.DistributedData.LightningDB
 
         private void Init()
         {
-            Receive<LoadAll>(loadAll =>
+            Receive<LoadAll>(_ =>
             {
                 if(_dir.Length == 0 || !Directory.Exists(_dir))
                 {
@@ -198,7 +198,7 @@ namespace Akka.DistributedData.LightningDB
                     using(var db = tx.OpenDatabase(DatabaseName))
                     using(var cursor = tx.CreateCursor(db))
                     {
-                        var data = cursor.AsEnumerable().Select((x, i)
+                        var data = cursor.AsEnumerable().Select((x, _)
                             => {
                             var (key, value) = x;
                             return new KeyValuePair<string, DurableDataEnvelope>(

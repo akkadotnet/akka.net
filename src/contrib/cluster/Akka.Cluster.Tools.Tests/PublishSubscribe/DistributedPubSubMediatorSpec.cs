@@ -39,7 +39,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         {
             EventFilter.Exception<NullReferenceException>().Expect(0, () =>
             {
-                var actor = Sys.ActorOf((dsl, context) =>
+                var actor = Sys.ActorOf((dsl, _) =>
                 {
                     IActorRef mediator = null;
                     dsl.OnPreStart = actorContext =>
@@ -48,7 +48,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
                     };
 
                     dsl.Receive<string>(s => s.Equals("check"),
-                        (s, actorContext) => { actorContext.Sender.Tell(mediator); });
+                        (_, actorContext) => { actorContext.Sender.Tell(mediator); });
                 }, "childActor");
 
                 actor.Tell("check");
@@ -66,7 +66,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         {
             // arrange
             var mediator = DistributedPubSub.Get(Sys).Mediator;
-            var actor = Sys.ActorOf((dsl, context) => { }, "childActor");
+            var actor = Sys.ActorOf((_, _) => { }, "childActor");
 
             // act
             // create a topic

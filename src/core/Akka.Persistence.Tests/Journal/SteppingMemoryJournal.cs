@@ -90,7 +90,7 @@ akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
                 {
                     var op = _queuedOps.Dequeue();
                     var tokenConsumer = Sender;
-                    op().ContinueWith(t => tokenConsumer.Tell(TokenConsumed.Instance), _continuationOptions).Wait();
+                    op().ContinueWith(_ => tokenConsumer.Tell(TokenConsumed.Instance), _continuationOptions).Wait();
                 }
                 return true;
             }
@@ -99,7 +99,7 @@ akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
 
         protected override void PreStart()
         {
-            _current.AddOrUpdate(_instanceId, id => Self, (id, old) => Self);
+            _current.AddOrUpdate(_instanceId, _ => Self, (_, _) => Self);
             base.PreStart();
         }
 
@@ -133,7 +133,7 @@ akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
                 WrapAndDoOrEnqueue(
                     () =>
                         base.DeleteMessagesToAsync(persistenceId, toSequenceNr)
-                            .ContinueWith(t => new object(),
+                            .ContinueWith(_ => new object(),
                                 _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion));
         }
 
@@ -150,7 +150,7 @@ akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
                     () =>
                         base.ReplayMessagesAsync(context, persistenceId, fromSequenceNr, toSequenceNr, max,
                             recoveryCallback)
-                            .ContinueWith(t => new object(),
+                            .ContinueWith(_ => new object(),
                                 _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion));
         }
 
@@ -181,7 +181,7 @@ akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
             {
                 var completed = op();
                 var tokenRecipient = _queuedTokenRecipients.Dequeue();
-                completed.ContinueWith(t => tokenRecipient.Tell(TokenConsumed.Instance), _continuationOptions).Wait();
+                completed.ContinueWith(_ => tokenRecipient.Tell(TokenConsumed.Instance), _continuationOptions).Wait();
             }
             else
                 _queuedOps.Enqueue(op);

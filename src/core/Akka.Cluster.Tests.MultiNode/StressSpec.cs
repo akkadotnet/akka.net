@@ -494,7 +494,7 @@ akka.remote.default-remote-dispatcher {
                 _reportTo.OnSuccess(n => Context.Watch(n));
             });
 
-            Receive<Terminated>(t =>
+            Receive<Terminated>(_ =>
             {
                 if (_reportTo.HasValue)
                     _reportTo = Option<IActorRef>.None;
@@ -602,7 +602,7 @@ akka.remote.default-remote-dispatcher {
                 _reportTo.OnSuccess(n => Context.Watch(n));
             });
 
-            Receive<Terminated>(t =>
+            Receive<Terminated>(_ =>
             {
                 if (_reportTo.HasValue)
                     _reportTo = Option<IActorRef>.None;

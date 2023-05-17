@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (x > 50)
                         throw error;
                     return x;
-                }).RunSum((i, i1) => 0, Materializer);
+                }).RunSum((_, _) => 0, Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>().WithMessage("test");
                 return Task.CompletedTask;

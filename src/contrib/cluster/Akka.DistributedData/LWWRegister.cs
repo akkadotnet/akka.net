@@ -88,14 +88,14 @@ namespace Akka.DistributedData
         /// Default clock is using max between DateTime.UtcNow.Ticks and current timestamp + 1.
         /// </summary>
         public static readonly Clock<T> DefaultClock =
-            (timestamp, value) => Math.Max(DateTime.UtcNow.Ticks, timestamp + 1);
+            (timestamp, _) => Math.Max(DateTime.UtcNow.Ticks, timestamp + 1);
 
         /// <summary>
         /// Reverse clock can be used for first-write-wins semantics. It's counting backwards, 
         /// using min between -DateTime.UtcNow.Ticks and current timestamp - 1.
         /// </summary>
         public static readonly Clock<T> ReverseClock =
-            (timestamp, value) => Math.Min(-DateTime.UtcNow.Ticks, timestamp - 1);
+            (timestamp, _) => Math.Min(-DateTime.UtcNow.Ticks, timestamp - 1);
 
         /// <summary>
         /// TBD

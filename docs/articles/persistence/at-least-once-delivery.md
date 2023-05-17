@@ -2,7 +2,10 @@
 uid: at-least-once-delivery
 title: At-Least-Once Delivery
 ---
-# At-Least-Once Delivery
+# At-Least-Once Delivery (Obsolete)
+
+> [!WARNING]
+> `AtLeastOnceDelivery` actors in Akka.Persistence are being deprecated in favor of [Akka.Delivery](xref:reliable-delivery) and [Akka.Cluster.Sharding.Delivery](xref:cluster-sharding-delivery). Please look at those articles for further details.
 
 To send messages with at-least-once delivery semantics to destinations you can mix-in `AtLeastOnceDelivery` class to your `PersistentActor` on the sending side. It takes care of re-sending messages when they have not been confirmed within a configurable timeout.
 

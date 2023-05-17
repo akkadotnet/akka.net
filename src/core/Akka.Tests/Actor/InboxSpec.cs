@@ -141,7 +141,7 @@ namespace Akka.Tests.Actor
         public void Select_WithClient_should_update_Client_and_copy_the_rest_of_the_properties_BUG_427()
         {
             var deadline = new TimeSpan(Sys.Scheduler.MonotonicClock.Ticks / 2); //Some point in the past
-            Predicate<object> predicate = o => true;
+            Predicate<object> predicate = _ => true;
             var actorRef = new EmptyLocalActorRef(((ActorSystemImpl)Sys).Provider, new RootActorPath(new Address("akka", "test")), Sys.EventStream);
             var select = new Select(deadline, predicate, actorRef);
 

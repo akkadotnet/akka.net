@@ -64,7 +64,7 @@ namespace Akka.Cluster.Sharding.Tests
                 var regions = Enumerable.Range(1, numberOfRegions).Select(n => LeastShardAllocationStrategySpec.NewFakeRegion($"{iteration}-R{n}", memberArray[n - 1]));
 
                 //var regions = Enumerable.Range(1, numberOfRegions).Select(n => Sys.ActorOf(Props.Empty, $"{iteration}-R{n}")).ToImmutableList();
-                var countPerRegion = regions.ToImmutableDictionary(region => region, region => rnd.Next(maxShardsPerRegion));
+                var countPerRegion = regions.ToImmutableDictionary(region => region, _ => rnd.Next(maxShardsPerRegion));
                 var allocations = CreateAllocations(countPerRegion);
                 TestRebalance(allocationStrategy, allocations, ImmutableList.Create(allocations), expectedMaxSteps);
                 foreach (var region in regions)

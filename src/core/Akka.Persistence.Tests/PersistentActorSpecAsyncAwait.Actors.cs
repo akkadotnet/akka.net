@@ -640,14 +640,14 @@ namespace Akka.Persistence.Tests
                             if (data.Contains("defer"))
                             {
                                 DeferAsync("before-nil", evt => Sender.Tell(evt));
-                                PersistAll<object>(null, evt => Sender.Tell("Null"));
+                                PersistAll<object>(null, _ => Sender.Tell("Null"));
                                 DeferAsync("after-nil", evt => Sender.Tell(evt));
                                 Sender.Tell(data);
                             }
                             else if (data.Contains("persist"))
                             {
                                 Persist("before-nil", evt => Sender.Tell(evt));
-                                PersistAll<object>(null, evt => Sender.Tell("Null"));
+                                PersistAll<object>(null, _ => Sender.Tell("Null"));
                                 DeferAsync("after-nil", evt => Sender.Tell(evt));
                                 Sender.Tell(data);
                                 //return true;

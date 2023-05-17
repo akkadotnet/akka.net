@@ -1110,7 +1110,7 @@ namespace Akka.Cluster
                 else
                 {
                     var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExitingDone);
-                    return self.Ask(InternalClusterAction.ExitingCompleted.Instance, timeout).ContinueWith(tr => Done.Instance);
+                    return self.Ask(InternalClusterAction.ExitingCompleted.Instance, timeout).ContinueWith(_ => Done.Instance);
                 }
             });
         }

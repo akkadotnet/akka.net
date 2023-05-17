@@ -51,9 +51,9 @@ namespace Akka.Tests.Performance.Actor
         {
             public MemoryReceiveActor()
             {
-                Receive<string>(s => { });
-                Receive<int>(i => { });
-                Receive<bool>(b => { });
+                Receive<string>(_ => { });
+                Receive<int>(_ => { });
+                Receive<bool>(_ => { });
             }
 
             public static Props Props { get; } = Props.Create(() => new MemoryReceiveActor());

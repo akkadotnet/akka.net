@@ -676,7 +676,7 @@ namespace Akka.IO
 
             var args = new SocketAsyncEventArgs();
             args.UserToken = onCompleteNotificationsReceiver;
-            args.Completed += (sender, e) =>
+            args.Completed += (_, e) =>
             {
                 var actorRef = e.UserToken as IActorRef;
                 var completeMsg = ResolveMessage(e);

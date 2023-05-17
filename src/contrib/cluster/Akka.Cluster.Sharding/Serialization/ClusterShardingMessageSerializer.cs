@@ -124,26 +124,26 @@ namespace Akka.Cluster.Sharding.Serialization
                 { GracefulShutdownReqManifest, bytes => new ShardCoordinator.GracefulShutdownRequest(ActorRefMessageFromBinary(bytes)) },
                 { RegionStoppedManifest, bytes => new ShardCoordinator.RegionStopped(ActorRefMessageFromBinary(bytes)) },
 
-                { GetShardStatsManifest, bytes => Shard.GetShardStats.Instance },
+                { GetShardStatsManifest, _ => Shard.GetShardStats.Instance },
                 { ShardStatsManifest, bytes => ShardStatsFromBinary(bytes) },
-                { GetShardRegionStatsManifest, bytes => GetShardRegionStats.Instance },
+                { GetShardRegionStatsManifest, _ => GetShardRegionStats.Instance },
                 { ShardRegionStatsManifest, bytes => ShardRegionStatsFromBinary(bytes) },
 
                 { GetClusterShardingStatsManifest, bytes => GetClusterShardingStatsFromBinary(bytes) },
                 { ClusterShardingStatsManifest, bytes => ClusterShardingStatsFromBinary(bytes) },
 
-                { GetCurrentRegionsManifest, bytes => GetCurrentRegions.Instance },
+                { GetCurrentRegionsManifest, _ => GetCurrentRegions.Instance },
                 { CurrentRegionsManifest, bytes => CurrentRegionsFromBinary(bytes) },
 
                 { StartEntityManifest, bytes => StartEntityFromBinary(bytes) },
                 { StartEntityAckManifest, bytes => StartEntityAckFromBinary(bytes) },
 
-                { GetCurrentShardStateManifest, bytes => Shard.GetCurrentShardState.Instance },
+                { GetCurrentShardStateManifest, _ => Shard.GetCurrentShardState.Instance },
                 { CurrentShardStateManifest, bytes => CurrentShardStateFromBinary(bytes) },
-                { GetShardRegionStateManifest, bytes => GetShardRegionState.Instance },
+                { GetShardRegionStateManifest, _ => GetShardRegionState.Instance },
                 { ShardStateManifest, bytes => ShardStateFromBinary(bytes) },
                 { CurrentShardRegionStateManifest, bytes => CurrentShardRegionStateFromBinary(bytes) },
-                { EventSourcedRememberShardsMigrationMarkerManifest, bytes => EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker.Instance},
+                { EventSourcedRememberShardsMigrationMarkerManifest, _ => EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker.Instance},
                 { EventSourcedRememberShardsState, bytes => RememberShardsStateFromBinary(bytes) }
             };
         }

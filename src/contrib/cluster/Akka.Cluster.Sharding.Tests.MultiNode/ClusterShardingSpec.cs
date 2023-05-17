@@ -703,7 +703,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 // mute logging of deadLetters during shutdown of systems
                 if (!Log.IsDebugEnabled)
-                    Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(x => true), new PredicateMatcher(x => true))));
+                    Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(_ => true), new PredicateMatcher(_ => true))));
                 EnterBarrier("logs-muted");
 
                 RunOn(() =>

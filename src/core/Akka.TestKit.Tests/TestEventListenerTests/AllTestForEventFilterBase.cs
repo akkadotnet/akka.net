@@ -234,7 +234,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
             await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(1, TimeSpan.FromSeconds(2), () => {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                Task.Delay(TimeSpan.FromMilliseconds(10)).ContinueWith(t => { LogMessage("whatever"); });
+                Task.Delay(TimeSpan.FromMilliseconds(10)).ContinueWith(_ => { LogMessage("whatever"); });
                 return Task.CompletedTask;
             });
         }

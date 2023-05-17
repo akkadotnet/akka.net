@@ -25,7 +25,7 @@ namespace Akka.Tests.Performance.IO
             public TestListener(IPEndPoint endpoint, Counter inboundCounter, ManualResetEventSlim reset)
             {
                 Context.System.Tcp().Tell(new Tcp.Bind(Self, endpoint));
-                Receive<Tcp.Connected>(connected =>
+                Receive<Tcp.Connected>(_ =>
                 {
                     var connection = Sender;
                     var handler = Context.ActorOf(Props.Create(() => new TestHandler(connection, inboundCounter, reset)));
@@ -53,8 +53,8 @@ namespace Akka.Tests.Performance.IO
                         connection.Tell(Tcp.Write.Create(received.Data));
                     }
                 });
-                Receive<Tcp.ConnectionClosed>(closed => Context.Stop(Self));
-                Receive<Terminated>(terminated => Context.Stop(Self));
+                Receive<Tcp.ConnectionClosed>(_ => Context.Stop(Self));
+                Receive<Terminated>(_ => Context.Stop(Self));
             }
         }
 
@@ -64,13 +64,13 @@ namespace Akka.Tests.Performance.IO
             {
                 Context.System.Tcp().Tell(new Tcp.Connect(remoteEndPoint));
 
-                Receive<Tcp.CommandFailed>(failed => failed.Cmd is Tcp.Connect, failed =>
+                Receive<Tcp.CommandFailed>(failed => failed.Cmd is Tcp.Connect, _ =>
                 {
                     reset.Set();
                     completion.SetCanceled();
                     Context.Stop(Self);
                 });
-                Receive<Tcp.Connected>(connected =>
+                Receive<Tcp.Connected>(_ =>
                 {
                     var connection = Sender;
                     Context.Watch(connection);
@@ -100,12 +100,12 @@ namespace Akka.Tests.Performance.IO
                 {
                     connection.Tell(Tcp.Write.Create(ByteString.FromBytes(data)));
                 });
-                Receive<Tcp.CommandFailed>(failed =>
+                Receive<Tcp.CommandFailed>(_ =>
                 {
                     reset.Set();
                     Context.Stop(Self);
                 });
-                Receive<Tcp.ConnectionClosed>(closed =>
+                Receive<Tcp.ConnectionClosed>(_ =>
                 {
                     reset.Set();
                     Context.Stop(Self);

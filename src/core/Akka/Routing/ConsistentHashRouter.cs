@@ -26,7 +26,7 @@ namespace Akka.Routing
         /// <summary>
         /// Default empty <see cref="ConsistentHashMapping"/> implementation
         /// </summary>
-        public static readonly ConsistentHashMapping EmptyConsistentHashMapping = key => null;
+        public static readonly ConsistentHashMapping EmptyConsistentHashMapping = _ => null;
     }
 
     /// <summary>

@@ -65,7 +65,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             Context.ActorOf(
                 act =>
                 {
-                    act.Receive<ProducerController.RequestNext<T>>((msg, ctx) =>
+                    act.Receive<ProducerController.RequestNext<T>>((msg, _) =>
                     {
                         self.Forward(new WrappedRequestNext<T>(msg));
                     });
@@ -153,7 +153,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         var self = Self;
         MsgAdapter = Context.ActorOf(act =>
         {
-            act.Receive<ShardingEnvelope>((msg, ctx) => { self.Forward(new Msg(msg, 0)); });
+            act.Receive<ShardingEnvelope>((msg, _) => { self.Forward(new Msg(msg, 0)); });
 
             act.ReceiveAny((_, ctx) =>
             {
@@ -533,8 +533,8 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
 
         DurableQueueRef.Value.Ask<DurableProducerQueue.StoreMessageSentAck>(Mapper,
                 askTimeout, cancellationToken: default)
-            .PipeTo(self, success: ack => new StoreMessageSentCompleted<T>(messageSent),
-                failure: ex => new StoreMessageSentFailed<T>(messageSent, attempt));
+            .PipeTo(self, success: _ => new StoreMessageSentCompleted<T>(messageSent),
+                failure: _ => new StoreMessageSentFailed<T>(messageSent, attempt));
     }
 
     private RequestNext<T> CreateRequestNext(State<T> state)
@@ -600,7 +600,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             var self = Self;
             @ref.Ask<DurableProducerQueue.State<T>>(Mapper, timeout: loadTimeout, cancellationToken: default)
                 .PipeTo(self, success: state => new LoadStateReply<T>(state),
-                    failure: ex => new LoadStateFailed(attempt)); // timeout
+                    failure: _ => new LoadStateFailed(attempt)); // timeout
         });
     }
 

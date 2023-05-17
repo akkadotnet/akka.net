@@ -52,9 +52,9 @@ namespace Akka.Tests.Actor
                 var timeout = Dilated(TimeSpan.FromSeconds(5));
                 var address = "new-actor" + i;
                 var actors = Enumerable.Range(0, 4)
-                    .Select(x => Task.Run(() => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address))).ToArray();
+                    .Select(_ => Task.Run(() => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address))).ToArray();
                 // Use WhenAll with empty ContinueWith to swallow all exceptions, so we can inspect the tasks afterwards.
-                await Task.WhenAll(actors).ContinueWith(a => { }).AwaitWithTimeout(timeout);
+                await Task.WhenAll(actors).ContinueWith(_ => { }).AwaitWithTimeout(timeout);
                 Assert.True(actors.Any(x => x.Status == TaskStatus.RanToCompletion && x.Result != null), "Failed to create any Actors");
                 Assert.True(actors.Any(x => x.Status == TaskStatus.Faulted && x.Exception.InnerException is InvalidActorNameException), "Succeeded in creating all Actors. Some should have failed.");
             }

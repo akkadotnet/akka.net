@@ -1991,7 +1991,7 @@ namespace Akka.Streams.Dsl
                         Push(stage.OutTap, _pendingTap.Value);
                         _pendingTap = Option<T>.None;
                     },
-                    cause =>
+                    _ =>
                     {
                         SetHandler(stage.In, () => Push(stage.OutMain, Grab(stage.In)));
                         // Allow any outstanding element to be garbage-collected

@@ -54,6 +54,7 @@ public sealed class Producer : ReceiveActor, IWithTimers
         Timers.StartPeriodicTimer("produce", Produce.Instance, TimeSpan.FromSeconds(1));
     }
 
+    // <MessageProduction>
     private void Active()
     {
         Receive<Produce>(_ =>
@@ -67,19 +68,11 @@ public sealed class Producer : ReceiveActor, IWithTimers
 
         Receive<ShardingProducerController.RequestNext<Customer.ICustomerCommand>>(next =>
         {
-            // if (next.EntitiesWithDemand.Any())
-            // {
-            //     var customer = PickRandom(next.EntitiesWithDemand.ToList());
-            //     var item = PickRandom(Items);
-            //     var msg = new Customer.PurchaseItem(item);
-            //     SendNext.Tell(new ShardingEnvelope(customer, msg));
-            // }
-            
-            
             // no work to do yet, but update SendNext
             SendNext = next.SendNextTo;
         });
     }
+    // </MessageProduction>
 
     /// <summary>
     /// Waiting for demand for messages to come from sharding system

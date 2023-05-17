@@ -37,7 +37,7 @@ namespace Akka.Tests.Routing
                 _testActor = testActor;
                 Context.Parent.Tell("one");
 
-                Receive<string>(s => s == "one", c =>
+                Receive<string>(s => s == "one", _ =>
                 {
                     _testActor.Forward("two");
                 });

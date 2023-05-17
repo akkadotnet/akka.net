@@ -85,7 +85,6 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
             {
                 // BugFix: TestConsumer was recreated by a message sent by the Sharding system, but the EndCondition was already met
                 // and we don't want to send another Collected that is missing some of the figures. Ignore.
-                
             }
             else
             {

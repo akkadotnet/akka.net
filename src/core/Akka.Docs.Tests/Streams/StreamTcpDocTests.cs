@@ -152,7 +152,7 @@ namespace DocsExamples.Streams
                         Output.WriteLine($"Server: {text}");
                         return text;
                     })
-                    .Select(text => ReadLine("> "))
+                    .Select(_ => ReadLine("> "))
                     .Via(replParser);
 
                 connection.Join(repl).Run(Materializer);

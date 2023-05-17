@@ -83,7 +83,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     _replyTo.Tell(Done.Instance);
                 });
 
-                Receive<Terminated>(t => { });
+                Receive<Terminated>(_ => { });
             }
         }
 

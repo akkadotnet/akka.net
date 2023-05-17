@@ -128,7 +128,7 @@ namespace Akka.TestKit
         {
             return await InternalExpectMsgAsync<T>(
                 timeout: RemainingOrDilated(timeout), 
-                assert: (m, sender) =>
+                assert: (m, _) =>
                 {
                     if (isMessage != null)
                         AssertPredicateIsTrueForMessage(isMessage, m, hint);
@@ -410,8 +410,8 @@ namespace Akka.TestKit
             string hint,
             CancellationToken cancellationToken)
         {
-            msgAssert ??= m => { };
-            senderAssert ??= sender => { };
+            msgAssert ??= _ => { };
+            senderAssert ??= _ => { };
 
             Action<T, IActorRef> combinedAssert = (m, sender) =>
             {

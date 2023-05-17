@@ -57,7 +57,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                     Context.Stop(Self);
                 });
 
-                ReceiveAny(x => Sender.Tell(Self));
+                ReceiveAny(_ => Sender.Tell(Self));
             }
 
             protected override void PreStart()

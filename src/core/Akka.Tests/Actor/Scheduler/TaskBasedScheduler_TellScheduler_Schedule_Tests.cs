@@ -36,7 +36,7 @@ namespace Akka.Tests.Actor.Scheduler
                     //Receive three messages, and store the time when these were received
                     //after three messages stop the actor and send the times to TestActor
                     var messages = new List<DateTimeOffset>();
-                    dsl.Receive<string>((s, context) =>
+                    dsl.Receive<string>((_, context) =>
                     {
                         messages.Add(context.System.Scheduler.Now);
                         if (messages.Count == 3)

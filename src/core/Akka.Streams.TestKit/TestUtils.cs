@@ -29,7 +29,7 @@ namespace Akka.Streams.TestKit
         public static IEnumerable<IPEndPoint> TemporaryServerAddresses(int numberOfAddresses,
             string hostName = "127.0.0.1", bool udp = false)
         {
-            return Enumerable.Range(0, numberOfAddresses).Select(i => TemporaryServerAddress(hostName, udp));
+            return Enumerable.Range(0, numberOfAddresses).Select(_ => TemporaryServerAddress(hostName, udp));
         }
     }
 }

@@ -95,38 +95,38 @@ namespace Akka.Tests.MatchHandler
             AssertSameSignatures<object>(
                 bldr =>
                 {
-                    bldr.Match<string>(s => { });
-                    bldr.Match<bool>(b => { });
-                    bldr.Match<int>(i => { });
+                    bldr.Match<string>(_ => { });
+                    bldr.Match<bool>(_ => { });
+                    bldr.Match<int>(_ => { });
                 },
                 bldr =>
                 {
                     bldr.Match<string>(s => { str = s; });
                     bldr.Match<bool>(b => { var x = b && true; });
-                    bldr.Match<int>(i => { });
+                    bldr.Match<int>(_ => { });
                 });
 
 
-            AssertSameSignatures<object>(bldr => bldr.Match<string>(s => { }, s => true), bldr => bldr.Match<string>(s => { }, s => false));
+            AssertSameSignatures<object>(bldr => bldr.Match<string>(_ => { }, _ => true), bldr => bldr.Match<string>(_ => { }, _ => false));
 
-            AssertSameSignatures<object>(bldr => bldr.Match<string>(s => true), bldr => bldr.Match<string>(s => false));
+            AssertSameSignatures<object>(bldr => bldr.Match<string>(_ => true), bldr => bldr.Match<string>(_ => false));
 
             AssertSameSignatures<object>(
                 bldr =>
                 {
-                    bldr.Match<string>(s => { });
-                    bldr.Match<bool>(b => { }, b => b);
-                    bldr.Match<int>(i => { }, _ => true);
-                    bldr.Match(typeof(ValueTuple), t => { });
-                    bldr.Match(typeof(float), o => true);
+                    bldr.Match<string>(_ => { });
+                    bldr.Match<bool>(_ => { }, b => b);
+                    bldr.Match<int>(_ => { }, _ => true);
+                    bldr.Match(typeof(ValueTuple), _ => { });
+                    bldr.Match(typeof(float), _ => true);
                 },
                 bldr =>
                 {
                     bldr.Match<string>(s => { str = s; });
                     bldr.Match<bool>(b => { var x = b && true; }, b => !b);
-                    bldr.Match<int>(i => { }, i => i > 0);
-                    bldr.Match(typeof(ValueTuple), t => { });
-                    bldr.Match(typeof(float), o => false);
+                    bldr.Match<int>(_ => { }, i => i > 0);
+                    bldr.Match(typeof(ValueTuple), _ => { });
+                    bldr.Match(typeof(float), _ => false);
                 });
         }
 
@@ -148,30 +148,30 @@ namespace Akka.Tests.MatchHandler
             AssertDifferentSignatures<object>(
                 bldr =>
                 {
-                    bldr.Match<string>(s => { });
-                    bldr.Match<bool>(b => { });
-                    bldr.Match<int>(i => { });
+                    bldr.Match<string>(_ => { });
+                    bldr.Match<bool>(_ => { });
+                    bldr.Match<int>(_ => { });
                 },
                 bldr =>
                 {
-                    bldr.Match<string>(s => { });
-                    bldr.Match<bool>(b => { });
-                    bldr.Match<int>(i => { });
-                    bldr.Match<int>(i => { });
+                    bldr.Match<string>(_ => { });
+                    bldr.Match<bool>(_ => { });
+                    bldr.Match<int>(_ => { });
+                    bldr.Match<int>(_ => { });
                 });
 
             AssertDifferentSignatures<object>(
                 bldr =>
                 {
-                    bldr.Match<string>(s => { });
-                    bldr.Match<bool>(b => { });
-                    bldr.Match<int>(i => { });
+                    bldr.Match<string>(_ => { });
+                    bldr.Match<bool>(_ => { });
+                    bldr.Match<int>(_ => { });
                 },
                 bldr =>
                 {
-                    bldr.Match<string>(s => { });
-                    bldr.Match<bool>(b => { });
-                    bldr.Match<int>(i => { });
+                    bldr.Match<string>(_ => { });
+                    bldr.Match<bool>(_ => { });
+                    bldr.Match<int>(_ => { });
                     bldr.MatchAny(_ => { });
                 });
 
@@ -179,27 +179,27 @@ namespace Akka.Tests.MatchHandler
             AssertDifferentSignatures<object>(
                 bldr =>
                 {
-                    bldr.Match<string>(s => { });
-                    bldr.Match<bool>(b => { });
-                    bldr.Match<int>(i => { });
-                    bldr.Match(typeof(ValueTuple), t => { });
+                    bldr.Match<string>(_ => { });
+                    bldr.Match<bool>(_ => { });
+                    bldr.Match<int>(_ => { });
+                    bldr.Match(typeof(ValueTuple), _ => { });
                 },
                 bldr =>
                 {
-                    bldr.Match<string>(s => { });
-                    bldr.Match<bool>(b => { });
-                    bldr.Match<int>(i => { });
-                    bldr.Match(typeof(double), t => { });
+                    bldr.Match<string>(_ => { });
+                    bldr.Match<bool>(_ => { });
+                    bldr.Match<int>(_ => { });
+                    bldr.Match(typeof(double), _ => { });
                 });
 
             AssertDifferentSignatures<object>(
                 bldr =>
                 {
-                    bldr.Match(typeof(string),s => true);
+                    bldr.Match(typeof(string),_ => true);
                 },
                 bldr =>
                 {
-                    bldr.Match(typeof(int), s => true);
+                    bldr.Match(typeof(int), _ => true);
                 });
 
         }
