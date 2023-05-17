@@ -151,20 +151,20 @@ namespace Akka.Tests.Actor
                 {
                     var child = a.ActorOf(c =>
                     {
-                        c.ReceiveAny((msg, ctx) => { });
-                        c.OnPreRestart = (reason, msg, ctx) =>
+                        c.ReceiveAny((_, _) => { });
+                        c.OnPreRestart = (reason, msg, _) =>
                         {
                             latch.CountDown();
                             c.DefaultPreRestart(reason, msg);
                         };
-                        c.OnPostRestart = (reason, ctx) =>
+                        c.OnPostRestart = (reason, _) =>
                         {
                             latch.CountDown();
                             c.DefaultPostRestart(reason);
                         };
                     });
-                    a.Strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), r => Directive.Restart);
-                    a.Receive<string>((_, ctx) => child.Tell(Kill.Instance));
+                    a.Strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), _ => Directive.Restart);
+                    a.Receive<string>((_, _) => child.Tell(Kill.Instance));
                 });
 
                 boss.Tell("send kill");

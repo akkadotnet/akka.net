@@ -189,7 +189,7 @@ namespace Akka.Persistence.Tests
             public CallReceiveWhenHandlingMessageActor(string pid) : base(pid)
             {
                 Recover<int>(i => State.AddLast(i));
-                Command<object>(m =>
+                Command<object>(_ =>
                 {
                     try
                     {

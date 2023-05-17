@@ -89,7 +89,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
                 Become(WaitRequest);
             });
 
-            ReceiveAny(msg =>
+            ReceiveAny(_ =>
                 Stash.Stash()
             );
 
@@ -260,7 +260,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
         {
             var props = Props.Create(() => new ShardedEntityActor());
             var sharding = ClusterSharding.Get(system);
-            return sharding.Start(entityName, s => props, ClusterShardingSettings.Create(system),
+            return sharding.Start(entityName, _ => props, ClusterShardingSettings.Create(system),
                 new ShardMessageExtractor());
         }
     }

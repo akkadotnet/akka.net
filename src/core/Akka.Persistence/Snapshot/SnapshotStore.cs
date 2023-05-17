@@ -122,7 +122,7 @@ namespace Akka.Persistence.Snapshot
                                         : new OperationCanceledException("DeleteAsync canceled, possibly due to timing out.")),
                                 _continuationOptions)
                     .PipeTo(self, senderPersistentActor)
-                    .ContinueWith(t =>
+                    .ContinueWith(_ =>
                     {
                         if (_publish)
                             eventStream.Publish(message);
@@ -162,7 +162,7 @@ namespace Akka.Persistence.Snapshot
                                         : new OperationCanceledException("DeleteAsync canceled, possibly due to timing out.")),
                                 _continuationOptions)
                     .PipeTo(self, senderPersistentActor)
-                    .ContinueWith(t =>
+                    .ContinueWith(_ =>
                     {
                         if (_publish)
                             eventStream.Publish(message);

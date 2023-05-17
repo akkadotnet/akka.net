@@ -600,14 +600,14 @@ namespace Akka.Remote
         /// <exception cref="HopelessAssociation">TBD</exception>
         protected void Receiving()
         {
-            Receive<EndpointWriter.FlushAndStop>(flush =>
+            Receive<EndpointWriter.FlushAndStop>(_ =>
             {
                 //Trying to serve until our last breath
                 ResendAll();
                 _writer.Tell(EndpointWriter.FlushAndStop.Instance);
                 Become(FlushWait);
             });
-            Receive<IsIdle>(idle => { }); // Do not reply, we will Terminate soon, or send a GotUid
+            Receive<IsIdle>(_ => { }); // Do not reply, we will Terminate soon, or send a GotUid
             Receive<EndpointManager.Send>(send => HandleSend(send));
             Receive<Ack>(ack =>
             {
@@ -627,11 +627,11 @@ namespace Akka.Remote
                     ResendNacked();
                 }
             });
-            Receive<AttemptSysMsgRedelivery>(sysmsg =>
+            Receive<AttemptSysMsgRedelivery>(_ =>
             {
                 if (UidConfirmed) ResendAll();
             });
-            Receive<Terminated>(terminated =>
+            Receive<Terminated>(_ =>
             {
                 _currentHandle = null;
                 Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
@@ -681,7 +681,7 @@ namespace Akka.Remote
         /// <exception cref="HopelessAssociation">TBD</exception>
         protected void Gated(bool writerTerminated, bool earlyUngateRequested)
         {
-            Receive<Terminated>(terminated =>
+            Receive<Terminated>(_ =>
             {
                 if (!writerTerminated)
                 {
@@ -695,8 +695,8 @@ namespace Akka.Remote
 
                 Become(() => Gated(true, earlyUngateRequested));
             });
-            Receive<IsIdle>(idle => Sender.Tell(Idle.Instance));
-            Receive<Ungate>(ungate =>
+            Receive<IsIdle>(_ => Sender.Tell(Idle.Instance));
+            Receive<Ungate>(_ =>
             {
                 if (!writerTerminated)
                 {
@@ -725,10 +725,10 @@ namespace Akka.Remote
                     GoToIdle();
                 }
             });
-            Receive<AttemptSysMsgRedelivery>(redelivery => { }); // Ignore
+            Receive<AttemptSysMsgRedelivery>(_ => { }); // Ignore
             Receive<EndpointManager.Send>(send => send.Message is ISystemMessage, send => TryBuffer(send.Copy(NextSeq())));
             Receive<EndpointManager.Send>(send => Context.System.DeadLetters.Tell(send));
-            Receive<EndpointWriter.FlushAndStop>(flush => Context.Stop(Self));
+            Receive<EndpointWriter.FlushAndStop>(_ => Context.Stop(Self));
             Receive<EndpointWriter.StopReading>(stop =>
             {
                 stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer));
@@ -741,7 +741,7 @@ namespace Akka.Remote
         /// </summary>
         protected void IdleBehavior()
         {
-            Receive<IsIdle>(idle => Sender.Tell(Idle.Instance));
+            Receive<IsIdle>(_ => Sender.Tell(Idle.Instance));
             Receive<EndpointManager.Send>(send =>
             {
                 _writer = CreateWriter();
@@ -750,7 +750,7 @@ namespace Akka.Remote
                 GoToActive();
             });
 
-            Receive<AttemptSysMsgRedelivery>(sys =>
+            Receive<AttemptSysMsgRedelivery>(_ =>
             {
                 if (_resendBuffer.Nacked.Any() || _resendBuffer.NonAcked.Any())
                 {
@@ -759,11 +759,11 @@ namespace Akka.Remote
                     GoToActive();
                 }
             });
-            Receive<TooLongIdle>(idle =>
+            Receive<TooLongIdle>(_ =>
             {
                 HandleTooLongIdle();
             });
-            Receive<EndpointWriter.FlushAndStop>(stop => Context.Stop(Self));
+            Receive<EndpointWriter.FlushAndStop>(_ => Context.Stop(Self));
             Receive<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
             Receive<Ungate>(_ => { }); //ok, not gated
         }
@@ -773,15 +773,15 @@ namespace Akka.Remote
         /// </summary>
         protected void FlushWait()
         {
-            Receive<IsIdle>(idle => { }); // Do not reply, we will Terminate soon, which will do the inbound connection unstashing
-            Receive<Terminated>(terminated =>
+            Receive<IsIdle>(_ => { }); // Do not reply, we will Terminate soon, which will do the inbound connection unstashing
+            Receive<Terminated>(_ =>
             {
                 //Clear buffer to prevent sending system messages to dead letters -- at this point we are shutting down and
                 //don't know if they were properly delivered or not
                 _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(0);
                 Context.Stop(Self);
             });
-            ReceiveAny(o => { }); // ignore
+            ReceiveAny(_ => { }); // ignore
         }
 
         #endregion
@@ -1205,13 +1205,13 @@ namespace Akka.Remote
         private void Buffering()
         {
             Receive<EndpointManager.Send>(send => EnqueueInBuffer(send));
-            Receive<BackoffTimer>(backoff => SendBufferedMessages());
+            Receive<BackoffTimer>(_ => SendBufferedMessages());
             Receive<FlushAndStop>(stop =>
             {
                 _buffer.AddLast(stop); //Flushing is postponed after the pending writes
                 Context.System.Scheduler.ScheduleTellOnce(Settings.FlushWait, Self, FlushAndStopTimeout.Instance, Self);
             });
-            Receive<FlushAndStopTimeout>(timeout =>
+            Receive<FlushAndStopTimeout>(_ =>
             {
                 // enough, ready to flush
                 DoFlushAndStop();
@@ -1229,8 +1229,8 @@ namespace Akka.Remote
                     Become(Buffering);
                 }
             });
-            Receive<FlushAndStop>(flush => DoFlushAndStop());
-            Receive<AckIdleCheckTimer>(ack =>
+            Receive<FlushAndStop>(_ => DoFlushAndStop());
+            Receive<AckIdleCheckTimer>(_ =>
             {
                 if (_ackDeadline.IsOverdue)
                 {
@@ -1241,7 +1241,7 @@ namespace Akka.Remote
 
         private void Handoff()
         {
-            Receive<Terminated>(terminated =>
+            Receive<Terminated>(_ =>
             {
                 _reader = StartReadEndpoint(_handle);
                 BecomeWritingOrSendBufferedMessages();
@@ -2000,7 +2000,7 @@ namespace Akka.Remote
                 if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
                     _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
             });
-            ReceiveAny(o => { }); // ignore
+            ReceiveAny(_ => { }); // ignore
         }
 
         #endregion

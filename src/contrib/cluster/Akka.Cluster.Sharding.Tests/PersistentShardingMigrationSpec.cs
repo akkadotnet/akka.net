@@ -169,7 +169,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             var typeName = "Migration";
 
-            WithSystem(Sys.Settings.Config, typeName, "OldMode", (s, region, p) =>
+            WithSystem(Sys.Settings.Config, typeName, "OldMode", (_, region, _) =>
             {
                 AssertRegionRegistrationComplete(region);
                 region.Tell(new Message(1));

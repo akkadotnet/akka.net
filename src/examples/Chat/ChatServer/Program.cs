@@ -57,7 +57,7 @@ akka {
                 foreach (var client in _clients) client.Tell(response, Self);
             });
 
-            Receive<ConnectRequest>(message =>
+            Receive<ConnectRequest>(_ =>
             {
                 _clients.Add(Sender);
                 Sender.Tell(new ConnectResponse

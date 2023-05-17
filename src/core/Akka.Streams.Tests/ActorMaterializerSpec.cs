@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public async Task CanMaterializeStreamsUsingActorSystem()
         {
-            Func<Task> task = () => Source.Single(1).RunForeach(i => { }, Sys);
+            Func<Task> task = () => Source.Single(1).RunForeach(_ => { }, Sys);
             await task.Should().NotThrowAsync();
         }
         

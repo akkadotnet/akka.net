@@ -37,7 +37,7 @@ namespace Akka.Tests.Pattern
             {
                 _probe = probe;
 
-                Receive<string>(str => str.Equals("boom"), message =>
+                Receive<string>(str => str.Equals("boom"), _ =>
                 {
                     throw new TestException();
                     return;
@@ -65,7 +65,7 @@ namespace Akka.Tests.Pattern
             {
                 _probe = probe;
 
-                Receive<string>(str => str.Equals("boom"), message =>
+                Receive<string>(str => str.Equals("boom"), _ =>
                 {
                     throw new TestException();
                     return;

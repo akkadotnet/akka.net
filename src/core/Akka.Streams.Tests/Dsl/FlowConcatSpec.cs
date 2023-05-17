@@ -122,7 +122,7 @@ namespace Akka.Streams.Tests.Dsl
                 (await subscriber.ExpectSubscriptionAsync()).Request(5);
 
                 var errorSignalled = Enumerable.Range(1, 4)
-                    .Aggregate(false, (b, e) => b || subscriber.ExpectNextOrError() is TestException);
+                    .Aggregate(false, (b, _) => b || subscriber.ExpectNextOrError() is TestException);
                 if (!errorSignalled)
                     subscriber.ExpectSubscriptionAndError().Should().BeOfType<TestException>();
             }, Materializer);
@@ -146,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
                 (await subscriber.ExpectSubscriptionAsync()).Request(5);
 
                 var errorSignalled = Enumerable.Range(1, 4)
-                    .Aggregate(false, (b, e) => b || subscriber.ExpectNextOrError() is TestException);
+                    .Aggregate(false, (b, _) => b || subscriber.ExpectNextOrError() is TestException);
                 if (!errorSignalled)
                     subscriber.ExpectSubscriptionAndError().Should().BeOfType<TestException>();
             }, Materializer);

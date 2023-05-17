@@ -268,7 +268,7 @@ namespace Akka.Remote.TestKit
                 {
                     var fsm = tr.Result;
                     _log.Debug("created server FSM {0}", fsm);
-                    _clients.AddOrUpdate(channel, fsm, (connection, @ref) => fsm);
+                    _clients.AddOrUpdate(channel, fsm, (_, _) => fsm);
                     channel.Configuration.AutoRead = true;
                 });
         }
@@ -368,7 +368,7 @@ namespace Akka.Remote.TestKit
                 return null;
             });
 
-            OnTermination(@event =>
+            OnTermination(_ =>
             {
                 _controller.Tell(new Controller.ClientDisconnected(_roleName));
                 _channel.CloseAsync();

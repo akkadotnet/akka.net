@@ -410,7 +410,7 @@ namespace Akka.Streams.Tests.Dsl
                 var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
-                    .Throttle(2, TimeSpan.FromMilliseconds(400), 5, x => 1, ThrottleMode.Shaping)
+                    .Throttle(2, TimeSpan.FromMilliseconds(400), 5, _ => 1, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 // Exhaust bucket first

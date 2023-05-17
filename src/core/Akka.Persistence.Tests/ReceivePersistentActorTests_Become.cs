@@ -102,14 +102,14 @@ namespace Akka.Persistence.Tests
 
             private void State2()
             {
-                Command<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
+                Command<string>(s => s == "UNBECOME", _ => UnbecomeStacked());
                 Command<string>(s => s == "BECOME", _ => BecomeStacked(State3));
                 Command<string>(s => Sender.Tell("string2:" + s, Self));
             }
 
             private void State3()
             {
-                Command<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
+                Command<string>(s => s == "UNBECOME", _ => UnbecomeStacked());
                 Command<string>(s => Sender.Tell("string3:" + s, Self));
             }
         }
@@ -119,7 +119,7 @@ namespace Akka.Persistence.Tests
             public BecomeDirectlyInConstructorActor(string pid) : base(pid)
             {
                 Recover<int>(i => State.AddLast(i));
-                Command<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
+                Command<string>(s => s == "UNBECOME", _ => UnbecomeStacked());
                 Command<string>(s => s == "BECOME", _ => BecomeStacked(State2));
                 Command<string>(s => Sender.Tell("string1:" + s, Self));
                 Command<int>(i => Sender.Tell("int1:" + i, Self));
@@ -129,14 +129,14 @@ namespace Akka.Persistence.Tests
 
             private void State2()
             {
-                Command<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
+                Command<string>(s => s == "UNBECOME", _ => UnbecomeStacked());
                 Command<string>(s => s == "BECOME", _ => BecomeStacked(State3));
                 Command<string>(s => Sender.Tell("string2:" + s, Self));
             }
 
             private void State3()
             {
-                Command<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
+                Command<string>(s => s == "UNBECOME", _ => UnbecomeStacked());
                 Command<string>(s => Sender.Tell("string3:" + s, Self));
             }
         }

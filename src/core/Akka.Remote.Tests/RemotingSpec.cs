@@ -516,7 +516,7 @@ namespace Akka.Remote.Tests
 
                 var remoteHandle =
                     await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4));
-                remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(ev => { }));
+                remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(_ => { }));
 
                 // Now we initiate an emulated inbound connection to the real system
                 var inboundHandleProbe = CreateTestProbe();
@@ -599,7 +599,7 @@ namespace Akka.Remote.Tests
 
                 var remoteHandle =
                     await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4));
-                remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(ev => { }));
+                remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(_ => { }));
 
                 // Now we initiate an emulated inbound connection to the real system
                 var inboundHandleProbe = CreateTestProbe();
@@ -955,7 +955,7 @@ namespace Akka.Remote.Tests
         {
             private readonly Action<IHandleEvent> _handler;
 
-            public ActionHandleEventListener() : this(ev => { })
+            public ActionHandleEventListener() : this(_ => { })
             {
             }
 

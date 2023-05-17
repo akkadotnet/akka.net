@@ -420,7 +420,7 @@ namespace Akka.Remote.Transport
 
                     var sender = Sender;
                     Task.WhenAll(modes).ContinueWith(
-                            tr => SetThrottleAck.Instance, 
+                            _ => SetThrottleAck.Instance, 
                             TaskContinuationOptions.ExecuteSynchronously)
                         .PipeTo(sender);
                     return;

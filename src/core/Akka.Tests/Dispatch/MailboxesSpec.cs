@@ -106,7 +106,7 @@ namespace Akka.Tests.Dispatch
                 Become(Process);
                 Stash.UnstashAll();
             });
-            ReceiveAny(msg =>
+            ReceiveAny(_ =>
             {
                 Stash.Stash();
             });

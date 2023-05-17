@@ -164,7 +164,7 @@ namespace Akka.Streams.Tests.Dsl
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 queue.WatchCompletionAsync()
-                    .ContinueWith(t => "done", TaskContinuationOptions.OnlyOnRanToCompletion)
+                    .ContinueWith(_ => "done", TaskContinuationOptions.OnlyOnRanToCompletion)
                     .PipeTo(TestActor);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -345,7 +345,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = await s.ExpectSubscriptionAsync();
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                queue.WatchCompletionAsync().ContinueWith(t => Done.Instance).PipeTo(TestActor);
+                queue.WatchCompletionAsync().ContinueWith(_ => Done.Instance).PipeTo(TestActor);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 sub.Cancel();
                 await ExpectMsgAsync(Done.Instance);

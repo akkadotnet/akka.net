@@ -64,10 +64,10 @@ namespace Akka.Benchmarks.Remoting
             _addr2 = RARP.For(_sys2).Provider.DefaultAddress;
 
             _senderActorRef =
-                _sys2.ActorOf(act => { act.ReceiveAny((o, context) => context.Sender.Tell(context.Sender)); },
+                _sys2.ActorOf(act => { act.ReceiveAny((_, context) => context.Sender.Tell(context.Sender)); },
                     "sender1");
 
-            _localReceiveRef = _sys1.ActorOf(act => { act.ReceiveAny((o, context) => context.Sender.Tell(context.Sender)); },
+            _localReceiveRef = _sys1.ActorOf(act => { act.ReceiveAny((_, context) => context.Sender.Tell(context.Sender)); },
                 "recv1");
 
             // create an association
