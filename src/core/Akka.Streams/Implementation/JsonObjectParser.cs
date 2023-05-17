@@ -92,8 +92,8 @@ namespace Akka.Streams.Implementation
             if(!foundObject || _pos == -1 || _pos == 0)
                 return Option<ByteString>.None;
 
-            var emit = _buffer.Slice(0, _pos);
-            var buffer = _buffer.Slice(_pos);
+            var emit = _buffer[.._pos];
+            var buffer = _buffer[_pos..];
             _buffer = buffer.Compact();
             _pos = 0;
 
@@ -103,7 +103,7 @@ namespace Akka.Streams.Implementation
             if (trimFront == 0)
                 return emit;
 
-            var trimmed = emit.Slice(trimFront);
+            var trimmed = emit[trimFront..];
             return trimmed.IsEmpty ? Option<ByteString>.None : trimmed;
         }
 

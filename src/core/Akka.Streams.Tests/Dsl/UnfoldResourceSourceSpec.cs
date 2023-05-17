@@ -163,7 +163,7 @@ namespace Akka.Streams.Tests.Dsl
                     var s = reader.Read(buffer, 0, chunkSize);
 
                     return s > 0
-                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Slice(0, s)
+                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1))[..s]
                         : Option<ByteString>.None;
                 }, reader => reader.Dispose())
                 .RunWith(Sink.AsPublisher<ByteString>(false), Materializer);
@@ -175,7 +175,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (remaining.Length <= chunkSize)
                         return remaining;
                     var chunk = remaining.Take(chunkSize).Aggregate("", (s, c1) => s + c1);
-                    remaining = remaining.Substring(chunkSize);
+                    remaining = remaining[chunkSize..];
                     return chunk;
                 };
 

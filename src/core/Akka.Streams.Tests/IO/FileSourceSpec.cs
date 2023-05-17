@@ -75,8 +75,8 @@ namespace Akka.Streams.Tests.IO
                     }
                     else
                     {
-                        chunks = remaining.Substring(0, chunkSize);
-                        remaining = remaining.Substring(chunkSize);
+                        chunks = remaining[..chunkSize];
+                        remaining = remaining[chunkSize..];
                     }
 
                     return chunks;
@@ -118,7 +118,7 @@ namespace Akka.Streams.Tests.IO
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
-                var remaining = _testText.Substring(1000);
+                var remaining = _testText[1000..];
 
                 var nextChunk = new Func<string>(() =>
                 {
@@ -131,8 +131,8 @@ namespace Akka.Streams.Tests.IO
                     }
                     else
                     {
-                        chunks = remaining.Substring(0, chunkSize);
-                        remaining = remaining.Substring(chunkSize);
+                        chunks = remaining[..chunkSize];
+                        remaining = remaining[chunkSize..];
                     }
 
                     return chunks;
@@ -179,8 +179,8 @@ namespace Akka.Streams.Tests.IO
                     }
                     else
                     {
-                        chunks = remaining.Substring(0, chunkSize);
-                        remaining = remaining.Substring(chunkSize);
+                        chunks = remaining[..chunkSize];
+                        remaining = remaining[chunkSize..];
                     }
 
                     return chunks;

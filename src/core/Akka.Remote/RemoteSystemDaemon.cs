@@ -263,7 +263,7 @@ namespace Akka.Remote
                 ActorPath p = Path/subPath;
                 var s = subPath.Join("/");
                 var i = s.IndexOf("#", StringComparison.Ordinal);
-                var childName = i < 0 ? s : s.Substring(0, i); // extract the name without the UID
+                var childName = i < 0 ? s : s[..i]; // extract the name without the UID
                 var localProps = props; //.WithDeploy(new Deploy(Scope.Local));
 
                 bool isTerminating = !_terminating.WhileOff(() =>
@@ -315,7 +315,7 @@ namespace Akka.Remote
                 var last = path.LastIndexOf("/", StringComparison.Ordinal);
                 if (last == -1)
                     return Nobody.Instance;
-                path = path.Substring(0, last);
+                path = path[..last];
                 n++;
             }
         }

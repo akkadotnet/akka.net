@@ -54,7 +54,7 @@ namespace Akka.Remote.Serialization
             if(absoluteUri.Length > 1 || path.Length > addressSpan.Length)
             {
                 //path end with /
-                rootPath = path.Slice(0, addressSpan.Length + 1).ToString();   
+                rootPath = path[..(addressSpan.Length + 1)].ToString();   
             }
             else
             {
@@ -62,7 +62,7 @@ namespace Akka.Remote.Serialization
                 Span<char> buffer = addressSpan.Length < 1024 
                     ? stackalloc char[addressSpan.Length + 1] 
                     : new char[addressSpan.Length + 1];
-                path.Slice(0, addressSpan.Length).CopyTo(buffer);
+                path[..addressSpan.Length].CopyTo(buffer);
                 buffer[buffer.Length - 1] = '/';
                 rootPath = buffer.ToString();
             }

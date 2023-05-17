@@ -57,7 +57,7 @@ namespace Akka.Tests.Actor
         {
             public Resumer()
             {
-                Receive<string>(s => s.StartsWith("spawn:"), s => Sender.Tell(Context.ActorOf<Resumer>(s.Substring(6))));
+                Receive<string>(s => s.StartsWith("spawn:"), s => Sender.Tell(Context.ActorOf<Resumer>(s[6..])));
                 Receive("spawn", _ => Sender.Tell(Context.ActorOf<Resumer>()));
                 Receive("fail", _ => { throw new Exception("expected"); });
                 Receive("ping", _ => Sender.Tell("pong"));
@@ -74,7 +74,7 @@ namespace Akka.Tests.Actor
             public ResumerAsync()
             {
 #pragma warning disable CS1998
-                ReceiveAsync<string>(s => s.StartsWith("spawn:"), async s => Sender.Tell(Context.ActorOf<ResumerAsync>(s.Substring(6))));
+                ReceiveAsync<string>(s => s.StartsWith("spawn:"), async s => Sender.Tell(Context.ActorOf<ResumerAsync>(s[6..])));
                 ReceiveAsync<string>(s => s.Equals("spawn"), async _ => Sender.Tell(Context.ActorOf<ResumerAsync>()));
                 ReceiveAsync<string>(s => s.Equals("fail"), async _ => { throw new Exception("expected"); });
                 ReceiveAsync<string>(s => s.Equals("ping"), async _ => Sender.Tell("pong"));
@@ -226,7 +226,7 @@ namespace Akka.Tests.Actor
             var slowResumer = ActorOf(c =>
             {
                 c.Strategy = new OneForOneStrategy(e => { latch.Ready(Dilated(TimeSpan.FromSeconds(4))); return Directive.Resume; });
-                c.Receive<string>(s => s.StartsWith("spawn:"), (s, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>(s.Substring(6))));
+                c.Receive<string>(s => s.StartsWith("spawn:"), (s, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>(s[6..])));
                 c.Receive("spawn", (s, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>()));
             }, "slowResumer");
 

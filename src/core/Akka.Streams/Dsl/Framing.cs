@@ -135,7 +135,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength)
         {
-            return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Slice(4));
+            return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b[4..]);
         }
 
         /// <summary>
@@ -342,8 +342,8 @@ namespace Akka.Streams.Dsl
                         else if (_buffer.HasSubstring(_stage._separatorBytes, possibleMatchPosition))
                         {
                             // Found a match
-                            var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
-                            _buffer = _buffer.Slice(possibleMatchPosition + _stage._separatorBytes.Count).Compact();
+                            var parsedFrame = _buffer[..possibleMatchPosition].Compact();
+                            _buffer = _buffer[(possibleMatchPosition + _stage._separatorBytes.Count)..].Compact();
                             _nextPossibleMatch = 0;
                             Push(_stage.Outlet, parsedFrame);
 
@@ -422,8 +422,8 @@ namespace Akka.Streams.Dsl
                 /// </summary>
                 private void PushFrame()
                 {
-                    var emit = _buffer.Slice(0, _frameSize).Compact();
-                    _buffer = _buffer.Slice(_frameSize);
+                    var emit = _buffer[.._frameSize].Compact();
+                    _buffer = _buffer[_frameSize..];
                     _frameSize = int.MaxValue;
                     Push(_stage.Outlet, emit);
                     if (_buffer.IsEmpty && IsClosed(_stage.Inlet))
@@ -440,11 +440,11 @@ namespace Akka.Streams.Dsl
                         PushFrame();
                     else if (bufferSize >= _stage._minimumChunkSize)
                     {
-                        var iterator = _buffer.Slice(_stage._lengthFieldOffset).GetEnumerator();
+                        var iterator = _buffer[_stage._lengthFieldOffset..].GetEnumerator();
                         var parsedLength = _stage._intDecoder(iterator, _stage._lengthFieldLength);
 
                         _frameSize = _stage._computeFrameSize.HasValue
-                            ? _stage._computeFrameSize.Value(_buffer.Slice(0, _stage._lengthFieldOffset).ToArray(), parsedLength)
+                            ? _stage._computeFrameSize.Value(_buffer[.._stage._lengthFieldOffset].ToArray(), parsedLength)
                             : parsedLength + _stage._minimumChunkSize;
 
                         if (_frameSize > _stage._maximumFramelength)

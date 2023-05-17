@@ -46,7 +46,7 @@ namespace Akka.Util
                 sb[spanIndex++] = Base64Chars[index];
                 next = next >> 6;
             } while (next != 0);
-            return sb.Slice(0, spanIndex).ToString();
+            return sb[..spanIndex].ToString();
         }
 
         /// <summary>

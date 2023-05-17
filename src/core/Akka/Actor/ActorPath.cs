@@ -451,7 +451,7 @@ namespace Akka.Actor
                 nextSlash = absoluteUri.IndexOf('/');
                 if (nextSlash > 0)
                 {
-                    var name = absoluteUri.Slice(0, nextSlash).ToString();
+                    var name = absoluteUri[..nextSlash].ToString();
                     actorPath = new ChildActorPath(actorPath, name, ActorCell.UndefinedUid);
                 }
                 else if (nextSlash < 0 && absoluteUri.Length > 0) // final segment
@@ -459,9 +459,9 @@ namespace Akka.Actor
                     var fragLoc = absoluteUri.IndexOf('#');
                     if (fragLoc > -1)
                     {
-                        var fragment = absoluteUri.Slice(fragLoc + 1);
+                        var fragment = absoluteUri[(fragLoc + 1)..];
                         var fragValue = SpanHacks.Parse(fragment);
-                        absoluteUri = absoluteUri.Slice(0, fragLoc);
+                        absoluteUri = absoluteUri[..fragLoc];
                         actorPath = new ChildActorPath(actorPath, absoluteUri.ToString(), fragValue);
                     }
                     else
@@ -471,7 +471,7 @@ namespace Akka.Actor
 
                 }
 
-                absoluteUri = absoluteUri.Slice(nextSlash + 1);
+                absoluteUri = absoluteUri[(nextSlash + 1)..];
             }
             while (nextSlash >= 0);
 
@@ -527,7 +527,7 @@ namespace Akka.Actor
                 return false;
             }
 
-            var doubleSlash = path.Slice(firstAtPos + 1);
+            var doubleSlash = path[(firstAtPos + 1)..];
             if (doubleSlash.Length < 2 || !(doubleSlash[0] == '/' && doubleSlash[1] == '/'))
             {
                 //missing double slash
@@ -536,7 +536,7 @@ namespace Akka.Actor
                 return false;
             }
 
-            var nextSlash = path.Slice(firstAtPos + 3).IndexOf('/');
+            var nextSlash = path[(firstAtPos + 3)..].IndexOf('/');
             if (nextSlash == -1)
             {
                 address = path;
@@ -544,8 +544,8 @@ namespace Akka.Actor
             }
             else
             {
-                address = path.Slice(0, firstAtPos + 3 + nextSlash);
-                absoluteUri = path.Slice(address.Length);
+                address = path[..(firstAtPos + 3 + nextSlash)];
+                absoluteUri = path[address.Length..];
             }
 
             return true;

@@ -82,8 +82,8 @@ namespace Akka.Streams.Tests.Dsl
                         var nextChunkSize = _buffer.IsEmpty
                             ? 0
                             : ThreadLocalRandom.Current.Next(0, _buffer.Count + 1);
-                        var newChunk = _buffer.Slice(0, nextChunkSize).Compact();
-                        _buffer = _buffer.Slice(nextChunkSize).Compact();
+                        var newChunk = _buffer[..nextChunkSize].Compact();
+                        _buffer = _buffer[nextChunkSize..].Compact();
 
                         Push(_stage.Outlet, newChunk);
 
@@ -122,7 +122,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             for (var i = 0; i < delimiter.Count; i++)
                 foreach (var sequence in BaseTestSequences)
-                    yield return delimiter.Slice(0, i) + sequence;
+                    yield return delimiter[..i] + sequence;
         }
 
         [Fact]
@@ -256,7 +256,7 @@ namespace Akka.Streams.Tests.Dsl
             ByteString tail)
         {
             var h = ByteString.FromBytes(new byte[4].PutInt(payload.Count, order: byteOrder));
-            var header = byteOrder == ByteOrder.LittleEndian ? h.Slice(0, fieldLength) : h.Slice(4 - fieldLength);
+            var header = byteOrder == ByteOrder.LittleEndian ? h[..fieldLength] : h[(4 - fieldLength)..];
 
             return offset + header + payload + tail;
         }
@@ -272,7 +272,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     var encodedFrames = FrameLengths.Where(x => x < 1L << (fieldLength * 8)).Select(length =>
                     {
-                        var payload = ReferenceChunk.Slice(0, length);
+                        var payload = ReferenceChunk[..length];
                         return Encode(payload, fieldOffset, fieldLength, byteOrder);
                     }).ToList();
 
@@ -317,7 +317,7 @@ namespace Akka.Streams.Tests.Dsl
 
                     var encodedFrames = FrameLengths.Where(x => x < 1L << (fieldLength * 8)).Select(length =>
                     {
-                        var payload = ReferenceChunk.Slice(0, length);
+                        var payload = ReferenceChunk[..length];
                         var offsetBytes = Offset();
                         var tailBytes = offsetBytes.Length > 0 ? new byte[offsetBytes[0]] : Array.Empty<byte>();
                         return EncodeComplexFrame(payload, fieldLength, byteOrder, ByteString.FromBytes(offsetBytes), ByteString.FromBytes(tailBytes));
@@ -357,7 +357,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Length_field_based_framing_must_report_oversized_frames()
         {
-            var task1 = Source.Single(Encode(ReferenceChunk.Slice(0, 100), 0, 1, ByteOrder.BigEndian))
+            var task1 = Source.Single(Encode(ReferenceChunk[..100], 0, 1, ByteOrder.BigEndian))
                 .Via(Framing.LengthField(1, 99, 0, ByteOrder.BigEndian))
                 .RunAggregate(new List<ByteString>(), (list, s) =>
                 {
@@ -366,7 +366,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
             task1.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
 
-            var task2 = Source.Single(Encode(ReferenceChunk.Slice(0, 100), 49, 1, ByteOrder.BigEndian))
+            var task2 = Source.Single(Encode(ReferenceChunk[..100], 49, 1, ByteOrder.BigEndian))
                 .Via(Framing.LengthField(1, 100, 0, ByteOrder.BigEndian))
                 .RunAggregate(new List<ByteString>(), (list, s) =>
                 {
@@ -387,8 +387,8 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         foreach (var frameLength in FrameLengths.Where(f => f < 1 << (fieldLength * 8) && f != 0))
                         {
-                            var fullFrame = Encode(ReferenceChunk.Slice(0, frameLength), fieldOffset, fieldLength, byteOrder);
-                            var partialFrame = fullFrame.Slice(0, fullFrame.Count - 1); // dropRight equivalent
+                            var fullFrame = Encode(ReferenceChunk[..frameLength], fieldOffset, fieldLength, byteOrder);
+                            var partialFrame = fullFrame[..^1]; // dropRight equivalent
 
                             Action action = () =>
                             {
@@ -417,7 +417,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Join(Flow.Create<ByteString>()); // Loopback
 
             var random= new Random();
-            var testMessages = Enumerable.Range(1, 100).Select(_ => ReferenceChunk.Slice(0, random.Next(1024))).ToList();
+            var testMessages = Enumerable.Range(1, 100).Select(_ => ReferenceChunk[..random.Next(1024)]).ToList();
 
             var task = Source.From(testMessages)
                 .Via(codecFlow)

@@ -264,7 +264,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public string HostPort()
         {
-            return ToString().Substring(Protocol.Length + 3);
+            return ToString()[(Protocol.Length + 3)..];
         }
 
         /// <summary>
@@ -362,25 +362,25 @@ namespace Akka.Actor
             }
 
             Span<char> fullScheme = stackalloc char[firstColonPos];
-            span.Slice(0, firstColonPos).ToLowerInvariant(fullScheme);
+            span[..firstColonPos].ToLowerInvariant(fullScheme);
             if (!fullScheme.StartsWith("akka".AsSpan()))
             {
                 //invalid scheme
                 return false;
             }
 
-            span = span.Slice(firstColonPos + 1);
+            span = span[(firstColonPos + 1)..];
             if (span.Length < 2 || !(span[0] == '/' && span[1] == '/'))
                 return false;
 
-            span = span.Slice(2); // move past the double //
+            span = span[2..]; // move past the double //
 
             // cut the absolute Uri off
             var uriStart = span.IndexOf('/');
             if (uriStart > -1)
             {
-                absolutUri = span.Slice(uriStart);
-                span = span.Slice(0, uriStart);
+                absolutUri = span[uriStart..];
+                span = span[..uriStart];
             } 
             else
             {
@@ -399,8 +399,8 @@ namespace Akka.Actor
             }
 
             // dealing with a remote Uri
-            sysName = span.Slice(0, firstAtPos).ToString();
-            span = span.Slice(firstAtPos + 1);
+            sysName = span[..firstAtPos].ToString();
+            span = span[(firstAtPos + 1)..];
 
             /*
              * Need to check for:
@@ -416,14 +416,14 @@ namespace Akka.Actor
             {
                 // found an IPV6 address
                 host = span.Slice(openBracket, closeBracket - openBracket + 1).ToString();
-                span = span.Slice(closeBracket + 1); // advance past the address
+                span = span[(closeBracket + 1)..]; // advance past the address
 
                 // need to check for trailing colon
                 var secondColonPos = span.IndexOf(':');
                 if (secondColonPos == -1)
                     return false;
 
-                span = span.Slice(secondColonPos + 1);
+                span = span[(secondColonPos + 1)..];
             }
             else
             {
@@ -431,10 +431,10 @@ namespace Akka.Actor
                 if (secondColonPos == -1)
                     return false;
 
-                host = span.Slice(0, secondColonPos).ToString();
+                host = span[..secondColonPos].ToString();
 
                 // move past the host
-                span = span.Slice(secondColonPos + 1);
+                span = span[(secondColonPos + 1)..];
             }
 
             
