@@ -1,3 +1,7 @@
+#### 1.5.8 May 17th 2023 ####
+
+**Placeholder for nightlies**
+
 #### 1.5.7 May 17th 2023 ####
 
 Akka.NET v1.5.7 is a significant release that introduces a [major new reliable message delivery feature to Akka.NET and Akka.Cluster.Sharding](https://getakka.net/articles/actors/reliable-delivery.html): `Akka.Delivery`.
