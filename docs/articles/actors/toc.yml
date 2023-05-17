@@ -26,4 +26,6 @@
   href: testing-actor-systems.md
 - name: Coordinated Shutdown
   href: coordinated-shutdown.md
+- name: Reliable Message Delivery
+  href: reliable-delivery.md
   

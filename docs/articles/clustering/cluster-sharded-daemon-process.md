@@ -1,3 +1,8 @@
+---
+uid: sharded-daemon-process
+title: Akka.Cluster.Sharding Daemon Processes - Distributing Workers
+---
+
 # Sharded Daemon Process
 
 > [!WARNING]

@@ -11,6 +11,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DependencyInjection")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DistributedData")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Docs.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Sql.TestKit")]
@@ -99,6 +100,8 @@ namespace Akka.Actor
         public static Akka.Actor.IActorRef GetCurrentSelfOrNoSender() { }
         public static Akka.Actor.IActorRef GetCurrentSenderOrNoSender() { }
         public Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
+        [Akka.Annotations.InternalApiAttribute()]
+        protected virtual void HandleActorTaskSchedulerMessage(Akka.Dispatch.SysMsg.ActorTaskSchedulerMessage m) { }
         public void Init(bool sendSupervise, Akka.Dispatch.MailboxType mailboxType) { }
         public Akka.Actor.Internal.ChildRestartStats InitChild(Akka.Actor.IInternalActorRef actor) { }
         public void Invoke(Akka.Actor.Envelope envelope) { }
@@ -3117,6 +3120,16 @@ namespace Akka.Dispatch.SysMsg
     {
         public ActorTask(System.Threading.Tasks.Task task) { }
         public System.Threading.Tasks.Task Task { get; }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class ActorTaskSchedulerMessage : Akka.Dispatch.SysMsg.SystemMessage
+    {
+        public ActorTaskSchedulerMessage(Akka.Dispatch.ActorTaskScheduler scheduler, System.Threading.Tasks.Task task, object message) { }
+        public ActorTaskSchedulerMessage(System.Exception exception, object message) { }
+        public System.Exception Exception { get; }
+        public object Message { get; }
+        public void ExecuteTask() { }
+        public override string ToString() { }
     }
     public sealed class Create : Akka.Dispatch.SysMsg.SystemMessage
     {
