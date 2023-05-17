@@ -35,9 +35,6 @@ public class ReliableDeliveryRandomSpecs : TestKit.Xunit2.TestKit
     {
     }
 
-    private bool Chunked => ProducerController.Settings.Create(Sys).ChunkLargeMessagesBytes != null &&
-                            ProducerController.Settings.Create(Sys).ChunkLargeMessagesBytes > 0;
-
     private int _idCount = 0;
     private int NextId() => _idCount++;
 

@@ -380,7 +380,6 @@ akka.remote.default-remote-dispatcher {
     /// </summary>
     internal class ClusterResultHistory : ReceiveActor
     {
-        private ILoggingAdapter _log = Context.GetLogger();
         private ImmutableList<AggregatedClusterResult> _history = ImmutableList<AggregatedClusterResult>.Empty;
 
         public ClusterResultHistory()

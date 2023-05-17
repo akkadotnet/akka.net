@@ -53,7 +53,6 @@ namespace Tutorials.Tutorial4
                 queryTimeoutTimer.Cancel();
             }
 
-            protected ILoggingAdapter Log { get; } = Context.GetLogger();
             public Dictionary<IActorRef, string> ActorToDeviceId { get; }
             public long RequestId { get; }
             public IActorRef Requester { get; }
@@ -75,7 +74,6 @@ namespace Tutorials.Tutorial4
         #region query-added
         public class DeviceGroup : UntypedActor
         {
-            private Dictionary<string, IActorRef> deviceIdToActor = new Dictionary<string, IActorRef>();
             private Dictionary<IActorRef, string> actorToDeviceId = new Dictionary<IActorRef, string>();
             private long nextCollectionId = 0L;
 

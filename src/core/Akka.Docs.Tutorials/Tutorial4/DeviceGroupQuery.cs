@@ -52,7 +52,6 @@ namespace Tutorials.Tutorial4
                 queryTimeoutTimer.Cancel();
             }
 
-            protected ILoggingAdapter Log { get; } = Context.GetLogger();
             public Dictionary<IActorRef, string> ActorToDeviceId { get; }
             public long RequestId { get; }
             public IActorRef Requester { get; }

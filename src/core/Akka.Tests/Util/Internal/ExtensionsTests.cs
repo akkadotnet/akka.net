@@ -113,20 +113,8 @@ namespace Akka.Tests.Util.Internal
         }
 #endif
 
-        private static IEnumerable<string> SplitDottedPathHonouringQuotesOracle(string path)
-        {
-            return AlternateSelectMany(path.Split('\"'),
-                outsideQuote => outsideQuote.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries),
-                insideQuote => new[] {insideQuote});
-        }
-
         internal class ConfigStringsGen
         {
-            public static Arbitrary<string> EventLocations()
-            {
-                return Arb.From(ConfigStrings());
-            }
-
             static Gen<string> ConfigStrings()
             {
                 var z =
