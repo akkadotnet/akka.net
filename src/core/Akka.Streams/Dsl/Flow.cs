@@ -508,7 +508,7 @@ namespace Akka.Streams.Dsl
         /// <param name="combine">TBD</param>
         /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> FromSinkAndSource<TIn, TOut, TMat1, TMat2, TMat>(IGraph<SinkShape<TIn>, TMat1> sink, IGraph<SourceShape<TOut>, TMat2> source, Func<TMat1, TMat2, TMat> combine) 
-            => FromGraph(GraphDsl.Create(sink, source, combine, (builder, @in, @out) => new FlowShape<TIn, TOut>(@in.Inlet, @out.Outlet)));
+            => FromGraph(GraphDsl.Create(sink, source, combine, (_, @in, @out) => new FlowShape<TIn, TOut>(@in.Inlet, @out.Outlet)));
 
         /// <summary>
         /// Creates a real <see cref="Flow"/> upon receiving the first element. Internal <see cref="Flow"/> will not be created

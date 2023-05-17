@@ -243,7 +243,7 @@ namespace Akka.Tests.Actor
 
                 StartWith(1, null);
 
-                When(1, evt => null);
+                When(1, _ => null);
 
                 OnTermination(x =>
                 {
@@ -322,7 +322,7 @@ namespace Akka.Tests.Actor
                     }
                 });
 
-                OnTermination(x =>
+                OnTermination(_ =>
                 {
                     foreach (var timerName in timerNames)
                     {
@@ -371,13 +371,13 @@ namespace Akka.Tests.Actor
                             return Stay();
 
                         return null;
-                    }).Using(state =>
+                    }).Using(_ =>
                     {
                         return GoTo(1);
                     })(evt);
                 });
 
-                When(1, evt =>
+                When(1, _ =>
                 {
                     return Stay();
                 });

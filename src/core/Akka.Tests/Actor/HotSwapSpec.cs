@@ -112,7 +112,7 @@ namespace Akka.Tests.Actor {
             public ConstructorBecomer()
             {
                 Become(Echo);
-                ReceiveAny(always => Sender.Tell("FAILURE"));
+                ReceiveAny(_ => Sender.Tell("FAILURE"));
             }
 
             private void Echo()
@@ -130,7 +130,7 @@ namespace Akka.Tests.Actor {
                     var i1 = i;
                     Become(() => ReceiveAny(m => Sender.Tell(i1 + ":" + m)));
                 }
-                ReceiveAny(always => Sender.Tell("FAILURE"));
+                ReceiveAny(_ => Sender.Tell("FAILURE"));
             }
         }
 
@@ -166,15 +166,15 @@ namespace Akka.Tests.Actor {
                     });
 
                 }
-                ReceiveAny(always => Sender.Tell("FAILURE"));
+                ReceiveAny(_ => Sender.Tell("FAILURE"));
             }
         }
 
         class HotSwapWithBecome : ReceiveActor {
             public HotSwapWithBecome() {
 
-                Receive<string>(m => "init".Equals(m), (m) => Sender.Tell("init"));
-                Receive<string>(m => "swap".Equals(m), (m) => {
+                Receive<string>(m => "init".Equals(m), (_) => Sender.Tell("init"));
+                Receive<string>(m => "swap".Equals(m), (_) => {
                     Become(() => Receive<string>(x => Sender.Tell(x)));
                 });
             }
@@ -183,11 +183,11 @@ namespace Akka.Tests.Actor {
         class HotSwapRevertUnBecome : ReceiveActor {
             public HotSwapRevertUnBecome() {
                 
-                Receive<string>(m => "init".Equals(m), (m) => Sender.Tell("init"));
-                Receive<string>(m => "swap".Equals(m), (m) => {
+                Receive<string>(m => "init".Equals(m), (_) => Sender.Tell("init"));
+                Receive<string>(m => "swap".Equals(m), (_) => {
                     BecomeStacked(() => {
                         Receive<string>(x => "swapped".Equals(x), x => Sender.Tell(x));
-                        Receive<string>(x => "revert".Equals(x), x => Context.UnbecomeStacked());
+                        Receive<string>(x => "revert".Equals(x), _ => Context.UnbecomeStacked());
                     });
                 });
             }
@@ -196,12 +196,12 @@ namespace Akka.Tests.Actor {
         class RevertToInitialState : ReceiveActor {
             public RevertToInitialState() {
 
-                Receive<string>(m => "state".Equals(m), (m) => Sender.Tell("0"));
-                Receive<string>(m => "swap".Equals(m), (m) => {
+                Receive<string>(m => "state".Equals(m), (_) => Sender.Tell("0"));
+                Receive<string>(m => "swap".Equals(m), (_) => {
                     BecomeStacked(() => {
-                        Receive<string>(x => "state".Equals(x), x => Sender.Tell("1"));
-                        Receive<string>(x => "swapped".Equals(x), x => Sender.Tell("swapped"));
-                        Receive<string>(x => "crash".Equals(x), x => {
+                        Receive<string>(x => "state".Equals(x), _ => Sender.Tell("1"));
+                        Receive<string>(x => "swapped".Equals(x), _ => Sender.Tell("swapped"));
+                        Receive<string>(x => "crash".Equals(x), _ => {
                             Crash();
                         });
                     });

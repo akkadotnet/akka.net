@@ -250,7 +250,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             AskLoadState(DurableProducerQueueRef, failed.Attempts + 1);
         });
 
-        Receive<DurableQueueTerminated>(terminated =>
+        Receive<DurableQueueTerminated>(_ =>
         {
             throw new IllegalStateException("DurableQueue was unexpectedly terminated.");
         });
@@ -357,7 +357,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
 
         Receive<RegisterConsumer<T>>(c => ReceiveRegisterConsumer(c.ConsumerController));
 
-        Receive<DurableQueueTerminated>(terminated =>
+        Receive<DurableQueueTerminated>(_ =>
             throw new IllegalStateException("DurableQueue was unexpectedly terminated."));
 
         ReceiveAny(_ => throw new InvalidOperationException($"Unexpected message: {_.GetType()}"));
@@ -566,7 +566,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             var self = Self;
             @ref.Ask<DurableProducerQueue.State<T>>(Mapper, timeout, default)
                 .PipeTo(self, success: state => new LoadStateReply<T>(state),
-                    failure: ex => new LoadStateFailed(attempt)); // timeout
+                    failure: _ => new LoadStateFailed(attempt)); // timeout
         });
     }
 
@@ -747,7 +747,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         var bytes = serialization.Serialize(msg);
         if (bytes.Length <= chunkSize)
         {
-            var chunkedMessage = new ChunkedMessage(ByteString.CopyFrom(bytes), true, true, serializerId, manifest);
+            var chunkedMessage = new ChunkedMessage(ByteString.FromBytes(bytes), true, true, serializerId, manifest);
             yield return chunkedMessage;
         }
         else
@@ -757,7 +757,8 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             for (var i = 0; i < chunkCount; i++)
             {
                 var isLast = i == chunkCount - 1;
-                var chunkedMessage = new ChunkedMessage(ByteString.CopyFrom(bytes, i * chunkSize, chunkSize), first,
+                var nextChunk = Math.Min(chunkSize, bytes.Length - i * chunkSize); // needs to be the next chunkSize or remaining bytes, whichever is smaller.
+                var chunkedMessage = new ChunkedMessage(ByteString.FromBytes(bytes, i * chunkSize, nextChunk), first,
                     isLast, serializerId, manifest);
 
                 first = false;
@@ -883,8 +884,8 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         var self = Self;
         DurableProducerQueueRef.Value.Ask<DurableProducerQueue.StoreMessageSentAck>(Mapper,
                 Settings.DurableQueueRequestTimeout, default)
-            .PipeTo(self, success: ack => new StoreMessageSentCompleted<T>(messageSent),
-                failure: ex => new StoreMessageSentFailed<T>(messageSent, attempt));
+            .PipeTo(self, success: _ => new StoreMessageSentCompleted<T>(messageSent),
+                failure: _ => new StoreMessageSentFailed<T>(messageSent, attempt));
     }
 
     #endregion

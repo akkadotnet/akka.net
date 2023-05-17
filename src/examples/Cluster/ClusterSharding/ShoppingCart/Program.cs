@@ -28,12 +28,12 @@ namespace ShoppingCart
             #region Console shutdown setup
             
             var exitEvent = new ManualResetEvent(false);
-            Console.CancelKeyPress += (sender, eventArgs) =>
+            Console.CancelKeyPress += (_, eventArgs) =>
             {
                 eventArgs.Cancel = true;
                 exitEvent.Set();
             };
-            AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) =>
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
                 exitEvent.Set();
             };
@@ -87,6 +87,7 @@ namespace ShoppingCart
                     break;
                 
                 case BackEndRole:
+                    // <LaunchShardRegion>
                     // Depending on the role, we will start a shard or a shard proxy
                     await sharding.StartAsync(
                         typeName: "customer",
@@ -101,6 +102,7 @@ namespace ShoppingCart
                         // in the "backend" roled nodes.
                         settings: ClusterShardingSettings.Create(system).WithRole(BackEndRole), 
                         messageExtractor: new MessageExtractor(10));
+                    // </LaunchShardRegion>
                     break;
             }
             #endregion

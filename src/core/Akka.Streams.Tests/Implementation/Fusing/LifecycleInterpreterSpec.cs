@@ -188,7 +188,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 new PreStartAndPostStopIdentity<string>(onStart: () => TestActor.Tell("start-c")),
             };
 
-            WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(ops, (_, upstream, _) =>
             {
                 ExpectMsg("start-a");
                 ExpectMsg("start-b");
@@ -207,7 +207,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 new PreStartAndPostStopIdentity<string>(onUpstreamCompleted: () => TestActor.Tell("complete-c"), onStop: ()=> TestActor.Tell("stop-c")),
             };
 
-            WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(ops, (_, upstream, _) =>
             {
                 upstream.OnComplete();
                 ExpectMsg("complete-a");
@@ -227,7 +227,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             var op = new PreStartAndPostStopIdentity<string>(onUpstreamFailed: ex => TestActor.Tell(ex.Message),
                 onStop: () => TestActor.Tell("stop-c"));
 
-            WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(op, (_, upstream, _) =>
             {
                 var msg = "Boom! Boom! Boom!";
                 upstream.OnError(new TestException(msg));
@@ -246,7 +246,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 new PreStartAndPostStopIdentity<string>(onStop: ()=> TestActor.Tell("stop-c")),
             };
 
-            WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(ops, (_, _, downstream) =>
             {
                 downstream.Cancel();
                 ExpectMsg("stop-c");
@@ -263,7 +263,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 onStop: () => TestActor.Tell("stop-a"));
 
 
-            WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(op, (_, upstream, _) =>
             {
                 ExpectMsg("start-a");
                 ExpectNoMsg(300);
@@ -281,7 +281,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 throw new TestException("Boom!");
             });
             
-            WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(op, (lastEvents, _, _) =>
             {
                 var events = lastEvents().ToArray();
                 events[0].Should().Be(new Cancel(new TestException("Boom!")));
@@ -299,7 +299,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 throw new TestException("Boom!");
             });
 
-            WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(op, (lastEvents, upstream, _) =>
             {
                 upstream.OnComplete();
                 lastEvents().Should().Equal(new OnComplete());
@@ -319,7 +319,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 new Select<string, string>(x => x),
             };
 
-            WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(ops, (lastEvents, _, _) =>
             {
                 var events = lastEvents().ToArray();
                 events[0].Should().Be(new Cancel(new TestException("Boom!")));
@@ -337,7 +337,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 throw new TestException("Boom!");
             });
 
-            WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(op, (lastEvents, upstream, _) =>
             {
                 lastEvents().Should().BeEmpty();
 

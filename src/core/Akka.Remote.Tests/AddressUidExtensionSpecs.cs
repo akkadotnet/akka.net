@@ -25,7 +25,7 @@ namespace Akka.Remote.Tests
         {
             var values = new ConcurrentBag<int>();
             var parallelOps = 1000;
-            var loop = Parallel.For(0, parallelOps, i =>
+            var loop = Parallel.For(0, parallelOps, _ =>
             {
                 values.Add(AddressUidExtension.Uid(Sys));
             });

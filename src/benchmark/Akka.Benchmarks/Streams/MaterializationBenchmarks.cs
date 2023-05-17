@@ -30,7 +30,7 @@ namespace Akka.Benchmarks.Streams
 
             simpleGraph = Source.Single(1)
                 .Select(x => x + 1)
-                .ToMaterialized(Sink.ForEach<int>(i => { }), Keep.Right);
+                .ToMaterialized(Sink.ForEach<int>(_ => { }), Keep.Right);
         }
 
         [GlobalCleanup]

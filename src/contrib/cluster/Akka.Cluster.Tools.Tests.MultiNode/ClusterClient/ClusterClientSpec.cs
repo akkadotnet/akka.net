@@ -83,7 +83,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
         {
             public TestService(IActorRef testActorRef)
             {
-                Receive<string>(cmd => cmd.Equals("shutdown"), msg =>
+                Receive<string>(cmd => cmd.Equals("shutdown"), _ =>
                 {
                     Context.System.Terminate();
                 });

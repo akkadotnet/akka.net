@@ -75,7 +75,7 @@ namespace Akka.Remote.Tests
                 {
                     context.Watch(@ref);
                 };
-                dsl.Receive<Terminated>((t, ctx) =>
+                dsl.Receive<Terminated>((t, _) =>
                 {
                     TestActor.Tell(t.ActorRef);
                 });
@@ -102,7 +102,7 @@ namespace Akka.Remote.Tests
                 {
                     context.Watch(rarp.ResolveActorRef(path));
                 };
-                dsl.Receive<Terminated>((t, ctx) =>
+                dsl.Receive<Terminated>((t, _) =>
                 {
                     TestActor.Tell(t.ActorRef.Path);
                 });

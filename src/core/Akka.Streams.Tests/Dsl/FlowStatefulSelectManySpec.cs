@@ -54,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         if (prev.HasValue)
                         {
-                            var result = Enumerable.Range(1, prev.Value).Select(__ => x);
+                            var result = Enumerable.Range(1, prev.Value).Select(_ => x);
                             prev = x;
                             return result;
                         }
@@ -80,7 +80,7 @@ namespace Akka.Streams.Tests.Dsl
 
                     if (prev.HasValue)
                     {
-                        var result = Enumerable.Range(1, prev.Value).Select(__ => x);
+                        var result = Enumerable.Range(1, prev.Value).Select(_ => x);
                         prev = x;
                         return result;
                     }
@@ -111,7 +111,7 @@ namespace Akka.Streams.Tests.Dsl
 
                     if (prev.HasValue)
                     {
-                        var result = Enumerable.Range(1, prev.Value).Select(__ => x);
+                        var result = Enumerable.Range(1, prev.Value).Select(_ => x);
                         prev = x;
                         return result;
                     }

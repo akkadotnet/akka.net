@@ -347,7 +347,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var c = this.CreateManualSubscriberProbe<string>();
             Source.From(new[] {"a", "b"})
-                .AggregateAsync("", (_, __) => Task.FromResult<string>(null))
+                .AggregateAsync("", (_, _) => Task.FromResult<string>(null))
                 .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
 

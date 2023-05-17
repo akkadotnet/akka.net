@@ -205,7 +205,7 @@ namespace Akka.Remote.Transport.DotNetty
                 LocalAddress = addr;
                 // resume accepting incoming connections
 #pragma warning disable 4014 // we WANT this task to run without waiting
-                AssociationListenerPromise.Task.ContinueWith(result => newServerChannel.Configuration.AutoRead = true,
+                AssociationListenerPromise.Task.ContinueWith(_ => newServerChannel.Configuration.AutoRead = true,
                     TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
 #pragma warning restore 4014
 
@@ -344,7 +344,7 @@ namespace Akka.Remote.Transport.DotNetty
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
                 var tlsHandler = Settings.Ssl.SuppressValidation
-                    ? new TlsHandler(stream => new SslStream(stream, true, (sender, cert, chain, errors) => true), new ClientTlsSettings(host))
+                    ? new TlsHandler(stream => new SslStream(stream, true, (_, _, _, _) => true), new ClientTlsSettings(host))
                     : TlsHandler.Client(host, certificate);
 
                 channel.Pipeline.AddFirst("TlsHandler", tlsHandler);

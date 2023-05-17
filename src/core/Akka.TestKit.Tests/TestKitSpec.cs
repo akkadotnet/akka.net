@@ -30,7 +30,7 @@ namespace Akka.TestKit.Tests
             using (var sys = ActorSystem.Create(nameof(TestKitSpec)))
             {
                 var testkit = new TestKit.Xunit2.TestKit(sys, _output);
-                var echoActor = testkit.Sys.ActorOf(c => c.ReceiveAny((m, ctx) => testkit.TestActor.Tell(m))); 
+                var echoActor = testkit.Sys.ActorOf(c => c.ReceiveAny((m, _) => testkit.TestActor.Tell(m))); 
                 Invoking(() =>
                 {
                     echoActor.Tell("message");
@@ -46,7 +46,7 @@ namespace Akka.TestKit.Tests
             using (var sys = ActorSystem.Create(nameof(TestKitSpec), TestKit.Xunit2.TestKit.DefaultConfig))
             {
                 var testkit = new TestKit.Xunit2.TestKit(sys, _output);
-                var echoActor = testkit.Sys.ActorOf(c => c.ReceiveAny((m, ctx) => testkit.TestActor.Tell(m))); 
+                var echoActor = testkit.Sys.ActorOf(c => c.ReceiveAny((m, _) => testkit.TestActor.Tell(m))); 
                 Invoking(() =>
                 {
                     echoActor.Tell("message");

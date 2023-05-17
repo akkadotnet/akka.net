@@ -158,7 +158,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(() => {
 #pragma warning disable CS0618 // Type or member is obsolete
-                var p = Source.From(new List<int>()).RunWith(Sink.ForEachParallel<int>(3, i => { }), Materializer);
+                var p = Source.From(new List<int>()).RunWith(Sink.ForEachParallel<int>(3, _ => { }), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
                 p.Wait(TimeSpan.FromSeconds(2)).Should().BeTrue();
                 return Task.CompletedTask;

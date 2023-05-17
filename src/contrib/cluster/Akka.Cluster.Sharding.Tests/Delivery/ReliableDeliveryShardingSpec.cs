@@ -61,7 +61,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerEndProbe = CreateTestProbe();
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -86,7 +86,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             $"producer-{_idCount}");
 
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
-        await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(25)).ToListAsync();
+        await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(5)).ToListAsync();
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerEndProbe = CreateTestProbe();
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -128,12 +128,13 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             $"p2-{_idCount}");
 
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
-        var endMessages = await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(25)).ToListAsync();
+        var endMessages = await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(5)).ToListAsync();
 
         var producerIds = endMessages.Cast<Collected>().SelectMany(c => c.ProducerIds).ToList();
         producerIds
             .Should().BeEquivalentTo($"p1-{_idCount}-entity-0", $"p1-{_idCount}-entity-1", $"p1-{_idCount}-entity-2",
                 $"p2-{_idCount}-entity-0", $"p2-{_idCount}-entity-1", $"p2-{_idCount}-entity-2");
+       
     }
 
     [Fact]
@@ -143,7 +144,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerEndProbe = CreateTestProbe();
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         PropsFor(DefaultConsumerDelay, 3, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -334,9 +335,9 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerIncarnation = new AtomicCounter(0);
-        var consumerProbes = Enumerable.Range(0, 3).Select(c => CreateTestProbe()).ToList();
+        var consumerProbes = Enumerable.Range(0, 3).Select(_ => CreateTestProbe()).ToList();
 
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new ProbeWrapper(consumerProbes[consumerIncarnation.GetAndIncrement()], c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -413,7 +414,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         }
 
         // redeliver also when no more messages are sent to the entity
-        await consumerProbes[1].GracefulStop(RemainingOrDefault);
+        Sys.Stop(consumerProbes[1]); // don't wait for termination
 
         var delivery4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
         delivery4b.Message.Should().BeEquivalentTo(new Job("msg-4"));
@@ -429,7 +430,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerEndProbe = CreateTestProbe();
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -506,7 +507,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         NextId();
 
         var consumerEndProbe = CreateTestProbe();
-        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", s =>
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
                         Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
@@ -649,7 +650,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                 Become(() => Idle(n));
             });
 
-            Receive<RequestNext>(next => { }); // already active
+            Receive<RequestNext>(_ => { }); // already active
         }
 
         public sealed class Tick

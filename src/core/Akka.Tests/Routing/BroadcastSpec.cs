@@ -29,7 +29,7 @@ namespace Akka.Tests.Routing
                 _doneLatch = doneLatch;
                 _counter = counter;
 
-                Receive<string>(s => s == "end", c => _doneLatch.CountDown());
+                Receive<string>(s => s == "end", _ => _doneLatch.CountDown());
                 Receive<int>(msg => _counter.AddAndGet(msg));
             }
         }

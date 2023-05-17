@@ -26,7 +26,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             seed.Cluster.Join(seed.Cluster.SelfAddress);
 
             var testSystems =
-                Enumerable.Range(0, 4).Select(x => new ActorSys(joinTo: seed.Cluster.SelfAddress))
+                Enumerable.Range(0, 4).Select(_ => new ActorSys(joinTo: seed.Cluster.SelfAddress))
                 .Concat(new[] {seed})
                 .ToList();
 

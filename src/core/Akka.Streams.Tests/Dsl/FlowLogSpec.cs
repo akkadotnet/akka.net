@@ -150,7 +150,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var ex = new TestException("test");
             var future = Source.From(Enumerable.Range(1, 5))
-                .Log("hi", n => { throw ex; })
+                .Log("hi", _ => { throw ex; })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(Sink.Aggregate<int, int>(0, (i, i1) => i + i1), Materializer);
 

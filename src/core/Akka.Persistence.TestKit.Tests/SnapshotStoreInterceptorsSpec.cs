@@ -52,7 +52,7 @@ namespace Akka.Persistence.TestKit.Tests
         public async Task on_condition_must_accept_sync_lambda()
         {
             var probe = new InterceptorProbe();
-            var onCondition = new SnapshotStoreInterceptors.OnCondition((_, __) => true, probe);
+            var onCondition = new SnapshotStoreInterceptors.OnCondition((_, _) => true, probe);
 
             await onCondition.InterceptAsync(null, null);
 
@@ -63,7 +63,7 @@ namespace Akka.Persistence.TestKit.Tests
         public async Task on_condition_must_accept_async_lambda()
         {
             var probe = new InterceptorProbe();
-            var onCondition = new SnapshotStoreInterceptors.OnCondition((_, __) => Task.FromResult(true), probe);
+            var onCondition = new SnapshotStoreInterceptors.OnCondition((_, _) => Task.FromResult(true), probe);
 
             await onCondition.InterceptAsync(null, null);
 
@@ -74,7 +74,7 @@ namespace Akka.Persistence.TestKit.Tests
         public async Task on_condition_must_call_next_interceptor_unless_predicate_returns_false()
         {
             var probe = new InterceptorProbe();
-            var onCondition = new SnapshotStoreInterceptors.OnCondition((_, __) => false, probe);
+            var onCondition = new SnapshotStoreInterceptors.OnCondition((_, _) => false, probe);
 
             await onCondition.InterceptAsync(null, null);
 
@@ -85,7 +85,7 @@ namespace Akka.Persistence.TestKit.Tests
         public async Task on_condition_with_negation_must_call_next_interceptor_unless_predicate_returns_true()
         {
             var probe = new InterceptorProbe();
-            var onCondition = new SnapshotStoreInterceptors.OnCondition((_, __) => false, probe, negate: true);
+            var onCondition = new SnapshotStoreInterceptors.OnCondition((_, _) => false, probe, negate: true);
 
             await onCondition.InterceptAsync(null, null);
 

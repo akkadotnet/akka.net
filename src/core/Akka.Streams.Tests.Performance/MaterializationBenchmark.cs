@@ -183,7 +183,7 @@ namespace Akka.Streams.Tests.Performance
         {
             var flow = Flow.Create<NotUsed>().Select(x => x);
             for (var i = 0; i < numberOfNestedGraphs; i++)
-                flow = Flow.FromGraph(GraphDsl.Create(flow, (b, f) => new FlowShape<NotUsed, NotUsed>(f.Inlet, f.Outlet)));
+                flow = Flow.FromGraph(GraphDsl.Create(flow, (_, f) => new FlowShape<NotUsed, NotUsed>(f.Inlet, f.Outlet)));
 
             return RunnableGraph.FromGraph(GraphDsl.Create(flow, (b, f) =>
             {

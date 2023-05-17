@@ -207,7 +207,7 @@ namespace Akka.Remote.Transport
         /// The <see cref="AkkaProtocolTransport"/> does not handle recovery of associations, this task is implemented
         /// in the remoting itself. Hence the strategy <see cref="Directive.Stop"/>.
         /// </summary>
-        private readonly SupervisorStrategy _supervisor = new OneForOneStrategy(exception => Directive.Stop);
+        private readonly SupervisorStrategy _supervisor = new OneForOneStrategy(_ => Directive.Stop);
         /// <summary>
         /// TBD
         /// </summary>

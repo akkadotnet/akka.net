@@ -92,14 +92,14 @@ namespace Akka.Cluster.Benchmarks.Persistence
                 _asker = Sender;
             });
 
-            Receive<Finished>(f =>
+            Receive<Finished>(_ =>
             {
                 // this will terminate the benchmark
                 if(--_expected <= 0)
                     _asker.Tell(Done.Instance);
             });
 
-            Receive<RecoveryFinished>(f =>
+            Receive<RecoveryFinished>(_ =>
             {
                 // this will terminate the benchmark
                 if (--_expected <= 0)

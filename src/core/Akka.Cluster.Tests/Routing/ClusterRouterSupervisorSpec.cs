@@ -32,7 +32,7 @@ namespace Akka.Cluster.Tests.Routing
             public KillableActor(IActorRef testActor)
             {
                 TestActor = testActor;
-                Receive<string>(s => s == "go away", s =>
+                Receive<string>(s => s == "go away", _ =>
                 {
                     throw new ArgumentException("Goodbye then!");
                 });
@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tests.Routing
         public async Task Cluster_aware_routers_must_use_provided_supervisor_strategy()
         {
             var escalator = new OneForOneStrategy(
-                exception =>
+                _ =>
                 {
                     TestActor.Tell("supervised");
                     return Directive.Stop;

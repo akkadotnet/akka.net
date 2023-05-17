@@ -83,7 +83,7 @@ namespace Akka.Benchmarks
                 Context.System.Tcp().Tell(new Tcp.Bind(Self, new IPEndPoint(IPAddress.Any, port)));
                 
                 Receive<Tcp.Bound>(_ => { });
-                Receive<Tcp.Connected>(connected =>
+                Receive<Tcp.Connected>(_ =>
                 {
                     var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender)));
                     Sender.Tell(new Tcp.Register(connection));

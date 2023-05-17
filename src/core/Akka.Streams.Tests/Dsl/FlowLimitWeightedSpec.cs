@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var input = new List<int>();
             var n = input.Count;
-            Func<int, long> costFunction = e => 999999L; // set to an arbitrarily big value
+            Func<int, long> costFunction = _ => 999999L; // set to an arbitrarily big value
             var future = Source.From(input)
                 .LimitWeighted(n, costFunction)
                 .Grouped(1000)
@@ -46,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var input = Enumerable.Range(1, 15).ToList();
             var n = 1; // must not matter since costFn always evaluates to 0
-            Func<int, long> costFunction = e => 0L;
+            Func<int, long> costFunction = _ => 0L;
             var future = Source.From(input)
                 .LimitWeighted(n, costFunction)
                 .Grouped(1000)
@@ -62,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var input = Enumerable.Range(1, 16).ToList();
             var n = input.Count;
-            Func<int, long> costFunction = e => 1L;
+            Func<int, long> costFunction = _ => 1L;
             var future = Source.From(input)
                 .LimitWeighted(n, costFunction)
                 .Grouped(1000)
@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var input = new[] {"this", "is", "some", "string"};
             var n = input.Length;
-            Func<string, long> costFunction = e => 1L;
+            Func<string, long> costFunction = _ => 1L;
             var future = Source.From(input)
                 .LimitWeighted(n, costFunction)
                 .Grouped(1000)

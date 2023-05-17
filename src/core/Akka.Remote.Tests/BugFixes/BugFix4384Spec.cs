@@ -59,7 +59,7 @@ namespace Akka.Remote.Tests.BugFixes
         {
             // create actor in Sys1
             const string actorName = "actor1";
-            Sys1.ActorOf(dsl => dsl.ReceiveAny((m, ctx) => TestActor.Tell(m)), actorName);
+            Sys1.ActorOf(dsl => dsl.ReceiveAny((m, _) => TestActor.Tell(m)), actorName);
             
             // create ActorSelection from Sys2 --> Sys1
             var sel = Sys2.ActorSelection(new RootActorPath(Sys1Address) / "user" / actorName);
@@ -104,7 +104,7 @@ namespace Akka.Remote.Tests.BugFixes
 
             var s2Actor = Sys2.ActorOf(act =>
             {
-                act.ReceiveAny((o, ctx) =>
+                act.ReceiveAny((o, _) =>
                 {
                     // Task is intentionally not awaited.
                     var task = sel.Ask<ActorIdentity>(new Identify(o), TimeSpan.FromSeconds(3)).PipeTo(sys2Probe);

@@ -82,7 +82,7 @@ namespace Akka.TestKit.Tests.TestFSMRefTests
             public TimerTestFsm()
             {
                 StartWith(1, null);
-                When(1, e => Stay());
+                When(1, _ => Stay());
             }
         }
     }

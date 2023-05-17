@@ -34,12 +34,12 @@ namespace Akka.Streams.Tests.Dsl
         {
             public Fw(IActorRef aref)
             {
-                Receive<string>(s => s == InitMessage, s =>
+                Receive<string>(s => s == InitMessage, _ =>
                 {
                     Sender.Tell(AckMessage);
                     aref.Forward(InitMessage);
                 });
-                Receive<string>(s => s == CompleteMessage, s => aref.Forward(CompleteMessage));
+                Receive<string>(s => s == CompleteMessage, _ => aref.Forward(CompleteMessage));
                 Receive<int>(i =>
                 {
                     Sender.Tell(AckMessage);

@@ -1,8 +1,8 @@
 ---
 uid: cluster-sharding
-title: Akka.Cluster.Sharding module
+title: Akka.Cluster.Sharding - Reliable, Automatic State Distribution with Akka.Cluster
 ---
-# Akka.Cluster.Sharding Module
+# Akka.Cluster.Sharding
 
 Cluster sharding is useful in cases when you want to contact with cluster actors using their logical id's, but don't want to care about their physical location inside the cluster or manage their creation. Moreover it's able to re-balance them, as nodes join/leave the cluster. It's often used to represent i.e. Aggregate Roots in Domain Driven Design terminology.
 
@@ -82,6 +82,10 @@ Entities are located and managed automatically. They can also be recreated on th
 As you may have seen in the examples above shard resolution algorithm is one of the choices you have to make. Good uniform distribution is not an easy task - too small number shards may result in not even distribution of entities across all nodes, while too many of them may increase message routing latency and re-balancing overhead. As a rule of thumb, you may decide to have a number of shards ten times greater than expected maximum number of cluster nodes.
 
 By default re-balancing process always happens from nodes with the highest number of shards, to the ones with the smallest one. This can be configured into by specifying custom implementation of the `IShardAllocationStrategy` interface in `ClusterSharding.Start` parameters.
+
+## Reliable Delivery of Messages to Sharded Entity Actors
+
+If you are interested in ensuring that all messages are guaranteed to be delivered to your entity actors even across restarts, re-balancing operations, or crashes then please see "[Reliable Delivery over Akka.Cluster.Sharding](xref:cluster-sharding-delivery)."
 
 ## Passivation
 

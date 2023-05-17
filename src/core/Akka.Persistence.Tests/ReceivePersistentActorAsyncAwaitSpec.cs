@@ -25,13 +25,13 @@ namespace Akka.Persistence.Tests
         {
             PersistenceId = persistenceId;
 
-            RecoverAny(o => { });
+            RecoverAny(_ => { });
 
-            Command<ReceiveTimeout>(t =>
+            Command<ReceiveTimeout>(_ =>
             {
                 _replyTo.Tell("GotIt");
             });
-            CommandAsync<string>(async s =>
+            CommandAsync<string>(async _ =>
             {
                 _replyTo = Sender;
 
@@ -48,7 +48,7 @@ namespace Akka.Persistence.Tests
         {
             PersistenceId = persistenceId;
 
-            RecoverAny(o => { });
+            RecoverAny(_ => { });
 
             CommandAsync<string>(async s =>
             {
@@ -70,7 +70,7 @@ namespace Akka.Persistence.Tests
         {
             PersistenceId = persistenceId;
 
-            RecoverAny(o => { });
+            RecoverAny(_ => { });
 
             var state = 0;
             Command<string>(s => s == "change", _ =>
@@ -99,7 +99,7 @@ namespace Akka.Persistence.Tests
         {
             PersistenceId = persistenceId;
 
-            RecoverAny(o => { });
+            RecoverAny(_ => { });
 
             CommandAsync<string>(async _ =>
             {
@@ -112,19 +112,19 @@ namespace Akka.Persistence.Tests
                 Sender.Tell("done");
             });
 
-            CommandAsync<int>(async msg =>
+            CommandAsync<int>(async _ =>
             {
                 await Task.Yield();
                 Sender.Tell("handled");
             }, i => i > 10);
 
-            CommandAsync(typeof(double), async msg =>
+            CommandAsync(typeof(double), async _ =>
             {
                 await Task.Yield();
                 Sender.Tell("handled");
             });
 
-            CommandAnyAsync(async msg =>
+            CommandAnyAsync(async _ =>
             {
                 await Task.Yield();
                 Sender.Tell("receiveany");
@@ -174,7 +174,7 @@ namespace Akka.Persistence.Tests
         {
             PersistenceId = persistenceId;
 
-            RecoverAny(o => { });
+            RecoverAny(_ => { });
 
             CommandAsync<string>(async _ =>
             {
@@ -232,7 +232,7 @@ namespace Akka.Persistence.Tests
         {
             PersistenceId = persistenceId;
 
-            RecoverAny(o => { });
+            RecoverAny(_ => { });
 
             Command<string>(_ =>
             {
@@ -251,7 +251,7 @@ namespace Akka.Persistence.Tests
         {
             PersistenceId = persistenceId;
 
-            RecoverAny(o => { });
+            RecoverAny(_ => { });
 
             Command<int>(_ =>
             {
@@ -277,7 +277,7 @@ namespace Akka.Persistence.Tests
         {
             PersistenceId = persistenceId;
 
-            RecoverAny(o => { });
+            RecoverAny(_ => { });
 
             _callback = callback;
             CommandAsync<string>(async _ =>
@@ -307,15 +307,15 @@ namespace Akka.Persistence.Tests
         {
             PersistenceId = persistenceId;
 
-            RecoverAny(o => { });
+            RecoverAny(_ => { });
 
-            Command<string>(m =>
+            Command<string>(_ =>
             {
                 //this is also safe, all tasks complete in the actor context
                 RunTask(async () =>
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1))
-                        .ContinueWith(t => { Sender.Tell("done"); });
+                        .ContinueWith(_ => { Sender.Tell("done"); });
                 });
             });
         }
@@ -331,15 +331,15 @@ namespace Akka.Persistence.Tests
         {
             PersistenceId = persistenceId;
 
-            RecoverAny(o => { });
+            RecoverAny(_ => { });
 
             _callback = callback;
-            Command<string>(m =>
+            Command<string>(_ =>
             {
                 RunTask(async () =>
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1))
-                   .ContinueWith(t => { throw new Exception("foo"); });
+                   .ContinueWith(_ => { throw new Exception("foo"); });
                 });
             });
         }
@@ -489,7 +489,7 @@ namespace Akka.Persistence.Tests
             {
                 PersistenceId = persistenceId;
 
-                RecoverAny(o => { });
+                RecoverAny(_ => { });
 
                 CommandAsync<string>(async m =>
                 {
@@ -531,9 +531,9 @@ namespace Akka.Persistence.Tests
             {
                 PersistenceId = persistenceId;
 
-                RecoverAny(o => { });
+                RecoverAny(_ => { });
 
-                CommandAsync<string>(m => {
+                CommandAsync<string>(_ => {
                     ThrowException();
                     return Task.CompletedTask;
                 });
@@ -570,7 +570,7 @@ namespace Akka.Persistence.Tests
             {
                 PersistenceId = persistenceId;
 
-                RecoverAny(o => { });
+                RecoverAny(_ => { });
 
                 CommandAsync<string>(async msg =>
                 {
@@ -597,7 +597,7 @@ namespace Akka.Persistence.Tests
             {
                 PersistenceId = persistenceId;
 
-                RecoverAny(o => { });
+                RecoverAny(_ => { });
 
                 CommandAsync<string>(msg => {
                     var sender = Sender;

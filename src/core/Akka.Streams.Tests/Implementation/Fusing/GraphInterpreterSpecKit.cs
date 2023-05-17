@@ -121,10 +121,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     var assembly = BuildAssembly();
 
                     var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
-                        new Dictionary<IModule, object>(), s => { });
+                        new Dictionary<IModule, object>(), _ => { });
                     var connections = mat.Item1;
                     var logics = mat.Item2;
-                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
+                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (_, _, _) => {}, false, null);
 
                     var i = 0;
                     foreach (var upstream in _upstreams)
@@ -144,10 +144,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public void ManualInit(GraphAssembly assembly)
             {
                 var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
-                    new Dictionary<IModule, object>(), s => { });
+                    new Dictionary<IModule, object>(), _ => { });
                 var connections = mat.Item1;
                 var logics = mat.Item2;
-                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
+                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (_, _, _) => {}, false, null);
             }
 
             public AssemblyBuilder Builder(params IGraphStageWithMaterializedValue<Shape, object>[] stages)
@@ -648,7 +648,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     SetHandler(setup._stageOut,
                         () => MayFail(() => Pull(setup._stageIn)),
-                        cause => MayFail(CompleteStage));
+                        _ => MayFail(CompleteStage));
                 }
 
                 private void MayFail(Action task)
@@ -980,13 +980,17 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         public PushPullGraphStage<TIn, TOut> ToGraphStage<TIn, TOut>(IStage<TIn, TOut> stage)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             var s = stage;
             return new PushPullGraphStage<TIn, TOut>(_ => s, Attributes.None);
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         public IGraphStageWithMaterializedValue<Shape, object>[] ToGraphStage<TIn, TOut>(IStage<TIn, TOut>[] stages)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             return stages.Select(ToGraphStage).Cast<IGraphStageWithMaterializedValue<Shape, object>>().ToArray();
         }
@@ -1015,7 +1019,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             spec(setup, setup.Builder, setup.LastEvents);
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         public void WithOneBoundedSetup<T>(IStage<T, T> op,
+#pragma warning restore CS0618 // Type or member is obsolete
             Action
                 <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)
@@ -1023,7 +1029,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup<T>(ToGraphStage(op), spec);
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         public void WithOneBoundedSetup<T>(IStage<T, T>[] ops,
+#pragma warning restore CS0618 // Type or member is obsolete
             Action
                 <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)

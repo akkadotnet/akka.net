@@ -81,7 +81,7 @@ akka.actor.deployment {
         {
             public MailboxReportingActor()
             {
-                ReceiveAny(x => Sender.Tell(((ActorCell)Context).Mailbox.MessageQueue));
+                ReceiveAny(_ => Sender.Tell(((ActorCell)Context).Mailbox.MessageQueue));
             }
         }
 

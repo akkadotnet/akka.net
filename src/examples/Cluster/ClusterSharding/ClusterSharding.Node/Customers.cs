@@ -49,7 +49,7 @@ namespace ClusterSharding.Node
             SetReceiveTimeout(TimeSpan.FromSeconds(60));
             Recover<ItemPurchased>(purchased => _purchasedItems.Add(purchased.ItemName));
 
-            Command<ShardRegion.StartEntity>(e =>
+            Command<ShardRegion.StartEntity>(_ =>
             {
                 Console.WriteLine($"'{PersistenceId}' started via remember-entities");
 

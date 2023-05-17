@@ -70,20 +70,20 @@ namespace Akka.Remote.Tests.Transport
                 _remoteRef = remoteRef;
                 _controller = controller;
 
-                Receive<string>(s => s.Equals("start"), s =>
+                Receive<string>(s => s.Equals("start"), _ =>
                 {
                     Self.Tell("sendNext");
                     _startTime = MonotonicClock.GetNanos();
                 });
 
-                Receive<string>(s => s.Equals("sendNext") && _messageCount > 0, s =>
+                Receive<string>(s => s.Equals("sendNext") && _messageCount > 0, _ =>
                 {
                     _remoteRef.Tell("ping");
                     Self.Tell("sendNext");
                     _messageCount--;
                 });
 
-                Receive<string>(s => s.Equals("pong"), s =>
+                Receive<string>(s => s.Equals("pong"), _ =>
                 {
                     _received++;
                     if (_received >= MessageCount)

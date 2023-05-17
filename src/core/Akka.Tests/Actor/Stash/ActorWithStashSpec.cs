@@ -93,7 +93,7 @@ namespace Akka.Tests.Actor.Stash
         [Fact]
         public async Task An_actor_Must_process_stashed_messages_after_restart()
         {
-            SupervisorStrategy strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), e => Directive.Restart);
+            SupervisorStrategy strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), _ => Directive.Restart);
             var boss = ActorOf(() => new Supervisor(strategy));
             var restartLatch = CreateTestLatch();
             var hasMsgLatch = CreateTestLatch();
@@ -117,7 +117,7 @@ namespace Akka.Tests.Actor.Stash
         [Fact]
         public async Task An_actor_that_clears_the_stash_on_preRestart_Must_not_receive_previously_stashed_messages()
         {
-            SupervisorStrategy strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), e => Directive.Restart);
+            SupervisorStrategy strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), _ => Directive.Restart);
             var boss = ActorOf(() => new Supervisor(strategy));
             var restartLatch = CreateTestLatch();
             var slaveProps = Props.Create(() => new ActorsThatClearsStashOnPreRestart(restartLatch));
@@ -168,13 +168,13 @@ namespace Akka.Tests.Actor.Stash
         {
             public StashingActor()
             {
-                Receive("hello", m =>
+                Receive("hello", _ =>
                 {
                     _state.S = "hello";
                     Stash.UnstashAll();
                     Become(Greeted);
                 });
-                ReceiveAny(m => Stash.Stash());
+                ReceiveAny(_ => Stash.Stash());
             }
 
             private void Greeted()
@@ -194,7 +194,7 @@ namespace Akka.Tests.Actor.Stash
         {
             public StashAndReplyActor()
             {
-                ReceiveAny(m =>
+                ReceiveAny(_ =>
                 {
                     Stash.Stash();
                     Sender.Tell("bye");
@@ -208,7 +208,7 @@ namespace Akka.Tests.Actor.Stash
         {
             public StashEverythingActor()
             {
-                ReceiveAny(m=>Stash.Stash());
+                ReceiveAny(_=>Stash.Stash());
             }
             public IStash Stash { get; set; }
         }
@@ -217,7 +217,7 @@ namespace Akka.Tests.Actor.Stash
         {
             public StashingTwiceActor()
             {
-                Receive("hello", m =>
+                Receive("hello", _ =>
                 {
                     Stash.Stash();
                     try
@@ -229,7 +229,7 @@ namespace Akka.Tests.Actor.Stash
                         _state.ExpectedException.Open();
                     }
                 });
-                ReceiveAny(m => { });
+                ReceiveAny(_ => { });
             }
 
             private void Greeted()
@@ -255,7 +255,7 @@ namespace Akka.Tests.Actor.Stash
                 Receive("crash", _ => { throw new Exception("Received \"crash\""); });
 
                 // when restartLatch is not yet open, stash all messages != "crash"                
-                Receive<object>(_ => !restartLatch.IsOpen, m => Stash.Stash());
+                Receive<object>(_ => !restartLatch.IsOpen, _ => Stash.Stash());
 
                 // when restartLatch is open, must receive the unstashed message
                 Receive(expectedUnstashedMessage, _ => hasMsgLatch.Open());
@@ -280,7 +280,7 @@ namespace Akka.Tests.Actor.Stash
                 Receive("crash", _ => { throw new Exception("Received \"crash\""); });
 
                 // when restartLatch is not yet open, stash all messages != "crash"                
-                Receive<object>(_ => !restartLatch.IsOpen, m => Stash.Stash());
+                Receive<object>(_ => !restartLatch.IsOpen, _ => Stash.Stash());
 
                 // when restartLatch is open we send all messages back
                 ReceiveAny(m => Sender.Tell(m));
@@ -303,7 +303,7 @@ namespace Akka.Tests.Actor.Stash
                 var stashed = false;
                 Context.Stop(watchedActor);
 
-                Receive<Terminated>(w => w.ActorRef == watchedActor, w =>
+                Receive<Terminated>(w => w.ActorRef == watchedActor, _ =>
                 {
                     if(!stashed)
                     {

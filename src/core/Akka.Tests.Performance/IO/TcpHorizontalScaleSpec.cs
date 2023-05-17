@@ -24,7 +24,7 @@ namespace Akka.Tests.Performance.IO
             public TestListener(EndPoint endPoint, Counter clientConnectCounter, Counter inboundCounter, Counter errorCounter)
             {
                 Context.System.Tcp().Tell(new Tcp.Bind(Self, endPoint));
-                Receive<Tcp.Connected>(connected =>
+                Receive<Tcp.Connected>(_ =>
                 {
                     var connection = Sender;
                     var handler = Context.ActorOf(Props.Create(() => new TestHandler(connection, inboundCounter, errorCounter)));
@@ -56,7 +56,7 @@ namespace Akka.Tests.Performance.IO
 
                     Context.Stop(Self);
                 });
-                Receive<Terminated>(terminated => Context.Stop(Self));
+                Receive<Terminated>(_ => Context.Stop(Self));
             }
 
             protected override void PreRestart(Exception reason, object message)
@@ -81,14 +81,14 @@ namespace Akka.Tests.Performance.IO
                     outboundCounter.Increment();
                     connection.Tell(Tcp.Write.Create(received.Data));
                 });
-                Receive<Tcp.Connected>(connected =>
+                Receive<Tcp.Connected>(_ =>
                 {
                     connection = Sender;
                     Context.Watch(connection);
                     connection.Tell(new Tcp.Register(Self));
                     connection.Tell(Tcp.Write.Create(ByteString.FromBytes(payload)));
                 });
-                Receive<Tcp.CommandFailed>(failed =>
+                Receive<Tcp.CommandFailed>(_ =>
                 {
                     _errorCounter.Increment();
                     Context.Stop(Self);

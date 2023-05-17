@@ -11,6 +11,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DependencyInjection")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DistributedData")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Docs.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Sql.TestKit")]
