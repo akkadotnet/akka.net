@@ -42,10 +42,6 @@
   <PropertyGroup>
     <PackageReleaseNotes>Placeholder for nightlies*</PackageReleaseNotes>
   </PropertyGroup>
-  <!-- SourceLink support for all Akka.NET projects -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
-  </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)\..\docs\images\akkalogo.png" Pack="true" Visible="false" PackagePath="\" />
     <None Include="$(MSBuildThisFileDirectory)\..\README.md" Pack="true" Visible="false" PackagePath="\" />

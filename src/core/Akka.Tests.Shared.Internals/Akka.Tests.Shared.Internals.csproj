@@ -8,12 +8,12 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <PackageReference Include="System.Diagnostics.StackTrace" Version="4.3.0" />
+    <PackageReference Include="System.Diagnostics.StackTrace" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FsCheck.Xunit" Version="$(FsCheckVersion)" />
-    <PackageReference Include="Fsharp.Core" Version="$(FsharpVersion)" />
+    <PackageReference Include="FsCheck.Xunit"/>
+    <PackageReference Include="Fsharp.Core"/>
   </ItemGroup>
 
 </Project>

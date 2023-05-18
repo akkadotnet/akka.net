@@ -14,6 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="FSharp.Core"/>
         <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj"/>
         <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj"/>
     </ItemGroup>

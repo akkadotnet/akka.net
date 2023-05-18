@@ -1,0 +1,59 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <!-- App dependencies -->
+  <ItemGroup>
+    <PackageVersion Include="Polyfill" Version="1.22.0" />
+    <PackageVersion Include="Microsoft.Extensions.ObjectPool" Version="7.0.5" />
+    <PackageVersion Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
+    <PackageVersion Include="System.Reflection.Emit" Version="4.7.0" />
+    <PackageVersion Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
+    <PackageVersion Include="System.Collections.Specialized" Version="4.3.0" />
+    <PackageVersion Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
+    <PackageVersion Include="System.Configuration.ConfigurationManager">
+      <Version>$(ConfigurationManagerVersion)</Version>
+    </PackageVersion>
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
+    <PackageVersion Include="NBench" Version="$(NBenchVersion)" />
+    <PackageVersion Include="FluentDateTime" Version="2.1.0" />
+    <PackageVersion Include="System.Net.Http" Version="4.3.4" />
+    <PackageVersion Include="FSharp.Quotations.Evaluator" Version="2.1.0"/>
+    <PackageVersion Include="FsPickler" Version="5.3.2"/>
+    <PackageVersion Include="Fsharp.Core" Version="$(FsharpVersion)" />
+    <PackageVersion Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+    <PackageVersion Include="DotNetty.Handlers" Version="0.6.0"/>
+    <PackageVersion Include="Reactive.Streams" Version="1.0.2" />
+    <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />    
+    <PackageVersion Include="Reactive.Streams.TCK" Version="1.0.2" />
+    <PackageVersion Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
+    <PackageVersion Include="Nito.AsyncEx.Context" Version="5.1.2" />
+    <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
+    <PackageVersion Include="System.Net.Sockets" Version="4.3.0" />
+    <PackageVersion Include="System.Runtime.Extensions" Version="4.3.1" />
+    <PackageVersion Include="System.Diagnostics.StackTrace" Version="4.3.0" />
+  </ItemGroup>
+  <!-- Test dependencies -->  
+  <ItemGroup>
+    <PackageVersion Include="Xunit.SkippableFact" Version="1.4.13" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="4.4.2" />
+    <PackageVersion Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageVersion Include="xunit" Version="$(XunitVersion)" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
+    <PackageVersion Include="PublicApiGenerator" Version="9.3.0" />
+    <PackageVersion Include="Verify.Xunit" Version="19.14.1" />
+    <PackageVersion Include="Verify.DiffPlex" Version="2.2.1" />
+    <PackageVersion Include="FsCheck.Xunit" Version="$(FsCheckVersion)" />
+    <PackageVersion Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageVersion Include="TeamCity.ServiceMessages" Version="3.0.13" />
+    <PackageVersion Include="xunit.runner.utility" Version="$(XunitVersion)" />
+  </ItemGroup>
+	<!-- SourceLink support for all Akka.NET projects -->
+	<ItemGroup>
+		
+	</ItemGroup>
+	
+</Project>

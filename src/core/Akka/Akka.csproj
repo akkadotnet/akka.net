@@ -13,15 +13,13 @@
   </ItemGroup>
 
   <ItemGroup>
-      <PackageReference Include="Polyfill" Version="1.23.0" PrivateAssets="all" />
-      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="7.0.5" />
-      <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-      <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />     
-      <PackageReference Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
-      <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
-      <PackageReference Include="System.Configuration.ConfigurationManager">
-          <Version>$(ConfigurationManagerVersion)</Version>
-      </PackageReference>
+      <PackageReference Include="Polyfill" PrivateAssets="all" />
+      <PackageReference Include="Microsoft.Extensions.ObjectPool" />
+      <PackageReference Include="Newtonsoft.Json" />
+      <PackageReference Include="System.Reflection.Emit" />     
+      <PackageReference Include="System.Collections.Immutable" />
+      <PackageReference Include="System.Threading.Channels" />
+      <PackageReference Include="System.Configuration.ConfigurationManager"/>
   </ItemGroup>
 
   <ItemGroup>

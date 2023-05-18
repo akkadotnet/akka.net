@@ -23,9 +23,9 @@ variables:
     value: akkadotnet/akka.net
 steps:
 - task: UseDotNet@2
-  displayName: 'Use .NET 7 SDK 7.0.100'
+  displayName: 'Use .NET 7 SDK 7.0.203'
   inputs:
-    version: 7.0.100
+    version: 7.0.203
 - task: BatchScript@1
   displayName: 'FAKE Build'
   inputs:
