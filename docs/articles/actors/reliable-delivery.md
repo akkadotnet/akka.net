@@ -5,6 +5,10 @@ title: Reliable Akka.NET Message Delivery with Akka.Delivery
 
 # Reliable Message Delivery with Akka.Delivery
 
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/X2PBsUOSXpk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
+
 By [default Akka.NET uses "at most once" message delivery between actors](xref:message-delivery-reliability) - this is sufficient for most purposes within Akka.NET, but there are instances where users may require strong delivery guarantees.
 
 This is where Akka.Delivery can be helpful - it provides a robust set of tools for ensuring message delivery over the network, across actor restarts, and even across process restarts.
