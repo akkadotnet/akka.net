@@ -446,7 +446,7 @@ namespace Akka.Cluster.Sharding.Serialization
         }
 
         //
-        // ShardCoordinator.State
+        // ShardCoordinator.CoordinatorState
         //
         private static Proto.Msg.CoordinatorState CoordinatorStateToProto(ShardCoordinator.CoordinatorState state)
         {
