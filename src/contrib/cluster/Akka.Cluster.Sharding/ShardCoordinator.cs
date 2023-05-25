@@ -1812,7 +1812,7 @@ namespace Akka.Cluster.Sharding
                         {
                             shardsTask.PipeTo(_context.Self,
                                 success: shards => new RebalanceResult(shards),
-                                failure: e => new RebalanceResult(ImmutableHashSet<ShardId>.Empty));
+                                failure: _ => new RebalanceResult(ImmutableHashSet<ShardId>.Empty));
                         }
                     }
                     return true;

@@ -57,7 +57,7 @@ namespace Akka.Tests.IO
         [Fact]
         public async Task The_TCP_transport_implementation_should_properly_bind_a_test_server()
         {
-            await new TestSetup(this).RunAsync(async x => await Task.CompletedTask);
+            await new TestSetup(this).RunAsync(async _ => await Task.CompletedTask);
         }
 
         [Fact(Skip="FIXME .net core / linux")]
@@ -484,7 +484,7 @@ namespace Akka.Tests.IO
         [Fact]
         public async Task The_TCP_transport_implementation_handle_tcp_connection_actor_death_properly()
         {
-            await new TestSetup(this, shouldBindServer:false).RunAsync(async x =>
+            await new TestSetup(this, shouldBindServer:false).RunAsync(async _ =>
             {
                 var serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
                 serverSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));

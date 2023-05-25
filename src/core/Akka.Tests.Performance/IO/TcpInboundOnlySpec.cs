@@ -26,7 +26,7 @@ namespace Akka.Tests.Performance.IO
             public TestListener(IPEndPoint endpoint, Counter inboundCounter, ManualResetEventSlim reset)
             {
                 Context.System.Tcp().Tell(new Tcp.Bind(Self, endpoint));
-                Receive<Tcp.Connected>(connected =>
+                Receive<Tcp.Connected>(_ =>
                 {
                     var connection = Sender;
                     var handler = Context.ActorOf(Props.Create(() => new TestHandler(connection, inboundCounter, reset)));
@@ -41,7 +41,7 @@ namespace Akka.Tests.Performance.IO
             public TestHandler(IActorRef connection, Counter inboundCounter, ManualResetEventSlim reset)
             {
                 Context.Watch(connection);
-                Receive<Tcp.Received>(received =>
+                Receive<Tcp.Received>(_ =>
                 {
                     inboundCounter.Increment();
                     if ((++i) >= WriteCount)
@@ -50,9 +50,9 @@ namespace Akka.Tests.Performance.IO
                         Context.Stop(Self);
                     }
                 });
-                Receive<Tcp.CommandFailed>(failed => Context.Stop(Self));
-                Receive<Tcp.ConnectionClosed>(closed => Context.Stop(Self));
-                Receive<Terminated>(terminated => Context.Stop(Self));
+                Receive<Tcp.CommandFailed>(_ => Context.Stop(Self));
+                Receive<Tcp.ConnectionClosed>(_ => Context.Stop(Self));
+                Receive<Terminated>(_ => Context.Stop(Self));
             }
         }
 

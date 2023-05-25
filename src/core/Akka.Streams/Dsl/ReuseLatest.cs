@@ -29,7 +29,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Do nothing by default
         /// </summary>
-        private static readonly Action<T,T> DefaultSwap = (oldValue, newValue) => { };
+        private static readonly Action<T,T> DefaultSwap = (_, _) => { };
 
         public ReuseLatest() : this(DefaultSwap)
         {

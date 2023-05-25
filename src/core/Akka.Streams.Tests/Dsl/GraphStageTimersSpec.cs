@@ -312,7 +312,7 @@ namespace Akka.Streams.Tests.Dsl
                         onUpstreamFailure: FailStage);
 
 
-                    SetHandler(stage.Outlet, onPull: DoNothing, onDownstreamFinish: cause => CompleteStage());
+                    SetHandler(stage.Outlet, onPull: DoNothing, onDownstreamFinish: _ => CompleteStage());
                 }
 
                 public override void PreStart() => ScheduleRepeatedly(TimerKey, TimeSpan.FromMilliseconds(100));

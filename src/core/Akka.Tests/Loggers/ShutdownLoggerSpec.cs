@@ -54,7 +54,7 @@ akka.stdout-logger-class = ""Akka.Tests.Loggers.ThrowingLogger, Akka.Tests""");
 
         public LogProbe()
         {
-            Receive<string>(msg => Sender.Tell(this));
+            Receive<string>(_ => Sender.Tell(this));
             Receive<LogEvent>(Events.Add);
             Receive<InitializeLogger>(e =>
             {

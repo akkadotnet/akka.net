@@ -114,7 +114,7 @@ namespace Akka.Cluster.Tools.Singleton
                 else
                     Remove(m.Member);
             });
-            Receive<ClusterEvent.IMemberEvent>(m =>
+            Receive<ClusterEvent.IMemberEvent>(_ =>
             {
                 /* do nothing */
             });

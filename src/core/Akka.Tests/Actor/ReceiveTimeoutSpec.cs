@@ -251,12 +251,12 @@ namespace Akka.Tests.Actor
             Action<IActorDsl> actor = d =>
             {
                 d.OnPreStart = c => c.SetReceiveTimeout(TimeSpan.FromSeconds(1));
-                d.Receive<ReceiveTimeout>((o, c) =>
+                d.Receive<ReceiveTimeout>((_, c) =>
                 {
                     c.Self.Tell(new TransparentTick());
                     timeoutLatch.CountDown();
                 });
-                d.Receive<TransparentTick>((_, __) => { });
+                d.Receive<TransparentTick>((_, _) => { });
             };
             var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
 
@@ -295,7 +295,7 @@ namespace Akka.Tests.Actor
             Action<IActorDsl> actor = d =>
             {
                 d.Receive<TransparentTick>((_, c) => c.SetReceiveTimeout(500.Milliseconds()));
-                d.Receive<ReceiveTimeout>((_, __) => timeoutLatch.Open());
+                d.Receive<ReceiveTimeout>((_, _) => timeoutLatch.Open());
             };
             var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
             timeoutActor.Tell(new TransparentTick());
@@ -313,7 +313,7 @@ namespace Akka.Tests.Actor
             {
                 d.OnPreStart = c => c.SetReceiveTimeout(500.Milliseconds());
                 d.Receive<TransparentTick>((_, c) => c.SetReceiveTimeout(null));
-                d.Receive<ReceiveTimeout>((_, __) => timeoutLatch.Open());
+                d.Receive<ReceiveTimeout>((_, _) => timeoutLatch.Open());
             };
             var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
             timeoutActor.Tell(new TransparentTick());

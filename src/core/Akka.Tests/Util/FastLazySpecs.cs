@@ -40,7 +40,7 @@ public class FastLazySpecs
         {
             var values = new ConcurrentBag<int>();
             var fal = new FastLazy<int>(() => new Random().Next(1, Int32.MaxValue));
-            var result = Parallel.For(0, 1000, i => values.Add(fal.Value)); // 1000 concurrent operations
+            var result = Parallel.For(0, 1000, _ => values.Add(fal.Value)); // 1000 concurrent operations
             SpinWait.SpinUntil(() => result.IsCompleted);
             var value = values.First();
             Assert.NotEqual(0, value);
@@ -61,7 +61,7 @@ public class FastLazySpecs
 
         var values = new ConcurrentBag<int>();
         var fal = new FastLazy<int>(slowValueFactory);
-        var result = Parallel.For(0, 1000, i => values.Add(fal.Value)); // 1000 concurrent operations
+        var result = Parallel.For(0, 1000, _ => values.Add(fal.Value)); // 1000 concurrent operations
         SpinWait.SpinUntil(() => result.IsCompleted);
         var value = values.First();
         Assert.NotEqual(0, value);
@@ -77,7 +77,7 @@ public class FastLazySpecs
         {
             var values = new ConcurrentBag<string>();
             var fal = new FastLazy<string>(() => Guid.NewGuid().ToString());
-            var result = Parallel.For(0, 1000, i => values.Add(fal.Value)); // 1000 concurrent operations
+            var result = Parallel.For(0, 1000, _ => values.Add(fal.Value)); // 1000 concurrent operations
             SpinWait.SpinUntil(() => result.IsCompleted);
             var value = values.First();
             Assert.NotNull(value);
@@ -98,7 +98,7 @@ public class FastLazySpecs
 
         var values = new ConcurrentBag<string>();
         var fal = new FastLazy<string>(slowValueFactory);
-        var result = Parallel.For(0, 1000, i => values.Add(fal.Value)); // 1000 concurrent operations
+        var result = Parallel.For(0, 1000, _ => values.Add(fal.Value)); // 1000 concurrent operations
         SpinWait.SpinUntil(() => result.IsCompleted);
         var value = values.First();
         Assert.NotNull(value);

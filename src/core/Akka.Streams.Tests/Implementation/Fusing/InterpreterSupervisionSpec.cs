@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Interpreter_error_handling_should_handle_external_failure()
         {
             WithOneBoundedSetup(new Select<int, int>(x => x + 1),
-                (lastEvents, upstream, downstream) =>
+                (lastEvents, upstream, _) =>
                 {
                     lastEvents().Should().BeEmpty();
 

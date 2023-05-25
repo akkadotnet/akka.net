@@ -121,10 +121,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     var assembly = BuildAssembly();
 
                     var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
-                        new Dictionary<IModule, object>(), s => { });
+                        new Dictionary<IModule, object>(), _ => { });
                     var connections = mat.Item1;
                     var logics = mat.Item2;
-                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
+                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (_, _, _) => {}, false, null);
 
                     var i = 0;
                     foreach (var upstream in _upstreams)
@@ -144,10 +144,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public void ManualInit(GraphAssembly assembly)
             {
                 var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
-                    new Dictionary<IModule, object>(), s => { });
+                    new Dictionary<IModule, object>(), _ => { });
                 var connections = mat.Item1;
                 var logics = mat.Item2;
-                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
+                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (_, _, _) => {}, false, null);
             }
 
             public AssemblyBuilder Builder(params IGraphStageWithMaterializedValue<Shape, object>[] stages)
@@ -648,7 +648,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     SetHandler(setup._stageOut,
                         () => MayFail(() => Pull(setup._stageIn)),
-                        cause => MayFail(CompleteStage));
+                        _ => MayFail(CompleteStage));
                 }
 
                 private void MayFail(Action task)

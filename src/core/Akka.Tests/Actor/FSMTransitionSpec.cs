@@ -205,7 +205,7 @@ namespace Akka.Tests.Actor
                     return null;
                 });
 
-                When(1, @event => GoTo(1));
+                When(1, _ => GoTo(1));
 
                 OnTransition((state1, state2) =>
                 {

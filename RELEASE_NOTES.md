@@ -1,6 +1,36 @@
-#### 1.5.7-beta1 May 9th 2023 ####
+#### 1.5.8 May 17th 2023 ####
 
-*Placeholder for nightlies*
+**Placeholder for nightlies**
+
+#### 1.5.7 May 17th 2023 ####
+
+Akka.NET v1.5.7 is a significant release that introduces a [major new reliable message delivery feature to Akka.NET and Akka.Cluster.Sharding](https://getakka.net/articles/actors/reliable-delivery.html): `Akka.Delivery`.
+
+**`Akka.Delivery`**
+
+Akka.Delivery is a reliable delivery system that leverages built-in actors, serialization, and persistence to help guarantee that all messages sent from one producer to one consumer will be delivered, in-order, even across process restarts / actor restarts / network outages.
+
+Akka.Delivery's functionality is divded across four libraries:
+
+* Akka - defines the base definitions for all messages, the `ProducerController` type, and the `ConsumerController` type;
+* Akka.Cluster - contains the serialization definitions for Akka.Delivery;
+* Akka.Persistence - contains the `EventSourcedProducerQueue` implementation, an optional feature that can be used to make the `ProducerController`'s outbound delivery queue persisted to the Akka.Persistence Journal and SnapshotStore; and
+* Akka.Cluster.Sharding - contains the definitions for the `ShardingProducerController` and `ShardingConsumerController`.
+
+We've documented how these features work in the following two detailed articles official website:
+
+* "[Reliable Message Delivery with Akka.Delivery](https://getakka.net/articles/actors/reliable-delivery.html)"
+* "[Reliable Delivery over Akka.Cluster.Sharding](https://getakka.net/articles/clustering/cluster-sharding-delivery.html)"
+
+If you want to see the [full set of changes made in Akka.NET v1.5.7, click here](https://github.com/akkadotnet/akka.net/milestone/86?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |   
+| --- | --- | --- | --- |            
+| 9 | 13972 | 135 | Aaron Stannard | 
+| 6 | 92 | 88 | Ebere Abanonu |      
+| 4 | 803 | 807 | Simon Cropp |      
+| 3 | 70 | 53 | Gregorius Soedharmo |
+| 3 | 3 | 3 | dependabot[bot] |      
 
 #### 1.5.6 May 8th 2023 ####
 

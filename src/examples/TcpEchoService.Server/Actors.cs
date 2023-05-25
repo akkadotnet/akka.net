@@ -66,12 +66,12 @@ namespace TcpEchoService.Server
                 else
                     Sender.Tell(Tcp.Write.Create(received.Data));
             });
-            Receive<Tcp.ConnectionClosed>(closed =>
+            Receive<Tcp.ConnectionClosed>(_ =>
             {
                 Console.WriteLine("Stopped, remote connection [{0}] closed", remote);
                 Context.Stop(Self);
             });
-            Receive<Terminated>(terminated =>
+            Receive<Terminated>(_ =>
             {
                 Console.WriteLine("Stopped, remote connection [{0}] died", remote);
                 Context.Stop(Self);

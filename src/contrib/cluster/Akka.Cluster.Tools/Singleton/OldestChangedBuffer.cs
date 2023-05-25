@@ -131,7 +131,7 @@ namespace Akka.Cluster.Tools.Singleton
                 else
                 {
                     var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
-                    return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+                    return self.Ask(SelfExiting.Instance, timeout).ContinueWith(_ => Done.Instance);
                 }
             });
         }

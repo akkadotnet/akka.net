@@ -170,7 +170,7 @@ namespace Akka.Cluster.Sharding
                 {
                     var (_, Shards) = MostSuitableRegion(sortedRegionEntries);
                     // even if it is to another new node.
-                    var mostShards = sortedRegionEntries.Select(r => r.ShardIds.Where(s => !rebalanceInProgress.Contains(s))).OrderByDescending(i => i.Count()).FirstOrDefault()?.ToArray() ?? Array.Empty<string>();
+                    var mostShards = sortedRegionEntries.Select(r => r.ShardIds.Where(s => !rebalanceInProgress.Contains(s))).MaxBy(i => i.Count())?.ToArray() ?? Array.Empty<string>();
 
                     var difference = mostShards.Length - Shards.Count;
                     if (difference >= _rebalanceThreshold)

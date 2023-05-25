@@ -41,7 +41,7 @@ namespace Akka.Cluster
 
         public CoordinatedShutdownLeave()
         {
-            Receive<LeaveReq>(req =>
+            Receive<LeaveReq>(_ =>
             {
                 // MemberRemoved is needed in case it was downed instead
                 _cluster.Leave(_cluster.SelfAddress);

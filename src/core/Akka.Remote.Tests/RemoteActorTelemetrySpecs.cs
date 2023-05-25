@@ -74,11 +74,11 @@ namespace Akka.Remote.Tests
             public TelemetrySubscriber()
             {
                 // Receive each type of IActorTelemetryEvent
-                Receive<ActorStarted>(e => { _actorCreated++; });
-                Receive<ActorStopped>(e => { _actorStopped++; });
-                Receive<ActorRestarted>(e => { _actorRestarted++; });
+                Receive<ActorStarted>(_ => { _actorCreated++; });
+                Receive<ActorStopped>(_ => { _actorStopped++; });
+                Receive<ActorRestarted>(_ => { _actorRestarted++; });
                 // receive a request for current counter values and return a GetTelemetry result
-                Receive<GetTelemetryRequest>(e =>
+                Receive<GetTelemetryRequest>(_ =>
                     Sender.Tell(new GetTelemetry(_actorCreated, _actorStopped, _actorRestarted)));
             }
 

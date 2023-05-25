@@ -269,7 +269,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(() => {
                 Flow.Create<int>()                                                                             
-                .Invoking(f => f.RecoverWithRetries(exception => Source.Empty<int>(), -2))                                                                             
+                .Invoking(f => f.RecoverWithRetries(_ => Source.Empty<int>(), -2))                                                                             
                 .Should().Throw<ArgumentException>();
                 return Task.CompletedTask;
             }, Materializer);
@@ -282,7 +282,7 @@ namespace Akka.Streams.Tests.Dsl
                 var matFail = new TestException("fail!");
 
                 var task = Source.Failed<string>(new TestException("trigger"))
-                    .RecoverWithRetries(ex => Source.FromGraph(new FailingInnerMat(matFail)), 1)
+                    .RecoverWithRetries(_ => Source.FromGraph(new FailingInnerMat(matFail)), 1)
                     .RunWith(Sink.Ignore<string>(), Materializer);
 
                 try

@@ -99,7 +99,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     Sender.Tell(TargetsRegistered.Instance);
                 });
 
-                Receive<string>(s => s.Equals("boom"), e =>
+                Receive<string>(s => s.Equals("boom"), _ =>
                 {
                     _targets.ForEach(x => Context.Watch(x));
                 });

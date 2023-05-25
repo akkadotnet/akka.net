@@ -136,7 +136,7 @@ namespace Akka.IO
             {
                 var self = Self;
                 var saea = new SocketAsyncEventArgs();
-                saea.Completed += (s, e) => self.Tell(new SocketEvent(e));
+                saea.Completed += (_, e) => self.Tell(new SocketEvent(e));
                 if (!_socket.AcceptAsync(saea))
                     Self.Tell(new SocketEvent(saea));
                 yield return saea;

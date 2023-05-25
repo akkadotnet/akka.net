@@ -36,7 +36,7 @@ namespace Akka.Streams.Dsl
                 {
                     completion.SetResult(currentElement);
                     CompleteStage();
-                }, onUpstreamFailure: ex =>
+                }, onUpstreamFailure: _ =>
                 {
                     completion.SetResult(currentElement);
                     CompleteStage();

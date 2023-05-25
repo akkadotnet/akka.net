@@ -229,12 +229,12 @@ namespace Akka.Tests.Actor.Dispatch
                 Receive<CountDown>(countDown => { Ack(); countDown.Latch.Signal(); _busy.SwitchOff(); });
                 Receive<Increment>(increment => { Ack(); increment.Counter.IncrementAndGet(); _busy.SwitchOff(); });
                 Receive<CountDownNStop>(countDown => { Ack(); countDown.Latch.Signal(); Context.Stop(Self); _busy.SwitchOff(); });
-                Receive<Restart>(restart => { Ack(); _busy.SwitchOff(); throw new Exception("restart requested"); }, restart => true); // had to add predicate for compiler magic
-                Receive<Interrupt>(interrupt => { Ack(); Sender.Tell(new Status.Failure(new ActorInterruptedException(cause: new Exception(Ping)))); _busy.SwitchOff(); throw new Exception(Ping); }, interrupt => true);
+                Receive<Restart>(_ => { Ack(); _busy.SwitchOff(); throw new Exception("restart requested"); }, _ => true); // had to add predicate for compiler magic
+                Receive<Interrupt>(_ => { Ack(); Sender.Tell(new Status.Failure(new ActorInterruptedException(cause: new Exception(Ping)))); _busy.SwitchOff(); throw new Exception(Ping); }, _ => true);
                 Receive<InterruptNicely>(interrupt => { Ack(); Sender.Tell(interrupt.Expect); _busy.SwitchOff(); });
-                Receive<ThrowException>(throwEx => { Ack(); _busy.SwitchOff(); throw throwEx.E; }, throwEx => true);
-                Receive<DoubleStop>(doubleStop => { Ack(); Context.Stop(Self); Context.Stop(Self); _busy.SwitchOff(); });
-                Receive<GetStats>(stats => {
+                Receive<ThrowException>(throwEx => { Ack(); _busy.SwitchOff(); throw throwEx.E; }, _ => true);
+                Receive<DoubleStop>(_ => { Ack(); Context.Stop(Self); Context.Stop(Self); _busy.SwitchOff(); });
+                Receive<GetStats>(_ => {
                     Ack();
                     Sender.Tell(_interceptor.GetStats(Self));
                     _busy.SwitchOff();
@@ -562,7 +562,7 @@ namespace Akka.Tests.Actor.Dispatch
                 var waitTime = (int)Dilated(TimeSpan.FromSeconds(20)).TotalMilliseconds;
                 Action<IActorDsl> bossActor = c =>
                 {
-                    c.Receive<string>(str => str.Equals("run"), (s, context) =>
+                    c.Receive<string>(str => str.Equals("run"), (_, context) =>
                     {
                         for (var i = 1; i <= num; i++)
                         {
@@ -570,7 +570,7 @@ namespace Akka.Tests.Actor.Dispatch
                         }
                     });
 
-                    c.Receive<Terminated>((terminated, context) =>
+                    c.Receive<Terminated>((_, _) =>
                     {
                         stopLatch.Signal();
                     });

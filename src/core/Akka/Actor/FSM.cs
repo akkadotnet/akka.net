@@ -1072,7 +1072,7 @@ namespace Akka.Actor
         /// <summary>
         /// Termination handling
         /// </summary>
-        private Action<StopEvent<TState, TData>> _terminateEvent = @event =>{};
+        private Action<StopEvent<TState, TData>> _terminateEvent = _ =>{};
 
         /// <summary>
         /// Transition handling

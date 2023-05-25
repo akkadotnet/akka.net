@@ -97,8 +97,8 @@ namespace Akka.Persistence.Journal
                     {
                         _tagsToMessagesMapping.AddOrUpdate(
                             tag,
-                            (k) => new LinkedList<IPersistentRepresentation>(new[] { persistentRepresentation }),
-                            (k, v) =>
+                            (_) => new LinkedList<IPersistentRepresentation>(new[] { persistentRepresentation }),
+                            (_, v) =>
                             {
                                 v.AddLast(persistentRepresentation);
                                 return v;
@@ -151,7 +151,7 @@ namespace Akka.Persistence.Journal
             var highestSeqNr = HighestSequenceNr(persistenceId);
             var toSeqNr = Math.Min(toSequenceNr, highestSeqNr);
             if (toSeqNr == highestSeqNr)
-                _meta.AddOrUpdate(persistenceId, highestSeqNr, (pid, old) => highestSeqNr);
+                _meta.AddOrUpdate(persistenceId, highestSeqNr, (_, _) => highestSeqNr);
             for (var snr = 1L; snr <= toSeqNr; snr++)
                 Delete(persistenceId, snr);
             return Task.FromResult(new object());
@@ -543,7 +543,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public Messages Add(IPersistentRepresentation persistent)
         {
-            var list = Messages.GetOrAdd(persistent.PersistenceId, pid => new LinkedList<IPersistentRepresentation>());
+            var list = Messages.GetOrAdd(persistent.PersistenceId, _ => new LinkedList<IPersistentRepresentation>());
             list.AddLast(persistent);
             return Messages;
         }

@@ -689,9 +689,9 @@ namespace Akka.Remote
 
             Receive<InboundAssociation>(
                 ia => Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(10), Self, ia, Self));
-            Receive<ManagementCommand>(mc => Sender.Tell(new ManagementCommandAck(status: false)));
-            Receive<StartupFinished>(sf => Become(Accepting));
-            Receive<ShutdownAndFlush>(sf =>
+            Receive<ManagementCommand>(_ => Sender.Tell(new ManagementCommandAck(status: false)));
+            Receive<StartupFinished>(_ => Become(Accepting));
+            Receive<ShutdownAndFlush>(_ =>
              {
                  Sender.Tell(true);
                  Context.Stop(Self);
@@ -878,12 +878,12 @@ namespace Akka.Remote
                         break;
                 }
             });
-            Receive<ReliableDeliverySupervisor.Idle>(idle =>
+            Receive<ReliableDeliverySupervisor.Idle>(_ =>
             {
                 HandleStashedInbound(Sender, writerIsIdle: true);
             });
-            Receive<Prune>(prune => _endpoints.Prune());
-            Receive<ShutdownAndFlush>(shutdown =>
+            Receive<Prune>(_ => _endpoints.Prune());
+            Receive<ShutdownAndFlush>(_ =>
             {
                 //Shutdown all endpoints and signal to Sender when ready (and whether all endpoints were shutdown gracefully)
                 var sender = Sender;
@@ -897,7 +897,7 @@ namespace Akka.Remote
                             if (result.IsFaulted || result.IsCanceled)
                             {
                                 if (result.Exception != null)
-                                    result.Exception.Handle(e => true);
+                                    result.Exception.Handle(_ => true);
                                 return false;
                             }
                             return result.Result.All(x => x);
@@ -909,7 +909,7 @@ namespace Akka.Remote
                               if (result.IsFaulted || result.IsCanceled)
                               {
                                   if (result.Exception != null)
-                                      result.Exception.Handle(e => true);
+                                      result.Exception.Handle(_ => true);
                                   return false;
                               }
                               return result.Result.All(x => x) && tr.Result;
@@ -935,7 +935,7 @@ namespace Akka.Remote
             Receive<Send>(send => Context.System.DeadLetters.Tell(send));
             Receive<InboundAssociation>(
                      ia => ia.Association.AsInstanceOf<AkkaProtocolHandle>().Disassociate(DisassociateInfo.Shutdown));
-            Receive<Terminated>(terminated => { }); // why should we care now?
+            Receive<Terminated>(_ => { }); // why should we care now?
         }
 
         #endregion
