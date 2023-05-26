@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
+[assembly: InternalsVisibleTo("Akka.DistributedData.Tests")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
