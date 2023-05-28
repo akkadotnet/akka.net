@@ -50,8 +50,8 @@ namespace Akka.Benchmarks.Remoting
 
         private readonly Ack _lastAck = new Ack(-1);
 
-        private ByteString _fullDecode;
-        private ByteString _pduDecoded;
+        private ReadOnlyMemory<byte> _fullDecode;
+        private ReadOnlyMemory<byte> _pduDecoded;
         private Akka.Remote.Serialization.Proto.Msg.Payload _payloadDecoded;
 
         [GlobalSetup]
@@ -79,9 +79,10 @@ namespace Akka.Benchmarks.Remoting
 
             _recvCodec = new AkkaPduProtobuffCodec(_sys1);
             _sendCodec = new AkkaPduProtobuffCodec(_sys2);
-            _fullDecode = CreatePayloadPdu();
-            _pduDecoded = ((Payload)_recvCodec.DecodePdu(_fullDecode)).Bytes;
-            _payloadDecoded = _recvCodec.DecodeMessage(_pduDecoded, _rarp, _addr1).MessageOption.SerializedMessage;
+            _fullDecode = CreatePayloadPdu().Memory;
+            _pduDecoded = ((Payload)_recvCodec.DecodePdu(ref _fullDecode)).Bytes.Memory;
+            
+            _payloadDecoded = _recvCodec.DecodeMessage(ref _pduDecoded, _rarp, _addr1).MessageOption.SerializedMessage;
         }
 
         [GlobalCleanup]
@@ -149,10 +150,11 @@ namespace Akka.Benchmarks.Remoting
         {
             for (var i = 0; i < Operations; i++)
             {
-                var pdu = _recvCodec.DecodePdu(_fullDecode);
+                var pdu = _recvCodec.DecodePdu(ref _fullDecode);
                 if (pdu is Payload p)
                 {
-                    var msg = _recvCodec.DecodeMessage(p.Bytes, _rarp, _addr1);
+                    var b = p.Bytes.Memory;
+                    var msg = _recvCodec.DecodeMessage(ref b, _rarp, _addr1);
                     var deserialize = MessageSerializer.Deserialize(_sys1, msg.MessageOption.SerializedMessage);
                 }
             }
@@ -163,7 +165,7 @@ namespace Akka.Benchmarks.Remoting
         {
             for (var i = 0; i < Operations; i++)
             {
-                var pdu = _recvCodec.DecodePdu(_fullDecode);
+                var pdu = _recvCodec.DecodePdu(ref _fullDecode);
             }
         }
 
@@ -172,7 +174,7 @@ namespace Akka.Benchmarks.Remoting
         {
             for (var i = 0; i < Operations; i++)
             {
-                var msg = _recvCodec.DecodeMessage(_pduDecoded, _rarp, _addr1);
+                var msg = _recvCodec.DecodeMessage(ref _pduDecoded, _rarp, _addr1);
             }
         }
 
