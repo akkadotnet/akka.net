@@ -111,7 +111,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public ByteString Bytes { get; private set; }
+        public ByteString Bytes { get; }
     }
 
     /// <summary>
@@ -215,8 +215,8 @@ namespace Akka.Remote.Transport
         /// <see cref="ByteString"/>.
         /// </summary>
         /// <param name="raw">Encoded raw byte representation of an Akka PDU</param>
-        /// <returns>Class representation of a PDU that can be used in a <see cref="PatternMatch"/>.</returns>
-        public abstract IAkkaPdu DecodePdu(ByteString raw);
+        /// <returns>Class representation of a PDU.</returns>
+        public abstract IAkkaPdu DecodePdu(ref ReadOnlyMemory<byte> raw);
 
         /// <summary>
         /// Takes an <see cref="IAkkaPdu"/> representation of an Akka PDU and returns its encoded form
@@ -229,7 +229,7 @@ namespace Akka.Remote.Transport
             switch (pdu)
             {
                 case Payload p:
-                    return ConstructPayload(p.Bytes);
+                    return ConstructPayload(ByteString.CopyFrom(p.Bytes.Span));
                 case Heartbeat h:
                     return ConstructHeartbeat();
                 case Associate a:
@@ -275,7 +275,7 @@ namespace Akka.Remote.Transport
         /// <param name="provider">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        public abstract AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress);
+        public abstract AckAndMessage DecodeMessage(ref ReadOnlyMemory<byte> raw, IRemoteActorRefProvider provider, Address localAddress);
 
         /// <summary>
         /// TBD
@@ -299,9 +299,9 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
-    internal class AkkaPduProtobuffCodec : AkkaPduCodec
+    internal sealed class AkkaPduProtobuffCodec : AkkaPduCodec
     {
         /// <summary>
         /// TBD
@@ -316,14 +316,14 @@ namespace Akka.Remote.Transport
         /// </ul>
         /// </exception>
         /// <returns>TBD</returns>
-        public override IAkkaPdu DecodePdu(ByteString raw)
+        public override IAkkaPdu DecodePdu(ref ReadOnlyMemory<byte> raw)
         {
             try
             {
-                var pdu = AkkaProtocolMessage.Parser.ParseFrom(raw);
+                var pdu = AkkaProtocolMessage.Parser.ParseFrom(raw.Span);
                 if (pdu.Instruction != null) return DecodeControlPdu(pdu.Instruction);
-                else if (!pdu.Payload.IsEmpty) return new Payload(pdu.Payload); // TODO HasPayload
-                else throw new PduCodecException("Error decoding Akka PDU: Neither message nor control message were contained");
+                if (!pdu.Payload.IsEmpty) return new Payload(pdu.Payload); // TODO HasPayload
+                throw new PduCodecException("Error decoding Akka PDU: Neither message nor control message were contained");
             }
             catch (InvalidProtocolBufferException ex)
             {
@@ -407,9 +407,9 @@ namespace Akka.Remote.Transport
         /// <param name="provider">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        public override AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress)
+        public override AckAndMessage DecodeMessage(ref ReadOnlyMemory<byte> raw, IRemoteActorRefProvider provider, Address localAddress)
         {
-            var ackAndEnvelope = AckAndEnvelopeContainer.Parser.ParseFrom(raw);
+            var ackAndEnvelope = AckAndEnvelopeContainer.Parser.ParseFrom(raw.Span);
 
             Ack ackOption = null;
 
@@ -420,39 +420,34 @@ namespace Akka.Remote.Transport
 
             Message messageOption = null;
 
-            if (ackAndEnvelope.Envelope != null)
+            var envelopeContainer = ackAndEnvelope.Envelope;
+            if (envelopeContainer == null) return new AckAndMessage(ackOption, null);
+            var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
+                    
+            //todo get parsed address from provider
+            var recipientAddress = ActorPathCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path).Address;
+                    
+            var serializedMessage = envelopeContainer.Message;
+            IActorRef senderOption = null;
+            if (envelopeContainer.Sender != null)
+                senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
+                    
+            SeqNo seqOption = null;
+            if (envelopeContainer.Seq != SeqUndefined)
             {
-                var envelopeContainer = ackAndEnvelope.Envelope;
-                if (envelopeContainer != null)
+                unchecked
                 {
-                    var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
-                    
-                    //todo get parsed address from provider
-                    var recipientAddress = ActorPathCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path).Address;
-                    
-                    var serializedMessage = envelopeContainer.Message;
-                    IActorRef senderOption = null;
-                    if (envelopeContainer.Sender != null)
-                        senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
-                    
-                    SeqNo seqOption = null;
-                    if (envelopeContainer.Seq != SeqUndefined)
-                    {
-                        unchecked
-                        {
-                            seqOption = new SeqNo((long)envelopeContainer.Seq); //proto takes a ulong
-                        }
-                    }
-
-                    messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
+                    seqOption = new SeqNo((long)envelopeContainer.Seq); //proto takes a ulong
                 }
             }
+
+            messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
 
 
             return new AckAndMessage(ackOption, messageOption);
         }
 
-        private AcknowledgementInfo AckBuilder(Ack ack)
+        private static AcknowledgementInfo AckBuilder(Ack ack)
         {
             var acki = new AcknowledgementInfo();
             acki.CumulativeAck = (ulong)ack.CumulativeAck.RawValue;
@@ -496,7 +491,7 @@ namespace Akka.Remote.Transport
         }
 
 #region Internal methods
-        private IAkkaPdu DecodeControlPdu(AkkaControlMessage controlPdu)
+        private static IAkkaPdu DecodeControlPdu(AkkaControlMessage controlPdu)
         {
             switch (controlPdu.CommandType)
             {

@@ -1131,7 +1131,7 @@ namespace Akka.Remote.Transport
             {
                 if (@event is { FsmEvent: InboundPayload payload, StateData: ExposedHandle handle })
                 {
-                    var b = payload.Payload;
+                    var b = ByteString.CopyFrom(payload.Payload.Span);
                     ThrottledMessages.Enqueue(b);
                     var origin = PeekOrigin(b);
                     if (origin != null)
@@ -1148,7 +1148,7 @@ namespace Akka.Remote.Transport
             {
                 if (@event.FsmEvent is InboundPayload payload)
                 {
-                    var b = payload.Payload;
+                    var b = ByteString.CopyFrom(payload.Payload.Span);
                     ThrottledMessages.Enqueue(b);
                     return Stay();
                 }
@@ -1191,7 +1191,7 @@ namespace Akka.Remote.Transport
             {
                 if (@event.FsmEvent is InboundPayload payload)
                 {
-                    ThrottledMessages.Enqueue(payload.Payload);
+                    ThrottledMessages.Enqueue(ByteString.CopyFrom(payload.Payload.Span));
                     return Stay();
                 }
 
@@ -1217,7 +1217,7 @@ namespace Akka.Remote.Transport
 
                 if (@event.FsmEvent is InboundPayload inboundPayload)
                 {
-                    ThrottledMessages.Enqueue(inboundPayload.Payload);
+                    ThrottledMessages.Enqueue(ByteString.CopyFrom(inboundPayload.Payload.Span));
                     return Stay();
                 }
 
@@ -1239,7 +1239,8 @@ namespace Akka.Remote.Transport
 
                 if (@event.FsmEvent is InboundPayload inboundPayload)
                 {
-                    ForwardOrDelay(inboundPayload.Payload);
+                    var p = inboundPayload.Payload;
+                    ForwardOrDelay(ref p);
                     return Stay();
                 }
 
@@ -1248,7 +1249,8 @@ namespace Akka.Remote.Transport
                     if (ThrottledMessages.Any())
                     {
                         var payload = ThrottledMessages.Dequeue();
-                        UpstreamListener.Notify(new InboundPayload(payload));
+                        var mem = payload.Memory;
+                        UpstreamListener.Notify(new InboundPayload(ref mem));
                         InboundThrottleMode = InboundThrottleMode.TryConsumeTokens(MonotonicClock.GetNanos(),
                             payload.Length).Item1;
                         if (ThrottledMessages.Any())
@@ -1303,7 +1305,8 @@ namespace Akka.Remote.Transport
         {
             try
             {
-                var pdu = _codec.DecodePdu(b);
+                var mem = b.Memory;
+                var pdu = _codec.DecodePdu(ref mem);
                 if (pdu is Associate associate)
                 {
                     return associate.Info.Origin;
@@ -1328,7 +1331,7 @@ namespace Akka.Remote.Transport
             }
         }
 
-        private void ForwardOrDelay(ByteString payload)
+        private void ForwardOrDelay(ref ReadOnlyMemory<byte> payload)
         {
             if (InboundThrottleMode is Blackhole)
             {
@@ -1345,17 +1348,17 @@ namespace Akka.Remote.Transport
                     if (success)
                     {
                         InboundThrottleMode = newBucket;
-                        UpstreamListener.Notify(new InboundPayload(payload));
+                        UpstreamListener.Notify(new InboundPayload(ref payload));
                     }
                     else
                     {
-                        ThrottledMessages.Enqueue(payload);
+                        ThrottledMessages.Enqueue(ByteString.CopyFrom(payload.Span));
                         ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), tokens));
                     }
                 }
                 else
                 {
-                    ThrottledMessages.Enqueue(payload);
+                    ThrottledMessages.Enqueue(ByteString.CopyFrom(payload.Span));
                 }
             }
         }

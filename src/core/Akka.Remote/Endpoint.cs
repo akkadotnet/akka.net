@@ -8,17 +8,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
-using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Util;
@@ -1942,7 +1938,7 @@ namespace Akka.Remote
                 }
                 else
                 {
-                    var ackAndMessage = TryDecodeMessageAndAck(payload);
+                    var ackAndMessage = TryDecodeMessageAndAck(ref payload);
                     if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
                         _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
                     if (ackAndMessage.MessageOption != null)
@@ -1996,7 +1992,8 @@ namespace Akka.Remote
             Receive<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
             Receive<InboundPayload>(payload =>
             {
-                var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
+                var mem = payload.Payload;
+                var ackAndMessage = TryDecodeMessageAndAck(ref mem);
                 if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
                     _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
             });
@@ -2066,11 +2063,11 @@ namespace Akka.Remote
             deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
         }
 
-        private AckAndMessage TryDecodeMessageAndAck(ByteString pdu)
+        private AckAndMessage TryDecodeMessageAndAck(ref ReadOnlyMemory<byte> pdu)
         {
             try
             {
-                return _codec.DecodeMessage(pdu, _provider, LocalAddress);
+                return _codec.DecodeMessage(ref pdu, _provider, LocalAddress);
             }
             catch (Exception ex)
             {

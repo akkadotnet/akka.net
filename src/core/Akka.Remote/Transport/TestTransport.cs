@@ -275,7 +275,8 @@ namespace Akka.Remote.Transport
 
             if (remoteReadHandler != null)
             {
-                remoteReadHandler.Notify(new InboundPayload(payload));
+                var mem = payload.Memory;
+                remoteReadHandler.Notify(new InboundPayload(ref mem));
                 return Task.FromResult(true);
             }
 

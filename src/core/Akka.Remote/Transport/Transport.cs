@@ -124,15 +124,15 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         /// <param name="payload">TBD</param>
-        public InboundPayload(ByteString payload)
+        public InboundPayload(ref ReadOnlyMemory<byte> payload)
         {
             Payload = payload;
         }
 
         /// <summary>
-        /// TBD
+        /// The payload of the inbound message in raw byte format.
         /// </summary>
-        public ByteString Payload { get; private set; }
+        public ReadOnlyMemory<byte> Payload { get; private set; }
 
         
         public override string ToString()

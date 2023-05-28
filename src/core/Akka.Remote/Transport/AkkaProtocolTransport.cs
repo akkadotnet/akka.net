@@ -894,8 +894,9 @@ namespace Akka.Remote.Transport
                     case Disassociated d:
                         return Stop(new Failure(d.Info));
                     case InboundPayload p when @event.StateData is OutboundUnderlyingAssociated ola:
-                        {
-                            var pdu = DecodePdu(p.Payload);
+                    {
+                            var bytes = p.Payload;
+                            var pdu = DecodePdu(ref bytes);
                             /*
                              * This state is used for OutboundProtocolState actors when they receive
                              * a reply back from the inbound end of the association.
@@ -941,8 +942,9 @@ namespace Akka.Remote.Transport
 
                     // Events for inbound associations
                     case InboundPayload p when @event.StateData is InboundUnassociated iu:
-                        {
-                            var pdu = DecodePdu(p.Payload);
+                    {
+                            var bytes = p.Payload;
+                            var pdu = DecodePdu(ref bytes);
                             /*
                              * This state is used by inbound protocol state actors
                              * when they receive an association attempt from the
@@ -1002,8 +1004,9 @@ namespace Akka.Remote.Transport
                     case Disassociated d:
                         return Stop(new Failure(d.Info));
                     case InboundPayload ip:
-                        {
-                            var pdu = DecodePdu(ip.Payload);
+                    {
+                            var bytes = ip.Payload;
+                            var pdu = DecodePdu(ref bytes);
                             switch (pdu)
                             {
                                 case Disassociate d:
@@ -1024,7 +1027,8 @@ namespace Akka.Remote.Transport
                                                     .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
                                                         nQueue));
                                         case ListenerReady lr:
-                                            lr.Listener.Notify(new InboundPayload(p.Bytes));
+                                            var mem = p.Bytes.Memory;
+                                            lr.Listener.Notify(new InboundPayload(ref mem));
                                             return Stay();
                                         default:
                                             throw new AkkaProtocolException(
@@ -1064,7 +1068,8 @@ namespace Akka.Remote.Transport
                     case HandleListenerRegistered hlr when @event.StateData is AssociatedWaitHandler awh:
                         foreach (var p in awh.Queue)
                         {
-                            hlr.Listener.Notify(new InboundPayload(p));
+                            var mem = p.Memory;
+                            hlr.Listener.Notify(new InboundPayload(ref mem));
                         }
 
                         return Stay().Using(new ListenerReady(hlr.Listener, awh.WrappedHandle));
@@ -1299,11 +1304,11 @@ namespace Akka.Remote.Transport
             return readHandlerPromise.Task;
         }
 
-        private IAkkaPdu DecodePdu(ByteString pdu)
+        private IAkkaPdu DecodePdu(ref ReadOnlyMemory<byte> pdu)
         {
             try
             {
-                return _codec.DecodePdu(pdu);
+                return _codec.DecodePdu(ref pdu);
             }
             catch (Exception ex)
             {

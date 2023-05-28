@@ -55,8 +55,10 @@ namespace Akka.Remote.Transport.DotNetty
             if (buf.ReadableBytes > 0)
             {
                 // no need to copy the byte buffer contents; ByteString does that automatically
+                // DEFENSIVE COPY
                 var bytes = ByteString.CopyFrom(buf.Array, buf.ArrayOffset + buf.ReaderIndex, buf.ReadableBytes);
-                NotifyListener(new InboundPayload(bytes));
+                var mem = bytes.Memory;
+                NotifyListener(new InboundPayload(ref mem));
             }
 
             // decrease the reference count to 0 (releases buffer)

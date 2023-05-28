@@ -611,6 +611,7 @@ namespace Akka.Actor
                     name.CopyTo(buffer.Slice(offset + 1, name.Length));
                     p = p._parent;
                 }
+                
                 return buffer.ToString(); //todo use string.Create() when available
             }
         }
