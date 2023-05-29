@@ -66,9 +66,13 @@ namespace Akka.DistributedData.Serialization
 
         private readonly byte[] _emptyArray = Array.Empty<byte>();
 
+        private readonly bool _backwardCompatWireFormat;
+        
         public ReplicatedDataSerializer(ExtendedActorSystem system) : base(system)
         {
             _ser = new SerializationSupport(system);
+            _backwardCompatWireFormat =
+                system.Settings.Config.GetBoolean("akka.cluster.sharding.distributed-data.backward-compatible-wire-format");
         }
 
 
@@ -735,6 +739,11 @@ namespace Akka.DistributedData.Serialization
             pLww.State = _ser.OtherMessageToProto(register.Value);
             pLww.Timestamp = register.Timestamp;
             pLww.TypeInfo = GetTypeDescriptor(r.RegisterType);
+            
+            // HACK: Really really ugly hack to make sure that v1.5 DData cluster sharding works with v1.4
+            if(_backwardCompatWireFormat && pLww.TypeInfo.TypeName == "Akka.Cluster.Sharding.ShardCoordinator+CoordinatorState, Akka.Cluster.Sharding")
+                pLww.TypeInfo.TypeName = "Akka.Cluster.Sharding.PersistentShardCoordinator+State, Akka.Cluster.Sharding";
+            
             return pLww;
         }
 
@@ -766,9 +775,13 @@ namespace Akka.DistributedData.Serialization
                     }
                 case ValType.Other:
                     {
+                        // HACK: Really really ugly hack to make sure that v1.5 DData cluster sharding works with v1.4
+                        var typeName = proto.TypeInfo.TypeName;
+                        if (typeName == "Akka.Cluster.Sharding.PersistentShardCoordinator+State, Akka.Cluster.Sharding")
+                            typeName = "Akka.Cluster.Sharding.ShardCoordinator+CoordinatorState, Akka.Cluster.Sharding";
+                        
                         // runtime type - enter horrible dynamic serialization stuff
-
-                        var setContentType = Type.GetType(proto.TypeInfo.TypeName);
+                        var setContentType = Type.GetType(typeName);
 
                         var setType = LWWRegisterMaker.MakeGenericMethod(setContentType);
                         return (ILWWRegister)setType.Invoke(this, new object[] { proto });

@@ -8,6 +8,7 @@
   </PropertyGroup>
  
   <ItemGroup>
+    <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
     <ProjectReference Include="..\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj" />
     <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
