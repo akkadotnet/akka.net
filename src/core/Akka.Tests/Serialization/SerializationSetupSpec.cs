@@ -85,16 +85,6 @@ namespace Akka.Tests.Serialization
         public SerializationSetupSpec(ITestOutputHelper output) 
             : base(ActorSystem.Create("SerializationSettingsSpec", ActorSystemSettings), output) { }
 
-        private void VerifySerialization(ActorSystem sys, object obj)
-        {
-            var serialization = sys.Serialization;
-            var bytes = serialization.Serialize(obj);
-            var serializer = serialization.FindSerializerFor(obj);
-            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, obj);
-            var deserialized = serialization.Deserialize(bytes, serializer.Identifier, manifest);
-            deserialized.Should().Be(obj);
-        }
-
         [Fact]
         public void SerializationSettingsShouldAllowForProgrammaticConfigurationOfSerializers()
         {

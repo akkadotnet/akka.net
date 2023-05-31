@@ -1844,8 +1844,6 @@ namespace Akka.Remote
             public Ack Ack { get; private set; }
         }
 
-        private const string AckIdleTimerName = "AckIdleTimer";
-
         #endregion
 
     }

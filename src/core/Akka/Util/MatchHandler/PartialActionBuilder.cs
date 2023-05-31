@@ -20,7 +20,6 @@ namespace Akka.Tools.MatchHandler
         /// </summary>
         public const int MaxNumberOfArguments = 15;
 
-        private static readonly Type _objectArrayType = typeof(object[]);
         private static readonly Type[] _types = new[]
         {
             typeof(PartialHandlerArgumentsCapture<>),

@@ -111,7 +111,6 @@ namespace Akka.Tests.Util.Internal
                     SplitDottedPathHonouringQuotesOracle(s).SequenceEqual(s.SplitDottedPathHonouringQuotes()))
                 .QuickCheckThrowOnFailure();
         }
-#endif
 
         private static IEnumerable<string> SplitDottedPathHonouringQuotesOracle(string path)
         {
@@ -122,11 +121,6 @@ namespace Akka.Tests.Util.Internal
 
         internal class ConfigStringsGen
         {
-            public static Arbitrary<string> EventLocations()
-            {
-                return Arb.From(ConfigStrings());
-            }
-
             static Gen<string> ConfigStrings()
             {
                 var z =
@@ -142,6 +136,7 @@ namespace Akka.Tests.Util.Internal
                 return z;
             }
         }
+#endif
 
         /// <summary>
         /// Like selectMany, but alternates between two selectors (starting with even for item 0)
