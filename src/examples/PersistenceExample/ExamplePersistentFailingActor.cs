@@ -36,10 +36,10 @@ namespace PersistenceExample
         {
             switch (message)
             {
-                case string and "print":
+                case "print":
                     Console.WriteLine("Received: " + string.Join(";, ", Enumerable.Reverse(Received)));
                     return true;
-                case string and "boom":
+                case "boom":
                     throw new Exception("controlled demolition");
                 case string str:
                     Persist(str, s => Received.AddFirst(s));

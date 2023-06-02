@@ -93,7 +93,7 @@ namespace Akka.Actor
                     case string e when e.Contains('?') || e.Contains('*'):
                         list.Add(new SelectChildPattern(e));
                         break;
-                    case string and "..":
+                    case "..":
                         list.Add(SelectParent.Instance);
                         break;
                     default:

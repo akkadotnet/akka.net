@@ -169,7 +169,7 @@ namespace Akka.Persistence.Tests
             {
                 switch(message)
                 {
-                    case string and "done":
+                    case "done":
                         _probe.Tell("done");
                         return true;
                     case string payload:
