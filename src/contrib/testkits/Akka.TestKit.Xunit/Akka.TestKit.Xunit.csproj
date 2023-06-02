@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.TestKit.Xunit</AssemblyTitle>
         <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);testkit;xunit</PackageTags>

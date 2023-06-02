@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Persistence.TestKit</AssemblyTitle>
     <Description>TestKit for writing tests for Akka.NET Persistance module.</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);testkit;persistance</PackageTags>
