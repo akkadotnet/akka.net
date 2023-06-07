@@ -227,12 +227,12 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
 
-        public override async Task<AssociationHandle> Associate(Address remoteAddress)
+        public override Task<AssociationHandle> Associate(Address remoteAddress)
         {
             if (!ServerChannel.Open)
                 throw new ChannelException("Transport is not open");
 
-            return await AssociateInternal(remoteAddress).ConfigureAwait(false);
+            return AssociateInternal(remoteAddress);
         }
 
         protected abstract Task<AssociationHandle> AssociateInternal(Address remoteAddress);
