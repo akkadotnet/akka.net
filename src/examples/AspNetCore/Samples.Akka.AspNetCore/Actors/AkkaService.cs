@@ -61,9 +61,9 @@ namespace Samples.Akka.AspNetCore.Actors
             await CoordinatedShutdown.Get(_actorSystem).Run(CoordinatedShutdown.ClrExitReason.Instance);
         }
 
-        public async Task<HashReply> Hash(string input, CancellationToken token)
+        public Task<HashReply> Hash(string input, CancellationToken token)
         {
-            return await RouterActor.Ask<HashReply>(input, token);
+            return RouterActor.Ask<HashReply>(input, token);
         }
     }
 }
