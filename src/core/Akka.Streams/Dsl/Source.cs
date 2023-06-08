@@ -676,6 +676,18 @@ namespace Akka.Streams.Dsl
             => source as Source<T, TMat> ?? new Source<T, TMat>(source.Module);
 
         /// <summary>
+        /// Defers the creation of a <see cref="Source"/> until materialization. The <paramref name="factory"/> 
+        /// function exposes <see cref="ActorMaterializer"/> which is going to be used during materialization and
+        /// <see cref="Attributes"/> of the <see cref="Source"/> returned by this method.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="factory">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<T, Task<TMat>> Setup<T, TMat>(Func<ActorMaterializer, Attributes, Source<T, TMat>> factory)
+            => FromGraph(new SetupSourceStage<T, TMat>(factory));
+
+        /// <summary>
         /// Start a new <see cref="Source{TOut,TMat}"/> from the given <see cref="Task{T}"/>. The stream will consist of
         /// one element when the <see cref="Task{T}"/> is completed with a successful value, which
         /// may happen before or after materializing the <see cref="IFlow{TOut,TMat}"/>.

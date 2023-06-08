@@ -814,7 +814,8 @@ namespace Akka.Streams.Stage
             get
             {
                 if (_interpreter == null)
-                    throw new IllegalStateException("Not yet initialized: only SetHandler is allowed in GraphStageLogic constructor");
+                    throw new IllegalStateException("Not yet initialized: only SetHandler is allowed in GraphStageLogic constructor. " +
+                        "To access materializer use Source/Flow/Sink.Setup factory");
                 return _interpreter;
             }
             set => _interpreter = value;

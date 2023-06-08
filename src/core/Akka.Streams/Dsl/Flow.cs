@@ -479,6 +479,19 @@ namespace Akka.Streams.Dsl
             => graph as Flow<TIn, TOut, TMat> ?? new Flow<TIn, TOut, TMat>(graph.Module);
 
         /// <summary>
+        /// Defers the creation of a <see cref="Flow"/> until materialization. The <paramref name="factory"/> 
+        /// function exposes <see cref="ActorMaterializer"/> which is going to be used during materialization and
+        /// <see cref="Attributes"/> of the <see cref="Flow"/> returned by this method.
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="factory">TBD</param>
+        /// <returns>TBD</returns>
+        public static Flow<TIn, TOut, Task<TMat>> Setup<TIn, TOut, TMat>(Func<ActorMaterializer, Attributes, Flow<TIn, TOut, TMat>> factory)
+            => FromGraph(new SetupFlowStage<TIn, TOut, TMat>(factory));
+
+        /// <summary>
         /// Creates a <see cref="Flow{TIn,TOut,TMat}"/> from a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/> where the flow's input
         /// will be sent to the sink and the flow's output will come from the source.
         /// </summary>
