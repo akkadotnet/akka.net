@@ -46,22 +46,21 @@ namespace Akka.TestKit
                 .AsTask().WaitAndUnwrapException();
         }
 
-        public async ValueTask<T> ExpectMsgFromAsync<T>(
+        public ValueTask<T> ExpectMsgFromAsync<T>(
             IActorRef sender,
             TimeSpan? duration = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync<T>(
+            return InternalExpectMsgAsync<T>(
                     timeout: RemainingOrDilated(duration),
                     msgAssert: null,
                     senderAssert: s => _assertions.AssertEqual(
                         expected: sender,
                         actual: s,
-                        format: FormatWrongSenderMessage(s,sender.ToString(), hint)), 
-                    hint: null, 
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                        format: FormatWrongSenderMessage(s,sender.ToString(), hint)),
+                    hint: null,
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -95,23 +94,22 @@ namespace Akka.TestKit
                 .AsTask().WaitAndUnwrapException();
         }
 
-        public async ValueTask<T> ExpectMsgFromAsync<T>(
+        public ValueTask<T> ExpectMsgFromAsync<T>(
             IActorRef sender,
             T message,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync<T>(
+            return InternalExpectMsgAsync<T>(
                     timeout: RemainingOrDilated(timeout),
                     msgAssert: m => _assertions.AssertEqual(message, m),
                     senderAssert: s => _assertions.AssertEqual(
                         expected: sender,
                         actual: s,
-                        format: FormatWrongSenderMessage(s, sender.ToString(), hint)), 
+                        format: FormatWrongSenderMessage(s, sender.ToString(), hint)),
                     hint: hint,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -146,24 +144,23 @@ namespace Akka.TestKit
                 .AsTask().WaitAndUnwrapException();
         }
 
-        public async ValueTask<T> ExpectMsgFromAsync<T>(
+        public ValueTask<T> ExpectMsgFromAsync<T>(
             IActorRef sender,
             Predicate<T> isMessage,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync<T>(
-                    timeout: RemainingOrDilated(timeout), 
+            return InternalExpectMsgAsync<T>(
+                    timeout: RemainingOrDilated(timeout),
                     assert: (m, s) =>
                     {
                         _assertions.AssertEqual(sender, s, FormatWrongSenderMessage(s, sender.ToString(), hint));
                         if(isMessage != null)
                             AssertPredicateIsTrueForMessage(isMessage, m, hint);
-                    }, 
-                    hint: hint, 
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    },
+                    hint: hint,
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -198,14 +195,14 @@ namespace Akka.TestKit
                 .AsTask().WaitAndUnwrapException();
         }
 
-        public async ValueTask<T> ExpectMsgFromAsync<T>(
+        public ValueTask<T> ExpectMsgFromAsync<T>(
             Predicate<IActorRef> isSender,
             Predicate<T> isMessage,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync<T>(
+            return InternalExpectMsgAsync<T>(
                 timeout: RemainingOrDilated(timeout),
                 assert: (m, sender) =>
                 {
@@ -213,10 +210,9 @@ namespace Akka.TestKit
                         AssertPredicateIsTrueForSender(isSender, sender, hint, m);
                     if(isMessage != null)
                         AssertPredicateIsTrueForMessage(isMessage, m, hint);
-                }, 
+                },
                 hint: hint,
-                cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                cancellationToken: cancellationToken);
         }
 
         private static string FormatWrongSenderMessage(IActorRef actualSender, string expectedSender, string hint)
@@ -267,20 +263,19 @@ namespace Akka.TestKit
                 .AsTask().WaitAndUnwrapException();
         }
 
-        public async ValueTask<T> ExpectMsgFromAsync<T>(
+        public ValueTask<T> ExpectMsgFromAsync<T>(
             IActorRef sender,
             Action<T> assertMessage,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync(
+            return InternalExpectMsgAsync(
                     timeout: RemainingOrDilated(timeout),
-                    msgAssert: assertMessage, 
-                    senderAssert: s => _assertions.AssertEqual(sender, s, hint), 
+                    msgAssert: assertMessage,
+                    senderAssert: s => _assertions.AssertEqual(sender, s, hint),
                     hint: hint,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -315,20 +310,19 @@ namespace Akka.TestKit
                 .AsTask().WaitAndUnwrapException();
         }
         
-        public async ValueTask<T> ExpectMsgFromAsync<T>(
+        public ValueTask<T> ExpectMsgFromAsync<T>(
             Action<IActorRef> assertSender, 
             Action<T> assertMessage,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync(
+            return InternalExpectMsgAsync(
                 timeout: RemainingOrDilated(timeout),
-                msgAssert: assertMessage, 
+                msgAssert: assertMessage,
                 senderAssert: assertSender,
-                hint: hint, 
-                cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                hint: hint,
+                cancellationToken: cancellationToken);
         }
     }
 }

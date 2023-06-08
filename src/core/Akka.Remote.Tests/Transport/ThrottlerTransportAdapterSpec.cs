@@ -153,23 +153,23 @@ namespace Akka.Remote.Tests.Transport
             return identity.Subject;
         }
 
-        private async Task<bool> Throttle(ThrottleTransportAdapter.Direction direction, ThrottleMode mode)
+        private Task<bool> Throttle(ThrottleTransportAdapter.Direction direction, ThrottleMode mode)
         {
             var rootBAddress = new Address("akka", "systemB", "localhost", RootB.Address.Port.Value);
             var transport =
                 Sys.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
-            
-            return await transport.ManagementCommand(new SetThrottle(rootBAddress, direction, mode))
+
+            return transport.ManagementCommand(new SetThrottle(rootBAddress, direction, mode))
                 .ShouldCompleteWithin(DefaultTimeout);
         }
 
-        private async Task<bool> Disassociate()
+        private Task<bool> Disassociate()
         {
             var rootBAddress = new Address("akka", "systemB", "localhost", RootB.Address.Port.Value);
             var transport =
                 Sys.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
-            
-            return await transport.ManagementCommand(new ForceDisassociate(rootBAddress))
+
+            return transport.ManagementCommand(new ForceDisassociate(rootBAddress))
                 .ShouldCompleteWithin(DefaultTimeout);
         }
 

@@ -229,17 +229,16 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Async version of ExpectOne
         /// </summary>
-        public async Task<T> ExpectOneAsync<T>(
+        public Task<T> ExpectOneAsync<T>(
             Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
-            return await InterceptAsync(
+            return InterceptAsync(
                     func: func,
                     system: _actorSystem,
                     timeout: null,
                     expectedOccurrences: 1,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -262,19 +261,18 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Async version of ExpectOne
         /// </summary>
-        public async Task<T> ExpectOneAsync<T>(
+        public Task<T> ExpectOneAsync<T>(
             TimeSpan timeout,
             Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
-            return await InterceptAsync(
+            return InterceptAsync(
                     func: func, 
                     system: _actorSystem,
                     timeout: timeout,
                     expectedOccurrences: 1,
                     matchedEventHandler: null,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -297,19 +295,18 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Async version of Expect
         /// </summary>
-        public async Task<T> ExpectAsync<T>(
+        public Task<T> ExpectAsync<T>(
             int expectedCount, 
             Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
-            return await InterceptAsync(
+            return InterceptAsync(
                     func: func,
                     system: _actorSystem,
                     timeout: null,
                     expectedOccurrences: expectedCount,
                     matchedEventHandler: null,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -335,20 +332,19 @@ namespace Akka.TestKit.Internal
         /// Async version of Expect
         /// Note: <paramref name="func"/> might not get awaited.
         /// </summary>
-        public async Task<T> ExpectAsync<T>(
+        public Task<T> ExpectAsync<T>(
             int expectedCount,
             TimeSpan timeout,
             Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
-            return await InterceptAsync(
+            return InterceptAsync(
                     func: func,
                     system: _actorSystem,
                     timeout: timeout,
                     expectedOccurrences: expectedCount,
                     matchedEventHandler: null,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -367,16 +363,15 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Async version of Mute
         /// </summary>
-        public async Task<T> MuteAsync<T>(Func<Task<T>> func, CancellationToken cancellationToken = default)
+        public Task<T> MuteAsync<T>(Func<Task<T>> func, CancellationToken cancellationToken = default)
         {
-            return await InterceptAsync(
+            return InterceptAsync(
                     func: func,
                     system: _actorSystem,
                     timeout: null,
                     expectedOccurrences: null,
                     matchedEventHandler: null,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
