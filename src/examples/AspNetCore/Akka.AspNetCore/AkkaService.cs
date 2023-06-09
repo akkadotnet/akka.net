@@ -69,9 +69,9 @@ namespace Akka.AspNetCore
             _actorRef.Tell(message);
         }
 
-        public async Task<T> Ask<T>(object message)
+        public Task<T> Ask<T>(object message)
         {
-            return await _actorRef.Ask<T>(message);
+            return _actorRef.Ask<T>(message);
         }
     }
 }
