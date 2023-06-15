@@ -1,3 +1,7 @@
+#### 1.5.9 June 15th 2023 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.8 June 15th 2023 ####
 
 Akka.NET v1.5.8 is a maintenance release that introduces some new features and fixes some bugs with Akka.NET v1.5.7 and earlier.
