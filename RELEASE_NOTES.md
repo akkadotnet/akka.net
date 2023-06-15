@@ -1,6 +1,21 @@
-#### 1.5.8 May 17th 2023 ####
+#### 1.5.8 June 15th 2023 ####
 
-**Placeholder for nightlies**
+Akka.NET v1.5.8 is a maintenance release that introduces some new features and fixes some bugs with Akka.NET v1.5.7 and earlier.
+
+* [Akka.Streams: Added `Source`/`Flow` `Setup` operator](https://github.com/akkadotnet/akka.net/pull/6788)
+* [Akka.Cluster.Sharding: fixed potential wire format problem when upgrading from v1.4 to v1.5 with `state-store-mode=ddata` and `remember-entities=on`](https://github.com/akkadotnet/akka.net/issues/6704)
+* [Akka.Remote.TestKit: Fix MNTR crashing because it is using PolyFill extension method](https://github.com/akkadotnet/akka.net/pull/6768)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.8, click here](https://github.com/akkadotnet/akka.net/milestone/90?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 9 | 11 | 11 | dependabot[bot] |
+| 2 | 8 | 0 | Aaron Stannard |
+| 2 | 75 | 4 | Gregorius Soedharmo |
+| 2 | 132 | 158 | Simon Cropp |
+| 1 | 431 | 1 | Ismael Hamed |
+| 1 | 1 | 1 | Andrea Di Stefano |
 
 #### 1.5.7 May 17th 2023 ####
 
