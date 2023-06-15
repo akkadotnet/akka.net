@@ -1353,6 +1353,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<T, T, Akka.NotUsed> Identity<T>() { }
         public static Akka.Streams.Dsl.Flow<T, T, TMat> Identity<T, TMat>() { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, System.Threading.Tasks.Task<Akka.Util.Option<TMat>>> LazyInitAsync<TIn, TOut, TMat>(System.Func<System.Threading.Tasks.Task<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>>> flowFactory) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, System.Threading.Tasks.Task<TMat>> Setup<TIn, TOut, TMat>(System.Func<Akka.Streams.ActorMaterializer, Akka.Streams.Attributes, Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> factory) { }
     }
     public class static FlowOperations
     {
@@ -2033,6 +2034,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Never<T>() { }
         public static Akka.Streams.Dsl.Source<T, Akka.Streams.ISourceQueueWithComplete<T>> Queue<T>(int bufferSize, Akka.Streams.OverflowStrategy overflowStrategy) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Repeat<T>(T element) { }
+        public static Akka.Streams.Dsl.Source<T, System.Threading.Tasks.Task<TMat>> Setup<T, TMat>(System.Func<Akka.Streams.ActorMaterializer, Akka.Streams.Attributes, Akka.Streams.Dsl.Source<T, TMat>> factory) { }
         public static Akka.Streams.SourceShape<T> Shape<T>(string name) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Single<T>(T element) { }
         public static Akka.Streams.Dsl.Source<T, Akka.Actor.ICancelable> Tick<T>(System.TimeSpan initialDelay, System.TimeSpan interval, T tick) { }
@@ -3581,6 +3583,25 @@ namespace Akka.Streams.Implementation
         public override Akka.Streams.SinkShape<T> Shape { get; }
         public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<T>>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class SetupFlowStage<TIn, TOut, TMat> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.FlowShape<TIn, TOut>, System.Threading.Tasks.Task<TMat>>
+    {
+        public SetupFlowStage(System.Func<Akka.Streams.ActorMaterializer, Akka.Streams.Attributes, Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> factory) { }
+        public Akka.Streams.Inlet<TIn> In { get; }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public Akka.Streams.Outlet<TOut> Out { get; }
+        public override Akka.Streams.FlowShape<TIn, TOut> Shape { get; }
+        public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<TMat>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class SetupSourceStage<TOut, TMat> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SourceShape<TOut>, System.Threading.Tasks.Task<TMat>>
+    {
+        public SetupSourceStage(System.Func<Akka.Streams.ActorMaterializer, Akka.Streams.Attributes, Akka.Streams.Dsl.Source<TOut, TMat>> factory) { }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public Akka.Streams.Outlet<TOut> Out { get; }
+        public override Akka.Streams.SourceShape<TOut> Shape { get; }
+        public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<TMat>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
     }
     public class SignalThrewException : Akka.Pattern.IllegalStateException, Akka.Streams.Implementation.ISpecViolation
     {
