@@ -42,8 +42,8 @@ namespace Akka.Persistence.Journal
     /// </summary>
     public class ReplayFilter : ActorBase
     {
-        private readonly LinkedList<ReplayedMessage>  _buffer = new LinkedList<ReplayedMessage>();
-        private readonly LinkedList<string> _oldWriters = new LinkedList<string>();
+        private readonly LinkedList<ReplayedMessage>  _buffer = new();
+        private readonly LinkedList<string> _oldWriters = new();
         private string _writerUuid = string.Empty;
         private long _sequenceNr = -1;
         private readonly ILoggingAdapter _log = Context.GetLogger();

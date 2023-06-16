@@ -74,7 +74,7 @@ namespace Akka.Persistence
     /// </summary>
     public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, IPersistenceStash, IPersistenceRecovery
     {
-        private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
+        private static readonly AtomicCounter InstanceCounter = new(1);
 
         private readonly int _instanceId;
         private readonly string _writerGuid;

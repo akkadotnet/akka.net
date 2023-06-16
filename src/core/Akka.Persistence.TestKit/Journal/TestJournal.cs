@@ -130,7 +130,7 @@ namespace Akka.Persistence.TestKit
 
         public sealed class Ack
         {
-            public static readonly Ack Instance = new Ack();
+            public static readonly Ack Instance = new();
         }
 
         internal class TestJournalWrapper : ITestJournal
@@ -142,9 +142,9 @@ namespace Akka.Persistence.TestKit
 
             private readonly IActorRef _actor;
 
-            public JournalWriteBehavior OnWrite => new JournalWriteBehavior(new JournalWriteBehaviorSetter(_actor));
+            public JournalWriteBehavior OnWrite => new(new JournalWriteBehaviorSetter(_actor));
 
-            public JournalRecoveryBehavior OnRecovery => new JournalRecoveryBehavior(new JournalRecoveryBehaviorSetter(_actor));
+            public JournalRecoveryBehavior OnRecovery => new(new JournalRecoveryBehaviorSetter(_actor));
         }
     }
 }

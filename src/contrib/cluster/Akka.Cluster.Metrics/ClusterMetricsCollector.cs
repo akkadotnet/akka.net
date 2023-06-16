@@ -39,7 +39,7 @@ namespace Akka.Cluster.Metrics
         sealed class MetricsTick
         { 
             private MetricsTick() { }
-            public static readonly MetricsTick Instance = new MetricsTick();
+            public static readonly MetricsTick Instance = new();
         }
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace Akka.Cluster.Metrics
         sealed class GossipTick
         {
             private GossipTick() { }
-            public static readonly GossipTick Instance = new GossipTick();
+            public static readonly GossipTick Instance = new();
         }
         
         /// <summary>

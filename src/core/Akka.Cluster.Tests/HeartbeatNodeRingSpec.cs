@@ -34,12 +34,12 @@ namespace Akka.Cluster.Tests
             _nodes = ImmutableHashSet.Create(aa, bb, cc, dd, ee, ff);
         }
         
-        private UniqueAddress aa = new UniqueAddress(new Address("akka.tcp", "sys", "aa", 2552), 1);
-        private UniqueAddress bb = new UniqueAddress(new Address("akka.tcp", "sys", "bb", 2552), 2);
-        private UniqueAddress cc = new UniqueAddress(new Address("akka.tcp", "sys", "cc", 2552), 3);
-        private UniqueAddress dd = new UniqueAddress(new Address("akka.tcp", "sys", "dd", 2552), 4);
-        private UniqueAddress ee = new UniqueAddress(new Address("akka.tcp", "sys", "ee", 2552), 5);
-        private UniqueAddress ff = new UniqueAddress(new Address("akka.tcp", "sys", "ff", 2552), 6);
+        private UniqueAddress aa = new(new Address("akka.tcp", "sys", "aa", 2552), 1);
+        private UniqueAddress bb = new(new Address("akka.tcp", "sys", "bb", 2552), 2);
+        private UniqueAddress cc = new(new Address("akka.tcp", "sys", "cc", 2552), 3);
+        private UniqueAddress dd = new(new Address("akka.tcp", "sys", "dd", 2552), 4);
+        private UniqueAddress ee = new(new Address("akka.tcp", "sys", "ee", 2552), 5);
+        private UniqueAddress ff = new(new Address("akka.tcp", "sys", "ff", 2552), 6);
 
         private readonly ImmutableHashSet<UniqueAddress> _nodes;
 

@@ -134,7 +134,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetCurrentShardState Instance = new GetCurrentShardState();
+            public static readonly GetCurrentShardState Instance = new();
 
             private GetCurrentShardState()
             {
@@ -211,7 +211,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetShardStats Instance = new GetShardStats();
+            public static readonly GetShardStats Instance = new();
 
             private GetShardStats()
             {
@@ -309,7 +309,7 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class LeaseRetry : IDeadLetterSuppression, INoSerializationVerificationNeeded
         {
-            public static readonly LeaseRetry Instance = new LeaseRetry();
+            public static readonly LeaseRetry Instance = new();
             private LeaseRetry() { }
         }
 
@@ -340,7 +340,7 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class PassivateIdleTick : INoSerializationVerificationNeeded
         {
-            public static readonly PassivateIdleTick Instance = new PassivateIdleTick();
+            public static readonly PassivateIdleTick Instance = new();
             private PassivateIdleTick() { }
         }
 
@@ -456,7 +456,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal sealed class NoState : EntityState
         {
-            public static readonly NoState Instance = new NoState();
+            public static readonly NoState Instance = new();
 
             private NoState()
             {
@@ -488,7 +488,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal sealed class RememberedButNotCreated : EntityState
         {
-            public static readonly RememberedButNotCreated Instance = new RememberedButNotCreated();
+            public static readonly RememberedButNotCreated Instance = new();
 
             private RememberedButNotCreated()
             {
@@ -518,7 +518,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal sealed class RememberingStart : EntityState, IEquatable<RememberingStart>
         {
-            private static readonly RememberingStart Empty = new RememberingStart(ImmutableHashSet<IActorRef>.Empty);
+            private static readonly RememberingStart Empty = new(ImmutableHashSet<IActorRef>.Empty);
 
             public static RememberingStart Create(IActorRef ackTo)
             {
@@ -601,7 +601,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal sealed class RememberingStop : EntityState
         {
-            public static readonly RememberingStop Instance = new RememberingStop();
+            public static readonly RememberingStop Instance = new();
 
             private RememberingStop()
             {
@@ -705,7 +705,7 @@ namespace Akka.Cluster.Sharding
 
         internal sealed class WaitingForRestart : EntityState
         {
-            public static readonly WaitingForRestart Instance = new WaitingForRestart();
+            public static readonly WaitingForRestart Instance = new();
 
             private WaitingForRestart()
             {
@@ -730,11 +730,11 @@ namespace Akka.Cluster.Sharding
 
         internal sealed class Entities
         {
-            private readonly Dictionary<EntityId, EntityState> _entities = new Dictionary<EntityId, EntityState>();
+            private readonly Dictionary<EntityId, EntityState> _entities = new();
             // needed to look up entity by ref when a Passivating is received
-            private readonly Dictionary<IActorRef, EntityId> _byRef = new Dictionary<IActorRef, EntityId>();
+            private readonly Dictionary<IActorRef, EntityId> _byRef = new();
             // optimization to not have to go through all entities to find batched writes
-            private readonly HashSet<EntityId> _remembering = new HashSet<EntityId>();
+            private readonly HashSet<EntityId> _remembering = new();
 
 
             public Entities(
@@ -928,8 +928,8 @@ namespace Akka.Cluster.Sharding
         private readonly IActorRef _rememberEntitiesStore;
         private readonly bool _rememberEntities;
         private readonly Entities _entities;
-        private readonly Dictionary<EntityId, DateTime> _lastMessageTimestamp = new Dictionary<EntityId, DateTime>();
-        private readonly MessageBufferMap<EntityId> _messageBuffers = new MessageBufferMap<EntityId>();
+        private readonly Dictionary<EntityId, DateTime> _lastMessageTimestamp = new();
+        private readonly MessageBufferMap<EntityId> _messageBuffers = new();
 
         private IActorRef _handOffStopper;
         private readonly ICancelable _passivateIdleTask;

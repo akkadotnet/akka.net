@@ -27,8 +27,8 @@ namespace Akka.Benchmarks.Cluster
         [Params(100)]
         public int Iterations;
 
-        public Address Address = new Address("akka", "sys", "a", 2552);
-        public Address Node = new Address("akka", "sys", "a", 2552);
+        public Address Address = new("akka", "sys", "a", 2552);
+        public Address Node = new("akka", "sys", "a", 2552);
 
         private Reachability CreateReachabilityOfSize(Reachability baseReachability, int size)
         {

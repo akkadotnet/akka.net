@@ -57,7 +57,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
     {
         private class EchoStarted
         {
-            public static readonly EchoStarted Instance = new EchoStarted();
+            public static readonly EchoStarted Instance = new();
 
             private EchoStarted() { }
         }

@@ -590,7 +590,7 @@ namespace Akka.Actor
             }
         }
 
-        private static readonly IgnoreActorRefSurrogate SurrogateInstance = new IgnoreActorRefSurrogate();
+        private static readonly IgnoreActorRefSurrogate SurrogateInstance = new();
 
         private const string fakeSystemName = "local";
 
@@ -652,9 +652,9 @@ namespace Akka.Actor
         /// <summary>
         /// Singleton instance of <see cref="Nobody"/>.
         /// </summary>
-        public static Nobody Instance = new Nobody();
+        public static Nobody Instance = new();
 
-        private static readonly NobodySurrogate SurrogateInstance = new NobodySurrogate();
+        private static readonly NobodySurrogate SurrogateInstance = new();
         private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/Nobody");
 
         private Nobody() { }
@@ -736,7 +736,7 @@ namespace Akka.Actor
         private readonly IActorRefProvider _provider;
         private readonly ActorPath _path;
 
-        private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new ConcurrentDictionary<string, IInternalActorRef>();
+        private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new();
 
         /// <summary>
         /// TBD

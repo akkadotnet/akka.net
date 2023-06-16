@@ -57,7 +57,7 @@ namespace Akka.TestKit
         /// <summary>
         /// TBD
         /// </summary>
-        public static NoAutoPilot Instance = new NoAutoPilot();
+        public static NoAutoPilot Instance = new();
 
         private NoAutoPilot() { }
 
@@ -82,7 +82,7 @@ namespace Akka.TestKit
         /// <summary>
         /// TBD
         /// </summary>
-        public static KeepRunning Instance = new KeepRunning();
+        public static KeepRunning Instance = new();
 
         private KeepRunning(){ }
         

@@ -30,7 +30,7 @@ namespace Akka.Tests.Actor
             return new Phase(dependsOn?.ToImmutableHashSet() ?? ImmutableHashSet<string>.Empty, TimeSpan.FromSeconds(10), true);
         }
 
-        private static readonly Phase EmptyPhase = new Phase(ImmutableHashSet<string>.Empty, TimeSpan.FromSeconds(10), true);
+        private static readonly Phase EmptyPhase = new(ImmutableHashSet<string>.Empty, TimeSpan.FromSeconds(10), true);
 
         private List<string> CheckTopologicalSort(Dictionary<string, Phase> phases)
         {

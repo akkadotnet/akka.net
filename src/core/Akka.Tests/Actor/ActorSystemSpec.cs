@@ -460,7 +460,7 @@ namespace Akka.Tests.Actor
     public class Wave : ReceiveActor
     {
         private IActorRef _master = Nobody.Instance;
-        private readonly HashSet<IActorRef> _terminaters = new HashSet<IActorRef>();
+        private readonly HashSet<IActorRef> _terminaters = new();
 
         public Wave()
         {

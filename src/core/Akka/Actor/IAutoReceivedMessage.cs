@@ -204,7 +204,7 @@ namespace Akka.Actor
         /// <summary>
         /// The singleton instance of PoisonPill.
         /// </summary>
-        public static PoisonPill Instance { get; } = new PoisonPill();
+        public static PoisonPill Instance { get; } = new();
 
         
         public override string ToString()
@@ -227,7 +227,7 @@ namespace Akka.Actor
         /// <summary>
         /// The singleton instance of Kill.
         /// </summary>
-        public static Kill Instance { get; } = new Kill();
+        public static Kill Instance { get; } = new();
 
         
         public override string ToString()

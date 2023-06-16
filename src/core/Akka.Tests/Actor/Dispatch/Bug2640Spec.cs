@@ -32,7 +32,7 @@ namespace Akka.Tests.Actor.Dispatch
 
         private class GetThread
         {
-            public static readonly GetThread Instance = new GetThread();
+            public static readonly GetThread Instance = new();
 
             private GetThread()
             {

@@ -26,8 +26,7 @@ namespace Akka.Actor
         /// </summary>
         protected readonly Config Default;
         private readonly Settings _settings;
-        private readonly AtomicReference<WildcardIndex<Deploy>> _deployments = 
-            new AtomicReference<WildcardIndex<Deploy>>(new WildcardIndex<Deploy>());
+        private readonly AtomicReference<WildcardIndex<Deploy>> _deployments = new(new WildcardIndex<Deploy>());
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Deployer"/> class.

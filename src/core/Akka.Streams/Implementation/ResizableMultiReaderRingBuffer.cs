@@ -23,7 +23,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// The singleton instance of this exception
         /// </summary>
-        public static readonly NothingToReadException Instance = new NothingToReadException();
+        public static readonly NothingToReadException Instance = new();
 
         private NothingToReadException()
         {

@@ -198,7 +198,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly CancelledSubscription Instance = new CancelledSubscription();
+        public static readonly CancelledSubscription Instance = new();
 
         private CancelledSubscription() { }
 

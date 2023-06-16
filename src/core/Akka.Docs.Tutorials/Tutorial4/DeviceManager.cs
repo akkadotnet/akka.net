@@ -27,14 +27,14 @@ namespace Tutorials.Tutorial4
 
         public sealed class DeviceRegistered
         {
-            public static DeviceRegistered Instance { get; } = new DeviceRegistered();
+            public static DeviceRegistered Instance { get; } = new();
             private DeviceRegistered() { }
         }
 
         public class DeviceManager : UntypedActor
         {
-            private Dictionary<string, IActorRef> groupIdToActor = new Dictionary<string, IActorRef>();
-            private Dictionary<IActorRef, string> actorToGroupId = new Dictionary<IActorRef, string>();
+            private Dictionary<string, IActorRef> groupIdToActor = new();
+            private Dictionary<IActorRef, string> actorToGroupId = new();
 
             protected override void PreStart() => Log.Info("DeviceManager started");
             protected override void PostStop() => Log.Info("DeviceManager stopped");

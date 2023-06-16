@@ -183,7 +183,7 @@ namespace Akka.DistributedData
 
     public sealed class WriteLocal : IWriteConsistency
     {
-        public static readonly WriteLocal Instance = new WriteLocal();
+        public static readonly WriteLocal Instance = new();
 
         public TimeSpan Timeout => TimeSpan.Zero;
 

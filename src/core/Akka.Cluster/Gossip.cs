@@ -55,7 +55,7 @@ namespace Akka.Cluster
         /// <summary>
         /// An empty <see cref="Gossip"/> object.
         /// </summary>
-        public static readonly Gossip Empty = new Gossip(EmptyMembers);
+        public static readonly Gossip Empty = new(EmptyMembers);
 
         /// <summary>
         /// Creates a new <see cref="Gossip"/> from the given set of members.

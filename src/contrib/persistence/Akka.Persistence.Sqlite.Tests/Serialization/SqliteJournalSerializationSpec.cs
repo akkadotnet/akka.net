@@ -15,7 +15,7 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
 {
     public class SqliteJournalSerializationSpec : JournalSerializationSpec
     {
-        private static AtomicCounter Counter { get; } = new AtomicCounter(0);
+        private static AtomicCounter Counter { get; } = new(0);
 
         public SqliteJournalSerializationSpec(ITestOutputHelper output)
             : base(CreateSpecConfig("Filename=file:serialization-journal-" + Counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"), "SqliteJournalSerializationSpec", output)

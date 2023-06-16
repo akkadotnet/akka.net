@@ -51,7 +51,7 @@ namespace Akka.Streams
         /// <summary>
         /// Initializes a single instance of the <see cref="StreamDetachedException"/> class.
         /// </summary>
-        public static readonly StreamDetachedException Instance = new StreamDetachedException();
+        public static readonly StreamDetachedException Instance = new();
 
         public StreamDetachedException()
             : this("Stream is terminated. Materialized value is detached.")
@@ -78,7 +78,7 @@ namespace Akka.Streams
         /// <summary>
         /// The single instance of this exception
         /// </summary>
-        public static readonly BindFailedException Instance = new BindFailedException();
+        public static readonly BindFailedException Instance = new();
 
         private BindFailedException() : base("bind failed")
         {

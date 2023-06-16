@@ -35,11 +35,11 @@ namespace Akka.Streams.Implementation.IO
         {
             private const string BindShutdownTimer = "BindTimer";
 
-            private readonly AtomicCounterLong _connectionFlowsAwaitingInitialization = new AtomicCounterLong();
+            private readonly AtomicCounterLong _connectionFlowsAwaitingInitialization = new();
             private readonly ConnectionSourceStage _stage;
             private IActorRef _listener;
             private readonly TaskCompletionSource<StreamTcp.ServerBinding> _bindingPromise;
-            private readonly TaskCompletionSource<NotUsed> _unbindPromise = new TaskCompletionSource<NotUsed>();
+            private readonly TaskCompletionSource<NotUsed> _unbindPromise = new();
             private bool _unbindStarted = false;
 
             public ConnectionSourceStageLogic(Shape shape, ConnectionSourceStage stage, TaskCompletionSource<StreamTcp.ServerBinding> bindingPromise)
@@ -196,7 +196,7 @@ namespace Akka.Streams.Implementation.IO
         private readonly bool _halfClose;
         private readonly TimeSpan? _idleTimeout;
         private readonly TimeSpan _bindShutdownTimeout;
-        private readonly Outlet<StreamTcp.IncomingConnection> _out = new Outlet<StreamTcp.IncomingConnection>("IncomingConnections.out");
+        private readonly Outlet<StreamTcp.IncomingConnection> _out = new("IncomingConnections.out");
 
         /// <summary>
         /// TBD
@@ -255,9 +255,9 @@ namespace Akka.Streams.Implementation.IO
         private readonly IActorRef _connection;
         private readonly EndPoint _remoteAddress;
         private readonly bool _halfClose;
-        private readonly AtomicBoolean _hasBeenCreated = new AtomicBoolean();
-        private readonly Inlet<ByteString> _bytesIn = new Inlet<ByteString>("IncomingTCP.in");
-        private readonly Outlet<ByteString> _bytesOut = new Outlet<ByteString>("IncomingTCP.out");
+        private readonly AtomicBoolean _hasBeenCreated = new();
+        private readonly Inlet<ByteString> _bytesIn = new("IncomingTCP.in");
+        private readonly Outlet<ByteString> _bytesOut = new("IncomingTCP.out");
 
         /// <summary>
         /// TBD
@@ -312,7 +312,7 @@ namespace Akka.Streams.Implementation.IO
     {
         private class WriteAck : Tcp.Event
         {
-            public static readonly WriteAck Instance = new WriteAck();
+            public static readonly WriteAck Instance = new();
 
             private WriteAck()
             {
@@ -582,8 +582,8 @@ namespace Akka.Streams.Implementation.IO
         private readonly IImmutableList<Inet.SocketOption> _options;
         private readonly bool _halfClose;
         private readonly TimeSpan? _connectionTimeout;
-        private readonly Inlet<ByteString> _bytesIn = new Inlet<ByteString>("IncomingTCP.in");
-        private readonly Outlet<ByteString> _bytesOut = new Outlet<ByteString>("IncomingTCP.out");
+        private readonly Inlet<ByteString> _bytesIn = new("IncomingTCP.in");
+        private readonly Outlet<ByteString> _bytesOut = new("IncomingTCP.out");
 
         /// <summary>
         /// TBD

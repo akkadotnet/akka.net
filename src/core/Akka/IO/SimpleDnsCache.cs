@@ -90,7 +90,7 @@ namespace Akka.IO
             private readonly SortedSet<ExpiryEntry> _queue;
             private readonly Dictionary<string, CacheEntry> _cache;
             private readonly Func<long> _clock;
-            private readonly object _queueCleanupLock = new object();
+            private readonly object _queueCleanupLock = new();
 
             public Cache(SortedSet<ExpiryEntry> queue, Dictionary<string, CacheEntry> cache, Func<long> clock)
             {
@@ -115,7 +115,7 @@ namespace Akka.IO
                 cache[answer.Name] = new CacheEntry(answer, until);
 
                 return new Cache(
-                    queue: new SortedSet<ExpiryEntry>(_queue, new ExpiryEntryComparer()) { new ExpiryEntry(answer.Name, until) },
+                    queue: new SortedSet<ExpiryEntry>(_queue, new ExpiryEntryComparer()) { new(answer.Name, until) },
                     cache: cache,
                     clock: _clock); 
             }

@@ -29,7 +29,7 @@ namespace Akka.Tests.Performance.Actor.Pattern
 
         private ActorSystem _sys;
         private IActorRef _target;
-        private static readonly Identify Msg = new Identify(null);
+        private static readonly Identify Msg = new(null);
         private static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(1);
 
         [PerfSetup]

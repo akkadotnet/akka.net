@@ -381,9 +381,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public void ClearEvents() => LastEvent = new HashSet<ITestEvent>();
 
-            public UpstreamProbe<T> NewUpstreamProbe<T>(string name) => new UpstreamProbe<T>(this, name);
+            public UpstreamProbe<T> NewUpstreamProbe<T>(string name) => new(this, name);
 
-            public DownstreamProbe<T> NewDownstreamProbe<T>(string name) => new DownstreamProbe<T>(this, name);
+            public DownstreamProbe<T> NewDownstreamProbe<T>(string name) => new(this, name);
 
             public class UpstreamProbe<T> : GraphInterpreter.UpstreamBoundaryStageLogic
             {
@@ -526,9 +526,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public EventPropagateStage() => Shape  = new FlowShape<int, int>(In, Out);
 
-                public Inlet<int> In { get; } = new Inlet<int>("Propagate.in");
+                public Inlet<int> In { get; } = new("Propagate.in");
 
-                public Outlet<int> Out { get; } = new Outlet<int>("Propagate.out");
+                public Outlet<int> Out { get; } = new("Propagate.out");
 
                 public override FlowShape<int, int> Shape { get; }
 

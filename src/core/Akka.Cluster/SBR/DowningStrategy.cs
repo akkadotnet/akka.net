@@ -21,7 +21,7 @@ namespace Akka.Cluster.SBR
 
     internal class DownReachable : IDecision
     {
-        public static readonly DownReachable Instance = new DownReachable();
+        public static readonly DownReachable Instance = new();
 
         private DownReachable()
         {
@@ -32,7 +32,7 @@ namespace Akka.Cluster.SBR
 
     internal class DownUnreachable : IDecision
     {
-        public static readonly DownUnreachable Instance = new DownUnreachable();
+        public static readonly DownUnreachable Instance = new();
 
         private DownUnreachable()
         {
@@ -43,7 +43,7 @@ namespace Akka.Cluster.SBR
 
     internal class DownAll : IDecision
     {
-        public static readonly DownAll Instance = new DownAll();
+        public static readonly DownAll Instance = new();
 
         private DownAll()
         {
@@ -54,7 +54,7 @@ namespace Akka.Cluster.SBR
 
     internal class DownIndirectlyConnected : IDecision
     {
-        public static readonly DownIndirectlyConnected Instance = new DownIndirectlyConnected();
+        public static readonly DownIndirectlyConnected Instance = new();
 
         private DownIndirectlyConnected()
         {
@@ -129,7 +129,7 @@ namespace Akka.Cluster.SBR
 
     internal class ReverseDownIndirectlyConnected : IDecision
     {
-        public static readonly ReverseDownIndirectlyConnected Instance = new ReverseDownIndirectlyConnected();
+        public static readonly ReverseDownIndirectlyConnected Instance = new();
 
         public bool IsIndirectlyConnected => true;
 

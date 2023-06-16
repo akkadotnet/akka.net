@@ -17,7 +17,7 @@ namespace Akka.Persistence.Query
     public sealed class PersistenceQuery : IExtension
     {
         private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<string, IReadJournal> _readJournalPluginExtensionIds = new ConcurrentDictionary<string, IReadJournal>();
+        private readonly ConcurrentDictionary<string, IReadJournal> _readJournalPluginExtensionIds = new();
         private ILoggingAdapter _log;
 
         public static PersistenceQuery Get(ActorSystem system)

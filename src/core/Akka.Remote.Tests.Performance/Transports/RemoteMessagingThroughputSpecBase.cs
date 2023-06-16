@@ -26,13 +26,13 @@ namespace Akka.Remote.Tests.Performance.Transports
         private const int RemoteMessageCount = 10000;
         private const int NumClients = 10;
         private Counter _remoteMessageThroughput;
-        private List<Task> _tasks = new List<Task>();
-        private readonly List<IActorRef> _receivers = new List<IActorRef>();
+        private List<Task> _tasks = new();
+        private readonly List<IActorRef> _receivers = new();
         private IActorRef _echo;
         private IActorRef _remoteEcho;
         private IActorRef _remoteReceiver;
 
-        private static readonly AtomicCounter ActorSystemNameCounter = new AtomicCounter(0);
+        private static readonly AtomicCounter ActorSystemNameCounter = new(0);
         protected ActorSystem System1;
         protected ActorSystem System2;
 
@@ -42,7 +42,7 @@ namespace Akka.Remote.Tests.Performance.Transports
         {
             public class AllStarted { }
 
-            private readonly HashSet<IActorRef> _actors = new HashSet<IActorRef>();
+            private readonly HashSet<IActorRef> _actors = new();
             private int _correlationId = 0;
 
             protected override void OnReceive(object message)

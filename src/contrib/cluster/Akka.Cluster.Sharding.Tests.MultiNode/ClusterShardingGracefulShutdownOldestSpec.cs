@@ -71,7 +71,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public class RegionTerminated
             {
-                public static RegionTerminated Instance = new RegionTerminated();
+                public static RegionTerminated Instance = new();
 
                 private RegionTerminated()
                 {
@@ -80,7 +80,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             public class CoordinatorTerminated
             {
-                public static CoordinatorTerminated Instance = new CoordinatorTerminated();
+                public static CoordinatorTerminated Instance = new();
 
                 private CoordinatorTerminated()
                 {
@@ -127,7 +127,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public class Stop
             {
-                public static Stop Instance = new Stop();
+                public static Stop Instance = new();
 
                 private Stop()
                 {
@@ -136,7 +136,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             public class ActualStop
             {
-                public static ActualStop Instance = new ActualStop();
+                public static ActualStop Instance = new();
 
                 private ActualStop()
                 {

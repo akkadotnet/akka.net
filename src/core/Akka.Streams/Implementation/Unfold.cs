@@ -61,7 +61,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TElement> Out = new Outlet<TElement>("Unfold.out");
+        public readonly Outlet<TElement> Out = new("Unfold.out");
 
         /// <summary>
         /// TBD
@@ -152,7 +152,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TElement> Out = new Outlet<TElement>("UnfoldAsync.out");
+        public readonly Outlet<TElement> Out = new("UnfoldAsync.out");
 
         /// <summary>
         /// TBD
@@ -222,7 +222,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TElement> Out = new Outlet<TElement>("UnfoldInfinite.out");
+        public readonly Outlet<TElement> Out = new("UnfoldInfinite.out");
 
         /// <summary>
         /// TBD

@@ -50,8 +50,7 @@ namespace Akka.IO.Buffers
             }
         }
 
-        public BufferPoolInfo Diagnostics()
-            => new BufferPoolInfo(typeof(DisabledBufferPool), 0, 0, 0);
+        public BufferPoolInfo Diagnostics() => new(typeof(DisabledBufferPool), 0, 0, 0);
 
         private ByteBuffer RentOfSize(int size)
         {

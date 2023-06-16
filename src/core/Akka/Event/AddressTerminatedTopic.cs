@@ -37,7 +37,7 @@ namespace Akka.Event
     /// </summary>
     internal sealed class AddressTerminatedTopic : IExtension
     {
-        private readonly HashSet<IActorRef> _subscribers = new HashSet<IActorRef>();
+        private readonly HashSet<IActorRef> _subscribers = new();
 
         /// <summary>
         /// Retrieves the extension from the specified actor system.

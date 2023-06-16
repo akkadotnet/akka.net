@@ -17,7 +17,7 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class ActorPathThreadLocalCache : ExtensionIdProvider<ActorPathThreadLocalCache>, IExtension
     {
-        private readonly ThreadLocal<ActorPathCache> _current = new ThreadLocal<ActorPathCache>(() => new ActorPathCache());
+        private readonly ThreadLocal<ActorPathCache> _current = new(() => new ActorPathCache());
 
         public ActorPathCache Cache => _current.Value;
 

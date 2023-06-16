@@ -579,7 +579,7 @@ namespace Akka.Persistence.Tests
 
         internal class AsyncPersistSameEventTwiceActor : ExamplePersistentActor
         {
-            private AtomicCounter _sendMessageCounter = new AtomicCounter(0);
+            private AtomicCounter _sendMessageCounter = new(0);
             public AsyncPersistSameEventTwiceActor(string name)
                 : base(name)
             {
@@ -1202,7 +1202,7 @@ namespace Akka.Persistence.Tests
         {
             private readonly int _maxDepth;
             private readonly IActorRef _probe;
-            private readonly Dictionary<string, int> _currentDepths = new Dictionary<string, int>();
+            private readonly Dictionary<string, int> _currentDepths = new();
 
             public DeeplyNestedPersists(string name, int maxDepth, IActorRef probe)
                 : base(name)
@@ -1250,7 +1250,7 @@ namespace Akka.Persistence.Tests
         {
             private readonly int _maxDepth;
             private readonly IActorRef _probe;
-            private readonly Dictionary<string, int> _currentDepths = new Dictionary<string, int>();
+            private readonly Dictionary<string, int> _currentDepths = new();
 
             public DeeplyNestedPersistAsyncs(string name, int maxDepth, IActorRef probe)
                 : base(name)

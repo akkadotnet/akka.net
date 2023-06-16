@@ -45,7 +45,7 @@ namespace Akka.DistributedData.LightningDB
 
         private sealed class WriteBehind : IDeadLetterSuppression
         {
-            public static readonly WriteBehind Instance = new WriteBehind();
+            public static readonly WriteBehind Instance = new();
             private WriteBehind() { }
         }
 
@@ -58,7 +58,7 @@ namespace Akka.DistributedData.LightningDB
         private readonly TimeSpan _writeBehindInterval;
         private readonly string _dir;
 
-        private readonly Dictionary<string, DurableDataEnvelope> _pending = new Dictionary<string, DurableDataEnvelope>();
+        private readonly Dictionary<string, DurableDataEnvelope> _pending = new();
         private readonly ILoggingAdapter _log;
 
         public LmdbDurableStore(Config config)

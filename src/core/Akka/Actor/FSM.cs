@@ -211,7 +211,7 @@ namespace Akka.Actor
             /// <summary>
             /// Singleton instance of Normal
             /// </summary>
-            public static Normal Instance { get; } = new Normal();
+            public static Normal Instance { get; } = new();
         }
 
         /// <summary>
@@ -225,7 +225,7 @@ namespace Akka.Actor
             /// <summary>
             /// Singleton instance of Shutdown
             /// </summary>
-            public static Shutdown Instance { get; } = new Shutdown();
+            public static Shutdown Instance { get; } = new();
         }
 
         /// <summary>
@@ -263,7 +263,7 @@ namespace Akka.Actor
             /// <summary>
             /// Singleton instance of StateTimeout
             /// </summary>
-            public static StateTimeout Instance { get; } = new StateTimeout();
+            public static StateTimeout Instance { get; } = new();
         }
 
         /// <summary>
@@ -837,7 +837,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
-        public TransformHelper Transform(StateFunction func) => new TransformHelper(func);
+        public TransformHelper Transform(StateFunction func) => new(func);
 
         /// <summary>
         /// Schedule named timer to deliver message after given delay, possibly repeating.
@@ -1003,7 +1003,7 @@ namespace Akka.Actor
         /// <summary>
         /// Retrieves the support needed to interact with an actor's listeners.
         /// </summary>
-        public ListenerSupport Listeners { get; } = new ListenerSupport();
+        public ListenerSupport Listeners { get; } = new();
 
         /// <summary>
         /// Can be set to enable debugging on certain actions taken by the FSM
@@ -1023,13 +1023,13 @@ namespace Akka.Actor
         /// Timer handling
         /// </summary>
         private readonly IDictionary<string, Timer> _timers = new Dictionary<string, Timer>();
-        private readonly AtomicCounter _timerGen = new AtomicCounter(0);
+        private readonly AtomicCounter _timerGen = new(0);
 
         /// <summary>
         /// State definitions
         /// </summary>
-        private readonly Dictionary<TState, StateFunction> _stateFunctions = new Dictionary<TState, StateFunction>();
-        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new Dictionary<TState, TimeSpan?>();
+        private readonly Dictionary<TState, StateFunction> _stateFunctions = new();
+        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new();
 
         private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {

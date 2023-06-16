@@ -19,7 +19,7 @@ namespace Akka.Cluster.Sharding.Tests
     {
         private class InitTimeout
         {
-            public static readonly InitTimeout Instance = new InitTimeout();
+            public static readonly InitTimeout Instance = new();
 
             private InitTimeout() { }
         }

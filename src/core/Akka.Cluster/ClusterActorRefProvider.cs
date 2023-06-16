@@ -94,7 +94,7 @@ namespace Akka.Cluster
         /// <summary>
         /// The singleton instance of this scope.
         /// </summary>
-        public static readonly ClusterScope Instance = new ClusterScope();
+        public static readonly ClusterScope Instance = new();
 
         /// <summary>
         /// Creates a new <see cref="Akka.Actor.Scope" /> from this scope using another <see cref="Akka.Actor.Scope" />

@@ -49,7 +49,7 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        private readonly FileInfo _file = new FileInfo(InUseSnapshotPath);
+        private readonly FileInfo _file = new(InUseSnapshotPath);
 
         public SnapshotDirectoryFailureSpec() : base(Configuration("SnapshotDirectoryFailureSpec",
             extraConfig: "akka.persistence.snapshot-store.local.dir = \"" + InUseSnapshotPath + "\""))

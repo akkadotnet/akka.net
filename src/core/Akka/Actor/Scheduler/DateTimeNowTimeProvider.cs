@@ -14,7 +14,7 @@ namespace Akka.Actor
     /// </summary>
     public class DateTimeOffsetNowTimeProvider : ITimeProvider, IDateTimeOffsetNowTimeProvider
     {
-        private static readonly DateTimeOffsetNowTimeProvider _instance = new DateTimeOffsetNowTimeProvider();
+        private static readonly DateTimeOffsetNowTimeProvider _instance = new();
         private DateTimeOffsetNowTimeProvider() { }
         /// <summary>
         /// TBD

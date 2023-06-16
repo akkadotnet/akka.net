@@ -19,7 +19,7 @@ namespace Akka.Tests.Performance.Actor
 
         private const double MinimumAcceptableOperationsPerSecond = 1000000.0d; //million op / second
 
-        private static readonly RootActorPath RootAddress = new RootActorPath(Address.AllSystems);
+        private static readonly RootActorPath RootAddress = new(Address.AllSystems);
         private static readonly ActorPath TopLevelActorPath = RootAddress / "user" / "foo1";
         private Counter _equalsThroughput;
 

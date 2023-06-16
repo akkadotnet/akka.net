@@ -778,7 +778,7 @@ namespace Akka.Remote
             public sealed class TransportShutdown
             {
                 private TransportShutdown() { }
-                public static TransportShutdown Instance { get; } = new TransportShutdown();
+                public static TransportShutdown Instance { get; } = new();
 
                 public override string ToString()
                 {

@@ -19,7 +19,7 @@ namespace Akka.Streams.Serialization
 
         public static Type TypeFromProto(EventType eventType) => TypeFromString(eventType.TypeName);
 
-        public static EventType TypeToProto(Type clrType) => new EventType
+        public static EventType TypeToProto(Type clrType) => new()
         {
             TypeName = clrType.TypeQualifiedName()
         };

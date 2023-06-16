@@ -112,7 +112,7 @@ namespace Akka.Routing
         /// <summary>
         /// The collection of registered listeners that is listening for messages from an actor.
         /// </summary>
-        protected readonly HashSet<IActorRef> Listeners = new HashSet<IActorRef>();
+        protected readonly HashSet<IActorRef> Listeners = new();
 
         /// <summary>
         /// Retrieves the wiring needed to implement listening functionality.

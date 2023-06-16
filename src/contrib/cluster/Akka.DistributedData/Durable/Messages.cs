@@ -57,7 +57,7 @@ namespace Akka.DistributedData.Durable
     /// </summary>
     public sealed class LoadAll : IEquatable<LoadAll>
     {
-        public static readonly LoadAll Instance = new LoadAll();
+        public static readonly LoadAll Instance = new();
         private LoadAll() { }
         public bool Equals(LoadAll other) => true;
         public override bool Equals(object obj) => obj is LoadAll;
@@ -75,7 +75,7 @@ namespace Akka.DistributedData.Durable
 
     public sealed class LoadAllCompleted : IEquatable<LoadAllCompleted>
     {
-        public static readonly LoadAllCompleted Instance = new LoadAllCompleted();
+        public static readonly LoadAllCompleted Instance = new();
         private LoadAllCompleted() { }
         public bool Equals(LoadAllCompleted other) => true;
         public override bool Equals(object obj) => obj is LoadAllCompleted;

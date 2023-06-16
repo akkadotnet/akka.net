@@ -29,7 +29,7 @@ namespace Akka.Streams
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Enqueued Instance = new Enqueued();
+            public static readonly Enqueued Instance = new();
 
             private Enqueued()
             {
@@ -44,7 +44,7 @@ namespace Akka.Streams
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Dropped Instance = new Dropped();
+            public static readonly Dropped Instance = new();
 
             private Dropped()
             {
@@ -79,7 +79,7 @@ namespace Akka.Streams
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly QueueClosed Instance = new QueueClosed();
+            public static readonly QueueClosed Instance = new();
 
             private QueueClosed()
             {

@@ -276,7 +276,7 @@ namespace Akka.Streams.Tests.Dsl
                 Shape = new SourceShape<Attributes>(Out);
             }
 
-            private Outlet<Attributes> Out { get; } = new Outlet<Attributes>("AttributesSource.out");
+            private Outlet<Attributes> Out { get; } = new("AttributesSource.out");
 
             public override SourceShape<Attributes> Shape { get; }
 

@@ -19,7 +19,7 @@ namespace Akka.DistributedData
     {
         protected sealed class SendToSecondary
         {
-            public static readonly SendToSecondary Instance = new SendToSecondary();
+            public static readonly SendToSecondary Instance = new();
             private SendToSecondary() { }
         }
 

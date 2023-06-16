@@ -28,8 +28,8 @@ namespace Akka.Remote.TestKit.Tests
         {
         }
 
-        private readonly RoleName A = new RoleName("a");
-        private readonly RoleName B = new RoleName("b");
+        private readonly RoleName A = new("a");
+        private readonly RoleName B = new("b");
 
         [Fact]
         public void Controller_must_publish_its_nodes()

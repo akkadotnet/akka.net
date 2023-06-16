@@ -170,11 +170,11 @@ namespace Akka.Streams.Dsl
             /// too. Since the queue is read only if the output port has been pulled, downstream backpressure can delay
             /// processing of control messages. This causes no issues though, see the explanation in 'tryProcessNext'.
             /// </summary>
-            private readonly ConcurrentQueue<IEvent> _queue = new ConcurrentQueue<IEvent>();
+            private readonly ConcurrentQueue<IEvent> _queue = new();
 
             private readonly MergeHub<T> _stage;
             private readonly AtomicCounterLong _producerCount;
-            private readonly Dictionary<long, InputState> _demands = new Dictionary<long, InputState>();
+            private readonly Dictionary<long, InputState> _demands = new();
             private Action _wakeupCallback;
             private bool _needWakeup;
             private bool _shuttingDown;
@@ -411,7 +411,7 @@ namespace Akka.Streams.Dsl
                 Shape = new SinkShape<T>(In);
             }
 
-            private Inlet<T> In { get; } = new Inlet<T>("MergeHub.in");
+            private Inlet<T> In { get; } = new("MergeHub.in");
 
             public override SinkShape<T> Shape { get; }
 
@@ -447,7 +447,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<T> Out { get; } = new Outlet<T>("MergeHub.out");
+        public Outlet<T> Out { get; } = new("MergeHub.out");
 
         /// <summary>
         /// TBD
@@ -534,7 +534,7 @@ namespace Akka.Streams.Dsl
 
         private sealed class RegistrationPending : IHubEvent
         {
-            public static RegistrationPending Instance { get; } = new RegistrationPending();
+            public static RegistrationPending Instance { get; } = new();
 
             private RegistrationPending()
             {
@@ -603,7 +603,7 @@ namespace Akka.Streams.Dsl
 
         private sealed class Completed
         {
-            public static Completed Instance { get; } = new Completed();
+            public static Completed Instance { get; } = new();
 
             private Completed()
             {
@@ -642,7 +642,7 @@ namespace Akka.Streams.Dsl
 
         private sealed class Wakeup : IConsumerEvent
         {
-            public static Wakeup Instance { get; } = new Wakeup();
+            public static Wakeup Instance { get; } = new();
 
             private Wakeup()
             {
@@ -678,8 +678,7 @@ namespace Akka.Streams.Dsl
         {
             private readonly BroadcastHub<T> _stage;
 
-            private readonly TaskCompletionSource<Action<IHubEvent>> _callbackCompletion =
-                new TaskCompletionSource<Action<IHubEvent>>();
+            private readonly TaskCompletionSource<Action<IHubEvent>> _callbackCompletion = new();
 
             private readonly Open _noRegistrationState;
             internal readonly AtomicReference<IHubState> State;
@@ -1105,7 +1104,7 @@ namespace Akka.Streams.Dsl
                 Shape = new SourceShape<T>(Out);
             }
 
-            private Outlet<T> Out { get; } = new Outlet<T>("HubSourceLogic.out");
+            private Outlet<T> Out { get; } = new("HubSourceLogic.out");
 
             public override SourceShape<T> Shape { get; }
 
@@ -1147,7 +1146,7 @@ namespace Akka.Streams.Dsl
             Shape = new SinkShape<T>(In);
         }
 
-        private Inlet<T> In { get; } = new Inlet<T>("BroadcastHub.in");
+        private Inlet<T> In { get; } = new("BroadcastHub.in");
 
         /// <summary>
         /// TBD
@@ -1315,7 +1314,7 @@ namespace Akka.Streams.Dsl
 
         private sealed class ConsumerQueue
         {
-            public static ConsumerQueue Empty { get; } = new ConsumerQueue(ImmutableQueue<object>.Empty, 0);
+            public static ConsumerQueue Empty { get; } = new(ImmutableQueue<object>.Empty, 0);
 
             private readonly ImmutableQueue<object> _queue;
 
@@ -1325,21 +1324,21 @@ namespace Akka.Streams.Dsl
                 Size = size;
             }
 
-            public ConsumerQueue Enqueue(object element) => new ConsumerQueue(_queue.Enqueue(element), Size + 1);
+            public ConsumerQueue Enqueue(object element) => new(_queue.Enqueue(element), Size + 1);
 
             public bool IsEmpty => Size == 0;
 
             public object Head => _queue.First();
 
-            public ConsumerQueue Tail => new ConsumerQueue(_queue.Dequeue(), Size - 1);
+            public ConsumerQueue Tail => new(_queue.Dequeue(), Size - 1);
 
             public int Size { get; }
         }
 
         private sealed class PartitionQueue : IPartitionQueue
         {
-            private readonly AtomicCounter _totalSize = new AtomicCounter();
-            private readonly ConcurrentDictionary<long, ConsumerQueue> _queues = new ConcurrentDictionary<long, ConsumerQueue>();
+            private readonly AtomicCounter _totalSize = new();
+            private readonly ConcurrentDictionary<long, ConsumerQueue> _queues = new();
 
             public void Init(long id) => _queues.TryAdd(id, ConsumerQueue.Empty);
 
@@ -1406,14 +1405,14 @@ namespace Akka.Streams.Dsl
 
         private sealed class Wakeup : IConsumerEvent
         {
-            public static Wakeup Instance { get; } = new Wakeup();
+            public static Wakeup Instance { get; } = new();
 
             private Wakeup() { }
         }
 
         private sealed class Initialize : IConsumerEvent
         {
-            public static Initialize Instance { get; } = new Initialize();
+            public static Initialize Instance { get; } = new();
 
             private Initialize() { }
         }
@@ -1433,7 +1432,7 @@ namespace Akka.Streams.Dsl
 
         private sealed class RegistrationPending : IHubEvent
         {
-            public static RegistrationPending Instance { get; } = new RegistrationPending();
+            public static RegistrationPending Instance { get; } = new();
 
             private RegistrationPending() { }
         }
@@ -1473,14 +1472,14 @@ namespace Akka.Streams.Dsl
 
         private sealed class TryPull : IHubEvent
         {
-            public static TryPull Instance { get; } = new TryPull();
+            public static TryPull Instance { get; } = new();
 
             private TryPull() { }
         }
 
         private sealed class Completed
         {
-            public static Completed Instance { get; } = new Completed();
+            public static Completed Instance { get; } = new();
 
             private Completed() { }
         }
@@ -1540,13 +1539,13 @@ namespace Akka.Streams.Dsl
             private readonly PartitionHub<T> _hub;
             private readonly int _demandThreshold;
             private readonly Func<PartitionHub.IConsumerInfo, T, long> _materializedPartitioner;
-            private readonly TaskCompletionSource<Action<IHubEvent>> _callbackCompletion = new TaskCompletionSource<Action<IHubEvent>>();
+            private readonly TaskCompletionSource<Action<IHubEvent>> _callbackCompletion = new();
             private readonly IHubState _noRegistrationsState;
             private bool _initialized;
             private readonly IPartitionQueue _queue = new PartitionQueue();
-            private readonly List<T> _pending = new List<T>();
+            private readonly List<T> _pending = new();
             private ConsumerInfo _consumerInfo;
-            private readonly Dictionary<long, Consumer> _needWakeup = new Dictionary<long, Consumer>();
+            private readonly Dictionary<long, Consumer> _needWakeup = new();
             private long _callbackCount;
 
             public PartitionSinkLogic(PartitionHub<T> hub) : base(hub.Shape)
@@ -1832,7 +1831,7 @@ namespace Akka.Streams.Dsl
 
             private readonly AtomicCounterLong _counter;
             private readonly PartitionSinkLogic _logic;
-            private readonly Outlet<T> _out = new Outlet<T>("PartitionHub.out");
+            private readonly Outlet<T> _out = new("PartitionHub.out");
 
             public PartitionSource(AtomicCounterLong counter, PartitionSinkLogic logic)
             {
@@ -1858,7 +1857,7 @@ namespace Akka.Streams.Dsl
             Shape = new SinkShape<T>(In);
         }
 
-        public Inlet<T> In { get; } = new Inlet<T>("PartitionHub.in");
+        public Inlet<T> In { get; } = new("PartitionHub.in");
 
         public override SinkShape<T> Shape { get; }
 

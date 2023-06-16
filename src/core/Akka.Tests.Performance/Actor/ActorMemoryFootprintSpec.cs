@@ -60,7 +60,7 @@ namespace Akka.Tests.Performance.Actor
         }
         #endregion
 
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new(0);
         private ActorSystem _system;
         private Counter _createActorThroughput;
 

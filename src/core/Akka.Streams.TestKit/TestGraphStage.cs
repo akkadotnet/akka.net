@@ -17,14 +17,14 @@ namespace Akka.Streams.TestKit
     {
         public class Push : INoSerializationVerificationNeeded
         {
-            public static Push Instance { get; } = new Push();
+            public static Push Instance { get; } = new();
 
             private Push() { }
         }
 
         public class UpstreamFinish : INoSerializationVerificationNeeded
         {
-            public static UpstreamFinish Instance { get; } = new UpstreamFinish();
+            public static UpstreamFinish Instance { get; } = new();
 
             private UpstreamFinish() { }
         }
@@ -41,14 +41,14 @@ namespace Akka.Streams.TestKit
 
         public class Pull : INoSerializationVerificationNeeded
         {
-            public static Pull Instance { get; } = new Pull();
+            public static Pull Instance { get; } = new();
 
             private Pull() { }
         }
 
         public class DownstreamFinish : INoSerializationVerificationNeeded
         {
-            public static DownstreamFinish Instance { get; } = new DownstreamFinish();
+            public static DownstreamFinish Instance { get; } = new();
 
             private DownstreamFinish() { }
         }
@@ -56,10 +56,9 @@ namespace Akka.Streams.TestKit
 
     public sealed class TestSinkStage<T, TMat> : GraphStageWithMaterializedValue<SinkShape<T>, TMat>
     {
-        public static TestSinkStage<T, TMat> Create(GraphStageWithMaterializedValue<SinkShape<T>, TMat> stageUnderTest,
-            TestProbe probe) => new TestSinkStage<T, TMat>(stageUnderTest, probe);
+        public static TestSinkStage<T, TMat> Create(GraphStageWithMaterializedValue<SinkShape<T>, TMat> stageUnderTest, TestProbe probe) => new(stageUnderTest, probe);
 
-        private readonly Inlet<T> _in = new Inlet<T>("testSinkStage.in");
+        private readonly Inlet<T> _in = new("testSinkStage.in");
         private readonly GraphStageWithMaterializedValue<SinkShape<T>, TMat> _stageUnderTest;
         private readonly TestProbe _probe;
 
@@ -102,7 +101,7 @@ namespace Akka.Streams.TestKit
         public static Source<T, TMat> Create(GraphStageWithMaterializedValue<SourceShape<T>, TMat> stageUnderTest,
             TestProbe probe) => Source.FromGraph(new TestSourceStage<T, TMat>(stageUnderTest, probe));
 
-        private readonly Outlet<T> _out = new Outlet<T>("testSourceStage.out");
+        private readonly Outlet<T> _out = new("testSourceStage.out");
         private readonly GraphStageWithMaterializedValue<SourceShape<T>, TMat> _stageUnderTest;
         private readonly TestProbe _probe;
 
