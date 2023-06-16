@@ -158,12 +158,12 @@ namespace Akka.Cluster
         {
             Config config2 = config;
             if (config.HasPath("cluster.enabled")
-                && config.GetBoolean("cluster.enabled", false)
+                && config.GetBoolean("cluster.enabled")
                 && !config.HasPath("nr-of-instances"))
             {
                 var maxTotalNrOfInstances = config
                     .WithFallback(Default)
-                    .GetInt("cluster.max-total-nr-of-instances", 0);
+                    .GetInt("cluster.max-total-nr-of-instances");
                 config2 = ConfigurationFactory.ParseString("nr-of-instances=" + maxTotalNrOfInstances)
                     .WithFallback(config);
             }
@@ -171,7 +171,7 @@ namespace Akka.Cluster
             var deploy = base.ParseConfig(key, config2);
             if (deploy != null)
             {
-                if (deploy.Config.GetBoolean("cluster.enabled", false))
+                if (deploy.Config.GetBoolean("cluster.enabled"))
                 {
                     if (deploy.Scope != Deploy.NoScopeGiven)
                         throw new ConfigurationException($"Cluster deployment can't be combined with scope [{deploy.Scope}]");

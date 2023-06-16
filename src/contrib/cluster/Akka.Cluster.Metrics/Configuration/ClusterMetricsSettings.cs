@@ -37,12 +37,12 @@ namespace Akka.Cluster.Metrics.Configuration
             CollectorProvider = _config.GetString("collector.provider");
             CollectorFallback = _config.GetBoolean("collector.fallback");
             CollectorSampleInterval = 
-                Requiring(_config.GetTimeSpan("collector.sample-interval", null), t => t > TimeSpan.Zero, "collector.sample-interval must be > 0");
+                Requiring(_config.GetTimeSpan("collector.sample-interval"), t => t > TimeSpan.Zero, "collector.sample-interval must be > 0");
 
             CollectorGossipInterval = 
-                Requiring(_config.GetTimeSpan("collector.gossip-interval", null), t => t > TimeSpan.Zero, "collector.gossip-interval must be > 0");
+                Requiring(_config.GetTimeSpan("collector.gossip-interval"), t => t > TimeSpan.Zero, "collector.gossip-interval must be > 0");
             CollectorMovingAverageHalfLife = 
-                Requiring(_config.GetTimeSpan("collector.moving-average-half-life", null), t => t > TimeSpan.Zero, "collector.moving-average-half-life must be > 0");
+                Requiring(_config.GetTimeSpan("collector.moving-average-half-life"), t => t > TimeSpan.Zero, "collector.moving-average-half-life must be > 0");
         }
 
         /// <summary>

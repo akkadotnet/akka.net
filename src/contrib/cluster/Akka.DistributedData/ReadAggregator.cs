@@ -137,7 +137,7 @@ namespace Akka.DistributedData
             {
                 case ReadRepairAck _:
                     var reply = envelope.Data is DeletedData
-                        ? (object)new DataDeleted(_key, null)
+                        ? (object)new DataDeleted(_key)
                         : new GetSuccess(_key, _req, envelope.Data);
                     _replyTo.Tell(reply, Context.Parent);
                     Context.Stop(Self);

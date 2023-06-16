@@ -16,7 +16,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         public MemorySnapshotStoreShared()
         {
-            Timeout = Context.System.Settings.Config.GetTimeSpan("akka.persistence.memory-snapshot-store-shared.timeout", null);
+            Timeout = Context.System.Settings.Config.GetTimeSpan("akka.persistence.memory-snapshot-store-shared.timeout");
         }
 
         public static void SetStore(IActorRef store, ActorSystem system)

@@ -34,7 +34,7 @@ namespace Akka.Persistence.Tests
 
             public TestJournal(Config config)
             {
-                _testValue = config.GetString("test-value", null);
+                _testValue = config.GetString("test-value");
             }
 
             protected internal override bool AroundReceive(Receive receive, object message)
@@ -54,7 +54,7 @@ namespace Akka.Persistence.Tests
 
             public TestSnapshotStore(Config config)
             {
-                _testValue = config.GetString("test-value", null);
+                _testValue = config.GetString("test-value");
             }
 
             protected internal override bool AroundReceive(Receive receive, object message)

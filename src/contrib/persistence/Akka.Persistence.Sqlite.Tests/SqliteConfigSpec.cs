@@ -71,7 +71,7 @@ namespace Akka.Persistence.Sqlite.Tests
             settings.ConnectionStringName.Should().Be(config.GetString("connection-string-name"));
             settings.ConnectionTimeout.Should().Be(config.GetTimeSpan("connection-timeout"));
             settings.JournalTableName.Should().Be(config.GetString("table-name"));
-            settings.SchemaName.Should().Be(config.GetString("schema-name", null));
+            settings.SchemaName.Should().Be(config.GetString("schema-name"));
             settings.MetaTableName.Should().Be(config.GetString("metadata-table-name"));
             settings.TimestampProvider.Should().Be(config.GetString("timestamp-provider"));
             settings.ReadIsolationLevel.Should().Be(config.GetIsolationLevel("read-isolation-level"));
@@ -123,13 +123,13 @@ namespace Akka.Persistence.Sqlite.Tests
             settings.ConnectionString.Should().Be(config.GetString("connection-string"));
             settings.ConnectionStringName.Should().Be(config.GetString("connection-string-name"));
             settings.ConnectionTimeout.Should().Be(config.GetTimeSpan("connection-timeout"));
-            settings.SchemaName.Should().Be(config.GetString("schema-name", null));
+            settings.SchemaName.Should().Be(config.GetString("schema-name"));
             settings.TableName.Should().Be(config.GetString("table-name"));
             settings.ReadIsolationLevel.Should().Be(config.GetIsolationLevel("read-isolation-level"));
             settings.WriteIsolationLevel.Should().Be(config.GetIsolationLevel("write-isolation-level"));
             settings.AutoInitialize.Should().Be(config.GetBoolean("auto-initialize"));
 #pragma warning disable CS0618
-            settings.DefaultSerializer.Should().Be(config.GetString("serializer", null));
+            settings.DefaultSerializer.Should().Be(config.GetString("serializer"));
 #pragma warning restore CS0618
         }
 

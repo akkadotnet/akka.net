@@ -190,7 +190,7 @@ namespace Akka.Serialization
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<HyperionSerializerSettings>("akka.actor.serialization-settings.hyperion");
 
-            var typeName = config.GetString("known-types-provider", null);
+            var typeName = config.GetString("known-types-provider");
             var type = !string.IsNullOrWhiteSpace(typeName) ? Type.GetType(typeName, true) : null;
 
             var framework = RuntimeInformation.FrameworkDescription;

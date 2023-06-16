@@ -74,7 +74,7 @@ namespace Akka.Benchmarks.Hocon
         [Benchmark]
         public string Hocon_parse_resolve_string_value()
         {
-            return fallback2.GetString("akka.actor.provider", null);
+            return fallback2.GetString("akka.actor.provider");
         }
 
         [Benchmark]

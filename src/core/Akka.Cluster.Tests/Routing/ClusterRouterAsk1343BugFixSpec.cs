@@ -72,7 +72,7 @@ namespace Akka.Cluster.Tests.Routing
         [Fact]
         public async Task Should_Ask_Clustered_Pool_Router_and_forward_ask_to_routee()
         {
-            var router = Sys.ActorOf(EchoActor.Props(this, true).WithRouter(FromConfig.Instance), "router1");
+            var router = Sys.ActorOf(EchoActor.Props(this).WithRouter(FromConfig.Instance), "router1");
             Assert.IsType<RoutedActorRef>(router);
 
             var result = await router.Ask<string>("foo");
@@ -82,7 +82,7 @@ namespace Akka.Cluster.Tests.Routing
         [Fact]
         public async Task Should_Ask_Clustered_Group_Router_and_forward_ask_to_routee()
         {
-            var echo = Sys.ActorOf(EchoActor.Props(this, true), "echo");
+            var echo = Sys.ActorOf(EchoActor.Props(this), "echo");
             var router = Sys.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "router2");
             Assert.IsType<RoutedActorRef>(router);
 

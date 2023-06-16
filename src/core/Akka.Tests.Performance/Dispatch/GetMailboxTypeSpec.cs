@@ -25,7 +25,7 @@ namespace Akka.Tests.Performance.Dispatch
             public static Props Props { get; } = Props.Create(() => new EchoActor());
         }
 
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new AtomicCounter();
         private Counter _createActorThroughput;
         private const string CreateThroughputCounter = "GetMailboxTypeFootprint";
         private const int GetMailboxTypeNumber = 1000000;

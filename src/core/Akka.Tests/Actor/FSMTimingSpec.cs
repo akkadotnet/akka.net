@@ -283,7 +283,7 @@ namespace Akka.Tests.Actor
                         switch (name)
                         {
                             case FsmState.TestSingleTimer:
-                                SetTimer("tester", Tick.Instance, 500.Milliseconds(), false);
+                                SetTimer("tester", Tick.Instance, 500.Milliseconds());
                                 return GoTo(FsmState.TestSingleTimer);
                             case FsmState.TestRepeatedTimer:
                                 SetTimer("tester", Tick.Instance, 100.Milliseconds(), true);

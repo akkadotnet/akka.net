@@ -45,15 +45,15 @@ namespace Akka.Remote
                 throw ConfigurationException.NullOrEmptyConfig<AkkaProtocolSettings>();
 
             TransportFailureDetectorConfig = config.GetConfig("akka.remote.transport-failure-detector");
-            TransportFailureDetectorImplementationClass = TransportFailureDetectorConfig.GetString("implementation-class", null);
-            TransportHeartBeatInterval = TransportFailureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
+            TransportFailureDetectorImplementationClass = TransportFailureDetectorConfig.GetString("implementation-class");
+            TransportHeartBeatInterval = TransportFailureDetectorConfig.GetTimeSpan("heartbeat-interval");
 
             // backwards compatibility with the existing dot-netty.tcp.connection-timeout
             var enabledTransports = config.GetStringList("akka.remote.enabled-transports", new string[] { });
             if (enabledTransports.Contains("akka.remote.dot-netty.tcp"))
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.tcp.connection-timeout", null);
+                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.tcp.connection-timeout");
             else if (enabledTransports.Contains("akka.remote.dot-netty.ssl"))
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.ssl.connection-timeout", null);
+                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.ssl.connection-timeout");
             else
                 HandshakeTimeout = config.GetTimeSpan("akka.remote.handshake-timeout", TimeSpan.FromSeconds(20), allowInfinite:false);
         }

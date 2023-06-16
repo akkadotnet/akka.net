@@ -37,23 +37,23 @@ namespace Akka.Cluster
             if (clusterConfig?.GetConfig("failure-detector") == null)
                 throw new ConfigurationException($"Failed to instantiate {nameof(ClusterSettings)}: Configuration does not contain `akka.cluster` node. Did you forgot to set the 'akka.cluster.provider' HOCON property to 'cluster'?");
 
-            LogInfoVerbose = clusterConfig.GetBoolean("log-info-verbose", false);
-            LogInfo = LogInfoVerbose || clusterConfig.GetBoolean("log-info", false);
+            LogInfoVerbose = clusterConfig.GetBoolean("log-info-verbose");
+            LogInfo = LogInfoVerbose || clusterConfig.GetBoolean("log-info");
             _failureDetectorConfig = clusterConfig.GetConfig("failure-detector");
-            FailureDetectorImplementationClass = _failureDetectorConfig.GetString("implementation-class", null);
-            HeartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
-            HeartbeatExpectedResponseAfter = _failureDetectorConfig.GetTimeSpan("expected-response-after", null);
-            MonitoredByNrOfMembers = _failureDetectorConfig.GetInt("monitored-by-nr-of-members", 0);
+            FailureDetectorImplementationClass = _failureDetectorConfig.GetString("implementation-class");
+            HeartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval");
+            HeartbeatExpectedResponseAfter = _failureDetectorConfig.GetTimeSpan("expected-response-after");
+            MonitoredByNrOfMembers = _failureDetectorConfig.GetInt("monitored-by-nr-of-members");
 
             SeedNodes = clusterConfig.GetStringList("seed-nodes", new string[] { }).Select(Address.Parse).ToImmutableList();
-            SeedNodeTimeout = clusterConfig.GetTimeSpan("seed-node-timeout", null);
+            SeedNodeTimeout = clusterConfig.GetTimeSpan("seed-node-timeout");
             RetryUnsuccessfulJoinAfter = clusterConfig.GetTimeSpanWithOffSwitch("retry-unsuccessful-join-after");
             ShutdownAfterUnsuccessfulJoinSeedNodes = clusterConfig.GetTimeSpanWithOffSwitch("shutdown-after-unsuccessful-join-seed-nodes");
-            PeriodicTasksInitialDelay = clusterConfig.GetTimeSpan("periodic-tasks-initial-delay", null);
-            GossipInterval = clusterConfig.GetTimeSpan("gossip-interval", null);
-            GossipTimeToLive = clusterConfig.GetTimeSpan("gossip-time-to-live", null);
-            LeaderActionsInterval = clusterConfig.GetTimeSpan("leader-actions-interval", null);
-            UnreachableNodesReaperInterval = clusterConfig.GetTimeSpan("unreachable-nodes-reaper-interval", null);
+            PeriodicTasksInitialDelay = clusterConfig.GetTimeSpan("periodic-tasks-initial-delay");
+            GossipInterval = clusterConfig.GetTimeSpan("gossip-interval");
+            GossipTimeToLive = clusterConfig.GetTimeSpan("gossip-time-to-live");
+            LeaderActionsInterval = clusterConfig.GetTimeSpan("leader-actions-interval");
+            UnreachableNodesReaperInterval = clusterConfig.GetTimeSpan("unreachable-nodes-reaper-interval");
             PublishStatsInterval = clusterConfig.GetTimeSpanWithOffSwitch("publish-stats-interval");
 
             var key = "down-removal-margin";
@@ -64,7 +64,7 @@ namespace Akka.Cluster
                     useDownRemoval.ToLowerInvariant().Equals("false") ||
                     useDownRemoval.ToLowerInvariant().Equals("no")
                 ) ? TimeSpan.Zero :
-                clusterConfig.GetTimeSpan("down-removal-margin", null);
+                clusterConfig.GetTimeSpan("down-removal-margin");
 
 #pragma warning disable CS0618
             AutoDownUnreachableAfter = clusterConfig.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
@@ -73,22 +73,22 @@ namespace Akka.Cluster
             Roles = clusterConfig.GetStringList("roles", new string[] { }).ToImmutableHashSet();
             AppVersion = Util.AppVersion.Create(clusterConfig.GetString("app-version"));
 
-            MinNrOfMembers = clusterConfig.GetInt("min-nr-of-members", 0);
+            MinNrOfMembers = clusterConfig.GetInt("min-nr-of-members");
 
-            _useDispatcher = clusterConfig.GetString("use-dispatcher", null);
+            _useDispatcher = clusterConfig.GetString("use-dispatcher");
             if (string.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.InternalDispatcherId;
-            GossipDifferentViewProbability = clusterConfig.GetDouble("gossip-different-view-probability", 0);
-            ReduceGossipDifferentViewProbability = clusterConfig.GetInt("reduce-gossip-different-view-probability", 0);
-            SchedulerTickDuration = clusterConfig.GetTimeSpan("scheduler.tick-duration", null);
-            SchedulerTicksPerWheel = clusterConfig.GetInt("scheduler.ticks-per-wheel", 0);
+            GossipDifferentViewProbability = clusterConfig.GetDouble("gossip-different-view-probability");
+            ReduceGossipDifferentViewProbability = clusterConfig.GetInt("reduce-gossip-different-view-probability");
+            SchedulerTickDuration = clusterConfig.GetTimeSpan("scheduler.tick-duration");
+            SchedulerTicksPerWheel = clusterConfig.GetInt("scheduler.ticks-per-wheel");
 
             MinNrOfMembersOfRole = clusterConfig.GetConfig("role").Root.GetObject().Items
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
 
-            VerboseHeartbeatLogging = clusterConfig.GetBoolean("debug.verbose-heartbeat-logging", false);
-            VerboseGossipReceivedLogging = clusterConfig.GetBoolean("debug.verbose-receive-gossip-logging", false);
+            VerboseHeartbeatLogging = clusterConfig.GetBoolean("debug.verbose-heartbeat-logging");
+            VerboseGossipReceivedLogging = clusterConfig.GetBoolean("debug.verbose-receive-gossip-logging");
 
-            var downingProviderClassName = clusterConfig.GetString("downing-provider-class", null);
+            var downingProviderClassName = clusterConfig.GetString("downing-provider-class");
             if (!string.IsNullOrEmpty(downingProviderClassName))
                 DowningProviderType = Type.GetType(downingProviderClassName, true);
 #pragma warning disable CS0618
@@ -98,7 +98,7 @@ namespace Akka.Cluster
             else
                 DowningProviderType = typeof(NoDowning);
 
-            RunCoordinatedShutdownWhenDown = clusterConfig.GetBoolean("run-coordinated-shutdown-when-down", false);
+            RunCoordinatedShutdownWhenDown = clusterConfig.GetBoolean("run-coordinated-shutdown-when-down");
             
             TimeSpan GetWeaklyUpDuration()
             {
@@ -121,7 +121,7 @@ namespace Akka.Cluster
 
             WeaklyUpAfter = GetWeaklyUpDuration();
 
-            UseLegacyHeartbeatMessage = clusterConfig.GetBoolean("use-legacy-heartbeat-message", false);
+            UseLegacyHeartbeatMessage = clusterConfig.GetBoolean("use-legacy-heartbeat-message");
         }
 
         /// <summary>

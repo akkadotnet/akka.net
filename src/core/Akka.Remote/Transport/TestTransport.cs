@@ -107,7 +107,7 @@ namespace Akka.Remote.Transport
 
         private static string GetConfigString(Config conf, string name)
         {
-            var value = conf.GetString(name, null);
+            var value = conf.GetString(name);
             if (value == null)
                 throw new ConfigurationException("Please specify a value for config setting \"" + name + "\"");
             return value;

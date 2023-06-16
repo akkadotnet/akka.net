@@ -33,7 +33,7 @@ namespace Akka.Cluster.Tools.Singleton
                 throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonProxySettings>("akka.cluster.singleton-proxy");
 
             var considerAppVersion =
-                system.Settings.Config.GetBoolean("akka.cluster.singleton.consider-app-version", false);
+                system.Settings.Config.GetBoolean("akka.cluster.singleton.consider-app-version");
             return Create(config, considerAppVersion);
         }
 
@@ -49,14 +49,14 @@ namespace Akka.Cluster.Tools.Singleton
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonProxySettings>();
 
-            var role = config.GetString("role", null);
+            var role = config.GetString("role");
             if (role == string.Empty) role = null;
 
             return new ClusterSingletonProxySettings(
                 singletonName: config.GetString("singleton-name"),
                 role: role,
                 singletonIdentificationInterval: config.GetTimeSpan("singleton-identification-interval"),
-                bufferSize: config.GetInt("buffer-size", 0),
+                bufferSize: config.GetInt("buffer-size"),
                 considerAppVersion: considerAppVersion);
         }
 

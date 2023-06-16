@@ -47,7 +47,7 @@ namespace Akka.TestKit.Tests
         [Fact]
         public async Task Delivers_messages_scheduled_for_same_time_in_order_they_were_added()
         {
-            _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 1));
+            _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1)));
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 2));
             await _testReceiveActor.Ask<ActorIdentity>(new Identify(null), RemainingOrDefault); // verify that the ActorCell has started
 

@@ -194,7 +194,7 @@ namespace Akka.Remote.Transport
         {
             ExtendedActorSystem = extendedActorSystem;
             _log = Logging.GetLogger(ExtendedActorSystem, this);
-            _shouldDebugLog = ExtendedActorSystem.Settings.Config.GetBoolean("akka.remote.gremlin.debug", false);
+            _shouldDebugLog = ExtendedActorSystem.Settings.Config.GetBoolean("akka.remote.gremlin.debug");
         }
 
         private ILoggingAdapter _log;

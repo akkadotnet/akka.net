@@ -203,7 +203,7 @@ namespace Akka.Actor
             if (System.Mailboxes.ProducesMessageQueue(mailboxType.GetType()) && System.Mailboxes.HasRequiredType(actorClass))
             {
                 var req = System.Mailboxes.GetRequiredType(actorClass);
-                if (req.IsInstanceOfType(mailbox.MessageQueue)) createMessage = new Create(null); //success
+                if (req.IsInstanceOfType(mailbox.MessageQueue)) createMessage = new Create(); //success
                 else
                 {
                     var gotType = mailbox.MessageQueue == null ? "null" : mailbox.MessageQueue.GetType().FullName;
@@ -212,7 +212,7 @@ namespace Akka.Actor
             }
             else
             {
-                createMessage = new Create(null);
+                createMessage = new Create();
             }
 
             SwapMailbox(mailbox);

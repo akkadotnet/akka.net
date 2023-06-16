@@ -18,7 +18,7 @@ namespace Akka.Tests.Util
         [Fact]
         public void On_and_off()
         {
-            var s = new Switch(false);
+            var s = new Switch();
             Assert.True(s.IsOff, "Initially should be off");
             Assert.False(s.IsOn, "Initially should not be on");
 
@@ -50,7 +50,7 @@ namespace Akka.Tests.Util
         [Fact]
         public void Given_OffSwitch_When_SwitchOn_throws_exception_Then_Should_revert()
         {
-            var s = new Switch(false);
+            var s = new Switch();
             XAssert.Throws<InvalidOperationException>(() => s.SwitchOn(() => { throw new InvalidOperationException(); }));
             Assert.True(s.IsOff);
             Assert.False(s.IsOn);
@@ -69,7 +69,7 @@ namespace Akka.Tests.Util
         [Fact]
         public void Run_action_without_locking()
         {
-            var s = new Switch(false);
+            var s = new Switch();
             var actionRun = false;
             Assert.True(s.IfOff(() => { actionRun = true; }));
             Assert.True(actionRun);
@@ -91,7 +91,7 @@ namespace Akka.Tests.Util
         [Fact]
         public void Run_action_with_locking()
         {
-            var s = new Switch(false);
+            var s = new Switch();
             var actionRun = false;
             Assert.True(s.WhileOff(() => { actionRun = true; }));
             Assert.True(actionRun);

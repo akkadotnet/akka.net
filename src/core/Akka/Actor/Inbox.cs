@@ -419,8 +419,8 @@ namespace Akka.Actor
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<Inbox>("akka.actor.inbox");
 
-            var inboxSize = config.GetInt("inbox-size", 0);
-            var timeout = config.GetTimeSpan("default-timeout", null);
+            var inboxSize = config.GetInt("inbox-size");
+            var timeout = config.GetTimeSpan("default-timeout");
 
             var receiver = ((ActorSystemImpl)system).SystemActorOf(Props.Create(() => new InboxActor(inboxSize)), "inbox-" + Interlocked.Increment(ref _inboxNr));
 

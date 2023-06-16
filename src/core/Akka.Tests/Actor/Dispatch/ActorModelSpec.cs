@@ -195,7 +195,7 @@ namespace Akka.Tests.Actor.Dispatch
 
         class DispatcherActor : ReceiveActor
         {
-            private Switch _busy = new Switch(false);
+            private Switch _busy = new Switch();
             private readonly ILoggingAdapter _log = Context.GetLogger();
             private MessageDispatcherInterceptor _interceptor = Context.Dispatcher.AsInstanceOf<MessageDispatcherInterceptor>();
 
@@ -321,11 +321,11 @@ namespace Akka.Tests.Actor.Dispatch
                     throw ConfigurationException.NullOrEmptyConfig<MessageDispatcherInterceptorConfigurator>();
 
                 _instance = new MessageDispatcherInterceptor(this,
-                    config.GetString("id", null),
-                    config.GetInt("throughput", 0),
-                    config.GetTimeSpan("throughput-deadline-time", null).Ticks,
+                    config.GetString("id"),
+                    config.GetInt("throughput"),
+                    config.GetTimeSpan("throughput-deadline-time").Ticks,
                     ConfigureExecutor(),
-                    Config.GetTimeSpan("shutdown-timeout", null));
+                    Config.GetTimeSpan("shutdown-timeout"));
             }
 
             public override MessageDispatcher Dispatcher()

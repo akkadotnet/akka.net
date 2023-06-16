@@ -209,7 +209,7 @@ namespace Akka.Tests.Actor
             });
 
             await co.Run(CoordinatedShutdown.UnknownReason.Instance).AwaitWithTimeout(RemainingOrDefault);
-            (await ReceiveNAsync(4, default).ToListAsync()).Should().Equal(new object[] { "A", "B", "B", "C" });
+            (await ReceiveNAsync(4).ToListAsync()).Should().Equal(new object[] { "A", "B", "B", "C" });
         }
 
         [Fact]
@@ -242,7 +242,7 @@ namespace Akka.Tests.Actor
             });
 
             await co.Run(customReason, "b").AwaitWithTimeout(RemainingOrDefault);
-            (await ReceiveNAsync(2, default).ToListAsync()).Should().Equal(new object[] { "B", "C" });
+            (await ReceiveNAsync(2).ToListAsync()).Should().Equal(new object[] { "B", "C" });
             co.ShutdownReason.Should().BeEquivalentTo(customReason);
         }
 

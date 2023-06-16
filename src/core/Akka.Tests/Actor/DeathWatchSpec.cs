@@ -233,8 +233,8 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task DeathWatch_must_discard_Terminated_when_unwatched_between_sysmsg_and_processing()
         {
-            var t1 = CreateTestLatch(1);
-            var t2 = CreateTestLatch(1);
+            var t1 = CreateTestLatch();
+            var t2 = CreateTestLatch();
             var p = CreateTestProbe();
             var w = Sys.ActorOf(Props.Create(() => new Watcher()).WithDeploy(Deploy.Local), "testWatcher");
 

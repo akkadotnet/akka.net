@@ -47,7 +47,7 @@ namespace Akka.Remote.Tests.Serialization
         [Fact]
         public void Can_serialize_Create()
         {
-            var message = new Create(null);
+            var message = new Create();
             AssertEqual(message);
         }
 

@@ -533,7 +533,7 @@ namespace Akka.Tests.Actor
 
             var probe = CreateTestProbe();
             Sys.ActorSelection("/user/a/*").Tell(new Identify(1), probe.Ref);
-            var received = await probe.ReceiveNAsync(2, default)
+            var received = await probe.ReceiveNAsync(2)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
                 .ToListAsync();
@@ -589,7 +589,7 @@ namespace Akka.Tests.Actor
 
             // grab everything below /user/a
             Sys.ActorSelection("/user/a/**").Tell(new Identify(1), probe.Ref);
-            var received = await probe.ReceiveNAsync(6, default)
+            var received = await probe.ReceiveNAsync(6)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
                 .ToListAsync();
@@ -598,7 +598,7 @@ namespace Akka.Tests.Actor
 
             // grab everything below /user/a/b2
             Sys.ActorSelection("/user/a/b2/**").Tell(new Identify(2), probe.Ref);
-            received = await probe.ReceiveNAsync(3, default)
+            received = await probe.ReceiveNAsync(3)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
                 .ToListAsync();

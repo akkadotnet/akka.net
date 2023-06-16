@@ -53,10 +53,10 @@ namespace Akka.Persistence.Tests.Journal
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ChaosJournal>("akka.persistence.journal.chaos");
 
-            _writeFailureRate = config.GetDouble("write-failure-rate", 0);
-            _deleteFailureRate = config.GetDouble("delete-failure-rate", 0);
-            _replayFailureRate = config.GetDouble("replay-failure-rate", 0);
-            _readHighestFailureRate = config.GetDouble("read-highest-failure-rate", 0);
+            _writeFailureRate = config.GetDouble("write-failure-rate");
+            _deleteFailureRate = config.GetDouble("delete-failure-rate");
+            _replayFailureRate = config.GetDouble("replay-failure-rate");
+            _readHighestFailureRate = config.GetDouble("read-highest-failure-rate");
         }
 
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)

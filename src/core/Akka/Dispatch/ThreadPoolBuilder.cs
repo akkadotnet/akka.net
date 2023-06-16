@@ -70,7 +70,7 @@ namespace Akka.Dispatch
         /// </summary>
         public int PoolSizeMin
         {
-            get { return _config.GetInt("pool-size-min", 0); }
+            get { return _config.GetInt("pool-size-min"); }
         }
 
         /// <summary>
@@ -78,7 +78,7 @@ namespace Akka.Dispatch
         /// </summary>
         public double PoolSizeFactor
         {
-            get { return _config.GetDouble("pool-size-factor", 0); }
+            get { return _config.GetDouble("pool-size-factor"); }
         }
 
         /// <summary>
@@ -86,7 +86,7 @@ namespace Akka.Dispatch
         /// </summary>
         public int PoolSizeMax
         {
-            get { return _config.GetInt("pool-size-max", 0); }
+            get { return _config.GetInt("pool-size-max"); }
         }
 
         #region Static methods

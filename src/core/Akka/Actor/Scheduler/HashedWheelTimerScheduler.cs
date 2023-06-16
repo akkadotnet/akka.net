@@ -48,8 +48,8 @@ namespace Akka.Actor
             if (SchedulerConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<HashedWheelTimerScheduler>();
 
-            var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel", 0);
-            var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration", null);
+            var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel");
+            var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
             if (tickDuration.TotalMilliseconds < 10.0d)
                 throw new ArgumentOutOfRangeException("minimum supported akka.scheduler.tick-duration on Windows is 10ms");
 
@@ -65,7 +65,7 @@ namespace Akka.Actor
                 throw new ArgumentOutOfRangeException("akka.scheduler.tick-duration", _tickDuration,
                     $"akka.scheduler.tick-duration: {_tickDuration} (expected: 0 < tick-duration in ticks < {long.MaxValue / _wheel.Length}");
 
-            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
+            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout");
         }
 
         private long _startTime = 0;

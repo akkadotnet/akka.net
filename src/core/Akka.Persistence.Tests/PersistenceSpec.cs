@@ -37,7 +37,7 @@ namespace Akka.Persistence.Tests
 
         internal readonly Cleanup Clean;
 
-        private readonly AtomicCounter _counter = new AtomicCounter(0);
+        private readonly AtomicCounter _counter = new(0);
 
         private readonly string _name;
 
@@ -93,14 +93,14 @@ namespace Akka.Persistence.Tests
     internal class Cleanup : IDisposable
     {
         internal List<DirectoryInfo> StorageLocations;
-        private static readonly object _syncRoot = new object();
+        private static readonly object _syncRoot = new();
 
         public Cleanup(AkkaSpec spec)
         {
             StorageLocations = new[]
             {
                 "akka.persistence.snapshot-store.local.dir"
-            }.Select(s => new DirectoryInfo(spec.Sys.Settings.Config.GetString(s, null))).ToList();
+            }.Select(s => new DirectoryInfo(spec.Sys.Settings.Config.GetString(s))).ToList();
         }
 
         public void Initialize()
@@ -146,7 +146,7 @@ namespace Akka.Persistence.Tests
 
     internal sealed class GetState
     {
-        public static readonly GetState Instance = new GetState();
+        public static readonly GetState Instance = new();
         private GetState() { }
     }
 

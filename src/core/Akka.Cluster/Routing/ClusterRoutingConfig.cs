@@ -69,8 +69,8 @@ namespace Akka.Cluster.Routing
             return new ClusterRouterGroupSettings(
                 GetMaxTotalNrOfInstances(config),
                 ImmutableHashSet.CreateRange(config.GetStringList("routees.paths")),
-                config.GetBoolean("cluster.allow-local-routees", false),
-                UseRoleOption(config.GetString("cluster.use-role", null)));
+                config.GetBoolean("cluster.allow-local-routees"),
+                UseRoleOption(config.GetString("cluster.use-role")));
         }
     }
 
@@ -117,9 +117,9 @@ namespace Akka.Cluster.Routing
 
             return new ClusterRouterPoolSettings(
                 GetMaxTotalNrOfInstances(config),
-                config.GetInt("cluster.max-nr-of-instances-per-node", 0),
-                config.GetBoolean("cluster.allow-local-routees", false),
-                UseRoleOption(config.GetString("cluster.use-role", null)));
+                config.GetInt("cluster.max-nr-of-instances-per-node"),
+                config.GetBoolean("cluster.allow-local-routees"),
+                UseRoleOption(config.GetString("cluster.use-role")));
         }
 
         private bool Equals(ClusterRouterPoolSettings other)
@@ -206,7 +206,7 @@ namespace Akka.Cluster.Routing
         /// </summary>
         internal static int GetMaxTotalNrOfInstances(Config config)
         {
-            int number = config.GetInt("nr-of-instances", 0);
+            int number = config.GetInt("nr-of-instances");
             if (number is 0 or 1)
             {
                 return config.GetInt("cluster.max-nr-of-instances-per-node");

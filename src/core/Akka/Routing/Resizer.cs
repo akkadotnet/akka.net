@@ -56,7 +56,7 @@ namespace Akka.Routing
         {
             var defaultResizerConfig = parentConfig.GetConfig("resizer");
 
-            if (!defaultResizerConfig.IsNullOrEmpty() && defaultResizerConfig.GetBoolean("enabled", false))
+            if (!defaultResizerConfig.IsNullOrEmpty() && defaultResizerConfig.GetBoolean("enabled"))
             {
                 return DefaultResizer.Apply(defaultResizerConfig);
             }
@@ -134,7 +134,7 @@ namespace Akka.Routing
         /// <returns>TBD</returns>
         public new static DefaultResizer FromConfig(Config resizerConfig)
         {
-            return resizerConfig.GetBoolean("resizer.enabled", false) ? DefaultResizer.Apply(resizerConfig.GetConfig("resizer")) : null;
+            return resizerConfig.GetBoolean("resizer.enabled") ? DefaultResizer.Apply(resizerConfig.GetConfig("resizer")) : null;
         }
 
         /// <summary>
@@ -148,13 +148,13 @@ namespace Akka.Routing
                 throw ConfigurationException.NullOrEmptyConfig<DefaultResizer>();
 
             return new DefaultResizer(
-                  resizerConfig.GetInt("lower-bound", 0),
-                  resizerConfig.GetInt("upper-bound", 0),
-                  resizerConfig.GetInt("pressure-threshold", 0),
-                  resizerConfig.GetDouble("rampup-rate", 0),
-                  resizerConfig.GetDouble("backoff-threshold", 0),
-                  resizerConfig.GetDouble("backoff-rate", 0),
-                  resizerConfig.GetInt("messages-per-resize", 0)
+                  resizerConfig.GetInt("lower-bound"),
+                  resizerConfig.GetInt("upper-bound"),
+                  resizerConfig.GetInt("pressure-threshold"),
+                  resizerConfig.GetDouble("rampup-rate"),
+                  resizerConfig.GetDouble("backoff-threshold"),
+                  resizerConfig.GetDouble("backoff-rate"),
+                  resizerConfig.GetInt("messages-per-resize")
                 );
         }
 

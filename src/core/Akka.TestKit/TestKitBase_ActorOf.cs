@@ -26,7 +26,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IActorRef ActorOf(Props props)
         {
-            return Sys.ActorOf(props, null);
+            return Sys.ActorOf(props);
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IActorRef ActorOf<TActor>() where TActor : ActorBase, new()
         {
-            return Sys.ActorOf(Props.Create<TActor>(), null);
+            return Sys.ActorOf(Props.Create<TActor>());
         }
 
         /// <summary>
@@ -73,7 +73,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IActorRef ActorOf<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
         {
-            return Sys.ActorOf(Props.Create(factory), null);
+            return Sys.ActorOf(Props.Create(factory));
         }
 
         /// <summary>

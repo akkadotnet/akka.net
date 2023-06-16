@@ -350,7 +350,7 @@ namespace Akka.DistributedData.Tests
             probe.ExpectMsg<Write>();
             probe.LastSender.Tell(WriteNack.Instance);
 
-            ExpectMsg(new StoreFailure(KeyA, null));
+            ExpectMsg(new StoreFailure(KeyA));
             ExpectTerminated(aggregator);
         }
 

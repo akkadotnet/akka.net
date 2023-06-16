@@ -696,7 +696,7 @@ namespace Akka.Dispatch
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<BoundedMailbox>();
 
-            Capacity = config.GetInt("mailbox-capacity", 0);
+            Capacity = config.GetInt("mailbox-capacity");
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
             if (Capacity < 0)
@@ -835,7 +835,7 @@ namespace Akka.Dispatch
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<BoundedDequeBasedMailbox>();
 
-            Capacity = config.GetInt("mailbox-capacity", 0);
+            Capacity = config.GetInt("mailbox-capacity");
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
             if (Capacity < 0)

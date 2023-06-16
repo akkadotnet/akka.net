@@ -136,7 +136,7 @@ namespace Akka.Tests.Actor
             _taskWithoutResult.PipeTo(TestActor, success: () => "Hello");
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("World");
-            var pipeTo = await ReceiveNAsync(2, default).Cast<string>().ToListAsync();
+            var pipeTo = await ReceiveNAsync(2).Cast<string>().ToListAsync();
             pipeTo.Should().Contain("Hello");
             pipeTo.Should().Contain("Hello World");
         }
@@ -151,7 +151,7 @@ namespace Akka.Tests.Actor
             _valueTaskWithoutResult.PipeTo(TestActor, success: () => "Hello");
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("World");
-            var pipeTo = await ReceiveNAsync(2, default).Cast<string>().ToListAsync();
+            var pipeTo = await ReceiveNAsync(2).Cast<string>().ToListAsync();
             pipeTo.Should().Contain("Hello");
             pipeTo.Should().Contain("Hello World");
         }

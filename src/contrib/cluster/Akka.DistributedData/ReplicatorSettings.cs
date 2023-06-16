@@ -43,13 +43,13 @@ namespace Akka.DistributedData
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ReplicatorSettings>();
 
-            var dispatcher = config.GetString("use-dispatcher", null);
+            var dispatcher = config.GetString("use-dispatcher");
             if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.InternalDispatcherId;
 
             var durableConfig = config.GetConfig("durable");
             var durableKeys = durableConfig.GetStringList("keys");
             var durableStoreProps = Props.Empty;
-            var durableStoreTypeName = durableConfig.GetString("store-actor-class", null);
+            var durableStoreTypeName = durableConfig.GetString("store-actor-class");
 
             if (durableKeys.Count != 0)
             {
@@ -79,7 +79,7 @@ namespace Akka.DistributedData
                 pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromHours(6)),
                 durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromDays(10)),
                 maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 50),
-                restartReplicatorOnFailure: config.GetBoolean("recreate-on-failure", false),
+                restartReplicatorOnFailure: config.GetBoolean("recreate-on-failure"),
                 preferOldest: config.GetBoolean("prefer-oldest"),
                 verboseDebugLogging: config.GetBoolean("verbose-debug-logging"));
         }

@@ -84,7 +84,7 @@ namespace Akka.Remote.Tests.MultiNode
                 _identify(_config.Second, "subject");
                 EnterBarrier("actors-communicate");
 
-                EventFilter.Warning(null, null, contains: "address is now gated").ExpectOne(() =>
+                EventFilter.Warning(null, contains: "address is now gated").ExpectOne(() =>
                 {
                     var cmd =
                         RARP.For(Sys)

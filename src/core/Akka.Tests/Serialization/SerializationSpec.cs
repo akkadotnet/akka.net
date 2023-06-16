@@ -556,7 +556,7 @@ namespace Akka.Tests.Serialization
 
             var dummy2 = (DummyConfigurableSerializer) Sys.Serialization.GetSerializerById(-7);
             dummy2.Config.ShouldNotBe(null);
-            dummy2.Config.GetString("test-key", null).ShouldBe("test value");
+            dummy2.Config.GetString("test-key").ShouldBe("test value");
         }
 
 

@@ -118,7 +118,7 @@ namespace Akka.Coordination.Tests
 
         public TestProbe Probe { get; }
         private AtomicReference<Task<bool>> nextAcquireResult;
-        private AtomicBoolean nextCheckLeaseResult = new AtomicBoolean(false);
+        private AtomicBoolean nextCheckLeaseResult = new AtomicBoolean();
         private AtomicReference<Action<Exception>> currentCallBack = new AtomicReference<Action<Exception>>(_ => { });
         private ILoggingAdapter _log;
         public TaskCompletionSource<bool> InitialPromise { get; } = new TaskCompletionSource<bool>();

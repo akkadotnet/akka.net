@@ -79,11 +79,11 @@ namespace Akka.Dispatch
             if (Config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<MessageDispatcher>();
 
-            return new CurrentSynchronizationContextDispatcher(this, Config.GetString("id", null),
-                Config.GetInt("throughput", 0),
-                Config.GetTimeSpan("throughput-deadline-time", null).Ticks,
+            return new CurrentSynchronizationContextDispatcher(this, Config.GetString("id"),
+                Config.GetInt("throughput"),
+                Config.GetTimeSpan("throughput-deadline-time").Ticks,
                 _executorServiceConfigurator,
-                Config.GetTimeSpan("shutdown-timeout", null));
+                Config.GetTimeSpan("shutdown-timeout"));
         }
     }
 

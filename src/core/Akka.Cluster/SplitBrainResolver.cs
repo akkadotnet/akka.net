@@ -27,7 +27,7 @@ namespace Akka.Cluster
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<SplitBrainResolver>("akka.cluster.split-brain-resolver");
 
-            StableAfter = config.GetTimeSpan("stable-after", null);
+            StableAfter = config.GetTimeSpan("stable-after");
             Strategy = ResolveSplitBrainStrategy(config);
             _cluster = cluster;
         }
@@ -40,7 +40,7 @@ namespace Akka.Cluster
 
         private ISplitBrainStrategy ResolveSplitBrainStrategy(Config config)
         {
-            var activeStrategy = config.GetString("active-strategy", null);
+            var activeStrategy = config.GetString("active-strategy");
             switch (activeStrategy)
             {
                 case "static-quorum": return new StaticQuorum(config.GetConfig("static-quorum"));
@@ -93,8 +93,8 @@ namespace Akka.Cluster
     internal sealed class StaticQuorum : ISplitBrainStrategy
     {
         public StaticQuorum(Config config) : this(
-           quorumSize: config.GetInt("quorum-size", 0),
-           role: config.GetString("role", null))
+           quorumSize: config.GetInt("quorum-size"),
+           role: config.GetString("role"))
         { }
 
         public StaticQuorum(int quorumSize, string role)
@@ -122,7 +122,7 @@ namespace Akka.Cluster
     internal sealed class KeepMajority : ISplitBrainStrategy
     {
         public KeepMajority(Config config) : this(
-            role: config.GetString("role", null))
+            role: config.GetString("role"))
         { }
 
         public KeepMajority(string role = null)
@@ -159,7 +159,7 @@ namespace Akka.Cluster
     {
         public KeepOldest(Config config) : this(
             downIfAlone: config.GetBoolean("down-if-alone", true),
-            role: config.GetString("role", null))
+            role: config.GetString("role"))
         { }
 
         public KeepOldest(bool downIfAlone, string role = null)
@@ -205,7 +205,7 @@ namespace Akka.Cluster
     internal sealed class KeepReferee : ISplitBrainStrategy
     {
         public KeepReferee(Config config) : this(
-            address: Address.Parse(config.GetString("address", null)),
+            address: Address.Parse(config.GetString("address")),
             downAllIfLessThanNodes: config.GetInt("down-all-if-less-than-nodes", 1))
         { }
 

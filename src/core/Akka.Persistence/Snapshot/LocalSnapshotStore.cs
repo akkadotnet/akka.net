@@ -51,12 +51,12 @@ namespace Akka.Persistence.Snapshot
                 throw new ConfigurationException($"Cannot create {typeof(LocalSnapshotStore)}: akka.persistence.snapshot-store.local configuration node not found");
             */
 
-            _maxLoadAttempts = config.GetInt("max-load-attempts", 0);
+            _maxLoadAttempts = config.GetInt("max-load-attempts");
 
-            _streamDispatcher = Context.System.Dispatchers.Lookup(config.GetString("stream-dispatcher", null));
-            _dir = new DirectoryInfo(config.GetString("dir", null));
+            _streamDispatcher = Context.System.Dispatchers.Lookup(config.GetString("stream-dispatcher"));
+            _dir = new DirectoryInfo(config.GetString("dir"));
 
-            _defaultSerializer = config.GetString("serializer", null);
+            _defaultSerializer = config.GetString("serializer");
 
             _serialization = Context.System.Serialization;
             _wrapperSerializer = _serialization.FindSerializerForType(WrapperType);

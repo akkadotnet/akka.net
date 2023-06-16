@@ -248,7 +248,7 @@ namespace Akka.Actor.Internal
         private void WarnIfJsonIsDefaultSerializer()
         {
             const string configPath = "akka.suppress-json-serializer-warning";
-            var showSerializerWarning = Settings.Config.HasPath(configPath) && !Settings.Config.GetBoolean(configPath, false);
+            var showSerializerWarning = Settings.Config.HasPath(configPath) && !Settings.Config.GetBoolean(configPath);
 
             if (showSerializerWarning &&
                 Serialization.FindSerializerForType(typeof (object)) is NewtonSoftJsonSerializer)

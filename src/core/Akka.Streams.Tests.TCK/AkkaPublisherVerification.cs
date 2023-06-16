@@ -42,7 +42,7 @@ namespace Akka.Streams.Tests.TCK
         protected AkkaPublisherVerification(Config config)
             : this(
                 new TestEnvironment(Timeouts.DefaultTimeoutMillis,
-                    TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds(), false),
+                    TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds()),
                 Timeouts.PublisherShutdownTimeoutMillis, config)
         {
         }

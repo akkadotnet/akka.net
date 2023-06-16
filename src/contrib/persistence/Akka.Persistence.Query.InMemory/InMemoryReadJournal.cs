@@ -34,8 +34,8 @@ namespace Akka.Persistence.Query.InMemory
         
         public InMemoryReadJournal(Config config)
         {
-            _writeJournalPluginId = config.GetString("write-plugin", null);
-            _maxBufferSize = config.GetInt("max-buffer-size", 0);
+            _writeJournalPluginId = config.GetString("write-plugin");
+            _maxBufferSize = config.GetInt("max-buffer-size");
             _refreshInterval = config.GetTimeSpan("refresh-interval", TimeSpan.FromSeconds(1));
         }
         

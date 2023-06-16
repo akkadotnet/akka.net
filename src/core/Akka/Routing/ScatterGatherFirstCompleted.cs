@@ -125,9 +125,9 @@ namespace Akka.Routing
         /// </param>
         public ScatterGatherFirstCompletedPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances", 0),
+                  nrOfInstances: config.GetInt("nr-of-instances"),
                   resizer: Resizer.FromConfig(config),
-                  within: config.GetTimeSpan("within", null),
+                  within: config.GetTimeSpan("within"),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,
                   usePoolDispatcher: config.HasPath("pool-dispatcher"))
@@ -367,7 +367,7 @@ namespace Akka.Routing
         public ScatterGatherFirstCompletedGroup(Config config)
             : this(
                   config.GetStringList("routees.paths", new string[] { }),
-                  config.GetTimeSpan("within", null),
+                  config.GetTimeSpan("within"),
                   Dispatchers.DefaultDispatcherId)
         {
         }

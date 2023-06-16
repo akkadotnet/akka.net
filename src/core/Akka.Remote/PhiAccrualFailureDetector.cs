@@ -85,11 +85,11 @@ namespace Akka.Remote
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<PhiAccrualFailureDetector>();
 
-            _threshold = config.GetDouble("threshold", 0);
-            _maxSampleSize = config.GetInt("max-sample-size", 0);
-            _minStdDeviation = config.GetTimeSpan("min-std-deviation", null);
-            _acceptableHeartbeatPause = config.GetTimeSpan("acceptable-heartbeat-pause", null);
-            _firstHeartbeatEstimate = config.GetTimeSpan("heartbeat-interval", null);
+            _threshold = config.GetDouble("threshold");
+            _maxSampleSize = config.GetInt("max-sample-size");
+            _minStdDeviation = config.GetTimeSpan("min-std-deviation");
+            _acceptableHeartbeatPause = config.GetTimeSpan("acceptable-heartbeat-pause");
+            _firstHeartbeatEstimate = config.GetTimeSpan("heartbeat-interval");
             _state = new AtomicReference<AccrualState>(new AccrualState(FirstHeartBeat, null));
             EventStream = ev ?? Option<EventStream>.None;
         }

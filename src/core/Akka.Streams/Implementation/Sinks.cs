@@ -1071,7 +1071,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly ObservableLogic _logic;
             private readonly IObserver<T> _observer;
-            private readonly AtomicBoolean _disposed = new AtomicBoolean(false);
+            private readonly AtomicBoolean _disposed = new AtomicBoolean();
 
             public ObserverDisposable(ObservableLogic logic, IObserver<T> observer)
             {

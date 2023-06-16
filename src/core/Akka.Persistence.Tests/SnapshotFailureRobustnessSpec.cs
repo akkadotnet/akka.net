@@ -160,7 +160,7 @@ namespace Akka.Persistence.Tests
                 {
                     var bytes = Encoding.UTF8.GetBytes("b0rk");
                     var tempFile = WithOutputStream(metadata, stream => stream.Write(bytes, 0, bytes.Length));
-					tempFile.MoveTo(GetSnapshotFileForWrite(metadata, "").FullName);
+					tempFile.MoveTo(GetSnapshotFileForWrite(metadata).FullName);
                 }
                 else base.Save(metadata, payload);
             }

@@ -330,7 +330,7 @@ namespace Akka.Streams.Tests.Dsl
         public async Task Flow_with_ask_must_resume_after_multiple_failures() => await this.AssertAllStagesStoppedAsync(() => {
             var aref = ReplierFailAllExceptOn(6);
             var t = Source.From(Enumerable.Range(1, 6))
-                .Ask<Reply>(aref, _timeout, 2)
+                .Ask<Reply>(aref, _timeout)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Supervision.Deciders.ResumingDecider))
                 .RunWith(Sink.First<Reply>(), _materializer);
 

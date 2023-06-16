@@ -290,7 +290,7 @@ namespace Akka.Remote
         {
             if (_endpointManager == null)
             {
-                throw new RemoteTransportException("Attempted to send remote message but Remoting is not running.", null);
+                throw new RemoteTransportException("Attempted to send remote message but Remoting is not running.");
             }
 
             _endpointManager.Tell(new EndpointManager.Send(message, recipient, sender), sender ?? ActorRefs.NoSender);
@@ -308,7 +308,7 @@ namespace Akka.Remote
         public override async Task<bool> ManagementCommand(object cmd, CancellationToken cancellationToken)
         {
             if (_endpointManager == null)
-                throw new RemoteTransportException("Attempted to send management command but Remoting is not running.", null);
+                throw new RemoteTransportException("Attempted to send management command but Remoting is not running.");
 
             var result = await _endpointManager.Ask<EndpointManager.ManagementCommandAck>(
                 message: new EndpointManager.ManagementCommand(cmd),
@@ -383,8 +383,7 @@ namespace Akka.Remote
                     throw new RemoteTransportException(
                         "No transport is responsible for address:[" + remote + "] although protocol [" + remote.Protocol +
                         "] is available." +
-                        " Make sure at least one transport is configured to be responsible for the address.",
-                        null);
+                        " Make sure at least one transport is configured to be responsible for the address.");
 
                 if (responsibleTransports.Length == 1)
                     return responsibleTransports.First().Address;
@@ -393,13 +392,12 @@ namespace Akka.Remote
                     "Multiple transports are available for [" + remote + ": " +
                     string.Join(",", responsibleTransports.Select(t => t.ToString())) + "] " +
                     "Remoting cannot decide which transport to use to reach the remote system. Change your configuration " +
-                    "so that only one transport is responsible for the address.",
-                    null);
+                    "so that only one transport is responsible for the address.");
             }
 
             throw new RemoteTransportException(
                 "No transport is loaded for protocol: [" + remote.Protocol + "], available protocols: [" +
-                string.Join(",", transportMapping.Keys.Select(t => t.ToString())) + "]", null);
+                string.Join(",", transportMapping.Keys.Select(t => t.ToString())) + "]");
         }
 
         #endregion

@@ -238,7 +238,7 @@ namespace Akka.DistributedData.Tests
             var data = PNCounterDictionary<string>.Empty;
             for (int i = 1; i <= 1000; i++)
             {
-                var d = data.ResetDelta().Increment(selfUniqueAddress, (i % 2).ToString(), 1);
+                var d = data.ResetDelta().Increment(selfUniqueAddress, (i % 2).ToString());
                 selector.Update("A", d.Delta);
                 data = d;
             }

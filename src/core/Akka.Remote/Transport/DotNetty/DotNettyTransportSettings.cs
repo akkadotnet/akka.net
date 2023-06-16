@@ -60,10 +60,10 @@ namespace Akka.Remote.Transport.DotNetty
                 throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>();
 
             var transportMode = config.GetString("transport-protocol", "tcp").ToLower();
-            var host = config.GetString("hostname", null);
+            var host = config.GetString("hostname");
             if (string.IsNullOrEmpty(host)) host = IPAddress.Any.ToString();
-            var publicHost = config.GetString("public-hostname", null);
-            var publicPort = config.GetInt("public-port", 0);
+            var publicHost = config.GetString("public-hostname");
+            var publicPort = config.GetInt("public-port");
 
             var order = ByteOrder.LittleEndian;
             var byteOrderString = config.GetString("byte-order", "little-endian").ToLowerInvariant();
@@ -76,7 +76,7 @@ namespace Akka.Remote.Transport.DotNetty
 
             var batchWriterSettings = new BatchWriterSettings(config.GetConfig("batching"));
 
-            var enableSsl = config.GetBoolean("enable-ssl", false);
+            var enableSsl = config.GetBoolean("enable-ssl");
 
             return new DotNettyTransportSettings(
                 transportMode: transportMode == "tcp" ? TransportMode.Tcp : TransportMode.Udp,
@@ -90,18 +90,18 @@ namespace Akka.Remote.Transport.DotNetty
                 clientSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("client-socket-worker-pool")),
                 maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size", null)) ?? 128000,
                 ssl: config.HasPath("ssl") && enableSsl ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
-                dnsUseIpv6: config.GetBoolean("dns-use-ipv6", false),
+                dnsUseIpv6: config.GetBoolean("dns-use-ipv6"),
                 tcpReuseAddr: ResolveTcpReuseAddrOption(config.GetString("tcp-reuse-addr", "off-for-windows")),
                 tcpKeepAlive: config.GetBoolean("tcp-keepalive", true),
                 tcpNoDelay: config.GetBoolean("tcp-nodelay", true),
                 backlog: config.GetInt("backlog", 4096),
-                enforceIpFamily: RuntimeDetector.IsMono || config.GetBoolean("enforce-ip-family", false),
+                enforceIpFamily: RuntimeDetector.IsMono || config.GetBoolean("enforce-ip-family"),
                 receiveBufferSize: ToNullableInt(config.GetByteSize("receive-buffer-size", null) ?? 256000),
                 sendBufferSize: ToNullableInt(config.GetByteSize("send-buffer-size", null) ?? 256000),
                 writeBufferHighWaterMark: ToNullableInt(config.GetByteSize("write-buffer-high-water-mark", null)),
                 writeBufferLowWaterMark: ToNullableInt(config.GetByteSize("write-buffer-low-water-mark", null)),
-                backwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility", false),
-                logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport", false),
+                backwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility"),
+                logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"),
                 byteOrder: order,
                 enableBufferPooling: config.GetBoolean("enable-pooling", true),
                 batchWriterSettings: batchWriterSettings);
@@ -115,9 +115,9 @@ namespace Akka.Remote.Transport.DotNetty
                 return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
 
             return ThreadPoolConfig.ScaledPoolSize(
-                floor: config.GetInt("pool-size-min", 0),
-                scalar: config.GetDouble("pool-size-factor", 0),
-                ceiling: config.GetInt("pool-size-max", 0));
+                floor: config.GetInt("pool-size-min"),
+                scalar: config.GetDouble("pool-size-factor"),
+                ceiling: config.GetInt("pool-size-max"));
         }
 
         /// <summary>
@@ -296,18 +296,18 @@ namespace Akka.Remote.Transport.DotNetty
             if (config.IsNullOrEmpty())
                 throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.ssl`)");
 
-            if (config.GetBoolean("certificate.use-thumprint-over-file", false)
-                || config.GetBoolean("certificate.use-thumbprint-over-file", false))
+            if (config.GetBoolean("certificate.use-thumprint-over-file")
+                || config.GetBoolean("certificate.use-thumbprint-over-file"))
             {
-                var thumbprint = config.GetString("certificate.thumbprint", null) 
-                                 ?? config.GetString("certificate.thumpbrint", null);
+                var thumbprint = config.GetString("certificate.thumbprint") 
+                                 ?? config.GetString("certificate.thumpbrint");
                 if (string.IsNullOrWhiteSpace(thumbprint))
                     throw new Exception("`akka.remote.dot-netty.ssl.certificate.use-thumbprint-over-file` is set to true but `akka.remote.dot-netty.ssl.certificate.thumbprint` is null or empty");
                 
                 return new SslSettings(thumbprint,
-                    config.GetString("certificate.store-name", null),
-                    ParseStoreLocationName(config.GetString("certificate.store-location", null)),
-                        config.GetBoolean("suppress-validation", false));
+                    config.GetString("certificate.store-name"),
+                    ParseStoreLocationName(config.GetString("certificate.store-location")),
+                        config.GetBoolean("suppress-validation"));
 
             }
             else
@@ -316,10 +316,10 @@ namespace Akka.Remote.Transport.DotNetty
                 var flags = flagsRaw.Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
 
                 return new SslSettings(
-                    certificatePath: config.GetString("certificate.path", null),
-                    certificatePassword: config.GetString("certificate.password", null),
+                    certificatePath: config.GetString("certificate.path"),
+                    certificatePassword: config.GetString("certificate.password"),
                     flags: flags,
-                    suppressValidation: config.GetBoolean("suppress-validation", false));
+                    suppressValidation: config.GetBoolean("suppress-validation"));
             }
 
         }

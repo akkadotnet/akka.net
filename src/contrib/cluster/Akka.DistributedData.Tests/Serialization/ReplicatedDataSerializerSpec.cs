@@ -110,7 +110,7 @@ namespace Akka.DistributedData.Tests.Serialization
 
             CheckSameContent(
                 GCounter.Empty.Increment(_address1, 2).Increment(_address2, 5),
-                GCounter.Empty.Increment(_address2, 5).Increment(_address1, 1).Increment(_address1, 1));
+                GCounter.Empty.Increment(_address2, 5).Increment(_address1).Increment(_address1));
             CheckSameContent(
                 GCounter.Empty.Increment(_address1, 2).Increment(_address3, 5),
                 GCounter.Empty.Increment(_address3, 5).Increment(_address1, 2));
@@ -121,19 +121,19 @@ namespace Akka.DistributedData.Tests.Serialization
         {
             CheckSerialization(PNCounter.Empty);
             CheckSerialization(PNCounter.Empty.Increment(_address1, 3));
-            CheckSerialization(PNCounter.Empty.Increment(_address1, 3).Decrement(_address1, 1));
+            CheckSerialization(PNCounter.Empty.Increment(_address1, 3).Decrement(_address1));
             CheckSerialization(PNCounter.Empty.Increment(_address1, 2).Increment(_address2, 5));
-            CheckSerialization(PNCounter.Empty.Increment(_address1, 2).Increment(_address2, 5).Decrement(_address1, 1));
+            CheckSerialization(PNCounter.Empty.Increment(_address1, 2).Increment(_address2, 5).Decrement(_address1));
 
             CheckSameContent(
                 PNCounter.Empty.Increment(_address1, 2).Increment(_address2, 5),
-                PNCounter.Empty.Increment(_address2, 5).Increment(_address1, 1).Increment(_address1, 1));
+                PNCounter.Empty.Increment(_address2, 5).Increment(_address1).Increment(_address1));
             CheckSameContent(
                 PNCounter.Empty.Increment(_address1, 2).Increment(_address3, 5),
                 PNCounter.Empty.Increment(_address3, 5).Increment(_address1, 2));
             CheckSameContent(
-                PNCounter.Empty.Increment(_address1, 2).Decrement(_address1, 1).Increment(_address3, 5),
-                PNCounter.Empty.Increment(_address3, 5).Increment(_address1, 2).Decrement(_address1, 1));
+                PNCounter.Empty.Increment(_address1, 2).Decrement(_address1).Increment(_address3, 5),
+                PNCounter.Empty.Increment(_address3, 5).Increment(_address1, 2).Decrement(_address1));
         }
 
         [Fact()]

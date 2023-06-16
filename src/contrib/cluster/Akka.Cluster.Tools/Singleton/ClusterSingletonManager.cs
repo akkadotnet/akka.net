@@ -670,7 +670,7 @@ namespace Akka.Cluster.Tools.Singleton
 
             var n = (int)(_removalMargin.TotalMilliseconds / _settings.HandOverRetryInterval.TotalMilliseconds);
 
-            var minRetries = Context.System.Settings.Config.GetInt("akka.cluster.singleton.min-number-of-hand-over-retries", 0);
+            var minRetries = Context.System.Settings.Config.GetInt("akka.cluster.singleton.min-number-of-hand-over-retries");
             if (minRetries < 1)
                 throw new ConfigurationException("min-number-of-hand-over-retries must be >= 1");
 
@@ -1254,7 +1254,7 @@ namespace Akka.Cluster.Tools.Singleton
                         if (wasOldestData.NewOldest != null)
                             Peer(wasOldestData.NewOldest.Address).Tell(TakeOverFromMe.Instance);
 
-                        SetTimer(TakeOverRetryTimer, new TakeOverRetry(takeOverRetry.Count + 1), _settings.HandOverRetryInterval, false);
+                        SetTimer(TakeOverRetryTimer, new TakeOverRetry(takeOverRetry.Count + 1), _settings.HandOverRetryInterval);
                         return Stay();
                     }
                     else

@@ -333,8 +333,7 @@ namespace Akka.Routing
             nrOfInstances,
             null,
             Pool.DefaultSupervisorStrategy,
-            Dispatchers.DefaultDispatcherId,
-            false) { }
+            Dispatchers.DefaultDispatcherId) { }
 
         // TODO: do we need to check for null or empty config here?
         /// <summary>
@@ -347,13 +346,13 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public ConsistentHashingPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances", 0),
+                  nrOfInstances: config.GetInt("nr-of-instances"),
                   resizer: Resizer.FromConfig(config),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,
                   usePoolDispatcher: config.HasPath("pool-dispatcher"))
         {
-            VirtualNodesFactor = config.GetInt("virtual-nodes-factor", 0);
+            VirtualNodesFactor = config.GetInt("virtual-nodes-factor");
         }
 
         /// <summary>
@@ -622,7 +621,7 @@ namespace Akka.Routing
         public ConsistentHashingGroup(Config config)
             : this(config.GetStringList("routees.paths", new string[] { }))
         {
-            VirtualNodesFactor = config.GetInt("virtual-nodes-factor", 0);
+            VirtualNodesFactor = config.GetInt("virtual-nodes-factor");
         }
 
         /// <summary>

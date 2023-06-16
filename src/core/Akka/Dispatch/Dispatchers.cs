@@ -576,8 +576,8 @@ namespace Akka.Dispatch
             if (!cfg.HasPath("id"))
                 throw new ConfigurationException($"Missing dispatcher `id` property in config: {cfg.Root}");
 
-            var id = cfg.GetString("id", null);
-            var type = cfg.GetString("type", null);
+            var id = cfg.GetString("id");
+            var type = cfg.GetString("type");
 
 
             MessageDispatcherConfigurator dispatcher;
@@ -637,7 +637,7 @@ namespace Akka.Dispatch
             : base(config, prerequisites)
         {
             // Need to see if a non-zero value is available for this setting
-            TimeSpan deadlineTime = Config.GetTimeSpan("throughput-deadline-time", null);
+            TimeSpan deadlineTime = Config.GetTimeSpan("throughput-deadline-time");
             long? deadlineTimeTicks = null;
             if (deadlineTime.Ticks > 0)
                 deadlineTimeTicks = deadlineTime.Ticks;

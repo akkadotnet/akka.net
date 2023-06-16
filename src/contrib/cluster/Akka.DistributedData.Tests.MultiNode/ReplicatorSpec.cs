@@ -280,7 +280,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 ExpectMsg(new UpdateSuccess(KeyB, null));
 
                 // add 1 on both nodes using WriteTwo
-                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeTwo, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyB, null));
 
                 // the total, after replication should be 42
@@ -297,7 +297,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 // add 1 on both nodes using WriteAll
-                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeAll, x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeAll, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyB, null));
 
                 // the total, after replication should be 44
@@ -314,7 +314,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 // add 1 on both nodes using WriteMajority
-                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeMajority, x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeMajority, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyB, null));
 
                 // the total, after replication should be 46

@@ -63,7 +63,7 @@ namespace Akka.DistributedData.Tests.Serialization
             var ref1 = Sys.ActorOf(Props.Empty, "ref1");
             var data1 = GSet.Create("a");
             var delta1 = GCounter.Empty.Increment(_address1, 17).Increment(_address2, 2).Delta;
-            var delta2 = delta1.Increment(_address2, 1).Delta;
+            var delta2 = delta1.Increment(_address2).Delta;
             var delta3 = ORSet<string>.Empty.Add(_address1, "a").Delta;
             var delta4 = ORMultiValueDictionary<string, string>.Empty.AddItem(_address1, "a", "b").Delta;
 

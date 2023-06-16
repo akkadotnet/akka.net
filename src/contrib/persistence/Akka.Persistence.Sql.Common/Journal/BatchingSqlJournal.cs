@@ -90,7 +90,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             Mode = mode;
             WindowSize = config.GetInt("window-size", 100);
             MaxOldWriters = config.GetInt("max-old-writers", 10);
-            IsDebug = config.GetBoolean("debug", false);
+            IsDebug = config.GetBoolean("debug");
         }
 
         /// <summary>
@@ -277,7 +277,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<BatchingSqlJournalSetup>();
 
-            var connectionString = config.GetString("connection-string", null);
+            var connectionString = config.GetString("connection-string");
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 connectionString = System.Configuration.ConfigurationManager
@@ -300,15 +300,15 @@ namespace Akka.Persistence.Sql.Common.Journal
             MaxConcurrentOperations = config.GetInt("max-concurrent-operations", 64);
             MaxBatchSize = config.GetInt("max-batch-size", 100);
             MaxBufferSize = config.GetInt("max-buffer-size", 500000);
-            AutoInitialize = config.GetBoolean("auto-initialize", false);
+            AutoInitialize = config.GetBoolean("auto-initialize");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout", TimeSpan.FromSeconds(30));
             CircuitBreakerSettings = new CircuitBreakerSettings(config.GetConfig("circuit-breaker"));
             ReplayFilterSettings = new ReplayFilterSettings(config.GetConfig("replay-filter"));
             NamingConventions = namingConventions;
 #pragma warning disable CS0618
-            DefaultSerializer = config.GetString("serializer", null);
+            DefaultSerializer = config.GetString("serializer");
 #pragma warning restore CS0618
-            TimestampProviderTypeName = config.GetString("timestamp-provider", null);
+            TimestampProviderTypeName = config.GetString("timestamp-provider");
         }
 
         /// <summary>

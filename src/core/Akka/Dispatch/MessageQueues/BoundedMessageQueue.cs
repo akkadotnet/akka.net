@@ -25,7 +25,7 @@ namespace Akka.Dispatch.MessageQueues
         /// </summary>
         /// <param name="config">The configuration for this mailbox.</param>
         public BoundedMessageQueue(Config config)
-            : this(config.GetInt("mailbox-capacity", 0), config.GetTimeSpan("mailbox-push-timeout-time", null))
+            : this(config.GetInt("mailbox-capacity"), config.GetTimeSpan("mailbox-push-timeout-time"))
         {
         }
 

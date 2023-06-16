@@ -398,7 +398,7 @@ namespace Akka.Cluster.Sharding
                 leastShardAllocationRelativeLimit: config.GetDouble("least-shard-allocation-strategy.rebalance-relative-limit"));
 
             var coordinatorSingletonSettings = ClusterSingletonManagerSettings.Create(singletonConfig);
-            var role = config.GetString("role", null);
+            var role = config.GetString("role");
             if (role == string.Empty) role = null;
 
             var usePassivateIdle = config.GetString("passivate-idle-entity-after").ToLowerInvariant();

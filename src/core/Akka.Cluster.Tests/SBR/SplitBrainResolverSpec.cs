@@ -368,7 +368,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_minority_partition_A_C_E__B_D___A_C_E()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberC, MemberE);
             setup.Side2 = ImmutableHashSet.Create(MemberB, MemberD);
             setup.AssertDowning(setup.Side2);
@@ -377,7 +377,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_minority_partition_A_B__C_D_E___C_D_E()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB);
             setup.Side2 = ImmutableHashSet.Create(MemberC, MemberD, MemberE);
             setup.AssertDowning(setup.Side1);
@@ -386,7 +386,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_self_when_alone_B__A_C___A_C()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberB);
             setup.Side2 = ImmutableHashSet.Create(MemberA, MemberC);
             setup.AssertDowning(setup.Side1);
@@ -395,7 +395,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_keep_half_with_lowest_address_when_equal_size_partition_A_B__C_D___A_B()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB);
             setup.Side2 = ImmutableHashSet.Create(MemberC, MemberD);
             setup.AssertDowning(setup.Side2);
@@ -404,7 +404,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_keep_node_with_lowest_address_in_two_node_cluster_A__B___A()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA);
             setup.Side2 = ImmutableHashSet.Create(MemberB);
             setup.AssertDowning(setup.Side2);
@@ -441,7 +441,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_not_count_joining_node_but_down_it_B_D__Aj_C___B_D()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberB, MemberD);
             setup.Side2 = ImmutableHashSet.Create(Joining(MemberA), MemberC);
             setup.AssertDowning(setup.Side2);
@@ -450,7 +450,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_minority_partition_and_joining_node_A_Bj__C_D_E___C_D_E()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, Joining(MemberB));
             setup.Side2 = ImmutableHashSet.Create(MemberC, MemberD, MemberE);
             setup.AssertDowning(setup.Side1);
@@ -459,7 +459,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_each_part_when_split_in_3_too_small_parts_A_B__C_D__E___()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB);
             setup.Side2 = ImmutableHashSet.Create(MemberC, MemberD);
             setup.Side3 = ImmutableHashSet.Create(MemberE);
@@ -471,7 +471,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_detect_edge_case_of_membership_change_A_B_F_G__C_D_E___A_B_F_G()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberF, MemberG);
             setup.Side2 = ImmutableHashSet.Create(MemberC, MemberD, MemberE);
 
@@ -492,7 +492,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_detect_edge_case_of_membership_change_when_equal_size_A_B_F__C_D_E___A_B_F()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberF);
             setup.Side2 = ImmutableHashSet.Create(MemberC, MemberD, MemberE);
 
@@ -515,7 +515,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_detect_safe_edge_case_of_membership_change_A_B__C_D_E_F___C_D_E_F()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB);
             setup.Side2 = ImmutableHashSet.Create(MemberC, MemberD, MemberE, Joining(MemberF));
 
@@ -535,7 +535,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_detect_edge_case_of_leaving_exiting_membership_change_A_B__C_D___C_D()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(Leaving(MemberA), MemberB, Joining(MemberE));
             setup.Side2 = ImmutableHashSet.Create(MemberC, MemberD);
 
@@ -557,7 +557,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_A_B___()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
                 (MemberA, MemberB),
@@ -568,7 +568,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_A_B__C___C()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
                 (MemberA, MemberB),
@@ -580,7 +580,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_A_B__C___()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
                 (MemberA, MemberB),
@@ -592,7 +592,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_A_B_C_D___()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC, MemberD);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
                 (MemberA, MemberD),
@@ -605,7 +605,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_A_B_C__D_E___D_E()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC, MemberD, MemberE);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
                 (MemberA, MemberB),
@@ -618,7 +618,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_A__B_C__D__E_F__G___A_D_G()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF, MemberG);
             // two groups of indirectly connected, 4 in total
             setup.IndirectlyConnected = ImmutableHashSet.Create(
@@ -633,7 +633,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_detected_via_seen_A_B_C___()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
                 (MemberA, MemberB),
@@ -644,7 +644,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_detected_via_seen_A_B_C_D__E___E()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC, MemberD, MemberE);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
                 (MemberB, MemberC),
@@ -657,7 +657,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_when_combined_with_crashed_A_B__D_E__C___D_E()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberD, MemberE);
             setup.Side2 = ImmutableHashSet.Create(MemberC);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
@@ -671,7 +671,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_when_combined_with_clean_partition_A__B_C__D_E___A()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC);
             setup.Side2 = ImmutableHashSet.Create(MemberD, MemberE);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
@@ -701,7 +701,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_on_minority_side_when_combined_with_clean_partition_A__B_C__D_E_F_G___D_E_F_G()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC);
             setup.Side2 = ImmutableHashSet.Create(MemberD, MemberE, MemberF, MemberG);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
@@ -726,7 +726,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_on_majority_side_when_combined_with_clean_partition_A_B_C__D_E__F_G___F_G()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC);
             setup.Side2 = ImmutableHashSet.Create(MemberD, MemberE, MemberF, MemberG);
 
@@ -753,7 +753,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_spanning_across_a_clean_partition_A__B__C__D__E_F__G___D_G()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC);
             setup.Side2 = ImmutableHashSet.Create(MemberD, MemberE, MemberF, MemberG);
             setup.IndirectlyConnected = ImmutableHashSet.Create(
@@ -771,7 +771,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_down_indirectly_connected_detected_via_seen_combined_with_clean_partition_A_B_C__D_E__F_G___()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC);
             setup.Side2 = ImmutableHashSet.Create(MemberD, MemberE, MemberF, MemberG);
 
@@ -788,7 +788,7 @@ namespace Akka.Cluster.Tests.SBR
         [Fact]
         public void KeepMajority_must_double_DownIndirectlyConnected_when_indirectly_connected_happens_before_clean_partition_A_B_C__D_E__F_G___()
         {
-            var setup = new KeepMajoritySetup(this, null);
+            var setup = new KeepMajoritySetup(this);
             setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC);
             setup.Side2 = ImmutableHashSet.Create(MemberD, MemberE, MemberF, MemberG);
             // trouble when indirectly connected happens before clean partition

@@ -46,7 +46,7 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public RandomPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances", 0),
+                  nrOfInstances: config.GetInt("nr-of-instances"),
                   resizer: Resizer.FromConfig(config),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,
