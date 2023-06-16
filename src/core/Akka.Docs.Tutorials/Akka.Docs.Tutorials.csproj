@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-      <AssemblyTitle>Akka.Docs.Tutorials</AssemblyTitle>
       <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
       <RootNamespace>Tutorials</RootNamespace>
       <IsPackable>false</IsPackable>

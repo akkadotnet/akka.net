@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Cluster.TestKit</AssemblyTitle>
     <Description>Helper classes for combining the Akka.Remote.TestKit with Akka.Cluster</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;cluster;testkit</PackageTags>

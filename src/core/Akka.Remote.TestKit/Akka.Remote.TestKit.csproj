@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Remote.TestKit</AssemblyTitle>
     <Description>TestKit for Testing Distributed Akka.NET Applications</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;testkit</PackageTags>

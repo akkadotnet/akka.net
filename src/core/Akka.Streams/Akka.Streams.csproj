@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyTitle>Akka.Streams</AssemblyTitle>
         <Description>Streaming support for Akka.NET. Introduces a LINQ-like interface for writing asynchronous,
             back-pressure-aware streams built on top of Akka.NET actors.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>

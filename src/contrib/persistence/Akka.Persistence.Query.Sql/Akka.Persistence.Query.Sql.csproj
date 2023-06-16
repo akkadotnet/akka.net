@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Persistence.Query.Sql</AssemblyTitle>
         <Description>Akka.NET streams support for ADO.NET Persistence middleware.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>

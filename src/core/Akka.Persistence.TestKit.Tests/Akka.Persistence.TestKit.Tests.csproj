@@ -2,7 +2,6 @@
   <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Persistence.TestKit.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
