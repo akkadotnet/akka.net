@@ -61,7 +61,7 @@ namespace Akka.Tests.Actor
         public void Props_created_with_null_type_must_throw()
         {
             Type missingType = null;
-            object[] args = new object[0];
+            object[] args = Array.Empty<object>();
             var argsEnumerable = Enumerable.Empty<object>();
             var defaultStrategy = SupervisorStrategy.DefaultStrategy;
             var defaultDeploy = Deploy.Local;

@@ -266,7 +266,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     var s = (os + 1) % 3;
                     if (os < 42) return new[] { (os + 1, os + 1), (s, s) };
-                    if (os == 42) return new (int, int)[0];
+                    if (os == 42) return Array.Empty<(int, int)>();
                     return null;
                 }))
                 .ToMaterialized(this.SinkProbe<(Result<int>, int)>(), Keep.Both)

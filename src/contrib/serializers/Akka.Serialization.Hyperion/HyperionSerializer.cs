@@ -313,7 +313,7 @@ namespace Akka.Serialization
         /// <exception>Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
         [Obsolete]
         public HyperionSerializerSettings(bool preserveObjectReferences, bool versionTolerance, Type knownTypesProvider)
-            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, new List<Func<string, string>>(), new Surrogate[0], true, DisabledTypeFilter.Instance)
+            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, new List<Func<string, string>>(), Array.Empty<Surrogate>(), true, DisabledTypeFilter.Instance)
         { }
 
         /// <summary>
@@ -330,7 +330,7 @@ namespace Akka.Serialization
             bool versionTolerance, 
             Type knownTypesProvider, 
             IEnumerable<Func<string, string>> packageNameOverrides)
-            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, new Surrogate[0], true, DisabledTypeFilter.Instance)
+            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, packageNameOverrides, Array.Empty<Surrogate>(), true, DisabledTypeFilter.Instance)
         { }
 
         /// <summary>

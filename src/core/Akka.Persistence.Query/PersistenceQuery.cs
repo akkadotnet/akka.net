@@ -62,7 +62,7 @@ namespace Akka.Persistence.Query
             if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new[] { parameters[0] });
 
             ctor = pluginType.GetConstructor(new Type[0]);
-            if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new object[0]);
+            if (ctor != null) return (IReadJournalProvider)ctor.Invoke(Array.Empty<object>());
 
             throw new ArgumentException($"Unable to create read journal plugin instance type {pluginType}!");
         }

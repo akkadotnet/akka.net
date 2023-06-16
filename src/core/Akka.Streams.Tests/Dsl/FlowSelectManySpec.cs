@@ -35,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
         public async Task SelectMany_should_map_and_concat()
         {
             var script = Script.Create(
-                (new[] { 0 }, new int[0]),
+                (new[] { 0 }, Array.Empty<int>()),
                 (new[] { 1 }, new[] { 1 }),
                 (new[] { 2 }, new[] { 2, 2 }),
                 (new[] { 3 }, new[] { 3, 3, 3 }),

@@ -484,7 +484,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var propagateStage = new EventPropagateStage();
 
                 var assembly = !chasing
-                    ? new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[0], new Attributes[0],
+                    ? new GraphAssembly(Array.Empty<IGraphStageWithMaterializedValue<Shape, object>>(), Array.Empty<Attributes>(),
                         new Inlet[] {null}, new[] {-1}, new Outlet[] {null}, new[] {-1})
                     : new GraphAssembly(new[] {propagateStage}, new[] {Attributes.None},
                         new Inlet[] {propagateStage.In, null}, new[] {0, -1}, new Outlet[] {null, propagateStage.Out},
