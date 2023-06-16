@@ -558,7 +558,7 @@ namespace Akka.Tests.IO
                 connectCommander.Send(_spec.Sys.Tcp(), new Tcp.Connect(_endpoint, options: ConnectOptions));
                 await connectCommander.ExpectMsgAsync<Tcp.Connected>();
                 
-                var clientHandler = _spec.CreateTestProbe($"client-handler-probe");
+                var clientHandler = _spec.CreateTestProbe("client-handler-probe");
                 if (registerClientHandler)
                     connectCommander.Sender.Tell(new Tcp.Register(clientHandler.Ref));
 

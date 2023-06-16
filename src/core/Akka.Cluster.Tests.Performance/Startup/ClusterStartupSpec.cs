@@ -57,7 +57,7 @@ namespace Akka.Cluster.Tests.Performance.Startup
             context.Trace.Info($"Started ActorSystem1 on {Cluster.Get(OtherSys).SelfAddress}");
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             _clusterMemberUp.Task.Wait(cts.Token);
-            context.Trace.Info($"Successfully joined cluster.");
+            context.Trace.Info("Successfully joined cluster.");
         }
 
         [PerfCleanup]

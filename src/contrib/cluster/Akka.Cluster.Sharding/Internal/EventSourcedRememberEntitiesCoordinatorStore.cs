@@ -81,7 +81,7 @@ namespace Akka.Cluster.Sharding.Internal
             }
 
             /// <inheritdoc/>
-            public override string ToString() => $"MigrationMarker";
+            public override string ToString() => "MigrationMarker";
         }
 
         public EventSourcedRememberEntitiesCoordinatorStore(

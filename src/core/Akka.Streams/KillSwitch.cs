@@ -124,7 +124,7 @@ namespace Akka.Streams
                 private void OnCancelComplete() => CompleteStage();
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                private void OnCancelFail() => FailStage(new OperationCanceledException($"Stage cancelled due to cancellation token request.", _stage._cancellationToken));
+                private void OnCancelFail() => FailStage(new OperationCanceledException("Stage cancelled due to cancellation token request.", _stage._cancellationToken));
             }
 
             #endregion

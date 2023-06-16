@@ -64,7 +64,7 @@ namespace Akka.Cluster.Sharding.External
             {
             }
 
-            public override string ToString() => $"GetShardLocations";
+            public override string ToString() => "GetShardLocations";
         }
 
         public sealed class GetShardLocationsResponse : INoSerializationVerificationNeeded, IEquatable<GetShardLocationsResponse>

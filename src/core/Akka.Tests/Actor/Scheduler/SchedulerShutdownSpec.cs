@@ -165,7 +165,7 @@ namespace Akka.Tests.Actor.Scheduler
 
             var terminated = await sys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(5));
             if (!terminated)
-                Assert.True(false, $"Expected ActorSystem to terminate within 5s. Took longer.");
+                Assert.True(false, "Expected ActorSystem to terminate within 5s. Took longer.");
 
             Assert.Throws<SchedulerException>(() =>
             {

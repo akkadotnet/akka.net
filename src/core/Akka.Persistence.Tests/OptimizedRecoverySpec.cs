@@ -104,7 +104,7 @@ namespace Akka.Persistence.Tests
                         _probe.Tell(evt);
                         return true;
                     case RecoveryCompleted _:
-                        if (IsRecovering) throw new InvalidOperationException($"Expected !IsRecovering in RecoveryCompleted");
+                        if (IsRecovering) throw new InvalidOperationException("Expected !IsRecovering in RecoveryCompleted");
                         _probe.Tell(RecoveryCompleted.Instance);
                         // Verify that persist can be used here
                         Persist(PersistFromRecoveryCompleted.Instance, _ => _probe.Tell(PersistFromRecoveryCompleted.Instance));
