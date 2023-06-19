@@ -74,16 +74,16 @@ namespace Akka.Cluster.Metrics.Tests
         [Fact]
         public void NodeMetrics_Should_return_correct_result_for_2_same_nodes()
         {
-            new NodeMetrics(_node1, 0, new NodeMetrics.Types.Metric[0])
-                .SameAs(new NodeMetrics(_node1, 0, new NodeMetrics.Types.Metric[0]))
+            new NodeMetrics(_node1, 0, Array.Empty<NodeMetrics.Types.Metric>())
+                .SameAs(new NodeMetrics(_node1, 0, Array.Empty<NodeMetrics.Types.Metric>()))
                 .Should().BeTrue();
         }
         
         [Fact]
         public void NodeMetrics_Should_return_correct_result_for_2_not_same_nodes()
         {
-            new NodeMetrics(_node1, 0, new NodeMetrics.Types.Metric[0])
-                .SameAs(new NodeMetrics(_node2, 0, new NodeMetrics.Types.Metric[0]))
+            new NodeMetrics(_node1, 0, Array.Empty<NodeMetrics.Types.Metric>())
+                .SameAs(new NodeMetrics(_node2, 0, Array.Empty<NodeMetrics.Types.Metric>()))
                 .Should().BeFalse();
         }
 

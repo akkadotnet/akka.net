@@ -191,7 +191,7 @@ namespace Akka.Streams.Tests.IO
 
                 Action(() => inputStream.Read(buf, -1, 2)).Should().Throw<ArgumentException>();
                 Action(() => inputStream.Read(buf, 0, 5)).Should().Throw<ArgumentException>();
-                Action(() => inputStream.Read(new byte[0], 0, 1)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.Read(Array.Empty<byte>(), 0, 1)).Should().Throw<ArgumentException>();
                 Action(() => inputStream.Read(buf, 0, 0)).Should().Throw<ArgumentException>();
                 return Task.CompletedTask;
             }, _materializer);

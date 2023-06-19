@@ -63,7 +63,7 @@ akka.actor {
                     false, 
                     typeof(DummyTypesProvider), 
                     new Func<string, string>[] { s => $"{s}.." },
-                    new Surrogate[0],
+                    Array.Empty<Surrogate>(),
                     true);
             var appliedSettings = setup.ApplySettings(settings);
 

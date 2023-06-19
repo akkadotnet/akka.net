@@ -376,7 +376,7 @@ namespace Akka.Remote.Tests.Serialization
         public void Serializer_must_reject_deserialization_with_invalid_manifest()
         {
             var serializer = new MiscMessageSerializer(Sys.AsInstanceOf<ExtendedActorSystem>());
-            Action comparison = () => serializer.FromBinary(new byte[0], "INVALID");
+            Action comparison = () => serializer.FromBinary(Array.Empty<byte>(), "INVALID");
             comparison.Should().Throw<SerializationException>();
         }
 

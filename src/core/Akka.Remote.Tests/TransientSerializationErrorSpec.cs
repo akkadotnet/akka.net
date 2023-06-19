@@ -111,7 +111,7 @@ namespace Akka.Remote.Tests
                     case ToBinaryIllegal _:
                         throw new ArgumentException();
                     default:
-                        return new byte[0];
+                        return Array.Empty<byte>();
                 }
             }
         }

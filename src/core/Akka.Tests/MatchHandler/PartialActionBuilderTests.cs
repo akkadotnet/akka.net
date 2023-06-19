@@ -22,7 +22,7 @@ namespace Akka.Tests.MatchHandler
             object updatedValue = null;
             Func<object, bool> deleg = value => { updatedValue = value; return true; };
 
-            var partialAction = builder.Build<object>(new CompiledMatchHandlerWithArguments(deleg, new object[0]));
+            var partialAction = builder.Build<object>(new CompiledMatchHandlerWithArguments(deleg, Array.Empty<object>()));
             partialAction("value");
             Assert.Same(updatedValue, "value");
         }

@@ -283,7 +283,7 @@ namespace Akka.Streams
         /// <param name="attributes">TBD</param>
         public Attributes(params IAttribute[] attributes)
         {
-            _attributes = attributes ?? new IAttribute[0];
+            _attributes = attributes ?? Array.Empty<IAttribute>();
         }
 
         /// <summary>

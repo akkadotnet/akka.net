@@ -139,7 +139,7 @@ namespace Akka.Cluster
 
             if (remaining.Count < unreachable.Count) return context.Remaining;
             if (remaining.Count > unreachable.Count) return context.Unreachable;
-            if (remaining.IsEmpty && unreachable.IsEmpty) return new Member[0];
+            if (remaining.IsEmpty && unreachable.IsEmpty) return Array.Empty<Member>();
 
             // if the parts are of equal size the part containing the node with the lowest address is kept.
             var oldest = remaining.Union(unreachable).First();

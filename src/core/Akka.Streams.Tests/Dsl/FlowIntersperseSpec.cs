@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Intersperse_must_not_surround_empty_stream_with_null_start_and_stop()
         {
             var probe =
-                Source.From(new int[0])
+                Source.From(Array.Empty<int>())
                     .Select(x => x.ToString())
                     .Intersperse(",")
                     .RunWith(this.SinkProbe<string>(), Materializer);

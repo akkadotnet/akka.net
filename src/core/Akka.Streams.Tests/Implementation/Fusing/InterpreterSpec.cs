@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_with_only_boundary_ops()
         {
-            WithOneBoundedSetup(new IStage<int, int>[0],
+            WithOneBoundedSetup(Array.Empty<IStage<int, int>>(),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();

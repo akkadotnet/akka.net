@@ -21,7 +21,7 @@ namespace Akka.Tests.MatchHandler
         public void When_compiling_first_time_correct_calls_are_made_to_MatchExpressionBuilder_and_PartialActionBuilder()
         {
             //Arrange
-            object[] argumentValues = new object[0];
+            object[] argumentValues = Array.Empty<object>();
             Expression<Func<object, bool>> lambdaExpression = _ => true;
             var matchExpressionBuilder = new DummyMatchExpressionBuilder()
             {
@@ -60,12 +60,11 @@ namespace Akka.Tests.MatchHandler
         public void When_compiling_second_time_with_same_signature_the_cached_version_should_be_used()
         {
             //Arrange
-            object[] argumentValues = new object[0];
             Expression<Func<object, bool>> lambdaExpression = _ => true;
             var matchExpressionBuilder = new DummyMatchExpressionBuilder()
             {
-                BuildLambdaExpressionResult = new MatchExpressionBuilderResult(lambdaExpression, argumentValues),
-                CreateArgumentValuesArrayResult = argumentValues,
+                BuildLambdaExpressionResult = new MatchExpressionBuilderResult(lambdaExpression, Array.Empty<object>()),
+                CreateArgumentValuesArrayResult = Array.Empty<object>(),
             };
 
             Func<object, bool> deleg = _ => true;
@@ -95,7 +94,7 @@ namespace Akka.Tests.MatchHandler
             //Assert
 
             AssertOneCall(to: matchExpressionBuilder.CreateArgumentValuesArrayCalls, withArgument: arguments, description: "CreateArgumentValuesArray");
-            AssertOneCall(to: partialActionBuilder.BuildCalls, description: "Build", check: i => ReferenceEquals(i.CompiledDelegate, deleg) && ReferenceEquals(i.DelegateArguments, argumentValues));
+            AssertOneCall(to: partialActionBuilder.BuildCalls, description: "Build", check: i => ReferenceEquals(i.CompiledDelegate, deleg) && ReferenceEquals(i.DelegateArguments, Array.Empty<object>()));
             Assert.Same(partialAction, resultPartialAction);
 
             AssertNoCall(to: matchExpressionBuilder.BuildLambdaExpressionCalls, description: "BuildLambdaExpression");

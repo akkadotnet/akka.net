@@ -95,7 +95,7 @@ namespace Akka.Persistence.TCK.Serialization
         {
             var probe = CreateTestProbe();
 
-            var unconfirmed = new UnconfirmedDelivery[0];
+            var unconfirmed = Array.Empty<UnconfirmedDelivery>();
             var atLeastOnceDeliverySnapshot = new AtLeastOnceDeliverySnapshot(13, unconfirmed);
 
             var metadata = new SnapshotMetadata(Pid, 2);
