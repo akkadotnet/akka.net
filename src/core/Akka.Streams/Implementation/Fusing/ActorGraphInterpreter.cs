@@ -1315,7 +1315,8 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="shell">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(GraphInterpreterShell shell) => Actor.Props.Create(() => new ActorGraphInterpreter(shell)).WithDeploy(Deploy.Local);
+        public static Props Props(GraphInterpreterShell shell) => Actor.Props
+            .Create<ActorGraphInterpreter>(shell).WithDeploy(Deploy.Local);
 
         private ISet<GraphInterpreterShell> _activeInterpreters = new HashSet<GraphInterpreterShell>();
         private readonly Queue<GraphInterpreterShell> _newShells = new Queue<GraphInterpreterShell>();
@@ -1332,6 +1333,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="shell">TBD</param>
+        /// If this ctor gets changed you -must- change <see cref="ActorGraphInterpreter.Props"/> as well!
         public ActorGraphInterpreter(GraphInterpreterShell shell)
         {
             _initial = shell;
