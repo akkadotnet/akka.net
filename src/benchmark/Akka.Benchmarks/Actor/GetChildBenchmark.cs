@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
 using FluentAssertions;
 
 namespace Akka.Benchmarks.Actor

@@ -5,13 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Annotations;
 using Akka.Util;
-using Akka.Util.Internal;
-using Newtonsoft.Json;
 
 namespace Akka.Cluster.Metrics.Serialization
 {

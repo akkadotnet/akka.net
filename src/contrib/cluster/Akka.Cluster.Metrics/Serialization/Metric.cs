@@ -6,10 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.ComponentModel;
 using Akka.Annotations;
 using Akka.Cluster.Metrics.Helpers;
-using Akka.Dispatch.SysMsg;
 using Akka.Util;
 
 namespace Akka.Cluster.Metrics.Serialization

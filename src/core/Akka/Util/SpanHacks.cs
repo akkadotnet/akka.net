@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Globalization;
 
 namespace Akka.Util
 {

@@ -11,7 +11,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
-using Akka.Persistence.Fsm;
 using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
 using Xunit;

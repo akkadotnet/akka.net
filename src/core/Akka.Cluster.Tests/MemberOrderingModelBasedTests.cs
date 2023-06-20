@@ -12,7 +12,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Tests.Shared.Internals.Helpers;
 using Akka.Util;
-using Akka.Util.Internal;
 using FsCheck;
 using FsCheck.Experimental;
 using FsCheck.Xunit;

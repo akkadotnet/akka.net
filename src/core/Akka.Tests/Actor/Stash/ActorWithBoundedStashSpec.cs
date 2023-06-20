@@ -7,7 +7,6 @@
 
 using System;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;

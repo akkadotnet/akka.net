@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System.IO;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Xunit;
 

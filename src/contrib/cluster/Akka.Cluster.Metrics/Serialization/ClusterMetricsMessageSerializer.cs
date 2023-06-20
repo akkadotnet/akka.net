@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -15,7 +14,6 @@ using Akka.Dispatch;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
-using Google.Protobuf.WellKnownTypes;
 
 namespace Akka.Cluster.Metrics.Serialization
 {

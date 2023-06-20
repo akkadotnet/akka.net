@@ -8,7 +8,6 @@
 using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Routing;
 using Akka.TestKit;
 using FluentAssertions;

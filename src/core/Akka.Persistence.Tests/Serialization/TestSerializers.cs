@@ -9,7 +9,6 @@ using System;
 using System.Text;
 using Akka.Actor;
 using Akka.Serialization;
-using Akka.Util;
 
 namespace Akka.Persistence.Tests.Serialization
 {

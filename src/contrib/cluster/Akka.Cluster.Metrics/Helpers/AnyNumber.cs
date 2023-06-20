@@ -5,9 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Annotations;
-using Akka.Util;
 
 namespace Akka.Cluster.Metrics.Helpers
 {

@@ -13,13 +13,11 @@ using Akka.Actor;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Routing;
-using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util.Internal;
 using FluentAssertions;
-using Xunit;
 
 namespace Akka.Remote.Tests.MultiNode.Router
 {

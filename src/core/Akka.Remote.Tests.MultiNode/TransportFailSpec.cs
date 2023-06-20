@@ -13,7 +13,6 @@ using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Util;
-using Xunit;
 
 namespace Akka.Remote.Tests.MultiNode
 {

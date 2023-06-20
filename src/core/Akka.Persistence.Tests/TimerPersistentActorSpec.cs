@@ -6,13 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.TestKit;
-using Akka.TestKit.TestActors;
-using Akka.Util.Internal;
-using FluentAssertions;
 using Xunit;
 
 namespace Akka.Persistence.Tests

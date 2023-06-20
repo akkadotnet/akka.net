@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Serialization;
-using Akka.Util;
 using Google.Protobuf;
 
 namespace Akka.Remote.Serialization

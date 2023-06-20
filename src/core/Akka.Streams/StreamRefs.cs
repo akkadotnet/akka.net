@@ -10,7 +10,6 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
-using Akka.Streams.Implementation;
 using Akka.Util;
 
 #pragma warning disable 628

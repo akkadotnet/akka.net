@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Util;

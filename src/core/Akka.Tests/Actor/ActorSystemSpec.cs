@@ -22,7 +22,6 @@ using Akka.Dispatch;
 using Akka.Event;
 using Akka.TestKit.Extensions;
 using FluentAssertions.Execution;
-using Akka.Tests.Util;
 
 namespace Akka.Tests.Actor
 {

@@ -5,12 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Cluster.Metrics.Configuration;
 using Akka.Cluster.Metrics.Events;
-using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Configuration;
 using Akka.Event;

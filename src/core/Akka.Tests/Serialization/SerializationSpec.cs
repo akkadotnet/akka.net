@@ -6,15 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
 using System.Runtime.Serialization;
-using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.Serialization;
 using Akka.TestKit;

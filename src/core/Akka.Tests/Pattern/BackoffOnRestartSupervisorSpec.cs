@@ -12,7 +12,6 @@ using Akka.Pattern;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
-using System.Threading;
 using FluentAssertions.Extensions;
 using System.Threading.Tasks;
 

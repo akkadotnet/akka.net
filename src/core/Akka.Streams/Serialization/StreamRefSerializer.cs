@@ -10,7 +10,6 @@ using System.Text;
 using Akka.Actor;
 using Akka.Serialization;
 using Akka.Streams.Serialization.Proto.Msg;
-using Akka.Util;
 using Google.Protobuf;
 using Akka.Streams.Implementation.StreamRef;
 using CumulativeDemand = Akka.Streams.Implementation.StreamRef.CumulativeDemand;

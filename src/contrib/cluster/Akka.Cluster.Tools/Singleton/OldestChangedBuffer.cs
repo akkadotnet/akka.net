@@ -11,7 +11,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Util.Internal;
 
 namespace Akka.Cluster.Tools.Singleton
 {

@@ -8,15 +8,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
 using Xunit;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.MessageQueues;
 using Akka.Util.Internal;

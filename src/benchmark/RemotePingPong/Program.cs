@@ -15,7 +15,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Util.Internal;
 
 namespace RemotePingPong
 {

@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;

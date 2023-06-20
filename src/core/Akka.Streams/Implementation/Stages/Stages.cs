@@ -7,7 +7,6 @@
 
 using System;
 using System.Threading.Tasks;
-using Akka.Dispatch;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 

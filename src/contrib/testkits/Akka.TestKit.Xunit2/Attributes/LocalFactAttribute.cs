@@ -7,7 +7,6 @@
 
 using System;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Akka.TestKit.Xunit2.Attributes
 {

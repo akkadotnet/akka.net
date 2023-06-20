@@ -13,7 +13,6 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Debug = Akka.Event.Debug;
-using System.Globalization;
 
 namespace Akka.Actor
 {

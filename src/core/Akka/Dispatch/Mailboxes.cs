@@ -10,14 +10,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reflection;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch.MessageQueues;
 using Akka.Event;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Dispatch
 {

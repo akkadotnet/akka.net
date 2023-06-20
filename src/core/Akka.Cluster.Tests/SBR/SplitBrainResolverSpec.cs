@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Coordination;
@@ -23,7 +22,6 @@ using Akka.Configuration;
 using Akka.Remote;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Akka.Util;
 using Akka.Coordination.Tests;
 
 namespace Akka.Cluster.Tests.SBR

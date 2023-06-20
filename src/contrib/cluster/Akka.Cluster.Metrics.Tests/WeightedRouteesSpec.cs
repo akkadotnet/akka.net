@@ -8,9 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Routing;
 using Akka.TestKit;

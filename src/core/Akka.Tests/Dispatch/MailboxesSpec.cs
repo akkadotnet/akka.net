@@ -6,22 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
-using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
-using Akka.Tests.Actor;
-using Akka.Util.Internal;
-using FluentAssertions;
 using FluentAssertions.Extensions;
-using FsCheck;
-using FsCheck.Xunit;
 using Xunit;
 using Config = Akka.Configuration.Config;
 

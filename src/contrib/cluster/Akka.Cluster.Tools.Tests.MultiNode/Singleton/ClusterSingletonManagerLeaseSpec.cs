@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq;
-using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
@@ -17,7 +16,6 @@ using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
-using Akka.Util.Internal;
 using FluentAssertions;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton

@@ -10,8 +10,6 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using System;
 using System.Collections.Immutable;
-using System.Collections.Generic;
-using Akka.Event;
 
 namespace Akka.DistributedData
 {

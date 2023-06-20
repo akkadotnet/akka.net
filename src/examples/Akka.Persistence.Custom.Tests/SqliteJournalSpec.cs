@@ -6,13 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Data.Common;
-using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Persistence.TCK.Journal;
-using Akka.Util.Internal;
-using Microsoft.Data.Sqlite;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Custom.Tests

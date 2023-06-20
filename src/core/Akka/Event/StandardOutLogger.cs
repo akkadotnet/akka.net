@@ -9,7 +9,6 @@ using System;
 using Akka.Actor;
 using Akka.Util;
 using System.Text;
-using System.Threading;
 
 namespace Akka.Event
 {

@@ -8,7 +8,6 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.TestKit.TestActors;
 using Akka.Util;

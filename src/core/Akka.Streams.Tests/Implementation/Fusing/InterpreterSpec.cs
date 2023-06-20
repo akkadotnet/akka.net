@@ -10,7 +10,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
-using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;

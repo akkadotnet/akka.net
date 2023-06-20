@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Immutable;
-using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Metrics.Events;
 using Akka.Cluster.Metrics.Serialization;

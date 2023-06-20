@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +16,6 @@ using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.TestKit.Xunit2.Attributes;
-using Akka.Tests.Shared.Internals;
 using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;

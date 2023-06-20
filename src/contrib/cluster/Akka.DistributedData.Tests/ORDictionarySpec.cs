@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Numerics;
 using Akka.Actor;
 using Akka.Cluster;

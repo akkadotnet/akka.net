@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor.Setup;
-using Akka.Configuration;
 
 namespace Akka.Persistence.TestKit
 {

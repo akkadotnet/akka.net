@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq.Expressions;
-using System.Reflection.Emit;
 
 namespace Akka.Tools.MatchHandler
 {

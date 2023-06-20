@@ -7,7 +7,6 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
 
 namespace Akka.Dispatch.MessageQueues
 {

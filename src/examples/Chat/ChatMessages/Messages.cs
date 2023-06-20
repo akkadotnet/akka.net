@@ -5,8 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Actor;
-
 namespace ChatMessages
 {
     public class ConnectRequest

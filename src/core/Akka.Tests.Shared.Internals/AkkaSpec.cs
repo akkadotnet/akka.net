@@ -17,9 +17,7 @@ using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
-using Akka.Util;
 using Akka.Util.Internal;
-using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 

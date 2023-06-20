@@ -13,10 +13,8 @@
 //     the code is regenerated.
 // </auto-generated>
 //------------------------------------------------------------------------------
-using System;
+
 using System.Text.RegularExpressions;
-using Akka.Actor;
-using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
 namespace Akka.TestKit

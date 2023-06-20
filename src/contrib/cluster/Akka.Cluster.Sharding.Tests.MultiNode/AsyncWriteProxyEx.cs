@@ -13,7 +13,6 @@ using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Persistence;
 using Akka.Persistence.Journal;
 
