@@ -118,8 +118,7 @@ namespace Akka.Routing
         private readonly ActorSystem _system;
 
         private readonly AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>> _consistentHashRef =
-            new AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>>(
-                (Tuple.Create<Routee[], ConsistentHash<ConsistentRoutee>>(null, null)));
+            new(Tuple.Create<Routee[], ConsistentHash<ConsistentRoutee>>(null, null));
 
         private readonly Address _selfAddress;
         private readonly int _vnodes;

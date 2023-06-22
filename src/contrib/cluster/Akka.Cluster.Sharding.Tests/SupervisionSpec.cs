@@ -47,7 +47,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class StopMessage
         {
-            public static readonly StopMessage Instance = new StopMessage();
+            public static readonly StopMessage Instance = new();
             private StopMessage() { }
         }
 

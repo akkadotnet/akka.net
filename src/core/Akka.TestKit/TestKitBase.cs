@@ -58,7 +58,7 @@ namespace Akka.TestKit
                 akka.log-dead-letters = true
                 akka.loglevel = DEBUG
                 akka.stdout-loglevel = DEBUG");
-        private static readonly AtomicCounter _testActorId = new AtomicCounter(0);
+        private static readonly AtomicCounter _testActorId = new(0);
 
         private readonly ITestKitAssertions _assertions;
         private TestState _testState;

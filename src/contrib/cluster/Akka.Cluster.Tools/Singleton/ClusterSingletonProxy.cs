@@ -47,7 +47,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public static TryToIdentifySingleton Instance { get; } = new TryToIdentifySingleton();
+            public static TryToIdentifySingleton Instance { get; } = new();
             private TryToIdentifySingleton() { }
         }
 
@@ -79,7 +79,7 @@ namespace Akka.Cluster.Tools.Singleton
         private readonly MemberAgeOrdering _memberAgeComparer;
         private readonly ClusterSingletonProxySettings _settings;
         private readonly Cluster _cluster = Cluster.Get(Context.System);
-        private readonly Queue<KeyValuePair<object, IActorRef>> _buffer = new Queue<KeyValuePair<object, IActorRef>>(); // queue seems to fit better
+        private readonly Queue<KeyValuePair<object, IActorRef>> _buffer = new(); // queue seems to fit better
         private readonly string[] _singletonPath;
         private int _identityCounter = 0;
         private string _identityId;

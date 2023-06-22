@@ -473,7 +473,7 @@ namespace Akka.Streams.Tests.Dsl
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
         }
 
-        private static readonly Exception Ex = new Exception("BUH");
+        private static readonly Exception Ex = new("BUH");
 
         [Fact]
         public void QueueSource_should_fail_the_stream_when_buffer_is_empty()

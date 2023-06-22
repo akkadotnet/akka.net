@@ -21,7 +21,7 @@ namespace Akka
         /// <summary>
         /// The singleton instance of <see cref="NotUsed"/>.
         /// </summary>
-        public static readonly NotUsed Instance = new NotUsed();
+        public static readonly NotUsed Instance = new();
 
         private NotUsed()
         {

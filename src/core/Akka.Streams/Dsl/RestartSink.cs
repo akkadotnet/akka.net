@@ -105,7 +105,7 @@ namespace Akka.Streams.Dsl
             Shape = new SinkShape<T>(In);
         }
 
-        public Inlet<T> In { get; } = new Inlet<T>("RestartWithBackoffSink.in");
+        public Inlet<T> In { get; } = new("RestartWithBackoffSink.in");
 
         public override SinkShape<T> Shape { get; }
 

@@ -243,7 +243,7 @@ namespace Akka.Streams.Tests.Dsl
 
         sealed class Offset : IEquatable<Offset>
         {
-            public static readonly Offset Uninitialized = new Offset(-1);
+            public static readonly Offset Uninitialized = new(-1);
             public int Value { get; }
 
             public Offset(int value)

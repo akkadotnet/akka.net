@@ -37,25 +37,25 @@ namespace Akka.Cluster.Tests
         static readonly Member dUp = TestMember.Create(new Address("akka.tcp", "sys", "d", 2552), MemberStatus.Up, ImmutableHashSet.Create("GRP"));
 
         static readonly Gossip g0 = new Gossip(ImmutableSortedSet.Create(aUp)).Seen(aUp.UniqueAddress);
-        static readonly MembershipState state0 = new MembershipState(g0, aUp.UniqueAddress);
+        static readonly MembershipState state0 = new(g0, aUp.UniqueAddress);
         static readonly Gossip g1 = new Gossip(ImmutableSortedSet.Create(aUp, cJoining)).Seen(aUp.UniqueAddress).Seen(cJoining.UniqueAddress);
-        static readonly MembershipState state1 = new MembershipState(g1, aUp.UniqueAddress);
+        static readonly MembershipState state1 = new(g1, aUp.UniqueAddress);
         static readonly Gossip g2 = new Gossip(ImmutableSortedSet.Create(aUp, bExiting, cUp)).Seen(aUp.UniqueAddress);
-        static readonly MembershipState state2 = new MembershipState(g2, aUp.UniqueAddress);
+        static readonly MembershipState state2 = new(g2, aUp.UniqueAddress);
         static readonly Gossip g3 = g2.Seen(bExiting.UniqueAddress).Seen(cUp.UniqueAddress);
-        static readonly MembershipState state3 = new MembershipState(g3, aUp.UniqueAddress);
+        static readonly MembershipState state3 = new(g3, aUp.UniqueAddress);
         static readonly Gossip g4 = new Gossip(ImmutableSortedSet.Create(a51Up, aUp, bExiting, cUp)).Seen(aUp.UniqueAddress);
-        static readonly MembershipState state4 = new MembershipState(g4, aUp.UniqueAddress);
+        static readonly MembershipState state4 = new(g4, aUp.UniqueAddress);
         static readonly Gossip g5 = new Gossip(ImmutableSortedSet.Create(a51Up, aUp, bExiting, cUp)).Seen(aUp.UniqueAddress).Seen(bExiting.UniqueAddress).Seen(cUp.UniqueAddress);
-        static readonly MembershipState state5 = new MembershipState(g5, aUp.UniqueAddress);
+        static readonly MembershipState state5 = new(g5, aUp.UniqueAddress);
         static readonly Gossip g6 = new Gossip(ImmutableSortedSet.Create(aLeaving, bExiting, cUp)).Seen(aUp.UniqueAddress);
-        static readonly MembershipState state6 = new MembershipState(g6, aUp.UniqueAddress);
+        static readonly MembershipState state6 = new(g6, aUp.UniqueAddress);
         static readonly Gossip g7 = new Gossip(ImmutableSortedSet.Create(aExiting, bExiting, cUp)).Seen(aUp.UniqueAddress);
-        static readonly MembershipState state7 = new MembershipState(g7, aUp.UniqueAddress);
+        static readonly MembershipState state7 = new(g7, aUp.UniqueAddress);
         static readonly Gossip g8 = new Gossip(ImmutableSortedSet.Create(aUp, bExiting, cUp, dUp), new GossipOverview(Reachability.Empty.Unreachable(aUp.UniqueAddress, dUp.UniqueAddress))).Seen(aUp.UniqueAddress);
-        static readonly MembershipState state8 = new MembershipState(g8, aUp.UniqueAddress);
+        static readonly MembershipState state8 = new(g8, aUp.UniqueAddress);
 
-        static readonly MembershipState _emptyMembershipState = new MembershipState(Gossip.Empty, aUp.UniqueAddress);
+        static readonly MembershipState _emptyMembershipState = new(Gossip.Empty, aUp.UniqueAddress);
         readonly TestProbe _memberSubscriber;
 
         public ClusterDomainEventPublisherSpec() : base(Config)

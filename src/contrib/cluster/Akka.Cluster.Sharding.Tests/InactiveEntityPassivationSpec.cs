@@ -26,7 +26,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class Passivate
         {
-            public static readonly Passivate Instance = new Passivate();
+            public static readonly Passivate Instance = new();
             private Passivate() { }
         }
 

@@ -110,7 +110,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly DelayFlow<T> _delayFlow;
-            private readonly object _delayTimerKey = new object();
+            private readonly object _delayTimerKey = new();
             private readonly IDelayStrategy<T> _strategy;
             private T _delayedElement;
 

@@ -1029,7 +1029,7 @@ namespace Akka.Remote.TestKit
     public class Done : IServerOp, IUnconfirmedClientOp, INetworkOp
     {
         private Done() { }
-        private static readonly Done _instance = new Done();
+        private static readonly Done _instance = new();
 
         public static Done Instance
         {

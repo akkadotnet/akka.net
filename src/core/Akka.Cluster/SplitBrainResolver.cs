@@ -237,7 +237,7 @@ namespace Akka.Cluster
 
         private sealed class StabilityReached
         {
-            public static readonly StabilityReached Instance = new StabilityReached();
+            public static readonly StabilityReached Instance = new();
             private StabilityReached() { }
         }
 

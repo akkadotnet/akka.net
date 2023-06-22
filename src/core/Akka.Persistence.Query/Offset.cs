@@ -133,7 +133,7 @@ namespace Akka.Persistence.Query
         /// <summary>
         /// The singleton instance of <see cref="NoOffset"/>.
         /// </summary>
-        public static NoOffset Instance { get; } = new NoOffset();
+        public static NoOffset Instance { get; } = new();
         private NoOffset() { }
 
         public override int CompareTo(Offset other)

@@ -70,7 +70,7 @@ namespace Akka.Streams.Implementation
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly NotReached Instance = new NotReached();
+            public static readonly NotReached Instance = new();
             private NotReached() { }
 
             /// <summary>
@@ -93,7 +93,7 @@ namespace Akka.Streams.Implementation
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Completed Instance = new Completed();
+            public static readonly Completed Instance = new();
             private Completed() { }
 
             /// <summary>

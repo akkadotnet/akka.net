@@ -23,11 +23,11 @@ namespace Akka.Tools.MatchHandler
         private readonly IMatchExpressionBuilder _expressionBuilder;
         private readonly IPartialActionBuilder _actionBuilder;
         private readonly ILambdaExpressionCompiler _expressionCompiler;
-        private readonly ConcurrentDictionary<MatchBuilderSignature, Delegate> _cache = new ConcurrentDictionary<MatchBuilderSignature, Delegate>();
+        private readonly ConcurrentDictionary<MatchBuilderSignature, Delegate> _cache = new();
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly CachedMatchCompiler<T> Instance = new CachedMatchCompiler<T>(new MatchExpressionBuilder<T>(), new PartialActionBuilder(), new LambdaExpressionCompiler());
+        public static readonly CachedMatchCompiler<T> Instance = new(new MatchExpressionBuilder<T>(), new PartialActionBuilder(), new LambdaExpressionCompiler());
 
         /// <summary>
         /// TBD

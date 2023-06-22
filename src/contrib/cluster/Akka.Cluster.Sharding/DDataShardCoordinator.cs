@@ -28,7 +28,7 @@ namespace Akka.Cluster.Sharding
 
         private sealed class RememberEntitiesStoreStopped
         {
-            public static RememberEntitiesStoreStopped Instance = new RememberEntitiesStoreStopped();
+            public static RememberEntitiesStoreStopped Instance = new();
 
             private RememberEntitiesStoreStopped()
             {
@@ -47,7 +47,7 @@ namespace Akka.Cluster.Sharding
 
         private sealed class RememberEntitiesLoadTimeout
         {
-            public static readonly RememberEntitiesLoadTimeout Instance = new RememberEntitiesLoadTimeout();
+            public static readonly RememberEntitiesLoadTimeout Instance = new();
 
             private RememberEntitiesLoadTimeout()
             {

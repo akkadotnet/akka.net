@@ -37,8 +37,8 @@ namespace Akka.Tests.Serialization
 
             public override int Identifier => 666;
 
-            private AtomicCounter Counter { get; } = new AtomicCounter(0);
-            private ConcurrentDictionary<int, object> Registry { get; } = new ConcurrentDictionary<int, object>();
+            private AtomicCounter Counter { get; } = new(0);
+            private ConcurrentDictionary<int, object> Registry { get; } = new();
 
             public override byte[] ToBinary(object obj)
             {
@@ -64,7 +64,7 @@ namespace Akka.Tests.Serialization
             public override object FromBinary(byte[] bytes, Type type) => throw new NotImplementedException();
         }
 
-        public static SerializationSetup SerializationSettings = new SerializationSetup(_ => 
+        public static SerializationSetup SerializationSettings = new(_ => 
             ImmutableHashSet<SerializerDetails>.Empty.Add(SerializerDetails.Create("test", new TestSerializer(_), 
                 ImmutableHashSet<Type>.Empty.Add(typeof(ProgammaticDummy)))));
 

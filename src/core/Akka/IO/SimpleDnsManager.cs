@@ -82,7 +82,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly CacheCleanup Instance = new CacheCleanup();
+            public static readonly CacheCleanup Instance = new();
         }
     }
 }

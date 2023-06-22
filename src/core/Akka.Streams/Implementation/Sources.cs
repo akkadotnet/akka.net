@@ -69,7 +69,7 @@ namespace Akka.Streams.Implementation
             /// <summary>
             /// TBD
             /// </summary>
-            public static Completion Instance { get; } = new Completion();
+            public static Completion Instance { get; } = new();
 
             private Completion()
             {
@@ -369,7 +369,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("queueSource.out");
+        public Outlet<TOut> Out { get; } = new("queueSource.out");
 
         /// <summary>
         /// TBD
@@ -521,7 +521,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("UnfoldResourceSource.out");
+        public Outlet<TOut> Out { get; } = new("UnfoldResourceSource.out");
 
         /// <summary>
         /// TBD
@@ -740,7 +740,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("UnfoldResourceSourceAsync.out");
+        public Outlet<TOut> Out { get; } = new("UnfoldResourceSourceAsync.out");
 
         /// <summary>
         /// TBD
@@ -840,7 +840,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("LazySource.out");
+        public Outlet<TOut> Out { get; } = new("LazySource.out");
 
         /// <summary>
         /// TBD
@@ -877,8 +877,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Creates a new <see cref="LazySource{TOut,TMat}"/> for the given <paramref name="create"/> factory
         /// </summary>
-        public static LazySource<TOut, TMat> Create<TOut, TMat>(Func<Source<TOut, TMat>> create) =>
-            new LazySource<TOut, TMat>(create);
+        public static LazySource<TOut, TMat> Create<TOut, TMat>(Func<Source<TOut, TMat>> create) => new(create);
     }
 
     /// <summary>
@@ -900,7 +899,7 @@ namespace Akka.Streams.Implementation
             Shape = new SourceShape<TOut>(Out);
         }
 
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("EmptySource.out");
+        public Outlet<TOut> Out { get; } = new("EmptySource.out");
 
         public override SourceShape<TOut> Shape { get; }
 
@@ -1087,7 +1086,7 @@ namespace Akka.Streams.Implementation
             Shape = new SourceShape<T>(Outlet);
         }
 
-        public Outlet<T> Outlet { get; } = new Outlet<T>("observable.out");
+        public Outlet<T> Outlet { get; } = new("observable.out");
         public override SourceShape<T> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }

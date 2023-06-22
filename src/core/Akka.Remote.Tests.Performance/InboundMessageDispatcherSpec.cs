@@ -25,7 +25,7 @@ namespace Akka.Remote.Tests.Performance
         private SerializedMessage _message;
 
         private Counter _inboundMessageDispatcherCounter;
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new(0);
 
         private ActorSystem _actorSystem;
         private Address _systemAddress;

@@ -14,7 +14,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
 {
     public class BatchingSqliteJournalSpec : JournalSpec
     {
-        private static AtomicCounter counter = new AtomicCounter(0);
+        private static AtomicCounter counter = new(0);
 
         public BatchingSqliteJournalSpec(ITestOutputHelper output)
             : base(CreateSpecConfig($"Datasource=memdb-journal-batch-{counter.IncrementAndGet()}.db;Mode=Memory;Cache=Shared"), "BatchingSqliteJournalSpec", output)

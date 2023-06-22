@@ -38,8 +38,8 @@ namespace Tutorials.Tutorial3
 
         public class DeviceGroup : UntypedActor
         {
-            private Dictionary<string, IActorRef> deviceIdToActor = new Dictionary<string, IActorRef>();
-            private Dictionary<IActorRef, string> actorToDeviceId = new Dictionary<IActorRef, string>();
+            private Dictionary<string, IActorRef> deviceIdToActor = new();
+            private Dictionary<IActorRef, string> actorToDeviceId = new();
 
             public DeviceGroup(string groupId)
             {

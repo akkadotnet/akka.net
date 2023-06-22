@@ -39,7 +39,7 @@ namespace Akka.Persistence.Sql.TestKit
         private class SaveSnapshotTestActor : NamedPersistentActor
         {
             private readonly IActorRef _probe;
-            protected LinkedList<string> _state = new LinkedList<string>();
+            protected LinkedList<string> _state = new();
 
             public SaveSnapshotTestActor(string name, IActorRef probe)
                 : base(name)
@@ -86,7 +86,7 @@ namespace Akka.Persistence.Sql.TestKit
 
         internal class TakeSnapshot
         {
-            public static readonly TakeSnapshot Instance = new TakeSnapshot();
+            public static readonly TakeSnapshot Instance = new();
             private TakeSnapshot()
             {
             }
@@ -94,7 +94,7 @@ namespace Akka.Persistence.Sql.TestKit
 
         internal sealed class GetState
         {
-            public static readonly GetState Instance = new GetState();
+            public static readonly GetState Instance = new();
             private GetState() { }
         }
 

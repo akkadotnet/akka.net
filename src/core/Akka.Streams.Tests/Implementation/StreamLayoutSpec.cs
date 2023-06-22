@@ -144,9 +144,9 @@ namespace Akka.Streams.Tests.Implementation
         private static readonly TimeSpan VeryPatient = TimeSpan.FromSeconds(20);
         private readonly IMaterializer _materializer;
 
-        private static TestAtomicModule TestStage() => new TestAtomicModule(1, 1);
-        private static TestAtomicModule TestSource() => new TestAtomicModule(0, 1);
-        private static TestAtomicModule TestSink() => new TestAtomicModule(1, 0);
+        private static TestAtomicModule TestStage() => new(1, 1);
+        private static TestAtomicModule TestSource() => new(0, 1);
+        private static TestAtomicModule TestSink() => new(1, 0);
 
         public StreamLayoutSpec(ITestOutputHelper output) : base(output: output)
         {

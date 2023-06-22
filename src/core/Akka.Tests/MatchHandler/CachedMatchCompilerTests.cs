@@ -129,8 +129,8 @@ namespace Akka.Tests.MatchHandler
 
         private class DummyMatchExpressionBuilder : IMatchExpressionBuilder
         {
-            public readonly List<IReadOnlyList<TypeHandler>> BuildLambdaExpressionCalls = new List<IReadOnlyList<TypeHandler>>();
-            public readonly List<IReadOnlyList<Argument>> CreateArgumentValuesArrayCalls = new List<IReadOnlyList<Argument>>();
+            public readonly List<IReadOnlyList<TypeHandler>> BuildLambdaExpressionCalls = new();
+            public readonly List<IReadOnlyList<Argument>> CreateArgumentValuesArrayCalls = new();
             public MatchExpressionBuilderResult BuildLambdaExpressionResult;
             public object[] CreateArgumentValuesArrayResult;
 
@@ -157,7 +157,7 @@ namespace Akka.Tests.MatchHandler
         private class DummyPartialActionBuilder : IPartialActionBuilder
         {
             public PartialAction<object> BuildResult;
-            public List<CompiledMatchHandlerWithArguments> BuildCalls = new List<CompiledMatchHandlerWithArguments>();
+            public List<CompiledMatchHandlerWithArguments> BuildCalls = new();
 
             public PartialAction<T> Build<T>(CompiledMatchHandlerWithArguments handlerAndArgs)
             {
@@ -175,7 +175,7 @@ namespace Akka.Tests.MatchHandler
         private class DummyLambdaExpressionCompiler : ILambdaExpressionCompiler
         {
             public Delegate CompileResult;
-            public List<LambdaExpression> CompileCalls = new List<LambdaExpression>();
+            public List<LambdaExpression> CompileCalls = new();
             public Delegate Compile(LambdaExpression expression)
             {
                 CompileCalls.Add(expression);

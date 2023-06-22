@@ -17,7 +17,7 @@ namespace Akka.Configuration.Hocon
     /// </summary>
     public class Parser
     {
-        private readonly List<HoconSubstitution> _substitutions = new List<HoconSubstitution>();
+        private readonly List<HoconSubstitution> _substitutions = new();
         private HoconTokenizer _reader;
         private HoconValue _root;
         private Func<string, HoconRoot> _includeCallback;

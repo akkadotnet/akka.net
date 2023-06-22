@@ -16,7 +16,7 @@ namespace Akka.TestKit
 {
     public static class XAssert
     {
-        private static readonly XunitAssertions _assertions = new XunitAssertions();
+        private static readonly XunitAssertions _assertions = new();
         /// <summary>
         /// Fails the test with the specified reason.
         /// </summary>

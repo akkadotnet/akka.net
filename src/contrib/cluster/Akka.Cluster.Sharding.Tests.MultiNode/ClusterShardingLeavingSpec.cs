@@ -93,7 +93,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Serializable]
         internal sealed class GetLocations
         {
-            public static readonly GetLocations Instance = new GetLocations();
+            public static readonly GetLocations Instance = new();
 
             private GetLocations()
             {

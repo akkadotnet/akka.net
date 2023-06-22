@@ -242,7 +242,7 @@ namespace Akka.Remote.TestKit
     {
         private readonly ILoggingAdapter _log;
         private readonly IActorRef _controller;
-        private readonly ConcurrentDictionary<IChannel, IActorRef> _clients = new ConcurrentDictionary<IChannel, IActorRef>();
+        private readonly ConcurrentDictionary<IChannel, IActorRef> _clients = new();
 
         /// <summary>
         /// A single <see cref="ConductorHandler"/> gets shared across all of the connections between 

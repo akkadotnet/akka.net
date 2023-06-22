@@ -182,7 +182,7 @@ namespace Akka.Streams
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly AsyncBoundary Instance = new AsyncBoundary();
+            public static readonly AsyncBoundary Instance = new();
             private AsyncBoundary() { }
             public bool Equals(AsyncBoundary other) => other is AsyncBoundary;
             public override bool Equals(object obj) => obj is AsyncBoundary;
@@ -201,7 +201,7 @@ namespace Akka.Streams
         /// </summary>
         public sealed class CancellationStrategy : IMandatoryAttribute
         {
-            internal static CancellationStrategy Default { get; } = new CancellationStrategy(new PropagateFailure());
+            internal static CancellationStrategy Default { get; } = new(new PropagateFailure());
 
             public IStrategy Strategy { get; }
 
@@ -273,7 +273,7 @@ namespace Akka.Streams
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Attributes None = new Attributes();
+        public static readonly Attributes None = new();
 
         private readonly IAttribute[] _attributes;
 
@@ -388,7 +388,7 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public Attributes And(IAttribute other) => new Attributes(_attributes.Concat(new[] { other }).ToArray());
+        public Attributes And(IAttribute other) => new(_attributes.Concat(new[] { other }).ToArray());
 
         /// <summary>
         /// Extracts Name attributes and concatenates them.
@@ -455,13 +455,13 @@ namespace Akka.Streams
         /// <param name="initial">TBD</param>
         /// <param name="max">TBD</param>
         /// <returns>TBD</returns>
-        public static Attributes CreateInputBuffer(int initial, int max) => new Attributes(new InputBuffer(initial, max));
+        public static Attributes CreateInputBuffer(int initial, int max) => new(new InputBuffer(initial, max));
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public static Attributes CreateAsyncBoundary() => new Attributes(AsyncBoundary.Instance);
+        public static Attributes CreateAsyncBoundary() => new(AsyncBoundary.Instance);
 
         ///<summary>
         /// Configures <see cref="FlowOperations.Log{TIn,TOut,TMat}"/> stage log-levels to be used when logging.
@@ -476,7 +476,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static Attributes CreateLogLevels(LogLevel onElement = LogLevel.DebugLevel,
             LogLevel onFinish = LogLevel.DebugLevel, LogLevel onError = LogLevel.ErrorLevel)
-            => new Attributes(new LogLevels(onElement, onFinish, onError));
+            => new(new LogLevels(onElement, onFinish, onError));
 
         // TODO: different than scala code, investigate later.
         /// <summary>
@@ -554,7 +554,7 @@ namespace Akka.Streams
             public override string ToString() => "SupervisionStrategy";
         }
 
-        public static Dispatcher IODispatcher { get; } = new Dispatcher("akka.stream.materializer.blocking-io-dispatcher");
+        public static Dispatcher IODispatcher { get; } = new("akka.stream.materializer.blocking-io-dispatcher");
 
         /// <summary>
         /// Enables additional low level troubleshooting logging at DEBUG log level
@@ -741,7 +741,7 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="dispatcherName">TBD</param>
         /// <returns>TBD</returns>
-        public static Attributes CreateDispatcher(string dispatcherName) => new Attributes(new Dispatcher(dispatcherName));
+        public static Attributes CreateDispatcher(string dispatcherName) => new(new Dispatcher(dispatcherName));
 
         /// <summary>
         /// Decides how exceptions from user are to be handled
@@ -753,7 +753,7 @@ namespace Akka.Streams
         /// <param name="strategy">TBD</param>
         /// <returns>TBD</returns>
         public static Attributes CreateSupervisionStrategy(Decider strategy)
-            => new Attributes(new SupervisionStrategy(strategy));
+            => new(new SupervisionStrategy(strategy));
 
         /// <summary>
         /// Enables additional low level troubleshooting logging at DEBUG log level
@@ -761,7 +761,7 @@ namespace Akka.Streams
         /// <param name="enabled"></param>
         /// <returns></returns>
         public static Attributes CreateDebugLogging(bool enabled)
-            => new Attributes(new DebugLogging(enabled));
+            => new(new DebugLogging(enabled));
 
         /// <summary>
         /// Defines a timeout for stream subscription and what action to take when that hits.
@@ -772,7 +772,7 @@ namespace Akka.Streams
         public static Attributes CreateStreamSubscriptionTimeout(
             TimeSpan timeout,
             StreamSubscriptionTimeoutTerminationMode mode)
-            => new Attributes(new StreamSubscriptionTimeout(timeout, mode));
+            => new(new StreamSubscriptionTimeout(timeout, mode));
 
         /// <summary>
         /// Maximum number of elements emitted in batch if downstream signals large demand.
@@ -780,7 +780,7 @@ namespace Akka.Streams
         /// <param name="limit"></param>
         /// <returns></returns>
         public static Attributes CreateOutputBurstLimit(int limit)
-            => new Attributes(new OutputBurstLimit(limit));
+            => new(new OutputBurstLimit(limit));
 
         /// <summary>
         /// Test utility: fuzzing mode means that GraphStage events are not processed
@@ -789,7 +789,7 @@ namespace Akka.Streams
         /// <param name="enabled"></param>
         /// <returns></returns>
         public static Attributes CreateFuzzingMode(bool enabled)
-            => new Attributes(new FuzzingMode(enabled));
+            => new(new FuzzingMode(enabled));
 
         /// <summary>
         /// Configure the maximum buffer size for which a FixedSizeBuffer will be preallocated.
@@ -799,7 +799,7 @@ namespace Akka.Streams
         /// <param name="size"></param>
         /// <returns></returns>
         public static Attributes CreateMaxFixedBufferSize(int size)
-            => new Attributes(new MaxFixedBufferSize(size));
+            => new(new MaxFixedBufferSize(size));
 
         /// <summary>
         /// Limit for number of messages that can be processed synchronously in stream to substream communication
@@ -807,7 +807,7 @@ namespace Akka.Streams
         /// <param name="limit"></param>
         /// <returns></returns>
         public static Attributes CreateSyncProcessingLimit(int limit)
-            => new Attributes(new SyncProcessingLimit(limit));
+            => new(new SyncProcessingLimit(limit));
     }
 
     /// <summary>
@@ -934,25 +934,25 @@ namespace Akka.Streams
         /// <summary>
         /// Specifies the subscription timeout within which the remote side MUST subscribe to the handed out stream reference.
         /// </summary>
-        public static Attributes CreateSubscriptionTimeout(TimeSpan timeout) => new Attributes(new SubscriptionTimeout(timeout));
+        public static Attributes CreateSubscriptionTimeout(TimeSpan timeout) => new(new SubscriptionTimeout(timeout));
 
         /// <summary>
         /// Specifies the size of the buffer on the receiving side that is eagerly filled even without demand.
         /// </summary>
         public static Attributes CreateBufferCapacity(int capacity)
-            => new Attributes(new BufferCapacity(capacity));
+            => new(new BufferCapacity(capacity));
 
 
         /// <summary>
         /// If no new elements arrive within this timeout, demand is redelivered.
         /// </summary>
         public static Attributes CreateDemandRedeliveryInterval(TimeSpan timeout)
-            => new Attributes(new DemandRedeliveryInterval(timeout));
+            => new(new DemandRedeliveryInterval(timeout));
 
         /// <summary>
         /// The time between the Terminated signal being received and when the local SourceRef determines to fail itself
         /// </summary>
         public static Attributes CreateFinalTerminationSignalDeadline(TimeSpan timeout)
-            => new Attributes(new FinalTerminationSignalDeadline(timeout));
+            => new(new FinalTerminationSignalDeadline(timeout));
     }
 }

@@ -41,7 +41,7 @@ namespace Akka.Cluster.Sharding.Internal
 
         internal sealed class ShardSuitabilityOrdering : IComparer<RegionEntry>
         {
-            public static readonly ShardSuitabilityOrdering Instance = new ShardSuitabilityOrdering();
+            public static readonly ShardSuitabilityOrdering Instance = new();
 
             private ShardSuitabilityOrdering()
             {

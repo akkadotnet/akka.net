@@ -145,20 +145,20 @@ namespace Akka.Tests.Performance.Actor
             public int Age { get; }
         }
 
-        private SimpleData dataExample = new SimpleData("John", 25);
+        private SimpleData dataExample = new("John", 25);
         private int intExample = 343;
         private string stringExample = "just_string";
 
         private const string MailboxCounterName = "MessageReceived";
         private const long MailboxMessageCount = 10000000;
         private Counter _mailboxThroughput;
-        private readonly ManualResetEventSlim _resetEvent = new ManualResetEventSlim(false);
+        private readonly ManualResetEventSlim _resetEvent = new(false);
 
         private IActorRef _untypedActorRef;
         private IActorRef _receiveActorRef;
         private IActorRef _minimalActorRef;
 
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new(0);
         protected ActorSystem System;
 
         [PerfSetup]

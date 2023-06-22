@@ -226,13 +226,13 @@ namespace Akka.Pattern
 
     internal sealed class StopImpliesFailure : IBackoffType
     {
-        public static readonly StopImpliesFailure Instance = new StopImpliesFailure();
+        public static readonly StopImpliesFailure Instance = new();
         private StopImpliesFailure() { }
     }
 
     internal sealed class RestartImpliesFailure : IBackoffType
     {
-        public static readonly RestartImpliesFailure Instance = new RestartImpliesFailure();
+        public static readonly RestartImpliesFailure Instance = new();
         private RestartImpliesFailure() { }
     }
 

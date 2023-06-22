@@ -22,7 +22,7 @@ namespace Akka.Cluster.Tools.Singleton
     {
         private readonly ActorSystem _system;
         private readonly Lazy<Cluster> _cluster;
-        private readonly ConcurrentDictionary<string, IActorRef> _proxies = new ConcurrentDictionary<string, IActorRef>();
+        private readonly ConcurrentDictionary<string, IActorRef> _proxies = new();
 
         public static ClusterSingleton Get(ActorSystem system) =>
             system.WithExtension<ClusterSingleton, ClusterSingletonProvider>();
@@ -83,7 +83,7 @@ namespace Akka.Cluster.Tools.Singleton
 
     public class ClusterSingletonProvider : ExtensionIdProvider<ClusterSingleton>
     {
-        public override ClusterSingleton CreateExtension(ExtendedActorSystem system) => new ClusterSingleton(system);
+        public override ClusterSingleton CreateExtension(ExtendedActorSystem system) => new(system);
     }
 
     public class SingletonActor
@@ -96,8 +96,7 @@ namespace Akka.Cluster.Tools.Singleton
 
         public Option<ClusterSingletonSettings> Settings { get; }
 
-        public static SingletonActor Create(Props props, string name) =>
-            new SingletonActor(name, props, Option<object>.None, Option<ClusterSingletonSettings>.None);
+        public static SingletonActor Create(Props props, string name) => new(name, props, Option<object>.None, Option<ClusterSingletonSettings>.None);
 
         private SingletonActor(string name, Props props, Option<object> stopMessage, Option<ClusterSingletonSettings> settings)
         {
@@ -126,6 +125,6 @@ namespace Akka.Cluster.Tools.Singleton
         public SingletonActor WithSettings(ClusterSingletonSettings settings) => Copy(settings: settings);
 
         private SingletonActor Copy(string name = null, Props props = null, Option<object> stopMessage = default, Option<ClusterSingletonSettings> settings = default) =>
-            new SingletonActor(name ?? Name, props ?? Props, stopMessage.HasValue ? stopMessage : StopMessage, settings.HasValue ? settings : Settings);
+            new(name ?? Name, props ?? Props, stopMessage.HasValue ? stopMessage : StopMessage, settings.HasValue ? settings : Settings);
     }
 }

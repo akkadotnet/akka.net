@@ -478,7 +478,7 @@ namespace Akka.Actor
         /// <summary>
         ///  Use this instead of calling the default constructor
         /// </summary>
-        public static readonly SelectChildRecursive Instance = new SelectChildRecursive();
+        public static readonly SelectChildRecursive Instance = new();
 
         
         public override int GetHashCode() => "**".GetHashCode();
@@ -496,7 +496,7 @@ namespace Akka.Actor
         /// <summary>
         ///  Use this instead of calling the default constructor
         /// </summary>
-        public static readonly SelectParent Instance = new SelectParent();
+        public static readonly SelectParent Instance = new();
 
         
         public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is SelectParent;

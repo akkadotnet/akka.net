@@ -66,7 +66,7 @@ namespace Akka.Actor.Internal
             /// <summary>
             /// TBD
             /// </summary>
-            public static Termination Instance { get; } = new Termination();
+            public static Termination Instance { get; } = new();
         }
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace Akka.Actor.Internal
             /// <summary>
             /// TBD
             /// </summary>
-            public static UserRequest Instance { get; } = new UserRequest();
+            public static UserRequest Instance { get; } = new();
         }
     }
 }

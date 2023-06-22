@@ -33,7 +33,7 @@ namespace Akka.Util
         }
 
         private readonly ConcurrentDictionary<TKey, ConcurrentSet<TValue>> _container;
-        private readonly ConcurrentSet<TValue> _emptySet = new ConcurrentSet<TValue>();
+        private readonly ConcurrentSet<TValue> _emptySet = new();
 
         /// <summary>
         /// Associates the value of <typeparamref name="TValue"/> with key of type <typeparamref name="TKey"/>.

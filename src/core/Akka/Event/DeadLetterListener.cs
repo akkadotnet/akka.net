@@ -280,7 +280,7 @@ namespace Akka.Event
             /// <summary>
             /// A deadline that is due <see cref="DateTime.UtcNow"/>
             /// </summary>
-            public static Deadline Now => new Deadline(DateTime.UtcNow);
+            public static Deadline Now => new(DateTime.UtcNow);
 
             /// <summary>
             /// Adds a given <see cref="TimeSpan"/> to the due time of this <see cref="Deadline"/>

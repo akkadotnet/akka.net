@@ -35,7 +35,7 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly OneByOneRequestStrategy Instance = new OneByOneRequestStrategy();
+        public static readonly OneByOneRequestStrategy Instance = new();
         private OneByOneRequestStrategy() { }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly ZeroRequestStrategy Instance = new ZeroRequestStrategy();
+        public static readonly ZeroRequestStrategy Instance = new();
         private ZeroRequestStrategy() { }
 
         /// <summary>

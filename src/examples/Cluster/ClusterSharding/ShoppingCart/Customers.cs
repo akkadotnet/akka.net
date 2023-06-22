@@ -35,7 +35,7 @@ namespace ShoppingCart
         }
         // </MessageProtocol>
 
-        private readonly List<string> _purchasedItems = new List<string>();
+        private readonly List<string> _purchasedItems = new();
         private readonly IActorRef _consumerController; // use to guarantee reliable delivery of messages
 
         public Customer(string persistenceId, IActorRef consumerController)
