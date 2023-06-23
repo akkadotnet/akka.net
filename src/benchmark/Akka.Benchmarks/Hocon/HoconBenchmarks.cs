@@ -80,25 +80,25 @@ namespace Akka.Benchmarks.Hocon
         [Benchmark]
         public int Hocon_parse_resolve_int_value()
         {
-            return fallback2.GetInt("akka.remote.dot-netty.tcp.port", 0);
+            return fallback2.GetInt("akka.remote.dot-netty.tcp.port");
         }
 
         [Benchmark]
         public double Hocon_parse_resolve_double_value()
         {
-            return fallback1.GetDouble("akka.actor.branch-factor", 0);
+            return fallback1.GetDouble("akka.actor.branch-factor");
         }
 
         [Benchmark]
         public bool Hocon_parse_resolve_boolean_value()
         {
-            return fallback1.GetBoolean("akka.persistence.journal.sql-server.auto-initialize", false);
+            return fallback1.GetBoolean("akka.persistence.journal.sql-server.auto-initialize");
         }
 
         [Benchmark]
         public TimeSpan Hocon_parse_resolve_TimeSpan_value()
         {
-            return fallback1.GetTimeSpan("akka.actor.ask-timeout", null);
+            return fallback1.GetTimeSpan("akka.actor.ask-timeout");
         }
 
         [Benchmark]

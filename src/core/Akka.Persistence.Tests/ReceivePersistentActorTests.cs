@@ -242,7 +242,7 @@ namespace Akka.Persistence.Tests
                     }
                     return false;
                 });                                                                              //Func,            when 10 <= i < 15
-                Command(typeof(int), i => Sender.Tell("int:" + i, Self), null);                  //Null predicate,  when i >= 15
+                Command(typeof(int), i => Sender.Tell("int:" + i, Self));                  //Null predicate,  when i >= 15
                 Command(typeof(int), i => Sender.Tell("ShouldNeverMatch:" + i, Self));           //The handler above should never be invoked
                 Command(typeof(string), i => Sender.Tell("string:" + i));
             }

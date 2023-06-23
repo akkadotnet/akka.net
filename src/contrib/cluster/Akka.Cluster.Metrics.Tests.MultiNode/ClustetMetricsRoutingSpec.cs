@@ -321,7 +321,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         {
             var router = Sys.ActorOf(new ClusterRouterPool(
                 new AdaptiveLoadBalancingPool(MemoryMetricsSelector.Instance),
-                new ClusterRouterPoolSettings(10, 1, true, null)
+                new ClusterRouterPoolSettings(10, 1, true)
             ).Props(Props.Create<AdaptiveLoadBalancingRouterConfig.Echo>()), name);
             
             // it may take some time until router receives cluster member events

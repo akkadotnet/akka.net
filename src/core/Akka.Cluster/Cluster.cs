@@ -543,7 +543,7 @@ namespace Akka.Cluster
         /// </summary>
         public Member SelfMember => _readView.Self;
 
-        private readonly AtomicBoolean _isTerminated = new(false);
+        private readonly AtomicBoolean _isTerminated = new();
 
         /// <summary>
         /// Determine whether or not this cluster instance has been shutdown.

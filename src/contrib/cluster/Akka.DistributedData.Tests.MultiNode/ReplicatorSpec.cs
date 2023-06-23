@@ -360,7 +360,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 changedProbe.ExpectMsg<Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(30UL);
 
                 // replicate with gossip after WriteLocal
-                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyC, null));
                 changedProbe.ExpectMsg<Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(31UL);
 
@@ -400,7 +400,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 var c31 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyC)).Get(KeyC);
                 c31.Value.ShouldBe(31UL);
 
-                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyC, null));
 
                 Within(TimeSpan.FromSeconds(5), () =>
@@ -436,9 +436,9 @@ namespace Akka.DistributedData.Tests.MultiNode
                 var c40 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyD)).Get(KeyD);
                 c40.Value.ShouldBe(40UL);
 
-                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty.Increment(_cluster, 1), _writeTwo, x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty.Increment(_cluster), _writeTwo, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateTimeout(KeyD, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
-                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, _writeTwo, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateTimeout(KeyD, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
             }, _first, _second);
 
@@ -526,7 +526,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyE, null));
             }, _second);
 
@@ -542,7 +542,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, data =>
                 {
                     probe1.Ref.Tell(data.Value);
-                    return data.Increment(_cluster, 1);
+                    return data.Increment(_cluster);
                 }), probe2.Ref);
 
                 // verify read your own writes, without waiting for the UpdateSuccess reply
@@ -562,14 +562,14 @@ namespace Akka.DistributedData.Tests.MultiNode
                 var probe1 = CreateTestProbe();
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority), probe1.Ref);
                 probe1.ExpectMsg<GetSuccess>();
-                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 153, x => x.Increment(_cluster, 1)), probe1.Ref);
+                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 153, x => x.Increment(_cluster)), probe1.Ref);
 
                 // verify read your own writes, without waiting for the UpdateSuccess reply
                 // note that the order of the replies are not defined, and therefore we use separate probes
                 var probe2 = CreateTestProbe();
-                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 154, x => x.Increment(_cluster, 1)), probe2.Ref);
+                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 154, x => x.Increment(_cluster)), probe2.Ref);
                 var probe3 = CreateTestProbe();
-                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 155, x => x.Increment(_cluster, 1)), probe3.Ref);
+                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 155, x => x.Increment(_cluster)), probe3.Ref);
                 var probe5 = CreateTestProbe();
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority), probe5.Ref);
                 probe1.ExpectMsg(new UpdateSuccess(KeyE, 153));
@@ -622,7 +622,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     for (ulong i = 0; i < 100UL; i++)
                     {
                         c = c.Increment(_cluster, i);
-                        _replicator.Tell(Dsl.Update(KeyF, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 1)));
+                        _replicator.Tell(Dsl.Update(KeyF, GCounter.Empty, _writeTwo, x => x.Increment(_cluster)));
                     }
 
                     var results = ReceiveN(100);

@@ -211,7 +211,7 @@ akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "fal
         public void Can_serialize_ClusterRouterPoolWithEmptyRole()
         {
             var roundRobinPool = new RoundRobinPool(nrOfInstances: 4);
-            var clusterRouterPoolSettings = new ClusterRouterPoolSettings(2, 5, true, null);
+            var clusterRouterPoolSettings = new ClusterRouterPoolSettings(2, 5, true);
             var message = new ClusterRouterPool(roundRobinPool, clusterRouterPoolSettings);
             AssertEqual(message);
         }

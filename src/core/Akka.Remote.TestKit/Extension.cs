@@ -132,9 +132,9 @@ namespace Akka.Remote.TestKit
                 return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
 
             return ThreadPoolConfig.ScaledPoolSize(
-                config.GetInt("pool-size-min", 0),
-                config.GetDouble("pool-size-factor", 0),
-                config.GetInt("pool-size-max", 0));
+                config.GetInt("pool-size-min"),
+                config.GetDouble("pool-size-factor"),
+                config.GetInt("pool-size-max"));
         }
     }
 }

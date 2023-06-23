@@ -187,7 +187,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyA, null));
             }, First);
 
@@ -205,7 +205,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyD, null));
             }, Fourth);
 

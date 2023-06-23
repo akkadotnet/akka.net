@@ -139,7 +139,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             router2 = new Lazy<IActorRef>(() => Sys.ActorOf(
                 new ClusterRouterPool(
                     new RoundRobinPool(0),
-                    new ClusterRouterPoolSettings(3, 1, true, null)).Props(Props.Create<ClusterRoundRobinSpecConfig.SomeActor>()),
+                    new ClusterRouterPoolSettings(3, 1, true)).Props(Props.Create<ClusterRoundRobinSpecConfig.SomeActor>()),
                 "router2"));
             router3 = new Lazy<IActorRef>(() => Sys.ActorOf(FromConfig.Instance.Props(Props.Create<ClusterRoundRobinSpecConfig.SomeActor>()), "router3"));
             router4 = new Lazy<IActorRef>(() => Sys.ActorOf(FromConfig.Instance.Props(), "router4"));

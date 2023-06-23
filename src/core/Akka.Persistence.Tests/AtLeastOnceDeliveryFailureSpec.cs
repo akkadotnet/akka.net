@@ -249,7 +249,7 @@ namespace Akka.Persistence.Tests
                 Probe = probe;
                 State = new List<int>();
                 _config = Context.System.Settings.Config.GetConfig("akka.persistence.destination.chaos");
-                _confirmFailureRate = _config.GetDouble("confirm-failure-rate", 0);
+                _confirmFailureRate = _config.GetDouble("confirm-failure-rate");
 
                 Receive<Msg>(m =>
                 {
