@@ -264,7 +264,7 @@ namespace Akka.Cluster
             _cluster = cluster;
         }
 
-        public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        public ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         protected override void PreStart()
         {

@@ -1488,7 +1488,7 @@ namespace Akka.Cluster.Sharding
             private readonly bool _isRebalance;
             private ILoggingAdapter _log;
 
-            private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+            private ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
             public ITimerScheduler Timers { get; set; }
 
