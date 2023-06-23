@@ -82,7 +82,7 @@ namespace Akka.Streams.Dsl
         /// <param name="fn">TBD</param>
         /// <returns>TBD</returns>
         public Sink<TIn, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> fn)
-            => new Sink<TIn, TMat2>(Module.TransformMaterializedValue(fn));
+            => new(Module.TransformMaterializedValue(fn));
 
         /// <summary>
         /// Materializes this Sink immediately.
@@ -118,7 +118,7 @@ namespace Akka.Streams.Dsl
         /// <param name="attributes">TBD</param>
         /// <returns>TBD</returns>
         public Sink<TIn, TMat> WithAttributes(Attributes attributes)
-            => new Sink<TIn, TMat>(Module.WithAttributes(attributes));
+            => new(Module.WithAttributes(attributes));
 
         /// <summary>
         /// Add the given attributes to this <see cref="IGraph{TShape}"/>.
@@ -183,7 +183,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public static SinkShape<T> Shape<T>(string name) => new SinkShape<T>(new Inlet<T>(name + ".in"));
+        public static SinkShape<T> Shape<T>(string name) => new(new Inlet<T>(name + ".in"));
 
         /// <summary>
         /// A graph with the shape of a sink logically is a sink, this method makes
@@ -205,7 +205,7 @@ namespace Akka.Streams.Dsl
         /// <param name="subscriber">TBD</param>
         /// <returns>TBD</returns>
         public static Sink<TIn, object> Create<TIn>(ISubscriber<TIn> subscriber)
-            => new Sink<TIn, object>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
+            => new(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the first value received.
@@ -276,7 +276,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
         public static Sink<TIn, IPublisher<TIn>> Publisher<TIn>()
-            => new Sink<TIn, IPublisher<TIn>>(new PublisherSink<TIn>(DefaultAttributes.PublisherSink, Shape<TIn>("PublisherSink")));
+            => new(new PublisherSink<TIn>(DefaultAttributes.PublisherSink, Shape<TIn>("PublisherSink")));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into <see cref="IPublisher{TIn}"/>
@@ -285,11 +285,11 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
         public static Sink<TIn, IPublisher<TIn>> FanoutPublisher<TIn>()
-            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, ResizableMultiReaderRingBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
+            => new(new FanoutPublisherSink<TIn, ResizableMultiReaderRingBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
 
         [InternalApi]
         public static Sink<TIn, IPublisher<TIn>> DistinctRetainingFanOutPublisher<TIn>(Action onTerminated = null)
-            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, DistinctRetainingMultiReaderBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("DistinctRetainingFanOutPublisherSink"), onTerminated));
+            => new(new FanoutPublisherSink<TIn, DistinctRetainingMultiReaderBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("DistinctRetainingFanOutPublisherSink"), onTerminated));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will consume the stream and discard the elements.
@@ -550,7 +550,7 @@ namespace Akka.Streams.Dsl
         /// <param name="props">TBD</param>
         /// <returns>TBD</returns>
         public static Sink<TIn, IActorRef> ActorSubscriber<TIn>(Props props)
-            => new Sink<TIn, IActorRef>(new ActorSubscriberSink<TIn>(props, DefaultAttributes.ActorSubscriberSink, Shape<TIn>("ActorSubscriberSink")));
+            => new(new ActorSubscriberSink<TIn>(props, DefaultAttributes.ActorSubscriberSink, Shape<TIn>("ActorSubscriberSink")));
 
         ///<summary>
         /// <para>
@@ -642,7 +642,7 @@ namespace Akka.Streams.Dsl
         /// <param name="subscriber">TBD</param>
         /// <returns>TBD</returns>
         public static Sink<TIn, NotUsed> FromSubscriber<TIn>(ISubscriber<TIn> subscriber)
-            => new Sink<TIn, NotUsed>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
+            => new(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that immediately cancels its upstream after materialization.
@@ -650,7 +650,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
         public static Sink<TIn, NotUsed> Cancelled<TIn>()
-            => new Sink<TIn, NotUsed>(new CancelSink<TIn>(DefaultAttributes.CancelledSink, Shape<TIn>("CancelledSink")));
+            => new(new CancelSink<TIn>(DefaultAttributes.CancelledSink, Shape<TIn>("CancelledSink")));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="IPublisher{TIn}"/>.

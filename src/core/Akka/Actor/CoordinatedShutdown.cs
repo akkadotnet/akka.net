@@ -270,12 +270,12 @@ namespace Akka.Actor
         /// </summary>
         internal readonly List<string> OrderedPhases;
 
-        private readonly ConcurrentSet<Func<Task<Done>>> _clrShutdownTasks = new ConcurrentSet<Func<Task<Done>>>();
-        private readonly ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>> _tasks = new ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>>();
-        private readonly AtomicReference<Reason> _runStarted = new AtomicReference<Reason>(null);
-        private readonly AtomicBoolean _clrHooksStarted = new AtomicBoolean(false);
-        private readonly TaskCompletionSource<Done> _runPromise = new TaskCompletionSource<Done>();
-        private readonly TaskCompletionSource<Done> _hooksRunPromise = new TaskCompletionSource<Done>();
+        private readonly ConcurrentSet<Func<Task<Done>>> _clrShutdownTasks = new();
+        private readonly ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>> _tasks = new();
+        private readonly AtomicReference<Reason> _runStarted = new(null);
+        private readonly AtomicBoolean _clrHooksStarted = new(false);
+        private readonly TaskCompletionSource<Done> _runPromise = new();
+        private readonly TaskCompletionSource<Done> _hooksRunPromise = new();
 
         private volatile bool _runningClrHook = false;
 

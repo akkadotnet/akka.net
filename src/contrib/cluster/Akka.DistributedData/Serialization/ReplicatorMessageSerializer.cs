@@ -35,7 +35,7 @@ namespace Akka.DistributedData.Serialization
         {
             private readonly TimeSpan _ttl;
             private readonly Func<TKey, TVal> _getOrAddFactory;
-            private readonly AtomicCounter _n = new AtomicCounter(0);
+            private readonly AtomicCounter _n = new(0);
             private readonly int _mask;
             private readonly KeyValuePair<TKey, TVal>[] _elements;
 

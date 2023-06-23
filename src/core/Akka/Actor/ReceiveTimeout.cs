@@ -17,7 +17,7 @@ namespace Akka.Actor
     public class ReceiveTimeout : IPossiblyHarmful
     {
         private ReceiveTimeout() { }
-        private static readonly ReceiveTimeout _instance = new ReceiveTimeout();
+        private static readonly ReceiveTimeout _instance = new();
 
 
         /// <summary>

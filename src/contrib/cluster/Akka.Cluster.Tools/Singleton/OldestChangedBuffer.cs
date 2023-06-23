@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public static GetNext Instance { get; } = new GetNext();
+            public static GetNext Instance { get; } = new();
             private GetNext() { }
         }
 

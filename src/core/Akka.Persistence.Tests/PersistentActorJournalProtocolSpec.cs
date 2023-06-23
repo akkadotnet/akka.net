@@ -274,7 +274,7 @@ namespace Akka.Persistence.Tests
 
         public class JournalProbeExtension : ExtensionIdProvider<JournalProbe>
         {
-            public static readonly JournalProbeExtension Instance = new JournalProbeExtension();
+            public static readonly JournalProbeExtension Instance = new();
 
             private JournalProbeExtension()
             {

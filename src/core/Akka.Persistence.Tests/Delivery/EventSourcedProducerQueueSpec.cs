@@ -40,7 +40,7 @@ public sealed class EventSourcedProducerQueueSpec : AkkaSpec
         StateProbe = CreateTestProbe();
     }
 
-    private static readonly AtomicCounter _pidCounter = new AtomicCounter(0);
+    private static readonly AtomicCounter _pidCounter = new(0);
     private string NextPersistenceId() => $"p-{_pidCounter.IncrementAndGet()}";
     public TestProbe JournalOperationsProbe { get; private set; }
     public TestProbe StateProbe { get; private set; }

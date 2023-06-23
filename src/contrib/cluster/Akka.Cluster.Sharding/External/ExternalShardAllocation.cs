@@ -24,7 +24,7 @@ namespace Akka.Cluster.Sharding.External
         }
 
         private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<string, IExternalShardAllocationClient> _clients = new ConcurrentDictionary<ShardId, IExternalShardAllocationClient>();
+        private readonly ConcurrentDictionary<string, IExternalShardAllocationClient> _clients = new();
 
         public ExternalShardAllocation(ExtendedActorSystem system)
         {

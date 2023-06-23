@@ -364,10 +364,8 @@ namespace Akka.Streams.TestKit
         /// <summary>
         /// Probe that implements Reactive.Streams.IPublisher{T} interface.
         /// </summary>
-        public static ManualProbe<T> CreateManualPublisherProbe<T>(this TestKitBase testKit, bool autoOnSubscribe = true) 
-            => new ManualProbe<T>(testKit, autoOnSubscribe);
+        public static ManualProbe<T> CreateManualPublisherProbe<T>(this TestKitBase testKit, bool autoOnSubscribe = true) => new(testKit, autoOnSubscribe);
 
-        public static Probe<T> CreatePublisherProbe<T>(this TestKitBase testKit, long initialPendingRequests = 0L)
-            => new Probe<T>(testKit, initialPendingRequests);
+        public static Probe<T> CreatePublisherProbe<T>(this TestKitBase testKit, long initialPendingRequests = 0L) => new(testKit, initialPendingRequests);
     }
 }

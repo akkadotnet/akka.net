@@ -17,7 +17,7 @@ namespace Akka.Persistence.Query
     public sealed class PersistenceQuery : IExtension
     {
         private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<string, IReadJournal> _readJournalPluginExtensionIds = new ConcurrentDictionary<string, IReadJournal>();
+        private readonly ConcurrentDictionary<string, IReadJournal> _readJournalPluginExtensionIds = new();
         private ILoggingAdapter _log;
 
         public static PersistenceQuery Get(ActorSystem system)
@@ -62,7 +62,7 @@ namespace Akka.Persistence.Query
             if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new[] { parameters[0] });
 
             ctor = pluginType.GetConstructor(new Type[0]);
-            if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new object[0]);
+            if (ctor != null) return (IReadJournalProvider)ctor.Invoke(Array.Empty<object>());
 
             throw new ArgumentException($"Unable to create read journal plugin instance type {pluginType}!");
         }

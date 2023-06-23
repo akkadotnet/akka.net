@@ -43,7 +43,7 @@ namespace Akka.Actor.Setup
     /// </remarks>
     public sealed class ActorSystemSetup
     {
-        public static readonly ActorSystemSetup Empty = new ActorSystemSetup(ImmutableDictionary<Type, Setup>.Empty);
+        public static readonly ActorSystemSetup Empty = new(ImmutableDictionary<Type, Setup>.Empty);
 
         public static ActorSystemSetup Create(params Setup[] setup)
         {

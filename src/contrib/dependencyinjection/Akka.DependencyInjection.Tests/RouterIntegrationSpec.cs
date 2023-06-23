@@ -134,7 +134,7 @@ namespace Akka.DependencyInjection.Tests
         
         internal class TestDiActor : ReceiveActor
         {
-            public static readonly AtomicCounter Counter = new AtomicCounter(0);
+            public static readonly AtomicCounter Counter = new(0);
 
             public TestDiActor(InjectedService injected)
             {
@@ -151,7 +151,7 @@ namespace Akka.DependencyInjection.Tests
         
         internal class GetMessage
         {
-            public static readonly GetMessage Instance = new GetMessage();
+            public static readonly GetMessage Instance = new();
             private GetMessage()
             { }
         }

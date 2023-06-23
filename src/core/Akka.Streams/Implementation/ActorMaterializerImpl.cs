@@ -174,7 +174,7 @@ namespace Akka.Streams.Implementation
             private string StageName(Attributes attr) => $"{_flowName}-{_nextId++}-{attr.GetNameOrDefault()}";
 
             private MaterializationContext CreateMaterializationContext(Attributes effectiveAttributes)
-                => new MaterializationContext(_materializer, effectiveAttributes, StageName(effectiveAttributes));
+                => new(_materializer, effectiveAttributes, StageName(effectiveAttributes));
 
             private void MaterializeGraph(GraphModule graph, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
             {
@@ -492,14 +492,14 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly AtomicCounterLong Counter = new AtomicCounterLong(0);
+        public readonly AtomicCounterLong Counter = new(0);
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
-        public override FlowNameCounter CreateExtension(ExtendedActorSystem system) => new FlowNameCounter();
+        public override FlowNameCounter CreateExtension(ExtendedActorSystem system) => new();
     }
 
     /// <summary>
@@ -543,7 +543,7 @@ namespace Akka.Streams.Implementation
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetChildren Instance = new GetChildren();
+            public static readonly GetChildren Instance = new();
             private GetChildren() { }
         }
         /// <summary>
@@ -554,7 +554,7 @@ namespace Akka.Streams.Implementation
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly StopChildren Instance = new StopChildren();
+            public static readonly StopChildren Instance = new();
             private StopChildren() { }
         }
         /// <summary>
@@ -565,7 +565,7 @@ namespace Akka.Streams.Implementation
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly StoppedChildren Instance = new StoppedChildren();
+            public static readonly StoppedChildren Instance = new();
             private StoppedChildren() { }
         }
         /// <summary>
@@ -576,7 +576,7 @@ namespace Akka.Streams.Implementation
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly PrintDebugDump Instance = new PrintDebugDump();
+            public static readonly PrintDebugDump Instance = new();
             private PrintDebugDump() { }
         }
         /// <summary>

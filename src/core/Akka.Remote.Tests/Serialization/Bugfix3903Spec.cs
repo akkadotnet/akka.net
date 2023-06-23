@@ -60,7 +60,7 @@ namespace Akka.Remote.Tests.Serialization
         {
             public class Fail
             {
-                public static readonly Fail Instance = new Fail();
+                public static readonly Fail Instance = new();
                 private Fail(){}
             }
             

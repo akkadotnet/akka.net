@@ -21,7 +21,7 @@ namespace Akka.Benchmarks.Actor
         public sealed class StopActor
         {
             private StopActor(){}
-            public static readonly StopActor Instance = new StopActor();
+            public static readonly StopActor Instance = new();
         }
         
         public sealed class MyActor : ReceiveActor

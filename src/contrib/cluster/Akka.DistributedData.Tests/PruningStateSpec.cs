@@ -18,10 +18,10 @@ namespace Akka.DistributedData.Tests
     [Collection("DistributedDataSpec")]
     public class PruningStateSpec
     {
-        private readonly UniqueAddress _node1 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2551), 1);
-        private readonly UniqueAddress _node2 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2552), 2);
-        private readonly UniqueAddress _node3 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2553), 3);
-        private readonly UniqueAddress _node4 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2554), 4);
+        private readonly UniqueAddress _node1 = new(new Address("akka.tcp", "Sys", "localhost", 2551), 1);
+        private readonly UniqueAddress _node2 = new(new Address("akka.tcp", "Sys", "localhost", 2552), 2);
+        private readonly UniqueAddress _node3 = new(new Address("akka.tcp", "Sys", "localhost", 2553), 3);
+        private readonly UniqueAddress _node4 = new(new Address("akka.tcp", "Sys", "localhost", 2554), 4);
 
         public PruningStateSpec(ITestOutputHelper output)
         {

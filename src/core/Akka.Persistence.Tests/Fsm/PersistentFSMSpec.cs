@@ -604,7 +604,7 @@ namespace Akka.Persistence.Tests.Fsm
 
         public class Init : ITimeoutState
         {
-            public static Init Instance { get; } = new Init();
+            public static Init Instance { get; } = new();
 
             private Init() { }
             public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is Init;
@@ -615,7 +615,7 @@ namespace Akka.Persistence.Tests.Fsm
 
         public class OverrideTimeoutToInf
         {
-            public static readonly OverrideTimeoutToInf Instance = new OverrideTimeoutToInf();
+            public static readonly OverrideTimeoutToInf Instance = new();
             private OverrideTimeoutToInf() { }
         }
 
@@ -728,7 +728,7 @@ namespace Akka.Persistence.Tests.Fsm
 
     public class Shopping : IUserState
     {
-        public static Shopping Instance { get; } = new Shopping();
+        public static Shopping Instance { get; } = new();
 
         private Shopping() { }
         public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is Shopping;
@@ -740,7 +740,7 @@ namespace Akka.Persistence.Tests.Fsm
 
     public class Inactive : IUserState
     {
-        public static Inactive Instance { get; } = new Inactive();
+        public static Inactive Instance { get; } = new();
 
         private Inactive() { }
         public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is Inactive;
@@ -752,7 +752,7 @@ namespace Akka.Persistence.Tests.Fsm
 
     public class Paid : IUserState
     {
-        public static Paid Instance { get; } = new Paid();
+        public static Paid Instance { get; } = new();
 
         private Paid() { }
         public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is Paid;
@@ -764,7 +764,7 @@ namespace Akka.Persistence.Tests.Fsm
 
     public class LookingAround : IUserState
     {
-        public static LookingAround Instance { get; } = new LookingAround();
+        public static LookingAround Instance { get; } = new();
 
         private LookingAround() { }
         public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is LookingAround;
@@ -946,14 +946,14 @@ namespace Akka.Persistence.Tests.Fsm
 
     public class PersistSingleAtOnce : ISnapshotFSMState
     {
-        public static PersistSingleAtOnce Instance { get; } = new PersistSingleAtOnce();
+        public static PersistSingleAtOnce Instance { get; } = new();
         private PersistSingleAtOnce() { }
         public string Identifier => "PersistSingleAtOnce";
     }
 
     public class Persist4xAtOnce : ISnapshotFSMState
     {
-        public static Persist4xAtOnce Instance { get; } = new Persist4xAtOnce();
+        public static Persist4xAtOnce Instance { get; } = new();
         private Persist4xAtOnce() { }
         public string Identifier => "Persist4xAtOnce";
     }
@@ -1074,7 +1074,7 @@ namespace Akka.Persistence.Tests.Fsm
 
         public class Init : IState
         {
-            public static readonly Init Instance = new Init();
+            public static readonly Init Instance = new();
             public string Identifier => "Init";
         }
 

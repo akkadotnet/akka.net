@@ -98,7 +98,7 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// The singleton instance of <see cref="IdentityEventAdapter"/>.
         /// </summary>
-        public static IdentityEventAdapter Instance { get; } = new IdentityEventAdapter();
+        public static IdentityEventAdapter Instance { get; } = new();
 
         private IdentityEventAdapter() { }
 

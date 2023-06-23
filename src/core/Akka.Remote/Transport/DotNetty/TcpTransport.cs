@@ -132,7 +132,7 @@ namespace Akka.Remote.Transport.DotNetty
 
     internal sealed class TcpClientHandler : TcpHandlers
     {
-        private readonly TaskCompletionSource<AssociationHandle> _statusPromise = new TaskCompletionSource<AssociationHandle>();
+        private readonly TaskCompletionSource<AssociationHandle> _statusPromise = new();
         private readonly Address _remoteAddress;
 
         public Task<AssociationHandle> StatusFuture => _statusPromise.Task;

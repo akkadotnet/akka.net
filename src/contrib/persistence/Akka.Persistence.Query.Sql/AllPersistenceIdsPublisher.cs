@@ -151,7 +151,7 @@ namespace Akka.Persistence.Query.Sql
     {
         private sealed class Continue
         {
-            public static readonly Continue Instance = new Continue();
+            public static readonly Continue Instance = new();
 
             private Continue() { }
         }

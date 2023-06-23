@@ -17,7 +17,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// </summary>
     internal class PerGroupingBuffer
     {
-        private readonly Dictionary<string, BufferedMessages> _buffers = new Dictionary<string, BufferedMessages>();
+        private readonly Dictionary<string, BufferedMessages> _buffers = new();
         private int _totalBufferSize = 0;
 
         /// <summary>

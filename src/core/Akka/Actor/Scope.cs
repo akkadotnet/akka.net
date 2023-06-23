@@ -53,7 +53,7 @@ namespace Akka.Actor
     {
         private NoScopeGiven() { }
 
-        private static readonly NoScopeGiven _instance = new NoScopeGiven();
+        private static readonly NoScopeGiven _instance = new();
 
         /// <summary>
         /// The singleton instance of this scope.

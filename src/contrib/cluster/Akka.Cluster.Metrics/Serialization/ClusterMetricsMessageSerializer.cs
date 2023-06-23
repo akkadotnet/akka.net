@@ -54,8 +54,8 @@ namespace Akka.Cluster.Metrics.Serialization
                 case MetricsGossipEnvelope m: return Compress(MetricsGossipEnvelopeToProto(m)); // TODO: Add compression here
                 case Metrics.AdaptiveLoadBalancingPool alb: return AdaptiveLoadBalancingPoolToBinary(alb);
                 case Metrics.MixMetricsSelector mms: return MixMetricsSelectorToBinary(mms);
-                case CpuMetricsSelector _: return new byte[0];
-                case MemoryMetricsSelector _: return new byte[0];
+                case CpuMetricsSelector _: return Array.Empty<byte>();
+                case MemoryMetricsSelector _: return Array.Empty<byte>();
                 default:
                     throw new ArgumentException($"Can't serialize object of type ${obj.GetType().Name} in [${GetType().Name}]");
             }

@@ -35,8 +35,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
         }
 
-        private static readonly Take<int> TakeOne = new Take<int>(1);
-        private static readonly Take<int> TakeTwo = new Take<int>(2);
+        private static readonly Take<int> TakeOne = new(1);
+        private static readonly Take<int> TakeTwo = new(2);
 
         [Fact]
         public void Interpreter_should_implement_map_correctly()
@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_with_only_boundary_ops()
         {
-            WithOneBoundedSetup(new IStage<int, int>[0],
+            WithOneBoundedSetup(Array.Empty<IStage<int, int>>(),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();

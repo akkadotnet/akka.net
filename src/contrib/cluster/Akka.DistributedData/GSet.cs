@@ -34,7 +34,7 @@ namespace Akka.DistributedData
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="elements">TBD</param>
         /// <returns>TBD</returns>
-        public static GSet<T> Create<T>(params T[] elements) => new GSet<T>(ImmutableHashSet.Create(elements));
+        public static GSet<T> Create<T>(params T[] elements) => new(ImmutableHashSet.Create(elements));
 
         /// <summary>
         /// TBD
@@ -42,7 +42,7 @@ namespace Akka.DistributedData
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="elements">TBD</param>
         /// <returns>TBD</returns>
-        public static GSet<T> Create<T>(IImmutableSet<T> elements) => new GSet<T>(elements);
+        public static GSet<T> Create<T>(IImmutableSet<T> elements) => new(elements);
     }
 
     /// <summary>
@@ -70,7 +70,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GSet<T> Empty = new GSet<T>();
+        public static readonly GSet<T> Empty = new();
 
         /// <summary>
         /// TBD

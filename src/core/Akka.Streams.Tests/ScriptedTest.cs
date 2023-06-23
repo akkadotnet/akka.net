@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests
             private readonly int _maximumRequests;
             private readonly int _maximumBuffer;
 
-            private readonly List<string> _debugLog = new List<string>();
+            private readonly List<string> _debugLog = new();
 
             private Script<TIn, TOut> _currentScript;
             private int _remainingDemand;

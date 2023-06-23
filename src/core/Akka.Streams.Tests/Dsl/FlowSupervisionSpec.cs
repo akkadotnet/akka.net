@@ -20,7 +20,7 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class FlowSupervisionSpec : AkkaSpec
     {
-        private static readonly Exception Exception = new Exception("simulated exception");
+        private static readonly Exception Exception = new("simulated exception");
         private static Flow<int, int, NotUsed> FailingMap => Flow.Create<int>().Select(n =>
         {
             if (n == 3)

@@ -87,11 +87,11 @@ namespace Akka.Cluster.Tests
 
         #endregion
 
-        private UniqueAddress aa = new UniqueAddress(new Address("akka.tcp", "sys", "aa", 2552), 1);
-        private UniqueAddress bb = new UniqueAddress(new Address("akka.tcp", "sys", "bb", 2552), 2);
-        private UniqueAddress cc = new UniqueAddress(new Address("akka.tcp", "sys", "cc", 2552), 3);
-        private UniqueAddress dd = new UniqueAddress(new Address("akka.tcp", "sys", "dd", 2552), 4);
-        private UniqueAddress ee = new UniqueAddress(new Address("akka.tcp", "sys", "ee", 2552), 5);
+        private UniqueAddress aa = new(new Address("akka.tcp", "sys", "aa", 2552), 1);
+        private UniqueAddress bb = new(new Address("akka.tcp", "sys", "bb", 2552), 2);
+        private UniqueAddress cc = new(new Address("akka.tcp", "sys", "cc", 2552), 3);
+        private UniqueAddress dd = new(new Address("akka.tcp", "sys", "dd", 2552), 4);
+        private UniqueAddress ee = new(new Address("akka.tcp", "sys", "ee", 2552), 5);
 
         private readonly ClusterHeartbeatSenderState _emptyState;
 

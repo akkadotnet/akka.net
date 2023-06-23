@@ -32,7 +32,7 @@ namespace Akka.Actor
         }
 
         private LocalScope() { }
-        private static readonly LocalScope _instance = new LocalScope();
+        private static readonly LocalScope _instance = new();
 
         /// <summary>
         /// The singleton instance of this scope.

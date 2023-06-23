@@ -16,19 +16,19 @@ namespace Akka.Persistence
 {
     internal sealed class RequestRecoveryPermit
     {
-        public static RequestRecoveryPermit Instance { get; } = new RequestRecoveryPermit();
+        public static RequestRecoveryPermit Instance { get; } = new();
         private RequestRecoveryPermit() { }
     }
 
     internal sealed class RecoveryPermitGranted
     {
-        public static RecoveryPermitGranted Instance { get; } = new RecoveryPermitGranted();
+        public static RecoveryPermitGranted Instance { get; } = new();
         private RecoveryPermitGranted() { }
     }
 
     internal sealed class ReturnRecoveryPermit
     {
-        public static ReturnRecoveryPermit Instance { get; } = new ReturnRecoveryPermit();
+        public static ReturnRecoveryPermit Instance { get; } = new();
         private ReturnRecoveryPermit() { }
     }
 
@@ -38,7 +38,7 @@ namespace Akka.Persistence
     /// </summary>
     internal class RecoveryPermitter : UntypedActor
     {
-        private readonly LinkedList<IActorRef> pending = new LinkedList<IActorRef>();
+        private readonly LinkedList<IActorRef> pending = new();
         private readonly ILoggingAdapter Log = Context.GetLogger();
         private int _usedPermits;
         private int _maxPendingStats;

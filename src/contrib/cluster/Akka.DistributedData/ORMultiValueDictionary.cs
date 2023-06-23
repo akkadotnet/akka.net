@@ -74,8 +74,8 @@ namespace Akka.DistributedData
         IReplicatedDataSerialization, IEquatable<ORMultiValueDictionary<TKey, TValue>>,
         IEnumerable<KeyValuePair<TKey, IImmutableSet<TValue>>>, IORMultiValueDictionary
     {
-        public static readonly ORMultiValueDictionary<TKey, TValue> Empty = new ORMultiValueDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: false);
-        public static readonly ORMultiValueDictionary<TKey, TValue> EmptyWithValueDeltas = new ORMultiValueDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: true);
+        public static readonly ORMultiValueDictionary<TKey, TValue> Empty = new(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: false);
+        public static readonly ORMultiValueDictionary<TKey, TValue> EmptyWithValueDeltas = new(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: true);
 
         internal readonly ORDictionary<TKey, ORSet<TValue>> Underlying;
         private readonly bool _withValueDeltas;
@@ -263,10 +263,10 @@ namespace Akka.DistributedData
         IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
 
         public ORMultiValueDictionary<TKey, TValue> Prune(UniqueAddress removedNode, UniqueAddress collapseInto) =>
-            new ORMultiValueDictionary<TKey, TValue>(Underlying.Prune(removedNode, collapseInto), _withValueDeltas);
+            new(Underlying.Prune(removedNode, collapseInto), _withValueDeltas);
 
         public ORMultiValueDictionary<TKey, TValue> PruningCleanup(UniqueAddress removedNode) =>
-            new ORMultiValueDictionary<TKey, TValue>(Underlying.PruningCleanup(removedNode), _withValueDeltas);
+            new(Underlying.PruningCleanup(removedNode), _withValueDeltas);
 
         public bool Equals(ORMultiValueDictionary<TKey, TValue> other)
         {
@@ -398,8 +398,7 @@ namespace Akka.DistributedData
 
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
-        public ORMultiValueDictionary<TKey, TValue> ResetDelta() =>
-            new ORMultiValueDictionary<TKey, TValue>(Underlying.ResetDelta(), _withValueDeltas);
+        public ORMultiValueDictionary<TKey, TValue> ResetDelta() => new(Underlying.ResetDelta(), _withValueDeltas);
 
         #endregion
 

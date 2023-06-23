@@ -233,25 +233,25 @@ namespace Akka.Tests.Actor
         public class Tick
         {
             private Tick() { }
-            public static Tick Instance { get; } = new Tick();
+            public static Tick Instance { get; } = new();
         }
 
         public class Tock
         {
             private Tock() { }
-            public static Tock Instance { get; } = new Tock();
+            public static Tock Instance { get; } = new();
         }
 
         public class Cancel
         {
             private Cancel() { }
-            public static Cancel Instance { get; } = new Cancel();
+            public static Cancel Instance { get; } = new();
         }
 
         public class SetHandler
         {
             private SetHandler() { }
-            public static SetHandler Instance { get; } = new SetHandler();
+            public static SetHandler Instance { get; } = new();
         }
 
         public class Unhandled

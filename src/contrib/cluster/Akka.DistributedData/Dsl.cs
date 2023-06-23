@@ -62,7 +62,7 @@ namespace Akka.DistributedData
         /// <returns></returns>
         public static Update Update<T>(IKey<T> key, T value, IWriteConsistency consistency = null) 
             where T : IReplicatedData<T> =>
-            new Update(key, value, consistency ?? WriteLocal, old => old.Merge(value));
+            new(key, value, consistency ?? WriteLocal, old => old.Merge(value));
 
         /// <summary>
         /// Constructs a message that, when send to <see cref="DistributedData.Replicator"/>,
@@ -79,7 +79,7 @@ namespace Akka.DistributedData
         /// <param name="modify">An updating function.</param>
         /// <returns>TBD</returns>
         public static Update Update<T>(IKey<T> key, IWriteConsistency consistency, Func<T, T> modify) where T : IReplicatedData =>
-            new Update(key, consistency, data => modify((T)data));
+            new(key, consistency, data => modify((T)data));
 
         /// <summary>
         /// Constructs a message that, when send to <see cref="DistributedData.Replicator"/>,
@@ -98,7 +98,7 @@ namespace Akka.DistributedData
         /// <param name="modify">An updating function.</param>
         /// <returns>TBD</returns>
         public static Update Update<T>(IKey<T> key, T initial, IWriteConsistency consistency, Func<T, T> modify) where T : IReplicatedData =>
-            new Update(key, initial, consistency, data => modify((T)data));
+            new(key, initial, consistency, data => modify((T)data));
 
         /// <summary>
         /// Constructs a message that, when send to <see cref="DistributedData.Replicator"/>,
@@ -121,7 +121,7 @@ namespace Akka.DistributedData
         /// <param name="modify">An updating function.</param>
         /// <returns>TBD</returns>
         public static Update Update<T>(IKey<T> key, T initial, IWriteConsistency consistency, object request, Func<T, T> modify) where T : IReplicatedData =>
-            new Update(key, initial, consistency, data => modify((T)data), request);
+            new(key, initial, consistency, data => modify((T)data), request);
 
         /// <summary>
         /// Constructs a message that, when send to <see cref="DistributedData.Replicator"/>,
@@ -140,7 +140,7 @@ namespace Akka.DistributedData
         /// </param>
         /// <returns>TBD</returns>
         public static Get Get<T>(IKey<T> key, IReadConsistency consistency = null, object request = null) where T : IReplicatedData =>
-            new Get(key, consistency ?? ReadLocal, request);
+            new(key, consistency ?? ReadLocal, request);
 
         /// <summary>
         /// Constructs a message that, when send to <see cref="DistributedData.Replicator"/>,
@@ -162,7 +162,7 @@ namespace Akka.DistributedData
         /// </param>
         /// <returns>TBD</returns>
         public static Delete Delete<T>(IKey<T> key, IWriteConsistency consistency, object request = null) where T: IReplicatedData =>
-            new Delete(key, consistency, request);
+            new(key, consistency, request);
 
         /// <summary>
         /// Constructs a message that, when send to <see cref="DistributedData.Replicator"/>,
@@ -177,7 +177,7 @@ namespace Akka.DistributedData
         /// <param name="subscriber">Actor subscribing to changes under provided <paramref name="key"/>.</param>
         /// <returns>TBD</returns>
         public static Subscribe Subscribe<T>(IKey<T> key, IActorRef subscriber) where T : IReplicatedData =>
-            new Subscribe(key, subscriber);
+            new(key, subscriber);
 
         /// <summary>
         /// Constructs a message that, when send to <see cref="DistributedData.Replicator"/>,
@@ -189,6 +189,6 @@ namespace Akka.DistributedData
         /// <param name="subscriber">A subscriber for the <paramref name="key"/>ed value changes.</param>
         /// <returns>TBD</returns>
         public static Unsubscribe Unsubscribe<T>(IKey<T> key, IActorRef subscriber) where T : IReplicatedData =>
-            new Unsubscribe(key, subscriber);
+            new(key, subscriber);
     }
 }

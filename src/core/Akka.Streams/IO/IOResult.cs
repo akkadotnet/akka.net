@@ -60,7 +60,7 @@ namespace Akka.Streams.IO
         /// </summary>
         /// <param name="count">Numeric value depending on context, for example IO operations performed or bytes processed.</param>
         /// <returns>Successful IOResult</returns>
-        public static IOResult Success(long count) => new IOResult(count, Result.Success(NotUsed.Instance));
+        public static IOResult Success(long count) => new(count, Result.Success(NotUsed.Instance));
 
         /// <summary>
         /// Creates failed IOResult, <paramref name="count"/> should be the number of bytes (or other unit, please document in your APIs) processed before failing
@@ -69,7 +69,7 @@ namespace Akka.Streams.IO
         /// <param name="reason">The corresponding <see cref="Exception"/></param>
         /// <returns>Failed IOResult</returns>
         public static IOResult Failed(long count, Exception reason)
-            => new IOResult(count, Result.Failure<NotUsed>(reason));
+            => new(count, Result.Failure<NotUsed>(reason));
     }
 
     /// <summary>

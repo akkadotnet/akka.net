@@ -25,8 +25,7 @@ namespace Akka.Remote.Transport
     /// </summary>
     public class TestTransport : Transport
     {
-        private readonly TaskCompletionSource<IAssociationEventListener> _associationListenerPromise =
-            new TaskCompletionSource<IAssociationEventListener>();
+        private readonly TaskCompletionSource<IAssociationEventListener> _associationListenerPromise = new();
 
         private readonly AssociationRegistry _registry;
         /// <summary>
@@ -434,8 +433,7 @@ namespace Akka.Remote.Transport
     /// <typeparam name="TOut">TBD</typeparam>
     public class SwitchableLoggedBehavior<TIn, TOut>
     {
-        private readonly ConcurrentStack<Func<TIn, Task<TOut>>> _behaviorStack =
-            new ConcurrentStack<Func<TIn, Task<TOut>>>();
+        private readonly ConcurrentStack<Func<TIn, Task<TOut>>> _behaviorStack = new();
 
         /// <summary>
         /// TBD
@@ -564,18 +562,16 @@ namespace Akka.Remote.Transport
     /// </remarks>
     public class AssociationRegistry
     {
-        private static readonly ConcurrentDictionary<string, AssociationRegistry> registries =
-            new ConcurrentDictionary<string, AssociationRegistry>();
+        private static readonly ConcurrentDictionary<string, AssociationRegistry> registries = new();
 
-        private readonly ConcurrentStack<Activity> _activityLog = new ConcurrentStack<Activity>();
+        private readonly ConcurrentStack<Activity> _activityLog = new();
 
         private readonly
             ConcurrentDictionary<(Address, Address), (IHandleEventListener, IHandleEventListener)>
-            _listenersTable =
-                new ConcurrentDictionary<(Address, Address), (IHandleEventListener, IHandleEventListener)>();
+            _listenersTable = new();
 
         private readonly ConcurrentDictionary<Address, (TestTransport, Task<IAssociationEventListener>)>
-            _transportTable = new ConcurrentDictionary<Address, (TestTransport, Task<IAssociationEventListener>)>();
+            _transportTable = new();
 
         /// <summary>
         /// Retrieves the specified <see cref="AssociationRegistry"/> associated with the <paramref name="key"/>.

@@ -21,7 +21,7 @@ namespace Akka.TestKit
     /// </summary>
     public class TestEventListener : DefaultLogger
     {
-        private readonly List<IEventFilter> _filters = new List<IEventFilter>();
+        private readonly List<IEventFilter> _filters = new();
 
         /// <summary>
         /// TBD

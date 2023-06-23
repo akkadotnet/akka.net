@@ -127,7 +127,7 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode
         [Serializable]
         public sealed class Stop
         {
-            public static readonly Stop Instance = new Stop();
+            public static readonly Stop Instance = new();
             private Stop() { }
         }
 

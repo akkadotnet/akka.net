@@ -143,9 +143,9 @@ namespace Akka.Serialization
 
         private readonly Serializer _nullSerializer;
 
-        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new ConcurrentDictionary<Type, Serializer>();
-        private readonly Dictionary<int, Serializer> _serializersById = new Dictionary<int, Serializer>();
-        private readonly Dictionary<string, Serializer> _serializersByName = new Dictionary<string, Serializer>();
+        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new();
+        private readonly Dictionary<int, Serializer> _serializersById = new();
+        private readonly Dictionary<string, Serializer> _serializersByName = new();
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
         private readonly MinimalLogger _initializationLogger;

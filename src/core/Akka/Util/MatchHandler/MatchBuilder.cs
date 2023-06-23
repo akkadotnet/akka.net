@@ -38,9 +38,9 @@ namespace Akka.Tools.MatchHandler
         //    builder2:  action = s=>G(s); predicate = s=>s!=""
 
         private static readonly Type _itemType = typeof(TItem);
-        private readonly List<TypeHandler> _typeHandlers = new List<TypeHandler>(); //Contains all handlers, with the handled types and predicates
-        private readonly List<Argument> _arguments = new List<Argument>();                //Contains Actions,Predicates and Funcs that has been added
-        private readonly List<object> _signature = new List<object>();
+        private readonly List<TypeHandler> _typeHandlers = new(); //Contains all handlers, with the handled types and predicates
+        private readonly List<Argument> _arguments = new();                //Contains Actions,Predicates and Funcs that has been added
+        private readonly List<object> _signature = new();
         private readonly IMatchCompiler<TItem> _compiler;
         private State _state;
 

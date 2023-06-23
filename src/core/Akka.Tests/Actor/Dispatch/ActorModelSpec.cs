@@ -146,7 +146,7 @@ namespace Akka.Tests.Actor.Dispatch
         {
             private Interrupt() { }
 
-            public static readonly Interrupt Instance = new Interrupt();
+            public static readonly Interrupt Instance = new();
         }
 
         sealed class InterruptNicely : IActorModelMessage
@@ -163,21 +163,21 @@ namespace Akka.Tests.Actor.Dispatch
         {
             private Restart() { }
 
-            public static readonly Restart Instance = new Restart();
+            public static readonly Restart Instance = new();
         }
 
         sealed class DoubleStop : IActorModelMessage
         {
             private DoubleStop() { }
 
-            public static readonly DoubleStop Instance = new DoubleStop();
+            public static readonly DoubleStop Instance = new();
         }
 
         private class GetStats : IActorModelMessage
         {
             private GetStats(){}
 
-            public static readonly GetStats Instance = new GetStats();
+            public static readonly GetStats Instance = new();
         }
 
         sealed class ThrowException : IActorModelMessage
@@ -195,7 +195,7 @@ namespace Akka.Tests.Actor.Dispatch
 
         class DispatcherActor : ReceiveActor
         {
-            private Switch _busy = new Switch(false);
+            private Switch _busy = new(false);
             private readonly ILoggingAdapter _log = Context.GetLogger();
             private MessageDispatcherInterceptor _interceptor = Context.Dispatcher.AsInstanceOf<MessageDispatcherInterceptor>();
 
@@ -244,13 +244,13 @@ namespace Akka.Tests.Actor.Dispatch
 
         public class InterceptorStats
         {
-            public readonly AtomicCounterLong Suspensions = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong Resumes = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong Registers = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong Unregisters = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong MsgsReceived = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong MsgsProcessed = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong Restarts = new AtomicCounterLong(0L);
+            public readonly AtomicCounterLong Suspensions = new(0L);
+            public readonly AtomicCounterLong Resumes = new(0L);
+            public readonly AtomicCounterLong Registers = new(0L);
+            public readonly AtomicCounterLong Unregisters = new(0L);
+            public readonly AtomicCounterLong MsgsReceived = new(0L);
+            public readonly AtomicCounterLong MsgsProcessed = new(0L);
+            public readonly AtomicCounterLong Restarts = new(0L);
 
             public override string ToString()
             {
@@ -261,8 +261,8 @@ namespace Akka.Tests.Actor.Dispatch
 
         public class MessageDispatcherInterceptor : Dispatcher
         {
-            public readonly ConcurrentDictionary<IActorRef, InterceptorStats> Stats = new ConcurrentDictionary<IActorRef, InterceptorStats>();
-            public readonly AtomicCounterLong Stops = new AtomicCounterLong(0L);
+            public readonly ConcurrentDictionary<IActorRef, InterceptorStats> Stats = new();
+            public readonly AtomicCounterLong Stops = new(0L);
 
             public MessageDispatcherInterceptor(MessageDispatcherConfigurator configurator, string id, int throughput, long? throughputDeadlineTime, ExecutorServiceFactory executorServiceFactory, TimeSpan shutdownTimeout) : base(configurator, id, throughput, throughputDeadlineTime, executorServiceFactory, shutdownTimeout)
             {

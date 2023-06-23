@@ -37,7 +37,7 @@ namespace Akka.Tests.Performance.Dispatch
         /// <summary>
         /// Used to block the benchmark method from exiting before all scheduled work is completed
         /// </summary>
-        protected readonly ManualResetEventSlim EventBlock = new ManualResetEventSlim(false);
+        protected readonly ManualResetEventSlim EventBlock = new(false);
 
         protected Action ScheduledWork;
 

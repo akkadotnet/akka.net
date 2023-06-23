@@ -218,7 +218,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         sealed class ReqAck
         {
-            public static readonly ReqAck Instance = new ReqAck();
+            public static readonly ReqAck Instance = new();
             private ReqAck() { }
             public override bool Equals(object obj)
             {
@@ -229,7 +229,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         sealed class InvalidReq
         {
-            public static readonly InvalidReq Instance = new InvalidReq();
+            public static readonly InvalidReq Instance = new();
             private InvalidReq() { }
             public override bool Equals(object obj)
             {
@@ -332,10 +332,10 @@ namespace Akka.Persistence.Tests
         }
 
         [Serializable]
-        sealed class Boom { public static readonly Boom Instance = new Boom(); }
+        sealed class Boom { public static readonly Boom Instance = new(); }
 
         [Serializable]
-        sealed class SaveSnap { public static readonly SaveSnap Instance = new SaveSnap(); }
+        sealed class SaveSnap { public static readonly SaveSnap Instance = new(); }
 
         [Serializable]
         sealed class Snap

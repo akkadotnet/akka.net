@@ -15,7 +15,7 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
 {
     public class SqliteSnapshotStoreSerializationSpec : SnapshotStoreSerializationSpec
     {
-        private static AtomicCounter Counter { get; } = new AtomicCounter(0);
+        private static AtomicCounter Counter { get; } = new(0);
 
         public SqliteSnapshotStoreSerializationSpec(ITestOutputHelper output)
             : base(CreateSpecConfig("Filename=file:serialization-snapshot-" + Counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"), "SqliteSnapshotStoreSerializationSpec", output)

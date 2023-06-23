@@ -50,7 +50,7 @@ namespace Akka.Tests.Actor
             public class GetTelemetryRequest
             {
                 // make singleton
-                public static readonly GetTelemetryRequest Instance = new GetTelemetryRequest();
+                public static readonly GetTelemetryRequest Instance = new();
                 private GetTelemetryRequest() { }
             }
 
@@ -85,7 +85,7 @@ namespace Akka.Tests.Actor
         public class RestartChildren
         {
             // make singleton
-            public static readonly RestartChildren Instance = new RestartChildren();
+            public static readonly RestartChildren Instance = new();
 
             private RestartChildren()
             {

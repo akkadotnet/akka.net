@@ -16,13 +16,13 @@ namespace Akka.TestKit.Internal
 {
     public class AsyncQueue<T>: ITestQueue<T> where T: class
     {
-        private readonly AsyncPeekableCollection<T> _collection = new AsyncPeekableCollection<T>(new QueueCollection());
+        private readonly AsyncPeekableCollection<T> _collection = new(new QueueCollection());
 
         public int Count => _collection.Count;
         
         public void Enqueue(T item) => EnqueueAsync(item).AsTask().WaitAndUnwrapException();
 
-        public ValueTask EnqueueAsync(T item) => new ValueTask(_collection.AddAsync(item)); 
+        public ValueTask EnqueueAsync(T item) => new(_collection.AddAsync(item)); 
 
         public bool TryEnqueue(T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
@@ -113,8 +113,7 @@ namespace Akka.TestKit.Internal
             return item;
         }
 
-        public ValueTask<T> TakeAsync(CancellationToken cancellationToken) 
-            => new ValueTask<T>(_collection.TakeAsync(cancellationToken));
+        public ValueTask<T> TakeAsync(CancellationToken cancellationToken) => new(_collection.TakeAsync(cancellationToken));
 
         public bool TryPeek(out T item) => _collection.TryPeek(out item);
 
@@ -166,8 +165,7 @@ namespace Akka.TestKit.Internal
             return item;
         }
 
-        public ValueTask<T> PeekAsync(CancellationToken cancellationToken)
-            => new ValueTask<T>(_collection.PeekAsync(cancellationToken));
+        public ValueTask<T> PeekAsync(CancellationToken cancellationToken) => new(_collection.PeekAsync(cancellationToken));
         
         public List<T> ToList()
         {
@@ -176,7 +174,7 @@ namespace Akka.TestKit.Internal
         
         private class QueueCollection : IPeekableProducerConsumerCollection<T>
         {
-            private readonly Queue<T> _queue = new Queue<T>();
+            private readonly Queue<T> _queue = new();
 
             public int Count { 
                 get
@@ -267,7 +265,7 @@ namespace Akka.TestKit.Internal
                 return GetEnumerator();
             }
 
-            public object SyncRoot { get; } = new object();
+            public object SyncRoot { get; } = new();
 
             public bool IsSynchronized => true;
         }        

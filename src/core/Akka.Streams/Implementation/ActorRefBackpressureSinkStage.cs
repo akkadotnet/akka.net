@@ -133,7 +133,7 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
-        private readonly Inlet<TIn> _inlet = new Inlet<TIn>("ActorRefBackpressureSink.in");
+        private readonly Inlet<TIn> _inlet = new("ActorRefBackpressureSink.in");
 
         private readonly IActorRef _actorRef;
         private readonly object _onInitMessage;

@@ -154,7 +154,7 @@ namespace Akka.Cluster.Sharding.Internal
 
         public sealed class GetEntities : ICommand
         {
-            public static readonly GetEntities Instance = new GetEntities();
+            public static readonly GetEntities Instance = new();
 
             private GetEntities()
             {
@@ -342,7 +342,7 @@ namespace Akka.Cluster.Sharding.Internal
         /// </summary>
         public sealed class GetShards : ICommand
         {
-            public static readonly GetShards Instance = new GetShards();
+            public static readonly GetShards Instance = new();
 
             private GetShards()
             {

@@ -18,7 +18,7 @@ namespace Akka.Persistence.Query.InMemory
         [Serializable]
         public sealed class Continue
         {
-            public static readonly Continue Instance = new Continue();
+            public static readonly Continue Instance = new();
 
             private Continue()
             {

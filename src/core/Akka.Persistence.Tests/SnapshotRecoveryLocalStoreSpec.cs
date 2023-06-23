@@ -18,7 +18,7 @@ namespace Akka.Persistence.Tests
         public sealed class TakeSnapshot
         {
             private TakeSnapshot() {}
-            public static readonly TakeSnapshot Instance = new TakeSnapshot();
+            public static readonly TakeSnapshot Instance = new();
         }
 
         internal class SaveSnapshotTestPersistentActor : NamedPersistentActor
@@ -60,7 +60,7 @@ namespace Akka.Persistence.Tests
                 _probe = probe;
             }
 
-            public override Recovery Recovery => new Recovery(SnapshotSelectionCriteria.Latest, 0);
+            public override Recovery Recovery => new(SnapshotSelectionCriteria.Latest, 0);
 
             protected override bool ReceiveRecover(object message)
             {

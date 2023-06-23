@@ -138,7 +138,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// An empty instance of the <see cref="LWWDictionary{TKey,TValue}"/>
         /// </summary>
-        public static readonly LWWDictionary<TKey, TValue> Empty = new LWWDictionary<TKey, TValue>(ORDictionary<TKey, LWWRegister<TValue>>.Empty);
+        public static readonly LWWDictionary<TKey, TValue> Empty = new(ORDictionary<TKey, LWWRegister<TValue>>.Empty);
 
         internal readonly ORDictionary<TKey, LWWRegister<TValue>> Underlying;
 
@@ -232,8 +232,7 @@ namespace Akka.DistributedData
         /// Note that if there is a conflicting update on another node the entry will
         /// not be removed after merge.
         /// </summary>
-        public LWWDictionary<TKey, TValue> Remove(UniqueAddress node, TKey key) =>
-            new LWWDictionary<TKey, TValue>(Underlying.Remove(node, key));
+        public LWWDictionary<TKey, TValue> Remove(UniqueAddress node, TKey key) => new(Underlying.Remove(node, key));
 
         /// <summary>
         /// Tries to return a value under provided <paramref name="key"/> is such value exists.
@@ -259,7 +258,7 @@ namespace Akka.DistributedData
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
         public LWWDictionary<TKey, TValue> Merge(LWWDictionary<TKey, TValue> other) =>
-            new LWWDictionary<TKey, TValue>(Underlying.Merge(other.Underlying));
+            new(Underlying.Merge(other.Underlying));
 
         /// <summary>
         /// TBD
@@ -290,7 +289,7 @@ namespace Akka.DistributedData
         /// <param name="collapseInto">TBD</param>
         /// <returns>TBD</returns>
         public LWWDictionary<TKey, TValue> Prune(UniqueAddress removedNode, UniqueAddress collapseInto) =>
-            new LWWDictionary<TKey, TValue>(Underlying.Prune(removedNode, collapseInto));
+            new(Underlying.Prune(removedNode, collapseInto));
 
         /// <summary>
         /// TBD
@@ -298,7 +297,7 @@ namespace Akka.DistributedData
         /// <param name="removedNode">TBD</param>
         /// <returns>TBD</returns>
         public LWWDictionary<TKey, TValue> PruningCleanup(UniqueAddress removedNode) =>
-            new LWWDictionary<TKey, TValue>(Underlying.PruningCleanup(removedNode));
+            new(Underlying.PruningCleanup(removedNode));
 
         /// <summary>
         /// TBD
@@ -421,8 +420,7 @@ namespace Akka.DistributedData
             return new LWWDictionary<TKey, TValue>(Underlying.MergeDelta(delta));
         }
 
-        public LWWDictionary<TKey, TValue> ResetDelta() =>
-            new LWWDictionary<TKey, TValue>(Underlying.ResetDelta());
+        public LWWDictionary<TKey, TValue> ResetDelta() => new(Underlying.ResetDelta());
 
         #endregion
 

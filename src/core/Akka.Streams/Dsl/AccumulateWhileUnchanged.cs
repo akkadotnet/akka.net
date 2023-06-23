@@ -27,7 +27,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : GraphStageLogic
         {
             private Option<TProperty> _currentState = Option<TProperty>.None;
-            private readonly List<TElement> _buffer = new List<TElement>();
+            private readonly List<TElement> _buffer = new();
 
             public Logic(AccumulateWhileUnchanged<TElement, TProperty> accumulateWhileUnchanged) : base(accumulateWhileUnchanged.Shape)
             {

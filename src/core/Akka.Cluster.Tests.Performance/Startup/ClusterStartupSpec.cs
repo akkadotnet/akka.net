@@ -30,7 +30,7 @@ namespace Akka.Cluster.Tests.Performance.Startup
                                              akka.remote.dot-netty.tcp.public-hostname = localhost
                                              akka.cluster.seed-nodes = [""akka.tcp://ClusterSys@localhost:8110""]";
 
-        public TaskCompletionSource<Done> _clusterMemberUp = new TaskCompletionSource<Done>();
+        public TaskCompletionSource<Done> _clusterMemberUp = new();
 
         [PerfSetup]
         public void Setup(BenchmarkContext context)

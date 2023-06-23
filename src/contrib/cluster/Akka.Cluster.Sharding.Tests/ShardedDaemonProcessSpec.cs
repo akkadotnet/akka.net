@@ -20,7 +20,7 @@ namespace Akka.Cluster.Sharding.Tests
     {
         private sealed class Stop
         {
-            public static Stop Instance { get; } = new Stop();
+            public static Stop Instance { get; } = new();
             private Stop() { }
         }
 

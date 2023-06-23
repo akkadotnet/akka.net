@@ -19,7 +19,7 @@ namespace Akka.Tests.Util
 {
     public class IndexSpec : AkkaSpec
     {
-        private Index<string, int> Empty => new Index<string, int>();
+        private Index<string, int> Empty => new();
 
         private Index<string, int> IndexWithValues
         {

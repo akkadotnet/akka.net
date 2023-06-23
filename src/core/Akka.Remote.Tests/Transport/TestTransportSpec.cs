@@ -22,9 +22,9 @@ namespace Akka.Remote.Tests.Transport
     {
         #region Setup / Teardown
 
-        private readonly Address _addressA = new Address("test", "testsystemA", "testhostA", 4321);
-        private readonly Address _addressB = new Address("test", "testsystemB", "testhostB", 5432);
-        private readonly Address _nonExistantAddress = new Address("test", "nosystem", "nohost", 0);
+        private readonly Address _addressA = new("test", "testsystemA", "testhostA", 4321);
+        private readonly Address _addressB = new("test", "testsystemB", "testhostB", 5432);
+        private readonly Address _nonExistantAddress = new("test", "nosystem", "nohost", 0);
 
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
         #endregion

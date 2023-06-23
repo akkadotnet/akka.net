@@ -64,8 +64,8 @@ namespace Akka.Remote.Tests
 
             var remoteSettingsAdaptersStandart = new List<KeyValuePair<string, Type>>()
             {
-                new KeyValuePair<string, Type>("gremlin", typeof(FailureInjectorProvider)),
-                new KeyValuePair<string, Type>("trttl", typeof(ThrottlerProvider))
+                new("gremlin", typeof(FailureInjectorProvider)),
+                new("trttl", typeof(ThrottlerProvider))
             };
 
             var remoteSettingsAdapters =

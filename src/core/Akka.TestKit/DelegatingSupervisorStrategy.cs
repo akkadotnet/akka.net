@@ -15,7 +15,7 @@ namespace Akka.TestKit
 {
     public class DelegatingSupervisorStrategy : SupervisorStrategy
     {
-        private Dictionary<IActorRef, SupervisorStrategy> Delegates { get; } = new Dictionary<IActorRef, SupervisorStrategy>();
+        private Dictionary<IActorRef, SupervisorStrategy> Delegates { get; } = new();
 
         public override IDecider Decider { get; } = DefaultDecider;
         

@@ -66,13 +66,13 @@ namespace Akka.Benchmarks.Actor
 
         sealed class ChildReady
         {
-            public static readonly ChildReady Instance = new ChildReady();
+            public static readonly ChildReady Instance = new();
             private ChildReady() { }
         }
 
         sealed class TestDone
         {
-            public static readonly TestDone Instance = new TestDone();
+            public static readonly TestDone Instance = new();
             private TestDone() { }
         }
 
