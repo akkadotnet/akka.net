@@ -103,7 +103,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class GetLocations
         {
-            public static readonly GetLocations Instance = new GetLocations();
+            public static readonly GetLocations Instance = new();
 
             private GetLocations()
             {

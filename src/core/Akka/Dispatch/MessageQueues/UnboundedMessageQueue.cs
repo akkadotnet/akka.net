@@ -13,7 +13,7 @@ namespace Akka.Dispatch.MessageQueues
     /// <summary> An unbounded mailbox message queue. </summary>
     public class UnboundedMessageQueue : IMessageQueue, IUnboundedMessageQueueSemantics
     {
-        private readonly TQueue _queue = new TQueue();
+        private readonly TQueue _queue = new();
 
         /// <inheritdoc cref="IMessageQueue"/>
         public bool HasMessages

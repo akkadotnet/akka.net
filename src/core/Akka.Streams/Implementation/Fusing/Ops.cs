@@ -92,12 +92,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("Select.in");
+        public Inlet<TIn> In { get; } = new("Select.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Select.out");
+        public Outlet<TOut> Out { get; } = new("Select.out");
 
         /// <summary>
         /// TBD
@@ -526,7 +526,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private class NotApplied
             {
-                public static readonly NotApplied Instance = new NotApplied();
+                public static readonly NotApplied Instance = new();
                 private NotApplied() { }
             }
         }
@@ -559,12 +559,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("Collect.in");
+        public Inlet<TIn> In { get; } = new("Collect.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Collect.out");
+        public Outlet<TOut> Out { get; } = new("Collect.out");
 
         /// <summary>
         /// TBD
@@ -977,12 +977,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("Scan.in");
+        public Inlet<TIn> In { get; } = new("Scan.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Scan.out");
+        public Outlet<TOut> Out { get; } = new("Scan.out");
 
         /// <summary>
         /// TBD
@@ -1160,12 +1160,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("ScanAsync.in");
+        public Inlet<TIn> In { get; } = new("ScanAsync.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("ScanAsync.out");
+        public Outlet<TOut> Out { get; } = new("ScanAsync.out");
 
         /// <summary>
         /// TBD
@@ -1286,12 +1286,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("Aggregate.in");
+        public Inlet<TIn> In { get; } = new("Aggregate.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Aggregate.out");
+        public Outlet<TOut> Out { get; } = new("Aggregate.out");
 
         /// <summary>
         /// TBD
@@ -1459,12 +1459,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("AggregateAsync.in");
+        public Inlet<TIn> In { get; } = new("AggregateAsync.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("AggregateAsync.out");
+        public Outlet<TOut> Out { get; } = new("AggregateAsync.out");
 
         /// <summary>
         /// TBD
@@ -1689,12 +1689,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<T> In { get; } = new Inlet<T>("Grouped.in");
+        public Inlet<T> In { get; } = new("Grouped.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<IEnumerable<T>> Out { get; } = new Outlet<IEnumerable<T>>("Grouped.out");
+        public Outlet<IEnumerable<T>> Out { get; } = new("Grouped.out");
 
         /// <summary>
         /// TBD
@@ -1911,12 +1911,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<T> In { get; } = new Inlet<T>("Sliding.in");
+        public Inlet<T> In { get; } = new("Sliding.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<IEnumerable<T>> Out { get; } = new Outlet<IEnumerable<T>>("Sliding.out");
+        public Outlet<IEnumerable<T>> Out { get; } = new("Sliding.out");
 
         /// <summary>
         /// TBD
@@ -2149,9 +2149,9 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, NotUsed>(In, Out);
         }
 
-        public Inlet<T> In { get; } = new Inlet<T>("OnCompleted.in");
+        public Inlet<T> In { get; } = new("OnCompleted.in");
 
-        public Outlet<NotUsed> Out { get; } = new Outlet<NotUsed>("OnCompleted.out");
+        public Outlet<NotUsed> Out { get; } = new("OnCompleted.out");
 
         public override FlowShape<T, NotUsed> Shape { get; }
 
@@ -2485,12 +2485,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("expand.in");
+        public Inlet<TIn> In { get; } = new("expand.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("expand.out");
+        public Outlet<TOut> Out { get; } = new("expand.out");
 
         /// <summary>
         /// TBD
@@ -2661,11 +2661,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<TIn> In = new Inlet<TIn>("SelectAsync.in");
+        public readonly Inlet<TIn> In = new("SelectAsync.in");
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TOut> Out = new Outlet<TOut>("SelectAsync.out");
+        public readonly Outlet<TOut> Out = new("SelectAsync.out");
 
         /// <summary>
         /// TBD
@@ -2811,11 +2811,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<TIn> In = new Inlet<TIn>("SelectAsyncUnordered.in");
+        public readonly Inlet<TIn> In = new("SelectAsyncUnordered.in");
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TOut> Out = new Outlet<TOut>("SelectAsyncUnordered.out");
+        public readonly Outlet<TOut> Out = new("SelectAsyncUnordered.out");
 
         /// <summary>
         /// TBD
@@ -2855,7 +2855,7 @@ namespace Akka.Streams.Implementation.Fusing
     [InternalApi]
     public sealed class Log<T> : SimpleLinearGraphStage<T>
     {
-        private static readonly Attributes.LogLevels DefaultLogLevels = new Attributes.LogLevels(
+        private static readonly Attributes.LogLevels DefaultLogLevels = new(
             onElement: LogLevel.DebugLevel,
             onFinish: LogLevel.DebugLevel,
             onFailure: LogLevel.ErrorLevel);
@@ -3034,7 +3034,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private readonly GroupedWeightedWithin<T> _stage;
 
-            private readonly List<T> _buffer = new List<T>();
+            private readonly List<T> _buffer = new();
             private T _pending = default;
             private long _pendingWeight = 0L;
             // True if:
@@ -3203,8 +3203,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-        private readonly Inlet<T> _in = new Inlet<T>("in");
-        private readonly Outlet<IEnumerable<T>> _out = new Outlet<IEnumerable<T>>("out");
+        private readonly Inlet<T> _in = new("in");
+        private readonly Outlet<IEnumerable<T>> _out = new("out");
         private readonly long _maxWeight;
         private readonly int _maxNumber;
         private readonly Func<T, long> _costFn;
@@ -3879,7 +3879,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         #endregion
-        private readonly Outlet<T> _outlet = new Outlet<T>("EnumerableSource.out");
+        private readonly Outlet<T> _outlet = new("EnumerableSource.out");
         private readonly Func<IAsyncEnumerable<T>> _factory;
 
         public AsyncEnumerable(Func<IAsyncEnumerable<T>>  factory)
@@ -3993,8 +3993,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<Func<TIn, IEnumerable<TOut>>> _concatFactory;
 
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("StatefulSelectMany.in");
-        private readonly Outlet<TOut> _out = new Outlet<TOut>("StatefulSelectMany.out");
+        private readonly Inlet<TIn> _in = new("StatefulSelectMany.in");
+        private readonly Outlet<TOut> _out = new("StatefulSelectMany.out");
 
         /// <summary>
         /// TBD
@@ -4250,12 +4250,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("lazySink.In");
+        public Inlet<TIn> In { get; } = new("lazySink.In");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("lazySink.Out");
+        public Outlet<TOut> Out { get; } = new("lazySink.Out");
 
         /// <summary>
         /// TBD

@@ -18,7 +18,7 @@ namespace Akka.Persistence.Query.Sql;
 /// </summary>
 internal sealed class RequestQueryStart
 {
-    public static readonly RequestQueryStart Instance = new RequestQueryStart();
+    public static readonly RequestQueryStart Instance = new();
     private RequestQueryStart() { }
 }
 
@@ -27,7 +27,7 @@ internal sealed class RequestQueryStart
 /// </summary>
 internal sealed class QueryStartGranted
 {
-    public static readonly QueryStartGranted Instance = new QueryStartGranted();
+    public static readonly QueryStartGranted Instance = new();
     private QueryStartGranted() { }
 }
 
@@ -36,7 +36,7 @@ internal sealed class QueryStartGranted
 /// </summary>
 internal sealed class ReturnQueryStart
 {
-    public static readonly ReturnQueryStart Instance = new ReturnQueryStart();
+    public static readonly ReturnQueryStart Instance = new();
     private ReturnQueryStart() { }
 }
 

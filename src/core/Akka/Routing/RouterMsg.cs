@@ -42,7 +42,7 @@ namespace Akka.Routing
         /// <summary>
         /// The singleton instance of GetRoutees.
         /// </summary>
-        public static GetRoutees Instance { get; } = new GetRoutees();
+        public static GetRoutees Instance { get; } = new();
     }
 
     /// <summary>

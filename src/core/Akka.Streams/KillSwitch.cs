@@ -30,7 +30,7 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public static SharedKillSwitch Shared(string name) => new SharedKillSwitch(name);
+        public static SharedKillSwitch Shared(string name) => new(name);
 
         /// <summary>
         /// Creates a new <see cref="IGraph{TShape}"/> of <see cref="FlowShape{TIn,TOut}"/> that materializes to an external switch that allows external completion
@@ -139,8 +139,8 @@ namespace Akka.Streams
                 Shape = new FlowShape<T, T>(Inlet, Outlet);
             }
 
-            public Inlet<T> Inlet { get; } = new Inlet<T>("cancel.in");
-            public Outlet<T> Outlet { get; } = new Outlet<T>("cancel.out");
+            public Inlet<T> Inlet { get; } = new("cancel.in");
+            public Outlet<T> Outlet { get; } = new("cancel.out");
 
             public override FlowShape<T, T> Shape { get; }
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
@@ -207,15 +207,15 @@ namespace Akka.Streams
 
             #endregion
 
-            public static UniqueKillSwitchStage<T> Instance { get; } = new UniqueKillSwitchStage<T>();
+            public static UniqueKillSwitchStage<T> Instance { get; } = new();
 
             private UniqueKillSwitchStage() => Shape = new FlowShape<T, T>(In, Out);
 
             protected override Attributes InitialAttributes { get; } = Attributes.CreateName("breaker");
 
-            private Inlet<T> In { get; } = new Inlet<T>("KillSwitch.in");
+            private Inlet<T> In { get; } = new("KillSwitch.in");
 
-            private Outlet<T> Out { get; } = new Outlet<T>("KillSwitch.out");
+            private Outlet<T> Out { get; } = new("KillSwitch.out");
 
             public override FlowShape<T, T> Shape { get; }
 
@@ -270,19 +270,19 @@ namespace Akka.Streams
 
             #endregion
 
-            public static UniqueBidiKillSwitchStage<T1, T2> Instance { get; } = new UniqueBidiKillSwitchStage<T1, T2>();
+            public static UniqueBidiKillSwitchStage<T1, T2> Instance { get; } = new();
 
             private UniqueBidiKillSwitchStage() => Shape = new BidiShape<T1, T1, T2, T2>(In1, Out1, In2, Out2);
 
             protected override Attributes InitialAttributes { get; } = Attributes.CreateName("breaker");
 
-            private Inlet<T1> In1 { get; } = new Inlet<T1>("KillSwitchBidi.in1");
+            private Inlet<T1> In1 { get; } = new("KillSwitchBidi.in1");
 
-            private Outlet<T1> Out1 { get; } = new Outlet<T1>("KillSwitchBidi.out1");
+            private Outlet<T1> Out1 { get; } = new("KillSwitchBidi.out1");
 
-            private Inlet<T2> In2 { get; } = new Inlet<T2>("KillSwitchBidi.in2");
+            private Inlet<T2> In2 { get; } = new("KillSwitchBidi.in2");
 
-            private Outlet<T2> Out2 { get; } = new Outlet<T2>("KillSwitchBidi.out2");
+            private Outlet<T2> Out2 { get; } = new("KillSwitchBidi.out2");
 
             public override BidiShape<T1, T1, T2, T2> Shape { get; }
                 
@@ -427,9 +427,9 @@ namespace Akka.Streams
                 Shape = new FlowShape<T, T>(In, Out);
             }
 
-            private Inlet<T> In { get; } = new Inlet<T>("KillSwitch.in");
+            private Inlet<T> In { get; } = new("KillSwitch.in");
 
-            private Outlet<T> Out { get; } = new Outlet<T>("KillSwitch.out");
+            private Outlet<T> Out { get; } = new("KillSwitch.out");
 
             public override FlowShape<T, T> Shape { get; }
 
@@ -442,7 +442,7 @@ namespace Akka.Streams
 
         #endregion
 
-        private readonly TaskCompletionSource<NotUsed> _shutdownPromise = new TaskCompletionSource<NotUsed>();
+        private readonly TaskCompletionSource<NotUsed> _shutdownPromise = new();
         private readonly string _name;
 
         /// <summary>

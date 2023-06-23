@@ -307,7 +307,7 @@ namespace Akka.Streams.TestKit
 
         #endregion
 
-        private readonly List<Func<CancellationToken, Task>> _tasks = new List<Func<CancellationToken, Task>>();
+        private readonly List<Func<CancellationToken, Task>> _tasks = new();
         private bool _executed;
 
         internal SubscriberFluentBuilder(ManualProbe<T> probe)

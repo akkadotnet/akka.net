@@ -31,12 +31,12 @@ namespace Akka.Event
         private readonly bool _debug;
 
         // used to uniquely name unsubscribers instances, should there be more than one ActorSystem / EventStream
-        private static readonly AtomicCounter UnsubscribersCounter = new AtomicCounter(0);
-        private readonly AtomicReference<IActorRef> _unsubscriber = new AtomicReference<IActorRef>(ActorRefs.NoSender);
+        private static readonly AtomicCounter UnsubscribersCounter = new(0);
+        private readonly AtomicReference<IActorRef> _unsubscriber = new(ActorRefs.NoSender);
         
         // in the event that an actor subscribers to the EventStream prior to ActorSystemImpl.Init is called
         // we register them here and then move them all
-        private readonly ConcurrentSet<IActorRef> _pendingUnsubscribers = new ConcurrentSet<IActorRef>();
+        private readonly ConcurrentSet<IActorRef> _pendingUnsubscribers = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventStream"/> class.

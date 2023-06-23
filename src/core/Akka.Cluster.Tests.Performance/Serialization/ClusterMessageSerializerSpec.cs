@@ -20,7 +20,7 @@ namespace Akka.Cluster.Tests.Performance.Serialization
     public class ClusterMessageSerializerSpec
     {
         private const string SerializerCounterName = "SerializerCounter";
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new(0);
         private Counter _serializationThroughput;
         private ActorSystem _system;
         private ClusterMessageSerializer _serializer;
@@ -28,14 +28,14 @@ namespace Akka.Cluster.Tests.Performance.Serialization
 
         // MESSAGES
 
-        internal Lazy<ClusterRouterPool> ClusterRouterPoolMessage { get; } = new Lazy<ClusterRouterPool>(() =>
+        internal Lazy<ClusterRouterPool> ClusterRouterPoolMessage { get; } = new(() =>
         {
             var roundRobinPool = new RoundRobinPool(nrOfInstances: 4);
             var clusterRouterPoolSettings = new ClusterRouterPoolSettings(2, 5, true, "Richard, Duke");
             return new ClusterRouterPool(roundRobinPool, clusterRouterPoolSettings);
         });
 
-        internal Lazy<InternalClusterAction.Welcome> WelcomeMessage { get; } = new Lazy<InternalClusterAction.Welcome>(() =>
+        internal Lazy<InternalClusterAction.Welcome> WelcomeMessage { get; } = new(() =>
         {
             var member1 = new Member(new UniqueAddress(new Address("akka.tcp", "system", "some.host.org", 4718), 34), 1, MemberStatus.Joining, ImmutableHashSet<string>.Empty, AppVersion.Zero);
             var member2 = new Member(new UniqueAddress(new Address("akka.tcp", "system", "some.host.org", 4710), 35), 1, MemberStatus.Joining, ImmutableHashSet<string>.Empty, AppVersion.Zero);

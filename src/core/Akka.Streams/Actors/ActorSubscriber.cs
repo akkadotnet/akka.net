@@ -91,7 +91,7 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly OnComplete Instance = new OnComplete();
+        public static readonly OnComplete Instance = new();
         private OnComplete() { }
     }
 
@@ -417,11 +417,11 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly ActorSubscriberState Instance = new ActorSubscriberState();
+        public static readonly ActorSubscriberState Instance = new();
 
         private ActorSubscriberState() { }
 
-        private readonly ConcurrentDictionary<IActorRef, State> _state = new ConcurrentDictionary<IActorRef, State>();
+        private readonly ConcurrentDictionary<IActorRef, State> _state = new();
 
         /// <summary>
         /// TBD
@@ -457,6 +457,6 @@ namespace Akka.Streams.Actors
         /// </summary>
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
-        public override ActorSubscriberState CreateExtension(ExtendedActorSystem system) => new ActorSubscriberState();
+        public override ActorSubscriberState CreateExtension(ExtendedActorSystem system) => new();
     }
 }

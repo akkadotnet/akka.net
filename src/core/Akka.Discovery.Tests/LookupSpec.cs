@@ -20,7 +20,7 @@ namespace Akka.Discovery.Tests
         private readonly List<string> srvWithValidDomainNames;
 
         // No SRV that should result in simple A/AAAA lookups
-        private readonly List<string> noSrvLookups = new List<string>
+        private readonly List<string> noSrvLookups = new()
         {
             "portName.protocol.serviceName.local",
             "serviceName.local",

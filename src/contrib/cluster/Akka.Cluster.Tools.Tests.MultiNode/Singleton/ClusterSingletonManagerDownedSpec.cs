@@ -44,7 +44,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         internal class EchoStarted
         {
-            public static readonly EchoStarted Instance = new EchoStarted();
+            public static readonly EchoStarted Instance = new();
             private EchoStarted()
             {
             }
@@ -52,7 +52,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         internal class EchoStopped
         {
-            public static readonly EchoStopped Instance = new EchoStopped();
+            public static readonly EchoStopped Instance = new();
             private EchoStopped()
             {
             }

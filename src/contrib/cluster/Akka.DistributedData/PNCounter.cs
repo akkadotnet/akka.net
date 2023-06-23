@@ -34,7 +34,7 @@ namespace Akka.DistributedData
         IEquatable<PNCounter>,
         IReplicatedDelta
     {
-        public static readonly PNCounter Empty = new PNCounter();
+        public static readonly PNCounter Empty = new();
 
         public BigInteger Value => new BigInteger(Increments.Value) - new BigInteger(Decrements.Value);
 
@@ -82,8 +82,7 @@ namespace Akka.DistributedData
             return this;
         }
 
-        public PNCounter Merge(PNCounter other) =>
-            new PNCounter(Increments.Merge(other.Increments), Decrements.Merge(other.Decrements));
+        public PNCounter Merge(PNCounter other) => new(Increments.Merge(other.Increments), Decrements.Merge(other.Decrements));
 
         public ImmutableHashSet<UniqueAddress> ModifiedByNodes => Increments.ModifiedByNodes.Union(Decrements.ModifiedByNodes);
 
@@ -95,10 +94,10 @@ namespace Akka.DistributedData
         IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
 
         public PNCounter Prune(Cluster.UniqueAddress removedNode, Cluster.UniqueAddress collapseInto) =>
-            new PNCounter(Increments.Prune(removedNode, collapseInto), Decrements.Prune(removedNode, collapseInto));
+            new(Increments.Prune(removedNode, collapseInto), Decrements.Prune(removedNode, collapseInto));
 
         public PNCounter PruningCleanup(Cluster.UniqueAddress removedNode) =>
-            new PNCounter(Increments.PruningCleanup(removedNode), Decrements.PruningCleanup(removedNode));
+            new(Increments.PruningCleanup(removedNode), Decrements.PruningCleanup(removedNode));
 
         
         public bool Equals(PNCounter other)
@@ -126,7 +125,7 @@ namespace Akka.DistributedData
 
         #region delta
 
-        public PNCounter Delta => new PNCounter(Increments.Delta ?? GCounter.Empty, Decrements.Delta ?? GCounter.Empty);
+        public PNCounter Delta => new(Increments.Delta ?? GCounter.Empty, Decrements.Delta ?? GCounter.Empty);
 
         public PNCounter MergeDelta(PNCounter delta) => Merge(delta);
 

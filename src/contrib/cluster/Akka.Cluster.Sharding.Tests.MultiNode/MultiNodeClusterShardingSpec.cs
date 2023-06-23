@@ -52,7 +52,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public class Stop
             {
-                public static readonly Stop Instance = new Stop();
+                public static readonly Stop Instance = new();
 
                 private Stop()
                 {
@@ -71,7 +71,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             public class Pong
             {
-                public static readonly Pong Instance = new Pong();
+                public static readonly Pong Instance = new();
 
                 private Pong()
                 {
@@ -105,7 +105,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public class Stop
             {
-                public static readonly Stop Instance = new Stop();
+                public static readonly Stop Instance = new();
 
                 private Stop()
                 {

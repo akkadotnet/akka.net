@@ -30,10 +30,10 @@ namespace Akka.Persistence.Query
     /// </summary>
     internal struct TimeUuid : IEquatable<TimeUuid>, IComparable<TimeUuid>
     {
-        private static readonly DateTimeOffset GregorianCalendarTime = new DateTimeOffset(1582, 10, 15, 0, 0, 0, TimeSpan.Zero);
+        private static readonly DateTimeOffset GregorianCalendarTime = new(1582, 10, 15, 0, 0, 0, TimeSpan.Zero);
         //Reuse the random generator to avoid collisions
-        private static readonly Random RandomGenerator = new Random();
-        private static readonly object RandomLock = new object();
+        private static readonly Random RandomGenerator = new();
+        private static readonly object RandomLock = new();
         private static readonly byte[] MinNodeId = { 0x80, 0x80, 0x80, 0x80, 0x80, 0x80 };
         private static readonly byte[] MinClockId = { 0x80, 0x80 };
         private static readonly byte[] MaxNodeId = { 0x7f, 0x7f, 0x7f, 0x7f, 0x7f, 0x7f };

@@ -65,7 +65,7 @@ namespace Akka.Streams.TestKit
 
         public sealed class OnComplete: ISubscriberEvent
         {
-            public static readonly OnComplete Instance = new OnComplete();
+            public static readonly OnComplete Instance = new();
             private OnComplete() { }
 
             public override string ToString() => "TestSubscriber.OnComplete";

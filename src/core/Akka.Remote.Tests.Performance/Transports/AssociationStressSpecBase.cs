@@ -22,7 +22,7 @@ namespace Akka.Remote.Tests.Performance.Transports
     public abstract class AssociationStressSpecBase
     {
         private const string AssociationCounterName = "AssociationConfirmed";
-        private static readonly AtomicCounter ActorSystemNameCounter = new AtomicCounter(0);
+        private static readonly AtomicCounter ActorSystemNameCounter = new(0);
         protected readonly TimeSpan AssociationTimeout = TimeSpan.FromSeconds(2);
         protected Counter AssociationCounter;
 

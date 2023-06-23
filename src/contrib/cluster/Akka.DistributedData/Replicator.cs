@@ -270,7 +270,7 @@ namespace Akka.DistributedData
         private static readonly Digest LazyDigest = ByteString.CopyFrom(new byte[] { 0 });
         private static readonly Digest NotFoundDigest = ByteString.CopyFrom(new byte[] { 255 });
 
-        private static readonly DataEnvelope DeletedEnvelope = new DataEnvelope(DeletedData.Instance);
+        private static readonly DataEnvelope DeletedEnvelope = new(DeletedData.Instance);
 
         private readonly ReplicatorSettings _settings;
 
@@ -346,8 +346,8 @@ namespace Akka.DistributedData
         private long _statusCount = 0;
         private int _statusTotChunks = 0;
 
-        private readonly Dictionary<string, HashSet<IActorRef>> _subscribers = new Dictionary<string, HashSet<IActorRef>>();
-        private readonly Dictionary<string, HashSet<IActorRef>> _newSubscribers = new Dictionary<string, HashSet<IActorRef>>();
+        private readonly Dictionary<string, HashSet<IActorRef>> _subscribers = new();
+        private readonly Dictionary<string, HashSet<IActorRef>> _newSubscribers = new();
         private ImmutableDictionary<string, IKey> _subscriptionKeys = ImmutableDictionary<string, IKey>.Empty;
 
         private readonly ILoggingAdapter _log;

@@ -213,22 +213,22 @@ namespace Akka.Streams.Tests.Dsl
         }
         private sealed class CallInitStageActorRef
         {
-            public static readonly CallInitStageActorRef Instance = new CallInitStageActorRef();
+            public static readonly CallInitStageActorRef Instance = new();
             private CallInitStageActorRef() { }
         }
         private sealed class BecomeStringEcho
         {
-            public static readonly BecomeStringEcho Instance = new BecomeStringEcho();
+            public static readonly BecomeStringEcho Instance = new();
             private BecomeStringEcho() { }
         }
         private sealed class PullNow
         {
-            public static readonly PullNow Instance = new PullNow();
+            public static readonly PullNow Instance = new();
             private PullNow() { }
         }
         private sealed class StopNow
         {
-            public static readonly StopNow Instance = new StopNow();
+            public static readonly StopNow Instance = new();
             private StopNow() { }
         }
 
@@ -303,7 +303,7 @@ namespace Akka.Streams.Tests.Dsl
             }
             #endregion
 
-            private readonly Inlet<int> _inlet = new Inlet<int>("IntSum.in");
+            private readonly Inlet<int> _inlet = new("IntSum.in");
 
             public SumTestStage(IActorRef probe)
             {

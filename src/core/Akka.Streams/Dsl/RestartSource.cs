@@ -151,7 +151,7 @@ namespace Akka.Streams.Dsl
             Shape = new SourceShape<T>(Out);
         }
 
-        public Outlet<T> Out { get; } = new Outlet<T>("RestartWithBackoffSource.out");
+        public Outlet<T> Out { get; } = new("RestartWithBackoffSource.out");
 
         public override SourceShape<T> Shape { get; }
 

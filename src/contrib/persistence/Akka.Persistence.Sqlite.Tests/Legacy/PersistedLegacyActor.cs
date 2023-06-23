@@ -14,7 +14,7 @@ namespace Akka.Persistence.Sqlite.Tests.Legacy
     public class PersistedLegacyActor: ReceivePersistentActor
     {
         private Persisted _savedState;
-        private readonly List<Persisted> _events = new List<Persisted>();
+        private readonly List<Persisted> _events = new();
         private bool _recoveryCompleted;
         private bool _stateRequested;
         private int _persistCount;
@@ -89,7 +89,7 @@ namespace Akka.Persistence.Sqlite.Tests.Legacy
         
         public sealed class PersistAck
         {
-            public static readonly PersistAck Instance = new PersistAck();
+            public static readonly PersistAck Instance = new();
             private PersistAck() { }
         }
         
@@ -107,7 +107,7 @@ namespace Akka.Persistence.Sqlite.Tests.Legacy
         
         public sealed class GetState
         {
-            public static readonly GetState Instance = new GetState();
+            public static readonly GetState Instance = new();
             private GetState() { }
         }
         

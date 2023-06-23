@@ -109,7 +109,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             #region TestClientListener messages
             public sealed class GetLatestContactPoints
             {
-                public static readonly GetLatestContactPoints Instance = new GetLatestContactPoints();
+                public static readonly GetLatestContactPoints Instance = new();
                 private GetLatestContactPoints() { }
             }
 
@@ -168,7 +168,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             #region TestReceptionistListener messages
             public sealed class GetLatestClusterClients
             {
-                public static readonly GetLatestClusterClients Instance = new GetLatestClusterClients();
+                public static readonly GetLatestClusterClients Instance = new();
                 private GetLatestClusterClients() { }
             }
 

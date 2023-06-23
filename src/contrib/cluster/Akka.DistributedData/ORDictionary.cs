@@ -130,7 +130,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// An empty instance of the <see cref="ORDictionary{TKey,TValue}"/>
         /// </summary>
-        public static readonly ORDictionary<TKey, TValue> Empty = new ORDictionary<TKey, TValue>(ORSet<TKey>.Empty, ImmutableDictionary<TKey, TValue>.Empty);
+        public static readonly ORDictionary<TKey, TValue> Empty = new(ORSet<TKey>.Empty, ImmutableDictionary<TKey, TValue>.Empty);
 
         internal readonly ORSet<TKey> KeySet;
         internal readonly IImmutableDictionary<TKey, TValue> ValueMap;

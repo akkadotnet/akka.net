@@ -432,7 +432,7 @@ namespace Akka.Cluster
             /// <summary>
             /// Singleton instance
             /// </summary>
-            public static readonly ExitingCompleted Instance = new ExitingCompleted();
+            public static readonly ExitingCompleted Instance = new();
         }
 
         /// <summary>
@@ -446,7 +446,7 @@ namespace Akka.Cluster
         internal class GossipTick : ITick
         {
             private GossipTick() { }
-            private static readonly GossipTick _instance = new GossipTick();
+            private static readonly GossipTick _instance = new();
             /// <summary>
             /// TBD
             /// </summary>
@@ -465,7 +465,7 @@ namespace Akka.Cluster
         internal class GossipSpeedupTick : ITick
         {
             private GossipSpeedupTick() { }
-            private static readonly GossipSpeedupTick _instance = new GossipSpeedupTick();
+            private static readonly GossipSpeedupTick _instance = new();
             /// <summary>
             /// TBD
             /// </summary>
@@ -484,7 +484,7 @@ namespace Akka.Cluster
         internal class ReapUnreachableTick : ITick
         {
             private ReapUnreachableTick() { }
-            private static readonly ReapUnreachableTick _instance = new ReapUnreachableTick();
+            private static readonly ReapUnreachableTick _instance = new();
             /// <summary>
             /// TBD
             /// </summary>
@@ -503,7 +503,7 @@ namespace Akka.Cluster
         internal class MetricsTick : ITick
         {
             private MetricsTick() { }
-            private static readonly MetricsTick _instance = new MetricsTick();
+            private static readonly MetricsTick _instance = new();
             /// <summary>
             /// TBD
             /// </summary>
@@ -522,7 +522,7 @@ namespace Akka.Cluster
         internal class LeaderActionsTick : ITick
         {
             private LeaderActionsTick() { }
-            private static readonly LeaderActionsTick _instance = new LeaderActionsTick();
+            private static readonly LeaderActionsTick _instance = new();
             /// <summary>
             /// TBD
             /// </summary>
@@ -541,7 +541,7 @@ namespace Akka.Cluster
         internal class PublishStatsTick : ITick
         {
             private PublishStatsTick() { }
-            private static readonly PublishStatsTick _instance = new PublishStatsTick();
+            private static readonly PublishStatsTick _instance = new();
             /// <summary>
             /// TBD
             /// </summary>
@@ -833,7 +833,7 @@ namespace Akka.Cluster
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
-        private readonly TaskCompletionSource<Done> _clusterPromise = new TaskCompletionSource<Done>();
+        private readonly TaskCompletionSource<Done> _clusterPromise = new();
 
         /// <summary>
         /// Creates a new instance of the ClusterDaemon
@@ -1015,7 +1015,7 @@ namespace Akka.Cluster
         private Gossip LatestGossip => _membershipState.LatestGossip;
 
         private readonly bool _statsEnabled;
-        private GossipStats _gossipStats = new GossipStats();
+        private GossipStats _gossipStats = new();
         private ImmutableList<Address> _seedNodes;
         private IActorRef _seedNodeProcess;
         private int _seedNodeProcessCounter = 0; //for unique names
@@ -1026,7 +1026,7 @@ namespace Akka.Cluster
         private int _selfDownCounter = 0;
 
         private bool _exitingTasksInProgress = false;
-        private readonly TaskCompletionSource<Done> _selfExiting = new TaskCompletionSource<Done>();
+        private readonly TaskCompletionSource<Done> _selfExiting = new();
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private ImmutableHashSet<UniqueAddress> _exitingConfirmed = ImmutableHashSet<UniqueAddress>.Empty;
 

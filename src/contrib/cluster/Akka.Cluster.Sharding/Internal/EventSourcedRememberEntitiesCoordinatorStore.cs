@@ -74,7 +74,7 @@ namespace Akka.Cluster.Sharding.Internal
 
         public sealed class MigrationMarker : IClusterShardingSerializable
         {
-            public static readonly MigrationMarker Instance = new MigrationMarker();
+            public static readonly MigrationMarker Instance = new();
 
             private MigrationMarker()
             {
@@ -107,7 +107,7 @@ namespace Akka.Cluster.Sharding.Internal
         /// </summary>
         public override string PersistenceId { get; }
 
-        private readonly HashSet<ShardId> _shards = new HashSet<EntityId>();
+        private readonly HashSet<ShardId> _shards = new();
         private bool _writtenMarker = false;
 
         protected override bool ReceiveRecover(object message)

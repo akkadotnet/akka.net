@@ -119,7 +119,7 @@ namespace Akka.Util
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly WildcardTree<T> Empty = new WildcardTree<T>();
+        public static readonly WildcardTree<T> Empty = new();
 
         #endregion
     }

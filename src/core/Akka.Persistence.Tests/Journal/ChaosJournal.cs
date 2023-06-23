@@ -38,9 +38,9 @@ namespace Akka.Persistence.Tests.Journal
 
     public class ChaosJournal : AsyncWriteJournal, IMemoryMessages
     {
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
+        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
 
-        private readonly Random _random = new Random();
+        private readonly Random _random = new();
 
         private readonly double _writeFailureRate;
         private readonly double _deleteFailureRate;

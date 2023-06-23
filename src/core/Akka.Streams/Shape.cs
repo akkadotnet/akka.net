@@ -241,7 +241,7 @@ namespace Akka.Streams
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly ClosedShape Instance = new ClosedShape();
+        public static readonly ClosedShape Instance = new();
         
         private ClosedShape() { }
 
@@ -695,6 +695,6 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static BidiShape<TIn1, TOut1, TIn2, TOut2> FromFlows<TIn1, TOut1, TIn2, TOut2>(
             FlowShape<TIn1, TOut1> top, FlowShape<TIn2, TOut2> bottom)
-            => new BidiShape<TIn1, TOut1, TIn2, TOut2>(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);
+            => new(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);
     }
 }

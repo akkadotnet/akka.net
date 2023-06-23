@@ -29,7 +29,6 @@ namespace Akka.Streams.Implementation.StreamRef
 
     internal sealed class StreamRefsMasterProvider : ExtensionIdProvider<StreamRefsMaster>
     {
-        public override StreamRefsMaster CreateExtension(ExtendedActorSystem system) =>
-            new StreamRefsMaster(system);
+        public override StreamRefsMaster CreateExtension(ExtendedActorSystem system) => new(system);
     }
 }

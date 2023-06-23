@@ -209,7 +209,7 @@ namespace Akka.Streams.Implementation.IO
 
         internal class FlushSignal
         {
-            public static readonly FlushSignal Instance = new FlushSignal();
+            public static readonly FlushSignal Instance = new();
             private FlushSignal() { }
         }
     }

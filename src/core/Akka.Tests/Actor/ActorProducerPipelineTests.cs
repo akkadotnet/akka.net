@@ -97,7 +97,7 @@ namespace Akka.Tests.Actor
 
         internal sealed class StashStatus
         {
-            public static readonly StashStatus Instance = new StashStatus();
+            public static readonly StashStatus Instance = new();
             private StashStatus() { }
         }
 

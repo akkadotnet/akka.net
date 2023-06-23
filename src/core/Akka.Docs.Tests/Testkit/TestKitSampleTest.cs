@@ -36,7 +36,7 @@ namespace DocsExamples.Testkit
     public class TestKitSampleTest : TestKit
     {
     
-        private TimeSpan EpsilonValueForWithins => new TimeSpan(0, 0, 1); // https://github.com/akkadotnet/akka.net/issues/2130
+        private TimeSpan EpsilonValueForWithins => new(0, 0, 1); // https://github.com/akkadotnet/akka.net/issues/2130
 
         [Fact]
         public void Test()

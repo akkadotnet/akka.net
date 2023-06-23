@@ -17,7 +17,7 @@ namespace Akka.Persistence.Tests
 {
     public partial class PersistentActorSpecAsyncAwait : PersistenceSpec
     {
-        private readonly Random _random = new Random();
+        private readonly Random _random = new();
         public PersistentActorSpecAsyncAwait()
             : base(Configuration("PersistentActorSpecAsyncAwait"))
         {

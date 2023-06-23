@@ -33,14 +33,11 @@ namespace Akka.Util.Reflection
     }
     internal static class ExpressionBasedParser
     {
-        private static readonly ConcurrentDictionary<ConstructorInfo, string[]>
-            paramNameDictionary =
-                new ConcurrentDictionary<ConstructorInfo, string[]>();
+        private static readonly ConcurrentDictionary<ConstructorInfo, string[]> paramNameDictionary = new();
 
         private static readonly Type _objectType = typeof(object);
 
-        private static readonly Type _multicastDelegateType =
-            typeof(MulticastDelegate);
+        private static readonly Type _multicastDelegateType = typeof(MulticastDelegate);
         
         public static object[] ParseExpressionArgs(
             this NewExpression newExpr)

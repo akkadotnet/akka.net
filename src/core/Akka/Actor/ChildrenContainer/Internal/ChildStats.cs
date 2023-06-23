@@ -22,7 +22,7 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class ChildNameReserved : IChildStats
     {
-        private static readonly ChildNameReserved _instance = new ChildNameReserved();
+        private static readonly ChildNameReserved _instance = new();
         private ChildNameReserved() {/* Intentionally left blank */}
 
         /// <summary>

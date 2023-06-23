@@ -51,7 +51,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public class EchoStared
         {
-            public static EchoStared Instance { get; } = new EchoStared();
+            public static EchoStared Instance { get; } = new();
             private EchoStared() { }
         }
 

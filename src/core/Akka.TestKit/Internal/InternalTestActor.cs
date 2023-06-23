@@ -21,7 +21,7 @@ namespace Akka.TestKit.Internal
         private readonly ITestActorQueue<MessageEnvelope> _queue;
         private TestKit.TestActor.Ignore _ignore;
         private AutoPilot _autoPilot;
-        private DelegatingSupervisorStrategy _supervisorStrategy = new DelegatingSupervisorStrategy();
+        private DelegatingSupervisorStrategy _supervisorStrategy = new();
 
         /// <summary>
         /// TBD

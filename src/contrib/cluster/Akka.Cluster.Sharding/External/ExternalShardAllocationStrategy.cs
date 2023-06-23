@@ -58,7 +58,7 @@ namespace Akka.Cluster.Sharding.External
 
         public sealed class GetShardLocations : INoSerializationVerificationNeeded
         {
-            public static readonly GetShardLocations Instance = new GetShardLocations();
+            public static readonly GetShardLocations Instance = new();
 
             private GetShardLocations()
             {

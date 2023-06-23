@@ -75,27 +75,27 @@ namespace Tutorials.Tutorial4
 
         public sealed class TemperatureNotAvailable : ITemperatureReading
         {
-            public static TemperatureNotAvailable Instance { get; } = new TemperatureNotAvailable();
+            public static TemperatureNotAvailable Instance { get; } = new();
             private TemperatureNotAvailable() { }
         }
 
         public sealed class DeviceNotAvailable : ITemperatureReading
         {
-            public static DeviceNotAvailable Instance { get; } = new DeviceNotAvailable();
+            public static DeviceNotAvailable Instance { get; } = new();
             private DeviceNotAvailable() { }
         }
 
         public sealed class DeviceTimedOut : ITemperatureReading
         {
-            public static DeviceTimedOut Instance { get; } = new DeviceTimedOut();
+            public static DeviceTimedOut Instance { get; } = new();
             private DeviceTimedOut() { }
         }
         #endregion
 
         public class DeviceGroup : UntypedActor
         {
-            private Dictionary<string, IActorRef> deviceIdToActor = new Dictionary<string, IActorRef>();
-            private Dictionary<IActorRef, string> actorToDeviceId = new Dictionary<IActorRef, string>();
+            private Dictionary<string, IActorRef> deviceIdToActor = new();
+            private Dictionary<IActorRef, string> actorToDeviceId = new();
             private long nextCollectionId = 0L;
 
             public DeviceGroup(string groupId)

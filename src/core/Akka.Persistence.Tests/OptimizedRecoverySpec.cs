@@ -48,7 +48,7 @@ namespace Akka.Persistence.Tests
 
         internal sealed class PersistFromRecoveryCompleted
         {
-            public static PersistFromRecoveryCompleted Instance { get; } = new PersistFromRecoveryCompleted();
+            public static PersistFromRecoveryCompleted Instance { get; } = new();
             private PersistFromRecoveryCompleted() { }
         }
 

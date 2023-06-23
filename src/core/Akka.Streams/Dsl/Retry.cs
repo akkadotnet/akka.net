@@ -223,7 +223,7 @@ namespace Akka.Streams.Dsl
             private sealed class Logic : GraphStageLogic
             {
                 private readonly RetryConcatCoordinator<TIn, TState, TOut> _retry;
-                private readonly Queue<(TIn, TState)> _queue = new Queue<(TIn, TState)>();
+                private readonly Queue<(TIn, TState)> _queue = new();
                 private bool _elementInCycle;
 
                 public Logic(RetryConcatCoordinator<TIn, TState, TOut> retry) : base(retry.Shape)

@@ -97,7 +97,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// <typeparam name="TValue"></typeparam>
         internal sealed class ImmutableDictionaryKeepOrder<TKey, TValue> : IImmutableDictionary<TKey, TValue>
         {
-            public static readonly ImmutableDictionaryKeepOrder<TKey, TValue> Empty = new ImmutableDictionaryKeepOrder<TKey, TValue>(ImmutableDictionary<TKey, TValue>.Empty, ImmutableList<KeyValuePair<TKey, TValue>>.Empty);
+            public static readonly ImmutableDictionaryKeepOrder<TKey, TValue> Empty = new(ImmutableDictionary<TKey, TValue>.Empty, ImmutableList<KeyValuePair<TKey, TValue>>.Empty);
 
             private readonly ImmutableDictionary<TKey, TValue> _dictionary = ImmutableDictionary<TKey, TValue>.Empty;
             private readonly ImmutableList<KeyValuePair<TKey, TValue>> _items = ImmutableList<KeyValuePair<TKey, TValue>>.Empty;

@@ -15,7 +15,7 @@ namespace Akka.Event
     /// </summary>
     public class DefaultLogMessageFormatter : ILogMessageFormatter
     {
-        public static readonly DefaultLogMessageFormatter Instance = new DefaultLogMessageFormatter();
+        public static readonly DefaultLogMessageFormatter Instance = new();
         private DefaultLogMessageFormatter(){}
         
         public string Format(string format, params object[] args)

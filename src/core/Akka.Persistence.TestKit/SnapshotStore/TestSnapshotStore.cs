@@ -69,8 +69,7 @@ namespace Akka.Persistence.TestKit
         }
 
         static SnapshotSelectionCriteria ToSelectionCriteria(SnapshotMetadata metadata)
-            => new SnapshotSelectionCriteria(metadata.SequenceNr, metadata.Timestamp, metadata.SequenceNr,
-                metadata.Timestamp);
+            => new(metadata.SequenceNr, metadata.Timestamp, metadata.SequenceNr, metadata.Timestamp);
 
         /// <summary>
         ///     Create proxy object from snapshot store actor reference which can alter behavior of snapshot store.
@@ -117,7 +116,7 @@ namespace Akka.Persistence.TestKit
 
         public sealed class Ack
         {
-            public static readonly Ack Instance = new Ack();
+            public static readonly Ack Instance = new();
         }
 
         internal class TestSnapshotStoreWrapper : ITestSnapshotStore
@@ -129,9 +128,9 @@ namespace Akka.Persistence.TestKit
 
             private readonly IActorRef _actor;
 
-            public SnapshotStoreSaveBehavior OnSave => new SnapshotStoreSaveBehavior(new SnapshotStoreSaveBehaviorSetter(_actor));
-            public SnapshotStoreLoadBehavior OnLoad => new SnapshotStoreLoadBehavior(new SnapshotStoreLoadBehaviorSetter(_actor));
-            public SnapshotStoreDeleteBehavior OnDelete => new SnapshotStoreDeleteBehavior(new SnapshotStoreDeleteBehaviorSetter(_actor));
+            public SnapshotStoreSaveBehavior OnSave => new(new SnapshotStoreSaveBehaviorSetter(_actor));
+            public SnapshotStoreLoadBehavior OnLoad => new(new SnapshotStoreLoadBehaviorSetter(_actor));
+            public SnapshotStoreDeleteBehavior OnDelete => new(new SnapshotStoreDeleteBehaviorSetter(_actor));
         }
     }
 }

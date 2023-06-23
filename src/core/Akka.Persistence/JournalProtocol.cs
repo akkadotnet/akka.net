@@ -253,7 +253,7 @@ namespace Akka.Persistence
         /// <summary>
         /// The singleton instance of <see cref="WriteMessagesSuccessful"/>.
         /// </summary>
-        public static WriteMessagesSuccessful Instance { get; } = new WriteMessagesSuccessful();
+        public static WriteMessagesSuccessful Instance { get; } = new();
 
         private WriteMessagesSuccessful() { }
     }

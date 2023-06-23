@@ -174,7 +174,7 @@ namespace Akka.DistributedData
         IEnumerable<T>,
         IDeltaReplicatedData<ORSet<T>, ORSet<T>.IDeltaOperation>
     {
-        public static readonly ORSet<T> Empty = new ORSet<T>();
+        public static readonly ORSet<T> Empty = new();
 
         internal readonly ImmutableDictionary<T, VersionVector> ElementsMap;
 

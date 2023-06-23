@@ -17,7 +17,7 @@ namespace Tutorials.Tutorial4
         #region query-full
         public sealed class CollectionTimeout
         {
-            public static CollectionTimeout Instance { get; } = new CollectionTimeout();
+            public static CollectionTimeout Instance { get; } = new();
             private CollectionTimeout() { }
         }
 

@@ -89,6 +89,6 @@ namespace Akka.Streams.Dsl
         /// <returns></returns>
         public static FlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat> From<TIn, TCtxIn, TOut, TCtxOut, TMat>(
             Flow<(TIn, TCtxIn), (TOut, TCtxOut), TMat> flow) =>
-            new FlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat>(flow);
+            new(flow);
     }
 }

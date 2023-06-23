@@ -85,9 +85,9 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly IWriteConsistency writeTwo;
         private readonly IReadConsistency readTwo;
 
-        private readonly GCounterKey keyA = new GCounterKey("durable-A");
-        private readonly GCounterKey keyB = new GCounterKey("durable-B");
-        private readonly ORSetKey<string> keyC = new ORSetKey<string>("durable-C");
+        private readonly GCounterKey keyA = new("durable-A");
+        private readonly GCounterKey keyB = new("durable-B");
+        private readonly ORSetKey<string> keyC = new("durable-C");
 
         private int testStepCounter = 0;
 

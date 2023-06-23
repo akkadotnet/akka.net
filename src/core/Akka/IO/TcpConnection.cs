@@ -97,18 +97,16 @@ namespace Akka.IO
 
         private bool _isOutputShutdown;
 
-        private readonly ConcurrentQueue<(IActorRef Commander, object Ack)> _pendingAcks = new ConcurrentQueue<(IActorRef, object)>();
+        private readonly ConcurrentQueue<(IActorRef Commander, object Ack)> _pendingAcks = new();
         private bool _peerClosed;
         private IActorRef _interestedInResume;
         private CloseInformation _closedMessage;  // for ConnectionClosed message in postStop
 
         private IActorRef _watchedActor = Context.System.DeadLetters;
 
-        private readonly IOException droppingWriteBecauseWritingIsSuspendedException =
-            new IOException("Dropping write because writing is suspended");
+        private readonly IOException droppingWriteBecauseWritingIsSuspendedException = new("Dropping write because writing is suspended");
 
-        private readonly IOException droppingWriteBecauseQueueIsFullException =
-            new IOException("Dropping write because queue is full");
+        private readonly IOException droppingWriteBecauseQueueIsFullException = new("Dropping write because queue is full");
 
         protected TcpConnection(TcpExt tcp, Socket socket, bool pullMode, Option<int> writeCommandsBufferMaxSize)
         {
@@ -836,8 +834,8 @@ namespace Akka.IO
 
         private struct ReadResult
         {
-            public static readonly ReadResult EndOfStream = new ReadResult(ReadResultType.EndOfStream, SocketError.Success);
-            public static readonly ReadResult AllRead = new ReadResult(ReadResultType.AllRead, SocketError.Success);
+            public static readonly ReadResult EndOfStream = new(ReadResultType.EndOfStream, SocketError.Success);
+            public static readonly ReadResult AllRead = new(ReadResultType.AllRead, SocketError.Success);
 
             public readonly ReadResultType Type;
             public readonly SocketError Error;

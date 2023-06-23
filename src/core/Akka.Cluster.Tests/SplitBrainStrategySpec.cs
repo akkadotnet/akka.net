@@ -18,16 +18,16 @@ namespace Akka.Cluster.Tests
     public class SplitBrainStrategySpec
     {
         private static Member Member(Address address, int upNumber = 1, MemberStatus status = MemberStatus.Up, string role = null) =>
-            new Member(new UniqueAddress(address, ThreadLocalRandom.Current.Next()), upNumber, status, role == null ? ImmutableHashSet<string>.Empty : ImmutableHashSet.Create(role), AppVersion.Zero);
+            new(new UniqueAddress(address, ThreadLocalRandom.Current.Next()), upNumber, status, role == null ? ImmutableHashSet<string>.Empty : ImmutableHashSet.Create(role), AppVersion.Zero);
 
         private static ImmutableSortedSet<Member> Members(params Member[] members) => ImmutableSortedSet.CreateRange(Akka.Cluster.Member.AgeOrdering, members);
 
-        private static readonly Address a = new Address("akka.tcp", "system", "localhost", 10000);
-        private static readonly Address b = new Address("akka.tcp", "system", "localhost", 10001);
-        private static readonly Address c = new Address("akka.tcp", "system", "localhost", 10002);
-        private static readonly Address d = new Address("akka.tcp", "system", "localhost", 10003);
-        private static readonly Address e = new Address("akka.tcp", "system", "localhost", 10004);
-        private static readonly Address f = new Address("akka.tcp", "system", "localhost", 10005);
+        private static readonly Address a = new("akka.tcp", "system", "localhost", 10000);
+        private static readonly Address b = new("akka.tcp", "system", "localhost", 10001);
+        private static readonly Address c = new("akka.tcp", "system", "localhost", 10002);
+        private static readonly Address d = new("akka.tcp", "system", "localhost", 10003);
+        private static readonly Address e = new("akka.tcp", "system", "localhost", 10004);
+        private static readonly Address f = new("akka.tcp", "system", "localhost", 10005);
 
         [Fact]
         public void StaticQuorum_must_down_unreachable_nodes_if_remaining_size_is_equal_quorum_size()

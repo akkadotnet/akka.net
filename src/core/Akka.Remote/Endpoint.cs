@@ -409,7 +409,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly IsIdle Instance = new IsIdle();
+            public static readonly IsIdle Instance = new();
             private IsIdle() { }
         }
 
@@ -421,7 +421,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Idle Instance = new Idle();
+            public static readonly Idle Instance = new();
             private Idle() { }
         }
 
@@ -433,7 +433,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly TooLongIdle Instance = new TooLongIdle();
+            public static readonly TooLongIdle Instance = new();
             private TooLongIdle() { }
         }
 
@@ -1072,7 +1072,7 @@ namespace Akka.Remote
         private DisassociateInfo _stopReason = DisassociateInfo.Unknown;
 
         private IActorRef _reader;
-        private readonly AtomicCounter _readerId = new AtomicCounter(0);
+        private readonly AtomicCounter _readerId = new(0);
         private readonly IInboundMessageDispatcher _msgDispatcher;
 
         private Ack _lastAck = null;
@@ -1084,10 +1084,10 @@ namespace Akka.Remote
         // Use an internal buffer instead of Stash for efficiency
         // stash/unstashAll is slow when many messages are stashed
         // IMPORTANT: sender is not stored, so .Sender and forward must not be used in EndpointWriter
-        private readonly LinkedList<object> _buffer = new LinkedList<object>();
+        private readonly LinkedList<object> _buffer = new();
 
         //buffer for IPriorityMessages - ensures that heartbeats get delivered before user-defined messages
-        private readonly LinkedList<EndpointManager.Send> _prioBuffer = new LinkedList<EndpointManager.Send>();
+        private readonly LinkedList<EndpointManager.Send> _prioBuffer = new();
         private long _largeBufferLogTimestamp = MonotonicClock.GetNanos();
 
         private readonly IRemoteMetrics _remoteMetrics;
@@ -1717,7 +1717,7 @@ namespace Akka.Remote
         public sealed class BackoffTimer
         {
             private BackoffTimer() { }
-            private static readonly BackoffTimer _instance = new BackoffTimer();
+            private static readonly BackoffTimer _instance = new();
             /// <summary>
             /// TBD
             /// </summary>
@@ -1730,7 +1730,7 @@ namespace Akka.Remote
         public sealed class FlushAndStop
         {
             private FlushAndStop() { }
-            private static readonly FlushAndStop _instance = new FlushAndStop();
+            private static readonly FlushAndStop _instance = new();
             /// <summary>
             /// TBD
             /// </summary>
@@ -1743,7 +1743,7 @@ namespace Akka.Remote
         public sealed class AckIdleCheckTimer
         {
             private AckIdleCheckTimer() { }
-            private static readonly AckIdleCheckTimer _instance = new AckIdleCheckTimer();
+            private static readonly AckIdleCheckTimer _instance = new();
             /// <summary>
             /// TBD
             /// </summary>
@@ -1753,7 +1753,7 @@ namespace Akka.Remote
         private sealed class FlushAndStopTimeout
         {
             private FlushAndStopTimeout() { }
-            private static readonly FlushAndStopTimeout _instance = new FlushAndStopTimeout();
+            private static readonly FlushAndStopTimeout _instance = new();
             public static FlushAndStopTimeout Instance { get { return _instance; } }
         }
 
@@ -1899,7 +1899,7 @@ namespace Akka.Remote
         private readonly IInboundMessageDispatcher _msgDispatch;
 
         private readonly IRemoteActorRefProvider _provider;
-        private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
+        private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new();
 
         #region ActorBase overrides
 

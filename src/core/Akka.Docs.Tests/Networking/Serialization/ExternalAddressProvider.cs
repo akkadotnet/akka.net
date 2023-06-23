@@ -13,8 +13,7 @@ namespace DocsExamples.Networking.Serialization
 {
     public class ExternalAddress : ExtensionIdProvider<ExternalAddressExtension>
     {
-        public override ExternalAddressExtension CreateExtension(ExtendedActorSystem system) =>
-            new ExternalAddressExtension(system);
+        public override ExternalAddressExtension CreateExtension(ExtendedActorSystem system) => new(system);
     }
 
     public class ExternalAddressExtension : IExtension

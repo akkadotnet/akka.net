@@ -19,7 +19,7 @@ namespace Akka.Remote.Serialization
     /// </summary>
     public class ProtobufSerializer : Serializer
     {
-        private static readonly ConcurrentDictionary<string, MessageParser> TypeLookup = new ConcurrentDictionary<string, MessageParser>();
+        private static readonly ConcurrentDictionary<string, MessageParser> TypeLookup = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProtobufSerializer"/> class.

@@ -120,7 +120,7 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Cancel Instance = new Cancel();
+        public static readonly Cancel Instance = new();
         private Cancel() { }
     }
 
@@ -135,7 +135,7 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly SubscriptionTimeoutExceeded Instance = new SubscriptionTimeoutExceeded();
+        public static readonly SubscriptionTimeoutExceeded Instance = new();
         private SubscriptionTimeoutExceeded() { }
     }
 
@@ -781,12 +781,12 @@ namespace Akka.Streams.Actors
             }
         }
 
-        private readonly ConcurrentDictionary<IActorRef, State> _state = new ConcurrentDictionary<IActorRef, State>();
+        private readonly ConcurrentDictionary<IActorRef, State> _state = new();
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly ActorPublisherState Instance = new ActorPublisherState();
+        public static readonly ActorPublisherState Instance = new();
 
         private ActorPublisherState() { }
 
@@ -823,6 +823,6 @@ namespace Akka.Streams.Actors
         /// </summary>
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
-        public override ActorPublisherState CreateExtension(ExtendedActorSystem system) => new ActorPublisherState();
+        public override ActorPublisherState CreateExtension(ExtendedActorSystem system) => new();
     }
 }

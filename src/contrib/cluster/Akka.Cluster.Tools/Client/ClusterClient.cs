@@ -132,7 +132,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static RefreshContactsTick Instance { get; } = new RefreshContactsTick();
+            public static RefreshContactsTick Instance { get; } = new();
             private RefreshContactsTick() { }
         }
 
@@ -145,7 +145,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static HeartbeatTick Instance { get; } = new HeartbeatTick();
+            public static HeartbeatTick Instance { get; } = new();
             private HeartbeatTick() { }
         }
 
@@ -158,7 +158,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static ReconnectTimeout Instance { get; } = new ReconnectTimeout();
+            public static ReconnectTimeout Instance { get; } = new();
             private ReconnectTimeout() { }
         }
 
@@ -598,7 +598,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly SubscribeContactPoints Instance = new SubscribeContactPoints();
+        public static readonly SubscribeContactPoints Instance = new();
         private SubscribeContactPoints() { }
     }
 
@@ -617,7 +617,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly UnsubscribeContactPoints Instance = new UnsubscribeContactPoints();
+        public static readonly UnsubscribeContactPoints Instance = new();
         private UnsubscribeContactPoints() { }
     }
 
@@ -637,7 +637,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// The singleton instance of this message.
         /// </summary>
-        public static readonly GetContactPoints Instance = new GetContactPoints();
+        public static readonly GetContactPoints Instance = new();
         private GetContactPoints() { }
     }
 

@@ -43,15 +43,15 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly MemberAgeOrdering Ascending = new MemberAgeOrdering(true, false);
+        public static readonly MemberAgeOrdering Ascending = new(true, false);
 
-        public static readonly MemberAgeOrdering AscendingWithAppVersion = new MemberAgeOrdering(true, true);
+        public static readonly MemberAgeOrdering AscendingWithAppVersion = new(true, true);
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly MemberAgeOrdering Descending = new MemberAgeOrdering(false, false);
+        public static readonly MemberAgeOrdering Descending = new(false, false);
         
-        public static readonly MemberAgeOrdering DescendingWithAppVersion = new MemberAgeOrdering(false, true);
+        public static readonly MemberAgeOrdering DescendingWithAppVersion = new(false, true);
     }
 }

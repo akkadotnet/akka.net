@@ -45,7 +45,7 @@ namespace Akka.Actor
             {
             }
 
-            public static readonly Local Instance = new Local();
+            public static readonly Local Instance = new();
         }
 
         public sealed class Remote : ProviderSelection
@@ -54,7 +54,7 @@ namespace Akka.Actor
             {
             }
 
-            public static readonly Remote Instance = new Remote();
+            public static readonly Remote Instance = new();
         }
 
         public sealed class Cluster : ProviderSelection
@@ -63,7 +63,7 @@ namespace Akka.Actor
             {
             }
 
-            public static readonly Cluster Instance = new Cluster();
+            public static readonly Cluster Instance = new();
         }
 
         public sealed class Custom : ProviderSelection
