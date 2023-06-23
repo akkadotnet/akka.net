@@ -60,7 +60,7 @@ namespace DocsExamples.Actor.FiniteStateMachine
 
     public class Uninitialized : IData
     {
-        public static Uninitialized Instance = new Uninitialized();
+        public static Uninitialized Instance = new();
 
         private Uninitialized() { }
     }

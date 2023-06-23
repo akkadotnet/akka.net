@@ -304,7 +304,7 @@ namespace Akka.Streams.Implementation.StreamRef
             Shape = new SourceShape<TOut>(Outlet);
         }
 
-        public Outlet<TOut> Outlet { get; } = new Outlet<TOut>("SourceRef.out");
+        public Outlet<TOut> Outlet { get; } = new("SourceRef.out");
         public override SourceShape<TOut> Shape { get; }
 
         public override ILogicAndMaterializedValue<Task<ISinkRef<TOut>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)

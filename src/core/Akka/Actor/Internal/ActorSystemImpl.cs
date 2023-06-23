@@ -36,7 +36,7 @@ namespace Akka.Actor.Internal
     public class ActorSystemImpl : ExtendedActorSystem, ISupportSerializationConfigReload
     {
         private IActorRef _logDeadLetterListener;
-        private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
+        private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new();
 
         private ILoggingAdapter _log;
         private IActorRefProvider _provider;

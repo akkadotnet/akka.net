@@ -72,7 +72,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private Cluster cluster;
         private TestLeaseExt testLeaseExt;
 
-        private AtomicCounter counter = new AtomicCounter(0);
+        private AtomicCounter counter = new(0);
         private TimeSpan shortDuration = TimeSpan.FromMilliseconds(50);
         private string leaseOwner;
 

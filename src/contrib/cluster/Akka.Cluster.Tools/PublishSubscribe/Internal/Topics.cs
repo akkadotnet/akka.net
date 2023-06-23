@@ -322,8 +322,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// </summary>
     internal static class Utils
     {
-        private static System.Text.RegularExpressions.Regex _pathRegex =
-            new System.Text.RegularExpressions.Regex("^/remote/.+(/user/.+)");
+        private static System.Text.RegularExpressions.Regex _pathRegex = new("^/remote/.+(/user/.+)");
 
         /// <summary>
         /// <para>

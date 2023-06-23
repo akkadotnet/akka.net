@@ -36,7 +36,7 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly EmptyEventSequence Instance = new EmptyEventSequence();
+        public static readonly EmptyEventSequence Instance = new();
 
         private EmptyEventSequence() { }
 

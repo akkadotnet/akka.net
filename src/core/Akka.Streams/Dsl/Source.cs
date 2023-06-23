@@ -116,7 +116,7 @@ namespace Akka.Streams.Dsl
         /// <param name="attributes">The attributes to add</param>
         /// <returns>A new Source with the added attributes</returns>
         public Source<TOut, TMat> WithAttributes(Attributes attributes)
-            => new Source<TOut, TMat>(Module.WithAttributes(attributes));
+            => new(Module.WithAttributes(attributes));
 
         /// <summary>
         /// Add the given attributes to this <see cref="IGraph{TShape}"/>.
@@ -278,7 +278,7 @@ namespace Akka.Streams.Dsl
         /// <param name="mapFunc">TBD</param>
         /// <returns>TBD</returns>
         public Source<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
-            => new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
+            => new(Module.TransformMaterializedValue(mapFunc));
 
         /// <summary>
         ///  Materializes this Source immediately.
@@ -576,7 +576,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public static SourceShape<T> Shape<T>(string name) => new SourceShape<T>(new Outlet<T>(name + ".out"));
+        public static SourceShape<T> Shape<T>(string name) => new(new Outlet<T>(name + ".out"));
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IPublisher{T}"/>.
@@ -590,7 +590,7 @@ namespace Akka.Streams.Dsl
         /// <param name="publisher">TBD</param>
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> FromPublisher<T>(IPublisher<T> publisher)
-            => new Source<T, NotUsed>(new PublisherSource<T>(publisher, DefaultAttributes.PublisherSource, Shape<T>("PublisherSource")));
+            => new(new PublisherSource<T>(publisher, DefaultAttributes.PublisherSource, Shape<T>("PublisherSource")));
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IEnumerator{T}"/>.

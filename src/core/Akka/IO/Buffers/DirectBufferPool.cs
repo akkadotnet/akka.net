@@ -108,14 +108,14 @@ namespace Akka.IO.Buffers
     internal sealed class DirectBufferPool : IBufferPool
     {
         private const int Retries = 30;
-        private readonly object _syncRoot = new object();
+        private readonly object _syncRoot = new();
 
         private readonly int _bufferSize;
         private readonly int _buffersPerSegment;
         private readonly int _segmentSize;
         private readonly int _maxSegmentCount;
 
-        private readonly ConcurrentStack<ByteBuffer> _buffers = new ConcurrentStack<ByteBuffer>();
+        private readonly ConcurrentStack<ByteBuffer> _buffers = new();
         private readonly List<byte[]> _segments;
 
         /// <summary>
@@ -151,7 +151,7 @@ namespace Akka.IO.Buffers
         }
 
         public BufferPoolInfo Diagnostics()
-            => new BufferPoolInfo(
+            => new(
                 type: typeof(DirectBufferPool),
                 totalSize: _segments.Count * _segmentSize,
                 free: _buffers.Count * _bufferSize,

@@ -25,7 +25,7 @@ namespace Akka.Cluster.Metrics.Serialization
         /// <summary>
         /// Empty metrics gossip
         /// </summary>
-        public static readonly MetricsGossip Empty = new MetricsGossip(ImmutableHashSet<NodeMetrics>.Empty);
+        public static readonly MetricsGossip Empty = new(ImmutableHashSet<NodeMetrics>.Empty);
 
         public MetricsGossip(IImmutableSet<NodeMetrics> nodes)
         {

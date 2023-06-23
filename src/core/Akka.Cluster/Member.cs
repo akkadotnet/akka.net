@@ -254,7 +254,7 @@ namespace Akka.Cluster
         /// Orders the members by their address except that members with status
         /// Joining, Exiting and Down are ordered last (in that order).
         /// </summary>
-        internal static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new LeaderStatusMemberComparer();
+        internal static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new();
 
         /// <summary>
         /// INTERNAL API
@@ -282,7 +282,7 @@ namespace Akka.Cluster
         /// <summary>
         /// <see cref="Member"/> ordering type class, sorts members by host and port.
         /// </summary>
-        internal static readonly MemberComparer Ordering = new MemberComparer();
+        internal static readonly MemberComparer Ordering = new();
 
         /// <summary>
         /// INTERNAL API

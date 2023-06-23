@@ -49,7 +49,7 @@ akka.stdout-logger-class = ""Akka.Tests.Loggers.ThrowingLogger, Akka.Tests""");
 
     internal class LogProbe : ReceiveActor
     {
-        public List<LogEvent> Events { get; } = new List<LogEvent>();
+        public List<LogEvent> Events { get; } = new();
 
         public LogProbe()
         {

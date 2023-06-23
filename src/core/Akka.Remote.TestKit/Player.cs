@@ -319,7 +319,7 @@ namespace Akka.Remote.TestKit
         internal class Disconnected
         {
             private Disconnected() { }
-            private static readonly Disconnected _instance = new Disconnected();
+            private static readonly Disconnected _instance = new();
 
             public static Disconnected Instance
             {

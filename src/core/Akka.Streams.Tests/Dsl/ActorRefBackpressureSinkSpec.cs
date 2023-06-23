@@ -25,7 +25,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TriggerAckMessage
         {
-            public static readonly TriggerAckMessage Instance = new TriggerAckMessage();
+            public static readonly TriggerAckMessage Instance = new();
             private TriggerAckMessage() { }
         }
 

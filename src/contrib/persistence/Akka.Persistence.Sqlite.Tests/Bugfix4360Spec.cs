@@ -48,11 +48,11 @@ akka.persistence {
 
         private class RecoverActor : UntypedPersistentActor
         {
-            private HashSet<string> _values = new HashSet<string>();
+            private HashSet<string> _values = new();
 
             public class DoSnapshot
             {
-                public static readonly DoSnapshot Instance = new DoSnapshot();
+                public static readonly DoSnapshot Instance = new();
                 private DoSnapshot() { }
             }
 

@@ -27,8 +27,8 @@ namespace Akka.Cluster.Cpu.Benchmark
 
         private const int DefaultWarmUpRepeat = 5;
         
-        private static readonly List<CpuUsage> Usages = new List<CpuUsage>();
-        private static readonly List<Process> Processes = new List<Process>();
+        private static readonly List<CpuUsage> Usages = new();
+        private static readonly List<Process> Processes = new();
         
         public static async Task<int> Main(string[] args)
         {

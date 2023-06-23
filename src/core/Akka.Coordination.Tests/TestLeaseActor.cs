@@ -105,7 +105,7 @@ namespace Akka.Coordination.Tests
 
         public sealed class GetRequests
         {
-            public static readonly GetRequests Instance = new GetRequests();
+            public static readonly GetRequests Instance = new();
             private GetRequests()
             {
             }
@@ -141,7 +141,7 @@ namespace Akka.Coordination.Tests
         public static Props Props => Props.Create(() => new TestLeaseActor());
 
         private ILoggingAdapter _log = Context.GetLogger();
-        private readonly List<(IActorRef, ILeaseRequest)> _requests = new List<(IActorRef, ILeaseRequest)>();
+        private readonly List<(IActorRef, ILeaseRequest)> _requests = new();
 
         public TestLeaseActor()
         {
@@ -199,7 +199,7 @@ namespace Akka.Coordination.Tests
         }
 
         private readonly ExtendedActorSystem _system;
-        private AtomicReference<IActorRef> leaseActor = new AtomicReference<IActorRef>();
+        private AtomicReference<IActorRef> leaseActor = new();
 
         public TestLeaseActorClientExt(ExtendedActorSystem system)
         {

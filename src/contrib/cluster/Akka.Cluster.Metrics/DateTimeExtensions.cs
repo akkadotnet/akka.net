@@ -14,7 +14,7 @@ namespace Akka.Cluster.Metrics
     /// </summary>
     internal static class DateTimeExtensions
     {
-        private static readonly DateTime UnixOffset = new DateTime(1970, 1, 1);
+        private static readonly DateTime UnixOffset = new(1970, 1, 1);
         
         /// <summary>
         /// Converts given date and time to UNIX Timestamp - number of milliseconds elapsed since 1 Jan 1970

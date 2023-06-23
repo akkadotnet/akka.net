@@ -52,8 +52,7 @@ namespace Akka.Cluster
         /// <summary>
         ///     TBD
         /// </summary>
-        public static readonly Reachability Empty =
-            new Reachability(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());
+        public static readonly Reachability Empty = new(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());
 
         private readonly Lazy<Cache> _cache;
 

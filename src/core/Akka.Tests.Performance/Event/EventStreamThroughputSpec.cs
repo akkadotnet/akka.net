@@ -42,7 +42,7 @@ namespace Akka.Tests.Performance.Event
 
         private IActorRef _targetActor;
 
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new(0);
         protected ActorSystem System;
 
         [PerfSetup]

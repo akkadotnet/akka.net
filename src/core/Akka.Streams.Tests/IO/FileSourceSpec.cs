@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.IO
     {
         private readonly string _testText;
         private readonly ActorMaterializer _materializer;
-        private readonly FileInfo _testFilePath = new FileInfo(Path.Combine(Path.GetTempPath(), "file-source-spec.tmp"));
+        private readonly FileInfo _testFilePath = new(Path.Combine(Path.GetTempPath(), "file-source-spec.tmp"));
         private FileInfo _manyLinesPath;
 
         public FileSourceSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)

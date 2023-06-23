@@ -43,7 +43,7 @@ akka {
 
     class ChatServerActor : ReceiveActor, ILogReceive
     {
-        private readonly HashSet<IActorRef> _clients = new HashSet<IActorRef>();
+        private readonly HashSet<IActorRef> _clients = new();
 
         public ChatServerActor()
         {

@@ -474,12 +474,12 @@ namespace Akka.Cluster.Serialization
         }
 
         private static Proto.Msg.HeartBeatResponse HeartbeatRspToProto(ClusterHeartbeatSender.HeartbeatRsp heartbeatRsp)
-            => new HeartBeatResponse
-                {
-                    From = UniqueAddressToProto(heartbeatRsp.From),
-                    CreationTime = heartbeatRsp.CreationTimeNanos,
-                    SequenceNr = heartbeatRsp.SequenceNr
-                };
+            => new()
+            {
+                From = UniqueAddressToProto(heartbeatRsp.From),
+                CreationTime = heartbeatRsp.CreationTimeNanos,
+                SequenceNr = heartbeatRsp.SequenceNr
+            };
 
         private static ClusterHeartbeatSender.HeartbeatRsp DeserializeHeartbeatRsp(byte[] bytes)
         {
@@ -493,7 +493,7 @@ namespace Akka.Cluster.Serialization
         }
 
         private static Proto.Msg.Heartbeat HeartbeatToProto(ClusterHeartbeatSender.Heartbeat heartbeat)
-            => new Heartbeat
+            => new()
             {
                 From = AddressToProto(heartbeat.From), 
                 CreationTime = heartbeat.CreationTimeNanos, 

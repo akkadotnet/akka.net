@@ -55,7 +55,7 @@ namespace Akka.Actor
         /// <summary>
         /// Pseudo address for all systems
         /// </summary>
-        public static readonly Address AllSystems = new Address("akka", "all-systems");
+        public static readonly Address AllSystems = new("akka", "all-systems");
 
         private string _toString;
         private readonly string _host;

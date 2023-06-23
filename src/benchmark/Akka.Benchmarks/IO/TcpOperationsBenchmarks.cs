@@ -99,7 +99,7 @@ namespace Akka.Benchmarks
 
         private class ClientCoordinator : ReceiveActor
         {
-            private readonly HashSet<IActorRef> _waitingChildren = new HashSet<IActorRef>();
+            private readonly HashSet<IActorRef> _waitingChildren = new();
             private IActorRef _requester;
             
             public ClientCoordinator(string host, int port, int clientsCount)

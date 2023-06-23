@@ -35,28 +35,28 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         private sealed class Ping : IPingCmd
         {
-            public static Ping Instance { get; } = new Ping();
+            public static Ping Instance { get; } = new();
 
             private Ping() { }
         }
 
         private sealed class CompleteStage : IPingCmd
         {
-            public static CompleteStage Instance { get; } = new CompleteStage();
+            public static CompleteStage Instance { get; } = new();
 
             private CompleteStage() { }
         }
 
         private sealed class FailStage : IPingCmd
         {
-            public static FailStage Instance { get; } = new FailStage();
+            public static FailStage Instance { get; } = new();
 
             private FailStage() { }
         }
 
         private sealed class Throw : IPingCmd
         {
-            public static Throw Instance { get; } = new Throw();
+            public static Throw Instance { get; } = new();
 
             private Throw() { }
         }
@@ -65,28 +65,28 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         private sealed class Pong : IPingEvt
         {
-            public static Pong Instance { get; } = new Pong();
+            public static Pong Instance { get; } = new();
 
             private Pong() { }
         }
 
         private sealed class PostStop : IPingEvt
         {
-            public static PostStop Instance { get; } = new PostStop();
+            public static PostStop Instance { get; } = new();
 
             private PostStop() { }
         }
 
         private sealed class UpstreamCompleted : IPingEvt
         {
-            public static UpstreamCompleted Instance { get; } = new UpstreamCompleted();
+            public static UpstreamCompleted Instance { get; } = new();
 
             private UpstreamCompleted() { }
         }
 
         private sealed class EndOfEventHandler : IPingEvt
         {
-            public static EndOfEventHandler Instance { get; } = new EndOfEventHandler();
+            public static EndOfEventHandler Instance { get; } = new();
 
             private EndOfEventHandler() { }
         }
@@ -177,14 +177,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             #endregion
 
-            private readonly TaskCompletionSource<PingRef> _promise = new TaskCompletionSource<PingRef>();
+            private readonly TaskCompletionSource<PingRef> _promise = new();
 
             public PingableSink(bool keepAlive)
             {
                 _keepAlive = keepAlive;
             }
 
-            public override SinkShape<int> Shape { get; } = new SinkShape<int>(new Inlet<int>("ping.in"));
+            public override SinkShape<int> Shape { get; } = new(new Inlet<int>("ping.in"));
 
             public override ILogicAndMaterializedValue<Task<PingRef>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
             {

@@ -27,7 +27,7 @@ namespace Akka.Remote.Tests.Transport
         {
             public ITestOutputHelper Helper;
 
-            private TaskCompletionSource<Done> _tcs = new TaskCompletionSource<Done>();
+            private TaskCompletionSource<Done> _tcs = new();
 
             public Task Activated => _tcs.Task;
 

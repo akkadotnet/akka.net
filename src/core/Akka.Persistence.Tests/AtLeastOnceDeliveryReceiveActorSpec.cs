@@ -87,7 +87,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class Boom
         {
-            public static readonly Boom Instance = new Boom();
+            public static readonly Boom Instance = new();
         }
 
         private class Destination : ReceiveActor
@@ -117,7 +117,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class InvalidReq
         {
-            public static readonly InvalidReq Instance = new InvalidReq();
+            public static readonly InvalidReq Instance = new();
 
             private InvalidReq()
             {
@@ -261,7 +261,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class ReqAck
         {
-            public static readonly ReqAck Instance = new ReqAck();
+            public static readonly ReqAck Instance = new();
 
             private ReqAck()
             {
@@ -292,7 +292,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class SaveSnap
         {
-            public static readonly SaveSnap Instance = new SaveSnap();
+            public static readonly SaveSnap Instance = new();
         }
 
         [Serializable]

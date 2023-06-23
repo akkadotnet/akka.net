@@ -31,7 +31,7 @@ namespace Akka.Serialization
         /// <summary>
         /// A default instance of <see cref="NewtonSoftJsonSerializerSettings"/> used when no custom configuration has been provided.
         /// </summary>
-        public static readonly NewtonSoftJsonSerializerSettings Default = new NewtonSoftJsonSerializerSettings(
+        public static readonly NewtonSoftJsonSerializerSettings Default = new(
             encodeTypeNames: true,
             preserveObjectReferences: true,
             converters: Enumerable.Empty<Type>(),

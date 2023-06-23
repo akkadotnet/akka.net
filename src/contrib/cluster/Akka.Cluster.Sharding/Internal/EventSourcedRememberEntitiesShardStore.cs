@@ -120,7 +120,7 @@ namespace Akka.Cluster.Sharding.Internal
 
         public sealed class StartedAck
         {
-            public static readonly StartedAck Instance = new StartedAck();
+            public static readonly StartedAck Instance = new();
 
             private StartedAck()
             {
@@ -179,7 +179,7 @@ namespace Akka.Cluster.Sharding.Internal
         }
 
         private readonly int _maxUpdatesPerWrite;
-        private State _state = new State();
+        private State _state = new();
 
         /// <summary>
         /// Persistent actor keeping the state for Akka Persistence backed remember entities (enabled through `state-store-mode=persistence`).

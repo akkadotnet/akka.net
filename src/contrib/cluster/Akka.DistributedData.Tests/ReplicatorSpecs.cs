@@ -58,11 +58,11 @@ namespace Akka.DistributedData.Tests
         private readonly ReadMajority _readMajority;
         private readonly ReadAll _readAll;
 
-        private readonly PNCounterDictionaryKey<string> _keyC = new PNCounterDictionaryKey<string>("C");
-        private readonly ORDictionaryKey<string, Flag> _keyH = new ORDictionaryKey<string, Flag>("H");
-        private readonly GSetKey<string> _keyI = new GSetKey<string>("I");
-        private readonly ORMultiValueDictionaryKey<string, string> _keyJ = new ORMultiValueDictionaryKey<string, string>("J");
-        private readonly LWWDictionaryKey<string, string> _keyK = new LWWDictionaryKey<string, string>("K");
+        private readonly PNCounterDictionaryKey<string> _keyC = new("C");
+        private readonly ORDictionaryKey<string, Flag> _keyH = new("H");
+        private readonly GSetKey<string> _keyI = new("I");
+        private readonly ORMultiValueDictionaryKey<string, string> _keyJ = new("J");
+        private readonly LWWDictionaryKey<string, string> _keyK = new("K");
 
         public ReplicatorSpecs(ITestOutputHelper helper) : base(SpecConfig, helper)
         {

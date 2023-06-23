@@ -34,7 +34,7 @@ namespace Akka.Cluster.Tests
         static readonly Member eUp = TestMember.Create(new Address("akka.tcp", "sys", "e", 2552), MemberStatus.Up, eRoles);
         static readonly Member eDown = TestMember.Create(new Address("akka.tcp", "sys", "e", 2552), MemberStatus.Down, eRoles);
 
-        static readonly UniqueAddress selfDummyAddress = new UniqueAddress(new Address("akka.tcp", "sys", "selfDummy", 2552), 17);
+        static readonly UniqueAddress selfDummyAddress = new(new Address("akka.tcp", "sys", "selfDummy", 2552), 17);
 
         private static (Gossip, ImmutableHashSet<UniqueAddress>) Converge(Gossip gossip)
         {

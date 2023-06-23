@@ -35,9 +35,9 @@ namespace Akka.Streams.Tests.Dsl
             private readonly Task<Done> _firstReadFuture;
             private readonly Task<Done> _closeFuture;
 
-            private readonly TaskCompletionSource<Done> _createdPromise = new TaskCompletionSource<Done>();
-            private readonly TaskCompletionSource<Done> _closedPromise = new TaskCompletionSource<Done>();
-            private readonly TaskCompletionSource<Done> _firstReadPromise = new TaskCompletionSource<Done>();
+            private readonly TaskCompletionSource<Done> _createdPromise = new();
+            private readonly TaskCompletionSource<Done> _closedPromise = new();
+            private readonly TaskCompletionSource<Done> _firstReadPromise = new();
 
             // these can be used to observe when the resource calls has happened
             public Task<Done> Created => _createdPromise.Task;

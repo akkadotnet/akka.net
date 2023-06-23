@@ -770,28 +770,28 @@ my-dispatcher1 {
 
     internal class Boom
     {
-        public static Boom Instance { get; } = new Boom();
+        public static Boom Instance { get; } = new();
 
         private Boom() { }
     }
 
     internal class Complete
     {
-        public static Complete Instance { get; } = new Complete();
+        public static Complete Instance { get; } = new();
 
         private Complete() { }
     }
 
     internal class CompleteThenStop
     {
-        public static CompleteThenStop Instance { get; } = new CompleteThenStop();
+        public static CompleteThenStop Instance { get; } = new();
 
         private CompleteThenStop() { }
     }
 
     internal class ThreadName
     {
-        public static ThreadName Instance { get; } = new ThreadName();
+        public static ThreadName Instance { get; } = new();
 
         private ThreadName() { }
     }

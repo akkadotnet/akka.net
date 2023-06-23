@@ -22,9 +22,9 @@ namespace Akka.Util
         /// Create an empty message buffer.
         /// </summary>
         /// <returns>an empty message buffer</returns>
-        public static MessageBuffer Empty() => new MessageBuffer();
+        public static MessageBuffer Empty() => new();
 
-        private readonly LinkedList<(object Message, IActorRef Ref)> _buffer = new LinkedList<(object Message, IActorRef Ref)>();
+        private readonly LinkedList<(object Message, IActorRef Ref)> _buffer = new();
 
         private MessageBuffer()
         {
@@ -93,7 +93,7 @@ namespace Akka.Util
     /// <typeparam name="TId">Id type</typeparam>
     internal sealed class MessageBufferMap<TId> : IEnumerable<KeyValuePair<TId, MessageBuffer>>, IReadOnlyCollection<KeyValuePair<TId, MessageBuffer>>
     {
-        private readonly Dictionary<TId, MessageBuffer> _bufferMap = new Dictionary<TId, MessageBuffer>();
+        private readonly Dictionary<TId, MessageBuffer> _bufferMap = new();
 
         /// <summary>
         /// Check if the buffer map is empty.

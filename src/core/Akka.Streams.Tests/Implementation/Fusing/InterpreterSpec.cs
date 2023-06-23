@@ -34,8 +34,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
         }
 
-        private static readonly Take<int> TakeOne = new Take<int>(1);
-        private static readonly Take<int> TakeTwo = new Take<int>(2);
+        private static readonly Take<int> TakeOne = new(1);
+        private static readonly Take<int> TakeTwo = new(2);
 
         [Fact]
         public void Interpreter_should_implement_map_correctly()

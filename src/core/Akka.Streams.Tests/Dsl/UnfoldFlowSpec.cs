@@ -30,7 +30,7 @@ namespace Akka.Streams.Tests.Dsl
 
         public class WithSimpleFlow : Akka.TestKit.Xunit2.TestKit
         {
-            private readonly Exception _done = new Exception("done");
+            private readonly Exception _done = new("done");
             private readonly Source<int, (TestSubscriber.Probe<int>, TestPublisher.Probe<(int, int)>)> _source;
 
             public WithSimpleFlow()

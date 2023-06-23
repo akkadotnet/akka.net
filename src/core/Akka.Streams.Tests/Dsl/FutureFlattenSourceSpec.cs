@@ -271,11 +271,11 @@ namespace Akka.Streams.Tests.Dsl
 
         private class FailingMatGraphStage : GraphStageWithMaterializedValue<SourceShape<int>, string>
         {
-            public static readonly TestException Exception = new TestException("INNER_FAILED");
+            public static readonly TestException Exception = new("INNER_FAILED");
             
-            private readonly Outlet<int> _out = new Outlet<int>("whatever");
+            private readonly Outlet<int> _out = new("whatever");
 
-            public override SourceShape<int> Shape => new SourceShape<int>(_out);
+            public override SourceShape<int> Shape => new(_out);
 
             public override ILogicAndMaterializedValue<string> CreateLogicAndMaterializedValue(Attributes inheritedAttributes) => 
                 throw Exception;

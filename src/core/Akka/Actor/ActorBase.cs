@@ -22,7 +22,7 @@ namespace Akka.Actor
         /// </summary>
         public sealed class Success : Status
         {
-            public static readonly Success Instance = new Success(null);
+            public static readonly Success Instance = new(null);
 
             /// <summary>
             /// TBD

@@ -17,8 +17,8 @@ namespace Akka.Benchmarks.Actor
         private ActorPath x;
         private ActorPath y;
         private ActorPath _childPath;
-        private Address _sysAdr = new Address("akka.tcp", "system", "127.0.0.1", 1337);
-        private Address _otherAdr = new Address("akka.tcp", "system", "127.0.0.1", 1338);
+        private Address _sysAdr = new("akka.tcp", "system", "127.0.0.1", 1337);
+        private Address _otherAdr = new("akka.tcp", "system", "127.0.0.1", 1338);
 
         private string _actorPathStr;
         

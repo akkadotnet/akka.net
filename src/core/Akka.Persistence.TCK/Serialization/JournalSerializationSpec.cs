@@ -49,7 +49,7 @@ namespace Akka.Persistence.TCK.Serialization
 
             var messages = new List<AtomicWrite>
             {
-                new AtomicWrite(persistentEvent)
+                new(persistentEvent)
             };
 
             Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
@@ -71,7 +71,7 @@ namespace Akka.Persistence.TCK.Serialization
 
             var messages = new List<AtomicWrite>
             {
-                new AtomicWrite(persistentEvent)
+                new(persistentEvent)
             };
 
             Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
@@ -93,7 +93,7 @@ namespace Akka.Persistence.TCK.Serialization
 
             var messages = new List<AtomicWrite>
             {
-                new AtomicWrite(persistentEvent)
+                new(persistentEvent)
             };
 
             Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
@@ -117,7 +117,7 @@ namespace Akka.Persistence.TCK.Serialization
 
             var messages = new List<AtomicWrite>
             {
-                new AtomicWrite(new Persistent(stateChangeEvent, 1, Pid))
+                new(new Persistent(stateChangeEvent, 1, Pid))
             };
 
             Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));

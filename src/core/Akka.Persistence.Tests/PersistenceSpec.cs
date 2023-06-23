@@ -36,7 +36,7 @@ namespace Akka.Persistence.Tests
 
         internal readonly Cleanup Clean;
 
-        private readonly AtomicCounter _counter = new AtomicCounter(0);
+        private readonly AtomicCounter _counter = new(0);
 
         private readonly string _name;
 
@@ -92,7 +92,7 @@ namespace Akka.Persistence.Tests
     internal class Cleanup : IDisposable
     {
         internal List<DirectoryInfo> StorageLocations;
-        private static readonly object _syncRoot = new object();
+        private static readonly object _syncRoot = new();
 
         public Cleanup(AkkaSpec spec)
         {
@@ -145,7 +145,7 @@ namespace Akka.Persistence.Tests
 
     internal sealed class GetState
     {
-        public static readonly GetState Instance = new GetState();
+        public static readonly GetState Instance = new();
         private GetState() { }
     }
 

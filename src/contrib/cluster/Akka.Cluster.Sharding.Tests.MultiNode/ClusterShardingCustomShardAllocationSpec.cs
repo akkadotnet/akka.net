@@ -69,7 +69,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class AllocateReq
         {
-            public static readonly AllocateReq Instance = new AllocateReq();
+            public static readonly AllocateReq Instance = new();
 
             private AllocateReq()
             {
@@ -88,7 +88,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class UseRegionAck
         {
-            public static readonly UseRegionAck Instance = new UseRegionAck();
+            public static readonly UseRegionAck Instance = new();
 
             private UseRegionAck()
             {
@@ -97,7 +97,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class RebalanceReq
         {
-            public static readonly RebalanceReq Instance = new RebalanceReq();
+            public static readonly RebalanceReq Instance = new();
 
             private RebalanceReq()
             {
@@ -116,7 +116,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class RebalanceShardsAck
         {
-            public static readonly RebalanceShardsAck Instance = new RebalanceShardsAck();
+            public static readonly RebalanceShardsAck Instance = new();
 
             private RebalanceShardsAck()
             {

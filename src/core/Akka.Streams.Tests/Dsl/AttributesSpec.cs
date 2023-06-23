@@ -66,7 +66,7 @@ namespace Akka.Streams.Tests.Dsl
         private sealed class AttributesSink : SinkModule<NotUsed, Task<Attributes>>
         {
             public static Sink<NotUsed, Task<Attributes>> Create() =>
-                    new Sink<NotUsed, Task<Attributes>>(new AttributesSink(
+                    new(new AttributesSink(
                         Attributes.CreateName("attributesSink"),
                         new SinkShape<NotUsed>(new Inlet<NotUsed>("attributesSink"))));
 

@@ -30,7 +30,7 @@ namespace Akka.IO
         private SocketAsyncEventArgs _connectArgs;
 
         private readonly ConnectException finishConnectNeverReturnedTrueException =
-            new ConnectException("Could not establish connection because finishConnect never returned true");
+            new("Could not establish connection because finishConnect never returned true");
 
         public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
             : base(

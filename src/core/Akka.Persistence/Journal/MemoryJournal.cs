@@ -639,7 +639,7 @@ namespace Akka.Persistence.Journal
     /// </summary>
     public class SharedMemoryJournal : MemoryJournal
     {
-        private static readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> SharedMessages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
+        private static readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> SharedMessages = new();
 
         /// <summary>
         /// TBD

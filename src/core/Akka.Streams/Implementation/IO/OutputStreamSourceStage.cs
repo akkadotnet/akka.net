@@ -42,7 +42,7 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Flush Instance = new Flush();
+            public static readonly Flush Instance = new();
 
             private Flush()
             {
@@ -57,7 +57,7 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Close Instance = new Close();
+            public static readonly Close Instance = new();
 
             private Close()
             {
@@ -79,7 +79,7 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Ok Instance = new Ok();
+            public static readonly Ok Instance = new();
 
             private Ok()
             {
@@ -94,7 +94,7 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Canceled Instance = new Canceled();
+            public static readonly Canceled Instance = new();
 
             private Canceled()
             {
@@ -121,7 +121,7 @@ namespace Akka.Streams.Implementation.IO
             private readonly string _dispatcherId;
             private readonly Action<(IAdapterToStageMessage, TaskCompletionSource<NotUsed>)> _upstreamCallback;
             private readonly OnPullRunnable _pullTask;
-            private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
+            private readonly CancellationTokenSource _cancellation = new();
             private BlockingCollection<ByteString> _dataQueue;
             private TaskCompletionSource<NotUsed> _flush;
             private TaskCompletionSource<NotUsed> _close;
@@ -264,7 +264,7 @@ namespace Akka.Streams.Implementation.IO
         #endregion
 
         private readonly TimeSpan _writeTimeout;
-        private readonly Outlet<ByteString> _out = new Outlet<ByteString>("OutputStreamSource.out");
+        private readonly Outlet<ByteString> _out = new("OutputStreamSource.out");
 
         /// <summary>
         /// TBD

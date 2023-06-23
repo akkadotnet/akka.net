@@ -33,7 +33,7 @@ namespace Akka.Streams.Implementation
         /// <param name="timeout">TBD</param>
         /// <returns>TBD</returns>
         public static TimeSpan IdleTimeoutCheckInterval(TimeSpan timeout)
-            => new TimeSpan(Math.Min(Math.Max(timeout.Ticks/8, 100*TimeSpan.TicksPerMillisecond), timeout.Ticks/2));
+            => new(Math.Min(Math.Max(timeout.Ticks/8, 100*TimeSpan.TicksPerMillisecond), timeout.Ticks/2));
 
         /// <summary>
         /// TBD
@@ -433,19 +433,19 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<TIn> In1 = new Inlet<TIn>("in1");
+        public readonly Inlet<TIn> In1 = new("in1");
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<TOut> In2 = new Inlet<TOut>("in2");
+        public readonly Inlet<TOut> In2 = new("in2");
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TIn> Out1 = new Outlet<TIn>("out1");
+        public readonly Outlet<TIn> Out1 = new("out1");
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TOut> Out2 = new Outlet<TOut>("out2");
+        public readonly Outlet<TOut> Out2 = new("out2");
 
         /// <summary>
         /// TBD
@@ -654,8 +654,8 @@ namespace Akka.Streams.Implementation
 
         private readonly TimeSpan _timeout;
         private readonly Func<TOut> _inject;
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("IdleInject.in");
-        private readonly Outlet<TOut> _out = new Outlet<TOut>("IdleInject.out");
+        private readonly Inlet<TIn> _in = new("IdleInject.in");
+        private readonly Outlet<TOut> _out = new("IdleInject.out");
 
         /// <summary>
         /// TBD

@@ -192,7 +192,7 @@ namespace Akka.Actor
         ///     This strategy resembles Erlang in that failing children are always
         ///     terminated (one-for-one).
         /// </summary>
-        public static readonly OneForOneStrategy StoppingStrategy = new OneForOneStrategy(_ => Directive.Stop);
+        public static readonly OneForOneStrategy StoppingStrategy = new(_ => Directive.Stop);
 
         /// <summary>
         /// This method is called after the child has been removed from the set of children.

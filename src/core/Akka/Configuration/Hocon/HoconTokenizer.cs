@@ -18,7 +18,7 @@ namespace Akka.Configuration.Hocon
     {
         private readonly string _text;
         private int _index;
-        private readonly Stack<int> _indexStack = new Stack<int>();
+        private readonly Stack<int> _indexStack = new();
 
         /// <summary>
         /// Adds the current index to the tokenizer's bookkeeping stack.

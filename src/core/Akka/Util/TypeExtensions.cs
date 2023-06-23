@@ -41,9 +41,9 @@ namespace Akka.Util
             return moreGeneralType.IsAssignableFrom(type);
         }
 
-        private static readonly ConcurrentDictionary<Type, string> ShortenedTypeNames = new ConcurrentDictionary<Type, string>();
+        private static readonly ConcurrentDictionary<Type, string> ShortenedTypeNames = new();
 
-        private static readonly Regex cleanAssemblyVersionRegex = new Regex(
+        private static readonly Regex cleanAssemblyVersionRegex = new(
             @"(, Version=([\d\.]+))?(, Culture=[^,\] \t]+)?(, PublicKeyToken=(null|[\da-f]+))?",
             RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 

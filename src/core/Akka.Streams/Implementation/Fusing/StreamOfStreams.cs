@@ -34,7 +34,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private readonly FlattenMerge<TGraph, T, TMat> _stage;
             private readonly Attributes _enclosingAttributes;
-            private readonly HashSet<SubSinkInlet<T>> _sources = new HashSet<SubSinkInlet<T>>();
+            private readonly HashSet<SubSinkInlet<T>> _sources = new();
             private IBuffer<SubSinkInlet<T>> _q;
             private readonly Action _outHandler;
 
@@ -132,8 +132,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-        private readonly Inlet<TGraph> _in = new Inlet<TGraph>("flatten.in");
-        private readonly Outlet<T> _out = new Outlet<T>("flatten.out");
+        private readonly Inlet<TGraph> _in = new("flatten.in");
+        private readonly Outlet<T> _out = new("flatten.out");
 
         private readonly int _breadth;
 
@@ -314,8 +314,8 @@ namespace Akka.Streams.Implementation.Fusing
         #endregion
 
         private readonly int _count;
-        private readonly Inlet<T> _in = new Inlet<T>("PrefixAndTail.in");
-        private readonly Outlet<(IImmutableList<T>, Source<T, NotUsed>)> _out = new Outlet<(IImmutableList<T>, Source<T, NotUsed>)>("PrefixAndTail.out");
+        private readonly Inlet<T> _in = new("PrefixAndTail.in");
+        private readonly Outlet<(IImmutableList<T>, Source<T, NotUsed>)> _out = new("PrefixAndTail.out");
 
         /// <summary>
         /// TBD
@@ -364,9 +364,9 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly GroupBy<T, TKey> _stage;
-            private readonly Dictionary<TKey, SubstreamSource> _activeSubstreams = new Dictionary<TKey, SubstreamSource>();
-            private readonly HashSet<TKey> _closedSubstreams = new HashSet<TKey>();
-            private readonly HashSet<SubstreamSource> _substreamsJustStarted = new HashSet<SubstreamSource>();
+            private readonly Dictionary<TKey, SubstreamSource> _activeSubstreams = new();
+            private readonly HashSet<TKey> _closedSubstreams = new();
+            private readonly HashSet<SubstreamSource> _substreamsJustStarted = new();
             private readonly Lazy<Decider> _decider;
             private TimeSpan _timeout;
             private Option<SubstreamSource> _substreamWaitingToBePushed = Option<SubstreamSource>.None;
@@ -643,9 +643,9 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, Source<T, NotUsed>>(In, Out);
         }
 
-        private Inlet<T> In { get; } = new Inlet<T>("GroupBy.in");
+        private Inlet<T> In { get; } = new("GroupBy.in");
 
-        private Outlet<Source<T, NotUsed>> Out { get; } = new Outlet<Source<T, NotUsed>>("GroupBy.out");
+        private Outlet<Source<T, NotUsed>> Out { get; } = new("GroupBy.out");
 
         /// <summary>
         /// TBD
@@ -946,8 +946,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-        private readonly Inlet<T> _in = new Inlet<T>("Split.in");
-        private readonly Outlet<Source<T, NotUsed>> _out = new Outlet<Source<T, NotUsed>>("Split.out");
+        private readonly Inlet<T> _in = new("Split.in");
+        private readonly Outlet<Source<T, NotUsed>> _out = new("Split.out");
 
         private readonly Split.SplitDecision _decision;
         private readonly Func<T, bool> _predicate;
@@ -1001,7 +1001,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         internal class Uninitialized : IState
         {
-            public static readonly Uninitialized Instance = new Uninitialized();
+            public static readonly Uninitialized Instance = new();
 
             private Uninitialized()
             {
@@ -1026,7 +1026,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         internal class RequestOneScheduledBeforeMaterialization : CommandScheduledBeforeMaterialization
         {
-            public static readonly RequestOneScheduledBeforeMaterialization Instance = new RequestOneScheduledBeforeMaterialization(RequestOne.Instance);
+            public static readonly RequestOneScheduledBeforeMaterialization Instance = new(RequestOne.Instance);
 
             private RequestOneScheduledBeforeMaterialization(ICommand command) : base(command)
             {
@@ -1055,7 +1055,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         internal class RequestOne : ICommand
         {
-            public static readonly RequestOne Instance = new RequestOne();
+            public static readonly RequestOne Instance = new();
 
             private RequestOne()
             {
@@ -1136,8 +1136,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-        private readonly Inlet<T> _in = new Inlet<T>("SubSink.in");
-        private readonly AtomicReference<object> _status = new AtomicReference<object>(SubSink.Uninitialized.Instance);
+        private readonly Inlet<T> _in = new("SubSink.in");
+        private readonly AtomicReference<object> _status = new(SubSink.Uninitialized.Instance);
         private readonly string _name;
         private readonly Action<IActorSubscriberMessage> _externalCallback;
 
@@ -1266,8 +1266,8 @@ namespace Akka.Streams.Implementation.Fusing
         #endregion
 
         private readonly string _name;
-        private readonly Outlet<T> _out = new Outlet<T>("SubSource.out");
-        private readonly AtomicReference<object> _status = new AtomicReference<object>();
+        private readonly Outlet<T> _out = new("SubSource.out");
+        private readonly AtomicReference<object> _status = new();
 
         /// <summary>
         /// TBD

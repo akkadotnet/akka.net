@@ -20,7 +20,7 @@ namespace Akka.Cluster.Sharding.Tests
     {
         ClusterSharding clusterSharding;
         ClusterShardingSettings shardingSettings;
-        private MessageExtractor messageExtractor = new MessageExtractor(10);
+        private MessageExtractor messageExtractor = new(10);
 
         private class MessageExtractor : HashCodeMessageExtractor
         {

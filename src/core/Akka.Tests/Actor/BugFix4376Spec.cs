@@ -30,7 +30,7 @@ namespace Akka.Tests.Actor
 
         private class SimpleActor : ReceiveActor
         {
-            private readonly object _lock = new object();
+            private readonly object _lock = new();
             private static int Counter = 0;
 
             public SimpleActor()
@@ -50,7 +50,7 @@ namespace Akka.Tests.Actor
         private class SimpleBroadcastActor : ReceiveActor
         {
             private readonly AtomicCounter _counter = null;
-            private readonly object _lock = new object();
+            private readonly object _lock = new();
             private static int Counter = 0;
 
             public SimpleBroadcastActor(AtomicCounter counter)
@@ -73,7 +73,7 @@ namespace Akka.Tests.Actor
         private class ParentActor : ReceiveActor
         {
             private readonly AtomicCounter _counter;
-            private readonly List<IActorRef> _children = new List<IActorRef>();
+            private readonly List<IActorRef> _children = new();
 
             public ParentActor(AtomicCounter counter)
             {

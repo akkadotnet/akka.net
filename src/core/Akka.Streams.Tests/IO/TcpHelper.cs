@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.IO
 
         protected sealed class WriteAck : Tcp.Event
         {
-            public static WriteAck Instance { get; } = new WriteAck();
+            public static WriteAck Instance { get; } = new();
 
             private WriteAck() { }
         }
@@ -108,7 +108,7 @@ namespace Akka.Streams.Tests.IO
         protected class TestClient : UntypedActor
         {
             private readonly IActorRef _connection;
-            private readonly Queue<ByteString> _queuedWrites = new Queue<ByteString>();
+            private readonly Queue<ByteString> _queuedWrites = new();
             private bool _writePending;
             private int _toRead;
             private ByteString _readBuffer = ByteString.Empty;
@@ -191,7 +191,7 @@ namespace Akka.Streams.Tests.IO
 
         protected sealed class ServerClose
         {
-            public static ServerClose Instance { get; } = new ServerClose();
+            public static ServerClose Instance { get; } = new();
 
             private ServerClose() { }
         }

@@ -22,7 +22,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         public sealed class Pong
         {
-            public static Pong Instance => new Pong();
+            public static Pong Instance => new();
             private Pong() { }
         }
 
@@ -34,7 +34,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         public sealed class Perish
         {
-            public static Perish Instance => new Perish();
+            public static Perish Instance => new();
             private Perish() { }
         }
 

@@ -81,7 +81,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public class TargetsRegistered
         {
-            public static readonly TargetsRegistered Instance = new TargetsRegistered();
+            public static readonly TargetsRegistered Instance = new();
             private TargetsRegistered() { }
         }
 

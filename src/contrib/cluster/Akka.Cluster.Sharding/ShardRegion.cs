@@ -43,7 +43,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Retry Instance = new Retry();
+            public static readonly Retry Instance = new();
             private Retry() { }
         }
 
@@ -64,7 +64,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly RegisterRetry Instance = new RegisterRetry();
+            public static readonly RegisterRetry Instance = new();
             private RegisterRetry() { }
         }
 
@@ -213,7 +213,7 @@ namespace Akka.Cluster.Sharding
         {
             private sealed class StopTimeout
             {
-                public static readonly StopTimeout Instance = new StopTimeout();
+                public static readonly StopTimeout Instance = new();
 
                 private StopTimeout()
                 {
@@ -222,7 +222,7 @@ namespace Akka.Cluster.Sharding
 
             private sealed class StopTimeoutWarning
             {
-                public static readonly StopTimeoutWarning Instance = new StopTimeoutWarning();
+                public static readonly StopTimeoutWarning Instance = new();
 
                 private StopTimeoutWarning()
                 {
@@ -407,7 +407,7 @@ namespace Akka.Cluster.Sharding
 
         private IImmutableDictionary<IActorRef, IImmutableSet<ShardId>> _regions = ImmutableDictionary<IActorRef, IImmutableSet<ShardId>>.Empty;
         private IImmutableDictionary<ShardId, IActorRef> _regionByShard = ImmutableDictionary<ShardId, IActorRef>.Empty;
-        private readonly MessageBufferMap<ShardId> _shardBuffers = new MessageBufferMap<ShardId>();
+        private readonly MessageBufferMap<ShardId> _shardBuffers = new();
         private IImmutableDictionary<ShardId, IActorRef> _shards = ImmutableDictionary<ShardId, IActorRef>.Empty;
         private IImmutableDictionary<IActorRef, ShardId> _shardsByRef = ImmutableDictionary<IActorRef, ShardId>.Empty;
         private IImmutableSet<ShardId> _startingShards = ImmutableHashSet<ShardId>.Empty;
@@ -423,7 +423,7 @@ namespace Akka.Cluster.Sharding
         private bool _gracefulShutdownInProgress;
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
-        private readonly TaskCompletionSource<Done> _gracefulShutdownProgress = new TaskCompletionSource<Done>();
+        private readonly TaskCompletionSource<Done> _gracefulShutdownProgress = new();
 
         /// <summary>
         /// TBD

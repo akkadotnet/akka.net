@@ -35,7 +35,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
 
         public class Destination : UntypedActor
         {
-            private readonly HashSet<object> _receivedMessages = new HashSet<object>();
+            private readonly HashSet<object> _receivedMessages = new();
 
             protected override void OnReceive(object message)
             {

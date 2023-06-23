@@ -16,7 +16,7 @@ namespace Akka.Persistence.TCK
 {
     public abstract class PluginSpec : Akka.TestKit.Xunit2.TestKit, IDisposable
     {
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new(0);
 
         protected int ActorInstanceId = 1;
 

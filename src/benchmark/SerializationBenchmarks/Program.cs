@@ -53,7 +53,7 @@ serialization-settings {{
             _poolSer = 
             _sys_pool.Serialization.FindSerializerForType(typeof(object));
         }
-        private static TestSer testObj = new TestSer()
+        private static TestSer testObj = new()
         {
             Id = 124,
             someStr =
@@ -121,8 +121,7 @@ akka.actor {{
             _ser = _sys.Serialization.FindSerializerForType(typeof(MyType));
         }
         
-        public static MyType payload =>
-            new MyType() { SomeInt = 1, SomeStr = "lol" };
+        public static MyType payload => new() { SomeInt = 1, SomeStr = "lol" };
         [Benchmark]
         public void Serialization_WithTransport_NoState()
         {

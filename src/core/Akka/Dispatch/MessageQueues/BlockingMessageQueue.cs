@@ -15,7 +15,7 @@ namespace Akka.Dispatch.MessageQueues
     /// </summary>
     public abstract class BlockingMessageQueue : IMessageQueue, IBlockingMessageQueueSemantics
     {
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
         private TimeSpan _blockTimeOut = TimeSpan.FromSeconds(1);
         /// <summary>
         /// TBD

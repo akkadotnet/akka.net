@@ -28,7 +28,7 @@ namespace Akka.Tests.Actor.Scheduler
         /// </summary>
         private class ShutdownScheduler : SchedulerBase, IDisposable
         {
-            public readonly AtomicCounter Shutdown = new AtomicCounter(0);
+            public readonly AtomicCounter Shutdown = new(0);
 
             
 

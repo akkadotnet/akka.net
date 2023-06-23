@@ -113,7 +113,7 @@ namespace Akka.Tests.Performance.IO
 
         const string OutboundThroughputCounterName = "outbound ops";
         const string InboundThroughputCounterName = "inbound ops";
-        public static readonly IPEndPoint TestEndpoint = new IPEndPoint(IPAddress.Loopback, ThreadLocalRandom.Current.Next(5000, 11000));
+        public static readonly IPEndPoint TestEndpoint = new(IPAddress.Loopback, ThreadLocalRandom.Current.Next(5000, 11000));
 
         // The number of times we're going to warmup + run each benchmark
         public const int IterationCount = 3;
@@ -127,7 +127,7 @@ namespace Akka.Tests.Performance.IO
 
         private ActorSystem system;
         private IActorRef client;
-        private ManualResetEventSlim resetEvent = new ManualResetEventSlim(false);
+        private ManualResetEventSlim resetEvent = new(false);
         
         private byte[] message;
 

@@ -23,7 +23,7 @@ namespace Akka.TestKit.Internal
     /// <typeparam name="T">The type of item to store.</typeparam>
     public class BlockingQueue<T> : ITestQueue<T>
     {
-        private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>(new QueueWithAddFirst());
+        private readonly BlockingCollection<Positioned> _collection = new(new QueueWithAddFirst());
 
         public int Count { get { return _collection.Count; } }
 
@@ -200,7 +200,7 @@ namespace Akka.TestKit.Internal
 
         private class QueueWithAddFirst : IProducerConsumerCollection<Positioned>
         {
-            private readonly LinkedList<Positioned> _list = new LinkedList<Positioned>();
+            private readonly LinkedList<Positioned> _list = new();
 
             public int Count { 
                 get
@@ -280,7 +280,7 @@ namespace Akka.TestKit.Internal
                 return GetEnumerator();
             }
 
-            public object SyncRoot { get; } = new object();
+            public object SyncRoot { get; } = new();
 
             public bool IsSynchronized => true;
         }

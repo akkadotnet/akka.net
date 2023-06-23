@@ -139,7 +139,7 @@ namespace Akka.Remote.Transport
         {
             private PassThru() { }
 // ReSharper disable once InconsistentNaming
-            private static readonly PassThru _instance = new PassThru();
+            private static readonly PassThru _instance = new();
 
             /// <summary>
             /// TBD
@@ -204,7 +204,7 @@ namespace Akka.Remote.Transport
 
         private bool _shouldDebugLog;
         private volatile IAssociationEventListener _upstreamListener = null;
-        private readonly ConcurrentDictionary<Address,IGremlinMode> addressChaosTable = new ConcurrentDictionary<Address, IGremlinMode>();
+        private readonly ConcurrentDictionary<Address,IGremlinMode> addressChaosTable = new();
         private volatile IGremlinMode _allMode = PassThru.Instance;
 
         /// <summary>
@@ -215,7 +215,7 @@ namespace Akka.Remote.Transport
 #region AbstractTransportAdapter members
 
         // ReSharper disable once InconsistentNaming
-        private static readonly SchemeAugmenter _augmenter = new SchemeAugmenter(FailureInjectorSchemeIdentifier);
+        private static readonly SchemeAugmenter _augmenter = new(FailureInjectorSchemeIdentifier);
         /// <summary>
         /// TBD
         /// </summary>

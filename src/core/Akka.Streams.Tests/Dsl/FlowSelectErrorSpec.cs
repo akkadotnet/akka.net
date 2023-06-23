@@ -19,8 +19,8 @@ namespace Akka.Streams.Tests.Dsl
     // JVM - FlowMapErrorSpec
     public class FlowSelectErrorSpec : AkkaSpec
     {
-        private static readonly Exception Exception = new Exception("ex");
-        private static readonly Exception Boom = new Exception("BOOM!");
+        private static readonly Exception Exception = new("ex");
+        private static readonly Exception Boom = new("BOOM!");
 
         public FlowSelectErrorSpec()
         {

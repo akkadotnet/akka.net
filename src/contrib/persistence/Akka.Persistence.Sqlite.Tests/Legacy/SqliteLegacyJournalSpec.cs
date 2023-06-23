@@ -19,7 +19,7 @@ namespace Akka.Persistence.Sqlite.Tests.Legacy
 {
     public class SqliteLegacyJournalSpec: Akka.TestKit.Xunit2.TestKit
     {
-        private Dictionary<string, IActorRef> _actors = new Dictionary<string, IActorRef>();
+        private Dictionary<string, IActorRef> _actors = new();
         private readonly TestProbe _probe;
 
         public SqliteLegacyJournalSpec(ITestOutputHelper output)

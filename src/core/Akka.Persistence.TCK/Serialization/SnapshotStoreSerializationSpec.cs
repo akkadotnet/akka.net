@@ -76,9 +76,9 @@ namespace Akka.Persistence.TCK.Serialization
 
             var unconfirmed = new UnconfirmedDelivery[]
             {
-                new UnconfirmedDelivery(1, TestActor.Path, "a"),
-                new UnconfirmedDelivery(2, TestActor.Path, "b"),
-                new UnconfirmedDelivery(3, TestActor.Path, 42)
+                new(1, TestActor.Path, "a"),
+                new(2, TestActor.Path, "b"),
+                new(3, TestActor.Path, 42)
             };
             var atLeastOnceDeliverySnapshot = new AtLeastOnceDeliverySnapshot(17, unconfirmed);
 

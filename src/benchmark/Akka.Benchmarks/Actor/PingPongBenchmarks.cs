@@ -48,7 +48,7 @@ namespace Akka.Benchmarks.Actor
 
         sealed class StartTest
         {
-            public static readonly StartTest Instance = new StartTest();
+            public static readonly StartTest Instance = new();
             private StartTest() { }
         }
 
@@ -64,7 +64,7 @@ namespace Akka.Benchmarks.Actor
 
         sealed class TestDone
         {
-            public static readonly TestDone Instance = new TestDone();
+            public static readonly TestDone Instance = new();
             private TestDone() { }
         }
 

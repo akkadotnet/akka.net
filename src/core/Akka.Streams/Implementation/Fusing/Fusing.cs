@@ -583,7 +583,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// The list of all groups of modules that are within each async boundary.
         /// </summary>
-        public readonly LinkedList<ISet<IModule>> Groups = new LinkedList<ISet<IModule>>();
+        public readonly LinkedList<ISet<IModule>> Groups = new();
 
         /// <summary>
         /// A mapping from OutPort to its containing group, needed when determining whether an upstream connection is internal or not.
@@ -628,7 +628,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// A stack of materialized value sources, grouped by materialized computation context.
         /// </summary>
-        private readonly LinkedList<LinkedList<CopiedModule>> _materializedSources = new LinkedList<LinkedList<CopiedModule>>();
+        private readonly LinkedList<LinkedList<CopiedModule>> _materializedSources = new();
 
         /// <summary>
         /// TBD

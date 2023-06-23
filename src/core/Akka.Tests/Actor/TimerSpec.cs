@@ -202,7 +202,7 @@ namespace Akka.Tests.Actor
 
         internal class Bump : ICommand
         {
-            public static readonly Bump Instance = new Bump();
+            public static readonly Bump Instance = new();
 
             private Bump()
             {
@@ -221,7 +221,7 @@ namespace Akka.Tests.Actor
 
         internal class End : ICommand
         {
-            public static readonly End Instance = new End();
+            public static readonly End Instance = new();
 
             private End()
             {
@@ -240,7 +240,7 @@ namespace Akka.Tests.Actor
 
         internal class Cancel : ICommand
         {
-            public static readonly Cancel Instance = new Cancel();
+            public static readonly Cancel Instance = new();
 
             private Cancel()
             {
@@ -261,7 +261,7 @@ namespace Akka.Tests.Actor
 
         internal class AutoReceive : ICommand
         {
-            public static readonly AutoReceive Instance = new AutoReceive();
+            public static readonly AutoReceive Instance = new();
 
             private AutoReceive()
             {
@@ -436,7 +436,7 @@ namespace Akka.Tests.Actor
 
         internal class TheState
         {
-            public static readonly TheState Instance = new TheState();
+            public static readonly TheState Instance = new();
 
             private TheState()
             {
@@ -549,7 +549,7 @@ namespace Akka.Tests.Actor
 
         internal class StopStashing
         {
-            public static readonly StopStashing Instance = new StopStashing();
+            public static readonly StopStashing Instance = new();
 
             private StopStashing()
             {

@@ -70,14 +70,14 @@ namespace Akka.Tests.Actor
 
         public class Hello
         {
-            public static Hello Instance { get; } = new Hello();
+            public static Hello Instance { get; } = new();
 
             private Hello() { }
         }
 
         public class Bye
         {
-            public static Bye Instance { get; } = new Bye();
+            public static Bye Instance { get; } = new();
 
             private Bye() { }
         }

@@ -658,7 +658,7 @@ namespace Akka.Actor
         {
             private DefaultProducer(){}
 
-            public static readonly DefaultProducer Instance = new DefaultProducer();
+            public static readonly DefaultProducer Instance = new();
 
             public ActorBase Produce()
             {

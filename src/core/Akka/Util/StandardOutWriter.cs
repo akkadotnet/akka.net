@@ -15,7 +15,7 @@ namespace Akka.Util
     ///  </summary>
     public static class StandardOutWriter
     {
-        private static readonly object _lock = new object();
+        private static readonly object _lock = new();
 
         /// <summary>
         /// Writes the specified <see cref="string"/> value to the standard output stream. Optionally 

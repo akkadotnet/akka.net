@@ -27,7 +27,7 @@ namespace Akka.Streams.Tests.TCK
         {
             private sealed class Produce
             {
-                public static Produce Instance { get; } = new Produce();
+                public static Produce Instance { get; } = new();
 
                 private Produce()
                 {
@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.TCK
 
             private sealed class Loop
             {
-                public static Loop Instance { get; } = new Loop();
+                public static Loop Instance { get; } = new();
 
                 private Loop()
                 {
@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.TCK
 
             private sealed class Complete
             {
-                public static Complete Instance { get; } = new Complete();
+                public static Complete Instance { get; } = new();
 
                 private Complete()
                 {

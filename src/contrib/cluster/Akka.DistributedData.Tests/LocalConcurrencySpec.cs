@@ -18,7 +18,7 @@ namespace Akka.DistributedData.Tests
     {
         public sealed class Updater : ReceiveActor, IWithUnboundedStash
         {
-            public static readonly ORSetKey<string> Key = new ORSetKey<string>("key");
+            public static readonly ORSetKey<string> Key = new("key");
             public Updater()
             {
                 var cluster = Cluster.Cluster.Get(Context.System);

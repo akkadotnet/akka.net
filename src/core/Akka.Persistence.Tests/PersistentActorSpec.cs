@@ -18,7 +18,7 @@ namespace Akka.Persistence.Tests
 {
     public partial class PersistentActorSpec : PersistenceSpec
     {
-        private readonly Random _random = new Random();
+        private readonly Random _random = new();
         public PersistentActorSpec()
             : base(Configuration("PersistentActorSpec"))
         {

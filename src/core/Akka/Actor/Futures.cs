@@ -238,7 +238,7 @@ namespace Akka.Actor
            * StoppedWithPath(path) => stopped, path available
            * Stopped               => stopped, path not yet created
            */
-        private AtomicReference<object> _stateDoNotCallMeDirectly = new AtomicReference<object>(null);
+        private AtomicReference<object> _stateDoNotCallMeDirectly = new(null);
 
         /// <summary>
         /// TBD
@@ -251,7 +251,7 @@ namespace Akka.Actor
             /// <summary>
             /// TBD
             /// </summary>
-            public static Registering Instance { get; } = new Registering();
+            public static Registering Instance { get; } = new();
         }
 
         /// <summary>
@@ -265,7 +265,7 @@ namespace Akka.Actor
             /// <summary>
             /// Singleton instance.
             /// </summary>
-            public static Stopped Instance { get; } = new Stopped();
+            public static Stopped Instance { get; } = new();
         }
 
         /// <summary>
@@ -318,7 +318,7 @@ namespace Akka.Actor
 
         #region Static methods
 
-        private static readonly Status.Failure ActorStopResult = new Status.Failure(new ActorKilledException("Stopped"));
+        private static readonly Status.Failure ActorStopResult = new(new ActorKilledException("Stopped"));
 
         // use a static delegate to avoid allocations
         private static readonly Action<object> CancelAction = o => ((TaskCompletionSource<object>)o).TrySetCanceled();
@@ -408,7 +408,7 @@ namespace Akka.Actor
 
         #endregion
         
-        private readonly AtomicReference<ImmutableHashSet<IActorRef>> _watchedByDoNotCallMeDirectly = new AtomicReference<ImmutableHashSet<IActorRef>>(ImmutableHashSet<IActorRef>.Empty);
+        private readonly AtomicReference<ImmutableHashSet<IActorRef>> _watchedByDoNotCallMeDirectly = new(ImmutableHashSet<IActorRef>.Empty);
 
         private ImmutableHashSet<IActorRef> WatchedBy
         {

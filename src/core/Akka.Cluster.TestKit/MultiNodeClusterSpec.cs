@@ -82,7 +82,7 @@ namespace Akka.Cluster.TestKit
             public sealed class SendEnd
             {
                 private SendEnd() { }
-                private static readonly SendEnd _instance = new SendEnd();
+                private static readonly SendEnd _instance = new();
                 public static SendEnd Instance
                 {
                     get
@@ -95,7 +95,7 @@ namespace Akka.Cluster.TestKit
             public sealed class End
             {
                 private End() { }
-                private static readonly End _instance = new End();
+                private static readonly End _instance = new();
                 public static End Instance
                 {
                     get
@@ -108,7 +108,7 @@ namespace Akka.Cluster.TestKit
             public sealed class EndAck
             {
                 private EndAck() { }
-                private static readonly EndAck _instance = new EndAck();
+                private static readonly EndAck _instance = new();
                 public static EndAck Instance
                 {
                     get
@@ -190,8 +190,7 @@ namespace Akka.Cluster.TestKit
             get { return Roles.Count; }
         }
 
-        readonly ConcurrentDictionary<RoleName, Address> _cachedAddresses =
-            new ConcurrentDictionary<RoleName, Address>();
+        readonly ConcurrentDictionary<RoleName, Address> _cachedAddresses = new();
 
         protected override void AtStartup()
         {

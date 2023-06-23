@@ -28,19 +28,19 @@ namespace DocsExamples.Persistence.PersistentFSM
 
     public class Buy : ICommand
     {
-        public static Buy Instance { get; } = new Buy();
+        public static Buy Instance { get; } = new();
         private Buy() { }
     }
 
     public class Leave : ICommand
     {
-        public static Leave Instance { get; } = new Leave();
+        public static Leave Instance { get; } = new();
         private Leave() { }
     }
 
     public class GetCurrentCart : ICommand
     {
-        public static GetCurrentCart Instance { get; } = new GetCurrentCart();
+        public static GetCurrentCart Instance { get; } = new();
         private GetCurrentCart() { }
     }
     #endregion
@@ -50,28 +50,28 @@ namespace DocsExamples.Persistence.PersistentFSM
 
     public class LookingAround : IUserState
     {
-        public static LookingAround Instance { get; } = new LookingAround();
+        public static LookingAround Instance { get; } = new();
         private LookingAround() { }
         public string Identifier => "Looking Around";
     }
     
     public class Shopping : IUserState
     {
-        public static Shopping Instance { get; } = new Shopping();
+        public static Shopping Instance { get; } = new();
         private Shopping() { }
         public string Identifier => "Shopping";
     }
 
     public class Inactive : IUserState
     {
-        public static Inactive Instance { get; } = new Inactive();
+        public static Inactive Instance { get; } = new();
         private Inactive() { }
         public string Identifier => "Inactive";
     }
 
     public class Paid : IUserState
     {
-        public static Paid Instance { get; } = new Paid();
+        public static Paid Instance { get; } = new();
         private Paid() { }
         public string Identifier => "Paid";
     }
@@ -92,13 +92,13 @@ namespace DocsExamples.Persistence.PersistentFSM
 
     public class OrderExecuted : IDomainEvent
     {
-        public static OrderExecuted Instance { get; } = new OrderExecuted();
+        public static OrderExecuted Instance { get; } = new();
         private OrderExecuted() { }
     }
 
     public class OrderDiscarded : IDomainEvent
     {
-        public static OrderDiscarded Instance { get; } = new OrderDiscarded();
+        public static OrderDiscarded Instance { get; } = new();
         private OrderDiscarded() { }
     }
     #endregion
@@ -175,7 +175,7 @@ namespace DocsExamples.Persistence.PersistentFSM
 
     public class ShoppingCardDiscarded : IReportEvent
     {
-        public static ShoppingCardDiscarded Instance { get; } = new ShoppingCardDiscarded();
+        public static ShoppingCardDiscarded Instance { get; } = new();
         private ShoppingCardDiscarded() { }
     }
     #endregion

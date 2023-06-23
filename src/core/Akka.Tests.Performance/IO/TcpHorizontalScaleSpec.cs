@@ -114,7 +114,7 @@ namespace Akka.Tests.Performance.IO
         private const string OutboundThroughputCounterName = "outbound ops";
         private const string ClientConnectCounterName = "connected clients";
 
-        private static readonly IPEndPoint TestEndPoint = new IPEndPoint(IPAddress.Loopback, ThreadLocalRandom.Current.Next(5000, 11000));
+        private static readonly IPEndPoint TestEndPoint = new(IPAddress.Loopback, ThreadLocalRandom.Current.Next(5000, 11000));
         private static readonly TimeSpan SleepInterval = TimeSpan.FromMilliseconds(100);
 
         private Counter _clientConnectedCounter;

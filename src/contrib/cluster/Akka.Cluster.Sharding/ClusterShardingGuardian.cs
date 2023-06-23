@@ -172,7 +172,7 @@ namespace Akka.Cluster.Sharding
 
         private readonly ConcurrentDictionary<string, IActorRef> _regions;
         private readonly ConcurrentDictionary<string, IActorRef> _proxies;
-        private readonly ConcurrentDictionary<IActorRef, string> _typeLookup = new ConcurrentDictionary<IActorRef, string>();
+        private readonly ConcurrentDictionary<IActorRef, string> _typeLookup = new();
 
         /// <summary>
         /// TBD

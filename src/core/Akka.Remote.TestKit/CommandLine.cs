@@ -27,7 +27,7 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public static class CommandLine
     {
-        private static readonly Dictionary<string, string> Values = new Dictionary<string, string>();
+        private static readonly Dictionary<string, string> Values = new();
 
         static CommandLine()
         {

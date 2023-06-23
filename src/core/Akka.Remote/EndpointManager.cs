@@ -461,10 +461,10 @@ namespace Akka.Remote
         /// Mapping between addresses and endpoint actors. If passive connections are turned off, incoming connections
         /// will not be part of this map!
         /// </summary>
-        private readonly EndpointRegistry _endpoints = new EndpointRegistry();
+        private readonly EndpointRegistry _endpoints = new();
         private readonly RemoteSettings _settings;
         private readonly Config _conf;
-        private readonly AtomicCounterLong _endpointId = new AtomicCounterLong(0L);
+        private readonly AtomicCounterLong _endpointId = new(0L);
         private readonly ILoggingAdapter _log;
         private readonly EventPublisher _eventPublisher;
 
@@ -476,10 +476,9 @@ namespace Akka.Remote
         /// <summary>
         /// Mapping between transports and the local addresses they listen to
         /// </summary>
-        private Dictionary<Address, AkkaProtocolTransport> _transportMapping =
-            new Dictionary<Address, AkkaProtocolTransport>();
+        private Dictionary<Address, AkkaProtocolTransport> _transportMapping = new();
 
-        private readonly ConcurrentDictionary<Link, ResendState> _receiveBuffers = new ConcurrentDictionary<Link, ResendState>();
+        private readonly ConcurrentDictionary<Link, ResendState> _receiveBuffers = new();
 
         private bool RetryGateEnabled => _settings.RetryGateClosedFor > TimeSpan.Zero;
 
@@ -510,8 +509,8 @@ namespace Akka.Remote
             }
         }
 
-        private Dictionary<IActorRef, AkkaProtocolHandle> _pendingReadHandoffs = new Dictionary<IActorRef, AkkaProtocolHandle>();
-        private Dictionary<IActorRef, List<InboundAssociation>> _stashedInbound = new Dictionary<IActorRef, List<InboundAssociation>>();
+        private Dictionary<IActorRef, AkkaProtocolHandle> _pendingReadHandoffs = new();
+        private Dictionary<IActorRef, List<InboundAssociation>> _stashedInbound = new();
 
 
         private void HandleStashedInbound(IActorRef endpoint, bool writerIsIdle)

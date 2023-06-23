@@ -71,7 +71,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GracefulShutdown Instance = new GracefulShutdown();
+        public static readonly GracefulShutdown Instance = new();
 
         private GracefulShutdown()
         {
@@ -84,7 +84,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GracefulShutdownTimeout Instance = new GracefulShutdownTimeout();
+        public static readonly GracefulShutdownTimeout Instance = new();
 
         private GracefulShutdownTimeout()
         {
@@ -150,7 +150,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetCurrentRegions Instance = new GetCurrentRegions();
+        public static readonly GetCurrentRegions Instance = new();
 
         private GetCurrentRegions()
         {
@@ -398,7 +398,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetShardRegionStats Instance = new GetShardRegionStats();
+        public static readonly GetShardRegionStats Instance = new();
 
         private GetShardRegionStats()
         {
@@ -492,7 +492,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetShardRegionState Instance = new GetShardRegionState();
+        public static readonly GetShardRegionState Instance = new();
 
         private GetShardRegionState()
         {
@@ -643,7 +643,7 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     internal sealed class GetShardRegionStatus : IShardRegionQuery, INoSerializationVerificationNeeded
     {
-        public static readonly GetShardRegionStatus Instance = new GetShardRegionStatus();
+        public static readonly GetShardRegionStatus Instance = new();
 
         private GetShardRegionStatus()
         {

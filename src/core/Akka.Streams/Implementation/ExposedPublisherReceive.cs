@@ -26,7 +26,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public readonly Action<object> Unhandled;
 
-        private readonly LinkedList<object> _stash = new LinkedList<object>();
+        private readonly LinkedList<object> _stash = new();
 
         /// <summary>
         /// TBD

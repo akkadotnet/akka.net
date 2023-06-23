@@ -150,11 +150,11 @@ namespace Akka.Cluster.Tools.Singleton
 
         [InternalApi]
         internal ClusterSingletonManagerSettings ToManagerSettings(string singletonName) =>
-            new ClusterSingletonManagerSettings(singletonName, Role, RemovalMargin, HandOverRetryInterval, LeaseSettings, ConsiderAppVersion);
+            new(singletonName, Role, RemovalMargin, HandOverRetryInterval, LeaseSettings, ConsiderAppVersion);
 
         [InternalApi]
         internal ClusterSingletonProxySettings ToProxySettings(string singletonName) =>
-            new ClusterSingletonProxySettings(singletonName, Role, SingletonIdentificationInterval, BufferSize, ConsiderAppVersion);
+            new(singletonName, Role, SingletonIdentificationInterval, BufferSize, ConsiderAppVersion);
 
         [InternalApi]
         internal bool ShouldRunManager(Cluster cluster) => string.IsNullOrEmpty(Role) || cluster.SelfMember.Roles.Contains(Role);

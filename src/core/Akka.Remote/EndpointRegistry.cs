@@ -17,14 +17,13 @@ namespace Akka.Remote
     /// </summary>
     internal class EndpointRegistry
     {
-        private Dictionary<Address, (int, Deadline)> _addressToRefuseUid = new Dictionary<Address, (int, Deadline)>();
-        private readonly Dictionary<Address, (IActorRef, int)> _addressToReadonly = new Dictionary<Address, (IActorRef, int)>();
+        private Dictionary<Address, (int, Deadline)> _addressToRefuseUid = new();
+        private readonly Dictionary<Address, (IActorRef, int)> _addressToReadonly = new();
 
-        private Dictionary<Address, EndpointManager.EndpointPolicy> _addressToWritable =
-            new Dictionary<Address, EndpointManager.EndpointPolicy>();
+        private Dictionary<Address, EndpointManager.EndpointPolicy> _addressToWritable = new();
 
-        private readonly Dictionary<IActorRef, Address> _readonlyToAddress = new Dictionary<IActorRef, Address>();
-        private readonly Dictionary<IActorRef, Address> _writableToAddress = new Dictionary<IActorRef, Address>();
+        private readonly Dictionary<IActorRef, Address> _readonlyToAddress = new();
+        private readonly Dictionary<IActorRef, Address> _writableToAddress = new();
 
         /// <summary>
         /// Registers a new writable endpoint with the system.

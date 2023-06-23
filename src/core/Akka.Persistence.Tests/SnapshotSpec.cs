@@ -23,7 +23,7 @@ namespace Akka.Persistence.Tests
 
         internal class TakeSnapshot
         {
-            public static readonly TakeSnapshot Instance = new TakeSnapshot();
+            public static readonly TakeSnapshot Instance = new();
             private TakeSnapshot()
             {
             }

@@ -366,7 +366,7 @@ akka {
         
     public class FooHyperionSurrogate : Surrogate
     {
-        public static readonly List<Foo> Surrogated = new List<Foo>();
+        public static readonly List<Foo> Surrogated = new();
         
         public FooHyperionSurrogate()
         {

@@ -17,7 +17,7 @@ namespace Akka.DistributedData
     [Serializable]
     public class GetKeyIds
     {
-        public static readonly GetKeyIds Instance = new GetKeyIds();
+        public static readonly GetKeyIds Instance = new();
 
         private GetKeyIds() { }
 
@@ -720,7 +720,7 @@ namespace Akka.DistributedData
             throw Cause;
         }
 
-        public Exception Cause => new Exception($"Failed to store value under the key {_key}");
+        public Exception Cause => new($"Failed to store value under the key {_key}");
 
         
         public override string ToString() => $"StoreFailure({_key}{(_request == null ? "" : ", req=" + _request)})";
@@ -945,7 +945,7 @@ namespace Akka.DistributedData
     [Serializable]
     public sealed class GetReplicaCount
     {
-        public static readonly GetReplicaCount Instance = new GetReplicaCount();
+        public static readonly GetReplicaCount Instance = new();
 
         private GetReplicaCount() { }
     }
@@ -983,7 +983,7 @@ namespace Akka.DistributedData
     [Serializable]
     public sealed class FlushChanges
     {
-        public static readonly FlushChanges Instance = new FlushChanges();
+        public static readonly FlushChanges Instance = new();
 
         private FlushChanges() { }
 

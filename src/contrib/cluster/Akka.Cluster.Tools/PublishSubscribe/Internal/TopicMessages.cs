@@ -23,7 +23,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static Prune Instance { get; } = new Prune();
+        public static Prune Instance { get; } = new();
         private Prune() { }
     }
 
@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static Count Instance { get; } = new Count();
+        public static Count Instance { get; } = new();
         private Count() { }
     }
 
@@ -298,7 +298,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly DeltaCount Instance = new DeltaCount();
+        public static readonly DeltaCount Instance = new();
 
         private DeltaCount() { }
     }
@@ -312,7 +312,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static GossipTick Instance { get; } = new GossipTick();
+        public static GossipTick Instance { get; } = new();
 
         private GossipTick() { }
     }
@@ -457,7 +457,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static NoMoreSubscribers Instance { get; } = new NoMoreSubscribers();
+        public static NoMoreSubscribers Instance { get; } = new();
         private NoMoreSubscribers() {}
     }
 
@@ -470,7 +470,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static TerminateRequest Instance { get; } = new TerminateRequest();
+        public static TerminateRequest Instance { get; } = new();
         private TerminateRequest() {}
     }
 
@@ -484,7 +484,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static NewSubscriberArrived Instance { get; } = new NewSubscriberArrived();
+        public static NewSubscriberArrived Instance { get; } = new();
         private NewSubscriberArrived() { }
     }
 

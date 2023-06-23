@@ -113,7 +113,7 @@ namespace Akka.Streams.Extra
         /// </summary>
         internal sealed class TimedFlowContext
         {
-            private readonly Stopwatch _stopwatch = new Stopwatch();
+            private readonly Stopwatch _stopwatch = new();
 
             /// <summary>
             /// TBD

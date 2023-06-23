@@ -143,8 +143,7 @@ namespace Akka.Remote.Tests.Transport
 
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
             
-        private RootActorPath RootB
-            => new RootActorPath(_systemB.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress);
+        private RootActorPath RootB => new(_systemB.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress);
 
         private async Task<IActorRef> Here()
         {

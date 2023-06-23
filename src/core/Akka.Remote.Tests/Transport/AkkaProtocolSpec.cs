@@ -29,16 +29,15 @@ namespace Akka.Remote.Tests.Transport
     {
         #region Setup / Config
 
-        private readonly Address _localAddress = new Address("test", "testsystem", "testhost", 1234);
-        private readonly Address _localAkkaAddress = new Address("akka.test", "testsystem", "testhost", 1234);
+        private readonly Address _localAddress = new("test", "testsystem", "testhost", 1234);
+        private readonly Address _localAkkaAddress = new("akka.test", "testsystem", "testhost", 1234);
 
-        private readonly Address _remoteAddress = new Address("test", "testsystem2", "testhost2", 1234);
-        private readonly Address _remoteAkkaAddress = new Address("akka.test", "testsystem2", "testhost2", 1234);
+        private readonly Address _remoteAddress = new("test", "testsystem2", "testhost2", 1234);
+        private readonly Address _remoteAkkaAddress = new("akka.test", "testsystem2", "testhost2", 1234);
 
         private readonly AkkaPduCodec _codec;
 
-        private readonly SerializedMessage _testMsg =
-            new SerializedMessage { SerializerId = 0, Message = ByteString.CopyFromUtf8("foo") };
+        private readonly SerializedMessage _testMsg = new() { SerializerId = 0, Message = ByteString.CopyFromUtf8("foo") };
 
         private readonly ByteString _testEnvelope;
         private readonly ByteString _testMsgPdu;

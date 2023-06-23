@@ -323,7 +323,7 @@ namespace Akka.Streams.Tests.Dsl
 
         #region Test classes and helper 
         
-        private static readonly TestException TestException = new TestException("test");
+        private static readonly TestException TestException = new("test");
 
         private static readonly Func<int, (int, string)> Zipper = i => (i + i, i + "+" + i);
 

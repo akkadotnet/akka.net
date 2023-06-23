@@ -69,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
             Offset = offset;
         }
 
-        public Message Copy(string data = null, long? offset = null) => new Message(data ?? Data, offset ?? Offset);
+        public Message Copy(string data = null, long? offset = null) => new(data ?? Data, offset ?? Offset);
 
         public bool Equals(Message other)
         {

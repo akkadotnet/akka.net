@@ -26,7 +26,7 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        internal static readonly GossipTick Instance = new GossipTick();
+        internal static readonly GossipTick Instance = new();
         private GossipTick() { }
         /// <summary>
         /// TBD
@@ -44,7 +44,7 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// Singleton instance
         /// </summary>
-        public static DeltaPropagationTick Instance { get; } = new DeltaPropagationTick();
+        public static DeltaPropagationTick Instance { get; } = new();
 
         private DeltaPropagationTick() { }
     }
@@ -58,7 +58,7 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        internal static readonly RemovedNodePruningTick Instance = new RemovedNodePruningTick();
+        internal static readonly RemovedNodePruningTick Instance = new();
         private RemovedNodePruningTick() { }
         /// <summary>
         /// TBD
@@ -76,7 +76,7 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        internal static readonly ClockTick Instance = new ClockTick();
+        internal static readonly ClockTick Instance = new();
         private ClockTick() { }
         /// <summary>
         /// TBD
@@ -161,7 +161,7 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        internal static readonly WriteAck Instance = new WriteAck();
+        internal static readonly WriteAck Instance = new();
 
         private WriteAck() { }
         /// <inheritdoc/>
@@ -184,7 +184,7 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        internal static readonly WriteNack Instance = new WriteNack();
+        internal static readonly WriteNack Instance = new();
 
         private WriteNack() { }
         /// <summary>
@@ -353,7 +353,7 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly ReadRepairAck Instance = new ReadRepairAck();
+        public static readonly ReadRepairAck Instance = new();
 
         private ReadRepairAck() { }
 
@@ -370,7 +370,7 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static DataEnvelope DeletedEnvelope => new DataEnvelope(DeletedData.Instance);
+        public static DataEnvelope DeletedEnvelope => new(DeletedData.Instance);
 
         /// <summary>
         /// TBD
@@ -396,14 +396,11 @@ namespace Akka.DistributedData.Internal
             DeltaVersions = deltaVersions ?? VersionVector.Empty;
         }
 
-        internal DataEnvelope WithData(IReplicatedData data) =>
-            new DataEnvelope(data, Pruning, DeltaVersions);
+        internal DataEnvelope WithData(IReplicatedData data) => new(data, Pruning, DeltaVersions);
 
-        internal DataEnvelope WithPruning(ImmutableDictionary<UniqueAddress, IPruningState> pruning) =>
-            new DataEnvelope(Data, pruning, DeltaVersions);
+        internal DataEnvelope WithPruning(ImmutableDictionary<UniqueAddress, IPruningState> pruning) => new(Data, pruning, DeltaVersions);
 
-        internal DataEnvelope WithDeltaVersions(VersionVector deltaVersions) =>
-            new DataEnvelope(Data, Pruning, deltaVersions);
+        internal DataEnvelope WithDeltaVersions(VersionVector deltaVersions) => new(Data, Pruning, deltaVersions);
 
         internal DataEnvelope WithoutDeltaVersions() =>
             DeltaVersions.IsEmpty
@@ -435,7 +432,7 @@ namespace Akka.DistributedData.Internal
         /// <param name="owner">TBD</param>
         /// <returns>TBD</returns>
         internal DataEnvelope InitRemovedNodePruning(UniqueAddress removed, UniqueAddress owner) =>
-            new DataEnvelope(Data, Pruning.SetItem(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)));
+            new(Data, Pruning.SetItem(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)));
 
         /// <summary>
         /// TBD
@@ -635,7 +632,7 @@ namespace Akka.DistributedData.Internal
     [Serializable]
     internal sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>, IReplicatedDataSerialization
     {
-        public static readonly DeletedData Instance = new DeletedData();
+        public static readonly DeletedData Instance = new();
 
         private DeletedData() { }
 
@@ -866,7 +863,7 @@ namespace Akka.DistributedData.Internal
     {
         private sealed class NoDelta : IDeltaReplicatedData<IReplicatedData, IReplicatedDelta>, IRequireCausualDeliveryOfDeltas
         {
-            public static readonly NoDelta Instance = new NoDelta();
+            public static readonly NoDelta Instance = new();
             private NoDelta() { }
 
             IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
@@ -937,7 +934,7 @@ namespace Akka.DistributedData.Internal
 
     public sealed class DeltaNack : IReplicatorMessage, IDeadLetterSuppression, IEquatable<DeltaNack>
     {
-        public static readonly DeltaNack Instance = new DeltaNack();
+        public static readonly DeltaNack Instance = new();
         private DeltaNack() { }
         public bool Equals(DeltaNack other) => true;
         public override bool Equals(object obj) => obj is DeltaNack;

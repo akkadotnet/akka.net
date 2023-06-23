@@ -24,7 +24,7 @@ namespace Akka.Remote.Routing
     public sealed class RemoteRouterConfig : Pool, IEquatable<RouterConfig>
     {
         private readonly IEnumerator<Address> _nodeAddrEnumerator;
-        private readonly AtomicCounter _childNameCounter = new AtomicCounter();
+        private readonly AtomicCounter _childNameCounter = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RemoteRouterConfig"/> class.

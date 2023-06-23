@@ -38,7 +38,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static HandOverToMe Instance { get; } = new HandOverToMe();
+        public static HandOverToMe Instance { get; } = new();
         private HandOverToMe() { }
     }
 
@@ -53,7 +53,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static HandOverInProgress Instance { get; } = new HandOverInProgress();
+        public static HandOverInProgress Instance { get; } = new();
         private HandOverInProgress() { }
     }
 
@@ -68,7 +68,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static HandOverDone Instance { get; } = new HandOverDone();
+        public static HandOverDone Instance { get; } = new();
         private HandOverDone() { }
     }
 
@@ -86,7 +86,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static TakeOverFromMe Instance { get; } = new TakeOverFromMe();
+        public static TakeOverFromMe Instance { get; } = new();
         private TakeOverFromMe() { }
     }
 
@@ -99,7 +99,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static Cleanup Instance { get; } = new Cleanup();
+        public static Cleanup Instance { get; } = new();
         private Cleanup() { }
     }
 
@@ -112,7 +112,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static StartOldestChangedBuffer Instance { get; } = new StartOldestChangedBuffer();
+        public static StartOldestChangedBuffer Instance { get; } = new();
         private StartOldestChangedBuffer() { }
     }
 
@@ -167,7 +167,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static LeaseRetry Instance { get; } = new LeaseRetry();
+        public static LeaseRetry Instance { get; } = new();
         private LeaseRetry() { }
     }
 
@@ -185,7 +185,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static Uninitialized Instance { get; } = new Uninitialized();
+        public static Uninitialized Instance { get; } = new();
         private Uninitialized() { }
     }
 
@@ -339,7 +339,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static EndData Instance { get; } = new EndData();
+        public static EndData Instance { get; } = new();
         private EndData() { }
     }
 
@@ -460,7 +460,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Singleton instance
         /// </summary>
-        public static SelfExiting Instance { get; } = new SelfExiting();
+        public static SelfExiting Instance { get; } = new();
     }
 
     /// <summary>
@@ -632,7 +632,7 @@ namespace Akka.Cluster.Tools.Singleton
         private ILoggingAdapter _log;
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
-        private readonly TaskCompletionSource<Done> _memberExitingProgress = new TaskCompletionSource<Done>();
+        private readonly TaskCompletionSource<Done> _memberExitingProgress = new();
 
         private readonly string singletonLeaseName;
         private readonly Lease lease;

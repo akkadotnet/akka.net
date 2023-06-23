@@ -334,14 +334,14 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="maxResetTimeout">The upper bound of <see cref="ResetTimeout"/></param>
         public CircuitBreaker WithExponentialBackoff(TimeSpan maxResetTimeout) => 
-            new CircuitBreaker(Scheduler, MaxFailures, CallTimeout, ResetTimeout, maxResetTimeout, 2.0, RandomFactor);
+            new(Scheduler, MaxFailures, CallTimeout, ResetTimeout, maxResetTimeout, 2.0, RandomFactor);
 
         /// <summary>
         /// Adds jitter to the delay.
         /// </summary>
         /// <param name="randomFactor">after calculation of the back-off an additional random delay based on this factor is added, e.g. 0.2 adds up to 20% delay. In order to skip this additional delay pass in 0.</param>
         public CircuitBreaker WithRandomFactor(double randomFactor) => 
-            new CircuitBreaker(Scheduler, MaxFailures, CallTimeout, ResetTimeout, MaxResetTimeout, ExponentialBackoffFactor, randomFactor);
+            new(Scheduler, MaxFailures, CallTimeout, ResetTimeout, MaxResetTimeout, ExponentialBackoffFactor, randomFactor);
 
         /// <summary>
         /// Implements consistent transition between states. Throws IllegalStateException if an invalid transition is attempted.

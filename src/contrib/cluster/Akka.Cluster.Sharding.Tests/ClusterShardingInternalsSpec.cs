@@ -105,7 +105,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class HandOffStopMessage : INoSerializationVerificationNeeded
         {
-            public static readonly HandOffStopMessage Instance = new HandOffStopMessage();
+            public static readonly HandOffStopMessage Instance = new();
             private HandOffStopMessage()
             {
             }

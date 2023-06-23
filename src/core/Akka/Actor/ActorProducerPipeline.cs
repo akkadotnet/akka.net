@@ -117,13 +117,13 @@ namespace Akka.Actor
     public class ActorProducerPipelineResolver
     {
         private readonly Lazy<ILoggingAdapter> _log;
-        private readonly List<IActorProducerPlugin> _plugins = new List<IActorProducerPlugin>
+        private readonly List<IActorProducerPlugin> _plugins = new()
         {   
             // collection of plugins loaded by default
             new ActorStashPlugin()
         };
 
-        private readonly ConcurrentDictionary<Type, ActorProducerPipeline> _pipelines = new ConcurrentDictionary<Type, ActorProducerPipeline>();
+        private readonly ConcurrentDictionary<Type, ActorProducerPipeline> _pipelines = new();
 
         /// <summary>
         /// Gets total number of unique plugins registered inside current resolver.

@@ -69,7 +69,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class UnregisterConsumer
         {
-            public static readonly UnregisterConsumer Instance = new UnregisterConsumer();
+            public static readonly UnregisterConsumer Instance = new();
 
             private UnregisterConsumer()
             {
@@ -78,7 +78,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class RegisterConsumer
         {
-            public static readonly RegisterConsumer Instance = new RegisterConsumer();
+            public static readonly RegisterConsumer Instance = new();
 
             private RegisterConsumer()
             {
@@ -87,7 +87,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class RegistrationOk
         {
-            public static readonly RegistrationOk Instance = new RegistrationOk();
+            public static readonly RegistrationOk Instance = new();
 
             private RegistrationOk()
             {
@@ -96,7 +96,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class UnexpectedRegistration
         {
-            public static readonly UnexpectedRegistration Instance = new UnexpectedRegistration();
+            public static readonly UnexpectedRegistration Instance = new();
 
             private UnexpectedRegistration()
             {
@@ -105,7 +105,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class UnregistrationOk
         {
-            public static readonly UnregistrationOk Instance = new UnregistrationOk();
+            public static readonly UnregistrationOk Instance = new();
 
             private UnregistrationOk()
             {
@@ -114,7 +114,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class UnexpectedUnregistration
         {
-            public static readonly UnexpectedUnregistration Instance = new UnexpectedUnregistration();
+            public static readonly UnexpectedUnregistration Instance = new();
 
             private UnexpectedUnregistration()
             {
@@ -123,7 +123,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class Reset
         {
-            public static readonly Reset Instance = new Reset();
+            public static readonly Reset Instance = new();
 
             private Reset()
             {
@@ -132,7 +132,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class ResetOk
         {
-            public static readonly ResetOk Instance = new ResetOk();
+            public static readonly ResetOk Instance = new();
 
             private ResetOk()
             {
@@ -223,7 +223,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class Ping
         {
-            public static readonly Ping Instance = new Ping();
+            public static readonly Ping Instance = new();
 
             private Ping()
             {
@@ -232,7 +232,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class Pong
         {
-            public static readonly Pong Instance = new Pong();
+            public static readonly Pong Instance = new();
 
             private Pong()
             {
@@ -241,7 +241,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class End
         {
-            public static readonly End Instance = new End();
+            public static readonly End Instance = new();
 
             private End()
             {
@@ -250,7 +250,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class GetCurrent
         {
-            public static readonly GetCurrent Instance = new GetCurrent();
+            public static readonly GetCurrent Instance = new();
 
             private GetCurrent()
             {

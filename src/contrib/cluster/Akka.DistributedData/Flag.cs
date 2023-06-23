@@ -26,11 +26,11 @@ namespace Akka.DistributedData
         /// <summary>
         /// Flag with a false value set.
         /// </summary>
-        public static readonly Flag False = new Flag(false);
+        public static readonly Flag False = new(false);
         /// <summary>
         /// Flag with a true value set.
         /// </summary>
-        public static readonly Flag True = new Flag(true);
+        public static readonly Flag True = new(true);
 
         /// <summary>
         /// Checks if current flag value is set.

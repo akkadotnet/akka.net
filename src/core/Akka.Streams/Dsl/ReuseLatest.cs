@@ -20,10 +20,10 @@ namespace Akka.Streams.Dsl
     /// <typeparam name="T">The output type.</typeparam>
     public sealed class ReuseLatest<T> : GraphStage<FlowShape<T, T>>
     {
-        private readonly Inlet<T> _in = new Inlet<T>("RepeatPrevious.in");
-        private readonly Outlet<T> _out = new Outlet<T>("RepeatPrevious.out");
+        private readonly Inlet<T> _in = new("RepeatPrevious.in");
+        private readonly Outlet<T> _out = new("RepeatPrevious.out");
 
-        public override FlowShape<T, T> Shape => new FlowShape<T, T>(_in, _out);
+        public override FlowShape<T, T> Shape => new(_in, _out);
         private readonly Action<T,T> _onItemChanged;
 
         /// <summary>

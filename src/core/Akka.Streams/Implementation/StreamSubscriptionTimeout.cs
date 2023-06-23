@@ -55,7 +55,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly CancelingSubscriber<T> Instance = new CancelingSubscriber<T>();
+        public static readonly CancelingSubscriber<T> Instance = new();
         private CancelingSubscriber() { }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly NoopSubscriptionTimeout Instance = new NoopSubscriptionTimeout();
+        public static readonly NoopSubscriptionTimeout Instance = new();
         private NoopSubscriptionTimeout() { }
 
         /// <summary>

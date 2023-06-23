@@ -84,11 +84,11 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 
     public sealed class QueryTopics
     {
-        public static QueryTopics Instance = new QueryTopics();
+        public static QueryTopics Instance = new();
     }
 
     public sealed class PublishTopic
     {
-        public static PublishTopic Instance = new PublishTopic();
+        public static PublishTopic Instance = new();
     }
 }

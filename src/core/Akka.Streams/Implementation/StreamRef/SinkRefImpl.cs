@@ -284,7 +284,7 @@ namespace Akka.Streams.Implementation.StreamRef
             Shape = new SinkShape<TIn>(Inlet);
         }
 
-        public Inlet<TIn> Inlet { get; } = new Inlet<TIn>("SinkRef.in");
+        public Inlet<TIn> Inlet { get; } = new("SinkRef.in");
         public override SinkShape<TIn> Shape { get; }
         public override ILogicAndMaterializedValue<Task<ISourceRef<TIn>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {

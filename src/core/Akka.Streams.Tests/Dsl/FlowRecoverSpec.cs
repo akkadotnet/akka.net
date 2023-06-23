@@ -27,7 +27,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private static readonly TestException Ex = new TestException("test");
+        private static readonly TestException Ex = new("test");
 
         [Fact]
         public async Task A_Recover_must_recover_when_there_is_a_handler()

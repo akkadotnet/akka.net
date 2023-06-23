@@ -138,7 +138,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private TimeSpan shortDuration = TimeSpan.FromMilliseconds(100);
         private TestLeaseExt testLeaseExt;
-        private static AtomicCounter typeIdx = new AtomicCounter(0);
+        private static AtomicCounter typeIdx = new(0);
 
         public ShardWithLeaseSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
         {

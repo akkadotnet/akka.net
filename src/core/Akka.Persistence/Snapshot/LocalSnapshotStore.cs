@@ -26,7 +26,7 @@ namespace Akka.Persistence.Snapshot
     /// </remarks>
     public class LocalSnapshotStore : SnapshotStore
     {
-        private static readonly Regex FilenameRegex = new Regex(@"^snapshot-(.+)-(\d+)-(\d+)", RegexOptions.Compiled);
+        private static readonly Regex FilenameRegex = new(@"^snapshot-(.+)-(\d+)-(\d+)", RegexOptions.Compiled);
 
         private readonly int _maxLoadAttempts;
         private readonly MessageDispatcher _streamDispatcher;

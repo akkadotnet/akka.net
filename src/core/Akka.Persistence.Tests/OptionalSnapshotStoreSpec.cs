@@ -16,7 +16,7 @@ namespace Akka.Persistence.Tests
     {
         public sealed class GetConfig
         {
-            public static readonly GetConfig Instance = new GetConfig();
+            public static readonly GetConfig Instance = new();
             private GetConfig() { }
         }
 

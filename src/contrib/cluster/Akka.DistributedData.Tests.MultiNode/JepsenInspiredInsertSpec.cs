@@ -54,12 +54,12 @@ namespace Akka.DistributedData.Tests.MultiNode
 
     public class JepsenInspiredInsertSpec : MultiNodeClusterSpec
     {
-        public static readonly RoleName Controller = new RoleName("controller");
-        public static readonly RoleName N1 = new RoleName("n1");
-        public static readonly RoleName N2 = new RoleName("n2");
-        public static readonly RoleName N3 = new RoleName("n3");
-        public static readonly RoleName N4 = new RoleName("n4");
-        public static readonly RoleName N5 = new RoleName("n5");
+        public static readonly RoleName Controller = new("controller");
+        public static readonly RoleName N1 = new("n1");
+        public static readonly RoleName N2 = new("n2");
+        public static readonly RoleName N3 = new("n3");
+        public static readonly RoleName N4 = new("n4");
+        public static readonly RoleName N5 = new("n5");
 
         private readonly Cluster.Cluster _cluster;
         private readonly IActorRef _replicator;

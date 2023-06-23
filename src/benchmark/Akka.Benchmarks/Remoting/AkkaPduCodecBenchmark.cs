@@ -47,7 +47,7 @@ namespace Akka.Benchmarks.Remoting
         /// </summary>
         private readonly object _message = "foobar";
 
-        private readonly Ack _lastAck = new Ack(-1);
+        private readonly Ack _lastAck = new(-1);
 
         private ByteString _fullDecode;
         private ByteString _pduDecoded;

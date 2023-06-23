@@ -79,9 +79,9 @@ namespace Akka.Remote.TestKit.Tests
         {
         }
 
-        private readonly RoleName A = new RoleName("a");
-        private readonly RoleName B = new RoleName("b");
-        private readonly RoleName C = new RoleName("c");
+        private readonly RoleName A = new("a");
+        private readonly RoleName B = new("b");
+        private readonly RoleName C = new("c");
 
         [Fact]
         public void A_BarrierCoordinator_must_register_clients_and_remove_them()

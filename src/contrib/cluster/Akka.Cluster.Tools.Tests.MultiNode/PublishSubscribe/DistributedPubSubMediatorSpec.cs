@@ -235,7 +235,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         private readonly RoleName _second;
         private readonly RoleName _third;
 
-        private readonly ConcurrentDictionary<string, IActorRef> _chatUsers = new ConcurrentDictionary<string, IActorRef>();
+        private readonly ConcurrentDictionary<string, IActorRef> _chatUsers = new();
 
         public DistributedPubSubMediatorSpec() : this(new DistributedPubSubMediatorSpecConfig())
         {

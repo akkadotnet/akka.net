@@ -185,7 +185,7 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Finish Instance = new Finish();
+            public static readonly Finish Instance = new();
             private Finish() { }
         }
 
@@ -221,7 +221,7 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Stay Instance = new Stay();
+            public static readonly Stay Instance = new();
             private Stay() { }
         }
 

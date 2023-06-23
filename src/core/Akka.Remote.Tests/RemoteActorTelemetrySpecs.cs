@@ -63,7 +63,7 @@ namespace Akka.Remote.Tests
             public class GetTelemetryRequest
             {
                 // make singleton
-                public static readonly GetTelemetryRequest Instance = new GetTelemetryRequest();
+                public static readonly GetTelemetryRequest Instance = new();
 
                 private GetTelemetryRequest()
                 {

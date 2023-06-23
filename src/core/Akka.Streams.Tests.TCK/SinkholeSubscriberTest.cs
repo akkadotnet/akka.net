@@ -26,7 +26,7 @@ namespace Akka.Streams.Tests.TCK
 
         private sealed class Subscriber : ISubscriber<int?>
         {
-            private readonly SinkholeSubscriber<int?> _hole = new SinkholeSubscriber<int?>(new TaskCompletionSource<NotUsed>());
+            private readonly SinkholeSubscriber<int?> _hole = new(new TaskCompletionSource<NotUsed>());
             private readonly WhiteboxSubscriberProbe<int?> _probe;
 
             public Subscriber(WhiteboxSubscriberProbe<int?> probe)

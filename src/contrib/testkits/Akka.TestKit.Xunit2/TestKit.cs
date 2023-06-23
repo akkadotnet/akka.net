@@ -121,7 +121,7 @@ namespace Akka.TestKit.Xunit2
         /// <summary>
         /// Commonly used assertions used throughout the testkit.
         /// </summary>
-        protected static XunitAssertions Assertions { get; } = new XunitAssertions();
+        protected static XunitAssertions Assertions { get; } = new();
 
         /// <summary>
         /// This method is called when a test ends.

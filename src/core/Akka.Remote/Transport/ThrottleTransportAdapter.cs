@@ -45,7 +45,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly AtomicCounter UniqueId = new AtomicCounter(0);
+        public static readonly AtomicCounter UniqueId = new(0);
 
         /// <summary>
         /// TBD
@@ -78,7 +78,7 @@ namespace Akka.Remote.Transport
         }
 
         // ReSharper disable once InconsistentNaming
-        private static readonly SchemeAugmenter _schemeAugmenter = new SchemeAugmenter(Scheme);
+        private static readonly SchemeAugmenter _schemeAugmenter = new(Scheme);
         /// <summary>
         /// TBD
         /// </summary>
@@ -189,7 +189,7 @@ namespace Akka.Remote.Transport
     {
         private ForceDisassociateAck() { }
         // ReSharper disable once InconsistentNaming
-        private static readonly ForceDisassociateAck _instance = new ForceDisassociateAck();
+        private static readonly ForceDisassociateAck _instance = new();
 
         /// <summary>
         /// TBD
@@ -337,10 +337,9 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         protected readonly Transport WrappedTransport;
-        private Dictionary<Address, (ThrottleMode, ThrottleTransportAdapter.Direction)> _throttlingModes
-            = new Dictionary<Address, (ThrottleMode, ThrottleTransportAdapter.Direction)>();
+        private Dictionary<Address, (ThrottleMode, ThrottleTransportAdapter.Direction)> _throttlingModes = new();
 
-        private List<(Address, ThrottlerHandle)> _handleTable = new List<(Address, ThrottlerHandle)>();
+        private List<(Address, ThrottlerHandle)> _handleTable = new();
 
         /// <summary>
         /// TBD
@@ -603,7 +602,7 @@ namespace Akka.Remote.Transport
     {
         private Blackhole() { }
         // ReSharper disable once InconsistentNaming
-        private static readonly Blackhole _instance = new Blackhole();
+        private static readonly Blackhole _instance = new();
 
         /// <summary>
         /// The singleton instance
@@ -635,7 +634,7 @@ namespace Akka.Remote.Transport
     public class Unthrottled : ThrottleMode
     {
         private Unthrottled() { }
-        private static readonly Unthrottled _instance = new Unthrottled();
+        private static readonly Unthrottled _instance = new();
 
         /// <summary>
         /// TBD
@@ -869,7 +868,7 @@ namespace Akka.Remote.Transport
     {
         private SetThrottleAck() { }
         // ReSharper disable once InconsistentNaming
-        private static readonly SetThrottleAck _instance = new SetThrottleAck();
+        private static readonly SetThrottleAck _instance = new();
 
         /// <summary>
         /// TBD
@@ -887,7 +886,7 @@ namespace Akka.Remote.Transport
 
         internal readonly IActorRef ThrottlerActor;
 
-        internal AtomicReference<ThrottleMode> OutboundThrottleMode = new AtomicReference<ThrottleMode>(Unthrottled.Instance);
+        internal AtomicReference<ThrottleMode> OutboundThrottleMode = new(Unthrottled.Instance);
 
         /// <summary>
         /// TBD
@@ -1009,7 +1008,7 @@ namespace Akka.Remote.Transport
         {
             private Uninitialized() { }
             // ReSharper disable once InconsistentNaming
-            private static readonly Uninitialized _instance = new Uninitialized();
+            private static readonly Uninitialized _instance = new();
             /// <summary>
             /// TBD
             /// </summary>
@@ -1082,7 +1081,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        protected Queue<ByteString> ThrottledMessages = new Queue<ByteString>();
+        protected Queue<ByteString> ThrottledMessages = new();
         /// <summary>
         /// TBD
         /// </summary>

@@ -333,7 +333,7 @@ namespace Akka.Remote.Tests.Serialization
         {
             var message = new RemoteRouterConfig(
                 local: new RandomPool(25),
-                nodes: new List<Address> { new Address("akka.tcp", "TestSys", "localhost", 23423) });
+                nodes: new List<Address> { new("akka.tcp", "TestSys", "localhost", 23423) });
             AssertEqual(message);
         }
 

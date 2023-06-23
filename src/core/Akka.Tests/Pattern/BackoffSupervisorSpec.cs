@@ -331,7 +331,7 @@ namespace Akka.Tests.Pattern
 
         internal class DelayTable : IEnumerable<object[]>
         {
-            private readonly List<object[]> delayTable = new List<object[]>
+            private readonly List<object[]> delayTable = new()
             {
                 new object[] { 0, TimeSpan.Zero, TimeSpan.Zero, 0.0, TimeSpan.Zero },
                 new object[] { 0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(7), 0d, TimeSpan.FromMinutes(5) },

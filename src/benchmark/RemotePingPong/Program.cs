@@ -227,7 +227,7 @@ namespace RemotePingPong
         {
             public class AllStarted { }
 
-            private readonly HashSet<IActorRef> _actors = new HashSet<IActorRef>();
+            private readonly HashSet<IActorRef> _actors = new();
             private int _correlationId = 0;
 
             protected override void OnReceive(object message)

@@ -342,7 +342,7 @@ namespace Akka.Persistence.TestKit.Performance
 
     internal class ResetCounter
     {
-        public static ResetCounter Instance { get; } = new ResetCounter();
+        public static ResetCounter Instance { get; } = new();
         private ResetCounter() { }
     }
 
@@ -363,7 +363,7 @@ namespace Akka.Persistence.TestKit.Performance
     {
         private int _counter = 0;
         private const int BatchSize = 50;
-        private List<Cmd> _batch = new List<Cmd>(BatchSize);
+        private List<Cmd> _batch = new(BatchSize);
         
         public BenchActor(string persistenceId, IActorRef replyTo, int replyAfter, bool isGroup = false)
         {

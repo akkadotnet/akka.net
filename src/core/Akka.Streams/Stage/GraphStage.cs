@@ -207,7 +207,7 @@ namespace Akka.Streams.Stage
     public abstract class TimerGraphStageLogic : GraphStageLogic
     {
         private readonly IDictionary<object, TimerMessages.Timer> _keyToTimers = new Dictionary<object, TimerMessages.Timer>();
-        private readonly AtomicCounter _timerIdGen = new AtomicCounter(0);
+        private readonly AtomicCounter _timerIdGen = new(0);
         private Action<TimerMessages.Scheduled> _timerAsyncCallback;
 
         /// <summary>
@@ -1876,7 +1876,7 @@ namespace Akka.Streams.Stage
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        protected SubSinkInlet<T> CreateSubSinkInlet<T>(string name) => new SubSinkInlet<T>(this, name);
+        protected SubSinkInlet<T> CreateSubSinkInlet<T>(string name) => new(this, name);
 
         /// <summary>
         /// INTERNAL API
@@ -2260,7 +2260,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// The singleton instance of this exception
         /// </summary>
-        public static readonly StageActorRefNotInitializedException Instance = new StageActorRefNotInitializedException();
+        public static readonly StageActorRefNotInitializedException Instance = new();
         private StageActorRefNotInitializedException() : base("You must first call GetStageActorRef(StageActorRef.Receive), to initialize the actor's behavior") { }
 
         /// <summary>
@@ -2279,7 +2279,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly EagerTerminateInput Instance = new EagerTerminateInput();
+        public static readonly EagerTerminateInput Instance = new();
 
         private EagerTerminateInput() { }
 
@@ -2297,7 +2297,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly IgnoreTerminateInput Instance = new IgnoreTerminateInput();
+        public static readonly IgnoreTerminateInput Instance = new();
 
         private IgnoreTerminateInput() { }
 
@@ -2347,7 +2347,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly TotallyIgnorantInput Instance = new TotallyIgnorantInput();
+        public static readonly TotallyIgnorantInput Instance = new();
 
         private TotallyIgnorantInput() { }
 
@@ -2374,7 +2374,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly EagerTerminateOutput Instance = new EagerTerminateOutput();
+        public static readonly EagerTerminateOutput Instance = new();
 
         private EagerTerminateOutput() { }
         /// <summary>
@@ -2391,7 +2391,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly IgnoreTerminateOutput Instance = new IgnoreTerminateOutput();
+        public static readonly IgnoreTerminateOutput Instance = new();
 
         private IgnoreTerminateOutput() { }
 
@@ -2564,8 +2564,7 @@ namespace Akka.Streams.Stage
             public Stopped(Action<T> callback) => Callback = callback;
         }
 
-        private readonly AtomicReference<ICallbackState> _callbackState =
-            new AtomicReference<ICallbackState>(new NotInitialized(new List<T>()));
+        private readonly AtomicReference<ICallbackState> _callbackState = new(new NotInitialized(new List<T>()));
 
         /// <summary>
         /// TBD

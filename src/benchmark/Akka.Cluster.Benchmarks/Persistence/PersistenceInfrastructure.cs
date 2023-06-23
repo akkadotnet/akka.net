@@ -14,19 +14,19 @@ namespace Akka.Cluster.Benchmarks.Persistence
 {
     public sealed class Init
     {
-        public static readonly Init Instance = new Init();
+        public static readonly Init Instance = new();
         private Init() { }
     }
 
     public sealed class Finish
     {
-        public static readonly Finish Instance = new Finish();
+        public static readonly Finish Instance = new();
         private Finish() { }
     }
 
     public sealed class Done
     {
-        public static readonly Done Instance = new Done();
+        public static readonly Done Instance = new();
         private Done() { }
     }
 
@@ -42,7 +42,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
 
     public sealed class RecoveryFinished
     {
-        public static readonly RecoveryFinished Instance = new RecoveryFinished();
+        public static readonly RecoveryFinished Instance = new();
 
         private RecoveryFinished() { }
     }
@@ -72,7 +72,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
     /// </summary>
     public sealed class IsFinished
     {
-        public static readonly IsFinished Instance = new IsFinished();
+        public static readonly IsFinished Instance = new();
         private IsFinished(){}
     }
 
@@ -167,7 +167,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
 
 
     public static class PersistenceInfrastructure{
-        public static readonly AtomicCounter DbCounter = new AtomicCounter(0);
+        public static readonly AtomicCounter DbCounter = new(0);
 
         public static Config GenerateJournalConfig(){
             var config = ConfigurationFactory.ParseString(@"

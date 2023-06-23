@@ -19,8 +19,7 @@ namespace Akka.Discovery
     {
         private readonly ExtendedActorSystem _system;
         private readonly Lazy<ServiceDiscovery> _defaultImpl;
-        private readonly ConcurrentDictionary<string, Lazy<ServiceDiscovery>> _implementations =
-            new ConcurrentDictionary<string, Lazy<ServiceDiscovery>>();
+        private readonly ConcurrentDictionary<string, Lazy<ServiceDiscovery>> _implementations = new();
         private readonly ILoggingAdapter _log;
 
         public Discovery(ExtendedActorSystem system)
@@ -100,7 +99,7 @@ namespace Akka.Discovery
 
     public class DiscoveryProvider : ExtensionIdProvider<Discovery>
     {
-        public override Discovery CreateExtension(ExtendedActorSystem system) => new Discovery(system);
+        public override Discovery CreateExtension(ExtendedActorSystem system) => new(system);
 
         /// <summary>
         /// Returns a default configuration for the Akka Discovery module.
