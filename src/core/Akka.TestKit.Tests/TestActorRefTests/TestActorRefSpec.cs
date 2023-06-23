@@ -19,9 +19,9 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class TestActorRefSpec : AkkaSpec
     {
-        private readonly AtomicCounter _counter = new AtomicCounter(4);
+        private readonly AtomicCounter _counter = new(4);
         private readonly Thread _thread = Thread.CurrentThread;
-        private readonly AtomicReference<Thread> _otherThread = new AtomicReference<Thread>(null);
+        private readonly AtomicReference<Thread> _otherThread = new(null);
 
         public TestActorRefSpec()
             : base(GetConfig())

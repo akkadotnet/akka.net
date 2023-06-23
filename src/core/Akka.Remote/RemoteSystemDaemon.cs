@@ -80,8 +80,8 @@ namespace Akka.Remote
     internal sealed class RemoteSystemDaemon : VirtualPathContainer
     {
         private readonly ActorSystemImpl _system;
-        private readonly Switch _terminating = new Switch();
-        private readonly ConcurrentDictionary<IActorRef, IImmutableSet<IActorRef>> _parent2Children = new ConcurrentDictionary<IActorRef, IImmutableSet<IActorRef>>();
+        private readonly Switch _terminating = new(false);
+        private readonly ConcurrentDictionary<IActorRef, IImmutableSet<IActorRef>> _parent2Children = new();
         private readonly IActorRef _terminator;
 
         /// <summary>

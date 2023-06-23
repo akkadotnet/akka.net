@@ -290,7 +290,7 @@ namespace Akka.Remote.Transport.DotNetty
 
     internal sealed class SslSettings
     {
-        public static readonly SslSettings Empty = new SslSettings();
+        public static readonly SslSettings Empty = new();
         public static SslSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())

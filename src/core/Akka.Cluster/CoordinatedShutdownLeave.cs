@@ -29,7 +29,7 @@ namespace Akka.Cluster
             /// <summary>
             /// Singleton instance.
             /// </summary>
-            public static readonly LeaveReq Instance = new LeaveReq();
+            public static readonly LeaveReq Instance = new();
         }
 
         private readonly Cluster _cluster = Cluster.Get(Context.System);

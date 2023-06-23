@@ -33,7 +33,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         public sealed class AllocateMemory
         {
             private AllocateMemory() { }
-            public static readonly AllocateMemory Instance = new AllocateMemory();
+            public static readonly AllocateMemory Instance = new();
         }
         
         [Serializable]

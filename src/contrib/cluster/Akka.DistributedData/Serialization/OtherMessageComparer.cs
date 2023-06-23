@@ -14,7 +14,7 @@ namespace Akka.DistributedData.Serialization
 {
     internal class OtherMessageComparer : IComparer<OtherMessage>
     {
-        public static OtherMessageComparer Instance { get; } = new OtherMessageComparer();
+        public static OtherMessageComparer Instance { get; } = new();
 
         private OtherMessageComparer()
         {}

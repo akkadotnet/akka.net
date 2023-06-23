@@ -51,7 +51,7 @@ namespace Akka.Persistence
         private readonly Lazy<IStashOverflowStrategy> _defaultInternalStashOverflowStrategy;
         private readonly Lazy<IActorRef> _recoveryPermitter;
 
-        private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _pluginExtensionIds = new ConcurrentDictionary<string, Lazy<PluginHolder>>();
+        private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _pluginExtensionIds = new();
 
         private const string JournalFallbackConfigPath = "akka.persistence.journal-plugin-fallback";
         private const string SnapshotStoreFallbackConfigPath = "akka.persistence.snapshot-store-plugin-fallback";
@@ -313,7 +313,7 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public static Persistence Instance { get; } = new Persistence();
+        public static Persistence Instance { get; } = new();
 
         /// <summary>
         /// TBD

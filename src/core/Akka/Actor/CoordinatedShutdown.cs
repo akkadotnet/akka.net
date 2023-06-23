@@ -270,12 +270,12 @@ namespace Akka.Actor
         /// </summary>
         internal readonly List<string> OrderedPhases;
 
-        private readonly ConcurrentSet<Func<Task<Done>>> _clrShutdownTasks = new ConcurrentSet<Func<Task<Done>>>();
-        private readonly ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>> _tasks = new ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>>();
-        private readonly AtomicReference<Reason> _runStarted = new AtomicReference<Reason>(null);
-        private readonly AtomicBoolean _clrHooksStarted = new AtomicBoolean();
-        private readonly TaskCompletionSource<Done> _runPromise = new TaskCompletionSource<Done>();
-        private readonly TaskCompletionSource<Done> _hooksRunPromise = new TaskCompletionSource<Done>();
+        private readonly ConcurrentSet<Func<Task<Done>>> _clrShutdownTasks = new();
+        private readonly ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>> _tasks = new();
+        private readonly AtomicReference<Reason> _runStarted = new(null);
+        private readonly AtomicBoolean _clrHooksStarted = new(false);
+        private readonly TaskCompletionSource<Done> _runPromise = new();
+        private readonly TaskCompletionSource<Done> _hooksRunPromise = new();
 
         private volatile bool _runningClrHook = false;
 
@@ -559,7 +559,7 @@ namespace Akka.Actor
             if (config.IsNullOrEmpty())
                 throw new ConfigurationException("Invalid phase configuration.");
 
-            var defaultPhaseTimeout = config.GetString("default-phase-timeout");
+            var defaultPhaseTimeout = config.GetString("default-phase-timeout", null);
             var phasesConf = config.GetConfig("phases");
             var defaultPhaseConfig = ConfigurationFactory.ParseString($"timeout = {defaultPhaseTimeout}" + @"
                 recover = true
@@ -570,8 +570,8 @@ namespace Akka.Actor
              {
                  var c = phasesConf.GetConfig(v.Key).WithFallback(defaultPhaseConfig);
                  var dependsOn = c.GetStringList("depends-on").ToImmutableHashSet();
-                 var timeout = c.GetTimeSpan("timeout", allowInfinite: false);
-                 var recover = c.GetBoolean("recover");
+                 var timeout = c.GetTimeSpan("timeout", null, allowInfinite: false);
+                 var recover = c.GetBoolean("recover", false);
                  return new Phase(dependsOn, timeout, recover);
              });
         }
@@ -629,7 +629,7 @@ namespace Akka.Actor
         internal static void InitPhaseActorSystemTerminate(ActorSystem system, Config conf, CoordinatedShutdown coord)
         {
             var terminateActorSystem = system.Settings.CoordinatedShutdownTerminateActorSystem;
-            var exitClr = conf.GetBoolean("exit-clr");
+            var exitClr = conf.GetBoolean("exit-clr", false);
             if (terminateActorSystem || exitClr)
             {
                 coord.AddTask(PhaseActorSystemTerminate, "terminate-system", () =>
@@ -685,7 +685,7 @@ namespace Akka.Actor
         /// <param name="coord">The <see cref="CoordinatedShutdown"/> plugin instance.</param>
         internal static void InitClrHook(ActorSystem system, Config conf, CoordinatedShutdown coord)
         {
-            var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook");
+            var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook", false);
             if (runByClrShutdownHook)
             {
                 var exitTask = TerminateOnClrExit(coord);

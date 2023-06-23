@@ -300,7 +300,7 @@ namespace Akka.Persistence
             /// <summary>
             /// The singleton instance of the redelivery tick
             /// </summary>
-            public static RedeliveryTick Instance { get; } = new RedeliveryTick();
+            public static RedeliveryTick Instance { get; } = new();
 
             private RedeliveryTick() { }
 

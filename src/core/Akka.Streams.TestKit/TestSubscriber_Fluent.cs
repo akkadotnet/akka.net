@@ -28,8 +28,7 @@ namespace Akka.Streams.TestKit
             ///   after another before executing its own code.
             /// </summary>
             /// <returns></returns>
-            public SubscriberFluentBuilder<T> AsyncBuilder()
-                => new SubscriberFluentBuilder<T>(this);
+            public SubscriberFluentBuilder<T> AsyncBuilder() => new(this);
 
             /// <summary>
             /// Fluent DSL. Expect and return <see cref="ISubscriberEvent"/> (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).

@@ -42,7 +42,7 @@ namespace Akka.Tests.Routing
         {
             private readonly TestLatch _doneLatch;
             private static AtomicCounter _counter;
-            private readonly Lazy<int> id = new Lazy<int>(() => _counter.GetAndIncrement());
+            private readonly Lazy<int> id = new(() => _counter.GetAndIncrement());
 
             public RandomActor(TestLatch doneLatch, AtomicCounter counter)
             {

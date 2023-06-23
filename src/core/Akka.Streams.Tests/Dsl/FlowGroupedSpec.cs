@@ -28,7 +28,7 @@ namespace Akka.Streams.Tests.Dsl
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
         }
 
-        private readonly Random _random = new Random(12345);
+        private readonly Random _random = new(12345);
         private ICollection<int> RandomSeq(int n) => Enumerable.Range(1, n).Select(_ => _random.Next()).ToList();
 
         private (ICollection<int>, ICollection<IEnumerable<int>>) RandomTest(int n)

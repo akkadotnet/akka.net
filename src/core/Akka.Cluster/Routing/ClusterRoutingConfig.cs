@@ -227,7 +227,7 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public sealed class ClusterRouterPool : Pool
     {
-        private readonly AtomicCounter _childNameCounter = new AtomicCounter(0);
+        private readonly AtomicCounter _childNameCounter = new(0);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterRouterPool"/> class.

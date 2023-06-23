@@ -50,8 +50,8 @@ namespace Akka.Streams.Tests.Implementation
 
             #endregion
 
-            private readonly Inlet<int> _in = new Inlet<int>("in");
-            private readonly Outlet<int> _out = new Outlet<int>("out");
+            private readonly Inlet<int> _in = new("in");
+            private readonly Outlet<int> _out = new("out");
 
             public Emit1234()
             {
@@ -83,8 +83,8 @@ namespace Akka.Streams.Tests.Implementation
 
             #endregion
 
-            private readonly Inlet<int> _in = new Inlet<int>("in");
-            private readonly Outlet<int> _out = new Outlet<int>("out");
+            private readonly Inlet<int> _in = new("in");
+            private readonly Outlet<int> _out = new("out");
 
             public Emit5678()
             {
@@ -112,9 +112,9 @@ namespace Akka.Streams.Tests.Implementation
 
             #endregion
 
-            public Inlet<int> In { get; } = new Inlet<int>("in");
+            public Inlet<int> In { get; } = new("in");
 
-            public Outlet<int> Out { get; } = new Outlet<int>("out");
+            public Outlet<int> Out { get; } = new("out");
 
             public PassThrough()
             {
@@ -140,7 +140,7 @@ namespace Akka.Streams.Tests.Implementation
             
             #endregion
 
-            private readonly Outlet<int> _out = new Outlet<int>("out");
+            private readonly Outlet<int> _out = new("out");
 
             public EmitEmptyIterable()
             {
@@ -184,8 +184,7 @@ namespace Akka.Streams.Tests.Implementation
                 _n = n;
             }
 
-            public override FlowShape<int, int> Shape { get; } = new FlowShape<int, int>(new Inlet<int>("readN.in"),
-                new Outlet<int>("readN.out"));
+            public override FlowShape<int, int> Shape { get; } = new(new Inlet<int>("readN.in"), new Outlet<int>("readN.out"));
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new ReadNEmitNLogic(this);
         }
@@ -222,7 +221,7 @@ namespace Akka.Streams.Tests.Implementation
                 _n = n;
             }
 
-            public override FlowShape<int, int> Shape { get; } = new FlowShape<int, int>(new Inlet<int>("readN.in"),
+            public override FlowShape<int, int> Shape { get; } = new(new Inlet<int>("readN.in"),
                 new Outlet<int>("readN.out"));
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
@@ -257,7 +256,7 @@ namespace Akka.Streams.Tests.Implementation
                 Shape = new SourceShape<string>(Out);
             }
 
-            private Outlet<string> Out { get; } = new Outlet<string>("RandomLettersSource.out");
+            private Outlet<string> Out { get; } = new("RandomLettersSource.out");
 
             public override SourceShape<string> Shape { get; }
 
@@ -464,8 +463,8 @@ namespace Akka.Streams.Tests.Implementation
 
             #endregion
 
-            private readonly Inlet<int> _in = new Inlet<int>("in");
-            private readonly Outlet<int> _out = new Outlet<int>("out");
+            private readonly Inlet<int> _in = new("in");
+            private readonly Outlet<int> _out = new("out");
             private readonly IActorRef _testActor;
 
             public LifecycleStage(IActorRef testActor)
@@ -533,8 +532,8 @@ namespace Akka.Streams.Tests.Implementation
             }
 
             public override FlowShape<int, int> Shape { get; }
-            public Inlet<int> In { get; } = new Inlet<int>("in");
-            public Outlet<int> Out { get; } = new Outlet<int>("out");
+            public Inlet<int> In { get; } = new("in");
+            public Outlet<int> Out { get; } = new("out");
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
                 => new DoubleTerminateLogic(this, _testActor);

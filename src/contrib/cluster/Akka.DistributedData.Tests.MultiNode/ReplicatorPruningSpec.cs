@@ -51,9 +51,9 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly IActorRef _replicator;
         private readonly TimeSpan _timeout;
 
-        private readonly GCounterKey _keyA = new GCounterKey("A");
-        private readonly ORSetKey<string> _keyB = new ORSetKey<string>("B");
-        private readonly PNCounterDictionaryKey<string> _keyC = new PNCounterDictionaryKey<string>("C");
+        private readonly GCounterKey _keyA = new("A");
+        private readonly ORSetKey<string> _keyB = new("B");
+        private readonly PNCounterDictionaryKey<string> _keyC = new("C");
 
         public ReplicatorPruningSpec() : this(new ReplicatorPruningSpecConfig())
         {

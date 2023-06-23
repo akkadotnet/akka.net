@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.Performance
 
         private sealed class GraphDataSink<T> : GraphInterpreter.DownstreamBoundaryStageLogic
         {
-            private readonly Inlet<T> _inlet = new Inlet<T>("in");
+            private readonly Inlet<T> _inlet = new("in");
             private readonly string _toString;
 
             public GraphDataSink(string toString, int expected)

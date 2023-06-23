@@ -90,7 +90,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly UdpConnected Instance = new UdpConnected();
+        public static readonly UdpConnected Instance = new();
 
         /// <summary>
         /// TBD
@@ -138,7 +138,7 @@ namespace Akka.IO
             /// Default <see cref="NoAck"/> instance which is used when no acknowledgment information is
             /// explicitly provided. Its "token" is <see langword="null"/>.
             /// </summary>
-            public static readonly NoAck Instance = new NoAck(null);
+            public static readonly NoAck Instance = new(null);
 
             /// <summary>
             /// TBD
@@ -200,7 +200,7 @@ namespace Akka.IO
             /// object.
             /// </summary>
             /// <param name="payload">Binary payload to be send.</param>
-            public static Send Create(ByteString payload) => new Send(payload, NoAck.Instance);
+            public static Send Create(ByteString payload) => new(payload, NoAck.Instance);
         }
 
         /// <summary>
@@ -257,7 +257,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Disconnect Instance = new Disconnect();
+            public static readonly Disconnect Instance = new();
 
             private Disconnect()
             {
@@ -275,7 +275,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly SuspendReading Instance = new SuspendReading();
+            public static readonly SuspendReading Instance = new();
 
             private SuspendReading()
             { }
@@ -290,7 +290,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ResumeReading Instance = new ResumeReading();
+            public static readonly ResumeReading Instance = new();
 
             private ResumeReading()
             { }
@@ -353,7 +353,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Connected Instance = new Connected();
+            public static readonly Connected Instance = new();
 
             private Connected()
             { }
@@ -368,7 +368,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Disconnected Instance = new Disconnected();
+            public static readonly Disconnected Instance = new();
 
             private Disconnected()
             { }

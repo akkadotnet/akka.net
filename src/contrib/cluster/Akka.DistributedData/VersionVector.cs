@@ -47,7 +47,7 @@ namespace Akka.DistributedData
             return new MultiVersionVector(versions);
         }
 
-        protected static readonly AtomicCounterLong Counter = new AtomicCounterLong(1L);
+        protected static readonly AtomicCounterLong Counter = new(1L);
 
         /// <summary>
         /// Marker to signal that we have reached the end of a version vector.

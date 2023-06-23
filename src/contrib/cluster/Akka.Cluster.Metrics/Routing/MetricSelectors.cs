@@ -100,8 +100,8 @@ namespace Akka.Cluster.Metrics
         /// <summary>
         /// Singleton instance
         /// </summary>
-        public static readonly MemoryMetricsSelector Instance = new MemoryMetricsSelector();
-        
+        public static readonly MemoryMetricsSelector Instance = new();
+
         /// <inheritdoc />
         public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
@@ -130,7 +130,7 @@ namespace Akka.Cluster.Metrics
         /// <summary>
         /// Singleton instance
         /// </summary>
-        public static readonly CpuMetricsSelector Instance = new CpuMetricsSelector();
+        public static readonly CpuMetricsSelector Instance = new();
 
         public CpuMetricsSelector()
         {
@@ -198,7 +198,7 @@ namespace Akka.Cluster.Metrics
         /// Singleton instance of the default MixMetricsSelector, which uses <see cref="MemoryMetricsSelector"/> and
         /// <see cref="CpuMetricsSelector"/>
         /// </summary>
-        public static readonly MixMetricsSelector Instance = new MixMetricsSelector(
+        public static readonly MixMetricsSelector Instance = new(
             ImmutableArray.Create<CapacityMetricsSelector>(
                 MemoryMetricsSelector.Instance,
                 CpuMetricsSelector.Instance)

@@ -17,8 +17,8 @@ namespace Akka.Actor
     /// </summary>
     internal class InboxActor : ActorBase
     {
-        private readonly InboxQueue<object> _messages = new InboxQueue<object>();
-        private readonly InboxQueue<IQuery> _clients = new InboxQueue<IQuery>();
+        private readonly InboxQueue<object> _messages = new();
+        private readonly InboxQueue<IQuery> _clients = new();
 
         private readonly ISet<IQuery> _clientsByTimeout = new SortedSet<IQuery>(DeadlineComparer.Instance);
         private bool _printedWarning;

@@ -36,7 +36,7 @@ namespace Akka.DistributedData.Tests
             protected override int MaxDeltaSize => 10;
 
             protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData, long, long)> deltas) =>
-                new DeltaPropagation(selfUniqueAddress, false, deltas
+                new(selfUniqueAddress, false, deltas
                     .Select(kv => new KeyValuePair<string, Delta>(kv.Key, new Delta(new DataEnvelope(kv.Value.Item1), kv.Value.Item2, kv.Value.Item3)))
                     .ToImmutableDictionary());
         }

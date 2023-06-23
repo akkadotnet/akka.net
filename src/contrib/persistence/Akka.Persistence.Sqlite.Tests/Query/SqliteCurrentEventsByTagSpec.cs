@@ -17,7 +17,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
 {
     public class SqliteCurrentEventsByTagSpec : CurrentEventsByTagSpec
     {
-        public static readonly AtomicCounter Counter = new AtomicCounter(0);
+        public static readonly AtomicCounter Counter = new(0);
 
         public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO

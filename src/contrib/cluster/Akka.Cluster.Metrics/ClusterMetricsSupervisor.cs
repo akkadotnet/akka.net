@@ -95,7 +95,7 @@ namespace Akka.Cluster.Metrics
             /// <summary>
             /// Singleton instance for 
             /// </summary>
-            public static readonly CollectionStartMessage Instance = new CollectionStartMessage();
+            public static readonly CollectionStartMessage Instance = new();
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace Akka.Cluster.Metrics
             /// <summary>
             /// Singleton instance for 
             /// </summary>
-            public static readonly CollectionStopMessage Instance = new CollectionStopMessage();
+            public static readonly CollectionStopMessage Instance = new();
         }
     }
 }

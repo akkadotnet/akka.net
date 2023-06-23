@@ -561,7 +561,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Lightweight Stash implementation
         /// </summary>
-        protected Queue<object> DelayedEvents = new Queue<object>();
+        protected Queue<object> DelayedEvents = new();
 
         /// <summary>
         /// TBD

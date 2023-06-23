@@ -24,11 +24,11 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly LatestFirstSystemMessageList LNil = new LatestFirstSystemMessageList(null);
+        public static readonly LatestFirstSystemMessageList LNil = new(null);
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly EarliestFirstSystemMessageList ENil = new EarliestFirstSystemMessageList(null);
+        public static readonly EarliestFirstSystemMessageList ENil = new(null);
 
         /// <summary>
         /// TBD
@@ -118,14 +118,14 @@ namespace Akka.Dispatch.SysMsg
         /// should be taken when passing the tail to other methods. <see cref="SystemMessage.Unlink"/> should be
         /// called on the head if one wants to detach the tail permanently.
         /// </summary>
-        public LatestFirstSystemMessageList Tail => new LatestFirstSystemMessageList(Head.Next);
+        public LatestFirstSystemMessageList Tail => new(Head.Next);
 
         /// <summary>
         /// Reverses the list. This operation mutates the underlying list. The cost of the call is O(N), where N is the number of elements.
         /// 
         /// The type of the returned list ios the opposite order: <see cref="EarliestFirstSystemMessageList"/>.
         /// </summary>
-        public EarliestFirstSystemMessageList Reverse => new EarliestFirstSystemMessageList(SystemMessageList.ReverseInner(Head, null));
+        public EarliestFirstSystemMessageList Reverse => new(SystemMessageList.ReverseInner(Head, null));
 
         /// <summary>
         /// Attaches a message to the current head of the list. This operation has constant cost.
@@ -192,14 +192,14 @@ namespace Akka.Dispatch.SysMsg
         /// should be taken when passing the tail to other methods. <see cref="SystemMessage.Unlink"/> should be
         /// called on the head if one wants to detach the tail permanently.
         /// </summary>
-        public EarliestFirstSystemMessageList Tail => new EarliestFirstSystemMessageList(Head.Next);
+        public EarliestFirstSystemMessageList Tail => new(Head.Next);
 
         /// <summary>
         /// Reverses the list. This operation mutates the underlying list. The cost of the call is O(N), where N is the number of elements.
         /// 
         /// The type of the returned list ios the opposite order: <see cref="LatestFirstSystemMessageList"/>.
         /// </summary>
-        public LatestFirstSystemMessageList Reverse => new LatestFirstSystemMessageList(SystemMessageList.ReverseInner(Head, null));
+        public LatestFirstSystemMessageList Reverse => new(SystemMessageList.ReverseInner(Head, null));
 
         /// <summary>
         /// Attaches a message to the current head of the list. This operation has constant cost.
@@ -864,7 +864,7 @@ namespace Akka.Dispatch.SysMsg
     public sealed class RegisterTerminationHook
     {
         private RegisterTerminationHook() { }
-        private static readonly RegisterTerminationHook _instance = new RegisterTerminationHook();
+        private static readonly RegisterTerminationHook _instance = new();
         /// <summary>
         /// TBD
         /// </summary>
@@ -892,7 +892,7 @@ namespace Akka.Dispatch.SysMsg
     public sealed class TerminationHook
     {
         private TerminationHook() { }
-        private static readonly TerminationHook _instance = new TerminationHook();
+        private static readonly TerminationHook _instance = new();
         /// <summary>
         /// TBD
         /// </summary>
@@ -920,7 +920,7 @@ namespace Akka.Dispatch.SysMsg
     public sealed class TerminationHookDone
     {
         private TerminationHookDone() { }
-        private static readonly TerminationHookDone _instance = new TerminationHookDone();
+        private static readonly TerminationHookDone _instance = new();
         /// <summary>
         /// TBD
         /// </summary>

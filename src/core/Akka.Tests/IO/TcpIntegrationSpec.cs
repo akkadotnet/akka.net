@@ -28,14 +28,14 @@ namespace Akka.Tests.IO
     {
         public const int InternalConnectionActorMaxQueueSize = 10000;
         
-        class Aye : Tcp.Event { public static readonly Aye Instance = new Aye(); }
-        class Yes : Tcp.Event { public static readonly Yes Instance = new Yes(); }
-        class Ack : Tcp.Event { public static readonly Ack Instance = new Ack(); }
+        class Aye : Tcp.Event { public static readonly Aye Instance = new(); }
+        class Yes : Tcp.Event { public static readonly Yes Instance = new(); }
+        class Ack : Tcp.Event { public static readonly Ack Instance = new(); }
 
         class AckWithValue : Tcp.Event
         {
             public object Value { get; }
-            public static AckWithValue Create(object value) => new AckWithValue(value);
+            public static AckWithValue Create(object value) => new(value);
             private AckWithValue(object value) { Value = value; }
         }
 

@@ -88,7 +88,7 @@ public static class EventSourcedProducerQueue
     /// </summary>
     internal sealed class CleanupTick
     {
-        public static readonly CleanupTick Instance = new CleanupTick();
+        public static readonly CleanupTick Instance = new();
 
         private CleanupTick()
         {

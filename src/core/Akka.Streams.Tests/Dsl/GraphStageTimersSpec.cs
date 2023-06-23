@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TestSingleTimer
         {
-            public static readonly TestSingleTimer Instance = new TestSingleTimer();
+            public static readonly TestSingleTimer Instance = new();
 
             private TestSingleTimer()
             {
@@ -152,7 +152,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TestSingleTimerResubmit
         {
-            public static readonly TestSingleTimerResubmit Instance = new TestSingleTimerResubmit();
+            public static readonly TestSingleTimerResubmit Instance = new();
 
             private TestSingleTimerResubmit()
             {
@@ -162,7 +162,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TestCancelTimer
         {
-            public static readonly TestCancelTimer Instance = new TestCancelTimer();
+            public static readonly TestCancelTimer Instance = new();
 
             private TestCancelTimer()
             {
@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TestCancelTimerAck
         {
-            public static readonly TestCancelTimerAck Instance = new TestCancelTimerAck();
+            public static readonly TestCancelTimerAck Instance = new();
 
             private TestCancelTimerAck()
             {
@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TestRepeatedTimer
         {
-            public static readonly TestRepeatedTimer Instance = new TestRepeatedTimer();
+            public static readonly TestRepeatedTimer Instance = new();
 
             private TestRepeatedTimer()
             {

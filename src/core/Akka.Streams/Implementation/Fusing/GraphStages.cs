@@ -186,7 +186,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Identity<T> Instance = new Identity<T>();
+        public static readonly Identity<T> Instance = new();
 
         private Identity()
         {
@@ -294,7 +294,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly TerminationWatcher<T> Instance = new TerminationWatcher<T>();
+        public static readonly TerminationWatcher<T> Instance = new();
 
         #region internal classes 
 
@@ -351,8 +351,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-        private readonly Inlet<T> _inlet = new Inlet<T>("TerminationWatcher.in");
-        private readonly Outlet<T> _outlet = new Outlet<T>("TerminationWatcher.out");
+        private readonly Inlet<T> _inlet = new("TerminationWatcher.in");
+        private readonly Outlet<T> _outlet = new("TerminationWatcher.out");
 
         private TerminationWatcher()
         {
@@ -490,12 +490,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<T> In { get; } = new Inlet<T>("MonitorFlow.in");
+        public Inlet<T> In { get; } = new("MonitorFlow.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<T> Out { get; } = new Outlet<T>("MonitorFlow.out");
+        public Outlet<T> Out { get; } = new("MonitorFlow.out");
 
         /// <summary>
         /// TBD
@@ -533,10 +533,9 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class Logic : TimerGraphStageLogic, ICancelable
         {
             private readonly TickSource<T> _stage;
-            private readonly AtomicBoolean _cancelled = new AtomicBoolean();
+            private readonly AtomicBoolean _cancelled = new();
 
-            private readonly AtomicReference<Action<NotUsed>> _cancelCallback =
-                new AtomicReference<Action<NotUsed>>(null);
+            private readonly AtomicReference<Action<NotUsed>> _cancelCallback = new(null);
 
             public Logic(TickSource<T> stage) : base(stage.Shape)
             {
@@ -608,7 +607,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<T> Out { get; } = new Outlet<T>("TimerSource.out");
+        public Outlet<T> Out { get; } = new("TimerSource.out");
 
         /// <summary>
         /// TBD
@@ -706,7 +705,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public readonly Outlet<T> Outlet;
 
-        private readonly TaskCompletionSource<T> _promise = new TaskCompletionSource<T>();
+        private readonly TaskCompletionSource<T> _promise = new();
 
         /// <summary>
         /// TBD
@@ -748,7 +747,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public MaterializedValueSource<T> CopySource() => new MaterializedValueSource<T>(Computation, Outlet);
+        public MaterializedValueSource<T> CopySource() => new(Computation, Outlet);
 
         IMaterializedValueSource IMaterializedValueSource.CopySource() => CopySource();
 
@@ -797,7 +796,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<T> Outlet = new Outlet<T>("single.out");
+        public readonly Outlet<T> Outlet = new("single.out");
 
         /// <summary>
         /// TBD
@@ -915,7 +914,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Task<Source<T, M>> _taskSource;
 
-        public readonly Outlet<T> Outlet = new Outlet<T>("TaskFlattenSource.out");
+        public readonly Outlet<T> Outlet = new("TaskFlattenSource.out");
 
         public TaskFlattenSource(Task<Source<T, M>> taskSource)
         {
@@ -979,7 +978,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<T> Outlet = new Outlet<T>("TaskSource.out");
+        public readonly Outlet<T> Outlet = new("TaskSource.out");
 
         /// <summary>
         /// TBD
@@ -1057,7 +1056,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.IgnoreSink;
 
-        public Inlet<T> Inlet { get; } = new Inlet<T>("Ignore.in");
+        public Inlet<T> Inlet { get; } = new("Ignore.in");
 
         public override SinkShape<T> Shape { get; }
 

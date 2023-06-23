@@ -22,7 +22,7 @@ namespace Akka.Remote.Serialization
     {
         private readonly WrappedPayloadSupport _wrappedPayloadSupport;
         private const BindingFlags All = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
-        private readonly HashSet<string> _defaultProperties = new HashSet<string>
+        private readonly HashSet<string> _defaultProperties = new()
         {
             "ClassName",
             "Message",
@@ -67,7 +67,7 @@ namespace Akka.Remote.Serialization
             return ExceptionFromProtoNet(proto);
         }
 
-        private readonly FormatterConverter _defaultFormatterConverter = new FormatterConverter();
+        private readonly FormatterConverter _defaultFormatterConverter = new();
 
         public Proto.Msg.ExceptionData ExceptionToProtoNet(Exception exception)
         {

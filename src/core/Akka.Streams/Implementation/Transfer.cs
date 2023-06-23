@@ -259,7 +259,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Completed Instance = new Completed();
+        public static readonly Completed Instance = new();
 
         private Completed()
         {
@@ -284,7 +284,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly NotInitialized Instance = new NotInitialized();
+        public static readonly NotInitialized Instance = new();
 
         private NotInitialized()
         {
@@ -343,7 +343,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Always Instance = new Always();
+        public static readonly Always Instance = new();
 
         private Always()
         {
@@ -539,7 +539,7 @@ namespace Akka.Streams.Implementation
         /// <exception cref="IllegalStateException">
         /// This exception is thrown when the action of the completed phase tried to execute.
         /// </exception>
-        public static readonly TransferPhase CompletedPhase = new TransferPhase(Completed.Instance, () =>
+        public static readonly TransferPhase CompletedPhase = new(Completed.Instance, () =>
         {
             throw new IllegalStateException("The action of completed phase must never be executed");
         });

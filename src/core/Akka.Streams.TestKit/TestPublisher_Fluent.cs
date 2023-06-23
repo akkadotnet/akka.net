@@ -29,8 +29,7 @@ namespace Akka.Streams.TestKit
             ///   after another before executing its own code.
             /// </summary>
             /// <returns></returns>
-            public PublisherFluentBuilder<T> AsyncBuilder()
-                => new PublisherFluentBuilder<T>(this);
+            public PublisherFluentBuilder<T> AsyncBuilder() => new(this);
 
             /// <summary>
             /// Fluent DSL

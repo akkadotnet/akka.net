@@ -83,7 +83,7 @@ namespace Akka.Coordination
         }
 
         private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<LeaseKey, Lease> _leases = new ConcurrentDictionary<LeaseKey, Lease>();
+        private readonly ConcurrentDictionary<LeaseKey, Lease> _leases = new();
 
         private ILoggingAdapter _log;
 

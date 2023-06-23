@@ -84,9 +84,9 @@ namespace Akka.Streams.Implementation
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("SetupFlowStage.in");
+        public Inlet<TIn> In { get; } = new("SetupFlowStage.in");
 
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("SetupFlowStage.out");
+        public Outlet<TOut> Out { get; } = new("SetupFlowStage.out");
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
@@ -160,7 +160,7 @@ namespace Akka.Streams.Implementation
             Shape = new SourceShape<TOut>(Out);
         }
 
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("SetupSourceStage.out");
+        public Outlet<TOut> Out { get; } = new("SetupSourceStage.out");
 
         public override SourceShape<TOut> Shape { get; }
 

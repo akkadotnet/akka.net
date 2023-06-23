@@ -249,7 +249,7 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
-        public override DistributedData CreateExtension(ExtendedActorSystem system) => new DistributedData(system);
+        public override DistributedData CreateExtension(ExtendedActorSystem system) => new(system);
     }
 
     public static class DistributedDataExtensions

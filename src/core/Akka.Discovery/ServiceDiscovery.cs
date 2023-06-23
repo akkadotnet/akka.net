@@ -146,7 +146,7 @@ namespace Akka.Discovery
     /// </summary>
     public class Lookup : INoSerializationVerificationNeeded, IEquatable<Lookup>
     {
-        private static readonly Regex srvQueryRegex = new Regex(@"^_(.+?)\._(.+?)\.(.+?)$",
+        private static readonly Regex srvQueryRegex = new(@"^_(.+?)\._(.+?)\.(.+?)$",
             RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
         // Validates domain name:
@@ -170,7 +170,7 @@ namespace Akka.Discovery
         //       . => separated by a . (dot)
         //       label pattern => (?![0-9-])[A-Za-z0-9-]{1,63}(?<!-)
         //       * => match zero or more times 
-        private static readonly Regex domainNameRegex = new Regex(@"^((?![0-9-])[A-Za-z0-9-]{1,63}(?<!-))((\.(?![0-9-])[A-Za-z0-9-]{1,63}(?<!-)))*$",
+        private static readonly Regex domainNameRegex = new(@"^((?![0-9-])[A-Za-z0-9-]{1,63}(?<!-))((\.(?![0-9-])[A-Za-z0-9-]{1,63}(?<!-)))*$",
             RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
         /// <summary>
@@ -250,8 +250,7 @@ namespace Akka.Discovery
 
         public override string ToString() => $"Lookup({ServiceName}, {PortName}, {Protocol})";
 
-        public Lookup Copy(string serviceName = null, string portName = null, string protocol = null) =>
-            new Lookup(serviceName ?? ServiceName, portName ?? PortName, protocol ?? Protocol);
+        public Lookup Copy(string serviceName = null, string portName = null, string protocol = null) => new(serviceName ?? ServiceName, portName ?? PortName, protocol ?? Protocol);
 
         public bool Equals(Lookup other)
         {

@@ -218,13 +218,13 @@ namespace Akka.Streams.Tests.Dsl
 
         private static readonly ByteString ReferenceChunk = ByteString.FromString(RandomString(0x100001));
 
-        private static readonly List<ByteOrder> ByteOrders = new List<ByteOrder>
+        private static readonly List<ByteOrder> ByteOrders = new()
         {
             ByteOrder.BigEndian,
             ByteOrder.LittleEndian
         };
 
-        private static readonly List<int> FrameLengths = new List<int>
+        private static readonly List<int> FrameLengths = new()
         {
             0,
             1,
@@ -241,9 +241,9 @@ namespace Akka.Streams.Tests.Dsl
             0x10001
         };
 
-        private static readonly List<int> FieldLengths = new List<int> {1, 2, 3, 4};
+        private static readonly List<int> FieldLengths = new() {1, 2, 3, 4};
 
-        private static readonly List<int> FieldOffsets = new List<int> {0, 1, 2, 3, 15, 16, 31, 32, 44, 107};
+        private static readonly List<int> FieldOffsets = new() {0, 1, 2, 3, 15, 16, 31, 32, 44, 107};
 
         private static ByteString Encode(ByteString payload, int fieldOffset, int fieldLength, ByteOrder byteOrder) =>
             EncodeComplexFrame(payload, fieldLength, byteOrder, ByteString.FromBytes(new byte[fieldOffset]), ByteString.Empty);

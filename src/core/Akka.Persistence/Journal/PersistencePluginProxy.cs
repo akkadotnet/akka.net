@@ -42,7 +42,7 @@ namespace Akka.Persistence.Journal
 
         private sealed class InitTimeout
         {
-            public static readonly InitTimeout Instance = new InitTimeout();
+            public static readonly InitTimeout Instance = new();
             private InitTimeout() { }
         }
 

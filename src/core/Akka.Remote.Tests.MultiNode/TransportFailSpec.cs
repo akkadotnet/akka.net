@@ -42,7 +42,7 @@ namespace Akka.Remote.Tests.MultiNode
             "));
         }
 
-        internal static AtomicBoolean FdAvailable = new AtomicBoolean(true);
+        internal static AtomicBoolean FdAvailable = new(true);
 
         /// <summary>
         /// Failure detector implementation that will fail when <see cref="FdAvailable"/> is false.

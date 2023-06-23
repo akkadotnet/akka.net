@@ -17,7 +17,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
     {
         public sealed class Resolve
         {
-            public static readonly Resolve Instance = new Resolve();
+            public static readonly Resolve Instance = new();
             private Resolve(){}
         }
 
@@ -211,7 +211,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
 
     public static class ShardingHelper
     {
-        public static AtomicCounter DbId = new AtomicCounter(0);
+        public static AtomicCounter DbId = new(0);
 
         internal static string BoolToToggle(bool val)
         {

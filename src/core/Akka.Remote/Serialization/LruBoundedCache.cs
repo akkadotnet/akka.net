@@ -102,7 +102,7 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class FastHashComparer : IEqualityComparer<string>
     {
-        public readonly static FastHashComparer Default = new FastHashComparer();
+        public readonly static FastHashComparer Default = new();
 
         public bool Equals(string x, string y)
         {

@@ -19,7 +19,7 @@ namespace Akka.Persistence.Tests
     [Collection("PersistentActorRecoveryTimeout")] // force tests to run sequentially
     public class PersistentActorRecoveryTimeoutSpec : PersistenceSpec
     {
-        private static readonly AtomicCounter JournalIdNumber = new AtomicCounter(0);
+        private static readonly AtomicCounter JournalIdNumber = new(0);
         private static readonly string JournalId = "persistent-actor-recovery-timeout-spec" + JournalIdNumber.GetAndIncrement();
         private readonly IActorRef _journal;
 

@@ -180,7 +180,7 @@ namespace Akka.Persistence.Tests
 
         public class PersistAllIncomingActor : NamedPersistentActor
         {
-            public readonly LinkedList<object> State = new LinkedList<object>();
+            public readonly LinkedList<object> State = new();
 
             public PersistAllIncomingActor(string name, string journalPluginId) : base(name)
             {

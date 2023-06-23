@@ -241,7 +241,7 @@ namespace Akka.Streams.Dsl
         /// <param name="mapFunc">TBD</param>
         /// <returns>TBD</returns>
         public Flow<TIn, TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
-            => new Flow<TIn, TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
+            => new(Module.TransformMaterializedValue(mapFunc));
 
         /// <summary>
         /// Connect this <see cref="Flow{TIn,TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/>, concatenating the processing steps of both.
@@ -410,7 +410,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Flow<T, T, NotUsed> Identity<T>() => new Flow<T, T, NotUsed>(GraphStages.Identity<T>().Module);
+        public static Flow<T, T, NotUsed> Identity<T>() => new(GraphStages.Identity<T>().Module);
 
         /// <summary>
         /// TBD
@@ -418,7 +418,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Flow<T, T, TMat> Identity<T, TMat>() => new Flow<T, T, TMat>(GraphStages.Identity<T>().Module);
+        public static Flow<T, T, TMat> Identity<T, TMat>() => new(GraphStages.Identity<T>().Module);
 
         /// <summary>
         /// Creates flow from the Reactive Streams <see cref="IProcessor{T1,T2}"/>.
@@ -439,7 +439,7 @@ namespace Akka.Streams.Dsl
         /// <param name="factory">TBD</param>
         /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> FromProcessorMaterialized<TIn, TOut, TMat>(Func<(IProcessor<TIn, TOut>, TMat)> factory) 
-            => new Flow<TIn, TOut, TMat>(new ProcessorModule<TIn, TOut, TMat>(factory));
+            => new(new ProcessorModule<TIn, TOut, TMat>(factory));
 
         /// <summary>
         /// Helper to create a <see cref="Flow{TIn,TOut,TMat}"/> without a <see cref="Source"/> or <see cref="Sink"/>.

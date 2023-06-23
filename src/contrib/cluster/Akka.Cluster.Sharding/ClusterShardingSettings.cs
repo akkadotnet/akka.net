@@ -230,7 +230,7 @@ namespace Akka.Cluster.Sharding
             int? coordinatorStateReadMajorityPlus = null,
             int? leastShardAllocationAbsoluteLimit = null,
             double? leastShardAllocationRelativeLimit = null)
-            => new TuningParameters(
+            => new(
                 coordinatorFailureBackoff: coordinatorFailureBackoff ?? CoordinatorFailureBackoff,
                 retryInterval: retryInterval ?? RetryInterval,
                 bufferSize: bufferSize ?? BufferSize,

@@ -20,7 +20,7 @@ namespace Akka.Tests.Performance.Dispatch
         protected ActorSystem System;
         protected IActorRef TestActor;
         protected Counter MsgReceived;
-        protected ManualResetEventSlim ResetEvent = new ManualResetEventSlim(false);
+        protected ManualResetEventSlim ResetEvent = new(false);
         protected const int ExpectedMessages = 500000;
 
 

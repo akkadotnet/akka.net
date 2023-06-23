@@ -34,7 +34,7 @@ namespace Akka.Coordination.Tests
         }
 
         private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<string, TestLease> testLeases = new ConcurrentDictionary<string, TestLease>();
+        private readonly ConcurrentDictionary<string, TestLease> testLeases = new();
 
         public TestLeaseExt(ExtendedActorSystem system)
         {
@@ -118,10 +118,10 @@ namespace Akka.Coordination.Tests
 
         public TestProbe Probe { get; }
         private AtomicReference<Task<bool>> nextAcquireResult;
-        private AtomicBoolean nextCheckLeaseResult = new AtomicBoolean();
-        private AtomicReference<Action<Exception>> currentCallBack = new AtomicReference<Action<Exception>>(_ => { });
+        private AtomicBoolean nextCheckLeaseResult = new(false);
+        private AtomicReference<Action<Exception>> currentCallBack = new(_ => { });
         private ILoggingAdapter _log;
-        public TaskCompletionSource<bool> InitialPromise { get; } = new TaskCompletionSource<bool>();
+        public TaskCompletionSource<bool> InitialPromise { get; } = new();
 
 
         public TestLease(LeaseSettings settings, ExtendedActorSystem system)

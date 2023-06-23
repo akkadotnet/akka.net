@@ -61,7 +61,7 @@ namespace Akka.Remote.Tests.Transport
         {
             private ResendFinal() { }
 
-            public static ResendFinal Instance { get; } = new ResendFinal();
+            public static ResendFinal Instance { get; } = new();
         }
 
         private class SequenceVerifier : UntypedActor

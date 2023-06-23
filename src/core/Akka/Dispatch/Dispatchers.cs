@@ -107,7 +107,7 @@ namespace Akka.Dispatch
     internal sealed class FixedConcurrencyTaskScheduler : TaskScheduler
     {
         [ThreadStatic] private static bool _threadRunning = false;
-        private ConcurrentQueue<Task> _tasks = new ConcurrentQueue<Task>();
+        private ConcurrentQueue<Task> _tasks = new();
 
         private int _readers = 0;
 
@@ -334,8 +334,7 @@ namespace Akka.Dispatch
         /// 
         /// Has to be thread-safe, as this collection can be accessed concurrently by many actors.
         /// </summary>
-        private readonly ConcurrentDictionary<string, MessageDispatcherConfigurator> _dispatcherConfigurators =
-            new ConcurrentDictionary<string, MessageDispatcherConfigurator>();
+        private readonly ConcurrentDictionary<string, MessageDispatcherConfigurator> _dispatcherConfigurators = new();
 
         /// <summary>
         /// Get (possibly aliased) dispatcher config. Returns empty config if not found.

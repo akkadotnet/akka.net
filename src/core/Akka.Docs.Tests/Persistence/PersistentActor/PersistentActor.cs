@@ -62,7 +62,7 @@ namespace DocsExamples.Persistence.PersistentActor
 
         public class PersistentActor : UntypedPersistentActor
         {
-            private ExampleState _state = new ExampleState();
+            private ExampleState _state = new();
 
             private void UpdateState(Evt evt)
             {

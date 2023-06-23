@@ -16,7 +16,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
 {
     public class BatchingSqliteEventsByTagSpec : EventsByTagSpec
     {
-        public static readonly AtomicCounter Counter = new AtomicCounter(0);
+        public static readonly AtomicCounter Counter = new(0);
         public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""

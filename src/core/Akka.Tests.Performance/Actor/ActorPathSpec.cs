@@ -18,7 +18,7 @@ namespace Akka.Tests.Performance.Actor
     {
         private const string ParseThroughputCounterName = "ParseOp";
         private const double MinimumAcceptableOperationsPerSecond = 1000000.0d; //million op / second
-        private static readonly RootActorPath RootAddress = new RootActorPath(Address.AllSystems);
+        private static readonly RootActorPath RootAddress = new(Address.AllSystems);
         private Counter _parseThroughput;
 
         [PerfSetup]

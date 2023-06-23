@@ -19,7 +19,7 @@ namespace Akka.Persistence.Tests
 {
     static class ChaosSupportExtensions
     {
-        private static readonly Random random = new Random();
+        private static readonly Random random = new();
 
         internal static void Add(this AtLeastOnceDeliveryFailureSpec.IChaosSupport chaos, int i)
         {
@@ -42,7 +42,7 @@ namespace Akka.Persistence.Tests
 
         internal sealed class Start
         {
-            public static readonly Start Instance = new Start();
+            public static readonly Start Instance = new();
             private Start() { }
         }
 

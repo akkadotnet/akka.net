@@ -19,7 +19,7 @@ namespace Akka.Streams.TestKit
 {
     public class PublisherFluentBuilder<T>
     {
-        private readonly List<Func<CancellationToken, Task>> _tasks = new List<Func<CancellationToken, Task>>();
+        private readonly List<Func<CancellationToken, Task>> _tasks = new();
         private bool _executed;
 
         internal PublisherFluentBuilder(ManualProbe<T> probe)

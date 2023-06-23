@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tests
 
     internal class DummyDowningProvider : IDowningProvider
     {
-        public readonly AtomicBoolean ActorPropsAccessed = new AtomicBoolean();
+        public readonly AtomicBoolean ActorPropsAccessed = new(false);
         public DummyDowningProvider(ActorSystem system, Cluster cluster)
         {
         }

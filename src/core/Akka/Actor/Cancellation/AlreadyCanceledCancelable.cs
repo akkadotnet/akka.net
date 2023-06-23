@@ -15,7 +15,7 @@ namespace Akka.Actor
     /// </summary>
     internal sealed class AlreadyCanceledCancelable : ICancelable
     {
-        private static readonly AlreadyCanceledCancelable _instance = new AlreadyCanceledCancelable();
+        private static readonly AlreadyCanceledCancelable _instance = new();
 
         private AlreadyCanceledCancelable() { }
 
@@ -34,7 +34,7 @@ namespace Akka.Actor
         public static ICancelable Instance => _instance;
 
         /// <inheritdoc/>
-        public CancellationToken Token => new CancellationToken(true);
+        public CancellationToken Token => new(true);
 
         void ICancelable.CancelAfter(TimeSpan delay)
         {

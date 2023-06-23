@@ -372,8 +372,7 @@ channel-executor.priority = normal");
         /// TBD
         /// </summary>
         internal static readonly Lazy<Index<MessageDispatcher, IInternalActorRef>> Actors =
-            new Lazy<Index<MessageDispatcher, IInternalActorRef>>(
-                () => new Index<MessageDispatcher, IInternalActorRef>(), LazyThreadSafetyMode.PublicationOnly);
+            new(() => new Index<MessageDispatcher, IInternalActorRef>(), LazyThreadSafetyMode.PublicationOnly);
 
 #pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         /// <summary>

@@ -87,7 +87,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Udp Instance = new Udp();
+        public static readonly Udp Instance = new();
 
         /// <summary>
         /// TBD
@@ -138,7 +138,7 @@ namespace Akka.IO
             /// Default <see cref="NoAck"/> instance which is used when no acknowledgment information is
             /// explicitly provided. Its "token" is <see langword="null"/>.
             /// </summary>
-            public static readonly NoAck Instance = new NoAck(null);
+            public static readonly NoAck Instance = new(null);
 
             /// <summary>
             /// TBD
@@ -224,7 +224,7 @@ namespace Akka.IO
             /// <param name="data">Binary payload to be send.</param>
             /// <param name="target">An endpoint of the message receiver.</param>
             /// <returns>TBD</returns>
-            public static Send Create(ByteString data, EndPoint target) => new Send(data, target, NoAck.Instance);
+            public static Send Create(ByteString data, EndPoint target) => new(data, target, NoAck.Instance);
         }
 
         /// <summary>
@@ -275,7 +275,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Unbind Instance = new Unbind();
+            public static readonly Unbind Instance = new();
 
             private Unbind() { }
         }
@@ -295,7 +295,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly SimpleSender Instance = new SimpleSender();
+            public static readonly SimpleSender Instance = new();
 
             /// <summary>
             /// TBD
@@ -323,7 +323,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly SuspendReading Instance = new SuspendReading();
+            public static readonly SuspendReading Instance = new();
 
             private SuspendReading()
             { }
@@ -338,7 +338,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ResumeReading Instance = new ResumeReading();
+            public static readonly ResumeReading Instance = new();
 
             private ResumeReading()
             { }
@@ -431,7 +431,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly SimpleSenderReady Instance = new SimpleSenderReady();
+            public static readonly SimpleSenderReady Instance = new();
 
             private  SimpleSenderReady() { }
         }
@@ -445,7 +445,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Unbound Instance = new Unbound();
+            public static readonly Unbound Instance = new();
             private Unbound() { }
         }
 

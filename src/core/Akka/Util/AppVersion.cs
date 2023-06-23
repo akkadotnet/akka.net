@@ -33,7 +33,7 @@ namespace Akka.Util
     /// </summary>
     public class AppVersion : IComparable<AppVersion>, IEquatable<AppVersion>
     {
-        public static readonly AppVersion Zero = new AppVersion("0.0.0");
+        public static readonly AppVersion Zero = new("0.0.0");
 
         // made internal for testing purposes
         internal const string AssemblyVersionMarker = "assembly-version";

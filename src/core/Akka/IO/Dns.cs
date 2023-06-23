@@ -56,7 +56,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Dns Instance = new Dns();
+        public static readonly Dns Instance = new();
 
         /// <summary>
         /// TBD

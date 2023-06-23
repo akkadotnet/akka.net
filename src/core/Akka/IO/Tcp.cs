@@ -28,7 +28,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Tcp Instance = new Tcp();
+        public static readonly Tcp Instance = new();
 
         /// <summary>
         /// TBD
@@ -57,25 +57,25 @@ namespace Akka.IO
 
         internal sealed class SocketSent : SocketCompleted
         {
-            public static readonly SocketSent Instance = new SocketSent();
+            public static readonly SocketSent Instance = new();
             private SocketSent() { }
         }
 
         internal sealed class SocketReceived : SocketCompleted
         {
-            public static readonly SocketReceived Instance = new SocketReceived();
+            public static readonly SocketReceived Instance = new();
             private SocketReceived() { }
         }
 
         internal sealed class SocketAccepted : SocketCompleted
         {
-            public static readonly SocketAccepted Instance = new SocketAccepted();
+            public static readonly SocketAccepted Instance = new();
             private SocketAccepted() { }
         }
 
         internal sealed class SocketConnected : SocketCompleted
         {
-            public static readonly SocketConnected Instance = new SocketConnected();
+            public static readonly SocketConnected Instance = new();
             private SocketConnected() { }
         }
 
@@ -268,7 +268,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Unbind Instance = new Unbind();
+            public static readonly Unbind Instance = new();
 
             private Unbind()
             { }
@@ -296,7 +296,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Close Instance = new Close();
+            public static readonly Close Instance = new();
 
             private Close()
             {
@@ -319,7 +319,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ConfirmedClose Instance = new ConfirmedClose();
+            public static readonly ConfirmedClose Instance = new();
 
             private ConfirmedClose()
             {
@@ -343,7 +343,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Abort Instance = new Abort();
+            public static readonly Abort Instance = new();
 
             private Abort()
             {
@@ -366,7 +366,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly NoAck Instance = new NoAck(null);
+            public static readonly NoAck Instance = new(null);
 
             /// <summary>
             /// TBD
@@ -484,7 +484,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Write Empty = new Write(ByteString.Empty, NoAck.Instance);
+            public static readonly Write Empty = new(ByteString.Empty, NoAck.Instance);
 
             /// <summary>
             /// TBD
@@ -668,7 +668,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ResumeWriting Instance = new ResumeWriting();
+            public static readonly ResumeWriting Instance = new();
 
             private ResumeWriting()
             {
@@ -685,7 +685,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly SuspendReading Instance = new SuspendReading();
+            public static readonly SuspendReading Instance = new();
 
             private SuspendReading()
             {
@@ -701,7 +701,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ResumeReading Instance = new ResumeReading();
+            public static readonly ResumeReading Instance = new();
 
             private ResumeReading()
             {
@@ -850,7 +850,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly WritingResumed Instance = new WritingResumed();
+            public static readonly WritingResumed Instance = new();
 
             private WritingResumed()
             {
@@ -891,7 +891,7 @@ namespace Akka.IO
             /// <summary>
             /// Singleton instance
             /// </summary>
-            public static readonly Unbound Instance = new Unbound();
+            public static readonly Unbound Instance = new();
 
             private Unbound()
             {
@@ -938,7 +938,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Closed Instance = new Closed();
+            public static readonly Closed Instance = new();
 
             private Closed()
             {
@@ -953,7 +953,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Aborted Instance = new Aborted();
+            public static readonly Aborted Instance = new();
 
             private Aborted()
             {
@@ -974,7 +974,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ConfirmedClosed Instance = new ConfirmedClosed();
+            public static readonly ConfirmedClosed Instance = new();
 
             private ConfirmedClosed()
             {
@@ -994,7 +994,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly PeerClosed Instance = new PeerClosed();
+            public static readonly PeerClosed Instance = new();
 
             private PeerClosed()
             {

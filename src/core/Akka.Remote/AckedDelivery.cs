@@ -235,7 +235,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly SeqNoComparer Comparer = new SeqNoComparer();
+        public static readonly SeqNoComparer Comparer = new();
         /// <summary>
         /// TBD
         /// </summary>
@@ -523,7 +523,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly SeqNo.HasSeqNoComparer<T> Comparer = new SeqNo.HasSeqNoComparer<T>();
+        public static readonly SeqNo.HasSeqNoComparer<T> Comparer = new();
 
         /// <summary>
         /// Constructor

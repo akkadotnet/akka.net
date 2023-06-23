@@ -33,22 +33,22 @@ namespace Akka.Persistence.Tests.Journal
         /// </summary>
         internal class Token
         {
-            public static readonly Token Instance = new Token();
+            public static readonly Token Instance = new();
             private Token() { }
         }
 
         internal class TokenConsumed
         {
-            public static readonly TokenConsumed Instance = new TokenConsumed();
+            public static readonly TokenConsumed Instance = new();
             private TokenConsumed() { }
         }
 
         private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
         // keep it in a thread safe global so that tests can get their hand on the actor ref and send Steps to it
-        private static readonly ConcurrentDictionary<string, IActorRef> _current = new ConcurrentDictionary<string, IActorRef>();
+        private static readonly ConcurrentDictionary<string, IActorRef> _current = new();
         private readonly string _instanceId;
-        private readonly Queue<Func<Task>> _queuedOps = new Queue<Func<Task>>();
-        private readonly Queue<IActorRef> _queuedTokenRecipients = new Queue<IActorRef>();
+        private readonly Queue<Func<Task>> _queuedOps = new();
+        private readonly Queue<IActorRef> _queuedTokenRecipients = new();
 
 
         public SteppingMemoryJournal()

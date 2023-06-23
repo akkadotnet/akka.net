@@ -818,8 +818,7 @@ namespace Akka.Streams.Tests.Dsl
 
             public int ProbesReaderTop { get; set; }
 
-            public List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>> Probes { get; } =
-                new List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>>(100);
+            public List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>> Probes { get; } = new(100);
 
             public ByteString BlockingNextElement { get; set; }
         }

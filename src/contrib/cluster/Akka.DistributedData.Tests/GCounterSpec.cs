@@ -17,9 +17,9 @@ namespace Akka.DistributedData.Tests
     [Collection("DistributedDataSpec")]
     public class GCounterSpec
     {
-        private readonly UniqueAddress _node1 = new UniqueAddress(new Actor.Address("akka.tcp", "Sys", "localhost", 2551), 1);
-        private readonly UniqueAddress _node2 = new UniqueAddress(new Actor.Address("akka.tcp", "Sys", "localhost", 2552), 2);
-        private readonly UniqueAddress _node3 = new UniqueAddress(new Actor.Address("akka.tcp", "Sys", "localhost", 2553), 3);
+        private readonly UniqueAddress _node1 = new(new Actor.Address("akka.tcp", "Sys", "localhost", 2551), 1);
+        private readonly UniqueAddress _node2 = new(new Actor.Address("akka.tcp", "Sys", "localhost", 2552), 2);
+        private readonly UniqueAddress _node3 = new(new Actor.Address("akka.tcp", "Sys", "localhost", 2553), 3);
 
         public GCounterSpec(ITestOutputHelper output)
         {

@@ -45,7 +45,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// Default settings for SingleThreadDispatcher instances.
         /// </summary>
-        internal static readonly DedicatedThreadPoolSettings DefaultSingleThreadPoolSettings = new DedicatedThreadPoolSettings(1, "DefaultSingleThreadPool");
+        internal static readonly DedicatedThreadPoolSettings DefaultSingleThreadPoolSettings = new(1, "DefaultSingleThreadPool");
     }
 
     /// <summary>

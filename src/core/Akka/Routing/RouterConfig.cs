@@ -147,7 +147,7 @@ namespace Akka.Routing
         protected Group(IEnumerable<string> paths, string routerDispatcher) : base(routerDispatcher)
         {
             // equivalent of turning the paths into an immutable sequence
-            InternalPaths = paths?.ToArray() ?? new string[0];
+            InternalPaths = paths?.ToArray() ?? Array.Empty<string>();
         }
 
         /// <summary>
@@ -433,7 +433,7 @@ namespace Akka.Routing
         /// This router is set to use the default dispatcher <see cref="Dispatchers.DefaultDispatcherId"/>.
         /// </note>
         /// </summary>
-        public static FromConfig Instance { get; } = new FromConfig();
+        public static FromConfig Instance { get; } = new();
 
         /// <summary>
         /// N/A
@@ -628,7 +628,7 @@ namespace Akka.Routing
         /// <summary>
         /// TBD
         /// </summary>
-        public static NoRouter Instance { get; } = new NoRouter();
+        public static NoRouter Instance { get; } = new();
 
         /// <summary>
         /// This class represents a surrogate of a <see cref="NoRouter"/> router.

@@ -16,7 +16,7 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="SourceWithContext"/> from a regular source that operates on a tuple of `(data, context)` elements.
         /// </summary>
         public static SourceWithContext<TOut, TCtxOut, TMat> FromTuples<TOut, TCtxOut, TMat>(Source<(TOut, TCtxOut), TMat> source) =>
-            new SourceWithContext<TOut, TCtxOut, TMat>(source);
+            new(source);
     }
 
     /// <summary>
@@ -41,7 +41,7 @@ namespace Akka.Streams.Dsl
         /// context propagation here.
         ///</summary>
         public SourceWithContext<TOut2, TCtx2, TMat> Via<TOut2, TCtx2, TMat2>(IGraph<FlowShape<(TOut, TCtx), (TOut2, TCtx2)>, TMat2> viaFlow) =>
-            new SourceWithContext<TOut2, TCtx2, TMat>(Source.FromGraph(Inner).Via(viaFlow));
+            new(Source.FromGraph(Inner).Via(viaFlow));
 
         ///<summary>
         /// Transform this flow by the regular flow. The given flow must support manual context propagation by
@@ -55,7 +55,7 @@ namespace Akka.Streams.Dsl
         ///</summary>
         public SourceWithContext<TOut2, TCtx2, TMat3> ViaMaterialized<TOut2, TCtx2, TMat2, TMat3>(
             IGraph<FlowShape<(TOut, TCtx), (TOut2, TCtx2)>, TMat2> viaFlow, Func<TMat, TMat2, TMat3> combine) =>
-            new SourceWithContext<TOut2, TCtx2, TMat3>(Source.FromGraph(Inner).ViaMaterialized(viaFlow, combine));
+            new(Source.FromGraph(Inner).ViaMaterialized(viaFlow, combine));
 
         /// <summary>
         /// Connect this <see cref="SourceWithContext{TOut, TCtx, TMat2}"/> to a <see cref="Sink"/>,
@@ -75,7 +75,7 @@ namespace Akka.Streams.Dsl
         /// Context-preserving variant of <see cref="Source{TOut, TMat2}.MapMaterializedValue{TMat2}(Func{TMat2, TMat2})"/>.
         /// </summary>
         public SourceWithContext<TOut, TCtx, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> combine) =>
-            new SourceWithContext<TOut, TCtx, TMat2>(Source.FromGraph(Inner).MapMaterializedValue(combine));
+            new(Source.FromGraph(Inner).MapMaterializedValue(combine));
 
         /// <summary>
         /// Connect this <see cref="SourceWithContext{TOut,TCtx,TMat}"/> to a Sink and run it. The returned value is the materialized value of the Sink.

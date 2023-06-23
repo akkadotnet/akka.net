@@ -164,7 +164,7 @@ namespace Akka.DistributedData
 
     public sealed class ReadLocal : IReadConsistency
     {
-        public static readonly ReadLocal Instance = new ReadLocal();
+        public static readonly ReadLocal Instance = new();
 
         public TimeSpan Timeout => TimeSpan.Zero;
 

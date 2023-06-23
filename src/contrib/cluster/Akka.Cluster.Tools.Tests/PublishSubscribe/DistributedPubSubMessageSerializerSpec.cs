@@ -57,16 +57,16 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             // TODO: Bucket should accepts IDictionary<string, ValueHolder> instead of ImmutableDictionary<string, ValueHolder>
             var message = new Delta(new List<Bucket>
             {
-                new Bucket(address1, 3, new Dictionary<string, ValueHolder>
+                new(address1, 3, new Dictionary<string, ValueHolder>
                 {
                     {"/user/u1", new ValueHolder(2, u1)},
                     {"/user/u2", new ValueHolder(3, u2)},
                 }.ToImmutableDictionary()),
-                new Bucket(address2, 17, new Dictionary<string, ValueHolder>
+                new(address2, 17, new Dictionary<string, ValueHolder>
                 {
                     {"/user/u3", new ValueHolder(17, u3)}
                 }.ToImmutableDictionary()),
-                new Bucket(address3, 5, new Dictionary<string, ValueHolder>
+                new(address3, 5, new Dictionary<string, ValueHolder>
                 {
                     {"/user/u4", new ValueHolder(4, u4)},
                     {"/user/u5", new ValueHolder(5, null)},

@@ -18,7 +18,7 @@ namespace Akka
         /// <summary>
         /// The singleton instance of <see cref="Done"/>
         /// </summary>
-        public static readonly Done Instance = new Done();
+        public static readonly Done Instance = new();
 
         private Done() { }
     }

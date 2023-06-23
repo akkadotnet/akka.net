@@ -28,7 +28,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
-        public override TcpExt CreateExtension(ExtendedActorSystem system) => new TcpExt(system);
+        public override TcpExt CreateExtension(ExtendedActorSystem system) => new(system);
 
         /// <summary>
         /// Represents a successful TCP server binding.

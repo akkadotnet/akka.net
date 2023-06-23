@@ -223,6 +223,6 @@ namespace Akka.Persistence.Sqlite.Journal
         /// </summary>
         /// <param name="connectionString">TBD</param>
         /// <returns>TBD</returns>
-        protected override SqliteConnection CreateConnection(string connectionString) => new SqliteConnection(connectionString);
+        protected override SqliteConnection CreateConnection(string connectionString) => new(connectionString);
     }
 }

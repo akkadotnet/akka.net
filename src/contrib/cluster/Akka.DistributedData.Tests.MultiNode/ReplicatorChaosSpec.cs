@@ -50,23 +50,23 @@ namespace Akka.DistributedData.Tests.MultiNode
 
     public class ReplicatorChaosSpec : MultiNodeClusterSpec
     {
-        public static readonly RoleName First = new RoleName("first");
-        public static readonly RoleName Second = new RoleName("second");
-        public static readonly RoleName Third = new RoleName("third");
-        public static readonly RoleName Fourth = new RoleName("fourth");
-        public static readonly RoleName Fifth = new RoleName("fifth");
+        public static readonly RoleName First = new("first");
+        public static readonly RoleName Second = new("second");
+        public static readonly RoleName Third = new("third");
+        public static readonly RoleName Fourth = new("fourth");
+        public static readonly RoleName Fifth = new("fifth");
 
         private readonly Cluster.Cluster _cluster;
         private readonly IActorRef _replicator;
         private readonly TimeSpan _timeout;
 
-        public readonly GCounterKey KeyA = new GCounterKey("A");
-        public readonly PNCounterKey KeyB = new PNCounterKey("B");
-        public readonly GCounterKey KeyC = new GCounterKey("C");
-        public readonly GCounterKey KeyD = new GCounterKey("D");
-        public readonly GSetKey<string> KeyE = new GSetKey<string>("E");
-        public readonly ORSetKey<string> KeyF = new ORSetKey<string>("F");
-        public readonly GCounterKey KeyX = new GCounterKey("X");
+        public readonly GCounterKey KeyA = new("A");
+        public readonly PNCounterKey KeyB = new("B");
+        public readonly GCounterKey KeyC = new("C");
+        public readonly GCounterKey KeyD = new("D");
+        public readonly GSetKey<string> KeyE = new("E");
+        public readonly ORSetKey<string> KeyF = new("F");
+        public readonly GCounterKey KeyX = new("X");
 
         public ReplicatorChaosSpec() : this(new ReplicatorChaosSpecConfig()) { }
         protected ReplicatorChaosSpec(ReplicatorChaosSpecConfig config) : base(config, typeof(ReplicatorChaosSpec))

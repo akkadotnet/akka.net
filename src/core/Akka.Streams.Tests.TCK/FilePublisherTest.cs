@@ -22,7 +22,7 @@ namespace Akka.Streams.Tests.TCK
         private const int Elements = 1000;
 
         private static int _counter;
-        private readonly List<FileInfo> _files = new List<FileInfo>();
+        private readonly List<FileInfo> _files = new();
 
         public FilePublisherTest() : base(Utils.UnboundedMailboxConfig.WithFallback(AkkaSpec.AkkaSpecConfig))
         {

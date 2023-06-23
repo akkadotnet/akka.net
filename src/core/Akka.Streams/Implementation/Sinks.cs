@@ -485,7 +485,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("LastOrDefault.in");
+        public readonly Inlet<T> In = new("LastOrDefault.in");
 
         /// <summary>
         /// TBD
@@ -570,7 +570,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("FirstOrDefault.in");
+        public readonly Inlet<T> In = new("FirstOrDefault.in");
 
         /// <summary>
         /// TBD
@@ -674,7 +674,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("Seq.in");
+        public readonly Inlet<T> In = new("Seq.in");
 
         /// <summary>
         /// TBD
@@ -816,7 +816,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("QueueSink.in");
+        public readonly Inlet<T> In = new("QueueSink.in");
 
         /// <summary>
         /// TBD
@@ -1037,7 +1037,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("lazySink.in");
+        public Inlet<TIn> In { get; } = new("lazySink.in");
 
         /// <summary>
         /// TBD
@@ -1071,7 +1071,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly ObservableLogic _logic;
             private readonly IObserver<T> _observer;
-            private readonly AtomicBoolean _disposed = new AtomicBoolean();
+            private readonly AtomicBoolean _disposed = new(false);
 
             public ObserverDisposable(ObservableLogic logic, IObserver<T> observer)
             {
@@ -1147,7 +1147,7 @@ namespace Akka.Streams.Implementation
             Shape = new SinkShape<T>(Inlet);
         }
 
-        public Inlet<T> Inlet { get; } = new Inlet<T>("observable.in");
+        public Inlet<T> Inlet { get; } = new("observable.in");
         public override SinkShape<T> Shape { get; }
         public override ILogicAndMaterializedValue<IObservable<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {

@@ -22,7 +22,7 @@ namespace Akka.Actor
         private readonly ILoggingAdapter _log;
         private readonly TaskCompletionSource<Status> _terminationPromise;
         private readonly ActorPath _path;
-        private readonly Switch _stopped = new Switch();
+        private readonly Switch _stopped = new(false);
         private readonly IActorRefProvider _provider;
 
         private bool IsWalking => !_terminationPromise.Task.IsCompleted;

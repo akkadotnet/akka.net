@@ -17,10 +17,10 @@ namespace Akka.DistributedData.Tests
 {
     public class DataEnvelopeSpec
     {
-        private readonly UniqueAddress node1 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2551), 1);
-        private readonly UniqueAddress node2 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2552), 1);
-        private readonly UniqueAddress node3 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2553), 1);
-        private readonly UniqueAddress node4 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2554), 1);
+        private readonly UniqueAddress node1 = new(new Address("akka.tcp", "Sys", "localhost", 2551), 1);
+        private readonly UniqueAddress node2 = new(new Address("akka.tcp", "Sys", "localhost", 2552), 1);
+        private readonly UniqueAddress node3 = new(new Address("akka.tcp", "Sys", "localhost", 2553), 1);
+        private readonly UniqueAddress node4 = new(new Address("akka.tcp", "Sys", "localhost", 2554), 1);
 
         private readonly DateTime obsoleteTimeInFuture = DateTime.UtcNow.AddHours(1);
         private readonly DateTime obsoleteTime = DateTime.UtcNow.AddHours(-1);
