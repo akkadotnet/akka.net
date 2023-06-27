@@ -126,7 +126,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        public ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
         /// <summary>
         /// TBD
