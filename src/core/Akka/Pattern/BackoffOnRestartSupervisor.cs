@@ -24,6 +24,10 @@ namespace Akka.Pattern
         private readonly OneForOneStrategy _strategy;
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        /// <devremarks>
+        /// If the arguments here change, you -must- change the invocation in <see cref="BackoffOptions"/> accordingly!
+        /// Expression based props are too slow for many scenarios, so we must drop compile time safety for that sake.
+        /// </devremarks>
         public BackoffOnRestartSupervisor(
             Props childProps,
             string childName,

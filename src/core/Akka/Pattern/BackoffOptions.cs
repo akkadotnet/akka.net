@@ -210,9 +210,9 @@ namespace Akka.Pattern
                 switch (_backoffType)
                 {
                     case RestartImpliesFailure _:
-                        return Props.Create(() => new BackoffOnRestartSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped, _finalStopMessage));
+                        return Props.Create<BackoffOnRestartSupervisor>(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped, _finalStopMessage);
                     case StopImpliesFailure _:
-                        return Props.Create(() => new BackoffSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped, _finalStopMessage));
+                        return Props.Create<BackoffSupervisor>(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped, _finalStopMessage);
                     default:
                         return Props.Empty;
                 }
