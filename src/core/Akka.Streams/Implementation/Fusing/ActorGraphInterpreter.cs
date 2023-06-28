@@ -185,11 +185,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public ILoggingAdapter Log => _log ?? (_log = GetLogger());
+        public ILoggingAdapter Log => _log ??= GetLogger();
         /// <summary>
         /// TBD
         /// </summary>
-        public GraphInterpreter Interpreter => _interpreter ?? (_interpreter = GetInterpreter());
+        public GraphInterpreter Interpreter => _interpreter ??= GetInterpreter();
 
         /// <summary>
         /// TBD
@@ -1358,7 +1358,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        public ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         private void EnqueueToShortCircuit(object input)
         {

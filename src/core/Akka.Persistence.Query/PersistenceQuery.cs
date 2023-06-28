@@ -25,7 +25,7 @@ namespace Akka.Persistence.Query
             return system.WithExtension<PersistenceQuery, PersistenceQueryProvider>();
         }
 
-        public ILoggingAdapter Log => _log ?? (_log = _system.Log);
+        public ILoggingAdapter Log => _log ??= _system.Log;
 
         public PersistenceQuery(ExtendedActorSystem system)
         {

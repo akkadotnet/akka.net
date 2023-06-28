@@ -707,7 +707,7 @@ namespace Akka.Cluster.Tools.Singleton
             });
         }
 
-        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        private ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()

@@ -1064,7 +1064,7 @@ namespace Akka.Actor
 
         private StateFunction HandleEvent
         {
-            get { return _handleEvent ?? (_handleEvent = HandleEventDefault); }
+            get { return _handleEvent ??= HandleEventDefault; }
             set { _handleEvent = value; }
         }
 
