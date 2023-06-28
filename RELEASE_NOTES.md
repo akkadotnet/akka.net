@@ -1,3 +1,8 @@
+#### 1.4.51 June 28th 2023 ####
+
+* [Perf: Backoff Supervisor uses Expression based `Props`](https://github.com/akkadotnet/akka.net/issues/6804)
+* [Akka.Streams: Do not use expression based props for long lived streams](https://github.com/akkadotnet/akka.net/pull/6807)
+
 #### 1.4.50 March 15th 2023 ####
 
 * [Query.Sql: Fix PersistenceIdPublisher froze on failure messages](https://github.com/akkadotnet/akka.net/pull/6375)
