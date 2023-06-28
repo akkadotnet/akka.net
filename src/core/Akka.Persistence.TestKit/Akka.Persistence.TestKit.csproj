@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.TestKit</AssemblyTitle>
     <Description>TestKit for writing tests for Akka.NET Persistance module.</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);testkit;persistance</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
