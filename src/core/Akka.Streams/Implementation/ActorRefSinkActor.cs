@@ -24,7 +24,7 @@ namespace Akka.Streams.Implementation
         /// <param name="onCompleteMessage">TBD</param>
         /// <returns>TBD</returns>
         public static Props Props(IActorRef @ref, int highWatermark, object onCompleteMessage)
-            => Actor.Props.Create(() => new ActorRefSinkActor(@ref, highWatermark, onCompleteMessage));
+            => Actor.Props.Create<ActorRefSinkActor>(@ref, highWatermark, onCompleteMessage);
 
         private ILoggingAdapter _log;
 
@@ -47,6 +47,7 @@ namespace Akka.Streams.Implementation
         /// <param name="ref">TBD</param>
         /// <param name="highWatermark">TBD</param>
         /// <param name="onCompleteMessage">TBD</param>
+        /// If this gets changed you must change <see cref="ActorRefSinkActor.Props"/> as well!
         public ActorRefSinkActor(IActorRef @ref, int highWatermark, object onCompleteMessage)
         {
             Ref = @ref;

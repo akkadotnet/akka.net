@@ -624,7 +624,7 @@ namespace Akka.Streams.Implementation
         /// <param name="haveShutdown">TBD</param>
         /// <returns>TBD</returns>
         public static Props Props(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
-            => Actor.Props.Create(() => new StreamSupervisor(settings, haveShutdown)).WithDeploy(Deploy.Local);
+            => Actor.Props.Create<StreamSupervisor>(settings, haveShutdown).WithDeploy(Deploy.Local);
 
         /// <summary>
         /// TBD
@@ -648,6 +648,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="settings">TBD</param>
         /// <param name="haveShutdown">TBD</param>
+        /// If this changes you must also change StreamSupervisor.Props as well!
         public StreamSupervisor(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
         {
             Settings = settings;
