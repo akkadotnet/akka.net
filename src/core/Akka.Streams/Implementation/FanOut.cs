@@ -720,7 +720,7 @@ namespace Akka.Streams.Implementation
         /// <param name="settings">TBD</param>
         /// <returns>TBD</returns>
         public static Props Props<T>(ActorMaterializerSettings settings)
-            => Actor.Props.Create(() => new Unzip<T>(settings, 2)).WithDeploy(Deploy.Local);
+            => Actor.Props.Create<Unzip<T>>(settings, 2).WithDeploy(Deploy.Local);
     }
 
     /// <summary>
@@ -740,6 +740,7 @@ namespace Akka.Streams.Implementation
         /// This exception is thrown when the elements in <see cref="Akka.Streams.Implementation.FanOut{T}.PrimaryInputs"/>
         /// are of an unknown type.
         /// </exception>>
+        /// If this gets changed you must change <see cref="Akka.Streams.Implementation.FanOut.Unzip{T}"/> as well!
         public Unzip(ActorMaterializerSettings settings, int outputCount = 2) : base(settings, outputCount)
         {
             OutputBunch.MarkAllOutputs();

@@ -34,7 +34,7 @@ namespace Akka.Streams.Implementation
                 throw new NotSupportedException("Backpressure overflow strategy not supported");
 
             var maxFixedBufferSize = settings.MaxFixedBufferSize;
-            return Actor.Props.Create(() => new ActorRefSourceActor<T>(bufferSize, overflowStrategy, maxFixedBufferSize));
+            return Actor.Props.Create<ActorRefSourceActor<T>>(bufferSize, overflowStrategy, maxFixedBufferSize);
         }
 
         /// <summary>
@@ -58,6 +58,7 @@ namespace Akka.Streams.Implementation
         /// <param name="bufferSize">TBD</param>
         /// <param name="overflowStrategy">TBD</param>
         /// <param name="maxFixedBufferSize">TBD</param>
+        /// If this changes you must also change <see cref="ActorRefSourceActor{T}.Props"/> as well!
         public ActorRefSourceActor(int bufferSize, OverflowStrategy overflowStrategy, int maxFixedBufferSize)
         {
             BufferSize = bufferSize;
