@@ -137,10 +137,13 @@ public class FailedSnapshotStoreRecoverySpec : PersistenceTestKit
         // act
         await WithSnapshotLoad(SelectBehavior, async () =>
         {
-            var actor2 = Sys.ActorOf(Props.Create(() => new PersistentActor("p1", probe.Ref)));
-            Watch(actor2);
-            await probe.ExpectNoMsgAsync();
-            await ExpectTerminatedAsync(actor2);
+            await WithinAsync(RemainingOrDefault, async () =>
+            {
+                var actor2 = Sys.ActorOf(Props.Create(() => new PersistentActor("p1", probe.Ref)));
+                Watch(actor2);
+                await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(150));
+                await ExpectTerminatedAsync(actor2);
+            });
         });
 
     }
