@@ -648,7 +648,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="settings">TBD</param>
         /// <param name="haveShutdown">TBD</param>
-        /// If this changes you must also change <see cref="StreamSupervisor.Props"/> as well!
+        /// If this changes you must also change StreamSupervisor.Props as well!
         public StreamSupervisor(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
         {
             Settings = settings;
