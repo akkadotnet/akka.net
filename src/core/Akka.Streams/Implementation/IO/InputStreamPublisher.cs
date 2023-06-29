@@ -37,7 +37,7 @@ namespace Akka.Streams.Implementation.IO
             if (chunkSize <= 0)
                 throw new ArgumentException($"chunkSize must be > 0 was {chunkSize}", nameof(chunkSize));
 
-            return Actor.Props.Create(()=> new InputStreamPublisher(inputstream, completionSource, chunkSize)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create<InputStreamPublisher>(inputstream, completionSource, chunkSize).WithDeploy(Deploy.Local);
         }
 
         private struct Continue : IDeadLetterSuppression
@@ -58,6 +58,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="inputstream">TBD</param>
         /// <param name="completionSource">TBD</param>
         /// <param name="chunkSize">TBD</param>
+        /// If this gets changed you must change <see cref="InputStreamPublisher.Props"/> as well!
         public InputStreamPublisher(Stream inputstream, TaskCompletionSource<IOResult> completionSource, int chunkSize)
         {
             _inputstream = inputstream;
