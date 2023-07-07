@@ -29,7 +29,7 @@
     <NetLibVersion>net6.0</NetLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-    <FsCheckVersion>2.16.5</FsCheckVersion>
+    <FsCheckVersion>2.16.6</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
     <MultiNodeAdapterVersion>1.5.8</MultiNodeAdapterVersion>
