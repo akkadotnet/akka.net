@@ -28,36 +28,38 @@ namespace PingPong
 
         protected override bool Receive(object message)
         {
-            if(message is Messages.Msg)
+            if (message is Messages.Msg)
             {
                 _received++;
-                if(_sent < _repeat)
+                if (_sent < _repeat)
                 {
                     _actor.Tell(message);
                     _sent++;
                 }
-                else if(_received >= _repeat)
+                else if (_received >= _repeat)
                 {
-                    //       Console.WriteLine("done {0}", Self.Path);
                     _latch.SetResult(true);
                 }
                 return true;
             }
-            if(message is Messages.Run)
+
+            if (message is Messages.Run)
             {
                 var msg = new Messages.Msg();
-                for(int i = 0; i < Math.Min(1000, _repeat); i++)
+                for (int i = 0; i < Math.Min(1000, _repeat); i++)
                 {
                     _actor.Tell(msg);
                     _sent++;
                 }
                 return true;
             }
-            if(message is Messages.Started)
+
+            if (message is Messages.Started)
             {
                 Sender.Tell(message);
                 return true;
             }
+
             return false;
         }
     }
