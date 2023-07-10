@@ -1458,6 +1458,41 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// Unwraps <see cref="IWrappedMessage"/> in order to help make it easier to troubleshoot
+        /// which oversized message was sent.
+        /// </summary>
+        /// <returns>The formatted type string.</returns>
+        /// <remarks>
+        /// Internal for testing purposes only.
+        /// </remarks>
+        internal static string LogPossiblyWrappedMessageType(object failedMsg)
+        {
+            if (failedMsg is IWrappedMessage wrappedMessage)
+            {
+                static void LogWrapped(StringBuilder builder, IWrappedMessage nextMsg)
+                {
+                    builder.Append($"{nextMsg.GetType()}-->");
+                    if (nextMsg.Message is IWrappedMessage wrappedAgain)
+                    {
+                        builder.Append('(');
+                        LogWrapped(builder, wrappedAgain); // recursively iterate through all layers of wrapping
+                        builder.Append(')');
+                    }
+                    else
+                    {
+                        builder.Append(nextMsg.Message.GetType());
+                    }
+                }
+                
+                var builder = new StringBuilder();
+                LogWrapped(builder, wrappedMessage);
+                return builder.ToString();
+            }
+
+            return failedMsg.GetType().ToString();
+        }
+
         private bool WriteSend(EndpointManager.Send send)
         {
             try
@@ -1482,7 +1517,7 @@ namespace Akka.Remote
                         string.Format("Discarding oversized payload sent to {0}: max allowed size {1} bytes, actual size of encoded {2} was {3} bytes.",
                             send.Recipient,
                             Transport.MaximumPayloadBytes,
-                            send.Message.GetType(),
+                            LogPossiblyWrappedMessageType(send.Message),
                             pdu.Length));
                     _log.Error(reason, "Transient association error (association remains live)");
                     return true;
@@ -1505,7 +1540,7 @@ namespace Akka.Remote
                 _log.Error(
                   ex,
                   "Serialization failed for message [{0}]. Transient association error (association remains live)",
-                  send.Message.GetType());
+                  LogPossiblyWrappedMessageType(send.Message));
                 return true;
             }
             catch (ArgumentException ex)
@@ -1513,7 +1548,7 @@ namespace Akka.Remote
                 _log.Error(
                   ex,
                   "Serializer threw ArgumentException for message type [{0}]. Transient association error (association remains live)",
-                  send.Message.GetType());
+                  LogPossiblyWrappedMessageType(send.Message));
                 return true;
             }
             catch (EndpointException ex)

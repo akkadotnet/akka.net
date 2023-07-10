@@ -505,7 +505,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        internal string Name => _name ?? (_name = GetHashCode().ToString("x"));
+        internal string Name => _name ??= GetHashCode().ToString("x");
 
         /// <summary>
         /// Assign the boundary logic to a given connection. This will serve as the interface to the external world
