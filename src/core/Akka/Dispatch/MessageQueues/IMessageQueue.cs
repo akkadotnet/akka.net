@@ -34,7 +34,7 @@ namespace Akka.Dispatch.MessageQueues
         /// This field is only used in a couple of places, but it should not be removed.
         /// </param>
         /// <param name="envelope"> The envelope to enqueue </param>
-        void Enqueue(IActorRef receiver, Envelope envelope);
+        void Enqueue(IActorRef receiver, in Envelope envelope);
 
         /// <summary> 
         /// Tries to pull an envelope of the message queue 

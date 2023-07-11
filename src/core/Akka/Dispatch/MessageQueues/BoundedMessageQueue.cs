@@ -61,7 +61,7 @@ namespace Akka.Dispatch.MessageQueues
         public int Count => _queue.Count;
 
         /// <inheritdoc cref="IMessageQueue"/>
-        public void Enqueue(IActorRef receiver, Envelope envelope)
+        public void Enqueue(IActorRef receiver, in Envelope envelope)
         {
             if (!_queue.TryAdd(envelope, PushTimeOut)) // dump messages that can't be delivered in-time into DeadLetters
             {

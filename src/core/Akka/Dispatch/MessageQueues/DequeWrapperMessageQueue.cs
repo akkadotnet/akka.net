@@ -53,7 +53,7 @@ namespace Akka.Dispatch.MessageQueues
         }
 
         /// <inheritdoc cref="IMessageQueue"/>
-        public void Enqueue(IActorRef receiver, Envelope envelope)
+        public void Enqueue(IActorRef receiver, in Envelope envelope)
         {
             MessageQueue.Enqueue(receiver, envelope);
         }
@@ -90,7 +90,7 @@ namespace Akka.Dispatch.MessageQueues
         /// Add a message to the front of the queue via the prepend buffer.
         /// </summary>
         /// <param name="envelope">The message we wish to append to the front of the queue.</param>
-        public void EnqueueFirst(Envelope envelope)
+        public void EnqueueFirst(in Envelope envelope)
         {
             _prependBuffer.Push(envelope);
         }

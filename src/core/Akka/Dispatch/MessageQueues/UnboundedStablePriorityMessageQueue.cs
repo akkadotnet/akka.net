@@ -80,7 +80,7 @@ namespace Akka.Dispatch.MessageQueues
             return false;
         }
 
-        public void EnqueueFirst(Envelope envelope)
+        public void EnqueueFirst(in Envelope envelope)
         {
             _prependBuffer.Push(envelope);
         }

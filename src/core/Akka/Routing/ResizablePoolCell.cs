@@ -77,7 +77,7 @@ namespace Akka.Routing
         /// TBD
         /// </summary>
         /// <param name="envelope">TBD</param>
-        public override void SendMessage(Envelope envelope)
+        public override void SendMessage(in Envelope envelope)
         {
             if(!(RouterConfig.IsManagementMessage(envelope.Message)) &&
                 resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()) &&

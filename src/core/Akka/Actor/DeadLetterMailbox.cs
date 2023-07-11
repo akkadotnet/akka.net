@@ -44,7 +44,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="receiver">TBD</param>
         /// <param name="envelope">TBD</param>
-        public void Enqueue(IActorRef receiver, Envelope envelope)
+        public void Enqueue(IActorRef receiver, in Envelope envelope)
         {
             if (envelope.Message is DeadLetter)
             {

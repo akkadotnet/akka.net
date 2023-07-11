@@ -388,7 +388,7 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="message">TBD</param>
-        public virtual void SendMessage(Envelope message)
+        public virtual void SendMessage(in Envelope message)
         {
             if (Mailbox == null)
             {
@@ -516,7 +516,7 @@ namespace Akka.Actor
             return current != null ? current.Sender : ActorRefs.NoSender;
         }
 
-        private Envelope SerializeAndDeserialize(Envelope envelope)
+        private Envelope SerializeAndDeserialize(in Envelope envelope)
         {
             DeadLetter deadLetter;
             var unwrapped = (deadLetter = envelope.Message as DeadLetter) != null ? deadLetter.Message : envelope.Message;
