@@ -39,7 +39,7 @@ namespace Akka.Benchmarks.Actor
             system.Dispose();
         }
 
-        [Benchmark(OperationsPerInvoke = Operations)]
+        [Benchmark(OperationsPerInvoke = Operations * 2)]
         public async Task Actor_ping_pong_single_pair_in_memory()
         {
             await ping.Ask(StartTest.Instance, timeout);
