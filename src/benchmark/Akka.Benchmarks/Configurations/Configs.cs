@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System.Reflection;
-using Akka.Benchmarks.Actor;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
