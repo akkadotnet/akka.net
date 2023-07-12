@@ -5,12 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;

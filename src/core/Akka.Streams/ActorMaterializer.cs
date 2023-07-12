@@ -6,9 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Runtime.Serialization;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;

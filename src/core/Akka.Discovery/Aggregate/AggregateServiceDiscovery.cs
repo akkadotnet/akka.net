@@ -14,7 +14,6 @@ using Akka.Actor;
 using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.Util.Internal;
 
 namespace Akka.Discovery.Aggregate
 {

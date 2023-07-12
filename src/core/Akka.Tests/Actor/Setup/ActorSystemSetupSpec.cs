@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Actor.Setup;
-using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;

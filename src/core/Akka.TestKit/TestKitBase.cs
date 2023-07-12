@@ -15,7 +15,6 @@ using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.TestKit.Extensions;
 using Akka.TestKit.Internal;
 using Akka.Util;
 using Akka.Util.Internal;

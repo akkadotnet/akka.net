@@ -6,11 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Dispatch.SysMsg;
-using Akka.Util.Internal;
 
 namespace Akka.Actor
 {

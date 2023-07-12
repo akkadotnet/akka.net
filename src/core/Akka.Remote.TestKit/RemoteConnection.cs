@@ -6,22 +6,16 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Remote.TestKit.Proto;
-using Akka.Remote.Transport.DotNetty;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
-using DotNetty.Codecs.Protobuf;
-using DotNetty.Common.Internal.Logging;
 using DotNetty.Common.Utilities;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
-using Microsoft.Extensions.Logging;
 
 namespace Akka.Remote.TestKit
 {

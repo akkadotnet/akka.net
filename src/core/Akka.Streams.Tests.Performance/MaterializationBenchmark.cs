@@ -7,7 +7,6 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using NBench;

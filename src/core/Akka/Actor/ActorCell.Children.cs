@@ -8,15 +8,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor.Internal;
-using Akka.Dispatch.SysMsg;
-using Akka.Serialization;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Actor
 {

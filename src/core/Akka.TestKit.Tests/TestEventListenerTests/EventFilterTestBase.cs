@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading.Tasks;
 using Akka.Event;
 
 namespace Akka.TestKit.Tests.TestEventListenerTests

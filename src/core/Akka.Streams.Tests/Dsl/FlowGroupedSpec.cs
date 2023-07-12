@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;

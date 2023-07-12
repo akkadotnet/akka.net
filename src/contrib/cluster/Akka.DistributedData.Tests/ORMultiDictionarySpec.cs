@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Actor;
@@ -14,8 +13,6 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using Akka.DistributedData.Internal;
-using Akka.DistributedData.Serialization;
-using Akka.DistributedData;
 
 namespace Akka.DistributedData.Tests
 {

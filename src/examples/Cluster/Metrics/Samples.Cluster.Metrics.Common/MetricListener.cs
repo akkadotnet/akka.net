@@ -5,15 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Cluster.Metrics;
 using Akka.Cluster.Metrics.Events;
-using Akka.Cluster.Metrics.Serialization;
 using Akka.Event;
 using Akka.Util.Internal;
 

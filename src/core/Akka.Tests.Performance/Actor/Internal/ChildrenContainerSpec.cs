@@ -7,7 +7,6 @@
 
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Util.Internal;
 using NBench;
 
 namespace Akka.Tests.Performance.Actor.Internal

@@ -13,7 +13,6 @@ using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
-using Akka.TestKit;
 using FluentAssertions;
 
 namespace Akka.Cluster.Tests.MultiNode.SBR

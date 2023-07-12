@@ -16,7 +16,6 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using System.Reflection;
 using System.Text;
 using Akka.Actor.Setup;
 using Akka.Serialization;

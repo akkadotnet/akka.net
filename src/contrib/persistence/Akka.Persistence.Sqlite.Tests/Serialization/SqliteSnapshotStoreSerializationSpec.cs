@@ -8,7 +8,6 @@
 using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
 using Akka.Util.Internal;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Serialization

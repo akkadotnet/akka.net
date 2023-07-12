@@ -6,14 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Net.NetworkInformation;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
 
 namespace Akka.Benchmarks.Actor
 {

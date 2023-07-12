@@ -7,19 +7,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
 using Akka.Annotations;
-using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
-using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
 using static Akka.Streams.Implementation.Fusing.GraphInterpreter;

@@ -9,7 +9,6 @@ using System;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
-using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util;
 using FluentAssertions;

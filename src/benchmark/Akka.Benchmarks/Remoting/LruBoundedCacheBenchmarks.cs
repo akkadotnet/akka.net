@@ -12,7 +12,6 @@ using Akka.Actor.Dsl;
 using Akka.Benchmarks.Configurations;
 using Akka.Configuration;
 using Akka.Remote.Serialization;
-using Akka.Util;
 using BenchmarkDotNet.Attributes;
 
 namespace Akka.Benchmarks.Remoting

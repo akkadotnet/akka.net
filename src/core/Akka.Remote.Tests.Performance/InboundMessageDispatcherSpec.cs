@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;

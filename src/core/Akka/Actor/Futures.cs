@@ -6,12 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Util;
 using Akka.Util.Internal;

@@ -11,11 +11,9 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Util;
-using Akka.Util.Extensions;
 using Akka.Util.Internal;
 using Address = Akka.Actor.Address;
 

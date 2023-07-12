@@ -13,7 +13,6 @@ using Akka.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Akka.Tests.Actor.Scheduler
 {

@@ -5,13 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.IO;
-using System.Text;
-using Akka.Actor;
-using Akka.Serialization;
-using Akka.Util;
-
 namespace Akka.Persistence.Serialization
 {
     /// <summary>

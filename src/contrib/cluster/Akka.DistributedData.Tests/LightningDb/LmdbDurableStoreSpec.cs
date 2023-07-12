@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System.IO;
-using Akka.Actor;
 using Akka.Configuration;
 using Akka.DistributedData.Durable;
 using Akka.DistributedData.LightningDB;

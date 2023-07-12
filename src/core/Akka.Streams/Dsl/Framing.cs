@@ -13,7 +13,6 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Streams.Dsl
 {

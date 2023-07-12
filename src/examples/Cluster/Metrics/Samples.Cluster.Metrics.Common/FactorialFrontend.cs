@@ -10,12 +10,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
-using System.Text;
 using Akka.Actor;
 using Akka.Cluster.Metrics;
 using Akka.Cluster.Routing;
 using Akka.Event;
-using Akka.Routing;
 
 namespace Samples.Cluster.Metrics.Common
 {

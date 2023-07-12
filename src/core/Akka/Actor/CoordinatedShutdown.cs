@@ -10,14 +10,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
 using static Akka.Pattern.FutureTimeoutSupport;
-using static Akka.Util.Internal.TaskEx;
 using Config = Akka.Configuration.Config;
 
 namespace Akka.Actor

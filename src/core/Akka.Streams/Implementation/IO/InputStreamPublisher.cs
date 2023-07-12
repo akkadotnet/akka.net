@@ -13,7 +13,6 @@ using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.IO;
-using Akka.Util;
 
 namespace Akka.Streams.Implementation.IO
 {

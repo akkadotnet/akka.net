@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Actors;

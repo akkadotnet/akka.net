@@ -5,11 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
-using Akka.Persistence.TestKit.Performance;
-using Akka.Util.Internal;
-using Xunit.Abstractions;
-
 namespace Akka.Persistence.Sqlite.Tests.Performance
 {
     // Skip performance test. Commented out for now, we'll add a specific environment variable controlled skipable fact later

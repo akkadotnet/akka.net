@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,12 +16,8 @@ using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
-using Akka.Streams.Supervision;
-using Akka.Streams.Util;
 using Akka.Util;
 using Reactive.Streams;
-using Decider = Akka.Streams.Supervision.Decider;
-using Directive = Akka.Streams.Supervision.Directive;
 
 namespace Akka.Streams.Implementation
 {

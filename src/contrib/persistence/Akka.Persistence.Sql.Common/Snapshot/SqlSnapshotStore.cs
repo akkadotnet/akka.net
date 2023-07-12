@@ -13,7 +13,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Snapshot;
-using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Persistence.Sql.Common.Snapshot

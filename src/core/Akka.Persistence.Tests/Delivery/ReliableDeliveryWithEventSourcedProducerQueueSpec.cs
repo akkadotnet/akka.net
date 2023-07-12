@@ -11,7 +11,6 @@ using Akka.Configuration;
 using Akka.Delivery;
 using Akka.Event;
 using Akka.Persistence.Delivery;
-using Akka.Persistence.Tests.Serialization;
 using Akka.Remote.Configuration;
 using Akka.TestKit;
 using Akka.Util;

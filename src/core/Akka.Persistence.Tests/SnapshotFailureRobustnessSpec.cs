@@ -6,16 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Snapshot;
-using Akka.TestKit.TestEvent;
 using Akka.Util.Internal;
-using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 

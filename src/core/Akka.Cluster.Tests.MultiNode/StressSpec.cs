@@ -27,7 +27,6 @@ using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util;
 using FluentAssertions;
-using Google.Protobuf.WellKnownTypes;
 using Environment = System.Environment;
 
 namespace Akka.Cluster.Tests.MultiNode

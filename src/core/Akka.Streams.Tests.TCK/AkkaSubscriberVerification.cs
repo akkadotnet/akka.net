@@ -7,7 +7,6 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal;

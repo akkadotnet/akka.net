@@ -16,7 +16,6 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Internal;
-using Get = Akka.DistributedData.Get;
 
 namespace Akka.Cluster.Sharding
 {

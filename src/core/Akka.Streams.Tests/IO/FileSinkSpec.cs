@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -24,7 +23,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.IO
 {

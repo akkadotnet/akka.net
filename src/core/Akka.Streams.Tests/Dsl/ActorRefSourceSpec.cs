@@ -7,13 +7,11 @@
 
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
-using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 // ReSharper disable InvokeAsExtensionMethod

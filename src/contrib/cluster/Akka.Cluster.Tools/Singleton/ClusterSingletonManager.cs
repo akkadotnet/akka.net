@@ -16,7 +16,6 @@ using Akka.Configuration;
 using Akka.Coordination;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Pattern;
 using Akka.Remote;
 using Akka.Util.Internal;
 using static Akka.Cluster.ClusterEvent;

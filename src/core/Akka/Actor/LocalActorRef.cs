@@ -7,11 +7,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
-using Akka.Util.Internal;
 using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor

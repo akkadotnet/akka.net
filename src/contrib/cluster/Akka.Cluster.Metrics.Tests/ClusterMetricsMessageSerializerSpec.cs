@@ -5,10 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Immutable;
 using Akka.Actor;
-using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Cluster.Tests;
 using Akka.TestKit;

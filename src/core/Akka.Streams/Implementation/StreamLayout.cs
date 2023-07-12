@@ -12,7 +12,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Annotations;
-using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;

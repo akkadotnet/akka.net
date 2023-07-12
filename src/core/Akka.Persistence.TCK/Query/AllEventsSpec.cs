@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;

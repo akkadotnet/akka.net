@@ -9,7 +9,6 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace Akka.IO
 {

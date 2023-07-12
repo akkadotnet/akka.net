@@ -6,12 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
-using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Routing;
 using Akka.Routing;
-using Akka.Util.Internal;
 
 namespace Akka.Remote
 {

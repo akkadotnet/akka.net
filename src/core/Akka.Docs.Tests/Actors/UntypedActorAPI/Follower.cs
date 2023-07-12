@@ -6,9 +6,6 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Event;
-using System;
-using System.Collections.Immutable;
 
 namespace DocsExamples.Actor.UntypedActorAPI
 {

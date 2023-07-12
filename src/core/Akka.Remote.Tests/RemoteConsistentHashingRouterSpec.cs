@@ -10,7 +10,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using FluentAssertions;
 using Xunit;
 
 namespace Akka.Remote.Tests

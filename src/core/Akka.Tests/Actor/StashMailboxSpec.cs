@@ -5,13 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Actor;
 using Akka.Dispatch;
-using Akka.Dispatch.MessageQueues;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
-using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Actor

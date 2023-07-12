@@ -6,15 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.TestKit;
 using Akka.TestKit.Extensions;
-using Akka.Tests.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
