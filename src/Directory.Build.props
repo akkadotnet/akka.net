@@ -14,8 +14,8 @@
     <LangVersion>11.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <XunitVersion>2.4.2</XunitVersion>
-    <XunitRunnerVersion>2.4.2</XunitRunnerVersion>
+    <XunitVersion>2.5.0</XunitVersion>
+    <XunitRunnerVersion>2.5.0</XunitRunnerVersion>
     <TestSdkVersion>17.6.3</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
