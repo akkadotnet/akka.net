@@ -8,10 +8,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
+using FluentAssertions;
 
 namespace Akka.Persistence.Tests
 {
@@ -128,6 +131,61 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        private sealed class Finish
+        {
+        }
+        
+        internal class SendTestActor : AtLeastOnceDeliveryReceiveActor
+        {
+            private int _identityCount;
+            private Dictionary<Guid, IActorRef> _guids = new Dictionary<Guid, IActorRef>();
+            public override string PersistenceId => "SendTest";
+
+            public SendTestActor(IActorRef probe)
+            {
+                Command<ActorIdentity>(msg =>
+                {
+                    var guid = Guid.Parse(msg.MessageId.ToString());
+                    if (!_guids.TryGetValue(guid, out var actor) || !actor.Equals(msg.Subject))
+                        throw new Exception("CORRELATION FAILED");
+                    _identityCount++;
+                });
+                
+                Command<Finish>(_ =>
+                {
+                    Sender.Tell((_guids, _identityCount));
+                });
+                
+                CommandAny(msg =>
+                {
+                    var actor = Context.System.ActorOf(Props.Create(() => new SendTestReceiverActor(probe)));
+                    
+                    var guid = Guid.NewGuid();
+                    _guids[guid] = actor;
+                    actor.Tell(new Identify(guid));
+                    actor.Tell($"one-{msg}");
+                    
+                    guid = Guid.NewGuid();
+                    _guids[guid] = actor;
+                    actor.Tell(new Identify(guid));
+                    actor.Tell($"two-{msg}");
+                    
+                    guid = Guid.NewGuid();
+                    _guids[guid] = actor;
+                    actor.Tell(new Identify(guid));
+                    actor.Tell($"three-{msg}");
+                });
+            }
+        }
+        
+        internal class SendTestReceiverActor : ReceiveActor
+        {
+            public SendTestReceiverActor(IActorRef probe)
+            {
+                Receive<string>(probe.Tell);
+            }
+        }
+        
         internal class Receiver : AtLeastOnceDeliveryReceiveActor
         {
             private readonly IDictionary<string, ActorPath> _destinations;
@@ -354,11 +412,46 @@ namespace Akka.Persistence.Tests
 
         #endregion
 
-        public AtLeastOnceDeliveryReceiveActorSpec()
-            : base(Configuration("AtLeastOnceDeliveryReceiveActorSpec"))
+        public AtLeastOnceDeliveryReceiveActorSpec(ITestOutputHelper output)
+            : base(Configuration("AtLeastOnceDeliveryReceiveActorSpec"), output)
         {
         }
 
+        [Fact(DisplayName = "PersistentReceive must be able to send multiple messages to actors created inside handler")]
+        public async Task SendTestTest()
+        {
+            const int totalSend = 10000;
+            
+            var probe = CreateTestProbe();
+            var sendActor = Sys.ActorOf(Props.Create(() => new SendTestActor(probe)));
+
+            var expected = new List<string>();
+            foreach (var i in Enumerable.Range(0, totalSend))
+            {
+                expected.Add($"one-{i}");
+                expected.Add($"two-{i}");
+                expected.Add($"three-{i}");
+            }            
+            
+            foreach (var i in Enumerable.Range(0, totalSend))
+            {
+                sendActor.Tell(i);
+            }
+
+            foreach (var _ in Enumerable.Range(0, totalSend * 3))
+            {
+                var received = probe.ExpectMsg<string>();
+                expected.Should().Contain(received);
+                expected.Remove(received);
+            }
+
+            expected.Count.Should().Be(0);
+
+            var (dict, count) = await sendActor.Ask<(Dictionary<Guid, IActorRef>, int)>(new Finish());
+            dict.Count.Should().Be(totalSend * 3);
+            count.Should().Be(dict.Count);
+        }
+        
         [Fact]
         public void PersistentReceive_must_deliver_messages_in_order_when_nothing_is_lost()
         {
