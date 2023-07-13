@@ -455,7 +455,7 @@ namespace Akka.Cluster
         /// <param name="gossip">TBD</param>
         /// <param name="deadline">TBD</param>
         /// <returns>TBD</returns>
-        public GossipEnvelope(UniqueAddress from, UniqueAddress to, Gossip gossip, Deadline deadline = null)
+        public GossipEnvelope(UniqueAddress from, UniqueAddress to, Gossip gossip, Deadline? deadline = null)
         {
             _from = from;
             _to = to;
@@ -478,7 +478,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        public Deadline Deadline { get; set; }
+        public Deadline? Deadline { get; set; }
     }
 
     /// <summary>

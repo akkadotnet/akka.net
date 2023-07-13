@@ -64,8 +64,9 @@ namespace Akka.Remote
         public override string ToString() { }
     }
     public delegate long Clock();
-    public class Deadline
+    public struct Deadline
     {
+        public static readonly Akka.Remote.Deadline Never;
         public Deadline(System.DateTime when) { }
         public bool HasTimeLeft { get; }
         public bool IsOverdue { get; }
@@ -76,6 +77,8 @@ namespace Akka.Remote
         public override int GetHashCode() { }
         public static Akka.Remote.Deadline +(Akka.Remote.Deadline deadline, System.TimeSpan duration) { }
         public static Akka.Remote.Deadline +(Akka.Remote.Deadline deadline, System.Nullable<System.TimeSpan> duration) { }
+        public static bool ==(Akka.Remote.Deadline left, Akka.Remote.Deadline right) { }
+        public static bool !=(Akka.Remote.Deadline left, Akka.Remote.Deadline right) { }
     }
     public class DeadlineFailureDetector : Akka.Remote.FailureDetector
     {

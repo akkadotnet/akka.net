@@ -452,7 +452,7 @@ namespace Akka.Remote.Transport
             return new AckAndMessage(ackOption, messageOption);
         }
 
-        private AcknowledgementInfo AckBuilder(Ack ack)
+        private static AcknowledgementInfo AckBuilder(Ack ack)
         {
             var acki = new AcknowledgementInfo();
             acki.CumulativeAck = (ulong)ack.CumulativeAck.RawValue;

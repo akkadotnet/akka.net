@@ -75,7 +75,7 @@ namespace Akka.Remote.TestKit
             public Deadline Deadline { get; private set; }
 
             public Data Copy(ImmutableHashSet<Controller.NodeInfo> clients = null, string barrier = null,
-                ImmutableHashSet<IActorRef> arrived = null, Deadline deadline = null)
+                ImmutableHashSet<IActorRef> arrived = null, Deadline? deadline = null)
             {
                 return new Data(clients ?? Clients,
                     barrier ?? Barrier,
@@ -494,7 +494,7 @@ namespace Akka.Remote.TestKit
 
         protected void InitFSM()
         {
-            StartWith(State.Idle, new Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "", ImmutableHashSet.Create<IActorRef>(), null));
+            StartWith(State.Idle, new Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "", ImmutableHashSet.Create<IActorRef>(), Deadline.Never));
 
             WhenUnhandled(@event =>
             {

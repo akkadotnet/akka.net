@@ -512,7 +512,7 @@ namespace Akka.Remote
         /// </summary>
         public bool UidConfirmed { get; private set; }
 
-        private Deadline _bailoutAt = null;
+        private Deadline _bailoutAt = Deadline.Never;
 
         /// <summary>
         /// TBD
@@ -528,7 +528,7 @@ namespace Akka.Remote
                 _log.Warning("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", _remoteAddress, _settings.RetryGateClosedFor.TotalMilliseconds, ex);
                 UidConfirmed = false; // Need confirmation of UID again
 
-                if ((_resendBuffer.Nacked.Any() || _resendBuffer.NonAcked.Any()) && _bailoutAt == null)
+                if ((_resendBuffer.Nacked.Any() || _resendBuffer.NonAcked.Any()) && _bailoutAt == Deadline.Never)
                     _bailoutAt = Deadline.Now + _settings.InitialSysMsgDeliveryTimeout;
                 Become(() => Gated(writerTerminated: false, earlyUngateRequested: false));
                 _currentHandle = null;
@@ -548,7 +548,7 @@ namespace Akka.Remote
         {
             _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(_settings.SysMsgBufferSize);
             _seqCounter = 0L;
-            _bailoutAt = null;
+            _bailoutAt = Deadline.Never;
         }
 
         private SeqNo NextSeq()
@@ -642,7 +642,7 @@ namespace Akka.Remote
             });
             Receive<GotUid>(g =>
             {
-                _bailoutAt = null;
+                _bailoutAt = Deadline.Never;
                 Context.Parent.Tell(g);
                 //New system that has the same address as the old - need to start from fresh state
                 UidConfirmed = true;
