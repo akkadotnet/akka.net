@@ -10,19 +10,23 @@ using Xunit;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using System;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Nito.AsyncEx;
 using Akka.Dispatch.SysMsg;
+using Akka.TestKit.TestActors;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor
 {
     public class AskSpec : AkkaSpec
     {
-        public AskSpec()
-            : base(@"akka.actor.ask-timeout = 3000ms")
+        public AskSpec(ITestOutputHelper outputHelper)
+            : base(@"akka.actor.ask-timeout = 3000ms", outputHelper)
         { }
 
         public class SomeActor : UntypedActor
@@ -109,6 +113,27 @@ namespace Akka.Tests.Actor
 
         public sealed class DummySystemMessage : ISystemMessage
         {
+        }
+
+        public sealed class AsyncAwaitActor : ReceiveActor
+        {
+            private readonly IActorRef _replyActor;
+            private readonly bool _configureAwait;
+
+            public AsyncAwaitActor(IActorRef replyActor, bool configureAwait)
+            {
+                _replyActor = replyActor;
+                _configureAwait = configureAwait;
+
+                ReceiveAsync<int>(async max =>
+                {
+                    foreach (var i in Enumerable.Range(0, max))
+                    {
+                        var count = await _replyActor.Ask<int>(i, TimeSpan.FromSeconds(1)).ConfigureAwait(configureAwait);
+                        Sender.Tell(count);
+                    }
+                });
+            }
         }
 
         [Fact]
@@ -320,6 +345,23 @@ namespace Akka.Tests.Actor
             var waitActor = Sys.ActorOf(Props.Create(() => new WaitActor(replyActor, TestActor)));
             waitActor.Tell("ask");
             ExpectMsg("bar");
+        }
+        
+        /// <summary>
+        /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/6279
+        /// </summary>
+        /// <param name="configureAwait">Input for actor's ConfigureAwait(bool)</param>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Actor_should_Await_on_Ask_inside_receive_loop(bool configureAwait)
+        {
+            var count = 3;
+            var replyActor = Sys.ActorOf(act => { act.ReceiveAny((o, context) => context.Sender.Tell(o)); });
+            // create AsyncAwaitActor
+            var asyncAwaitActor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor(replyActor, configureAwait)));
+            asyncAwaitActor.Tell(count);
+            ReceiveN(count, Debugger.IsAttached ? TimeSpan.FromMinutes(2) : RemainingOrDefault);
         }
     }
 }
