@@ -344,7 +344,7 @@ namespace Akka.DistributedData
 
             public LWWDictionaryDelta(ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation underlying)
             {
-                Underlying = underlying;
+                Underlying = underlying ?? throw new ArgumentNullException(nameof(underlying), "Delta operation can not be null");
                 if (underlying is IReplicatedDeltaSize s)
                 {
                     DeltaSize = s.DeltaSize;
