@@ -8,6 +8,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,8 +17,6 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Sdk;
-using static FluentAssertions.FluentActions;
 
 namespace Akka.Tests.Pattern
 {
@@ -362,8 +361,7 @@ namespace Akka.Tests.Pattern
         protected static async Task<T> InterceptException<T>(Func<Task> actionThatThrows)
             where T : Exception
         {
-            return (await Awaiting(actionThatThrows)
-                .Should().ThrowExactlyAsync<T>()).And;
+            return (await actionThatThrows.Should().ThrowExactlyAsync<T>()).And;
         }
 
         public TestBreaker ShortCallTimeoutCb() =>

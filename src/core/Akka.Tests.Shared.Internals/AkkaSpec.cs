@@ -277,6 +277,11 @@ namespace Akka.TestKit
                 .Should().ThrowExactly<T>().And;
         }
 
+        protected async Task<T> InterceptAsync<T>(Func<Task> funcThatThrows) where T : Exception
+        {
+            return (await funcThatThrows.Should().ThrowExactlyAsync<T>()).And;
+        }
+
         /// <summary>
         /// Ensure that an expected exception is thrown by the passed function value. The thrown exception must be an
         /// instance of the type specified by the type parameter of this method. This method invokes the passed
