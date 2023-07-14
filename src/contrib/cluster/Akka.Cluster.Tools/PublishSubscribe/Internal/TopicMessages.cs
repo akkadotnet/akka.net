@@ -159,7 +159,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public Routee Routee { get { return _routee ?? (_routee = Ref != null ? new ActorRefRoutee(Ref) : null); } }
+        public Routee Routee { get { return _routee ??= Ref != null ? new ActorRefRoutee(Ref) : null; } }
 
         /// <inheritdoc/>
         public bool Equals(ValueHolder other)
