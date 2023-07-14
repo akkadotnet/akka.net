@@ -19,9 +19,11 @@ using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
+using static FluentAssertions.FluentActions;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.TestKit
@@ -271,23 +273,8 @@ namespace Akka.TestKit
         /// <exception cref="ThrowsException">If the passed action does not complete abruptly with an exception that's an instance of the specified type.</exception>
         protected T Intercept<T>(Action actionThatThrows) where T : Exception
         {
-            try
-            {
-                actionThatThrows();
-            }
-            catch (Exception ex)
-            {
-                var exception = ex is AggregateException aggregateException
-                    ? aggregateException.Flatten().InnerExceptions[0]
-                    : ex;
-
-                var exceptionType = typeof(T);
-                return exceptionType == exception.GetType()
-                    ? (T)exception
-                    : throw new ThrowsException(exceptionType, exception);
-            }
-
-            throw new ThrowsException(typeof(T));
+            return Invoking(actionThatThrows)
+                .Should().ThrowExactly<T>().And;
         }
 
         /// <summary>
@@ -308,38 +295,13 @@ namespace Akka.TestKit
         /// <exception cref="ThrowsException">If the passed action does not complete abruptly with an exception that's an instance of the specified type.</exception>
         protected void AssertThrows<T>(Action actionThatThrows) where T : Exception
         {
-            try
-            {
-                actionThatThrows();
-            }
-            catch (Exception ex)
-            {
-                var exception = ex is AggregateException aggregateException
-                    ? aggregateException.Flatten().InnerExceptions[0]
-                    : ex;
-
-                var exceptionType = typeof(T);
-                if (exceptionType == exception.GetType())
-                    return;
-
-                throw new ThrowsException(exceptionType, exception);
-            }
-
-            throw new ThrowsException(typeof(T));
+            Intercept<T>(actionThatThrows); 
         }
 
         [Obsolete("Use AssertThrows instead.")]
         protected void Intercept(Action actionThatThrows)
         {
-            try
-            {
-                actionThatThrows();
-            }
-            catch(Exception)
-            {
-                return;
-            }
-            throw new ThrowsException(typeof(Exception));
+            Invoking(actionThatThrows).Should().Throw<Exception>();
         }
 
         protected void MuteDeadLetters(params Type[] messageClasses)
