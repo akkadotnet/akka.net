@@ -9,7 +9,7 @@ using System;
 using System.Runtime.Serialization;
 using Xunit.Sdk;
 
-namespace Akka.TestKit.Xunit2.Internals
+namespace Akka.TestKit.Xunit.Internals
 {
     /// <summary>
     /// TBD
