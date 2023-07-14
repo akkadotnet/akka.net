@@ -7,7 +7,6 @@
 
 using System;
 using Akka.TestKit.Xunit.Internals;
-using Akka.TestKit.Xunit2.Internals;
 using Xunit;
 
 namespace Akka.TestKit.Xunit
