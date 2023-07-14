@@ -479,6 +479,18 @@ namespace Akka.Remote.Transport
         public override System.Threading.Tasks.Task<System.ValueTuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen() { }
         public override System.Threading.Tasks.Task<bool> Shutdown() { }
     }
+    public abstract class AbstractTransportAdapterHandle : Akka.Remote.Transport.AssociationHandle
+    {
+        protected AbstractTransportAdapterHandle(Akka.Remote.Transport.AssociationHandle wrappedHandle, string addedSchemeIdentifier) { }
+        protected AbstractTransportAdapterHandle(Akka.Actor.Address originalLocalAddress, Akka.Actor.Address originalRemoteAddress, Akka.Remote.Transport.AssociationHandle wrappedHandle, string addedSchemeIdentifier) { }
+        public Akka.Actor.Address OriginalLocalAddress { get; }
+        public Akka.Actor.Address OriginalRemoteAddress { get; }
+        protected Akka.Remote.Transport.SchemeAugmenter SchemeAugmenter { get; }
+        public Akka.Remote.Transport.AssociationHandle WrappedHandle { get; }
+        protected bool Equals(Akka.Remote.Transport.AbstractTransportAdapterHandle other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
     public abstract class Activity
     {
         protected Activity() { }
@@ -506,6 +518,17 @@ namespace Akka.Remote.Transport
         protected override System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> InterceptListen(Akka.Actor.Address listenAddress, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> listenerTask) { }
         public override System.Threading.Tasks.Task<bool> Shutdown() { }
     }
+    public abstract class ActorTransportAdapterManager : Akka.Actor.UntypedActor
+    {
+        protected Akka.Remote.Transport.IAssociationEventListener AssociationListener;
+        protected System.Collections.Generic.Queue<object> DelayedEvents;
+        protected Akka.Actor.Address LocalAddress;
+        protected long UniqueId;
+        protected ActorTransportAdapterManager() { }
+        protected long NextId() { }
+        protected override void OnReceive(object message) { }
+        protected abstract void Ready(object message);
+    }
     public class AkkaProtocolException : Akka.Actor.AkkaException
     {
         public AkkaProtocolException(string message, System.Exception cause = null) { }
@@ -516,6 +539,12 @@ namespace Akka.Remote.Transport
         public AssociateAttempt(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress) { }
         public Akka.Actor.Address LocalAddress { get; }
         public Akka.Actor.Address RemoteAddress { get; }
+    }
+    public sealed class AssociateUnderlying : Akka.Remote.Transport.TransportOperation
+    {
+        public AssociateUnderlying(Akka.Actor.Address remoteAddress, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.AssociationHandle> statusPromise) { }
+        public Akka.Actor.Address RemoteAddress { get; }
+        public System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.AssociationHandle> StatusPromise { get; }
     }
     public abstract class AssociationHandle
     {
@@ -567,6 +596,11 @@ namespace Akka.Remote.Transport
         Unknown = 0,
         Shutdown = 1,
         Quarantined = 2,
+    }
+    public sealed class DisassociateUnderlying : Akka.Remote.Transport.TransportOperation, Akka.Event.IDeadLetterSuppression
+    {
+        public DisassociateUnderlying(Akka.Remote.Transport.DisassociateInfo info = 0) { }
+        public Akka.Remote.Transport.DisassociateInfo Info { get; }
     }
     public sealed class Disassociated : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Remote.Transport.IHandleEvent
     {
@@ -668,6 +702,17 @@ namespace Akka.Remote.Transport
     {
         public ListenAttempt(Akka.Actor.Address boundAddress) { }
         public Akka.Actor.Address BoundAddress { get; }
+    }
+    public sealed class ListenUnderlying : Akka.Remote.Transport.TransportOperation
+    {
+        public ListenUnderlying(Akka.Actor.Address listenAddress, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> upstreamListener) { }
+        public Akka.Actor.Address ListenAddress { get; }
+        public System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> UpstreamListener { get; }
+    }
+    public sealed class ListenerRegistered : Akka.Remote.Transport.TransportOperation
+    {
+        public ListenerRegistered(Akka.Remote.Transport.IAssociationEventListener listener) { }
+        public Akka.Remote.Transport.IAssociationEventListener Listener { get; }
     }
     public class SchemeAugmenter
     {
@@ -787,6 +832,11 @@ namespace Akka.Remote.Transport
         public abstract System.Threading.Tasks.Task<System.ValueTuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen();
         public virtual System.Threading.Tasks.Task<bool> ManagementCommand(object message) { }
         public abstract System.Threading.Tasks.Task<bool> Shutdown();
+    }
+    public abstract class TransportOperation : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        public static readonly System.TimeSpan AskTimeout;
+        protected TransportOperation() { }
     }
     public sealed class UnderlyingTransportError : Akka.Actor.INoSerializationVerificationNeeded, Akka.Remote.Transport.IHandleEvent
     {
