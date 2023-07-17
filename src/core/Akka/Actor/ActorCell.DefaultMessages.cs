@@ -53,11 +53,11 @@ namespace Akka.Actor
         /// <exception cref="ActorKilledException">
         /// This exception is thrown if a <see cref="Akka.Actor.Kill"/> message is included in the given <paramref name="envelope"/>.
         /// </exception>>
-        public void Invoke(Envelope envelope)
+        public void Invoke(in Envelope envelope)
         {
 
             var message = envelope.Message;
-            var influenceReceiveTimeout = !(message is INotInfluenceReceiveTimeout);
+            var influenceReceiveTimeout = message is not INotInfluenceReceiveTimeout;
 
             try
             {
@@ -130,12 +130,12 @@ namespace Akka.Actor
         /// <exception cref="ActorKilledException">
         /// This exception is thrown if a <see cref="Akka.Actor.Kill"/> message is included in the given <paramref name="envelope"/>.
         /// </exception>
-        protected internal virtual void AutoReceiveMessage(Envelope envelope)
+        protected internal virtual void AutoReceiveMessage(in Envelope envelope)
         {
             var message = envelope.Message;
 
             var actor = _actor;
-            var actorType = actor != null ? actor.GetType() : null;
+            var actorType = actor?.GetType();
 
             if (System.Settings.DebugAutoReceive)
                 Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));

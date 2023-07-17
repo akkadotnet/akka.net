@@ -292,7 +292,7 @@ namespace Akka.Tests.Actor.Dispatch
                 base.Resume(actorCell);
             }
 
-            public override void Dispatch(ActorCell cell, Envelope envelope)
+            public override void Dispatch(ActorCell cell, in Envelope envelope)
             {
                 GetStats(cell.Self).MsgsReceived.IncrementAndGet();
                 base.Dispatch(cell, envelope);

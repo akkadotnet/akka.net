@@ -68,7 +68,7 @@ namespace Akka.Event
 
         int IMessageQueue.Count => MessageQueue.Count;
 
-        void IMessageQueue.Enqueue(IActorRef receiver, Envelope envelope)
+        void IMessageQueue.Enqueue(IActorRef receiver, in Envelope envelope)
         {
             MessageQueue.Enqueue(receiver, envelope);
         }

@@ -87,7 +87,7 @@ namespace Akka.Actor
         protected void AddWatcher(Akka.Actor.IActorRef watchee, Akka.Actor.IActorRef watcher) { }
         protected void AddressTerminated(Akka.Actor.Address address) { }
         public virtual Akka.Actor.IActorRef AttachChild(Akka.Actor.Props props, bool isSystemService, string name = null) { }
-        protected virtual void AutoReceiveMessage(Akka.Actor.Envelope envelope) { }
+        protected virtual void AutoReceiveMessage([System.Runtime.CompilerServices.IsReadOnlyAttribute()] Akka.Actor.Envelope& modreq(System.Runtime.InteropServices.InAttribute) envelope) { }
         public void Become(Akka.Actor.Receive receive) { }
         public void BecomeStacked(Akka.Actor.Receive receive) { }
         public void CheckReceiveTimeout(bool reschedule = True) { }
@@ -102,7 +102,7 @@ namespace Akka.Actor
         public Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         public void Init(bool sendSupervise, Akka.Dispatch.MailboxType mailboxType) { }
         public Akka.Actor.Internal.ChildRestartStats InitChild(Akka.Actor.IInternalActorRef actor) { }
-        public void Invoke(Akka.Actor.Envelope envelope) { }
+        public void Invoke([System.Runtime.CompilerServices.IsReadOnlyAttribute()] ref Akka.Actor.Envelope envelope) { }
         protected virtual void PreStart() { }
         protected void PrepareForNewActor() { }
         protected virtual void ReceiveMessage(object message) { }
@@ -113,7 +113,7 @@ namespace Akka.Actor
         public void ReserveChild(string name) { }
         public void Restart(System.Exception cause) { }
         public void Resume(System.Exception causedByFailure) { }
-        public virtual void SendMessage(Akka.Actor.Envelope message) { }
+        public virtual void SendMessage([System.Runtime.CompilerServices.IsReadOnlyAttribute()] Akka.Actor.Envelope& modreq(System.Runtime.InteropServices.InAttribute) message) { }
         public virtual void SendMessage(Akka.Actor.IActorRef sender, object message) { }
         public virtual void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage systemMessage) { }
         protected void SetActorFields(Akka.Actor.ActorBase actor) { }
@@ -2892,7 +2892,7 @@ namespace Akka.Dispatch
     }
     public interface IDequeBasedMessageQueueSemantics : Akka.Dispatch.ISemantics
     {
-        void EnqueueFirst(Akka.Actor.Envelope envelope);
+        void EnqueueFirst([System.Runtime.CompilerServices.IsReadOnlyAttribute()] Akka.Actor.Envelope& modreq(System.Runtime.InteropServices.InAttribute) envelope);
     }
     public interface IDispatcherPrerequisites
     {
@@ -2966,7 +2966,7 @@ namespace Akka.Dispatch
         public System.Nullable<long> ThroughputDeadlineTime { get; set; }
         public virtual void Attach(Akka.Actor.ActorCell cell) { }
         public virtual void Detach(Akka.Actor.ActorCell cell) { }
-        public virtual void Dispatch(Akka.Actor.ActorCell cell, Akka.Actor.Envelope envelope) { }
+        public virtual void Dispatch(Akka.Actor.ActorCell cell, [System.Runtime.CompilerServices.IsReadOnlyAttribute()] Akka.Actor.Envelope& modreq(System.Runtime.InteropServices.InAttribute) envelope) { }
         protected abstract void ExecuteTask(Akka.Dispatch.IRunnable run);
         protected void ReportFailure(System.Exception ex) { }
         public void Schedule(System.Action run) { }
@@ -3050,7 +3050,7 @@ namespace Akka.Dispatch.MessageQueues
         public bool HasMessages { get; }
         protected abstract int LockedCount { get; }
         public void CleanUp(Akka.Actor.IActorRef owner, Akka.Dispatch.MessageQueues.IMessageQueue deadletters) { }
-        public void Enqueue(Akka.Actor.IActorRef receiver, Akka.Actor.Envelope envelope) { }
+        public void Enqueue(Akka.Actor.IActorRef receiver, [System.Runtime.CompilerServices.IsReadOnlyAttribute()] ref Akka.Actor.Envelope envelope) { }
         protected abstract void LockedEnqueue(Akka.Actor.Envelope envelope);
         protected abstract bool LockedTryDequeue(out Akka.Actor.Envelope envelope);
         public bool TryDequeue(out Akka.Actor.Envelope envelope) { }
@@ -3068,7 +3068,7 @@ namespace Akka.Dispatch.MessageQueues
         public bool HasMessages { get; }
         public System.TimeSpan PushTimeOut { get; set; }
         public void CleanUp(Akka.Actor.IActorRef owner, Akka.Dispatch.MessageQueues.IMessageQueue deadletters) { }
-        public void Enqueue(Akka.Actor.IActorRef receiver, Akka.Actor.Envelope envelope) { }
+        public void Enqueue(Akka.Actor.IActorRef receiver, [System.Runtime.CompilerServices.IsReadOnlyAttribute()] ref Akka.Actor.Envelope envelope) { }
         public bool TryDequeue(out Akka.Actor.Envelope envelope) { }
     }
     public class DequeWrapperMessageQueue : Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.MessageQueues.IMessageQueue
@@ -3078,8 +3078,8 @@ namespace Akka.Dispatch.MessageQueues
         public int Count { get; }
         public bool HasMessages { get; }
         public void CleanUp(Akka.Actor.IActorRef owner, Akka.Dispatch.MessageQueues.IMessageQueue deadletters) { }
-        public void Enqueue(Akka.Actor.IActorRef receiver, Akka.Actor.Envelope envelope) { }
-        public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
+        public void Enqueue(Akka.Actor.IActorRef receiver, [System.Runtime.CompilerServices.IsReadOnlyAttribute()] ref Akka.Actor.Envelope envelope) { }
+        public void EnqueueFirst([System.Runtime.CompilerServices.IsReadOnlyAttribute()] ref Akka.Actor.Envelope envelope) { }
         public bool TryDequeue(out Akka.Actor.Envelope envelope) { }
     }
     public interface IMessageQueue
@@ -3087,7 +3087,7 @@ namespace Akka.Dispatch.MessageQueues
         int Count { get; }
         bool HasMessages { get; }
         void CleanUp(Akka.Actor.IActorRef owner, Akka.Dispatch.MessageQueues.IMessageQueue deadletters);
-        void Enqueue(Akka.Actor.IActorRef receiver, Akka.Actor.Envelope envelope);
+        void Enqueue(Akka.Actor.IActorRef receiver, [System.Runtime.CompilerServices.IsReadOnlyAttribute()] Akka.Actor.Envelope& modreq(System.Runtime.InteropServices.InAttribute) envelope);
         bool TryDequeue(out Akka.Actor.Envelope envelope);
     }
     public class UnboundedDequeMessageQueue : Akka.Dispatch.MessageQueues.DequeWrapperMessageQueue, Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics
@@ -3100,14 +3100,14 @@ namespace Akka.Dispatch.MessageQueues
         public int Count { get; }
         public bool HasMessages { get; }
         public void CleanUp(Akka.Actor.IActorRef owner, Akka.Dispatch.MessageQueues.IMessageQueue deadletters) { }
-        public void Enqueue(Akka.Actor.IActorRef receiver, Akka.Actor.Envelope envelope) { }
+        public void Enqueue(Akka.Actor.IActorRef receiver, [System.Runtime.CompilerServices.IsReadOnlyAttribute()] ref Akka.Actor.Envelope envelope) { }
         public bool TryDequeue(out Akka.Actor.Envelope envelope) { }
     }
     public class UnboundedPriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue, Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics
     {
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
-        public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
+        public void EnqueueFirst([System.Runtime.CompilerServices.IsReadOnlyAttribute()] ref Akka.Actor.Envelope envelope) { }
         protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
         protected override bool LockedTryDequeue(out Akka.Actor.Envelope envelope) { }
     }
@@ -3115,7 +3115,7 @@ namespace Akka.Dispatch.MessageQueues
     {
         public UnboundedStablePriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
-        public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
+        public void EnqueueFirst([System.Runtime.CompilerServices.IsReadOnlyAttribute()] ref Akka.Actor.Envelope envelope) { }
         protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
         protected override bool LockedTryDequeue(out Akka.Actor.Envelope envelope) { }
     }

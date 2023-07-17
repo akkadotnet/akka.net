@@ -28,7 +28,7 @@ namespace Akka.Dispatch.MessageQueues
         }
 
         /// <inheritdoc cref="IMessageQueue"/>
-        public void Enqueue(IActorRef receiver, Envelope envelope)
+        public void Enqueue(IActorRef receiver, in Envelope envelope)
         {
             _queue.Enqueue(envelope);
         }

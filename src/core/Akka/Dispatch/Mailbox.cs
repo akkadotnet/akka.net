@@ -113,7 +113,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="receiver">The actor sending this message to the mailbox</param>
         /// <param name="envelope">The envelope.</param>
-        internal void Enqueue(IActorRef receiver, Envelope envelope)
+        internal void Enqueue(IActorRef receiver, in Envelope envelope)
         {
             MessageQueue.Enqueue(receiver, envelope);
         }

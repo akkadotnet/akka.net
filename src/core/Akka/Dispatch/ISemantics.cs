@@ -62,7 +62,7 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         /// <param name="envelope">TBD</param>
-        void EnqueueFirst(Envelope envelope);
+        void EnqueueFirst(in Envelope envelope);
     }
 
     /// <summary>
