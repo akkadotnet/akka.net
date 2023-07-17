@@ -23,7 +23,7 @@ using BenchmarkDotNet.Engines;
 namespace Akka.Benchmarks
 {
     [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob(warmupCount: 1, invocationCount: 1, launchCount: 1, runStrategy: RunStrategy.Monitoring, targetCount: 100)]
+    [SimpleJob(warmupCount: 1, invocationCount: 1, launchCount: 1, runStrategy: RunStrategy.Monitoring)]
     public class TcpOperationsBenchmarks
     {
         private ActorSystem _system;

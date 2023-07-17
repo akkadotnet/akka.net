@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.TestKit.Xunit2.Internals;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Sdk;
@@ -79,12 +80,12 @@ namespace Akka.TestKit
             {
                 l1.Add($"'{e1.Current}'");
                 if (!e2.MoveNext())
-                    throw new AssertActualExpectedException(
+                    throw AkkaEqualException.ForMismatchedValues(
                         l2, l1, $"Input has more elements than expected, differ at index {index}");
                 
                 l2.Add($"'{e2.Current}'");
                 if(!comparer.Equals(e1.Current, e2.Current))
-                    throw new AssertActualExpectedException(
+                    throw AkkaEqualException.ForMismatchedValues(
                         l2, l1, $"Input is not equal to expected, differ at index {index}");
                 
                 index++;
@@ -93,7 +94,7 @@ namespace Akka.TestKit
             if (e2.MoveNext())
             {
                 l2.Add($"'{e2.Current}'");
-                throw new AssertActualExpectedException(
+                throw AkkaEqualException.ForMismatchedValues(
                     l2, l1, $"Input has less elements than expected, differ at index {index}");
             }
         }

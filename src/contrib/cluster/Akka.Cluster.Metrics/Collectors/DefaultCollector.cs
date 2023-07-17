@@ -56,25 +56,37 @@ namespace Akka.Cluster.Metrics.Collectors
             using (var process = Process.GetCurrentProcess())
             {
                 process.Refresh();
-                var metrics = new List<NodeMetrics.Types.Metric>()
-                {
-                    // Memory
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(true)).Value,
+                var metrics = new List<NodeMetrics.Types.Metric>();
+                
+                var totalMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(true));
+                if(totalMemory.HasValue)
+                    metrics.Add(totalMemory.Value);
                     
-                    // total committed process memory = working set + paged
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.WorkingSet64 + process.PagedMemorySize64).Value,
-                    // CPU Processors
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount).Value,
-                };
+                var availableMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.WorkingSet64 + process.PagedMemorySize64);
+                if(availableMemory.HasValue)
+                    metrics.Add(availableMemory.Value);
+
+                var processorCount = NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount);
+                if(processorCount.HasValue)
+                    metrics.Add(processorCount.Value);
 
                 if (process.MaxWorkingSet != IntPtr.Zero)
-                    metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.MaxMemoryRecommended, process.MaxWorkingSet.ToInt64()).Value);
+                {
+                    var workingSet = NodeMetrics.Types.Metric.Create(StandardMetrics.MaxMemoryRecommended, process.MaxWorkingSet.ToInt64());
+                    if(workingSet.HasValue)
+                        metrics.Add(workingSet.Value);
+                }
 
                 var (processCpuUsage, totalCpuUsage) = GetCpuUsages(process.Id);
+                
                 // CPU % by process
-                metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.CpuProcessUsage, processCpuUsage).Value);
+                var cpuUsage = NodeMetrics.Types.Metric.Create(StandardMetrics.CpuProcessUsage, processCpuUsage);
+                if(cpuUsage.HasValue)
+                    metrics.Add(cpuUsage.Value);
+                
                 // CPU % by all processes that are used for overall CPU capacity calculation
-                metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.CpuTotalUsage, totalCpuUsage).Value);
+                var totalCpu = NodeMetrics.Types.Metric.Create(StandardMetrics.CpuTotalUsage, totalCpuUsage);
+                metrics.Add(totalCpu.Value);
             
                 return new NodeMetrics(_address, DateTime.UtcNow.ToTimestamp(), metrics);
             }
