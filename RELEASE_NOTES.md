@@ -1,4 +1,4 @@
-#### 1.5.9 June 15th 2023 ####
+#### 1.5.9 July 18th 2023 ####
 
 Akka.NET v1.5.9 is a maintenance release that introduces some performance improvements and internal code cleanup/modernization.
 
