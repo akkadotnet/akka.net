@@ -17,6 +17,7 @@ using FsCheck;
 using FsCheck.Experimental;
 using FsCheck.Xunit;
 
+#pragma warning disable xUnit1028
 namespace Akka.Cluster.Tests
 {
     public class MemberOrderingModelBasedTests

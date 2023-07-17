@@ -19,6 +19,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
+using Akka.TestKit.Xunit2.Internals;
 using Akka.Util;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -698,7 +699,7 @@ namespace Akka.Streams.Tests.Dsl
                                 await RandomDemandAsync(map, props);
                             }
                             else
-                                throw new AssertActualExpectedException(true, false, "state.HasDemand INVALID STATE");
+                                throw new XunitException("state.HasDemand INVALID STATE");
                         }
                         else
                         {

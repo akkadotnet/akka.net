@@ -343,7 +343,7 @@ namespace Akka.Streams.Tests.IO
                     })
                     .RunWith(FileIO.ToFile(f), _materializer);
 
-                var ex = Intercept<AbruptIOTerminationException>(() => completion.Wait(TimeSpan.FromSeconds(3)));
+                var ex = await InterceptAsync<AbruptIOTerminationException>(() => completion).ShouldCompleteWithin(3.Seconds());
                 ex.IoResult.Count.ShouldBe(1001);
                 CheckFileContent(f, string.Join("", _testLines.TakeWhile(s => !s.Contains('b'))));
                 await Task.CompletedTask;
