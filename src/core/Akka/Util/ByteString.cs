@@ -686,13 +686,12 @@ namespace Akka.IO
             if (ReferenceEquals(other, null)) return false;
             if (_count != other._count) return false;
 
-            using (var thisEnum = this.GetEnumerator())
-            using (var otherEnum = other.GetEnumerator())
+            using var thisEnum = this.GetEnumerator();
+            using var otherEnum = other.GetEnumerator();
+
+            while (thisEnum.MoveNext() && otherEnum.MoveNext())
             {
-                while (thisEnum.MoveNext() && otherEnum.MoveNext())
-                {
-                    if (thisEnum.Current != otherEnum.Current) return false;
-                }
+                if (thisEnum.Current != otherEnum.Current) return false;
             }
 
             return true;

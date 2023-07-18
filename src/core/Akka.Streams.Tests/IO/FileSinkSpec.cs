@@ -478,14 +478,10 @@ namespace Akka.Streams.Tests.IO
 
         private static void CheckFileContent(FileInfo f, string contents)
         {
-            using (var s = f.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            {
-                using(var reader = new StreamReader(s))
-                {
-                    var cont = reader.ReadToEnd();
-                    cont.Should().Be(contents);
-                }
-            }
+            using var s = f.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(s);
+            var cont = reader.ReadToEnd();
+            cont.Should().Be(contents);
         }
     }
 }

@@ -123,16 +123,11 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the assembly that contains the given resource.</returns>
         public static Config FromResource(string resourceName, Assembly assembly)
         {
-            using(Stream stream = assembly.GetManifestResourceStream(resourceName))
-            {
-                Debug.Assert(stream != null, "stream != null");
-                using (var reader = new StreamReader(stream))
-                {
-                    string result = reader.ReadToEnd();
-
-                    return ParseString(result);
-                }
-            }
+            using Stream stream = assembly.GetManifestResourceStream(resourceName);
+            Debug.Assert(stream != null, "stream != null");
+            using var reader = new StreamReader(stream);
+            string result = reader.ReadToEnd();
+            return ParseString(result);
         }
 
         /// <summary>

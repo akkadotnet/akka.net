@@ -111,18 +111,19 @@ namespace DocsExamples.Configuration
         public void SerializationSetupShouldWorkAsExpected()
         {
             // <Verification>
+
             // consume the ActorSystemSetup
-            using (var actorSystem = ActorSystem.Create("TestSerialization", ActorSystemSettings))
-            {
-                // implements IAppProtocol
-                var ack = new Ack();
+            using var actorSystem = ActorSystem.Create("TestSerialization", ActorSystemSettings);
 
-                // lookup the serializer configured by Akka.NET to manage Ack
-                var foundSerializer = actorSystem.Serialization.FindSerializerFor(ack);
+            // implements IAppProtocol
+            var ack = new Ack();
 
-                // it's the custom serializer we specified in our SerializationSetup
-                foundSerializer.Should().BeOfType<AppProtocolSerializer>();
-            }
+            // lookup the serializer configured by Akka.NET to manage Ack
+            var foundSerializer = actorSystem.Serialization.FindSerializerFor(ack);
+
+            // it's the custom serializer we specified in our SerializationSetup
+            foundSerializer.Should().BeOfType<AppProtocolSerializer>();
+
             // </Verification>
         }
         [Fact]

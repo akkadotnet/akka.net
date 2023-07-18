@@ -132,22 +132,20 @@ namespace Akka.Persistence.Custom.Snapshot
             // Create SQLite journal tables 
             try
             {
-                using (var connection = new SqliteConnection(_connectionString))
-                using (var cts = CancellationTokenSource
-                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                {
-                    await connection.OpenAsync(cts.Token);
-                    
-                    using (var command = GetCommand(connection, CreateSnapshotTableSql, _timeout))
-                    using (var tx = connection.BeginTransaction())
-                    {
-                        command.Transaction = tx;
-                        await command.ExecuteNonQueryAsync(cts.Token);
-                        tx.Commit();
-                    }
-                    
-                    return Status.Success.Instance;
-                }
+                using var connection = new SqliteConnection(_connectionString);
+                using var cts = CancellationTokenSource
+                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+
+                await connection.OpenAsync(cts.Token);
+
+                using var command = GetCommand(connection, CreateSnapshotTableSql, _timeout);
+                using var tx = connection.BeginTransaction();
+
+                command.Transaction = tx;
+                await command.ExecuteNonQueryAsync(cts.Token);
+                tx.Commit();
+
+                return Status.Success.Instance;
             }
             catch (Exception e)
             {
@@ -187,47 +185,45 @@ namespace Akka.Persistence.Custom.Snapshot
             SnapshotSelectionCriteria criteria)
         {
             // Create a new DbConnection instance
-            using (var connection = new SqliteConnection(_connectionString))
-            using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-            {
-                await connection.OpenAsync(cts.Token);
-                
-                // Create new DbCommand instance
-                using (var command = GetCommand(connection, SelectSnapshotSql, _timeout))
-                {
-                    // Populate the SQL parameters
-                    AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
-                    AddParameter(command, "@SequenceNr", DbType.Int64, criteria.MaxSequenceNr);
-                    AddParameter(command, "@Timestamp", DbType.DateTime2, criteria.MaxTimeStamp);
+            using var connection = new SqliteConnection(_connectionString);
 
-                    // Create a DbDataReader to sequentially read the returned query result
-                    using (var reader = await command.ExecuteReaderAsync(
-                               CommandBehavior.SequentialAccess,
-                               cts.Token))
-                    {
-                        // Return null if no snapshot is found
-                        if (!await reader.ReadAsync(cts.Token)) 
-                            return null;
-                        
-                        var id = reader.GetString(0);
-                        var sequenceNr = reader.GetInt64(1);
-                        var timestamp = reader.GetDateTime(2);
+            using var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
 
-                        var metadata = new SnapshotMetadata(id, sequenceNr, timestamp);
-                            
-                        var manifest = reader.GetString(3);
-                        var binary = (byte[])reader[4];
-                        
-                        var serializerId = reader.GetInt32(5);
-                        
-                        // Deserialize the snapshot payload using the data we read from the reader
-                        var snapshot = _serialization.Deserialize(binary, serializerId, manifest);
+            await connection.OpenAsync(cts.Token);
 
-                        return new SelectedSnapshot(metadata, snapshot);
-                    }
-                }
-            }
+            // Create new DbCommand instance
+            using var command = GetCommand(connection, SelectSnapshotSql, _timeout);
+
+            // Populate the SQL parameters
+            AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
+            AddParameter(command, "@SequenceNr", DbType.Int64, criteria.MaxSequenceNr);
+            AddParameter(command, "@Timestamp", DbType.DateTime2, criteria.MaxTimeStamp);
+
+            // Create a DbDataReader to sequentially read the returned query result
+            using var reader = await command.ExecuteReaderAsync(
+                       CommandBehavior.SequentialAccess,
+                       cts.Token);
+
+            // Return null if no snapshot is found
+            if (!await reader.ReadAsync(cts.Token))
+                return null;
+
+            var id = reader.GetString(0);
+            var sequenceNr = reader.GetInt64(1);
+            var timestamp = reader.GetDateTime(2);
+
+            var metadata = new SnapshotMetadata(id, sequenceNr, timestamp);
+
+            var manifest = reader.GetString(3);
+            var binary = (byte[])reader[4];
+
+            var serializerId = reader.GetInt32(5);
+
+            // Deserialize the snapshot payload using the data we read from the reader
+            var snapshot = _serialization.Deserialize(binary, serializerId, manifest);
+
+            return new SelectedSnapshot(metadata, snapshot);
         }
         //</LoadAsync>
 
@@ -237,67 +233,67 @@ namespace Akka.Persistence.Custom.Snapshot
             object snapshot)
         {
             // Create a new DbConnection instance
-            using (var connection = new SqliteConnection(_connectionString))
-            using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-            {
-                await connection.OpenAsync(cts.Token);
-                
-                // Create new DbCommand instance
-                using (var command = GetCommand(connection, InsertSnapshotSql, _timeout)) 
-                // Create a new DbTransaction instance
-                using (var tx = connection.BeginTransaction())
+            using var connection = new SqliteConnection(_connectionString);
+
+            using var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+
+            await connection.OpenAsync(cts.Token);
+
+            // Create new DbCommand instance
+            using var command = GetCommand(connection, InsertSnapshotSql, _timeout);
+
+            // Create a new DbTransaction instance
+            using var tx = connection.BeginTransaction();
+
+            command.Transaction = tx;
+
+            var snapshotType = snapshot.GetType();
+
+            // Get the serializer associated with the payload type
+            var serializer = _serialization.FindSerializerForType(objectType: snapshotType);
+
+            // This WithTransport method call is important, it allows for proper
+            // local IActorRef serialization by switching the serialization information
+            // context during the serialization process
+            var (binary, manifest) = Akka.Serialization.Serialization.WithTransport(
+                system: _serialization.System,
+                state: (snapshot, serializer),
+                action: state =>
                 {
-                    command.Transaction = tx;
-                    
-                    var snapshotType = snapshot.GetType();
-                    
-                    // Get the serializer associated with the payload type
-                    var serializer = _serialization.FindSerializerForType(objectType: snapshotType);
+                    var (thePayload, theSerializer) = state;
+                    var thisManifest = "";
 
-                    // This WithTransport method call is important, it allows for proper
-                    // local IActorRef serialization by switching the serialization information
-                    // context during the serialization process
-                    var (binary, manifest) = Akka.Serialization.Serialization.WithTransport(
-                        system: _serialization.System,
-                        state: (snapshot, serializer),
-                        action: state =>
-                        {
-                            var (thePayload, theSerializer) = state;
-                            var thisManifest = "";
-                                    
-                            // There are two kinds of serializer when it comes to manifest
-                            // support, we have to support both of them for proper payload
-                            // serialization
-                            if (theSerializer is SerializerWithStringManifest stringManifest)
-                            {
-                                thisManifest = stringManifest.Manifest(thePayload);
-                            }
-                            else if (theSerializer.IncludeManifest)
-                            {
-                                thisManifest = thePayload.GetType().TypeQualifiedName();
-                            }
-                                    
-                            // Return the serialized byte array and the manifest for the
-                            // serialized data
-                            return (theSerializer.ToBinary(thePayload), thisManifest);
-                        });
-                    
-                    // Populate the SQL parameters
-                    AddParameter(command, "@PersistenceId", DbType.String, metadata.PersistenceId);
-                    AddParameter(command, "@SequenceNr", DbType.Int64, metadata.SequenceNr);
-                    AddParameter(command, "@Timestamp", DbType.DateTime2, metadata.Timestamp);
-                    AddParameter(command, "@Manifest", DbType.String, manifest);
-                    AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
-                    AddParameter(command, "@Payload", DbType.Binary, binary);
+                    // There are two kinds of serializer when it comes to manifest
+                    // support, we have to support both of them for proper payload
+                    // serialization
+                    if (theSerializer is SerializerWithStringManifest stringManifest)
+                    {
+                        thisManifest = stringManifest.Manifest(thePayload);
+                    }
+                    else if (theSerializer.IncludeManifest)
+                    {
+                        thisManifest = thePayload.GetType().TypeQualifiedName();
+                    }
 
-                    // Execute the SQL query
-                    await command.ExecuteNonQueryAsync(cts.Token);
+                    // Return the serialized byte array and the manifest for the
+                    // serialized data
+                    return (theSerializer.ToBinary(thePayload), thisManifest);
+                });
 
-                    // Commit the DbTransaction
-                    tx.Commit();
-                }
-            }
+            // Populate the SQL parameters
+            AddParameter(command, "@PersistenceId", DbType.String, metadata.PersistenceId);
+            AddParameter(command, "@SequenceNr", DbType.Int64, metadata.SequenceNr);
+            AddParameter(command, "@Timestamp", DbType.DateTime2, metadata.Timestamp);
+            AddParameter(command, "@Manifest", DbType.String, manifest);
+            AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
+            AddParameter(command, "@Payload", DbType.Binary, binary);
+
+            // Execute the SQL query
+            await command.ExecuteNonQueryAsync(cts.Token);
+
+            // Commit the DbTransaction
+            tx.Commit();
         }
         //</SaveAsync>
 
@@ -305,41 +301,41 @@ namespace Akka.Persistence.Custom.Snapshot
         protected sealed override async Task DeleteAsync(SnapshotMetadata metadata)
         {
             // Create a new DbConnection instance
-            using (var connection = new SqliteConnection(_connectionString))
-            using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))    
+            using var connection = new SqliteConnection(_connectionString);
+
+            using var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+
+            await connection.OpenAsync(cts.Token);
+            var timestamp = metadata.Timestamp != DateTime.MinValue
+                ? metadata.Timestamp
+                : (DateTime?)null;
+
+            var sql = timestamp.HasValue
+                ? DeleteSnapshotRangeSql + " AND { Configuration.TimestampColumnName} = @Timestamp"
+                : DeleteSnapshotSql;
+
+            // Create new DbCommand instance
+            using var command = GetCommand(connection, sql, _timeout);
+
+            // Create a new DbTransaction instance
+            using var tx = connection.BeginTransaction();
+
+            command.Transaction = tx;
+
+            // Populate the SQL parameters
+            AddParameter(command, "@PersistenceId", DbType.String, metadata.PersistenceId);
+            AddParameter(command, "@SequenceNr", DbType.Int64, metadata.SequenceNr);
+            if (timestamp.HasValue)
             {
-                await connection.OpenAsync(cts.Token);
-                var timestamp = metadata.Timestamp != DateTime.MinValue 
-                    ? metadata.Timestamp 
-                    : (DateTime?)null;
-                
-                var sql = timestamp.HasValue
-                    ? DeleteSnapshotRangeSql + " AND { Configuration.TimestampColumnName} = @Timestamp"
-                    : DeleteSnapshotSql;
-
-                // Create new DbCommand instance
-                using (var command = GetCommand(connection, sql, _timeout))
-                // Create a new DbTransaction instance
-                using (var tx = connection.BeginTransaction())
-                {
-                    command.Transaction = tx;
-                    
-                    // Populate the SQL parameters
-                    AddParameter(command, "@PersistenceId", DbType.String, metadata.PersistenceId);
-                    AddParameter(command, "@SequenceNr", DbType.Int64, metadata.SequenceNr);
-                    if (timestamp.HasValue)
-                    {
-                        AddParameter(command, "@Timestamp", DbType.DateTime2, metadata.Timestamp);
-                    }
-
-                    // Execute the SQL query
-                    await command.ExecuteNonQueryAsync(cts.Token);
-
-                    // Commit the DbTransaction
-                    tx.Commit();
-                }
+                AddParameter(command, "@Timestamp", DbType.DateTime2, metadata.Timestamp);
             }
+
+            // Execute the SQL query
+            await command.ExecuteNonQueryAsync(cts.Token);
+
+            // Commit the DbTransaction
+            tx.Commit();
         }
         //</DeleteAsync>
 
@@ -349,31 +345,31 @@ namespace Akka.Persistence.Custom.Snapshot
             SnapshotSelectionCriteria criteria)
         {
             // Create a new DbConnection instance
-            using (var connection = new SqliteConnection(_connectionString))
-            using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-            {
-                await connection.OpenAsync(cts.Token);
-                
-                // Create new DbCommand instance
-                using (var command = GetCommand(connection, DeleteSnapshotRangeSql, _timeout))
-                // Create a new DbTransaction instance
-                using (var tx = connection.BeginTransaction())
-                {
-                    command.Transaction = tx;
-                    
-                    // Populate the SQL parameters
-                    AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
-                    AddParameter(command, "@SequenceNr", DbType.Int64, criteria.MaxSequenceNr);
-                    AddParameter(command, "@Timestamp", DbType.DateTime2, criteria.MaxTimeStamp);
-                    
-                    // Execute the SQL query
-                    await command.ExecuteNonQueryAsync(cts.Token);
+            using var connection = new SqliteConnection(_connectionString);
 
-                    // Commit the DbTransaction
-                    tx.Commit();
-                }
-            }
+            using var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+
+            await connection.OpenAsync(cts.Token);
+
+            // Create new DbCommand instance
+            using var command = GetCommand(connection, DeleteSnapshotRangeSql, _timeout);
+
+            // Create a new DbTransaction instance
+            using var tx = connection.BeginTransaction();
+
+            command.Transaction = tx;
+
+            // Populate the SQL parameters
+            AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
+            AddParameter(command, "@SequenceNr", DbType.Int64, criteria.MaxSequenceNr);
+            AddParameter(command, "@Timestamp", DbType.DateTime2, criteria.MaxTimeStamp);
+
+            // Execute the SQL query
+            await command.ExecuteNonQueryAsync(cts.Token);
+
+            // Commit the DbTransaction
+            tx.Commit();
         }
         //</DeleteAsync2>
 

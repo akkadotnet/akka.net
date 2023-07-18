@@ -15,13 +15,13 @@ namespace Tutorials.Tutorial1
     {
         public static void Init()
         {
-            using (var system = ActorSystem.Create("iot-system"))
-            {
-                // Create top level supervisor
-                var supervisor = system.ActorOf(IotSupervisor.Props(), "iot-supervisor");
-                // Exit the system after ENTER is pressed
-                Console.ReadLine();
-            }
+            using var system = ActorSystem.Create("iot-system");
+
+            // Create top level supervisor
+            var supervisor = system.ActorOf(IotSupervisor.Props(), "iot-supervisor");
+
+            // Exit the system after ENTER is pressed
+            Console.ReadLine();
         }
     }
     #endregion

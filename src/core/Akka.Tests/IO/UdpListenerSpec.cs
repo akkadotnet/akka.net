@@ -185,13 +185,10 @@ namespace Akka.Tests.IO
 
             public IPEndPoint SendDataToEndpoint(byte[] buffer, IPEndPoint receiverEndpoint)
             {
-                using (var udpClient = new UdpClient(0))
-                {
-                    udpClient.Connect(receiverEndpoint);
-                    udpClient.Send(buffer, buffer.Length);
-
-                    return (IPEndPoint)udpClient.Client.LocalEndPoint;
-                }
+                using var udpClient = new UdpClient(0);
+                udpClient.Connect(receiverEndpoint);
+                udpClient.Send(buffer, buffer.Length);
+                return (IPEndPoint)udpClient.Client.LocalEndPoint;
             }
             
             public IActorRef Listener { get { return _parentRef.UnderlyingActor.Listener; } }

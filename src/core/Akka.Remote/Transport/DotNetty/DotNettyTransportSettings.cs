@@ -366,20 +366,19 @@ namespace Akka.Remote.Transport.DotNetty
 
         public SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation)
         {
-            using (var store = new X509Store(storeName, storeLocation))
+            using var store = new X509Store(storeName, storeLocation);
+
+            store.Open(OpenFlags.ReadOnly);
+
+            var find = store.Certificates.Find(X509FindType.FindByThumbprint, certificateThumbprint, !suppressValidation);
+            if (find.Count == 0)
             {
-                store.Open(OpenFlags.ReadOnly);
-
-                var find = store.Certificates.Find(X509FindType.FindByThumbprint, certificateThumbprint, !suppressValidation);
-                if (find.Count == 0)
-                {
-                    throw new ArgumentException(
-                        "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.thumbprint`. Also check `akka.remote.dot-netty.tcp.ssl.certificate.store-name` and `akka.remote.dot-netty.tcp.ssl.certificate.store-location`)");
-                }
-
-                Certificate = find[0];
-                SuppressValidation = suppressValidation;
+                throw new ArgumentException(
+                    "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.thumbprint`. Also check `akka.remote.dot-netty.tcp.ssl.certificate.store-name` and `akka.remote.dot-netty.tcp.ssl.certificate.store-location`)");
             }
+
+            Certificate = find[0];
+            SuppressValidation = suppressValidation;
         }
 
         public SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)

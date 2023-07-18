@@ -18,14 +18,12 @@ namespace Akka.Remote.Tests
     {
         public static IEnumerable<(T, T)> Slide<T>(IEnumerable<T> values)
         {
-            using (var iterator = values.GetEnumerator())
+            using var iterator = values.GetEnumerator();
+            while (iterator.MoveNext())
             {
-                while (iterator.MoveNext())
-                {
-                    var first = iterator.Current;
-                    var second = iterator.MoveNext() ? iterator.Current : default(T);
-                    yield return (first, second);
-                }
+                var first = iterator.Current;
+                var second = iterator.MoveNext() ? iterator.Current : default(T);
+                yield return (first, second);
             }
         }
 

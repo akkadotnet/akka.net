@@ -27,33 +27,29 @@ namespace Akka.TestKit.Tests
         [Fact(DisplayName = "TestKit should accept arbitrary ActorSystem")]
         public void TestKitBaseTest()
         {
-            using (var sys = ActorSystem.Create(nameof(TestKitSpec)))
+            using var sys = ActorSystem.Create(nameof(TestKitSpec));
+            var testkit = new TestKit.Xunit2.TestKit(sys, _output);
+            var echoActor = testkit.Sys.ActorOf(c => c.ReceiveAny((m, _) => testkit.TestActor.Tell(m)));
+            Invoking(() =>
             {
-                var testkit = new TestKit.Xunit2.TestKit(sys, _output);
-                var echoActor = testkit.Sys.ActorOf(c => c.ReceiveAny((m, _) => testkit.TestActor.Tell(m))); 
-                Invoking(() =>
-                {
-                    echoActor.Tell("message");
-                    var message = testkit.ExpectMsg<string>();
-                    message.Should().Be("message");
-                }).Should().NotThrow<ConfigurationException>();
-            }
+                echoActor.Tell("message");
+                var message = testkit.ExpectMsg<string>();
+                message.Should().Be("message");
+            }).Should().NotThrow<ConfigurationException>();
         }
 
         [Fact(DisplayName = "TestKit should accept ActorSystem with TestKit.DefaultConfig")]
         public void TestKitConfigTest()
         {
-            using (var sys = ActorSystem.Create(nameof(TestKitSpec), TestKit.Xunit2.TestKit.DefaultConfig))
+            using var sys = ActorSystem.Create(nameof(TestKitSpec), TestKit.Xunit2.TestKit.DefaultConfig);
+            var testkit = new TestKit.Xunit2.TestKit(sys, _output);
+            var echoActor = testkit.Sys.ActorOf(c => c.ReceiveAny((m, _) => testkit.TestActor.Tell(m)));
+            Invoking(() =>
             {
-                var testkit = new TestKit.Xunit2.TestKit(sys, _output);
-                var echoActor = testkit.Sys.ActorOf(c => c.ReceiveAny((m, _) => testkit.TestActor.Tell(m))); 
-                Invoking(() =>
-                {
-                    echoActor.Tell("message");
-                    var message = testkit.ExpectMsg<string>();
-                    message.Should().Be("message");
-                }).Should().NotThrow<ConfigurationException>();
-            }
+                echoActor.Tell("message");
+                var message = testkit.ExpectMsg<string>();
+                message.Should().Be("message");
+            }).Should().NotThrow<ConfigurationException>();
         }
     }
 }

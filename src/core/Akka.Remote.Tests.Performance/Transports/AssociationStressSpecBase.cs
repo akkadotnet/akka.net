@@ -72,21 +72,20 @@ namespace Akka.Remote.Tests.Performance.Transports
         public void AssociationStress(BenchmarkContext context)
         {
             var registryKey = CreateRegistryKey();
-            using (
+            using
                 var system1 = ActorSystem.Create("SystemA" + ActorSystemNameCounter.Next(),
-                    CreateActorSystemConfig("SystemA" + ActorSystemNameCounter.Current, "127.0.0.1", 0, registryKey)))
-            using (
+                    CreateActorSystemConfig("SystemA" + ActorSystemNameCounter.Current, "127.0.0.1", 0, registryKey));
+            using
                 var system2 = ActorSystem.Create("SystemB" + ActorSystemNameCounter.Next(),
-                    CreateActorSystemConfig("SystemB" + ActorSystemNameCounter.Current, "127.0.0.1", 0, registryKey)))
-            {
-                var echo = system1.ActorOf(ActorProps, "echo");
-                var system1Address = RARP.For(system1).Provider.Transport.DefaultAddress;
-                var system1EchoActorPath = new RootActorPath(system1Address) / "user" / "echo";
+                    CreateActorSystemConfig("SystemB" + ActorSystemNameCounter.Current, "127.0.0.1", 0, registryKey));
 
-               var remoteActor = system2.ActorSelection(system1EchoActorPath)
-                   .Ask<ActorIdentity>(new Identify(null), TimeSpan.FromSeconds(2)).Result.Subject;
-                AssociationCounter.Increment();
-            }
+            var echo = system1.ActorOf(ActorProps, "echo");
+            var system1Address = RARP.For(system1).Provider.Transport.DefaultAddress;
+            var system1EchoActorPath = new RootActorPath(system1Address) / "user" / "echo";
+
+            var remoteActor = system2.ActorSelection(system1EchoActorPath)
+                .Ask<ActorIdentity>(new Identify(null), TimeSpan.FromSeconds(2)).Result.Subject;
+            AssociationCounter.Increment();
         }
 
         [PerfCleanup]

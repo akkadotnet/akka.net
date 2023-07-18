@@ -19,18 +19,15 @@ namespace Akka.Tests.Actor.Scheduler
         [Fact]
         public void Now_Should_be_accurate()
         {
-            using (var sys = ActorSystem.Create("Foo"))
+            using var sys = ActorSystem.Create("Foo");
+            ITimeProvider timeProvider = new HashedWheelTimerScheduler(sys.Settings.Config, sys.Log);
+            try
             {
-                
-                ITimeProvider timeProvider = new HashedWheelTimerScheduler(sys.Settings.Config, sys.Log);
-                try
-                {
-                    Math.Abs((timeProvider.Now - DateTimeOffset.Now).TotalMilliseconds).ShouldBeLessThan(20);
-                }
-                finally
-                {
-                    timeProvider.AsInstanceOf<IDisposable>().Dispose();
-                }
+                Math.Abs((timeProvider.Now - DateTimeOffset.Now).TotalMilliseconds).ShouldBeLessThan(20);
+            }
+            finally
+            {
+                timeProvider.AsInstanceOf<IDisposable>().Dispose();
             }
         }
     }

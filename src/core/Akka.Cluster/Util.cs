@@ -28,23 +28,21 @@ namespace Akka.Cluster
         public static T Min<T>(this IEnumerable<T> source,
             IComparer<T> comparer)
         {
-            using (var sourceIterator = source.GetEnumerator())
+            using var sourceIterator = source.GetEnumerator();
+            if (!sourceIterator.MoveNext())
             {
-                if (!sourceIterator.MoveNext())
-                {
-                    throw new InvalidOperationException("Sequence was empty");
-                }
-                var min = sourceIterator.Current;
-                while (sourceIterator.MoveNext())
-                {
-                    var candidate = sourceIterator.Current;
-                    if (comparer.Compare(candidate, min) < 0)
-                    {
-                        min = candidate;
-                    }
-                }
-                return min;
+                throw new InvalidOperationException("Sequence was empty");
             }
+            var min = sourceIterator.Current;
+            while (sourceIterator.MoveNext())
+            {
+                var candidate = sourceIterator.Current;
+                if (comparer.Compare(candidate, min) < 0)
+                {
+                    min = candidate;
+                }
+            }
+            return min;
         }
 
         /// <summary>
@@ -78,26 +76,24 @@ namespace Akka.Cluster
             //source.ThrowIfNull("source");
             //selector.ThrowIfNull("selector");
             //comparer.ThrowIfNull("comparer");
-            using (var sourceIterator = source.GetEnumerator())
+            using var sourceIterator = source.GetEnumerator();
+            if (!sourceIterator.MoveNext())
             {
-                if (!sourceIterator.MoveNext())
-                {
-                    throw new InvalidOperationException("Sequence was empty");
-                }
-                var max = sourceIterator.Current;
-                var maxKey = selector(max);
-                while (sourceIterator.MoveNext())
-                {
-                    var candidate = sourceIterator.Current;
-                    var candidateProjected = selector(candidate);
-                    if (comparer.Compare(candidateProjected, maxKey) > 0)
-                    {
-                        max = candidate;
-                        maxKey = candidateProjected;
-                    }
-                }
-                return max;
+                throw new InvalidOperationException("Sequence was empty");
             }
+            var max = sourceIterator.Current;
+            var maxKey = selector(max);
+            while (sourceIterator.MoveNext())
+            {
+                var candidate = sourceIterator.Current;
+                var candidateProjected = selector(candidate);
+                if (comparer.Compare(candidateProjected, maxKey) > 0)
+                {
+                    max = candidate;
+                    maxKey = candidateProjected;
+                }
+            }
+            return max;
         }
 
         /// <summary>

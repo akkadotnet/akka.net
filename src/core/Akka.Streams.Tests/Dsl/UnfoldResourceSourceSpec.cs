@@ -57,8 +57,8 @@ namespace Akka.Streams.Tests.Dsl
             if(_manyLinesFile.Exists)
                 _manyLinesFile.Delete();
 
-            using (var stream = _manyLinesFile.CreateText())
-                stream.Write(ManyLines);
+            using var stream = _manyLinesFile.CreateText();
+            stream.Write(ManyLines);
         }
 
         public ActorMaterializer Materializer { get; }

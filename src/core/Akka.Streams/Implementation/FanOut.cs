@@ -87,11 +87,9 @@ namespace Akka.Streams.Implementation
                     case FanOut.ExposedPublishers<T> exposed:
                         using (var publishers = exposed.Publishers.GetEnumerator())
                         {
-                            using (var outputs = _outputs.AsEnumerable().GetEnumerator())
-                            {
-                                while (publishers.MoveNext() && outputs.MoveNext())
-                                    outputs.Current?.SubReceive.CurrentReceive(new ExposedPublisher(publishers.Current));
-                            }
+                            using var outputs = _outputs.AsEnumerable().GetEnumerator();
+                            while (publishers.MoveNext() && outputs.MoveNext())
+                                outputs.Current?.SubReceive.CurrentReceive(new ExposedPublisher(publishers.Current));
                         }
                         return true;
 

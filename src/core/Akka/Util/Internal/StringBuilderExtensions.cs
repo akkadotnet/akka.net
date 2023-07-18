@@ -24,33 +24,33 @@ namespace Akka.Util.Internal
             if (separator == null) separator = "";
             if (valueAppender == null) valueAppender = DefaultAppendValue;
 
-            using (var enumerator = values.GetEnumerator())
-            {
-                var index = 0;
-                if (!enumerator.MoveNext())
-                    return sb;
+            using var enumerator = values.GetEnumerator();
 
+            var index = 0;
+            if (!enumerator.MoveNext())
+                return sb;
+
+            // ReSharper disable CompareNonConstrainedGenericWithNull
+            var current = enumerator.Current;
+            if (current != null)
+                // ReSharper restore CompareNonConstrainedGenericWithNull
+            {
+                valueAppender(sb, current, index);
+            }
+
+            while (enumerator.MoveNext())
+            {
+                index++;
+                sb.Append(separator);
                 // ReSharper disable CompareNonConstrainedGenericWithNull
-                var current = enumerator.Current;
+                current = enumerator.Current;
                 if (current != null)
                     // ReSharper restore CompareNonConstrainedGenericWithNull
                 {
                     valueAppender(sb, current, index);
                 }
-
-                while (enumerator.MoveNext())
-                {
-                    index++;
-                    sb.Append(separator);
-                    // ReSharper disable CompareNonConstrainedGenericWithNull
-                    current = enumerator.Current;
-                    if (current != null)
-                        // ReSharper restore CompareNonConstrainedGenericWithNull
-                    {
-                        valueAppender(sb, current, index);
-                    }
-                }
             }
+
             return sb;
         }
 

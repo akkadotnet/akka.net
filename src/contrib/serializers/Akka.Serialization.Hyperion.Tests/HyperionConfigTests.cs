@@ -33,15 +33,13 @@ namespace Akka.Serialization.Hyperion.Tests
                     }
                 }
             ");
-            using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
-            {
-                var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                Assert.True(serializer.Settings.VersionTolerance);
-                Assert.True(serializer.Settings.PreserveObjectReferences);
-                Assert.Equal("NoKnownTypes", serializer.Settings.KnownTypesProvider.Name);
-                Assert.True(serializer.Settings.DisallowUnsafeType);
-                Assert.Equal(serializer.Settings.TypeFilter, DisabledTypeFilter.Instance);
-            }
+            using var system = ActorSystem.Create(nameof(HyperionConfigTests), config);
+            var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+            Assert.True(serializer.Settings.VersionTolerance);
+            Assert.True(serializer.Settings.PreserveObjectReferences);
+            Assert.Equal("NoKnownTypes", serializer.Settings.KnownTypesProvider.Name);
+            Assert.True(serializer.Settings.DisallowUnsafeType);
+            Assert.Equal(serializer.Settings.TypeFilter, DisabledTypeFilter.Instance);
         }
 
         [Fact]
@@ -61,15 +59,13 @@ namespace Akka.Serialization.Hyperion.Tests
                     }
                 }
             ");
-            using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
-            {
-                var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                Assert.False(serializer.Settings.VersionTolerance);
-                Assert.False(serializer.Settings.PreserveObjectReferences);
-                Assert.Equal("NoKnownTypes", serializer.Settings.KnownTypesProvider.Name);
-                Assert.False(serializer.Settings.DisallowUnsafeType);
-                Assert.Equal("Akka.Serialization.Hyperion.Tests.HyperionConfigTests+ClassA, Akka.Serialization.Hyperion.Tests", ((TypeFilter) serializer.Settings.TypeFilter).FilteredTypes.First());
-            }
+            using var system = ActorSystem.Create(nameof(HyperionConfigTests), config);
+            var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+            Assert.False(serializer.Settings.VersionTolerance);
+            Assert.False(serializer.Settings.PreserveObjectReferences);
+            Assert.Equal("NoKnownTypes", serializer.Settings.KnownTypesProvider.Name);
+            Assert.False(serializer.Settings.DisallowUnsafeType);
+            Assert.Equal("Akka.Serialization.Hyperion.Tests.HyperionConfigTests+ClassA, Akka.Serialization.Hyperion.Tests", ((TypeFilter)serializer.Settings.TypeFilter).FilteredTypes.First());
         }
 
         [Theory]
@@ -93,26 +89,24 @@ namespace Akka.Serialization.Hyperion.Tests
                     }
                 }
             ");
-            using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
+            using var system = ActorSystem.Create(nameof(HyperionConfigTests), config);
+            var deserializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+            var serializer = new HyperionSerializer(null, deserializer.Settings.WithDisallowUnsafeType(false));
+
+            ((TypeFilter)deserializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
+
+            var serialized = serializer.ToBinary(sampleObject);
+            object deserialized = null;
+            Action act = () => deserialized = deserializer.FromBinary<object>(serialized);
+            if (shouldSucceed)
             {
-                var deserializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                var serializer = new HyperionSerializer(null, deserializer.Settings.WithDisallowUnsafeType(false));
-            
-                ((TypeFilter)deserializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
-                
-                var serialized = serializer.ToBinary(sampleObject);
-                object deserialized = null;
-                Action act = () => deserialized = deserializer.FromBinary<object>(serialized);
-                if (shouldSucceed)
-                {
-                    act.Should().NotThrow();
-                    deserialized.GetType().Should().Be(sampleObject.GetType());
-                }
-                else
-                {
-                    act.Should().Throw<SerializationException>()
-                        .WithInnerException<UserEvilDeserializationException>();
-                }
+                act.Should().NotThrow();
+                deserialized.GetType().Should().Be(sampleObject.GetType());
+            }
+            else
+            {
+                act.Should().Throw<SerializationException>()
+                    .WithInnerException<UserEvilDeserializationException>();
             }
         }
         
@@ -130,14 +124,12 @@ namespace Akka.Serialization.Hyperion.Tests
                     }
                 }
             ");
-            using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
-            {
-                var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                Assert.True(serializer.Settings.VersionTolerance);
-                Assert.True(serializer.Settings.PreserveObjectReferences);
-                Assert.Equal(typeof(DummyTypesProviderWithDefaultCtor), serializer.Settings.KnownTypesProvider);
-                Assert.True(serializer.Settings.DisallowUnsafeType);
-            }
+            using var system = ActorSystem.Create(nameof(HyperionConfigTests), config);
+            var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+            Assert.True(serializer.Settings.VersionTolerance);
+            Assert.True(serializer.Settings.PreserveObjectReferences);
+            Assert.Equal(typeof(DummyTypesProviderWithDefaultCtor), serializer.Settings.KnownTypesProvider);
+            Assert.True(serializer.Settings.DisallowUnsafeType);
         }
 
         [Fact]
@@ -154,14 +146,12 @@ namespace Akka.Serialization.Hyperion.Tests
                     }
                 }
             ");
-            using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
-            {
-                var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                Assert.True(serializer.Settings.VersionTolerance);
-                Assert.True(serializer.Settings.PreserveObjectReferences);
-                Assert.Equal(typeof(DummyTypesProvider), serializer.Settings.KnownTypesProvider);
-                Assert.True(serializer.Settings.DisallowUnsafeType);
-            }
+            using var system = ActorSystem.Create(nameof(HyperionConfigTests), config);
+            var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+            Assert.True(serializer.Settings.VersionTolerance);
+            Assert.True(serializer.Settings.PreserveObjectReferences);
+            Assert.Equal(typeof(DummyTypesProvider), serializer.Settings.KnownTypesProvider);
+            Assert.True(serializer.Settings.DisallowUnsafeType);
         }
 
         [Fact]
@@ -197,12 +187,11 @@ namespace Akka.Serialization.Hyperion.Tests
                     }
                 }
             ");
-            using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
-            {
-                var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                var overrides = serializer.Settings.PackageNameOverrides.ToList();
-                Assert.NotEmpty(overrides);
-                var @override = overrides[0];
+            using var system = ActorSystem.Create(nameof(HyperionConfigTests), config);
+            var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+            var overrides = serializer.Settings.PackageNameOverrides.ToList();
+            Assert.NotEmpty(overrides);
+            var @override = overrides[0];
 
 #if NET471
                 Assert.Equal("acc", @override("abc"));
@@ -214,9 +203,8 @@ namespace Akka.Serialization.Hyperion.Tests
                 Assert.Equal("gii", @override("ghi"));
                 Assert.Equal("hij", @override("hij"));
 #else
-                throw new Exception("Test can not be completed because no proper compiler directive is set for this test build");
+            throw new Exception("Test can not be completed because no proper compiler directive is set for this test build");
 #endif
-            }
         }
         
         [Fact]
@@ -235,18 +223,16 @@ namespace Akka.Serialization.Hyperion.Tests
                     }
                 }
             ");
-            using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
-            {
-                var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                FooHyperionSurrogate.Surrogated.Clear();
-                
-                var expected = new Foo("bar");
-                var serialized = serializer.ToBinary(expected);
-                var deserialized = serializer.FromBinary<Foo>(serialized);
-                deserialized.Bar.Should().Be("bar.");
-                FooHyperionSurrogate.Surrogated.Count.Should().Be(1);
-                FooHyperionSurrogate.Surrogated[0].Should().BeEquivalentTo(expected);
-            }
+            using var system = ActorSystem.Create(nameof(HyperionConfigTests), config);
+            var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+            FooHyperionSurrogate.Surrogated.Clear();
+
+            var expected = new Foo("bar");
+            var serialized = serializer.ToBinary(expected);
+            var deserialized = serializer.FromBinary<Foo>(serialized);
+            deserialized.Bar.Should().Be("bar.");
+            FooHyperionSurrogate.Surrogated.Count.Should().Be(1);
+            FooHyperionSurrogate.Surrogated[0].Should().BeEquivalentTo(expected);
         }
         
         [Fact]

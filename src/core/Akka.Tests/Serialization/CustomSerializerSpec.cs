@@ -52,11 +52,9 @@ namespace Akka.Tests.Serialization
                 }
             ");
             //The above config explictly does not configures the serialization-identifiers section
-            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
-            {
-                var serializer = (CustomSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                Assert.Equal(666, serializer.Identifier);
-            }
+            using var system = ActorSystem.Create(nameof(CustomSerializerSpec), config);
+            var serializer = (CustomSerializer)system.Serialization.FindSerializerForType(typeof(object));
+            Assert.Equal(666, serializer.Identifier);
         }
 
         [Fact]
@@ -75,26 +73,25 @@ namespace Akka.Tests.Serialization
                     }
                 }
             ");
-            
-            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
-            {
-                var firstMessage = new FirstMessage("First message");
-                var serialization = system.Serialization;
-                var serializer = (CustomManifestSerializer)serialization.FindSerializerFor(firstMessage);
 
-                var serialized = serializer.ToBinary(firstMessage);
-                var manifest = serializer.Manifest(firstMessage);
-                var deserializedFirstMessage = serializer.FromBinary(serialized, manifest);
-                manifest.Should().Be(FirstMessage.Manifest);
-                deserializedFirstMessage.Should().Be(firstMessage);
+            using var system = ActorSystem.Create(nameof(CustomSerializerSpec), config);
 
-                var secondMessage = new SecondMessage("Second message");
-                serialized = serializer.ToBinary(secondMessage);
-                manifest = serializer.Manifest(secondMessage);
-                var deserializedSecondMessage = serializer.FromBinary(serialized, manifest);
-                manifest.Should().Be(SecondMessage.Manifest);
-                deserializedSecondMessage.Should().Be(secondMessage);
-            }
+            var firstMessage = new FirstMessage("First message");
+            var serialization = system.Serialization;
+            var serializer = (CustomManifestSerializer)serialization.FindSerializerFor(firstMessage);
+
+            var serialized = serializer.ToBinary(firstMessage);
+            var manifest = serializer.Manifest(firstMessage);
+            var deserializedFirstMessage = serializer.FromBinary(serialized, manifest);
+            manifest.Should().Be(FirstMessage.Manifest);
+            deserializedFirstMessage.Should().Be(firstMessage);
+
+            var secondMessage = new SecondMessage("Second message");
+            serialized = serializer.ToBinary(secondMessage);
+            manifest = serializer.Manifest(secondMessage);
+            var deserializedSecondMessage = serializer.FromBinary(serialized, manifest);
+            manifest.Should().Be(SecondMessage.Manifest);
+            deserializedSecondMessage.Should().Be(secondMessage);
         }
         
         // Fix for issue #5569, could not declare multiple serializer identifier
@@ -117,17 +114,16 @@ namespace Akka.Tests.Serialization
                 }
             ");
             XunitOutputHelperLogger.Output = _output;
-            
-            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
-            {
-                var serialization = system.Serialization;
-                var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
-                var objectSerializer = serialization.FindSerializerFor(new object());
-                var serializerById = serialization.GetSerializerById(1);
 
-                serializer.Should().Be(serializerById);
-                serializer.Should().Be(objectSerializer);
-            }
+            using var system = ActorSystem.Create(nameof(CustomSerializerSpec), config);
+
+            var serialization = system.Serialization;
+            var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
+            var objectSerializer = serialization.FindSerializerFor(new object());
+            var serializerById = serialization.GetSerializerById(1);
+
+            serializer.Should().Be(serializerById);
+            serializer.Should().Be(objectSerializer);
         }
         
         // Fix for issue #5569, could not declare multiple serializer identifier
@@ -152,21 +148,20 @@ namespace Akka.Tests.Serialization
                 }
             ");
             XunitOutputHelperLogger.Output = _output;
-            
-            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
-            {
-                var firstMessage = new FirstMessage("First message");
-                var serialization = system.Serialization;
-                var serializer = (CustomSerializer)serialization.FindSerializerFor(firstMessage);
-                var serializerById = serialization.GetSerializerById(1);
 
-                serializer.Identifier.Should().Be(666); // This is because identifier is hardwired, so it could not be
-                                                        // used to override other serializer identifier
-                serializer.Should().NotBeEquivalentTo(serializerById);
-                
-                serializerById.Identifier.Should().Be(1); // This should be the JSON serializer
-                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
-            }
+            using var system = ActorSystem.Create(nameof(CustomSerializerSpec), config);
+
+            var firstMessage = new FirstMessage("First message");
+            var serialization = system.Serialization;
+            var serializer = (CustomSerializer)serialization.FindSerializerFor(firstMessage);
+            var serializerById = serialization.GetSerializerById(1);
+
+            serializer.Identifier.Should().Be(666); // This is because identifier is hardwired, so it could not be
+                                                    // used to override other serializer identifier
+            serializer.Should().NotBeEquivalentTo(serializerById);
+
+            serializerById.Identifier.Should().Be(1); // This should be the JSON serializer
+            serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
         }
         
         // BAD ILLEGAL SERIALIZATION IDENTIFIER SPEC
@@ -188,20 +183,19 @@ namespace Akka.Tests.Serialization
                 }
             ");
             XunitOutputHelperLogger.Output = _output;
-            
-            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
-            {
-                var serialization = system.Serialization;
-                var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
-                var objectSerializer = serialization.FindSerializerFor(new object());
-                var serializerById = serialization.GetSerializerById(1);
 
-                serializer.Should().Be(serializerById);
-                serializer.Should().Be(objectSerializer);
-                serializer.Should().BeOfType<CustomIllegalSerializer>();
-                serializerById.Should().BeOfType<CustomIllegalSerializer>();
-                objectSerializer.Should().BeOfType<CustomIllegalSerializer>();
-            }
+            using var system = ActorSystem.Create(nameof(CustomSerializerSpec), config);
+
+            var serialization = system.Serialization;
+            var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
+            var objectSerializer = serialization.FindSerializerFor(new object());
+            var serializerById = serialization.GetSerializerById(1);
+
+            serializer.Should().Be(serializerById);
+            serializer.Should().Be(objectSerializer);
+            serializer.Should().BeOfType<CustomIllegalSerializer>();
+            serializerById.Should().BeOfType<CustomIllegalSerializer>();
+            objectSerializer.Should().BeOfType<CustomIllegalSerializer>();
         }
         
         // BAD ILLEGAL SERIALIZATION IDENTIFIER SPEC
@@ -223,22 +217,21 @@ namespace Akka.Tests.Serialization
                     }
                 }"));
             XunitOutputHelperLogger.Output = _output;
-            
-            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
-            {
-                var serialization = system.Serialization;
-                var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
-                var objectSerializer = serialization.FindSerializerFor(new object());
-                var serializerById = serialization.GetSerializerById(1);
-                var invalidSerializerById = serialization.GetSerializerById(serializer.Identifier);
 
-                serializer.Should().BeOfType<CustomIllegalSerializer>();
-                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
-                objectSerializer.Should().BeOfType<NewtonSoftJsonSerializer>();
-                
-                invalidSerializerById.Should().NotBeOfType<CustomIllegalSerializer>(); // This is the bad part
-                invalidSerializerById.Identifier.Should().Be(serializerById.Identifier); // This is the bad part
-            }
+            using var system = ActorSystem.Create(nameof(CustomSerializerSpec), config);
+
+            var serialization = system.Serialization;
+            var serializer = serialization.FindSerializerFor(new FirstMessage("First message"));
+            var objectSerializer = serialization.FindSerializerFor(new object());
+            var serializerById = serialization.GetSerializerById(1);
+            var invalidSerializerById = serialization.GetSerializerById(serializer.Identifier);
+
+            serializer.Should().BeOfType<CustomIllegalSerializer>();
+            serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
+            objectSerializer.Should().BeOfType<NewtonSoftJsonSerializer>();
+
+            invalidSerializerById.Should().NotBeOfType<CustomIllegalSerializer>(); // This is the bad part
+            invalidSerializerById.Identifier.Should().Be(serializerById.Identifier); // This is the bad part
         }
         
         [Fact]
@@ -253,27 +246,26 @@ namespace Akka.Tests.Serialization
             );
 
             var setup = ActorSystemSetup.Create(settings);
-            
-            using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), setup))
-            {
-                var firstMessage = new FirstMessage("First message");
-                var serialization = system.Serialization;
-                var serializer = (CustomManifestSerializer)serialization.FindSerializerFor(firstMessage);
 
-                var serialized = serializer.ToBinary(firstMessage);
-                var manifest = serializer.Manifest(firstMessage);
-                var deserializedFirstMessage = serializer.FromBinary(serialized, manifest);
-                manifest.Should().Be(FirstMessage.Manifest);
-                deserializedFirstMessage.Should().Be(firstMessage);
+            using var system = ActorSystem.Create(nameof(CustomSerializerSpec), setup);
 
-                var secondMessage = new SecondMessage("Second message");
-                serialized = serializer.ToBinary(secondMessage);
-                manifest = serializer.Manifest(secondMessage);
-                var deserializedSecondMessage = serializer.FromBinary(serialized, manifest);
-                manifest.Should().Be(SecondMessage.Manifest);
-                deserializedSecondMessage.Should().Be(secondMessage);
-            }
-        }        
+            var firstMessage = new FirstMessage("First message");
+            var serialization = system.Serialization;
+            var serializer = (CustomManifestSerializer)serialization.FindSerializerFor(firstMessage);
+
+            var serialized = serializer.ToBinary(firstMessage);
+            var manifest = serializer.Manifest(firstMessage);
+            var deserializedFirstMessage = serializer.FromBinary(serialized, manifest);
+            manifest.Should().Be(FirstMessage.Manifest);
+            deserializedFirstMessage.Should().Be(firstMessage);
+
+            var secondMessage = new SecondMessage("Second message");
+            serialized = serializer.ToBinary(secondMessage);
+            manifest = serializer.Manifest(secondMessage);
+            var deserializedSecondMessage = serializer.FromBinary(serialized, manifest);
+            manifest.Should().Be(SecondMessage.Manifest);
+            deserializedSecondMessage.Should().Be(secondMessage);
+        }
     }
 
     internal abstract class MessageBase: IEquatable<MessageBase>

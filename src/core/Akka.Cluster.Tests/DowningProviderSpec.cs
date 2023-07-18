@@ -71,10 +71,8 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void Downing_provider_should_default_to_KeepMajority()
         {
-            using (var system = ActorSystem.Create("default", BaseConfig))
-            {
-                Cluster.Get(system).DowningProvider.Should().BeOfType<Akka.Cluster.SBR.SplitBrainResolverProvider>();
-            }
+            using var system = ActorSystem.Create("default", BaseConfig);
+            Cluster.Get(system).DowningProvider.Should().BeOfType<Akka.Cluster.SBR.SplitBrainResolverProvider>();
         }
 
         [Fact]
@@ -83,10 +81,8 @@ namespace Akka.Cluster.Tests
             var config = ConfigurationFactory.ParseString(@"
                 akka.cluster.downing-provider-class = """"
                 akka.cluster.auto-down-unreachable-after=18s");
-            using (var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig)))
-            {
-                Cluster.Get(system).DowningProvider.Should().BeOfType<AutoDowning>();
-            }
+            using var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig));
+            Cluster.Get(system).DowningProvider.Should().BeOfType<AutoDowning>();
         }
 
         [Fact]
@@ -94,14 +90,12 @@ namespace Akka.Cluster.Tests
         {
             var config = ConfigurationFactory.ParseString(
                 @"akka.cluster.downing-provider-class = ""Akka.Cluster.Tests.DummyDowningProvider, Akka.Cluster.Tests""");
-            using (var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig)))
-            {
-                var downingProvider = Cluster.Get(system).DowningProvider;
-                downingProvider.Should().BeOfType<DummyDowningProvider>();
-                AwaitCondition(() =>
-                    ((DummyDowningProvider)downingProvider).ActorPropsAccessed.Value,
-                    TimeSpan.FromSeconds(3));
-            }
+            using var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig));
+            var downingProvider = Cluster.Get(system).DowningProvider;
+            downingProvider.Should().BeOfType<DummyDowningProvider>();
+            AwaitCondition(() =>
+                ((DummyDowningProvider)downingProvider).ActorPropsAccessed.Value,
+                TimeSpan.FromSeconds(3));
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]

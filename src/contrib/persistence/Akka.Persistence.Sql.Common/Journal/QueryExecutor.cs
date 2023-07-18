@@ -663,14 +663,13 @@ namespace Akka.Persistence.Sql.Common.Journal
                     var commandBehavior = Configuration.UseSequentialAccess 
                         ? CommandBehavior.SequentialAccess : CommandBehavior.Default;
 
-                    using (var reader = await command.ExecuteReaderAsync(commandBehavior, token))
+                    using var reader = await command.ExecuteReaderAsync(commandBehavior, token);
+
+                    while (await reader.ReadAsync(token))
                     {
-                        while (await reader.ReadAsync(token))
-                        {
-                            var persistent = ReadEvent(reader);
-                            var ordering = reader.GetInt64(OrderingIndex);
-                            callback(new ReplayedTaggedMessage(persistent, tag, ordering));
-                        }
+                        var persistent = ReadEvent(reader);
+                        var ordering = reader.GetInt64(OrderingIndex);
+                        callback(new ReplayedTaggedMessage(persistent, tag, ordering));
                     }
                 }
 
@@ -835,12 +834,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public virtual async Task CreateTablesAsync(DbConnection connection, CancellationToken cancellationToken)
         {
-            using (var command = GetCommand(connection, CreateEventsJournalSql))
-            {
-                await command.ExecuteNonQueryAsync(cancellationToken);
-                command.CommandText = CreateMetaTableSql;
-                await command.ExecuteNonQueryAsync(cancellationToken);
-            }
+            using var command = GetCommand(connection, CreateEventsJournalSql);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+            command.CommandText = CreateMetaTableSql;
+            await command.ExecuteNonQueryAsync(cancellationToken);
         }
 
         /// <summary>

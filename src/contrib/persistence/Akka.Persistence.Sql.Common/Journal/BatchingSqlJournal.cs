@@ -747,17 +747,16 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             if (Setup.AutoInitialize)
             {
-                using (var connection = CreateConnection(Setup.ConnectionString))
-                using (var command = connection.CreateCommand())
-                {
-                    connection.Open();
+                using var connection = CreateConnection(Setup.ConnectionString);
+                using var command = connection.CreateCommand();
 
-                    foreach (var entry in Initializers)
-                    {
-                        Log.Debug("Executing initialization script: {0}", entry.Key);
-                        command.CommandText = entry.Value;
-                        command.ExecuteNonQuery();
-                    }
+                connection.Open();
+
+                foreach (var entry in Initializers)
+                {
+                    Log.Debug("Executing initialization script: {0}", entry.Key);
+                    command.CommandText = entry.Value;
+                    command.ExecuteNonQuery();
                 }
             }
 
@@ -956,61 +955,59 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 // In the grand scheme of thing, using a transaction in an all read batch operation
                 // should not hurt performance by much, because it is done only once at the start.
-                using (var tx = connection.BeginTransaction(isWriteOperation ? _writeIsolationLevel : _readIsolationLevel))
-                using (var command = (TCommand)connection.CreateCommand())
+                using var tx = connection.BeginTransaction(isWriteOperation ? _writeIsolationLevel : _readIsolationLevel);
+                using var command = (TCommand)connection.CreateCommand();
+                command.CommandTimeout = (int)Setup.ConnectionTimeout.TotalSeconds;
+                command.Transaction = tx;
+                try
                 {
-                    command.CommandTimeout = (int)Setup.ConnectionTimeout.TotalSeconds;
-                    command.Transaction = tx;
+                    stopwatch.Start();
+                    // This looks dangerous at a glance, but we have separated read and write operations
+                    // in the DequeueChunk method. 
+                    foreach (var req in chunk.Requests)
+                    {
+                        switch (req)
+                        {
+                            case WriteMessages msg:
+                                writeResults.Enqueue(await HandleWriteMessages(msg, command));
+                                break;
+                            case DeleteMessagesTo msg:
+                                await HandleDeleteMessagesTo(msg, command);
+                                break;
+                            case ReplayMessages msg:
+                                await HandleReplayMessages(msg, command, context);
+                                break;
+                            case ReplayTaggedMessages msg:
+                                await HandleReplayTaggedMessages(msg, command);
+                                break;
+                            case ReplayAllEvents msg:
+                                await HandleReplayAllMessages(msg, command);
+                                break;
+                            case SelectCurrentPersistenceIds msg:
+                                await HandleSelectCurrentPersistenceIds(msg, command);
+                                break;
+                            default:
+                                Unhandled(req);
+                                break;
+                        }
+                    }
+                    tx.Commit();
+                }
+                catch (Exception e1)
+                {
                     try
                     {
-                        stopwatch.Start();
-                        // This looks dangerous at a glance, but we have separated read and write operations
-                        // in the DequeueChunk method. 
-                        foreach (var req in chunk.Requests)
-                        {
-                            switch (req)
-                            {
-                                case WriteMessages msg:
-                                    writeResults.Enqueue(await HandleWriteMessages(msg, command)); 
-                                    break;
-                                case DeleteMessagesTo msg:
-                                    await HandleDeleteMessagesTo(msg, command);
-                                    break;
-                                case ReplayMessages msg:
-                                    await HandleReplayMessages(msg, command, context);
-                                    break;
-                                case ReplayTaggedMessages msg:
-                                    await HandleReplayTaggedMessages(msg, command);
-                                    break;
-                                case ReplayAllEvents msg:
-                                    await HandleReplayAllMessages(msg, command);
-                                    break;
-                                case SelectCurrentPersistenceIds msg:
-                                    await HandleSelectCurrentPersistenceIds(msg, command);
-                                    break;
-                                default:
-                                    Unhandled(req);
-                                    break;
-                            }
-                        }
-                        tx.Commit();
+                        tx.Rollback();
                     }
-                    catch (Exception e1)
+                    catch (Exception e2)
                     {
-                        try
-                        {
-                            tx.Rollback();
-                        }
-                        catch (Exception e2)
-                        {
-                            throw new AggregateException(e2, e1);
-                        }
-                        throw;
+                        throw new AggregateException(e2, e1);
                     }
-                    finally
-                    {
-                        stopwatch.Stop();
-                    }
+                    throw;
+                }
+                finally
+                {
+                    stopwatch.Stop();
                 }
             }
 
@@ -1230,12 +1227,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                     {
                         var persistent = ReadEvent(reader);
 
-                        if (!persistent.IsDeleted) // old records from pre 1.5 may still have the IsDeleted flag
+                        if (persistent.IsDeleted) // old records from pre 1.5 may still have the IsDeleted flag
+                            continue;
+                        
+                        foreach (var adaptedRepresentation in AdaptFromJournal(persistent))
                         {
-                            foreach (var adaptedRepresentation in AdaptFromJournal(persistent))
-                            {
-                                replyTo.Tell(new ReplayedMessage(adaptedRepresentation), ActorRefs.NoSender);
-                            }
+                            replyTo.Tell(new ReplayedMessage(adaptedRepresentation), ActorRefs.NoSender);
                         }
                     }
                 }

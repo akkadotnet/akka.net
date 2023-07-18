@@ -18,59 +18,57 @@ namespace Akka.TestKit.Extensions
     {
         public static async Task<bool> AwaitWithTimeout(this Task parentTask, TimeSpan timeout, CancellationToken cancellationToken = default)
         {
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+            try
             {
-                try
+                var delayed = Task.Delay(timeout, cts.Token);
+                var returnedTask = await Task.WhenAny(delayed, parentTask);
+
+                if (returnedTask == parentTask && returnedTask.Exception != null)
                 {
-                    var delayed = Task.Delay(timeout, cts.Token);
-                    var returnedTask = await Task.WhenAny(delayed, parentTask);
-                    
-                    if(returnedTask == parentTask && returnedTask.Exception != null)
-                    {
-                        var flattened = returnedTask.Exception.Flatten();
-                        if(flattened.InnerExceptions.Count == 1)
-                            ExceptionDispatchInfo.Capture(flattened.InnerExceptions[0]).Throw();
-                        else
-                            ExceptionDispatchInfo.Capture(returnedTask.Exception).Throw();
-                        return false;
-                    }
-                    
-                    return parentTask.IsCompleted;
+                    var flattened = returnedTask.Exception.Flatten();
+                    if (flattened.InnerExceptions.Count == 1)
+                        ExceptionDispatchInfo.Capture(flattened.InnerExceptions[0]).Throw();
+                    else
+                        ExceptionDispatchInfo.Capture(returnedTask.Exception).Throw();
+                    return false;
                 }
-                finally
-                {
-                    cts.Cancel();
-                }
+
+                return parentTask.IsCompleted;
+            }
+            finally
+            {
+                cts.Cancel();
             }
         }
         
         public static async Task<T> WithTimeout<T>(this Task<T> parentTask, TimeSpan timeout, CancellationToken cancellationToken = default)
         {
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
-            {
-                try
-                {
-                    var delayed = Task.Delay(timeout, cts.Token);
-                    var returnedTask = await Task.WhenAny(delayed, parentTask);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-                    if (returnedTask != parentTask)
-                        throw new TaskCanceledException($"Task timed out after {timeout.TotalSeconds} seconds");
-                    
-                    if(returnedTask == parentTask && returnedTask.Exception != null)
-                    {
-                        var flattened = returnedTask.Exception.Flatten();
-                        if(flattened.InnerExceptions.Count == 1)
-                            ExceptionDispatchInfo.Capture(flattened.InnerExceptions[0]).Throw();
-                        else
-                            ExceptionDispatchInfo.Capture(returnedTask.Exception).Throw();
-                    }
-                    
-                    return parentTask.Result;
-                }
-                finally
+            try
+            {
+                var delayed = Task.Delay(timeout, cts.Token);
+                var returnedTask = await Task.WhenAny(delayed, parentTask);
+
+                if (returnedTask != parentTask)
+                    throw new TaskCanceledException($"Task timed out after {timeout.TotalSeconds} seconds");
+
+                if (returnedTask == parentTask && returnedTask.Exception != null)
                 {
-                    cts.Cancel();
+                    var flattened = returnedTask.Exception.Flatten();
+                    if (flattened.InnerExceptions.Count == 1)
+                        ExceptionDispatchInfo.Capture(flattened.InnerExceptions[0]).Throw();
+                    else
+                        ExceptionDispatchInfo.Capture(returnedTask.Exception).Throw();
                 }
+
+                return parentTask.Result;
+            }
+            finally
+            {
+                cts.Cancel();
             }
         }
         

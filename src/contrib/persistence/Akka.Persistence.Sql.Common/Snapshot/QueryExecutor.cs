@@ -585,13 +585,11 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <returns>TBD</returns>
         public virtual async Task CreateTableAsync(DbConnection connection, CancellationToken cancellationToken)
         {
-            using (var command = GetCommand(connection, CreateSnapshotTableSql))
-            using (var tx = connection.BeginTransaction())
-            {
-                command.Transaction = tx;
-                await command.ExecuteNonQueryAsync(cancellationToken);
-                tx.Commit();
-            }
+            using var command = GetCommand(connection, CreateSnapshotTableSql);
+            using var tx = connection.BeginTransaction();
+            command.Transaction = tx;
+            await command.ExecuteNonQueryAsync(cancellationToken);
+            tx.Commit();
         }
 
         /// <summary>

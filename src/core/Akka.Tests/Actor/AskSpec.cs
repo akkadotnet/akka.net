@@ -173,8 +173,8 @@ namespace Akka.Tests.Actor
 
             await EventFilter.DeadLetter<object>().ExpectAsync(0, async () =>
             {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
-                    await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("delay", Timeout.InfiniteTimeSpan, cts.Token));
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("delay", Timeout.InfiniteTimeSpan, cts.Token));
             });
         }
 
@@ -201,10 +201,8 @@ namespace Akka.Tests.Actor
         public async Task Can_cancel_when_asking_actor()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
-            {
-                await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("timeout", Timeout.InfiniteTimeSpan, cts.Token));
-            }
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("timeout", Timeout.InfiniteTimeSpan, cts.Token));
         }
 
         [Fact]

@@ -36,17 +36,11 @@ namespace Akka.Cluster.Configuration
         internal static Config FromResource(string resourceName)
         {
             var assembly = typeof(ClusterConfigFactory).Assembly;
-
-            using (var stream = assembly.GetManifestResourceStream(resourceName))
-            {
-                Debug.Assert(stream != null, "stream != null");
-                using (var reader = new StreamReader(stream))
-                {
-                    var result = reader.ReadToEnd();
-
-                    return ConfigurationFactory.ParseString(result);
-                }
-            }
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            Debug.Assert(stream != null, "stream != null");
+            using var reader = new StreamReader(stream);
+            var result = reader.ReadToEnd();
+            return ConfigurationFactory.ParseString(result);
         }
     }
 }

@@ -33,18 +33,16 @@ namespace Akka.TestKit.Internal
 
         public async ValueTask<bool> TryEnqueueAsync(T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(millisecondsTimeout);
+            try
             {
-                cts.CancelAfter(millisecondsTimeout);
-                try
-                {
-                    await _collection.AddAsync(item, cts.Token);
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
+                await _collection.AddAsync(item, cts.Token);
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -99,11 +97,9 @@ namespace Akka.TestKit.Internal
 
         public async ValueTask<(bool success, T item)> TryTakeAsync(int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
-            {
-                cts.CancelAfter(millisecondsTimeout);
-                return await TryTakeAsync(cts.Token);
-            }
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(millisecondsTimeout);
+            return await TryTakeAsync(cts.Token);
         }
 
         public T Take(CancellationToken cancellationToken)
@@ -148,11 +144,9 @@ namespace Akka.TestKit.Internal
 
         public async ValueTask<(bool success, T item)> TryPeekAsync(int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
-            {
-                cts.CancelAfter(millisecondsTimeout);
-                return await TryPeekAsync(cts.Token);
-            }
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(millisecondsTimeout);
+            return await TryPeekAsync(cts.Token);
         }
 
         public T Peek(CancellationToken cancellationToken)

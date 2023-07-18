@@ -275,27 +275,21 @@ namespace Akka.Remote.Tests.Transport
 
         private void InstallCert()
         {
-            using (var store = new X509Store("My", StoreLocation.CurrentUser))
-            {
-                store.Open(OpenFlags.ReadWrite);
-
-
-                var cert = new X509Certificate2(ValidCertPath, Password);
-                Thumbprint = cert.Thumbprint;
-                store.Add(cert);
-            }
+            using var store = new X509Store("My", StoreLocation.CurrentUser);
+            store.Open(OpenFlags.ReadWrite);
+            var cert = new X509Certificate2(ValidCertPath, Password);
+            Thumbprint = cert.Thumbprint;
+            store.Add(cert);
         }
 
         private void RemoveCert()
         {
-            using (var store = new X509Store("My", StoreLocation.CurrentUser))
+            using var store = new X509Store("My", StoreLocation.CurrentUser);
+            store.Open(OpenFlags.ReadWrite);
+            var certs = store.Certificates.Find(X509FindType.FindByThumbprint, Thumbprint, false);
+            if (certs.Count > 0)
             {
-                store.Open(OpenFlags.ReadWrite);
-                var certs = store.Certificates.Find(X509FindType.FindByThumbprint, Thumbprint, false);
-                if (certs.Count > 0)
-                {
-                    store.Remove(certs[0]);
-                }
+                store.Remove(certs[0]);
             }
         }
 

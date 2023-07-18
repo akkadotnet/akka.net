@@ -295,17 +295,12 @@ namespace Akka.Serialization
             try
             {
                 sb = _sbPool.Get();
-                
-                using (var tw = new StringWriter(sb, CultureInfo.InvariantCulture))
-                {
-                    var ser = JsonSerializer.CreateDefault(Settings);
-                    ser.Formatting = Formatting.None;
-                    using (var jw = new JsonTextWriter(tw))
-                    {
-                        ser.Serialize(jw, obj);
-                    }
-                    return Encoding.UTF8.GetBytes(tw.ToString());
-                }
+                using var tw = new StringWriter(sb, CultureInfo.InvariantCulture);
+                var ser = JsonSerializer.CreateDefault(Settings);
+                ser.Formatting = Formatting.None;
+                using var jw = new JsonTextWriter(tw);
+                ser.Serialize(jw, obj);
+                return Encoding.UTF8.GetBytes(tw.ToString());
             }
             finally
             {

@@ -103,19 +103,13 @@ namespace Akka.Tests.Event
         [Fact]
         public async Task Be_able_to_log_unhandled_messages()
         {
-            using (var system = ActorSystem.Create("EventStreamSpecUnhandled", GetDebugUnhandledMessagesConfig()))
-            {
-                system.EventStream.Subscribe(TestActor, typeof(Debug));
-
-                var msg = new UnhandledMessage(42, system.DeadLetters, system.DeadLetters);
-
-                system.EventStream.Publish(msg);
-
-                var debugMsg = await ExpectMsgAsync<Debug>();
-
-                debugMsg.Message.ToString().StartsWith("Unhandled message from").ShouldBeTrue();
-                debugMsg.Message.ToString().EndsWith(": 42").ShouldBeTrue();
-            }
+            using var system = ActorSystem.Create("EventStreamSpecUnhandled", GetDebugUnhandledMessagesConfig());
+            system.EventStream.Subscribe(TestActor, typeof(Debug));
+            var msg = new UnhandledMessage(42, system.DeadLetters, system.DeadLetters);
+            system.EventStream.Publish(msg);
+            var debugMsg = await ExpectMsgAsync<Debug>();
+            debugMsg.Message.ToString().StartsWith("Unhandled message from").ShouldBeTrue();
+            debugMsg.Message.ToString().EndsWith(": 42").ShouldBeTrue();
         }
 
         /// <summary>
@@ -124,20 +118,13 @@ namespace Akka.Tests.Event
         [Fact]
         public async Task Bugfix3267_able_to_log_unhandled_messages_with_nosender()
         {
-            using (var system = ActorSystem.Create("EventStreamSpecUnhandled", GetDebugUnhandledMessagesConfig()))
-            {
-                system.EventStream.Subscribe(TestActor, typeof(Debug));
-
-                // sender is NoSender
-                var msg = new UnhandledMessage(42, ActorRefs.NoSender, system.DeadLetters);
-
-                system.EventStream.Publish(msg);
-
-                var debugMsg = await ExpectMsgAsync<Debug>();
-
-                debugMsg.Message.ToString().StartsWith("Unhandled message from").ShouldBeTrue();
-                debugMsg.Message.ToString().EndsWith(": 42").ShouldBeTrue();
-            }
+            using var system = ActorSystem.Create("EventStreamSpecUnhandled", GetDebugUnhandledMessagesConfig());
+            system.EventStream.Subscribe(TestActor, typeof(Debug));
+            var msg = new UnhandledMessage(42, ActorRefs.NoSender, system.DeadLetters); // sender is NoSender
+            system.EventStream.Publish(msg);
+            var debugMsg = await ExpectMsgAsync<Debug>();
+            debugMsg.Message.ToString().StartsWith("Unhandled message from").ShouldBeTrue();
+            debugMsg.Message.ToString().EndsWith(": 42").ShouldBeTrue();
         }
 
         [Fact]

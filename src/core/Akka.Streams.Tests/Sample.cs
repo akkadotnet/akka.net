@@ -22,14 +22,13 @@ namespace Akka.Streams.Tests
                 when an unknown printer took a galley of type and scrambled it to make a type
                 specimen book.";
 
-            using (var system = ActorSystem.Create("streams-example"))
-            using (var materializer = system.Materializer())
-            {
-                await Source
-                    .From(text)
-                    .Select(char.ToUpper) 
-                    .RunForeach(Console.WriteLine, materializer);
-            }
+            using var system = ActorSystem.Create("streams-example");
+            using var materializer = system.Materializer();
+
+            await Source
+                .From(text)
+                .Select(char.ToUpper)
+                .RunForeach(Console.WriteLine, materializer);
         }
     }
 }

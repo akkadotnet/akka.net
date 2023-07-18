@@ -125,20 +125,20 @@ namespace Akka.Cluster
             private static Node Hash(string name)
             {
                 // TODO: replace with Murmur3 or SHA512, some other consistent hash algorithm for FIPS complaince and no collisions in Akka.NET v1.5 or 2.0
-                using(var md5 = System.Security.Cryptography.MD5.Create()){
-                    var inputBytes = Encoding.UTF8.GetBytes(name);
-                    var hash = md5.ComputeHash(inputBytes);
 
+                using var md5 = System.Security.Cryptography.MD5.Create();
+                
+                var inputBytes = Encoding.UTF8.GetBytes(name);
+                var hash = md5.ComputeHash(inputBytes);
 
-                    var sb = new StringBuilder();
+                var sb = new StringBuilder();
 
-                    foreach (var t in hash)
-                    {
-                        sb.Append(t.ToString("X2"));
-                    }
+                foreach (var t in hash)
+                {
+                    sb.Append(t.ToString("X2"));
+                }
 
-                    return new Node(sb.ToString());
-                }               
+                return new Node(sb.ToString());
             }
 
            

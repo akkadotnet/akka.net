@@ -17,13 +17,13 @@ namespace Akka.Streams.TestKit
         public static IPEndPoint TemporaryServerAddress(string hostName = "127.0.0.1", bool udp = false)
         {
             var host = new IPEndPoint(IPAddress.Parse(hostName), 0);
-            using (var socket = new Socket(
+
+            using var socket = new Socket(
                 udp ? SocketType.Dgram : SocketType.Stream,
-                udp ? ProtocolType.Udp : ProtocolType.Tcp))
-            {
-                socket.Bind(host);
-                return new IPEndPoint(IPAddress.Loopback, ((IPEndPoint) socket.LocalEndPoint).Port);
-            }
+                udp ? ProtocolType.Udp : ProtocolType.Tcp);
+
+            socket.Bind(host);
+            return new IPEndPoint(IPAddress.Loopback, ((IPEndPoint) socket.LocalEndPoint).Port);
         }
 
         public static IEnumerable<IPEndPoint> TemporaryServerAddresses(int numberOfAddresses,

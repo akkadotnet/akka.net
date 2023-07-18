@@ -309,10 +309,8 @@ namespace Akka.Persistence.Tests
         private T WithActorSystem<T>(string name, Config config, Func<ActorSystem, T> block)
         {
             var testKit = new InternalTestKit(name, _journalConfig.WithFallback(config));
-            using (var system = testKit.Sys)
-            {
-                return block(system);
-            }
+            using var system = testKit.Sys;
+            return block(system);
         }
 
         [Fact]

@@ -105,30 +105,26 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             var writeTasks = messages.Select(async message =>
             {
-                using (var connection = CreateDbConnection())
+                using var connection = CreateDbConnection();
+                await connection.OpenAsync();
+                var eventToTags = new Dictionary<IPersistentRepresentation, IImmutableSet<string>>();
+                var persistentMessages = ((IImmutableList<IPersistentRepresentation>)message.Payload).ToArray();
+                for (var i = 0; i < persistentMessages.Length; i++)
                 {
-                    await connection.OpenAsync();
-
-                    var eventToTags = new Dictionary<IPersistentRepresentation, IImmutableSet<string>>();
-                    var persistentMessages = ((IImmutableList<IPersistentRepresentation>)message.Payload).ToArray();
-                    for (var i = 0; i < persistentMessages.Length; i++)
+                    var p = persistentMessages[i];
+                    if (p.Payload is Tagged tagged)
                     {
-                        var p = persistentMessages[i];
-                        if (p.Payload is Tagged tagged)
-                        {
-                            persistentMessages[i] = p = p.WithPayload(tagged.Payload);
-                            eventToTags.Add(p, tagged.Tags.Count != 0 ? tagged.Tags : ImmutableHashSet<string>.Empty);
-                        }
-                        else eventToTags.Add(p, ImmutableHashSet<string>.Empty);
-
-                        if (IsTagId(p.PersistenceId))
-                            throw new InvalidOperationException($"Persistence Id {p.PersistenceId} must not start with {QueryExecutor.Configuration.TagsColumnName}");
+                        persistentMessages[i] = p = p.WithPayload(tagged.Payload);
+                        eventToTags.Add(p, tagged.Tags.Count != 0 ? tagged.Tags : ImmutableHashSet<string>.Empty);
                     }
+                    else eventToTags.Add(p, ImmutableHashSet<string>.Empty);
 
-                    var batch = new WriteJournalBatch(eventToTags);
-                    using(var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                        await QueryExecutor.InsertBatchAsync(connection, cancellationToken.Token, batch);
+                    if (IsTagId(p.PersistenceId))
+                        throw new InvalidOperationException($"Persistence Id {p.PersistenceId} must not start with {QueryExecutor.Configuration.TagsColumnName}");
                 }
+                var batch = new WriteJournalBatch(eventToTags);
+                using var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+                await QueryExecutor.InsertBatchAsync(connection, cancellationToken.Token, batch);
             }).ToArray();
 
             var result = await Task<IImmutableList<Exception>>
@@ -146,58 +142,48 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected virtual async Task<long> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
-            using (var connection = CreateDbConnection())
-            {
-                await connection.OpenAsync();
-                using(var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using var connection = CreateDbConnection();
+            await connection.OpenAsync();
+            using var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+            return await QueryExecutor
+                .SelectByTagAsync(connection, cancellationToken.Token, replay.Tag, replay.FromOffset, replay.ToOffset, replay.Max, replayedTagged =>
                 {
-                    return await QueryExecutor
-                        .SelectByTagAsync(connection, cancellationToken.Token, replay.Tag, replay.FromOffset, replay.ToOffset, replay.Max, replayedTagged => {
-                            foreach(var adapted in AdaptFromJournal(replayedTagged.Persistent))
-                            { 
-                                replay.ReplyTo.Tell(new ReplayedTaggedMessage(adapted, replayedTagged.Tag, replayedTagged.Offset), ActorRefs.NoSender);
-                            }
-                        });
-                }
-            }
+                    foreach (var adapted in AdaptFromJournal(replayedTagged.Persistent))
+                    {
+                        replay.ReplyTo.Tell(new ReplayedTaggedMessage(adapted, replayedTagged.Tag, replayedTagged.Offset), ActorRefs.NoSender);
+                    }
+                });
         }
 
         protected virtual async Task<long> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            using (var connection = CreateDbConnection())
-            {
-                await connection.OpenAsync();
-                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                {
-                    return await QueryExecutor
-                        .SelectAllEventsAsync(
-                            connection,
-                            cancellationToken.Token, 
-                            replay.FromOffset, 
-                            replay.ToOffset,
-                            replay.Max, 
-                            replayedEvent => {
-                                foreach (var adapted in AdaptFromJournal(replayedEvent.Persistent))
-                                {
-                                    replay.ReplyTo.Tell(new ReplayedEvent(adapted, replayedEvent.Offset), ActorRefs.NoSender);
-                                }
-                            });
-                }
-            }
+            using var connection = CreateDbConnection();
+            await connection.OpenAsync();
+            using var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+            return await QueryExecutor
+                .SelectAllEventsAsync(
+                    connection,
+                    cancellationToken.Token,
+                    replay.FromOffset,
+                    replay.ToOffset,
+                    replay.Max,
+                    replayedEvent =>
+                    {
+                        foreach (var adapted in AdaptFromJournal(replayedEvent.Persistent))
+                        {
+                            replay.ReplyTo.Tell(new ReplayedEvent(adapted, replayedEvent.Offset), ActorRefs.NoSender);
+                        }
+                    });
         }
 
         protected virtual async Task<(IEnumerable<string> Ids, long LastOrdering)> SelectAllPersistenceIdsAsync(long offset)
         {
-            using (var connection = CreateDbConnection())
-            {
-                await connection.OpenAsync();
-                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                {
-                    var lastOrdering = await QueryExecutor.SelectHighestSequenceNrAsync(connection, cancellationToken.Token);
-                    var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, cancellationToken.Token, offset);
-                    return (ids, lastOrdering);
-                }
-            }
+            using var connection = CreateDbConnection();
+            await connection.OpenAsync();
+            using var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+            var lastOrdering = await QueryExecutor.SelectHighestSequenceNrAsync(connection, cancellationToken.Token);
+            var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, cancellationToken.Token, offset);
+            return (ids, lastOrdering);
         }
 
         /// <summary>
@@ -213,14 +199,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         public override async Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
-            using (var connection = CreateDbConnection())
-            {
-                await connection.OpenAsync();
-                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                {
-                    await QueryExecutor.SelectByPersistenceIdAsync(connection, cancellationToken.Token, persistenceId, fromSequenceNr, toSequenceNr, max, recoveryCallback);
-                }
-            }
+            using var connection = CreateDbConnection();
+            await connection.OpenAsync();
+            using var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+            await QueryExecutor.SelectByPersistenceIdAsync(connection, cancellationToken.Token, persistenceId, fromSequenceNr, toSequenceNr, max, recoveryCallback);
         }
 
         /// <summary>
@@ -272,14 +254,10 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             try
             {
-                using (var connection = CreateDbConnection())
-                {
-                    await connection.OpenAsync();
-                    using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                    {
-                        await QueryExecutor.CreateTablesAsync(connection, cancellationToken.Token);
-                    }
-                }
+                using var connection = CreateDbConnection();
+                await connection.OpenAsync();
+                using var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+                await QueryExecutor.CreateTablesAsync(connection, cancellationToken.Token);
             }
             catch (Exception e)
             {
@@ -324,14 +302,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
-            using (var connection = CreateDbConnection())
-            {
-                await connection.OpenAsync();
-                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                {
-                    await QueryExecutor.DeleteBatchAsync(connection, cancellationToken.Token, persistenceId, toSequenceNr);
-                }
-            }
+            using var connection = CreateDbConnection();
+            await connection.OpenAsync();
+            using var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+            await QueryExecutor.DeleteBatchAsync(connection, cancellationToken.Token, persistenceId, toSequenceNr);
         }
 
         /// <summary>
@@ -342,14 +316,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
-            using (var connection = CreateDbConnection())
-            {
-                await connection.OpenAsync();
-                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                {
-                    return await QueryExecutor.SelectHighestSequenceNrAsync(connection, cancellationToken.Token, persistenceId);
-                }
-            }
+            using var connection = CreateDbConnection();
+            await connection.OpenAsync();
+            using var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+            return await QueryExecutor.SelectHighestSequenceNrAsync(connection, cancellationToken.Token, persistenceId);
         }
 
         /// <summary>
