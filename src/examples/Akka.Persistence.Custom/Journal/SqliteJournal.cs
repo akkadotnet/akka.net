@@ -184,18 +184,14 @@ namespace Akka.Persistence.Custom.Journal
             // Create SQLite journal tables 
             try
             {
-                using (var connection = new SqliteConnection(_connectionString))
-                using (var cts = CancellationTokenSource
-                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                {
-                    await connection.OpenAsync(cts.Token);
-                    using (var command = GetCommand(connection, CreateEventsJournalSql, _timeout))
-                    {
-                        await command.ExecuteNonQueryAsync(cts.Token);
-                        command.CommandText = CreateMetaTableSql;
-                        await command.ExecuteNonQueryAsync(cts.Token);
-                    }
-                }
+                using var connection = new SqliteConnection(_connectionString);
+                using var cts = CancellationTokenSource
+                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+                await connection.OpenAsync(cts.Token);
+                using var command = GetCommand(connection, CreateEventsJournalSql, _timeout);
+                await command.ExecuteNonQueryAsync(cts.Token);
+                command.CommandText = CreateMetaTableSql;
+                await command.ExecuteNonQueryAsync(cts.Token);
             }
             catch (Exception e)
             {
@@ -216,57 +212,53 @@ namespace Akka.Persistence.Custom.Journal
             Action<IPersistentRepresentation> recoveryCallback)
         {
             // Create a new DbConnection instance
-            using (var connection = new SqliteConnection(_connectionString))
-            using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using var connection = new SqliteConnection(_connectionString);
+            using var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+
+            await connection.OpenAsync(cts.Token);
+
+            // Create new DbCommand instance
+            using var command = GetCommand(connection, ByPersistenceIdSql, _timeout);
+
+            // Populate the SQL parameters
+            AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
+            AddParameter(command, "@FromSequenceNr", DbType.Int64, fromSequenceNr);
+            AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
+
+            // Create a DbDataReader to sequentially read the returned query result
+            using var reader = await command.ExecuteReaderAsync(
+                       behavior: CommandBehavior.SequentialAccess,
+                       cancellationToken: cts.Token);
+            var i = 0L;
+            while (i++ < max && await reader.ReadAsync(cts.Token))
             {
-                await connection.OpenAsync(cts.Token);
-                
-                // Create new DbCommand instance
-                using (var command = GetCommand(connection, ByPersistenceIdSql, _timeout))
-                {
-                    // Populate the SQL parameters
-                    AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
-                    AddParameter(command, "@FromSequenceNr", DbType.Int64, fromSequenceNr);
-                    AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
-                    
-                    // Create a DbDataReader to sequentially read the returned query result
-                    using (var reader = await command.ExecuteReaderAsync(
-                               behavior: CommandBehavior.SequentialAccess, 
-                               cancellationToken: cts.Token))
-                    {
-                        var i = 0L;
-                        while (i++ < max && await reader.ReadAsync(cts.Token))
-                        {
-                            var id = reader.GetString(0);
-                            var sequenceNr = reader.GetInt64(1);
-                            var timestamp = reader.GetInt64(2);
-                            var isDeleted = reader.GetBoolean(3);
-                            var manifest = reader.GetString(4);
-                            var payload = reader[5];
-                            var serializerId = reader.GetInt32(6);
-                            
-                            // Deserialize the persistent payload using the data we read from the reader
-                            var deserialized = _serialization.Deserialize(
-                                bytes: (byte[])payload, 
-                                serializerId: serializerId, 
-                                manifest: manifest);
-                            
-                            // Call the recovery callback with the deserialized data from the database
-                            recoveryCallback(new Persistent(
-                                payload: deserialized, 
-                                sequenceNr: sequenceNr,
-                                persistenceId: id,
-                                manifest: manifest, 
-                                isDeleted: isDeleted, 
-                                sender: ActorRefs.NoSender, 
-                                writerGuid: null, 
-                                timestamp: timestamp));
-                        }
-                        command.Cancel();
-                    }
-                }
+                var id = reader.GetString(0);
+                var sequenceNr = reader.GetInt64(1);
+                var timestamp = reader.GetInt64(2);
+                var isDeleted = reader.GetBoolean(3);
+                var manifest = reader.GetString(4);
+                var payload = reader[5];
+                var serializerId = reader.GetInt32(6);
+
+                // Deserialize the persistent payload using the data we read from the reader
+                var deserialized = _serialization.Deserialize(
+                    bytes: (byte[])payload,
+                    serializerId: serializerId,
+                    manifest: manifest);
+
+                // Call the recovery callback with the deserialized data from the database
+                recoveryCallback(new Persistent(
+                    payload: deserialized,
+                    sequenceNr: sequenceNr,
+                    persistenceId: id,
+                    manifest: manifest,
+                    isDeleted: isDeleted,
+                    sender: ActorRefs.NoSender,
+                    writerGuid: null,
+                    timestamp: timestamp));
             }
+            command.Cancel();
         }
         // </ReplayMessagesAsync>
 
@@ -276,24 +268,23 @@ namespace Akka.Persistence.Custom.Journal
             long fromSequenceNr)
         {
             // Create a new DbConnection instance
-            using (var connection = new SqliteConnection(_connectionString))
-            using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-            {
-                await connection.OpenAsync(cts.Token);
-                // Create new DbCommand instance
-                using (var command = GetCommand(connection, HighestSequenceNrSql, _timeout))
-                {
-                    // Populate the SQL parameters
-                    AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
-        
-                    // Execute the SQL query statement
-                    var result = await command.ExecuteScalarAsync(cts.Token);
-        
-                    // Return the result if one is returned by the query result, else return zero
-                    return result is long ? Convert.ToInt64(result) : 0L;
-                }
-            }
+            using var connection = new SqliteConnection(_connectionString);
+            using var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+
+            await connection.OpenAsync(cts.Token);
+
+            // Create new DbCommand instance
+            using var command = GetCommand(connection, HighestSequenceNrSql, _timeout);
+
+            // Populate the SQL parameters
+            AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
+
+            // Execute the SQL query statement
+            var result = await command.ExecuteScalarAsync(cts.Token);
+
+            // Return the result if one is returned by the query result, else return zero
+            return result is long ? Convert.ToInt64(result) : 0L;
         }
         // </ReadHighestSequenceNrAsync>
 
@@ -305,78 +296,75 @@ namespace Akka.Persistence.Custom.Journal
             var writeTasks = messages.Select(async message =>
             {
                 // Create a new DbConnection instance
-                using (var connection = new SqliteConnection(_connectionString))
-                using (var cts = CancellationTokenSource
-                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                using var connection = new SqliteConnection(_connectionString);
+                using var cts = CancellationTokenSource
+                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+                await connection.OpenAsync(cts.Token);
+
+                // Create new DbCommand instance
+                using var command = GetCommand(connection, InsertEventSql, _timeout);
+
+                // Create a new DbTransaction instance for this AtomicWrite
+                using var tx = connection.BeginTransaction();
+
+                command.Transaction = tx;
+
+                // Cast the payload to IImmutableList<IPersistentRepresentation>.
+                // Note that AtomicWrite.Payload property is declared as an object property,
+                // but it is always populated with an IImmutableList<IPersistentRepresentation>
+                // instance
+                var payload = (IImmutableList<IPersistentRepresentation>)message.Payload;
+                var persistentMessages = payload.ToArray();
+                foreach (var @event in persistentMessages)
                 {
-                    await connection.OpenAsync(cts.Token);
-                    
-                    // Create new DbCommand instance
-                    using (var command = GetCommand(connection, InsertEventSql, _timeout))
-                    // Create a new DbTransaction instance for this AtomicWrite
-                    using (var tx = connection.BeginTransaction())
-                    {
-                        command.Transaction = tx;
-                        
-                        // Cast the payload to IImmutableList<IPersistentRepresentation>.
-                        // Note that AtomicWrite.Payload property is declared as an object property,
-                        // but it is always populated with an IImmutableList<IPersistentRepresentation>
-                        // instance
-                        var payload = (IImmutableList<IPersistentRepresentation>)message.Payload;
-                        var persistentMessages = payload.ToArray();
-                        foreach (var @event in persistentMessages)
+                    // Get the serializer associated with the payload type
+                    var serializer = _serialization.FindSerializerForType(@event.Payload.GetType());
+
+                    // This WithTransport method call is important, it allows for proper
+                    // local IActorRef serialization by switching the serialization information
+                    // context during the serialization process
+                    var (binary, manifest) = Akka.Serialization.Serialization.WithTransport(
+                        system: _serialization.System,
+                        state: (@event.Payload, serializer),
+                        action: state =>
                         {
-                            // Get the serializer associated with the payload type
-                            var serializer = _serialization.FindSerializerForType(@event.Payload.GetType());
-                            
-                            // This WithTransport method call is important, it allows for proper
-                            // local IActorRef serialization by switching the serialization information
-                            // context during the serialization process
-                            var (binary, manifest) = Akka.Serialization.Serialization.WithTransport(
-                                system: _serialization.System, 
-                                state: (@event.Payload, serializer), 
-                                action: state =>
-                                {
-                                    var (thePayload, theSerializer) = state;
-                                    var thisManifest = "";
-                                    
-                                    // There are two kinds of serializer when it comes to manifest
-                                    // support, we have to support both of them for proper payload
-                                    // serialization
-                                    if (theSerializer is SerializerWithStringManifest stringManifest)
-                                    {
-                                        thisManifest = stringManifest.Manifest(thePayload);
-                                    }
-                                    else if (theSerializer.IncludeManifest)
-                                    {
-                                        thisManifest = thePayload.GetType().TypeQualifiedName();
-                                    }
-                                    
-                                    // Return the serialized byte array and the manifest for the
-                                    // serialized data
-                                    return (theSerializer.ToBinary(thePayload), thisManifest);
-                                });
-                            
-                            // Populate the SQL parameters
-                            AddParameter(command, "@PersistenceId", DbType.String, @event.PersistenceId);
-                            AddParameter(command, "@SequenceNr", DbType.Int64, @event.SequenceNr);
-                            AddParameter(command, "@Timestamp", DbType.Int64, @event.Timestamp);
-                            AddParameter(command, "@IsDeleted", DbType.Boolean, false);
-                            AddParameter(command, "@Manifest", DbType.String, manifest);
-                            AddParameter(command, "@Payload", DbType.Binary, binary);
-                            AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
-                            
-                            // Execute the SQL query
-                            await command.ExecuteScalarAsync(cts.Token);
-                            
-                            // clear the parameters and reuse the DbCommand instance
-                            command.Parameters.Clear();
-                        }
-                        // Commit the DbTransaction
-                        tx.Commit();
-                    }
-                
+                            var (thePayload, theSerializer) = state;
+                            var thisManifest = "";
+
+                            // There are two kinds of serializer when it comes to manifest
+                            // support, we have to support both of them for proper payload
+                            // serialization
+                            if (theSerializer is SerializerWithStringManifest stringManifest)
+                            {
+                                thisManifest = stringManifest.Manifest(thePayload);
+                            }
+                            else if (theSerializer.IncludeManifest)
+                            {
+                                thisManifest = thePayload.GetType().TypeQualifiedName();
+                            }
+
+                            // Return the serialized byte array and the manifest for the
+                            // serialized data
+                            return (theSerializer.ToBinary(thePayload), thisManifest);
+                        });
+
+                    // Populate the SQL parameters
+                    AddParameter(command, "@PersistenceId", DbType.String, @event.PersistenceId);
+                    AddParameter(command, "@SequenceNr", DbType.Int64, @event.SequenceNr);
+                    AddParameter(command, "@Timestamp", DbType.Int64, @event.Timestamp);
+                    AddParameter(command, "@IsDeleted", DbType.Boolean, false);
+                    AddParameter(command, "@Manifest", DbType.String, manifest);
+                    AddParameter(command, "@Payload", DbType.Binary, binary);
+                    AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
+
+                    // Execute the SQL query
+                    await command.ExecuteScalarAsync(cts.Token);
+
+                    // clear the parameters and reuse the DbCommand instance
+                    command.Parameters.Clear();
                 }
+                // Commit the DbTransaction
+                tx.Commit();
             }).ToArray();
 
             // Collect all exceptions raised for each failed writes and return them.
@@ -396,68 +384,63 @@ namespace Akka.Persistence.Custom.Journal
             long toSequenceNr)
         {
             // Create a new DbConnection instance
-            using (var connection = new SqliteConnection(_connectionString))
+            using var connection = new SqliteConnection(_connectionString);
+
+            await connection.OpenAsync();
+
+            using var cts = CancellationTokenSource
+                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token);
+
+            // We will be using two DbCommands to complete this process
+            using var deleteCommand = GetCommand(connection, DeleteBatchSql, _timeout);
+            using var highestSeqNrCommand =
+                   GetCommand(connection, HighestSequenceNrSql, _timeout);
+
+            // Populate the SQL parameters
+            AddParameter(highestSeqNrCommand, "@PersistenceId", DbType.String,
+                persistenceId);
+
+            AddParameter(deleteCommand, "@PersistenceId", DbType.String, persistenceId);
+            AddParameter(deleteCommand, "@ToSequenceNr", DbType.Int64, toSequenceNr);
+
+            // Create a DbTransaction instance
+            using var tx = connection.BeginTransaction();
+
+            deleteCommand.Transaction = tx;
+            highestSeqNrCommand.Transaction = tx;
+
+            // Execute the HighestSequenceNrSql SQL statement and fetch the current
+            // highest sequence number for the given persistence identifier
+            var res = await highestSeqNrCommand.ExecuteScalarAsync(cts.Token);
+            var highestSeqNr = res is long ? Convert.ToInt64(res) : 0L;
+
+            // Delete all events up to toSequenceNr both in the journal and
+            // metadata table
+            await deleteCommand.ExecuteNonQueryAsync(cts.Token);
+
+            // Update the metadata table to reflect the new highest sequence number,
+            // if the toSequenceNr is higher than our current highest sequence number
+            if (highestSeqNr <= toSequenceNr)
             {
-                await connection.OpenAsync();
-                
-                using (var cts = CancellationTokenSource
-                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                {
-                    // We will be using two DbCommands to complete this process
-                    using (var deleteCommand = GetCommand(connection, DeleteBatchSql, _timeout))
-                    using (var highestSeqNrCommand = 
-                           GetCommand(connection, HighestSequenceNrSql, _timeout))
-                    {
-                        // Populate the SQL parameters
-                        AddParameter(highestSeqNrCommand, "@PersistenceId", DbType.String, 
-                            persistenceId);
+                // Create a new DbCommand instance
+                using var updateCommand = GetCommand(connection, UpdateSequenceNrSql,
+                           _timeout);
 
-                        AddParameter(deleteCommand, "@PersistenceId", DbType.String, persistenceId);
-                        AddParameter(deleteCommand, "@ToSequenceNr", DbType.Int64, toSequenceNr);
+                // This update is still part of the same transaction as everything
+                // else in this process
+                updateCommand.Transaction = tx;
 
-                        // Create a DbTransaction instance
-                        using (var tx = connection.BeginTransaction())
-                        {
-                            deleteCommand.Transaction = tx;
-                            highestSeqNrCommand.Transaction = tx;
+                // Populate the SQL parameters
+                AddParameter(
+                    updateCommand, "@PersistenceId", DbType.String, persistenceId);
+                AddParameter(
+                    updateCommand, "@SequenceNr", DbType.Int64, highestSeqNr);
 
-                            // Execute the HighestSequenceNrSql SQL statement and fetch the current
-                            // highest sequence number for the given persistence identifier
-                            var res = await highestSeqNrCommand.ExecuteScalarAsync(cts.Token);
-                            var highestSeqNr = res is long ? Convert.ToInt64(res) : 0L;
-
-                            // Delete all events up to toSequenceNr both in the journal and
-                            // metadata table
-                            await deleteCommand.ExecuteNonQueryAsync(cts.Token);
-
-                            // Update the metadata table to reflect the new highest sequence number,
-                            // if the toSequenceNr is higher than our current highest sequence number
-                            if (highestSeqNr <= toSequenceNr)
-                            {
-                                // Create a new DbCommand instance
-                                using (var updateCommand = GetCommand(connection, UpdateSequenceNrSql, 
-                                           _timeout))
-                                {
-                                    // This update is still part of the same transaction as everything
-                                    // else in this process
-                                    updateCommand.Transaction = tx;
-
-                                    // Populate the SQL parameters
-                                    AddParameter(
-                                        updateCommand, "@PersistenceId", DbType.String, persistenceId);
-                                    AddParameter(
-                                        updateCommand, "@SequenceNr", DbType.Int64, highestSeqNr);
-
-                                    // Execute the update SQL statement
-                                    await updateCommand.ExecuteNonQueryAsync(cts.Token);
-                                    tx.Commit();
-                                }
-                            }
-                            else tx.Commit();
-                        }
-                    }
-                }
+                // Execute the update SQL statement
+                await updateCommand.ExecuteNonQueryAsync(cts.Token);
+                tx.Commit();
             }
+            else tx.Commit();
         }
         // </DeleteMessagesToAsync>
 
