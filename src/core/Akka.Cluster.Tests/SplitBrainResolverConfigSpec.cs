@@ -80,17 +80,16 @@ namespace Akka.Cluster.Tests
                     }
                 }");
 
-            using (var system = ActorSystem.Create("system", config))
-            {
-                var cluster = Cluster.Get(system);
+            using var system = ActorSystem.Create("system", config);
 
-                cluster.DowningProvider.Should().BeOfType<SplitBrainResolver>();
-                var provider = (SplitBrainResolver)cluster.DowningProvider;
+            var cluster = Cluster.Get(system);
 
-                provider.Strategy.Should().BeOfType<StaticQuorum>();
-                provider.DownRemovalMargin.Should().Be(TimeSpan.FromSeconds(10));
-                provider.StableAfter.Should().Be(TimeSpan.FromSeconds(40));
-            }
+            cluster.DowningProvider.Should().BeOfType<SplitBrainResolver>();
+            var provider = (SplitBrainResolver)cluster.DowningProvider;
+
+            provider.Strategy.Should().BeOfType<StaticQuorum>();
+            provider.DownRemovalMargin.Should().Be(TimeSpan.FromSeconds(10));
+            provider.StableAfter.Should().Be(TimeSpan.FromSeconds(40));
         }
 
         [Fact]
@@ -108,17 +107,16 @@ namespace Akka.Cluster.Tests
                     }
                 }");
 
-            using (var system = ActorSystem.Create("system", config))
-            {
-                var cluster = Cluster.Get(system);
+            using var system = ActorSystem.Create("system", config);
 
-                cluster.DowningProvider.Should().BeOfType<SplitBrainResolver>();
-                var provider = (SplitBrainResolver)cluster.DowningProvider;
+            var cluster = Cluster.Get(system);
 
-                provider.Strategy.Should().BeOfType<KeepMajority>();
-                provider.DownRemovalMargin.Should().Be(TimeSpan.Zero);      // default is zero
-                provider.StableAfter.Should().Be(TimeSpan.FromSeconds(20)); // default is 20s
-            }
+            cluster.DowningProvider.Should().BeOfType<SplitBrainResolver>();
+            var provider = (SplitBrainResolver)cluster.DowningProvider;
+
+            provider.Strategy.Should().BeOfType<KeepMajority>();
+            provider.DownRemovalMargin.Should().Be(TimeSpan.Zero);      // default is zero
+            provider.StableAfter.Should().Be(TimeSpan.FromSeconds(20)); // default is 20s
         }
     }
 }

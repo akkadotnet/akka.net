@@ -73,11 +73,8 @@ namespace Akka.Cluster.Tests
         {
             var other = ProviderSelection.ClusterActorRefProvider;
             var ps = new ProviderSelection.Custom(other, "test");
-            using (var actorSystem = ActorSystem.Create("Test1", BootstrapSetup.Create().WithActorRefProvider(ps)))
-            {
-                actorSystem.Settings.ProviderClass.Should().Be(ps.Fqn);
-            }
-
+            using var actorSystem = ActorSystem.Create("Test1", BootstrapSetup.Create().WithActorRefProvider(ps));
+            actorSystem.Settings.ProviderClass.Should().Be(ps.Fqn);
         }
     }
 }
