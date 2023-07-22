@@ -190,7 +190,7 @@ namespace Akka.Persistence.Custom.Snapshot
             await connection.OpenAsync(cts.Token);
 
             // Create new DbCommand instance
-            using var command = GetCommand(connection, SelectSnapshotSql, _timeout); 3
+            using var command = GetCommand(connection, SelectSnapshotSql, _timeout);
 
             // Populate the SQL parameters
             AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
