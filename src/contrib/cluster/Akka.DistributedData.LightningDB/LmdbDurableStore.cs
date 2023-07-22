@@ -139,22 +139,20 @@ namespace Akka.DistributedData.LightningDB
                 {
                     if (_writeBehindInterval == TimeSpan.Zero)
                     {
-                        using (var env = GetLightningEnvironment())
-                        using(var tx = env.BeginTransaction())
-                        using (var db = tx.OpenDatabase(DatabaseName))
+                        using var env = GetLightningEnvironment();
+                        using var tx = env.BeginTransaction();
+                        using var db = tx.OpenDatabase(DatabaseName);
+                        try
                         {
-                            try
-                            {
-                                var byteKey = Encoding.UTF8.GetBytes(store.Key);
-                                var byteValue = _serializer.ToBinary(store.Data);
-                                tx.Put(db, byteKey, byteValue);
-                                tx.Commit();
-                            }
-                            catch (Exception)
-                            {
-                                tx.Abort();
-                                throw;
-                            }
+                            var byteKey = Encoding.UTF8.GetBytes(store.Key);
+                            var byteValue = _serializer.ToBinary(store.Data);
+                            tx.Put(db, byteKey, byteValue);
+                            tx.Commit();
+                        }
+                        catch (Exception)
+                        {
+                            tx.Abort();
+                            throw;
                         }
                     }
                     else
@@ -193,33 +191,32 @@ namespace Akka.DistributedData.LightningDB
                 
                 try
                 {
-                    using (var env = GetLightningEnvironment())
-                    using (var tx = env.BeginTransaction(TransactionBeginFlags.ReadOnly))
-                    using(var db = tx.OpenDatabase(DatabaseName))
-                    using(var cursor = tx.CreateCursor(db))
+                    using var env = GetLightningEnvironment();
+                    using var tx = env.BeginTransaction(TransactionBeginFlags.ReadOnly);
+                    using var db = tx.OpenDatabase(DatabaseName);
+                    using var cursor = tx.CreateCursor(db);
+                    var data = cursor.AsEnumerable().Select((x, _)
+                        =>
                     {
-                        var data = cursor.AsEnumerable().Select((x, _)
-                            => {
-                            var (key, value) = x;
-                            return new KeyValuePair<string, DurableDataEnvelope>(
-                                Encoding.UTF8.GetString(key.CopyToNewArray()),
-                                (DurableDataEnvelope)_serializer.FromBinary(value.CopyToNewArray(), _manifest));
-                        }).ToImmutableDictionary();
+                        var (key, value) = x;
+                        return new KeyValuePair<string, DurableDataEnvelope>(
+                            Encoding.UTF8.GetString(key.CopyToNewArray()),
+                            (DurableDataEnvelope)_serializer.FromBinary(value.CopyToNewArray(), _manifest));
+                    }).ToImmutableDictionary();
 
-                        if (data.Count > 0)
-                        {
-                            var loadData = new LoadData(data);
-                            Sender.Tell(loadData);
-                        }
-
-                        Sender.Tell(LoadAllCompleted.Instance);
-
-                        t0.Stop();
-                        if (_log.IsDebugEnabled)
-                            _log.Debug($"Load all of [{data.Count}] entries took [{t0.ElapsedMilliseconds}]");
-
-                        Become(Active);
+                    if (data.Count > 0)
+                    {
+                        var loadData = new LoadData(data);
+                        Sender.Tell(loadData);
                     }
+
+                    Sender.Tell(LoadAllCompleted.Instance);
+
+                    t0.Stop();
+                    if (_log.IsDebugEnabled)
+                        _log.Debug($"Load all of [{data.Count}] entries took [{t0.ElapsedMilliseconds}]");
+
+                    Become(Active);
                 }
                 catch (Exception e)
                 {
@@ -234,39 +231,35 @@ namespace Akka.DistributedData.LightningDB
             if (_pending.Count > 0)
             {
                 var t0 = Stopwatch.StartNew();
-                using (var env = GetLightningEnvironment())
-                using (var tx = env.BeginTransaction())
+                using var env = GetLightningEnvironment();
+                using var tx = env.BeginTransaction();
+                try
                 {
-                    try
+                    using var db = tx.OpenDatabase(DatabaseName);
+                    foreach (var entry in _pending)
                     {
-                        using (var db = tx.OpenDatabase(DatabaseName))
-                        {
-                            foreach (var entry in _pending)
-                            {
-                                var byteKey = Encoding.UTF8.GetBytes(entry.Key);
-                                var byteValue = _serializer.ToBinary(entry.Value);
-                                tx.Put(db, byteKey, byteValue);
-                            }
-                            tx.Commit();
+                        var byteKey = Encoding.UTF8.GetBytes(entry.Key);
+                        var byteValue = _serializer.ToBinary(entry.Value);
+                        tx.Put(db, byteKey, byteValue);
+                    }
+                    tx.Commit();
 
-                            t0.Stop();
-                            if (_log.IsDebugEnabled)
-                            {
-                                _log.Debug($"store and commit of [{_pending.Count}] entries took {t0.ElapsedMilliseconds} ms");
-                            }
-                        }
-                    }
-                    catch (Exception cause)
+                    t0.Stop();
+                    if (_log.IsDebugEnabled)
                     {
-                        _log.Error(cause, "failed to store [{0}]", string.Join(", ", _pending.Keys));
-                        tx.Abort();
-                        throw;
+                        _log.Debug($"store and commit of [{_pending.Count}] entries took {t0.ElapsedMilliseconds} ms");
                     }
-                    finally
-                    {
-                        t0.Stop();
-                        _pending.Clear();
-                    }
+                }
+                catch (Exception cause)
+                {
+                    _log.Error(cause, "failed to store [{0}]", string.Join(", ", _pending.Keys));
+                    tx.Abort();
+                    throw;
+                }
+                finally
+                {
+                    t0.Stop();
+                    _pending.Clear();
                 }
             }
         }
