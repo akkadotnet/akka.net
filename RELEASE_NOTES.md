@@ -1,3 +1,15 @@
+#### 1.5.10 July 26th 2023 ####
+
+Akka.NET v1.5.9 is a maintenance release with a minor API change.
+
+* [Persistence.TCK: Add constructor overload that takes ActorSystemSetup argument](https://github.com/akkadotnet/akka.net/pull/6850)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.10, click here](https://github.com/akkadotnet/akka.net/milestone/92?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 70   | 12   | Gregorius Soedharmo |
+
 #### 1.5.9 July 18th 2023 ####
 
 Akka.NET v1.5.9 is a maintenance release that introduces some performance improvements and internal code cleanup/modernization.
