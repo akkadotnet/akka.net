@@ -34,21 +34,24 @@ akka.actor {
     }
 }");
         
-        protected new static Config FromConfig(Config? config = null)
+        private static ActorSystemSetup WithConfig(Config? config = null)
         {
-            return BaseConfig.WithFallback(PluginSpec.FromConfig(config));
+            return ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create().WithConfig(BaseConfig.WithFallback(FromConfig(config))));
         }
         
         protected static ActorSystemSetup FromActorSystemSetup(ActorSystemSetup setup)
         {
-            var bootstrap = setup.Get<BootstrapSetup>();
-            var config = bootstrap.HasValue && bootstrap.Value.Config.HasValue
-                ? FromConfig(bootstrap.Value.Config.Value) : FromConfig();
-            return setup.And(BootstrapSetup.Create().WithConfig(config));
+            var bootstrapOption = setup.Get<BootstrapSetup>();
+            var bootstrap = bootstrapOption.HasValue ? bootstrapOption.Value : BootstrapSetup.Create();
+            var config = bootstrap.Config.HasValue
+                ? FromConfig(BaseConfig.WithFallback(bootstrap.Config.Value))
+                : FromConfig(BaseConfig);
+            return setup.And(bootstrap.WithConfig(config));
         }
         
         protected SnapshotStoreSerializationSpec(Config config, string actorSystem, ITestOutputHelper output) 
-            : base(FromConfig(config), actorSystem, output)
+            : this(WithConfig(config), actorSystem, output)
         {
         }
         
