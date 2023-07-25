@@ -20,7 +20,7 @@ namespace Akka.Persistence.TCK.Serialization
 {
     public abstract class SnapshotStoreSerializationSpec : PluginSpec
     {
-        protected static readonly Config SerializerConfig = ConfigurationFactory.ParseString(@"
+        public static readonly Config SerializerConfig = ConfigurationFactory.ParseString(@"
                 akka.actor {
                   serializers {
                     my-snapshot = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer, Akka.Persistence.TCK""
@@ -33,7 +33,7 @@ namespace Akka.Persistence.TCK.Serialization
                 }
             ");
 
-        protected ActorSystemSetup TransformSetup(ActorSystemSetup setup)
+        public static ActorSystemSetup TransformSetup(ActorSystemSetup setup)
         {
             // need to add SerializerConfig if it's not already there
             if (setup.Get<BootstrapSetup>().HasValue)
@@ -54,7 +54,7 @@ namespace Akka.Persistence.TCK.Serialization
         }
 
         protected SnapshotStoreSerializationSpec(ActorSystemSetup setup, string actorSystemName,
-            ITestOutputHelper output) : base(setup., actorSystemName, output)
+            ITestOutputHelper output) : base(TransformSetup(setup), actorSystemName, output)
         {
             
         }
