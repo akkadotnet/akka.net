@@ -8,30 +8,52 @@
 using System;
 using System.Text;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Serialization;
 using Xunit;
 using Xunit.Abstractions;
 using Akka.Util.Internal;
+using FluentAssertions;
 
+#nullable enable
 namespace Akka.Persistence.TCK.Serialization
 {
     public abstract class SnapshotStoreSerializationSpec : PluginSpec
     {
+        private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
+akka.actor {
+    serializers {
+        my-snapshot = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer, Akka.Persistence.TCK""
+        my-snapshot2 = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer2, Akka.Persistence.TCK""
+    }
+    serialization-bindings {
+        ""Akka.Persistence.TCK.Serialization.Test+MySnapshot, Akka.Persistence.TCK"" = my-snapshot
+        ""Akka.Persistence.TCK.Serialization.Test+MySnapshot2, Akka.Persistence.TCK"" = my-snapshot2
+    }
+}");
+        
+        protected new static Config FromConfig(Config? config = null)
+        {
+            return BaseConfig.WithFallback(PluginSpec.FromConfig(config));
+        }
+        
+        protected static ActorSystemSetup FromActorSystemSetup(ActorSystemSetup setup)
+        {
+            var bootstrap = setup.Get<BootstrapSetup>();
+            var config = bootstrap.HasValue && bootstrap.Value.Config.HasValue
+                ? FromConfig(bootstrap.Value.Config.Value) : FromConfig();
+            return setup.And(BootstrapSetup.Create().WithConfig(config));
+        }
+        
         protected SnapshotStoreSerializationSpec(Config config, string actorSystem, ITestOutputHelper output) 
-            : base(ConfigurationFactory.ParseString(@"
-                akka.actor {
-                  serializers {
-                    my-snapshot = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer, Akka.Persistence.TCK""
-                    my-snapshot2 = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer2, Akka.Persistence.TCK""
-                  }
-                  serialization-bindings {
-                    ""Akka.Persistence.TCK.Serialization.Test+MySnapshot, Akka.Persistence.TCK"" = my-snapshot
-                    ""Akka.Persistence.TCK.Serialization.Test+MySnapshot2, Akka.Persistence.TCK"" = my-snapshot2
-                  }
-                }
-            ").WithFallback(config), actorSystem, output)
+            : base(FromConfig(config), actorSystem, output)
+        {
+        }
+        
+        protected SnapshotStoreSerializationSpec(ActorSystemSetup setup, string actorSystem, ITestOutputHelper output)
+            :base(FromActorSystemSetup(setup), actorSystem, output)
         {
         }
 
