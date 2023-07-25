@@ -8,6 +8,7 @@
 using System;
 using System.Text;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Serialization;
@@ -19,8 +20,7 @@ namespace Akka.Persistence.TCK.Serialization
 {
     public abstract class SnapshotStoreSerializationSpec : PluginSpec
     {
-        protected SnapshotStoreSerializationSpec(Config config, string actorSystem, ITestOutputHelper output) 
-            : base(ConfigurationFactory.ParseString(@"
+        protected static readonly Config SerializerConfig = ConfigurationFactory.ParseString(@"
                 akka.actor {
                   serializers {
                     my-snapshot = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer, Akka.Persistence.TCK""
@@ -31,8 +31,32 @@ namespace Akka.Persistence.TCK.Serialization
                     ""Akka.Persistence.TCK.Serialization.Test+MySnapshot2, Akka.Persistence.TCK"" = my-snapshot2
                   }
                 }
-            ").WithFallback(config), actorSystem, output)
+            ");
+
+        protected ActorSystemSetup TransformSetup(ActorSystemSetup setup)
         {
+            // need to add SerializerConfig if it's not already there
+            if (setup.Get<BootstrapSetup>().HasValue)
+            {
+                var bootstrapSetup = setup.Get<BootstrapSetup>().Value;
+                bootstrapSetup.WithConfigFallback(SerializerConfig);
+                
+                // overrides old setup
+                return setup.And(bootstrapSetup);
+            }
+
+            return setup.And(BootstrapSetup.Create().WithConfig(SerializerConfig));
+        }
+        
+        protected SnapshotStoreSerializationSpec(Config config, string actorSystem, ITestOutputHelper output) 
+            : base(SerializerConfig.WithFallback(config), actorSystem, output)
+        {
+        }
+
+        protected SnapshotStoreSerializationSpec(ActorSystemSetup setup, string actorSystemName,
+            ITestOutputHelper output) : base(setup., actorSystemName, output)
+        {
+            
         }
 
         protected IActorRef SnapshotStore => Extension.SnapshotStoreFor(null);
