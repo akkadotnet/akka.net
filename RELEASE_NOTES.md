@@ -1,6 +1,20 @@
+#### 1.5.11 July 27th 2023 ####
+
+Akka.NET v1.5.11 is a maintenance release with a minor API change and internal code modernization/cleanup.
+
+* [Remote: Modernize DotNettyTransportSettings class and add support for a SSL Setup class](https://github.com/akkadotnet/akka.net/pull/6854)
+* [PubSub: Make CountSubscriber query command public](https://github.com/akkadotnet/akka.net/pull/6856)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.11, click here](https://github.com/akkadotnet/akka.net/milestone/93?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 465  | 321  | Gregorius Soedharmo |
+| 1       | 22   | 2    | Aaron Stannard      |
+
 #### 1.5.10 July 26th 2023 ####
 
-Akka.NET v1.5.9 is a maintenance release with a minor API change.
+Akka.NET v1.5.10 is a maintenance release with a minor API change.
 
 * [Persistence.TCK: Add constructor overload that takes ActorSystemSetup argument](https://github.com/akkadotnet/akka.net/pull/6850)
 
