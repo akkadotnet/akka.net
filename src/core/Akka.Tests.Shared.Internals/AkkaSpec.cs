@@ -53,6 +53,14 @@ namespace Akka.TestKit
 
         private static int _systemNumber = 0;
 
+        private static ActorSystemSetup FromActorSystemSetup(ActorSystemSetup setup)
+        {
+            var bootstrapOptions = setup.Get<BootstrapSetup>();
+            var bootstrap = bootstrapOptions.HasValue ? bootstrapOptions.Value : BootstrapSetup.Create();
+            bootstrap = bootstrap.WithConfigFallback(_akkaSpecConfig);
+            return setup.And(bootstrap);
+        }
+        
         public AkkaSpec(string config, ITestOutputHelper output = null)
             : this(ConfigurationFactory.ParseString(config).WithFallback(_akkaSpecConfig), output)
         {
@@ -65,7 +73,7 @@ namespace Akka.TestKit
         }
 
         public AkkaSpec(ActorSystemSetup setup, ITestOutputHelper output = null)
-            : base(setup, GetCallerName(), output)
+            : base(FromActorSystemSetup(setup), GetCallerName(), output)
         {
             BeforeAll();
         }
