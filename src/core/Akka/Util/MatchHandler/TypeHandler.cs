@@ -17,7 +17,7 @@ namespace Akka.Tools.MatchHandler
     internal class TypeHandler
     {
         private readonly Type _handlesType;
-        private readonly List<PredicateAndHandler> _handlers = new List<PredicateAndHandler>();
+        private readonly List<PredicateAndHandler> _handlers = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TypeHandler"/> class.

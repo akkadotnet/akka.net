@@ -42,7 +42,7 @@ namespace Akka.Cluster.Sharding.Internal
         //  private case object ResendUnAcked extends NoSerializationVerificationNeeded
         private sealed class ResendUnAcked
         {
-            public static readonly ResendUnAcked Instance = new ResendUnAcked();
+            public static readonly ResendUnAcked Instance = new();
 
             private ResendUnAcked()
             {

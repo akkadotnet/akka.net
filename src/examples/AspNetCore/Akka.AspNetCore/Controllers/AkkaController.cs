@@ -27,9 +27,9 @@ namespace Akka.AspNetCore.Controllers
         }
 
         [HttpGet]
-        public async Task<IEnumerable<string>> Get()
+        public Task<IEnumerable<string>> Get()
         {
-            return await _bridge.Ask<IEnumerable<string>>("get");
+            return _bridge.Ask<IEnumerable<string>>("get");
         }
 
         // POST api/<AkkaController>

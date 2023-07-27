@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using ChatMessages;
@@ -15,7 +16,7 @@ namespace ChatClient
 {
     class Program
     {
-        static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var config = ConfigurationFactory.ParseString(@"
 akka {  
@@ -31,54 +32,50 @@ akka {
 }
 ");
 
-            using (var system = ActorSystem.Create("MyClient", config))
+            var system = ActorSystem.Create("MyClient", config);
+            var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
+            chatClient.Tell(new ConnectRequest("Roggan"));
+
+            while (true)
             {
-                var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
-                chatClient.Tell(new ConnectRequest()
+                var input = Console.ReadLine();
+                if (input.StartsWith('/'))
                 {
-                    Username = "Roggan",
-                });
+                    var parts = input.Split(' ');
+                    var cmd = parts[0].ToLowerInvariant();
+                    var rest = string.Join(" ", parts.Skip(1));
 
-                while (true)
-                {
-                    var input = Console.ReadLine();
-                    if (input.StartsWith('/'))
+                    if (cmd == "/nick")
                     {
-                        var parts = input.Split(' ');
-                        var cmd = parts[0].ToLowerInvariant();
-                        var rest = string.Join(" ", parts.Skip(1));
-
-                        if (cmd == "/nick")
-                        {
-                            chatClient.Tell(new NickRequest
-                            {
-                                NewUsername = rest
-                            });
-                        }
-                        if (cmd == "/exit")
-                        {
-                            Console.WriteLine("exiting");
-                            break;
-                        }
+                        chatClient.Tell(new ChatClientActor.RequestNewNick(rest));
                     }
-                    else
+
+                    if (cmd == "/exit")
                     {
-                        chatClient.Tell(new SayRequest()
-                        {
-                            Text = input,
-                        });
+                        Console.WriteLine("exiting");
+                        break;
                     }
                 }
-
-                system.Terminate().Wait();
+                else
+                {
+                    chatClient.Tell(new ChatClientActor.PushNewChatMessage(input));
+                }
             }
+
+            await system.Terminate();
         }
     }
 
-    class ChatClientActor : ReceiveActor, ILogReceive
+    internal class ChatClientActor : ReceiveActor, ILogReceive
     {
         private string _nick = "Roggan";
-        private readonly ActorSelection _server = Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
+
+        private readonly ActorSelection _server =
+            Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
+
+        public record RequestNewNick(string NewNick);
+
+        public record PushNewChatMessage(string Message);
 
         public ChatClientActor()
         {
@@ -94,12 +91,12 @@ akka {
                 Console.WriteLine(rsp.Message);
             });
 
-            Receive<NickRequest>(nr =>
+            Receive<RequestNewNick>(nr =>
             {
-                nr.OldUsername = _nick;
-                Console.WriteLine("Changing nick to {0}", nr.NewUsername);
-                _nick = nr.NewUsername;
-                _server.Tell(nr);
+                Console.WriteLine("Changing nick to {0}", nr.NewNick);
+                var request = new NickRequest(_nick, nr.NewNick);
+                _nick = nr.NewNick;
+                _server.Tell(request);
             });
 
             Receive<NickResponse>(nrsp =>
@@ -107,17 +104,12 @@ akka {
                 Console.WriteLine("{0} is now known as {1}", nrsp.OldUsername, nrsp.NewUsername);
             });
 
-            Receive<SayRequest>(sr =>
+            Receive<PushNewChatMessage>(sr =>
             {
-                sr.Username = _nick;
-                _server.Tell(sr);
+                _server.Tell(new SayRequest(_nick, sr.Message));
             });
 
-            Receive<SayResponse>(srsp =>
-            {
-                Console.WriteLine("{0}: {1}", srsp.Username, srsp.Text);
-            });
+            Receive<SayResponse>(srsp => { Console.WriteLine("{0}: {1}", srsp.Username, srsp.Text); });
         }
     }
 }
-

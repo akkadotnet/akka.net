@@ -136,7 +136,7 @@ namespace Akka.Persistence.Tests
             ExpectMsg((object)"any:hello");
         }
         
-        private readonly AtomicCounterLong _seqNrCounter = new AtomicCounterLong(1L);
+        private readonly AtomicCounterLong _seqNrCounter = new(1L);
         /// <summary>
         /// Initialize test journal using provided events.
         /// </summary>
@@ -155,7 +155,7 @@ namespace Akka.Persistence.Tests
 
         private abstract class TestReceivePersistentActor : ReceivePersistentActor
         {
-            public readonly LinkedList<object> State = new LinkedList<object>();
+            public readonly LinkedList<object> State = new();
             private readonly string _persistenceId;
 
             protected TestReceivePersistentActor(string persistenceId)

@@ -78,11 +78,10 @@ namespace Akka.Streams.Implementation.StreamRef
             private StreamRefAttributes.SubscriptionTimeout _subscriptionTimeout;
             private string _stageActorName;
 
-            private StreamRefsMaster StreamRefsMaster => _streamRefsMaster ?? (_streamRefsMaster = StreamRefsMaster.Get(ActorMaterializerHelper.Downcast(Materializer).System));
-            private StreamRefSettings Settings => _settings ?? (_settings = ActorMaterializerHelper.Downcast(Materializer).Settings.StreamRefSettings);
-            private StreamRefAttributes.SubscriptionTimeout SubscriptionTimeout => _subscriptionTimeout ?? (_subscriptionTimeout =
-                                                                                       _inheritedAttributes.GetAttribute(new StreamRefAttributes.SubscriptionTimeout(Settings.SubscriptionTimeout)));
-            protected override string StageActorName => _stageActorName ?? (_stageActorName = StreamRefsMaster.NextSinkRefName());
+            private StreamRefsMaster StreamRefsMaster => _streamRefsMaster ??= StreamRefsMaster.Get(ActorMaterializerHelper.Downcast(Materializer).System);
+            private StreamRefSettings Settings => _settings ??= ActorMaterializerHelper.Downcast(Materializer).Settings.StreamRefSettings;
+            private StreamRefAttributes.SubscriptionTimeout SubscriptionTimeout => _subscriptionTimeout ??= _inheritedAttributes.GetAttribute(new StreamRefAttributes.SubscriptionTimeout(Settings.SubscriptionTimeout));
+            protected override string StageActorName => _stageActorName ??= StreamRefsMaster.NextSinkRefName();
 
             private StageActor _stageActor;
 
@@ -287,7 +286,7 @@ namespace Akka.Streams.Implementation.StreamRef
             Shape = new SinkShape<TIn>(Inlet);
         }
 
-        public Inlet<TIn> Inlet { get; } = new Inlet<TIn>("SinkRef.in");
+        public Inlet<TIn> Inlet { get; } = new("SinkRef.in");
         public override SinkShape<TIn> Shape { get; }
         public override ILogicAndMaterializedValue<Task<ISourceRef<TIn>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {

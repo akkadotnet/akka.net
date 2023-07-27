@@ -343,10 +343,10 @@ namespace Akka.Actor
         private readonly RepointableActorRef _self;
         private readonly Props _props;
         private readonly IInternalActorRef _supervisor;
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
 
         /* Both queues must be accessed via lock */
-        private readonly LinkedList<Envelope> _messageQueue = new LinkedList<Envelope>();
+        private readonly LinkedList<Envelope> _messageQueue = new();
         private LatestFirstSystemMessageList _sysMsgQueue = SystemMessageList.LNil;
 
         private readonly TimeSpan _timeout;

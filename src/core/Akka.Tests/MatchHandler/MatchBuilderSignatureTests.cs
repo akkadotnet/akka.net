@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Tools.MatchHandler;
 using Xunit;
 
@@ -16,7 +17,7 @@ namespace Akka.Tests.MatchHandler
         public void GetHashCode_should_return_same_value_for_empty_and_null_signatures()
         {
             var nullSignature = new MatchBuilderSignature(null);
-            var emptySignature = new MatchBuilderSignature(new object[0]);
+            var emptySignature = new MatchBuilderSignature(Array.Empty<object>());
 
             Assert.Equal(nullSignature.GetHashCode(), emptySignature.GetHashCode());
         }
@@ -83,7 +84,7 @@ namespace Akka.Tests.MatchHandler
         [Fact]
         public void Equals_with_null_should_be_false()
         {
-            var signature = new MatchBuilderSignature(new object[0]);
+            var signature = new MatchBuilderSignature(Array.Empty<object>());
             Assert.False(signature.Equals((object)null));
             Assert.False(signature.Equals(null));
         }
@@ -92,7 +93,7 @@ namespace Akka.Tests.MatchHandler
         [Fact]
         public void Equals_with_same_should_be_true()
         {
-            var signature = new MatchBuilderSignature(new object[0]);
+            var signature = new MatchBuilderSignature(Array.Empty<object>());
             Assert.True(signature.Equals((object)signature));
             Assert.True(signature.Equals(signature));
         }
@@ -100,7 +101,7 @@ namespace Akka.Tests.MatchHandler
         [Fact]
         public void Equals_with_different_type_should_be_false()
         {
-            var signature = new MatchBuilderSignature(new object[0]);
+            var signature = new MatchBuilderSignature(Array.Empty<object>());
             Assert.False(signature.Equals(new object()));
         }
 
@@ -116,7 +117,7 @@ namespace Akka.Tests.MatchHandler
         public void Equals_with_one_null_element_signature_and_one_empty_element_signature_should_be_true()
         {
             var signature1 = new MatchBuilderSignature(null);
-            var signature2 = new MatchBuilderSignature(new object[0]);
+            var signature2 = new MatchBuilderSignature(Array.Empty<object>());
             Assert.True(signature1.Equals(signature2));
             Assert.True(signature2.Equals(signature1));
         }

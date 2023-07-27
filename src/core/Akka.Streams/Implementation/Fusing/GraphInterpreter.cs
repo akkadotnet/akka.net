@@ -110,7 +110,7 @@ namespace Akka.Streams.Implementation.Fusing
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Empty Instance = new Empty();
+            public static readonly Empty Instance = new();
 
             private Empty()
             {
@@ -360,7 +360,7 @@ namespace Akka.Streams.Implementation.Fusing
         // Using an Object-array avoids holding on to the GraphInterpreter class
         // when this accidentally leaks onto threads that are not stopped when this
         // class should be unloaded.
-        private static readonly ThreadLocal<object[]> CurrentInterpreter = new ThreadLocal<object[]>(() => new object[1]);
+        private static readonly ThreadLocal<object[]> CurrentInterpreter = new(() => new object[1]);
 
         /// <summary>
         /// TBD
@@ -505,7 +505,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        internal string Name => _name ?? (_name = GetHashCode().ToString("x"));
+        internal string Name => _name ??= GetHashCode().ToString("x");
 
         /// <summary>
         /// Assign the boundary logic to a given connection. This will serve as the interface to the external world

@@ -19,16 +19,18 @@ using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
+using static FluentAssertions.FluentActions;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.TestKit
 {
     public abstract class AkkaSpec : Xunit2.TestKit    //AkkaSpec is not part of TestKit
     {
-        private static Regex _nameReplaceRegex = new Regex("[^a-zA-Z0-9]", RegexOptions.Compiled);
+        private static Regex _nameReplaceRegex = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
         private static readonly Config _akkaSpecConfig = ConfigurationFactory.ParseString(@"
           akka {
             loglevel = WARNING
@@ -51,6 +53,14 @@ namespace Akka.TestKit
 
         private static int _systemNumber = 0;
 
+        private static ActorSystemSetup FromActorSystemSetup(ActorSystemSetup setup)
+        {
+            var bootstrapOptions = setup.Get<BootstrapSetup>();
+            var bootstrap = bootstrapOptions.HasValue ? bootstrapOptions.Value : BootstrapSetup.Create();
+            bootstrap = bootstrap.WithConfigFallback(_akkaSpecConfig);
+            return setup.And(bootstrap);
+        }
+        
         public AkkaSpec(string config, ITestOutputHelper output = null)
             : this(ConfigurationFactory.ParseString(config).WithFallback(_akkaSpecConfig), output)
         {
@@ -63,7 +73,7 @@ namespace Akka.TestKit
         }
 
         public AkkaSpec(ActorSystemSetup setup, ITestOutputHelper output = null)
-            : base(setup, GetCallerName(), output)
+            : base(FromActorSystemSetup(setup), GetCallerName(), output)
         {
             BeforeAll();
         }
@@ -271,23 +281,13 @@ namespace Akka.TestKit
         /// <exception cref="ThrowsException">If the passed action does not complete abruptly with an exception that's an instance of the specified type.</exception>
         protected T Intercept<T>(Action actionThatThrows) where T : Exception
         {
-            try
-            {
-                actionThatThrows();
-            }
-            catch (Exception ex)
-            {
-                var exception = ex is AggregateException aggregateException
-                    ? aggregateException.Flatten().InnerExceptions[0]
-                    : ex;
+            return Invoking(actionThatThrows)
+                .Should().ThrowExactly<T>().And;
+        }
 
-                var exceptionType = typeof(T);
-                return exceptionType == exception.GetType()
-                    ? (T)exception
-                    : throw new ThrowsException(exceptionType, exception);
-            }
-
-            throw new ThrowsException(typeof(T));
+        protected async Task<T> InterceptAsync<T>(Func<Task> funcThatThrows) where T : Exception
+        {
+            return (await funcThatThrows.Should().ThrowExactlyAsync<T>()).And;
         }
 
         /// <summary>
@@ -308,38 +308,13 @@ namespace Akka.TestKit
         /// <exception cref="ThrowsException">If the passed action does not complete abruptly with an exception that's an instance of the specified type.</exception>
         protected void AssertThrows<T>(Action actionThatThrows) where T : Exception
         {
-            try
-            {
-                actionThatThrows();
-            }
-            catch (Exception ex)
-            {
-                var exception = ex is AggregateException aggregateException
-                    ? aggregateException.Flatten().InnerExceptions[0]
-                    : ex;
-
-                var exceptionType = typeof(T);
-                if (exceptionType == exception.GetType())
-                    return;
-
-                throw new ThrowsException(exceptionType, exception);
-            }
-
-            throw new ThrowsException(typeof(T));
+            Intercept<T>(actionThatThrows); 
         }
 
         [Obsolete("Use AssertThrows instead.")]
         protected void Intercept(Action actionThatThrows)
         {
-            try
-            {
-                actionThatThrows();
-            }
-            catch(Exception)
-            {
-                return;
-            }
-            throw new ThrowsException(typeof(Exception));
+            Invoking(actionThatThrows).Should().Throw<Exception>();
         }
 
         protected void MuteDeadLetters(params Type[] messageClasses)

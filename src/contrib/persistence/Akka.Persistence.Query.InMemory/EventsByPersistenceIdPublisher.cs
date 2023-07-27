@@ -17,7 +17,7 @@ namespace Akka.Persistence.Query.InMemory
         [Serializable]
         public sealed class Continue
         {
-            public static readonly Continue Instance = new Continue();
+            public static readonly Continue Instance = new();
 
             private Continue()
             {
@@ -52,7 +52,7 @@ namespace Akka.Persistence.Query.InMemory
             JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         protected string PersistenceId { get; }
         protected long FromSequenceNr { get; }
         protected long ToSequenceNr { get; set; }

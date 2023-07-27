@@ -362,7 +362,7 @@ namespace Akka.Streams.Tests.Actor
             public override int InFlight => _streamer._queue.Count;
         }
 
-        private readonly Dictionary<int, IActorRef> _queue = new Dictionary<int, IActorRef>();
+        private readonly Dictionary<int, IActorRef> _queue = new();
         private readonly Router _router;
 
         public Streamer()

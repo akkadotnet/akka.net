@@ -21,13 +21,13 @@ namespace Akka.Streams
         
         public sealed class NoMoreElementsNeeded : NonFailureCancellation
         {
-            public static readonly NoMoreElementsNeeded Instance = new NoMoreElementsNeeded();
+            public static readonly NoMoreElementsNeeded Instance = new();
             private NoMoreElementsNeeded() { }
         }
     
         public sealed class StageWasCompleted : NonFailureCancellation
         {
-            public static readonly StageWasCompleted Instance = new StageWasCompleted();
+            public static readonly StageWasCompleted Instance = new();
             private StageWasCompleted() { }
         }
     }

@@ -28,8 +28,8 @@ namespace Akka.Remote.Tests
     public class ExceptionSupportSpec : AkkaSpec
     {
         private readonly ExceptionSupport _serializer;
-        private readonly Exception _innerException = new Exception("inner message");
-        private readonly Exception _innerException2 = new Exception("inner message 2");
+        private readonly Exception _innerException = new("inner message");
+        private readonly Exception _innerException2 = new("inner message 2");
 
         public ExceptionSupportSpec(ITestOutputHelper output) : base(output)
         {

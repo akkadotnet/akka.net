@@ -231,6 +231,13 @@ Combine the elements of multiple streams into a stream of sequences using a comb
 
 **completes** when any upstream completes
 
+### Setup
+
+Defer the creation of a `Source` until materialization and access `ActorMaterializer` and `Attributes`.
+
+Typically used when access to materializer is needed to run a different stream during the construction of a source/flow.
+Can also be used to access the underlying `ActorSystem` from `ActorMaterializer`.
+
 ## Sink Stages
 
 These built-in sinks are available from ``Akka.Stream.DSL.Sink``:
@@ -614,6 +621,13 @@ Just like `Scan` but receiving a function that results in a `Task` to the next v
 **backpressures** when downstream backpressures
 
 **completes** when upstream completes and the last `Task` is resolved
+
+### Setup
+
+Defer the creation of a `Flow` until materialization and access `ActorMaterializer` and `Attributes`.
+
+Typically used when access to materializer is needed to run a different stream during the construction of a source/flow.
+Can also be used to access the underlying `ActorSystem` from `ActorMaterializer`.
 
 ### Aggregate
 

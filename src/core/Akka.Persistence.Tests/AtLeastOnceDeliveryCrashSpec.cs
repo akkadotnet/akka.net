@@ -47,13 +47,13 @@ namespace Akka.Persistence.Tests
 
         internal class Message
         {
-            public static readonly Message Instance = new Message();
+            public static readonly Message Instance = new();
             private Message() { }
         }
 
         internal class CrashMessage
         {
-            public static readonly CrashMessage Instance = new CrashMessage();
+            public static readonly CrashMessage Instance = new();
             private CrashMessage() { }
         }
 
@@ -74,7 +74,7 @@ namespace Akka.Persistence.Tests
             private readonly IActorRef _testProbe;
             private ILoggingAdapter _adapter;
 
-            ILoggingAdapter Log { get { return _adapter ?? (_adapter = Context.GetLogger()); } }
+            ILoggingAdapter Log { get { return _adapter ??= Context.GetLogger(); } }
 
             public CrashingActor(IActorRef testProbe)
             {

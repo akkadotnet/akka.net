@@ -40,7 +40,7 @@ namespace Akka.Actor.Internal
     [InternalApi]
     public class InternalActivateFsmLogging
     {
-        private static readonly InternalActivateFsmLogging _instance = new InternalActivateFsmLogging();
+        private static readonly InternalActivateFsmLogging _instance = new();
 
         private InternalActivateFsmLogging(){}
         /// <summary>

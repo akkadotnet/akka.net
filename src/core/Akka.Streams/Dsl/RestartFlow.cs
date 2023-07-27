@@ -162,7 +162,7 @@ namespace Akka.Streams.Dsl
         /// <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions"/>.</para>
         /// </summary>
         /// <param name="flowFactory">A factory for producing the <see cref="Flow"/>] to wrap.</param>
-        /// <param name="settings"></param>
+        /// <param name="settings"><see cref="RestartSettings" /> defining restart configuration</param>
         public static Flow<TIn, TOut, NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, RestartSettings settings)
             => Flow.FromGraph(new RestartWithBackoffFlow<TIn, TOut, TMat>(flowFactory, settings, onlyOnFailures: true));
     }
@@ -184,9 +184,9 @@ namespace Akka.Streams.Dsl
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("RestartWithBackoffFlow.in");
+        public Inlet<TIn> In { get; } = new("RestartWithBackoffFlow.in");
 
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("RestartWithBackoffFlow.out");
+        public Outlet<TOut> Out { get; } = new("RestartWithBackoffFlow.out");
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
@@ -514,9 +514,9 @@ namespace Akka.Streams.Dsl
 
         public bool IsOverdue => Time.Ticks - DateTime.UtcNow.Ticks < 0;
 
-        public static Deadline Now => new Deadline(new TimeSpan(DateTime.UtcNow.Ticks));
+        public static Deadline Now => new(new TimeSpan(DateTime.UtcNow.Ticks));
 
-        public static Deadline operator +(Deadline deadline, TimeSpan duration) => new Deadline(deadline.Time.Add(duration));
+        public static Deadline operator +(Deadline deadline, TimeSpan duration) => new(deadline.Time.Add(duration));
     }
 
     internal static class DeadlineExtensions

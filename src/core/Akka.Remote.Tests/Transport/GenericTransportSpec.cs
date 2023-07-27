@@ -19,8 +19,8 @@ namespace Akka.Remote.Tests.Transport
 {
     public abstract class GenericTransportSpec : AkkaSpec
     {
-        private readonly Address _addressATest = new Address("test", "testsytemA", "testhostA", 4321);
-        private readonly Address _addressBTest = new Address("test", "testsytemB", "testhostB", 5432);
+        private readonly Address _addressATest = new("test", "testsytemA", "testhostA", 4321);
+        private readonly Address _addressBTest = new("test", "testsytemB", "testhostB", 5432);
 
         private Address _addressA;
         private Address _addressB;

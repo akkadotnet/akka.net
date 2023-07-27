@@ -14,6 +14,7 @@ using FsCheck;
 using FsCheck.Xunit;
 using static Akka.Util.RuntimeDetector;
 
+#pragma warning disable xUnit1028
 namespace Akka.Tests.Actor
 {
     /// <summary>

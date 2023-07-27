@@ -28,7 +28,7 @@ namespace Akka.Cluster.Tests.MultiNode
             Unknown
         }
 
-        readonly AtomicReference<Status> _status = new AtomicReference<Status>(Status.Unknown);
+        readonly AtomicReference<Status> _status = new(Status.Unknown);
 
         public void MarkNodeAsUnavailable()
         {

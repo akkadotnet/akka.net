@@ -26,8 +26,14 @@ namespace Akka.Streams
             MaxRestartsWithin = maxRestartsWithin;
         }
 
+        /// <summary>
+        /// Creates a new instance of <see cref="RestartSettings"/> class 
+        /// </summary>
+        /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
+        /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
+        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
         public static RestartSettings Create(TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor) =>
-            new RestartSettings(minBackoff, maxBackoff, randomFactor, int.MaxValue, minBackoff);
+            new(minBackoff, maxBackoff, randomFactor, int.MaxValue, minBackoff);
 
         /// <summary>
         /// Minimum (initial) duration until the child actor will started again, if it is terminated
@@ -58,6 +64,6 @@ namespace Akka.Streams
             $"maxRestartsWithin={MaxRestartsWithin})";
 
         private RestartSettings Copy(TimeSpan? minBackoff = null, TimeSpan? maxBackoff = null, double? randomFactor = null, int? maxRestarts = null, TimeSpan? maxRestartsWithin = null) =>
-            new RestartSettings(minBackoff ?? MinBackoff, maxBackoff ?? MaxBackoff, randomFactor ?? RandomFactor, maxRestarts ?? MaxRestarts, maxRestartsWithin ?? MaxRestartsWithin);
+            new(minBackoff ?? MinBackoff, maxBackoff ?? MaxBackoff, randomFactor ?? RandomFactor, maxRestarts ?? MaxRestarts, maxRestartsWithin ?? MaxRestartsWithin);
     }
 }

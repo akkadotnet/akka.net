@@ -20,6 +20,7 @@ using FluentAssertions;
 using Xunit;
 using FluentAssertions.Extensions;
 using Xunit.Sdk;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -64,16 +65,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_lazy_source_must_fail_the_materialized_value_when_downstream_cancels_without_ever_consuming_any_element()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var result = Source.Lazily(() => Source.From(new[] { 1, 2, 3 }))                                                                             
-                .ToMaterialized(Sink.Cancelled<int>(), Keep.Left)                                                                             
-                .Run(Materializer);
-
-                AssertThrows<Exception>(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                await Awaiting(async () =>
                 {
-                    var boom = result.Result;
-                });
-                return Task.CompletedTask;
+                    await Source.Lazily(() => Source.From(new[] { 1, 2, 3 }))
+                        .ToMaterialized(Sink.Cancelled<int>(), Keep.Left)
+                        .Run(Materializer);
+                }).Should().ThrowAsync<Exception>().ShouldCompleteWithin(3.Seconds());
             }, Materializer);
         }
 
@@ -276,7 +275,7 @@ namespace Akka.Streams.Tests.Dsl
                 Shape = new SourceShape<Attributes>(Out);
             }
 
-            private Outlet<Attributes> Out { get; } = new Outlet<Attributes>("AttributesSource.out");
+            private Outlet<Attributes> Out { get; } = new("AttributesSource.out");
 
             public override SourceShape<Attributes> Shape { get; }
 

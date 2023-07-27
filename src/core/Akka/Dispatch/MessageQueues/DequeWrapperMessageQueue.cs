@@ -18,7 +18,7 @@ namespace Akka.Dispatch.MessageQueues
     public class DequeWrapperMessageQueue : IMessageQueue, IDequeBasedMessageQueueSemantics
     {
         // doesn't need to be threadsafe - only called from within actor
-        private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
+        private readonly Stack<Envelope> _prependBuffer = new();
 
         /// <summary>
         /// The underlying <see cref="IMessageQueue"/>.

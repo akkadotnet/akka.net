@@ -20,7 +20,7 @@ namespace Akka.Actor
         /// <summary>
         /// A deployment configuration that is bound to the <see cref="Akka.Actor.Scope.Local"/> scope.
         /// </summary>
-        public static readonly Deploy Local = new Deploy(Scope.Local);
+        public static readonly Deploy Local = new(Scope.Local);
         /// <summary>
         /// This deployment does not have a dispatcher associated with it.
         /// </summary>
@@ -44,7 +44,7 @@ namespace Akka.Actor
         /// <summary>
         /// A deployment configuration where none of the options have been configured.
         /// </summary>
-        public static readonly Deploy None = new Deploy();
+        public static readonly Deploy None = new();
         private readonly Config _config;
         private readonly string _dispatcher;
         private readonly string _mailbox;

@@ -91,7 +91,7 @@ namespace Akka.Cluster.Sharding.Tests
             };
 
             private ILoggingAdapter _log;
-            private ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+            private ILoggingAdapter Log => _log ??= Context.GetLogger();
 
             private Address SelfAddress => Cluster.Get(Context.System).SelfAddress;
 

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\xunitSettings.props" />
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests.TCK</AssemblyName>
@@ -18,16 +18,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.4.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
     <PackageReference Include="Reactive.Streams.TCK" Version="1.0.2" />
     <!-- !!!WARNING!!! 
          NUNIT VERSION HAVE TO MATCH WITH THE VERSION USED BY REACTIVE TCK. 
          !!!WARNING!!! -->
     <!--<PackageReference Include="NUnit" Version="3.7.1" Condition="'$(TargetFramework)' == '$(NetCoreTestVersion)'"/>-->
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <DefineConstants>$(DefineConstants)</DefineConstants>
-  </PropertyGroup>
 
 </Project>

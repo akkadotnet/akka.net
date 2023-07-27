@@ -21,7 +21,7 @@ namespace Akka.Persistence.Tests
 
         private sealed class TestRequest
         {
-            public static readonly TestRequest Instance = new TestRequest();
+            public static readonly TestRequest Instance = new();
 
             private TestRequest()
             {

@@ -88,7 +88,7 @@ namespace Akka.Streams.Implementation
         private readonly object _onCompleteMessage;
         private readonly Func<Exception, object> _onFailureMessage;
 
-        public Inlet<T> In { get; } = new Inlet<T>("ActorRefSink.in");
+        public Inlet<T> In { get; } = new("ActorRefSink.in");
 
         public ActorRefSinkStage(IActorRef actorRef, object onCompleteMessage, Func<Exception, object> onFailureMessage)
         {

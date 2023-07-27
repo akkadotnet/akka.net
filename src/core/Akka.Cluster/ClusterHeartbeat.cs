@@ -754,7 +754,7 @@ namespace Akka.Cluster
             /// <summary>
             /// The singleton instance of this comparer
             /// </summary>
-            public static readonly RingComparer Instance = new RingComparer();
+            public static readonly RingComparer Instance = new();
             private RingComparer() { }
 
             /// <inheritdoc/>

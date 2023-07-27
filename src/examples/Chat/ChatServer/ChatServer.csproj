@@ -10,8 +10,4 @@
     <ProjectReference Include="..\ChatMessages\ChatMessages.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
-
 </Project>

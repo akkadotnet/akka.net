@@ -18,9 +18,9 @@ namespace Akka.Tests.Actor
     
     public class RootGuardianActorRef_Tests : AkkaSpec
     {
-        static RootActorPath _rootActorPath = new RootActorPath(new Address("akka", "test"));
-        DummyActorRef _deadLetters = new DummyActorRef(_rootActorPath / "deadLetters");
-        ReadOnlyDictionary<string, IInternalActorRef> _emptyExtraNames = new ReadOnlyDictionary<string, IInternalActorRef>(new Dictionary<string, IInternalActorRef>());
+        static RootActorPath _rootActorPath = new(new Address("akka", "test"));
+        DummyActorRef _deadLetters = new(_rootActorPath / "deadLetters");
+        ReadOnlyDictionary<string, IInternalActorRef> _emptyExtraNames = new(new Dictionary<string, IInternalActorRef>());
         MessageDispatcher _dispatcher;
 
         public RootGuardianActorRef_Tests()

@@ -52,7 +52,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public class Stop
             {
-                public static readonly Stop Instance = new Stop();
+                public static readonly Stop Instance = new();
 
                 private Stop()
                 {
@@ -71,7 +71,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             public class Pong
             {
-                public static readonly Pong Instance = new Pong();
+                public static readonly Pong Instance = new();
 
                 private Pong()
                 {
@@ -84,7 +84,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
 
             private ILoggingAdapter _log;
-            private ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+            private ILoggingAdapter Log => _log ??= Context.GetLogger();
 
             protected override bool Receive(object message)
             {
@@ -105,7 +105,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public class Stop
             {
-                public static readonly Stop Instance = new Stop();
+                public static readonly Stop Instance = new();
 
                 private Stop()
                 {

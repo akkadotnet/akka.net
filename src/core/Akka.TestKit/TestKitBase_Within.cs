@@ -177,20 +177,19 @@ namespace Akka.TestKit
         /// <param name="epsilonValue">TBD</param>
         /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
-        public async Task<T> WithinAsync<T>(
+        public Task<T> WithinAsync<T>(
             TimeSpan max,
             Func<Task<T>> function,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
         {
-            return await WithinAsync(
+            return WithinAsync(
                     min: TimeSpan.Zero,
                     max: max,
                     function: function, 
                     hint: null,
                     epsilonValue: epsilonValue,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>

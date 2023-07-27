@@ -20,7 +20,7 @@ namespace Tutorials.Tutorial2
         #region read-protocol-1
         public sealed class ReadTemperature
         {
-            public static ReadTemperature Instance { get; } = new ReadTemperature();
+            public static ReadTemperature Instance { get; } = new();
             private ReadTemperature() { }
         }
 

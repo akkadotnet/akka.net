@@ -33,7 +33,7 @@ namespace Akka.Configuration.Hocon
     /// </summary>
     public class HoconObject : IHoconElement
     {
-        private static readonly Regex EscapeRegex = new Regex("[ \t:]{1}", RegexOptions.Compiled);
+        private static readonly Regex EscapeRegex = new("[ \t:]{1}", RegexOptions.Compiled);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HoconObject"/> class.

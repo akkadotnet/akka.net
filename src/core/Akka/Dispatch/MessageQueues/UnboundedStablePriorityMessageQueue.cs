@@ -19,7 +19,7 @@ namespace Akka.Dispatch.MessageQueues
     {
         private readonly StableListPriorityQueue _prioQueue;
         // doesn't need to be threadsafe - only called from within actor
-        private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
+        private readonly Stack<Envelope> _prependBuffer = new();
 
 
         /// <summary>

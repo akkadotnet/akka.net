@@ -17,7 +17,7 @@ namespace Akka.TestKit
         /// <summary>
         /// TBD
         /// </summary>
-        public static NullMessageEnvelope Instance=new NullMessageEnvelope();
+        public static NullMessageEnvelope Instance = new();
 
         private NullMessageEnvelope(){}
 

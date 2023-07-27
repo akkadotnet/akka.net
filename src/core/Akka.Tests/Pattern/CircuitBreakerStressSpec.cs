@@ -21,19 +21,19 @@ namespace Akka.Tests.Pattern
     {
         internal class RequestJob
         {
-            public static RequestJob Instance => new RequestJob();
+            public static RequestJob Instance => new();
             private RequestJob() { }
         }
 
         internal class JobDone
         {
-            public static JobDone Instance => new JobDone();
+            public static JobDone Instance => new();
             private JobDone() { }
         }
 
         internal class GetResult
         {
-            public static GetResult Instance => new GetResult();
+            public static GetResult Instance => new();
             private GetResult() { }
         }
 

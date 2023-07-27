@@ -23,7 +23,7 @@ using BenchmarkDotNet.Engines;
 namespace Akka.Benchmarks
 {
     [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob(warmupCount: 1, invocationCount: 1, launchCount: 1, runStrategy: RunStrategy.Monitoring, targetCount: 100)]
+    [SimpleJob(warmupCount: 1, invocationCount: 1, launchCount: 1, runStrategy: RunStrategy.Monitoring)]
     public class TcpOperationsBenchmarks
     {
         private ActorSystem _system;
@@ -104,7 +104,7 @@ namespace Akka.Benchmarks
 
         private class ClientCoordinator : ReceiveActor
         {
-            private readonly HashSet<IActorRef> _waitingChildren = new HashSet<IActorRef>();
+            private readonly HashSet<IActorRef> _waitingChildren = new();
             private IActorRef _requester;
             
             public ClientCoordinator(string host, int port, int clientsCount)

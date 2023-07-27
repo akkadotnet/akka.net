@@ -58,7 +58,7 @@ namespace Akka.Remote
     {
         private readonly ILoggingAdapter _log;
         private readonly long? _logFrameSizeExceeding;
-        private readonly ConcurrentDictionary<Type, long> _maxPayloadBytes = new ConcurrentDictionary<Type, long>();
+        private readonly ConcurrentDictionary<Type, long> _maxPayloadBytes = new();
 
         /// <summary>
         /// TBD

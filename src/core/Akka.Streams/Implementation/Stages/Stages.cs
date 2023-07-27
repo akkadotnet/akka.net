@@ -548,7 +548,7 @@ namespace Akka.Streams.Implementation.Stages
         private sealed class Logic : InGraphStageLogic
         {
             private readonly FirstOrDefault<TIn> _stage;
-            private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
+            private readonly TaskCompletionSource<TIn> _promise = new();
 
             public Task<TIn> Task => _promise.Task;
 
@@ -587,7 +587,7 @@ namespace Akka.Streams.Implementation.Stages
         #endregion
         
         private readonly bool _throwOnDefault;
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("firstOrDefault.in");
+        private readonly Inlet<TIn> _in = new("firstOrDefault.in");
 
         /// <summary>
         /// TBD
@@ -601,7 +601,7 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
-        public override SinkShape<TIn> Shape => new SinkShape<TIn>(_in);
+        public override SinkShape<TIn> Shape => new(_in);
 
         /// <summary>
         /// TBD
@@ -632,7 +632,7 @@ namespace Akka.Streams.Implementation.Stages
         private sealed class Logic : InGraphStageLogic
         {
             private readonly LastOrDefault<TIn> _stage;
-            private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
+            private readonly TaskCompletionSource<TIn> _promise = new();
             private TIn _prev;
             private bool _foundAtLeastOne;
 
@@ -675,7 +675,7 @@ namespace Akka.Streams.Implementation.Stages
         #endregion
 
         private readonly bool _throwOnDefault;
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("lastOrDefault.in");
+        private readonly Inlet<TIn> _in = new("lastOrDefault.in");
 
         /// <summary>
         /// TBD
@@ -689,7 +689,7 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
-        public override SinkShape<TIn> Shape => new SinkShape<TIn>(_in);
+        public override SinkShape<TIn> Shape => new(_in);
 
         /// <summary>
         /// TBD

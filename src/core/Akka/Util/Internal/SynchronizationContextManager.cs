@@ -36,7 +36,7 @@ namespace Akka.Util.Internal
     [InternalApi]
     internal static class SynchronizationContextManager
     {
-        public static ContextRemover RemoveContext { get; } = new ContextRemover();
+        public static ContextRemover RemoveContext { get; } = new();
     }
 
     [InternalApi]

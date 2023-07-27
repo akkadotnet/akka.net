@@ -24,9 +24,9 @@ namespace Samples.Cluster.Transformation
             _clusterConfig = section.AkkaConfig;
             LaunchBackend(new []{ "2551" });
             LaunchBackend(new[] { "2552" });
-            LaunchBackend(new string[0]);
-            LaunchFrontend(new string[0]);
-            LaunchFrontend(new string[0]);
+            LaunchBackend(Array.Empty<string>());
+            LaunchFrontend(Array.Empty<string>());
+            LaunchFrontend(Array.Empty<string>());
             //starting 2 frontend nodes and 3 backend nodes
             Console.WriteLine("Press any key to exit.");
             Console.ReadLine();

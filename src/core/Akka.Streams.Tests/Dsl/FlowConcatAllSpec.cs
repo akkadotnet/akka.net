@@ -30,7 +30,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private static readonly TestException TestException = new TestException("test");
+        private static readonly TestException TestException = new("test");
 
         [Fact]
         public async Task ConcatAll_must_work_in_the_happy_case()

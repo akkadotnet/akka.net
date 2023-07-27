@@ -107,7 +107,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         protected AkkaPduCodec Codec { get; private set; }
 
-        private readonly SchemeAugmenter _schemeAugmenter = new SchemeAugmenter(RemoteSettings.AkkaScheme);
+        private readonly SchemeAugmenter _schemeAugmenter = new(RemoteSettings.AkkaScheme);
 
         /// <summary>
         /// TBD
@@ -140,10 +140,8 @@ namespace Akka.Remote.Transport
         {
             get
             {
-                return _managerProps ??
-                       (_managerProps =
-                           Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
-                               .WithDeploy(Deploy.Local));
+                return _managerProps ??= Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
+                    .WithDeploy(Deploy.Local);
             }
         }
 
@@ -178,7 +176,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public static AtomicCounter UniqueId = new AtomicCounter(0);
+        public static AtomicCounter UniqueId = new(0);
 
         #endregion
     }

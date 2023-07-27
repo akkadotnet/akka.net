@@ -561,7 +561,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public static GetTopics Instance { get; } = new GetTopics();
+        public static GetTopics Instance { get; } = new();
         private GetTopics() { }
     }
 

@@ -29,7 +29,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal sealed class Terminate : IDeadLetterSuppression
         {
-            public static readonly Terminate Instance = new Terminate();
+            public static readonly Terminate Instance = new();
 
             private Terminate()
             {
@@ -1005,7 +1005,7 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class ShardCoordinatorInitialized : IDomainEvent, IEquatable<ShardCoordinatorInitialized>
         {
-            public static readonly ShardCoordinatorInitialized Instance = new ShardCoordinatorInitialized();
+            public static readonly ShardCoordinatorInitialized Instance = new();
 
             private ShardCoordinatorInitialized()
             {
@@ -1047,7 +1047,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly StateInitialized Instance = new StateInitialized();
+            public static readonly StateInitialized Instance = new();
 
             private StateInitialized() { }
         }
@@ -1062,7 +1062,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly CoordinatorState Empty = new CoordinatorState();
+            public static readonly CoordinatorState Empty = new();
 
             /// <summary>
             /// Region for each shard.
@@ -1301,7 +1301,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly RebalanceTick Instance = new RebalanceTick();
+            public static readonly RebalanceTick Instance = new();
 
             private RebalanceTick() { }
         }
@@ -1488,7 +1488,7 @@ namespace Akka.Cluster.Sharding
             private readonly bool _isRebalance;
             private ILoggingAdapter _log;
 
-            private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+            private ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
             public ITimerScheduler Timers { get; set; }
 

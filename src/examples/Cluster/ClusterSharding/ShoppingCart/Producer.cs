@@ -35,7 +35,7 @@ public sealed class Producer : ReceiveActor, IWithTimers
     
     private sealed class Produce
     {
-        public static readonly Produce Instance = new Produce();
+        public static readonly Produce Instance = new();
         private Produce() {}
     }
 

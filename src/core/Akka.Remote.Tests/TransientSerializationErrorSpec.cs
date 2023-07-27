@@ -21,42 +21,42 @@ namespace Akka.Remote.Tests
     {
         internal class ManifestNotSerializable
         {
-            public static readonly ManifestNotSerializable Instance = new ManifestNotSerializable();
+            public static readonly ManifestNotSerializable Instance = new();
 
             private ManifestNotSerializable() { }
         }
 
         internal class ManifestIllegal
         {
-            public static readonly ManifestIllegal Instance = new ManifestIllegal();
+            public static readonly ManifestIllegal Instance = new();
 
             private ManifestIllegal() { }
         }
 
         internal class ToBinaryNotSerializable
         {
-            public static readonly ToBinaryNotSerializable Instance = new ToBinaryNotSerializable();
+            public static readonly ToBinaryNotSerializable Instance = new();
 
             private ToBinaryNotSerializable() { }
         }
 
         internal class ToBinaryIllegal
         {
-            public static readonly ToBinaryIllegal Instance = new ToBinaryIllegal();
+            public static readonly ToBinaryIllegal Instance = new();
 
             private ToBinaryIllegal() { }
         }
 
         internal class NotDeserializable
         {
-            public static readonly NotDeserializable Instance = new NotDeserializable();
+            public static readonly NotDeserializable Instance = new();
 
             private NotDeserializable() { }
         }
 
         internal class IllegalOnDeserialize
         {
-            public static readonly IllegalOnDeserialize Instance = new IllegalOnDeserialize();
+            public static readonly IllegalOnDeserialize Instance = new();
 
             private IllegalOnDeserialize() { }
         }
@@ -111,7 +111,7 @@ namespace Akka.Remote.Tests
                     case ToBinaryIllegal _:
                         throw new ArgumentException();
                     default:
-                        return new byte[0];
+                        return Array.Empty<byte>();
                 }
             }
         }

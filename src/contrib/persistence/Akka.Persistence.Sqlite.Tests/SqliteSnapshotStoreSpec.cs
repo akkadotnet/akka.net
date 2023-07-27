@@ -14,7 +14,7 @@ namespace Akka.Persistence.Sqlite.Tests
 {
     public class SqliteSnapshotStoreSpec : SnapshotStoreSpec
     {
-        private static AtomicCounter counter = new AtomicCounter(0);
+        private static AtomicCounter counter = new(0);
         public SqliteSnapshotStoreSpec(ITestOutputHelper output)
             : base(CreateSpecConfig("Filename=file:memdb-snapshot-" + counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"), "SqliteSnapshotStoreSpec", output)
         {

@@ -76,8 +76,8 @@ namespace Akka.Actor.Scheduler
         }
 
         private readonly IActorContext ctx;
-        private readonly Dictionary<object, Timer> timers = new Dictionary<object, Timer>();
-        private AtomicCounter timerGen = new AtomicCounter(0);
+        private readonly Dictionary<object, Timer> timers = new();
+        private AtomicCounter timerGen = new(0);
 
 
         public TimerScheduler(IActorContext ctx)

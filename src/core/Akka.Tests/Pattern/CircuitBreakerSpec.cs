@@ -8,14 +8,15 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Akka.Tests.Pattern
 {
@@ -360,43 +361,27 @@ namespace Akka.Tests.Pattern
         protected static async Task<T> InterceptException<T>(Func<Task> actionThatThrows)
             where T : Exception
         {
-            try
-            {
-                await actionThatThrows();
-            }
-            catch (Exception ex)
-            {
-                var exception = ex is AggregateException aggregateException
-                    ? aggregateException.Flatten().InnerExceptions[0]
-                    : ex;
-
-                var exceptionType = typeof(T);
-                return exceptionType == exception.GetType()
-                    ? (T)exception
-                    : throw new ThrowsException(exceptionType, exception);
-            }
-
-            throw new ThrowsException(typeof(T));
+            return (await actionThatThrows.Should().ThrowExactlyAsync<T>()).And;
         }
 
         public TestBreaker ShortCallTimeoutCb() =>
-            new TestBreaker(new CircuitBreaker(Sys.Scheduler, 1, Dilated(TimeSpan.FromMilliseconds(50)), Dilated(TimeSpan.FromMilliseconds(500))));
+            new(new CircuitBreaker(Sys.Scheduler, 1, Dilated(TimeSpan.FromMilliseconds(50)), Dilated(TimeSpan.FromMilliseconds(500))));
 
         public TestBreaker ShortResetTimeoutCb() =>
-            new TestBreaker(new CircuitBreaker(Sys.Scheduler, 1, Dilated(TimeSpan.FromMilliseconds(1000)), Dilated(TimeSpan.FromMilliseconds(50))));
+            new(new CircuitBreaker(Sys.Scheduler, 1, Dilated(TimeSpan.FromMilliseconds(1000)), Dilated(TimeSpan.FromMilliseconds(50))));
 
         public TestBreaker LongCallTimeoutCb() =>
-            new TestBreaker(new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromSeconds(5), Dilated(TimeSpan.FromMilliseconds(500))));
+            new(new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromSeconds(5), Dilated(TimeSpan.FromMilliseconds(500))));
 
         public TimeSpan LongResetTimeout = TimeSpan.FromSeconds(5);
         public TestBreaker LongResetTimeoutCb() =>
-            new TestBreaker(new CircuitBreaker(Sys.Scheduler, 1, Dilated(TimeSpan.FromMilliseconds(100)), Dilated(LongResetTimeout)));
+            new(new CircuitBreaker(Sys.Scheduler, 1, Dilated(TimeSpan.FromMilliseconds(100)), Dilated(LongResetTimeout)));
 
         public TestBreaker MultiFailureCb() =>
-            new TestBreaker(new CircuitBreaker(Sys.Scheduler, 5, Dilated(TimeSpan.FromMilliseconds(200)), Dilated(TimeSpan.FromMilliseconds(500))));
+            new(new CircuitBreaker(Sys.Scheduler, 5, Dilated(TimeSpan.FromMilliseconds(200)), Dilated(TimeSpan.FromMilliseconds(500))));
 
         public TestBreaker NonOneFactorCb() =>
-            new TestBreaker(new CircuitBreaker(Sys.Scheduler, 1, Dilated(TimeSpan.FromMilliseconds(2000)), Dilated(TimeSpan.FromMilliseconds(1000)), Dilated(TimeSpan.FromDays(1)), 5, 0));
+            new(new CircuitBreaker(Sys.Scheduler, 1, Dilated(TimeSpan.FromMilliseconds(2000)), Dilated(TimeSpan.FromMilliseconds(1000)), Dilated(TimeSpan.FromDays(1)), 5, 0));
     }
 
     internal class TestException : Exception

@@ -19,7 +19,7 @@ namespace Akka.DistributedData
     {
         protected sealed class SendToSecondary
         {
-            public static readonly SendToSecondary Instance = new SendToSecondary();
+            public static readonly SendToSecondary Instance = new();
             private SendToSecondary() { }
         }
 
@@ -36,7 +36,7 @@ namespace Akka.DistributedData
 
         private ILoggingAdapter _log;
 
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         protected abstract int DoneWhenRemainingSize { get; }
 

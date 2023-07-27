@@ -23,7 +23,7 @@ namespace Akka.Persistence.Snapshot
         /// <summary>
         /// This is available to expose/override the snapshots in derived snapshot stores
         /// </summary>
-        protected virtual List<SnapshotEntry> Snapshots { get; } = new List<SnapshotEntry>();
+        protected virtual List<SnapshotEntry> Snapshots { get; } = new();
 
         protected override Task DeleteAsync(SnapshotMetadata metadata)
         {

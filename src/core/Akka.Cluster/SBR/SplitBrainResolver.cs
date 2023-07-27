@@ -73,8 +73,7 @@ namespace Akka.Cluster.SBR
         private ILoggingAdapter _log;
 
 
-        private ReachabilityChangedStats _reachabilityChangedStats =
-            new ReachabilityChangedStats(DateTime.UtcNow, DateTime.UtcNow, 0);
+        private ReachabilityChangedStats _reachabilityChangedStats = new(DateTime.UtcNow, DateTime.UtcNow, 0);
 
         private IReleaseLeaseCondition _releaseLeaseCondition = ReleaseLeaseCondition.NoLease.Instance;
         private bool _selfMemberAdded;
@@ -100,7 +99,7 @@ namespace Akka.Cluster.SBR
 
         public DowningStrategy Strategy { get; }
 
-        public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        public ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         public abstract UniqueAddress SelfUniqueAddress { get; }
 
@@ -658,7 +657,7 @@ namespace Akka.Cluster.SBR
 
         internal class Tick
         {
-            public static readonly Tick Instance = new Tick();
+            public static readonly Tick Instance = new();
 
             private Tick()
             {
@@ -696,7 +695,7 @@ namespace Akka.Cluster.SBR
         /// </summary>
         protected class AcquireLease
         {
-            public static readonly AcquireLease Instance = new AcquireLease();
+            public static readonly AcquireLease Instance = new();
 
             private AcquireLease()
             {
@@ -738,7 +737,7 @@ namespace Akka.Cluster.SBR
         {
             public class NoLease : IReleaseLeaseCondition
             {
-                public static readonly NoLease Instance = new NoLease();
+                public static readonly NoLease Instance = new();
 
                 private NoLease()
                 {

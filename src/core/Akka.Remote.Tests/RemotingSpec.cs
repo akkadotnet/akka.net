@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Routing;
 using Akka.TestKit;
@@ -649,6 +650,21 @@ namespace Akka.Remote.Tests
                 {
                     await VerifySendAsync(oversized, async () => { await ExpectNoMsgAsync(); });
                 });
+        }
+
+        /// <summary>
+        /// Validate that we can accurately log wrapped messages that fail to be delivered
+        /// </summary>
+        [Fact]
+        public void Log_Wrapped_messages_that_fail_to_Send()
+        {
+            // 2x wrapped message
+            var wrappedMessage =
+                new DeadLetter(new ActorSelectionMessage("hit", Array.Empty<SelectionPathElement>(), false), TestActor,
+                    TestActor);
+
+            var loggedType = EndpointWriter.LogPossiblyWrappedMessageType(wrappedMessage);
+            loggedType.Should().Contain("DeadLetter").And.Contain("ActorSelectionMessage").And.Contain("String");
         }
 
         [Fact]

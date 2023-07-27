@@ -148,7 +148,7 @@ namespace Akka.Streams.Implementation
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Ignore Instance = new Ignore();
+            public static readonly Ignore Instance = new();
 
             private Ignore()
             {
@@ -912,7 +912,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly EmptyModule Instance = new EmptyModule();
+        public static readonly EmptyModule Instance = new();
 
         private EmptyModule()
         {
@@ -1580,7 +1580,7 @@ namespace Akka.Streams.Implementation
         {
             public static readonly ISubscriber<T> Subscriber = new CancellingSubscriber<T>();
 
-            public static readonly Inert Instance = new Inert();
+            public static readonly Inert Instance = new();
 
             private Inert()
             {
@@ -1615,7 +1615,7 @@ namespace Akka.Streams.Implementation
                 ISubscriber<T> subscriber = null,
                 bool? onCompleteBuffered = null,
                 Exception onErrorBuffered = null)
-                => new Establishing(
+                => new(
                     subscriber ?? Subscriber,
                     onCompleteBuffered ?? OnCompleteBuffered,
                     onErrorBuffered ?? OnErrorBuffered);
@@ -2050,7 +2050,7 @@ namespace Akka.Streams.Implementation
 
         private sealed class PassThrough : ISubscriptionState
         {
-            public static PassThrough Instance { get; } = new PassThrough();
+            public static PassThrough Instance { get; } = new();
 
             private PassThrough() { }
 
@@ -2069,7 +2069,7 @@ namespace Akka.Streams.Implementation
 
         private sealed class WrappedSubscription : AtomicReference<ISubscriptionState>, ISubscription
         {
-            private static readonly Buffering NoBufferedDemand = new Buffering(0);
+            private static readonly Buffering NoBufferedDemand = new(0);
             private readonly ISubscription _real;
             private readonly VirtualProcessor<T> _processor;
             
@@ -2176,7 +2176,7 @@ namespace Akka.Streams.Implementation
         {
             public static readonly ISubscriber<T> Subscriber = new CancellingSubscriber<T>();
 
-            public static readonly Inert Instance = new Inert();
+            public static readonly Inert Instance = new();
 
             private Inert()
             {
@@ -2311,7 +2311,7 @@ namespace Akka.Streams.Implementation
         /// The reason why the encapsulated (copied) modules are stored as mutable state to save subclasses of this class
         /// from passing the current scope around or even knowing about it.
         /// </summary>
-        private readonly LinkedList<IModule> _moduleStack = new LinkedList<IModule>();
+        private readonly LinkedList<IModule> _moduleStack = new();
 
         /// <summary>
         /// TBD

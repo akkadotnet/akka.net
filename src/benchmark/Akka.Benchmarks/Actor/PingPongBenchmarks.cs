@@ -16,7 +16,7 @@ using BenchmarkDotNet.Engines;
 namespace Akka.Benchmarks.Actor
 {
     [Config(typeof(MonitoringConfig))]
-    [SimpleJob(RunStrategy.Monitoring, launchCount: 3, warmupCount: 3, targetCount: 3)]
+    [SimpleJob(RunStrategy.Monitoring, launchCount: 10, warmupCount: 10)]
     public class PingPongBenchmarks
     {
         public const int Operations = 1_000_000;
@@ -24,7 +24,7 @@ namespace Akka.Benchmarks.Actor
         private ActorSystem system;
         private IActorRef ping;
 
-        [GlobalSetup]
+        [IterationSetup]
         public void Setup()
         {
             timeout = TimeSpan.FromMinutes(1);
@@ -33,13 +33,13 @@ namespace Akka.Benchmarks.Actor
             ping = system.ActorOf(Props.Create(() => new Ping(pong)));
         }
 
-        [GlobalCleanup]
+        [IterationCleanup]
         public void Cleanup()
         {
             system.Dispose();
         }
 
-        [Benchmark(OperationsPerInvoke = Operations)]
+        [Benchmark(OperationsPerInvoke = Operations * 2)]
         public async Task Actor_ping_pong_single_pair_in_memory()
         {
             await ping.Ask(StartTest.Instance, timeout);
@@ -49,7 +49,7 @@ namespace Akka.Benchmarks.Actor
 
         sealed class StartTest
         {
-            public static readonly StartTest Instance = new StartTest();
+            public static readonly StartTest Instance = new();
             private StartTest() { }
         }
 
@@ -65,7 +65,7 @@ namespace Akka.Benchmarks.Actor
 
         sealed class TestDone
         {
-            public static readonly TestDone Instance = new TestDone();
+            public static readonly TestDone Instance = new();
             private TestDone() { }
         }
 

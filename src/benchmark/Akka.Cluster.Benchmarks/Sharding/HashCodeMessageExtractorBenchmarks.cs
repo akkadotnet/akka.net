@@ -14,8 +14,8 @@ namespace Akka.Cluster.Benchmarks.Sharding
     [Config(typeof(MicroBenchmarkConfig))]
     public class HashCodeMessageExtractorBenchmarks
     {
-        private ShardingEnvelope _m1 = new ShardingEnvelope("foo", 1);
-        private ShardedMessage _m2 = new ShardedMessage("foo", 1);
+        private ShardingEnvelope _m1 = new("foo", 1);
+        private ShardedMessage _m2 = new("foo", 1);
         private IMessageExtractor _extractor = new ShardMessageExtractor();
 
         [Benchmark]

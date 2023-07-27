@@ -108,7 +108,7 @@ namespace Helios.Concurrency
         /// </summary>
         private volatile int _parallelWorkers = 0;
 
-        private readonly LinkedList<Task> _tasks = new LinkedList<Task>();
+        private readonly LinkedList<Task> _tasks = new();
 
         private readonly DedicatedThreadPool _pool;
 
@@ -411,8 +411,8 @@ namespace Helios.Concurrency
             private static readonly int ProcessorCount = Environment.ProcessorCount;
             private const int CompletedState = 1;
 
-            private readonly ConcurrentQueue<IRunnable> _queue = new ConcurrentQueue<IRunnable>();
-            private readonly UnfairSemaphore _semaphore = new UnfairSemaphore();
+            private readonly ConcurrentQueue<IRunnable> _queue = new();
+            private readonly UnfairSemaphore _semaphore = new();
             private int _outstandingRequests;
             private int _isAddingCompleted;
 

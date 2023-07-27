@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var phases = new[]
                 {
-                    ((ICollection<int>)new[] {2}, (ICollection<int>)new int[0]),
+                    ((ICollection<int>)new[] {2}, (ICollection<int>)Array.Empty<int>()),
                     ((ICollection<int>)new[] {1}, (ICollection<int>)new[] {1, 1}),
                     ((ICollection<int>)new[] {3}, (ICollection<int>)new[] {3}),
                     ((ICollection<int>)new[] {6}, (ICollection<int>)new[] {6, 6, 6})

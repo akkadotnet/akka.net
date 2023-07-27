@@ -160,7 +160,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Serializable]
         internal sealed class Increment
         {
-            public static readonly Increment Instance = new Increment();
+            public static readonly Increment Instance = new();
 
             private Increment()
             {
@@ -170,7 +170,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Serializable]
         internal sealed class Decrement
         {
-            public static readonly Decrement Instance = new Decrement();
+            public static readonly Decrement Instance = new();
 
             private Decrement()
             {
@@ -202,7 +202,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Serializable]
         internal sealed class Stop
         {
-            public static readonly Stop Instance = new Stop();
+            public static readonly Stop Instance = new();
 
             private Stop()
             {

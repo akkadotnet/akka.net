@@ -76,7 +76,7 @@ namespace Akka.Tests.Actor
 
             private class Iteration
             {
-                public static readonly Iteration Instance = new Iteration();
+                public static readonly Iteration Instance = new();
                 private Iteration() { }
             }
 

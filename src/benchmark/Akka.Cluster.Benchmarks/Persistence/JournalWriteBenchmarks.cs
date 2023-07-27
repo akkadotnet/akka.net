@@ -20,7 +20,7 @@ namespace Akka.Cluster.Benchmarks.Persistence
     [Config(typeof(MicroBenchmarkConfig))]
     public class JournalWriteBenchmarks
     {
-        private static readonly Store Message = new Store(1);
+        private static readonly Store Message = new(1);
 
         [Params(1, 10, 100)] public int PersistentActors;
 

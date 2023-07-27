@@ -44,11 +44,11 @@ namespace Akka.DistributedData.Tests.MultiNode
     public class DurablePruningSpec : MultiNodeClusterSpec
     {
         private readonly Cluster.Cluster cluster;
-        private readonly RoleName first = new RoleName("first");
-        private readonly RoleName second = new RoleName("second");
+        private readonly RoleName first = new("first");
+        private readonly RoleName second = new("second");
         private readonly TimeSpan maxPruningDissemination = TimeSpan.FromSeconds(3);
         private readonly TimeSpan timeout;
-        private readonly GCounterKey keyA = new GCounterKey("A");
+        private readonly GCounterKey keyA = new("A");
         private readonly IActorRef replicator;
 
         public DurablePruningSpec() : this(new DurablePruningSpecConfig())

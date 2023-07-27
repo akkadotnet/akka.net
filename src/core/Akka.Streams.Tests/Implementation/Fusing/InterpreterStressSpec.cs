@@ -30,10 +30,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         private readonly ITestOutputHelper _helper;
 
         // GraphStages can be reused
-        private static readonly Select<int, int> Select = new Select<int, int>(x => x + 1);
-        private static readonly Skip<int> SkipOne = new Skip<int>(1);
-        private static readonly Take<int> TakeOne = new Take<int>(1);
-        private static readonly Take<int> TakeHalfOfRepetition = new Take<int>(Repetition/2);
+        private static readonly Select<int, int> Select = new(x => x + 1);
+        private static readonly Skip<int> SkipOne = new(1);
+        private static readonly Take<int> TakeOne = new(1);
+        private static readonly Take<int> TakeHalfOfRepetition = new(Repetition/2);
 
         public InterpreterStressSpec(ITestOutputHelper helper = null) : base(helper)
         {

@@ -19,7 +19,7 @@ namespace Akka.Util
     {
         private static int _seed = Environment.TickCount;
 
-        private static ThreadLocal<Random> _rng = new ThreadLocal<Random>(() => new Random(Interlocked.Increment(ref _seed)));
+        private static ThreadLocal<Random> _rng = new(() => new Random(Interlocked.Increment(ref _seed)));
 
         /// <summary>
         /// The current random number seed available to this thread

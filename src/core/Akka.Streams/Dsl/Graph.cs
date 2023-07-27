@@ -449,7 +449,7 @@ namespace Akka.Streams.Dsl
             private readonly MergePrioritized<T> _stage;
             private readonly List<FixedSizeBuffer<Inlet<T>>> _allBuffers;
             private int _runningUpstreams;
-            private readonly Random _randomGen = new Random();
+            private readonly Random _randomGen = new();
 
             public MergePrioritizedLogic(MergePrioritized<T> stage) : base(stage.Shape)
             {
@@ -869,17 +869,17 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> Left = new Inlet<T>("left");
+        public readonly Inlet<T> Left = new("left");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> Right = new Inlet<T>("right");
+        public readonly Inlet<T> Right = new("right");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<T> Out = new Outlet<T>("out");
+        public readonly Outlet<T> Out = new("out");
 
         /// <summary>
         /// TBD
@@ -1011,7 +1011,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("Broadcast.in");
+        public readonly Inlet<T> In = new("Broadcast.in");
 
         /// <summary>
         /// TBD
@@ -1171,7 +1171,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("Partition.in");
+        public readonly Inlet<T> In = new("Partition.in");
 
         /// <summary>
         /// TBD
@@ -1349,7 +1349,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<T> In { get; } = new Inlet<T>("Balance.in");
+        public Inlet<T> In { get; } = new("Balance.in");
 
         /// <summary>
         /// TBD
@@ -1427,7 +1427,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// The singleton instance of <see cref="ZipWith"/>.
         /// </summary>
-        public static readonly ZipWith Instance = new ZipWith();
+        public static readonly ZipWith Instance = new();
         private ZipWith() { }
     }
 
@@ -1476,7 +1476,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// The singleton instance of <see cref="UnzipWith"/>.
         /// </summary>
-        public static readonly UnzipWith Instance = new UnzipWith();
+        public static readonly UnzipWith Instance = new();
         private UnzipWith() { }
     }
 
@@ -1780,7 +1780,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Concat.out");
+        public Outlet<TOut> Out { get; } = new("Concat.out");
 
         /// <summary>
         /// TBD
@@ -1903,17 +1903,17 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<T> Primary { get; }   = new Inlet<T>("OrElse.primary");
+        public Inlet<T> Primary { get; }   = new("OrElse.primary");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<T> Secondary { get; } = new Inlet<T>("OrElse.secondary");
+        public Inlet<T> Secondary { get; } = new("OrElse.secondary");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<T> Out { get; } = new Outlet<T>("OrElse.out");
+        public Outlet<T> Out { get; } = new("OrElse.out");
 
         /// <summary>
         /// TBD
@@ -1941,7 +1941,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static WireTap<T> Create<T>() => new WireTap<T>();
+        public static WireTap<T> Create<T>() => new();
     }
 
     /// <summary>
@@ -2007,9 +2007,9 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public WireTap() => Shape = new FanOutShape<T, T, T>(In, OutMain, OutTap);
         
-        public Inlet<T> In { get; }   = new Inlet<T>("WireTap.In");
-        public Outlet<T> OutMain { get; } = new Outlet<T>("WireTap.OutMain");
-        public Outlet<T> OutTap { get; } = new Outlet<T>("WireTap.OutTap");
+        public Inlet<T> In { get; }   = new("WireTap.In");
+        public Outlet<T> OutMain { get; } = new("WireTap.OutMain");
+        public Outlet<T> OutTap { get; } = new("WireTap.OutTap");
 
         public override FanOutShape<T, T, T> Shape { get; }
         

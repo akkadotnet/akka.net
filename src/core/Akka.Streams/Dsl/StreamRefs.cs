@@ -89,7 +89,7 @@ namespace Akka.Streams.Dsl
         public StreamRefSettings Copy(int? bufferCapacity = null,
             TimeSpan? demandRedeliveryInterval = null,
             TimeSpan? subscriptionTimeout = null,
-            TimeSpan? finalTerminationSignalDeadline = null) => new StreamRefSettings(
+            TimeSpan? finalTerminationSignalDeadline = null) => new(
             bufferCapacity: bufferCapacity ?? this.BufferCapacity,
             demandRedeliveryInterval: demandRedeliveryInterval ?? this.DemandRedeliveryInterval,
             subscriptionTimeout: subscriptionTimeout ?? this.SubscriptionTimeout,

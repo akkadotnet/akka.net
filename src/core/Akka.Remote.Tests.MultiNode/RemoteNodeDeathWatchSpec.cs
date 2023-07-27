@@ -63,7 +63,7 @@ namespace Akka.Remote.Tests.MultiNode
 
         public sealed class Ack
         {
-            public static Ack Instance { get; } = new Ack();
+            public static Ack Instance { get; } = new();
 
             private Ack()
             {

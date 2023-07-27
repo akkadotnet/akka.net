@@ -15,7 +15,7 @@ namespace Akka.Util
     public class Switch
     {
         private readonly Util.AtomicBoolean _switch;
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
 
         /// <summary>
         /// TBD

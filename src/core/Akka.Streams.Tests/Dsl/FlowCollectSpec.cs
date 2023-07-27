@@ -20,7 +20,7 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class FlowCollectSpec : ScriptedTest
     {
-        private Random Random { get; } = new Random(12345);
+        private Random Random { get; } = new(12345);
         private ActorMaterializer Materializer { get; }
 
         public FlowCollectSpec(ITestOutputHelper helper) : base(helper)

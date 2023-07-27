@@ -30,7 +30,7 @@ namespace Akka.Pattern
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetCurrentChild Instance = new GetCurrentChild();
+            public static readonly GetCurrentChild Instance = new();
             private GetCurrentChild() { }
         }
 
@@ -58,14 +58,14 @@ namespace Akka.Pattern
         [Serializable]
         public sealed class Reset
         {
-            public static readonly Reset Instance = new Reset();
+            public static readonly Reset Instance = new();
             private Reset() { }
         }
 
         [Serializable]
         public sealed class GetRestartCount
         {
-            public static readonly GetRestartCount Instance = new GetRestartCount();
+            public static readonly GetRestartCount Instance = new();
             private GetRestartCount() { }
         }
 
@@ -86,7 +86,7 @@ namespace Akka.Pattern
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly StartChild Instance = new StartChild();
+            public static readonly StartChild Instance = new();
             private StartChild() { }
         }
 
@@ -117,6 +117,10 @@ namespace Akka.Pattern
         {
         }
 
+        /// <summary>
+        /// If the arguments here change, you -must- change the invocation in <see cref="BackoffOptions"/> accordingly!
+        /// Expression based props are too slow for many scenarios, so we must drop compile time safety for that sake.  
+        /// </summary>
         public BackoffSupervisor(
             Props childProps,
             string childName,

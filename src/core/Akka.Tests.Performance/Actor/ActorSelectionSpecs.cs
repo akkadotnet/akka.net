@@ -25,10 +25,10 @@ namespace Akka.Tests.Performance.Actor
         private IActorRef _receiver;
         private ActorPath _receiverActorPath;
 
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new(0);
         protected ActorSystem System;
 
-        private readonly ManualResetEventSlim _resetEvent = new ManualResetEventSlim(false);
+        private readonly ManualResetEventSlim _resetEvent = new(false);
         private Props _oneMessageBenchmarkProps;
 
         private class BenchmarkActor : UntypedActor

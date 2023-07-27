@@ -318,6 +318,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public override string ToString() { }
     }
 }
+namespace Akka.Cluster.Tools.PublishSubscribe.Internal
+{
+    [Akka.Annotations.ApiMayChangeAttribute()]
+    public sealed class CountSubscribers
+    {
+        public CountSubscribers(string topic) { }
+        public string Topic { get; }
+    }
+}
 namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 {
     public class DistributedPubSubMessageSerializer : Akka.Serialization.SerializerWithStringManifest

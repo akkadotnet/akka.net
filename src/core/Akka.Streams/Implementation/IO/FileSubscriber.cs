@@ -48,7 +48,7 @@ namespace Akka.Streams.Implementation.IO
             if (startPosition < 0)
                 throw new ArgumentException($"startPosition must be >= 0 (was {startPosition})", nameof(startPosition));
 
-            return Actor.Props.Create(() => new FileSubscriber(f, completionPromise, bufferSize, startPosition, fileMode, autoFlush, flushCommand))
+            return Actor.Props.Create<FileSubscriber>(f, completionPromise, bufferSize, startPosition, fileMode, autoFlush, flushCommand)
                 .WithDeploy(Deploy.Local);
         }
 
@@ -72,6 +72,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="fileMode">TBD</param>
         /// <param name="autoFlush"></param>
         /// <param name="flushSignaler"></param>
+        /// If this changes you must change <see cref="FileSubscriber.Props"/> as well!
         public FileSubscriber(
             FileInfo f,
             TaskCompletionSource<IOResult> completionPromise,
@@ -209,7 +210,7 @@ namespace Akka.Streams.Implementation.IO
 
         internal class FlushSignal
         {
-            public static readonly FlushSignal Instance = new FlushSignal();
+            public static readonly FlushSignal Instance = new();
             private FlushSignal() { }
         }
     }

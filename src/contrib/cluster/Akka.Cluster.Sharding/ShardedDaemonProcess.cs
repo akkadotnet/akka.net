@@ -18,7 +18,7 @@ namespace Akka.Cluster.Sharding
     {
         private sealed class Tick
         {
-            public static Tick Instance { get; } = new Tick();
+            public static Tick Instance { get; } = new();
             private Tick() { }
         }
 
@@ -170,6 +170,6 @@ namespace Akka.Cluster.Sharding
 
     public class ShardedDaemonProcessExtensionProvider : ExtensionIdProvider<ShardedDaemonProcess>
     {
-        public override ShardedDaemonProcess CreateExtension(ExtendedActorSystem system) => new ShardedDaemonProcess(system);
+        public override ShardedDaemonProcess CreateExtension(ExtendedActorSystem system) => new(system);
     }
 }

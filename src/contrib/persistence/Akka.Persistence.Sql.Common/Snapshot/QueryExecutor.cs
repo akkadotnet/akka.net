@@ -548,18 +548,18 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="maxSequenceNr">TBD</param>
         /// <param name="maxTimestamp">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task<SelectedSnapshot> SelectSnapshotAsync(
+        public virtual Task<SelectedSnapshot> SelectSnapshotAsync(
             DbConnection connection,
             CancellationToken cancellationToken,
             string persistenceId,
             long maxSequenceNr,
             DateTime maxTimestamp)
         {
-            return await connection.ExecuteInTransaction(ReadIsolationLevel, cancellationToken, async (tx, token) =>
+            return connection.ExecuteInTransaction(ReadIsolationLevel, cancellationToken, async (tx, token) =>
             {
                 using var command = GetCommand(connection, SelectSnapshotSql);
                 command.Transaction = tx;
-                
+
                 SetPersistenceIdParameter(persistenceId, command);
                 SetSequenceNrParameter(maxSequenceNr, command);
                 SetTimestampParameter(maxTimestamp, command);

@@ -21,7 +21,7 @@ namespace Akka.Tests.MatchHandler
         public void When_compiling_first_time_correct_calls_are_made_to_MatchExpressionBuilder_and_PartialActionBuilder()
         {
             //Arrange
-            object[] argumentValues = new object[0];
+            object[] argumentValues = Array.Empty<object>();
             Expression<Func<object, bool>> lambdaExpression = _ => true;
             var matchExpressionBuilder = new DummyMatchExpressionBuilder()
             {
@@ -60,12 +60,11 @@ namespace Akka.Tests.MatchHandler
         public void When_compiling_second_time_with_same_signature_the_cached_version_should_be_used()
         {
             //Arrange
-            object[] argumentValues = new object[0];
             Expression<Func<object, bool>> lambdaExpression = _ => true;
             var matchExpressionBuilder = new DummyMatchExpressionBuilder()
             {
-                BuildLambdaExpressionResult = new MatchExpressionBuilderResult(lambdaExpression, argumentValues),
-                CreateArgumentValuesArrayResult = argumentValues,
+                BuildLambdaExpressionResult = new MatchExpressionBuilderResult(lambdaExpression, Array.Empty<object>()),
+                CreateArgumentValuesArrayResult = Array.Empty<object>(),
             };
 
             Func<object, bool> deleg = _ => true;
@@ -95,7 +94,7 @@ namespace Akka.Tests.MatchHandler
             //Assert
 
             AssertOneCall(to: matchExpressionBuilder.CreateArgumentValuesArrayCalls, withArgument: arguments, description: "CreateArgumentValuesArray");
-            AssertOneCall(to: partialActionBuilder.BuildCalls, description: "Build", check: i => ReferenceEquals(i.CompiledDelegate, deleg) && ReferenceEquals(i.DelegateArguments, argumentValues));
+            AssertOneCall(to: partialActionBuilder.BuildCalls, description: "Build", check: i => ReferenceEquals(i.CompiledDelegate, deleg) && ReferenceEquals(i.DelegateArguments, Array.Empty<object>()));
             Assert.Same(partialAction, resultPartialAction);
 
             AssertNoCall(to: matchExpressionBuilder.BuildLambdaExpressionCalls, description: "BuildLambdaExpression");
@@ -130,8 +129,8 @@ namespace Akka.Tests.MatchHandler
 
         private class DummyMatchExpressionBuilder : IMatchExpressionBuilder
         {
-            public readonly List<IReadOnlyList<TypeHandler>> BuildLambdaExpressionCalls = new List<IReadOnlyList<TypeHandler>>();
-            public readonly List<IReadOnlyList<Argument>> CreateArgumentValuesArrayCalls = new List<IReadOnlyList<Argument>>();
+            public readonly List<IReadOnlyList<TypeHandler>> BuildLambdaExpressionCalls = new();
+            public readonly List<IReadOnlyList<Argument>> CreateArgumentValuesArrayCalls = new();
             public MatchExpressionBuilderResult BuildLambdaExpressionResult;
             public object[] CreateArgumentValuesArrayResult;
 
@@ -158,7 +157,7 @@ namespace Akka.Tests.MatchHandler
         private class DummyPartialActionBuilder : IPartialActionBuilder
         {
             public PartialAction<object> BuildResult;
-            public List<CompiledMatchHandlerWithArguments> BuildCalls = new List<CompiledMatchHandlerWithArguments>();
+            public List<CompiledMatchHandlerWithArguments> BuildCalls = new();
 
             public PartialAction<T> Build<T>(CompiledMatchHandlerWithArguments handlerAndArgs)
             {
@@ -176,7 +175,7 @@ namespace Akka.Tests.MatchHandler
         private class DummyLambdaExpressionCompiler : ILambdaExpressionCompiler
         {
             public Delegate CompileResult;
-            public List<LambdaExpression> CompileCalls = new List<LambdaExpression>();
+            public List<LambdaExpression> CompileCalls = new();
             public Delegate Compile(LambdaExpression expression)
             {
                 CompileCalls.Add(expression);

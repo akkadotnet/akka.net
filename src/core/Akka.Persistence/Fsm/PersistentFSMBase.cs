@@ -167,7 +167,7 @@ namespace Akka.Persistence.Fsm
         /// </summary>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
-        public TransformHelper Transform(StateFunction func) => new TransformHelper(func);
+        public TransformHelper Transform(StateFunction func) => new(func);
 
         /// <summary>
         /// Schedule named timer to deliver message after given delay, possibly repeating.
@@ -361,11 +361,11 @@ namespace Akka.Persistence.Fsm
 
         // Timer handling
         private readonly IDictionary<string, FSMBase.Timer> _timers = new Dictionary<string, FSMBase.Timer>();
-        private readonly AtomicCounter _timerGen = new AtomicCounter(0);
+        private readonly AtomicCounter _timerGen = new(0);
 
         // State definitions
-        private readonly Dictionary<TState, StateFunction> _stateFunctions = new Dictionary<TState, StateFunction>();
-        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new Dictionary<TState, TimeSpan?>();
+        private readonly Dictionary<TState, StateFunction> _stateFunctions = new();
+        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new();
 
         private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {
@@ -398,7 +398,7 @@ namespace Akka.Persistence.Fsm
 
         private StateFunction HandleEvent
         {
-            get { return _handleEvent ?? (_handleEvent = HandleEventDefault); }
+            get { return _handleEvent ??= HandleEventDefault; }
             set { _handleEvent = value; }
         }
 
@@ -419,7 +419,7 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         /// Listener support
         /// </summary>
-        public ListenerSupport Listeners { get; } = new ListenerSupport();
+        public ListenerSupport Listeners { get; } = new();
 
         // **
         // Main actor Receive method
