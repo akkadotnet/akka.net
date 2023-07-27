@@ -42,9 +42,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Get all subscribers for a given topic.
     /// </summary>
-    internal sealed class CountSubscribers
+    public sealed class CountSubscribers
     {
         public string Topic { get; }
 
