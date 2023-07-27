@@ -856,3 +856,12 @@ namespace Akka.Remote.Transport
         public Akka.Actor.Address Sender { get; }
     }
 }
+namespace Akka.Remote.Transport.DotNetty
+{
+    public sealed class DotNettySslSetup : Akka.Actor.Setup.Setup
+    {
+        public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation) { }
+        public System.Security.Cryptography.X509Certificates.X509Certificate2 Certificate { get; }
+        public bool SuppressValidation { get; }
+    }
+}
