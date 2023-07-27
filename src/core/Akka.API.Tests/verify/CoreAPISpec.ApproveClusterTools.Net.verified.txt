@@ -320,6 +320,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 }
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 {
+    [Akka.Annotations.ApiMayChangeAttribute()]
     public sealed class CountSubscribers
     {
         public CountSubscribers(string topic) { }

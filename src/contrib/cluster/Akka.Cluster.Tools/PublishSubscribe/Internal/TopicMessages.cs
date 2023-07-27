@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Routing;
 
@@ -44,6 +45,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// <summary>
     /// Get all subscribers for a given topic.
     /// </summary>
+    [ApiMayChange]
     public sealed class CountSubscribers
     {
         public string Topic { get; }
