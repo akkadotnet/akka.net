@@ -19,6 +19,7 @@ namespace Akka.Persistence.Query
         private readonly ExtendedActorSystem _system;
         private readonly ConcurrentDictionary<string, IReadJournal> _readJournalPluginExtensionIds = new();
         private ILoggingAdapter _log;
+        private readonly object _lock = new ();
 
         public static PersistenceQuery Get(ActorSystem system)
         {
@@ -34,8 +35,18 @@ namespace Akka.Persistence.Query
 
         public TJournal ReadJournalFor<TJournal>(string readJournalPluginId) where TJournal : IReadJournal
         {
-            var plugin = _readJournalPluginExtensionIds.GetOrAdd(readJournalPluginId, path => CreatePlugin(path, GetDefaultConfig<TJournal>()).GetReadJournal());
-            return (TJournal)plugin;
+            if(_readJournalPluginExtensionIds.TryGetValue(readJournalPluginId, out var plugin))
+                return (TJournal)plugin;
+            
+            lock (_lock)
+            {
+                if (_readJournalPluginExtensionIds.TryGetValue(readJournalPluginId, out plugin))
+                    return (TJournal)plugin;
+                
+                plugin = CreatePlugin(readJournalPluginId, GetDefaultConfig<TJournal>()).GetReadJournal();
+                _readJournalPluginExtensionIds[readJournalPluginId] = plugin;
+                return (TJournal)plugin;
+            }
         }
 
         private IReadJournalProvider CreatePlugin(string configPath, Config config)
