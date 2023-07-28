@@ -243,7 +243,7 @@ var storage = system.ActorOf<Storage>("storage");
 var webRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"webdispatcher");
 var fraudRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"frauddispatcher");
 var orderRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"orderdispatcher");
-var billingRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"billingispatcher");
+var billingRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"billingdispatcher");
 var storageRouter = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance),"storagedispatcher");
 ```
 
