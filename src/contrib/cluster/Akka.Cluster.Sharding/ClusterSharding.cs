@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -59,8 +60,8 @@ namespace Akka.Cluster.Sharding
         private class Implementation : HashCodeMessageExtractor
         {
             private readonly Func<object, string> _entityIdExtractor;
-            private readonly Func<object, object> _messageExtractor;
-            public Implementation(int maxNumberOfShards, Func<object, string> entityIdExtractor, Func<object, object> messageExtractor = null) : base(maxNumberOfShards)
+            private readonly Func<object, object>? _messageExtractor;
+            public Implementation(int maxNumberOfShards, Func<object, string> entityIdExtractor, Func<object, object>? messageExtractor = null) : base(maxNumberOfShards)
             {
                 _entityIdExtractor = entityIdExtractor ?? throw new NullReferenceException(nameof(entityIdExtractor));
                 _messageExtractor = messageExtractor;
@@ -80,7 +81,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="entityIdExtractor"></param>
         /// <param name="messageExtractor"></param>
         /// <returns></returns>
-        public static HashCodeMessageExtractor Create(int maxNumberOfShards, Func<object, string> entityIdExtractor, Func<object, object> messageExtractor = null)
+        public static HashCodeMessageExtractor Create(int maxNumberOfShards, Func<object, string> entityIdExtractor, Func<object, object>? messageExtractor = null)
             => new Implementation(maxNumberOfShards, entityIdExtractor, messageExtractor);
 
         /// <summary>
@@ -135,6 +136,11 @@ namespace Akka.Cluster.Sharding
                 id = EntityId(message);
 
             return _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
+        }
+
+        public string ShardId(string entityId, object? messageHint = null)
+        {
+            return _cachedIds[(Math.Abs(MurmurHash.StringHash(entityId)) % MaxNumberOfShards)];
         }
     }
 
@@ -1475,9 +1481,19 @@ namespace Akka.Cluster.Sharding
         /// Extract the shard id from an incoming <paramref name="message"/>. Only messages that
         /// passed the <see cref="EntityId"/> method will be used as input to this method.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
-        string ShardId(object message);
+        /// <param name="message">The message being delivered to the entity actor.</param>
+        /// <returns>The ShardId.</returns>
+        [Obsolete("Use ShardId(EntityId, object) instead.")]
+        ShardId ShardId(object message);
+        
+        /// <summary>
+        /// More performant overload of <see cref="EntityId(object)"/> that accepts an entity id in order to
+        /// allow faster method chaining and comparisons inside Akka.NET.
+        /// </summary>
+        /// <param name="entityId">Should always be populated with a non-null value.</param>
+        /// <param name="messageHint">The message - FOR BACKWARDS COMPATIBILITY ONLY.</param>
+        /// <returns>The ShardId.</returns>
+        ShardId ShardId(EntityId entityId, object? messageHint = null);
     }
 
     /// <summary>
