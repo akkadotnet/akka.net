@@ -32,5 +32,7 @@ namespace Akka.Persistence.Query.InMemory.Tests
         {
             ReadJournal = Sys.ReadJournalFor<InMemoryReadJournal>(InMemoryReadJournal.Identifier);
         }
+
+        protected override bool SupportsTagsInEventEnvelope => true;
     }
 }
