@@ -26,7 +26,7 @@ namespace Akka.Persistence.Query
         /// </summary>
         [Obsolete("For binary compatibility with previous releases. Since 1.4.14")]
         public EventEnvelope(Offset offset, string persistenceId, long sequenceNr, object @event)
-            : this(offset, persistenceId, sequenceNr, @event, 0L, null)
+            : this(offset, persistenceId, sequenceNr, @event, 0L, Array.Empty<string>())
         { }
         
         /// <summary>
@@ -34,17 +34,17 @@ namespace Akka.Persistence.Query
         /// </summary>
         [Obsolete("For binary compatibility with previous releases. Since 1.5.11")]
         public EventEnvelope(Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp)
-            : this(offset, persistenceId, sequenceNr, @event, timestamp, null)
+            : this(offset, persistenceId, sequenceNr, @event, timestamp, Array.Empty<string>())
         { }        
 
-        public EventEnvelope(Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp, string[]? tags)
+        public EventEnvelope(Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp, string[] tags)
         {
             Offset = offset;
             PersistenceId = persistenceId;
             SequenceNr = sequenceNr;
             Event = @event;
             Timestamp = timestamp;
-            Tags = tags;
+            Tags = tags ?? Array.Empty<string>();
         }        
 
         public Offset Offset { get; }
@@ -57,7 +57,7 @@ namespace Akka.Persistence.Query
         
         public long Timestamp { get; }
 
-        public string[]? Tags { get; }
+        public string[] Tags { get; }
 
         public bool Equals(EventEnvelope? other)
         {
