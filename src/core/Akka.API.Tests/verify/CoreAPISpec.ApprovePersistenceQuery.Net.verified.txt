@@ -4,15 +4,24 @@
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Persistence.Query
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class EventEnvelope : System.IEquatable<Akka.Persistence.Query.EventEnvelope>
     {
-        [System.ObsoleteAttribute("For binary compatibility with previous releases")]
+        [System.ObsoleteAttribute("For binary compatibility with previous releases. Since 1.4.14")]
         public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event) { }
+        [System.ObsoleteAttribute("For binary compatibility with previous releases. Since 1.5.11")]
         public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp) { }
+        public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] string[] tags) { }
         public object Event { get; }
         public Akka.Persistence.Query.Offset Offset { get; }
         public string PersistenceId { get; }
         public long SequenceNr { get; }
+        [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})]
+        public string[] Tags { get; }
         public long Timestamp { get; }
         public bool Equals(Akka.Persistence.Query.EventEnvelope other) { }
         public override bool Equals(object obj) { }
