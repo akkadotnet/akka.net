@@ -346,8 +346,7 @@ namespace Akka.Cluster.Sharding
             Func<string, Props> entityProps,
             ClusterShardingSettings settings,
             string coordinatorPath,
-            ExtractEntityId extractEntityId,
-            ExtractShardId extractShardId,
+            IMessageExtractor messageExtractor,
             object handOffStopMessage,
             IRememberEntitiesProvider rememberEntitiesProvider)
         {
@@ -356,8 +355,7 @@ namespace Akka.Cluster.Sharding
                 entityProps,
                 settings,
                 coordinatorPath,
-                extractEntityId,
-                extractShardId,
+                messageExtractor,
                 handOffStopMessage,
                 rememberEntitiesProvider))
                 .WithDeploy(Deploy.Local);
@@ -369,23 +367,20 @@ namespace Akka.Cluster.Sharding
         /// <param name="typeName">TBD</param>
         /// <param name="settings">TBD</param>
         /// <param name="coordinatorPath">TBD</param>
-        /// <param name="extractEntityId">TBD</param>
-        /// <param name="extractShardId">TBD</param>
+        /// <param name="messageExtractor"></param>
         /// <returns>TBD</returns>
         internal static Props ProxyProps(
             string typeName,
             ClusterShardingSettings settings,
             string coordinatorPath,
-            ExtractEntityId extractEntityId,
-            ExtractShardId extractShardId)
+            IMessageExtractor messageExtractor)
         {
             return Actor.Props.Create(() => new ShardRegion(
                 typeName,
                 null,
                 settings,
                 coordinatorPath,
-                extractEntityId,
-                extractShardId,
+                messageExtractor,
                 PoisonPill.Instance,
                 null))
                 .WithDeploy(Deploy.Local);
@@ -395,8 +390,7 @@ namespace Akka.Cluster.Sharding
         private readonly Func<string, Props> _entityProps;
         private readonly ClusterShardingSettings _settings;
         private readonly string _coordinatorPath;
-        private readonly ExtractEntityId _extractEntityId;
-        private readonly ExtractShardId _extractShardId;
+        private readonly IMessageExtractor _messageExtractor;
         private readonly object _handOffStopMessage;
 
         private readonly IRememberEntitiesProvider _rememberEntitiesProvider;
@@ -436,8 +430,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="entityProps">TBD</param>
         /// <param name="settings">TBD</param>
         /// <param name="coordinatorPath">TBD</param>
-        /// <param name="extractEntityId">TBD</param>
-        /// <param name="extractShardId">TBD</param>
+        /// <param name="messageExtractor"></param>
         /// <param name="handOffStopMessage">TBD</param>
         /// <param name="rememberEntitiesProvider">TBD</param>
         public ShardRegion(
@@ -445,8 +438,7 @@ namespace Akka.Cluster.Sharding
             Func<string, Props> entityProps,
             ClusterShardingSettings settings,
             string coordinatorPath,
-            ExtractEntityId extractEntityId,
-            ExtractShardId extractShardId,
+            IMessageExtractor messageExtractor,
             object handOffStopMessage,
             IRememberEntitiesProvider rememberEntitiesProvider)
         {
@@ -454,8 +446,7 @@ namespace Akka.Cluster.Sharding
             _entityProps = entityProps;
             _settings = settings;
             _coordinatorPath = coordinatorPath;
-            _extractEntityId = extractEntityId;
-            _extractShardId = extractShardId;
+            _messageExtractor = messageExtractor;
             _handOffStopMessage = handOffStopMessage;
             _rememberEntitiesProvider = rememberEntitiesProvider;
 
@@ -613,7 +604,8 @@ namespace Akka.Cluster.Sharding
                 case StartEntity _:
                     DeliverStartEntity(message, Sender);
                     return true;
-                case var _ when _extractEntityId(message).HasValue:
+                case var _ when !string.IsNullOrEmpty(_messageExtractor.EntityId(message)):
+                    // TODO: perf optimize
                     DeliverMessage(message, Sender);
                     return true;
                 default:
@@ -754,8 +746,9 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
-                var shardId = _extractShardId(message);
-                if (_regionByShard.TryGetValue(shardId, out var region))
+                // TODO: perf optimize
+                var shardId = _messageExtractor.ShardId(message);
+                if (_regionByShard.TryGetValue(shardId!, out var region))
                 {
                     if (region.Equals(Self))
                     {
@@ -952,7 +945,7 @@ namespace Akka.Cluster.Sharding
             try
             {
                 var entityId = getEntityLocation.EntityId;
-                var shardId = _extractShardId(new StartEntity(getEntityLocation.EntityId));
+                var shardId = _messageExtractor.ShardId(getEntityLocation.EntityId, new StartEntity(getEntityLocation.EntityId));
                 if (string.IsNullOrEmpty(shardId))
                 {
                     // unsupported entityId - could only happen in highly customized extractors

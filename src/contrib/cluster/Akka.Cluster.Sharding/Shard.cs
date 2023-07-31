@@ -329,8 +329,7 @@ namespace Akka.Cluster.Sharding
             ShardId shardId,
             Func<string, Props> entityProps,
             ClusterShardingSettings settings,
-            ExtractEntityId extractEntityId,
-            ExtractShardId extractShardId,
+            IMessageExtractor extractor,
             object handOffStopMessage,
              IRememberEntitiesProvider rememberEntitiesProvider)
         {
@@ -339,8 +338,7 @@ namespace Akka.Cluster.Sharding
                 shardId,
                 entityProps,
                 settings,
-                extractEntityId,
-                extractShardId,
+                extractor,
                 handOffStopMessage,
                 rememberEntitiesProvider)).WithDeploy(Deploy.Local);
         }
@@ -928,8 +926,7 @@ namespace Akka.Cluster.Sharding
         private readonly string _shardId;
         private readonly Func<string, Props> _entityProps;
         private readonly ClusterShardingSettings _settings;
-        private readonly ExtractEntityId _extractEntityId;
-        private readonly ExtractShardId _extractShardId;
+        private readonly IMessageExtractor _extractor;
         private readonly object _handOffStopMessage;
 
         private readonly bool _verboseDebug;
@@ -953,8 +950,7 @@ namespace Akka.Cluster.Sharding
             string shardId,
             Func<string, Props> entityProps,
             ClusterShardingSettings settings,
-            ExtractEntityId extractEntityId,
-            ExtractShardId extractShardId,
+            IMessageExtractor extractor,
             object handOffStopMessage,
             IRememberEntitiesProvider rememberEntitiesProvider)
         {
@@ -962,8 +958,7 @@ namespace Akka.Cluster.Sharding
             _shardId = shardId;
             _entityProps = entityProps;
             _settings = settings;
-            _extractEntityId = extractEntityId;
-            _extractShardId = extractShardId;
+            _extractor = extractor;
             _handOffStopMessage = handOffStopMessage;
 
             _verboseDebug = Context.System.Settings.Config.GetBoolean("akka.cluster.sharding.verbose-debug-logging");
@@ -1221,7 +1216,7 @@ namespace Akka.Cluster.Sharding
                 case RememberEntityStoreCrashed msg:
                     ReceiveRememberEntityStoreCrashed(msg);
                     return true;
-                case var msg when _extractEntityId(msg).HasValue:
+                case var msg when !string.IsNullOrEmpty(_extractor.EntityId(msg)):
                     DeliverMessage(msg, Sender);
                     return true;
             }
@@ -1325,8 +1320,8 @@ namespace Akka.Cluster.Sharding
                     case RememberEntityStoreCrashed msg:
                         ReceiveRememberEntityStoreCrashed(msg);
                         return true;
-                    case var msg when _extractEntityId(msg).HasValue:
-                        DeliverMessage(msg, Sender);
+                    case var _ when !string.IsNullOrEmpty(_extractor.EntityId(message)):
+                        DeliverMessage(message, Sender);
                         return true;
                     case var msg:
                         // shouldn't be any other message types, but just in case
@@ -1750,9 +1745,9 @@ namespace Akka.Cluster.Sharding
 
         private void DeliverMessage(object msg, IActorRef snd)
         {
-            var t = _extractEntityId(msg);
-            var entityId = t.Value.Item1;
-            var payload = t.Value.Item2;
+            // TODO: perf optimize this
+            var entityId = _extractor.EntityId(msg);
+            var payload = _extractor.EntityMessage(msg);
 
             if (string.IsNullOrEmpty(entityId))
             {

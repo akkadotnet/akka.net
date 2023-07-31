@@ -1465,7 +1465,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        EntityId EntityId(object message);
+        EntityId? EntityId(object message);
 
         /// <summary>
         /// Extract the message to send to the entity from an incoming <paramref name="message"/>.
@@ -1475,7 +1475,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        object EntityMessage(object message);
+        object? EntityMessage(object message);
 
         /// <summary>
         /// Extract the shard id from an incoming <paramref name="message"/>. Only messages that
@@ -1484,7 +1484,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">The message being delivered to the entity actor.</param>
         /// <returns>The ShardId.</returns>
         [Obsolete("Use ShardId(EntityId, object) instead.")]
-        ShardId ShardId(object message);
+        ShardId? ShardId(object message);
         
         /// <summary>
         /// More performant overload of <see cref="EntityId(object)"/> that accepts an entity id in order to
