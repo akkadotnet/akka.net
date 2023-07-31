@@ -82,7 +82,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// If the shard id extractor is changed, remembered entities will start in a different shard
+        /// If the shard id messageExtractor is changed, remembered entities will start in a different shard
         /// and this message is sent to the shard to not leak `entityId -> RememberedButNotStarted` entries
         /// </summary>
         public sealed class EntitiesMovedToOtherShard : IRememberEntityCommand, IEquatable<EntitiesMovedToOtherShard>
@@ -397,7 +397,7 @@ namespace Akka.Cluster.Sharding
 
         //
         // State machine for an entity:
-        //                                                                       Started on another shard bc. shard id extractor changed (we need to store that)
+        //                                                                       Started on another shard bc. shard id messageExtractor changed (we need to store that)
         //                                                                +------------------------------------------------------------------+
         //                                                                |                                                                  |
         //              Entity id remembered on shard start     +-------------------------+    StartEntity or early message for entity       |
@@ -1424,7 +1424,7 @@ namespace Akka.Cluster.Sharding
                     break;
 
                 case EntitiesMovedToOtherShard m:
-                    Log.Info("{0}: Clearing [{1}] remembered entities started elsewhere because of changed shard id extractor",
+                    Log.Info("{0}: Clearing [{1}] remembered entities started elsewhere because of changed shard id messageExtractor",
                         _typeName,
                         m.Ids.Count);
 
@@ -1483,7 +1483,7 @@ namespace Akka.Cluster.Sharding
                     Stash.Stash();
                     break;
                 case NoState _:
-                    // started manually from the outside, or the shard id extractor was changed since the entity was remembered
+                    // started manually from the outside, or the shard id messageExtractor was changed since the entity was remembered
                     // we need to store that it was started
                     Log.Debug("{0}: Request to start entity [{1}] and ack to [{2}]", _typeName, entityId, ackTo);
                     _entities.RememberingStart(entityId, ackTo);
@@ -1760,7 +1760,7 @@ namespace Akka.Cluster.Sharding
                 {
                     case ShardRegion.StartEntity start:
                         // Handling StartEntity both here and in the receives allows for sending it both as is and in an envelope
-                        // to be extracted by the entity id extractor.
+                        // to be extracted by the entity id messageExtractor.
 
                         // we can only start a new entity if we are not currently waiting for another write
                         if (_entities.PendingRememberedEntitiesExist)

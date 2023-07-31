@@ -523,8 +523,7 @@ namespace Akka.Cluster.Sharding.Tests
                     entityProps: _ => QualifiedCounter.Props(typeName),
                     settings: settings,
                     coordinatorPath: "/user/" + typeName + "Coordinator/singleton/coordinator",
-                    extractEntityId: ExtractEntityId,
-                    extractShardId: ExtractShardId,
+                    new MessageExtractorAdapter(ExtractEntityId, ExtractShardId),
                     handOffStopMessage: PoisonPill.Instance,
                     rememberEntitiesProvider: rememberEntitiesProvider),
                 name: typeName + "Region");
@@ -684,8 +683,7 @@ namespace Akka.Cluster.Sharding.Tests
                         typeName: "counter",
                         settings: settings,
                         coordinatorPath: "/user/counterCoordinator/singleton/coordinator",
-                        extractEntityId: ExtractEntityId,
-                        extractShardId: ExtractShardId),
+                        new MessageExtractorAdapter(ExtractEntityId, ExtractShardId)),
                         "regionProxy");
 
                     proxy.Tell(new Get(1));

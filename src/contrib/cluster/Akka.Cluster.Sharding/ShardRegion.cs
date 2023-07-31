@@ -96,7 +96,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// When remembering entities and a shard is started, each entity id that needs to
         /// be running will trigger this message being sent through sharding. For this to work
-        /// the message *must* be handled by the shard id extractor.
+        /// the message *must* be handled by the shard id messageExtractor.
         /// </summary>
         [Serializable]
         public sealed class StartEntity : IClusterShardingSerializable, IEquatable<StartEntity>
@@ -609,7 +609,7 @@ namespace Akka.Cluster.Sharding
                     DeliverMessage(message, Sender);
                     return true;
                 default:
-                    _log.Warning("{0}: Message does not have an extractor defined in shard so it was ignored: {1}", _typeName, message);
+                    _log.Warning("{0}: Message does not have an messageExtractor defined in shard so it was ignored: {1}", _typeName, message);
                     return false;
             }
         }
@@ -714,7 +714,7 @@ namespace Akka.Cluster.Sharding
             catch (Exception ex)
             {
                 //case ex: MatchError ⇒
-                _log.Error(ex, "{0}: When using remember-entities the shard id extractor must handle ShardRegion.StartEntity(id).", _typeName);
+                _log.Error(ex, "{0}: When using remember-entities the shard id messageExtractor must handle ShardRegion.StartEntity(id).", _typeName);
             }
         }
 
@@ -1286,8 +1286,7 @@ namespace Akka.Cluster.Sharding
                         id,
                         _entityProps,
                         _settings,
-                        _extractEntityId,
-                        _extractShardId,
+                        _messageExtractor,
                         _handOffStopMessage,
                         _rememberEntitiesProvider)
                         .WithDispatcher(Context.Props.Dispatcher), name));

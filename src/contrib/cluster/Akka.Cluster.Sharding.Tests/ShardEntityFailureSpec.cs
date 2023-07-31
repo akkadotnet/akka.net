@@ -126,8 +126,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "shard-1",
                 _ => entityProp,
                 settings,
-                extractEntityId,
-                extractShardId,
+                new MessageExtractorAdapter(extractEntityId, extractShardId),
                 PoisonPill.Instance,
                 provider
             ));
