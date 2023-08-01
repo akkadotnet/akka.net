@@ -139,12 +139,14 @@ namespace Akka.Persistence.Query.Sql
                     if (replayed.Offset > ToOffset)
                         return true;
 
+                    // NOTES: tags is empty because tags are not retrieved from the database query (as of this writing)
                     Buffer.Add(new EventEnvelope(
                         offset: new Sequence(replayed.Offset),
                         persistenceId: replayed.Persistent.PersistenceId,
                         sequenceNr: replayed.Persistent.SequenceNr,
                         @event: replayed.Persistent.Payload,
-                        timestamp: replayed.Persistent.Timestamp));
+                        timestamp: replayed.Persistent.Timestamp,
+                        tags: Array.Empty<string>()));
 
                     CurrentOffset = replayed.Offset;
                     Buffer.DeliverBuffer(TotalDemand);
