@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 
@@ -110,6 +111,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public abstract string EntityId(object message);
 
         /// <summary>
@@ -117,6 +119,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public virtual object EntityMessage(object message)
         {
             return message;
@@ -127,7 +130,8 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        public virtual string ShardId(object message)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public string ShardId(object message)
         {
             EntityId id;
             if (message is ShardRegion.StartEntity se)
@@ -138,6 +142,7 @@ namespace Akka.Cluster.Sharding
             return _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string ShardId(string entityId, object? messageHint = null)
         {
             return _cachedIds[(Math.Abs(MurmurHash.StringHash(entityId)) % MaxNumberOfShards)];
@@ -1349,7 +1354,7 @@ namespace Akka.Cluster.Sharding
 #pragma warning disable CS0419 // Ambiguous reference in cref attribute
         /// <summary>
         /// Retrieve the actor reference of the <see cref="Sharding.ShardRegion"/> actor responsible for the named entity type.
-        /// The entity type must be registered with the <see cref="ClusterSharding.Start"/> or <see cref="ClusterSharding.StartProxy"/> method before it
+        /// The entity type must be registered with the <see cref="ClusterSharding.Start"/> or <see cref="ClusterShardingGuardian.StartProxy"/> method before it
         /// can be used here. Messages to the entity is always sent via the <see cref="Sharding.ShardRegion"/>.
         /// </summary>
         /// <param name="typeName">TBD</param>
@@ -1375,7 +1380,7 @@ namespace Akka.Cluster.Sharding
         /// Retrieve the actor reference of the <see cref="Sharding.ShardRegion"/> actor that will act as a proxy to the
         /// named entity type running in another data center. A proxy within the same data center can be accessed
         /// with <see cref="Sharding.ShardRegion"/> instead of this method. The entity type must be registered with the
-        /// <see cref="ClusterSharding.StartProxy"/> method before it can be used here. Messages to the entity is always sent
+        /// <see cref="ClusterShardingGuardian.StartProxy"/> method before it can be used here. Messages to the entity is always sent
         /// via the <see cref="Sharding.ShardRegion"/>.
         /// </summary>
         /// <param name="typeName"></param>
