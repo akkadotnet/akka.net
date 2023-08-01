@@ -26,10 +26,9 @@ namespace Akka.Cluster.Benchmarks.Sharding
         [Params(StateStoreMode.Persistence, StateStoreMode.DData)]
         public StateStoreMode StateMode;
 
-        [Params(10000)]
-        public int MsgCount;
+        public const int MsgCount = 10000;
 
-        public int BatchSize = 20;
+        public const int BatchSize = 20;
 
         private ActorSystem _sys1;
         private ActorSystem _sys2;
@@ -143,21 +142,21 @@ namespace Akka.Cluster.Benchmarks.Sharding
             _batchActor = _sys1.ActorOf(Props.Create(() => new BulkSendActor(tcs, MsgCount)));
         }
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount)]
         public async Task SingleRequestResponseToLocalEntity()
         {
             for (var i = 0; i < MsgCount; i++)
                 await _shardRegion1.Ask<ShardedMessage>(_messageToSys1);
         }
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount * BatchSize)]
         public async Task StreamingToLocalEntity()
         {
             _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys1, _shardRegion1, BatchSize));
             await _batchComplete;
         }
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount)]
         public async Task SingleRequestResponseToRemoteEntity()
         {
             for (var i = 0; i < MsgCount; i++)
@@ -165,14 +164,14 @@ namespace Akka.Cluster.Benchmarks.Sharding
         }
 
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount)]
         public async Task SingleRequestResponseToRemoteEntityWithLocalProxy()
         {
             for (var i = 0; i < MsgCount; i++)
                 await _localRouter.Ask<ShardedMessage>(new SendShardedMessage(_messageToSys2.EntityId, _messageToSys2));
         }
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount*BatchSize)]
         public async Task StreamingToRemoteEntity()
         {
             _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys2, _shardRegion1, BatchSize));
