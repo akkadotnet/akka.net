@@ -44,5 +44,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }
+
+        protected override bool SupportsTagsInEventEnvelope => true;
     }
 }

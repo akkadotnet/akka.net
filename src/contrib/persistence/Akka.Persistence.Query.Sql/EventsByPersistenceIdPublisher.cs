@@ -153,12 +153,14 @@ namespace Akka.Persistence.Query.Sql
             {
                 case ReplayedMessage replayed:
                     var seqNr = replayed.Persistent.SequenceNr;
+                    // NOTES: tags is empty because tags are not retrieved from the database query (as of this writing)
                     Buffer.Add(new EventEnvelope(
                         offset: new Sequence(seqNr),
                         persistenceId: PersistenceId,
                         sequenceNr: seqNr,
                         @event: replayed.Persistent.Payload,
-                        timestamp: replayed.Persistent.Timestamp));
+                        timestamp: replayed.Persistent.Timestamp,
+                        tags: Array.Empty<string>()));
                     CurrentSequenceNr = seqNr + 1;
                     Buffer.DeliverBuffer(TotalDemand);
                     return true;
