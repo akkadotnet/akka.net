@@ -16,6 +16,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 
 using Akka.Actor;
+using Akka.Cluster.Sharding.Serialization.Proto.Msg;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -37,7 +38,7 @@ namespace Akka.Cluster.Sharding
     /// <summary>
     /// TBD
     /// </summary>
-    public class ClusterShardingExtensionProvider : ExtensionIdProvider<ClusterSharding>
+    public sealed class ClusterShardingExtensionProvider : ExtensionIdProvider<ClusterSharding>
     {
         /// <summary>
         /// TBD
@@ -48,6 +49,54 @@ namespace Akka.Cluster.Sharding
         {
             var extension = new ClusterSharding(system);
             return extension;
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Used to automatically handle built-in sharding messages when used with ClusterSharding.
+    /// </summary>
+    internal sealed class ExtractorAdapter : IMessageExtractor
+    {
+        private readonly IMessageExtractor _underlying;
+
+        public ExtractorAdapter(IMessageExtractor underlying)
+        {
+            _underlying = underlying;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public string? EntityId(object message)
+        {
+            return message switch
+            {
+                StartEntity se => se.EntityId,
+                ShardingEnvelope se => se.EntityId,
+                _ => _underlying.EntityId(message)
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public object? EntityMessage(object message)
+        {
+            return message switch
+            {
+                ShardingEnvelope se => se.Message,
+                _ => _underlying.EntityMessage(message)
+            };
+        }
+
+        [Obsolete("Use ShardId(EntityId, object) instead.")]
+        public string? ShardId(object message)
+        {
+           return _underlying.ShardId(message);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public string ShardId(string entityId, object? messageHint = null)
+        {
+            return _underlying.ShardId(entityId, messageHint);
         }
     }
 
@@ -383,7 +432,7 @@ namespace Akka.Cluster.Sharding
                 typeName,
                 _ => entityProps,
                 settings,
-                new MessageExtractorAdapter(extractEntityId, extractShardId),
+                new DeprecatedHandlerExtractorAdapter(extractEntityId, extractShardId),
                 allocationStrategy,
                 handOffStopMessage);
         }
@@ -437,7 +486,7 @@ namespace Akka.Cluster.Sharding
                 typeName,
                 _ => entityProps,
                 settings,
-                new MessageExtractorAdapter(extractEntityId, extractShardId),
+                new DeprecatedHandlerExtractorAdapter(extractEntityId, extractShardId),
                 allocationStrategy,
                 handOffStopMessage);
         }
@@ -758,7 +807,7 @@ namespace Akka.Cluster.Sharding
                 typeName,
                 entityPropsFactory,
                 settings,
-                new MessageExtractorAdapter(extractEntityId, extractShardId),
+                new DeprecatedHandlerExtractorAdapter(extractEntityId, extractShardId),
                 allocationStrategy,
                 handOffStopMessage);
         }
@@ -812,7 +861,7 @@ namespace Akka.Cluster.Sharding
                 typeName,
                 entityPropsFactory,
                 settings,
-                new MessageExtractorAdapter(extractEntityId, extractShardId),
+                new DeprecatedHandlerExtractorAdapter(extractEntityId, extractShardId),
                 allocationStrategy,
                 handOffStopMessage);
         }
@@ -1220,7 +1269,7 @@ namespace Akka.Cluster.Sharding
             return StartProxy(
                 typeName,
                 role,
-                new MessageExtractorAdapter(extractEntityId, extractShardId));
+                new DeprecatedHandlerExtractorAdapter(extractEntityId, extractShardId));
         }
 
         /// <summary>
@@ -1252,7 +1301,7 @@ namespace Akka.Cluster.Sharding
             return StartProxyAsync(
                 typeName,
                 role,
-                new MessageExtractorAdapter(extractEntityId, extractShardId));
+                new DeprecatedHandlerExtractorAdapter(extractEntityId, extractShardId));
         }
 
         /// <summary>
@@ -1491,12 +1540,12 @@ namespace Akka.Cluster.Sharding
     ///
     /// For backwards compatibility reasons, we need to support the old delegate-based extractor API
     /// </summary>
-    internal sealed class MessageExtractorAdapter : IMessageExtractor
+    internal sealed class DeprecatedHandlerExtractorAdapter : IMessageExtractor
     {
         private readonly ExtractEntityId _extractEntityId;
         private readonly ExtractShardId _extractShardId;
 
-        public MessageExtractorAdapter(ExtractEntityId extractEntityId, ExtractShardId extractShardId)
+        public DeprecatedHandlerExtractorAdapter(ExtractEntityId extractEntityId, ExtractShardId extractShardId)
         {
             _extractEntityId = extractEntityId;
             _extractShardId = extractShardId;
@@ -1522,7 +1571,7 @@ namespace Akka.Cluster.Sharding
         public string ShardId(string entityId, object? messageHint = null)
         {
             if(messageHint is null)
-                throw new ArgumentNullException(nameof(messageHint), "MessageExtractorAdapter: Message hint must be provided when using the ShardId(EntityId, object) overload.");
+                throw new ArgumentNullException(nameof(messageHint), "DeprecatedHandlerExtractorAdapter: Message hint must be provided when using the ShardId(EntityId, object) overload.");
             return _extractShardId(messageHint);
         }
     }

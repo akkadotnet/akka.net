@@ -454,7 +454,7 @@ namespace Akka.Cluster.Sharding
             _entityProps = entityProps;
             _settings = settings;
             _coordinatorPath = coordinatorPath;
-            _messageExtractor = messageExtractor;
+            _messageExtractor = new ExtractorAdapter(messageExtractor);
             _handOffStopMessage = handOffStopMessage;
             _rememberEntitiesProvider = rememberEntitiesProvider;
 
@@ -608,9 +608,6 @@ namespace Akka.Cluster.Sharding
                     return true;
                 case RestartShard restart:
                     DeliverRestartShard(restart, Sender);
-                    return true;
-                case StartEntity se:
-                    DeliverMessage(se.EntityId, message, Sender);
                     return true;
                 default:
                     var entityId = _messageExtractor.EntityId(message);

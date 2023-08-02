@@ -42,7 +42,7 @@ namespace Akka.Cluster.Sharding
     [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
             0,
             1})]
-    public class ClusterShardingExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.ClusterSharding>
+    public sealed class ClusterShardingExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.ClusterSharding>
     {
         public ClusterShardingExtensionProvider() { }
         public override Akka.Cluster.Sharding.ClusterSharding CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
@@ -169,8 +169,9 @@ namespace Akka.Cluster.Sharding
                 1})] System.Func<object, object> messageExtractor = null) { }
         public abstract string EntityId(object message);
         public virtual object EntityMessage(object message) { }
+        [System.ObsoleteAttribute("Use ShardId(string, object?) instead")]
         public virtual string ShardId(object message) { }
-        public string ShardId(string entityId, [System.Runtime.CompilerServices.NullableAttribute(2)] object messageHint = null) { }
+        public virtual string ShardId(string entityId, [System.Runtime.CompilerServices.NullableAttribute(2)] object messageHint = null) { }
     }
     public interface IActorSystemDependentAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded, Akka.Cluster.Sharding.IShardAllocationStrategy
     {
