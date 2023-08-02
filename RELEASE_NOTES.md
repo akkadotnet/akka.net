@@ -1,3 +1,20 @@
+#### 1.5.12 August 2nd 2023 ####
+
+Akka.NET v1.5.12 is a maintenance release with a minor API change and a minor bug fix.
+
+* [Persistence.Query: Fix `ReadJournalFor()` thread safety](https://github.com/akkadotnet/akka.net/pull/6859)
+* [Persistence.Query: Expose new `Tags` property in `EventEnvelope`](https://github.com/akkadotnet/akka.net/pull/6862)
+* [Documentation: Fix typo in member-roles.md](https://github.com/akkadotnet/akka.net/pull/6784)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.12, click here](https://github.com/akkadotnet/akka.net/milestone/94?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 34   | 18   | Aaron Stannard      |
+| 2       | 150  | 51   | Gregorius Soedharmo |
+| 1       | 1    | 1    | dependabot[bot]     |
+| 1       | 1    | 1    | Jim Aho             |
+
 #### 1.5.11 July 27th 2023 ####
 
 Akka.NET v1.5.11 is a maintenance release with a minor API change and internal code modernization/cleanup.
