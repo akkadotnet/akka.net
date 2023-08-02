@@ -58,7 +58,7 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     public abstract class HashCodeMessageExtractor : IMessageExtractor
     {
-        private class Implementation : HashCodeMessageExtractor
+        private sealed class Implementation : HashCodeMessageExtractor
         {
             private readonly Func<object, string> _entityIdExtractor;
             private readonly Func<object, object>? _messageExtractor;
@@ -131,7 +131,8 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string ShardId(object message)
+        [Obsolete("Use ShardId(string, object?) instead")]
+        public virtual string ShardId(object message)
         {
             EntityId id;
             if (message is ShardRegion.StartEntity se)
@@ -143,7 +144,7 @@ namespace Akka.Cluster.Sharding
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string ShardId(string entityId, object? messageHint = null)
+        public virtual string ShardId(string entityId, object? messageHint = null)
         {
             return _cachedIds[(Math.Abs(MurmurHash.StringHash(entityId)) % MaxNumberOfShards)];
         }
