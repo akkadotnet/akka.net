@@ -126,7 +126,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "shard-1",
                 _ => entityProp,
                 settings,
-                new DeprecatedHandlerExtractorAdapter(extractEntityId, extractShardId),
+                new ExtractorAdapter(new DeprecatedHandlerExtractorAdapter(extractEntityId, extractShardId)),
                 PoisonPill.Instance,
                 provider
             ));
