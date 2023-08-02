@@ -71,7 +71,6 @@ namespace Akka.Cluster.Sharding
         {
             return message switch
             {
-                StartEntity se => se.EntityId,
                 ShardingEnvelope se => se.EntityId,
                 _ => _underlying.EntityId(message)
             };

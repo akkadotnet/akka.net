@@ -609,6 +609,9 @@ namespace Akka.Cluster.Sharding
                 case RestartShard restart:
                     DeliverRestartShard(restart, Sender);
                     return true;
+                case StartEntity se:
+                    DeliverMessage(se.EntityId, message, Sender);
+                    return true;
                 default:
                     var entityId = _messageExtractor.EntityId(message);
                     if (entityId is null)
