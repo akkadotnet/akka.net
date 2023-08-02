@@ -583,6 +583,15 @@ namespace Akka.Cluster.Sharding
         /// <inheritdoc cref="ActorBase.Receive"/>
         protected override bool Receive(object message)
         {
+            // check hotpath first
+            // if user designed a greedy extractor this may cause problems.
+            var entityId = _messageExtractor.EntityId(message);
+            if (!string.IsNullOrEmpty(entityId))
+            {
+                DeliverMessage(entityId!, message, Sender);
+                return true;
+            }
+
             switch (message)
             {
                 case Terminated t:
@@ -610,16 +619,9 @@ namespace Akka.Cluster.Sharding
                     DeliverRestartShard(restart, Sender);
                     return true;
                 default:
-                    var entityId = _messageExtractor.EntityId(message);
-                    if (entityId is null)
-                    {
-                        _log.Warning("{0}: Message does not have an extractor defined in shard so it was ignored: {1}",
-                            _typeName, message);
-                        return false;
-                    }
-
-                    DeliverMessage(entityId, message, Sender);
-                    return true;
+                    _log.Warning("{0}: Message does not have an extractor defined in shard so it was ignored: {1}",
+                        _typeName, message);
+                    return false;
             }
         }
 
