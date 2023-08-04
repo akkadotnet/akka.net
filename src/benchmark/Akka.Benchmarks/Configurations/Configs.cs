@@ -36,13 +36,17 @@ namespace Akka.Benchmarks.Configurations
         {
             var benchmarkAttribute = benchmarkCase.Descriptor.WorkloadMethod.GetCustomAttribute<BenchmarkAttribute>();
             var totalOperations = benchmarkAttribute?.OperationsPerInvoke ?? 1;
-    
-            var report = summary[benchmarkCase];
-            var nsPerOperation = report.ResultStatistics.Mean;
-            var operationsPerSecond = 1 / (nsPerOperation / 1e9);
 
+            if (summary.HasReport(benchmarkCase))
+            {
+                var report = summary[benchmarkCase];
+                var nsPerOperation = report.ResultStatistics.Mean;
+                var operationsPerSecond = 1 / (nsPerOperation / 1e9);
 
-            return operationsPerSecond.ToString("N2");  // or format as you like
+                return operationsPerSecond.ToString("N2");  // or format as you like
+            }
+            
+            return "<not found>";
         }
     }
 
