@@ -51,11 +51,9 @@ namespace Akka.Remote
             // backwards compatibility with the existing dot-netty.tcp.connection-timeout
             var enabledTransports = config.GetStringList("akka.remote.enabled-transports", new string[] { });
             if (enabledTransports.Contains("akka.remote.dot-netty.tcp"))
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.tcp.connection-timeout", null);
-            else if (enabledTransports.Contains("akka.remote.dot-netty.ssl"))
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.ssl.connection-timeout", null);
+                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.tcp.connection-timeout", TimeSpan.FromSeconds(15), allowInfinite:false);
             else
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.handshake-timeout", TimeSpan.FromSeconds(20), allowInfinite:false);
+                HandshakeTimeout = config.GetTimeSpan("akka.remote.handshake-timeout", TimeSpan.FromSeconds(15), allowInfinite:false);
         }
     }
 }

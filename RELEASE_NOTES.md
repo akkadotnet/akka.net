@@ -1,3 +1,46 @@
+#### 1.5.12 August 2nd 2023 ####
+
+Akka.NET v1.5.12 is a maintenance release with a minor API change and a minor bug fix.
+
+* [Persistence.Query: Fix `ReadJournalFor()` thread safety](https://github.com/akkadotnet/akka.net/pull/6859)
+* [Persistence.Query: Expose new `Tags` property in `EventEnvelope`](https://github.com/akkadotnet/akka.net/pull/6862)
+* [Documentation: Fix typo in member-roles.md](https://github.com/akkadotnet/akka.net/pull/6784)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.12, click here](https://github.com/akkadotnet/akka.net/milestone/94?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 34   | 18   | Aaron Stannard      |
+| 2       | 150  | 51   | Gregorius Soedharmo |
+| 1       | 1    | 1    | dependabot[bot]     |
+| 1       | 1    | 1    | Jim Aho             |
+
+#### 1.5.11 July 27th 2023 ####
+
+Akka.NET v1.5.11 is a maintenance release with a minor API change and internal code modernization/cleanup.
+
+* [Remote: Modernize DotNettyTransportSettings class and add support for a SSL Setup class](https://github.com/akkadotnet/akka.net/pull/6854)
+* [PubSub: Make CountSubscriber query command public](https://github.com/akkadotnet/akka.net/pull/6856)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.11, click here](https://github.com/akkadotnet/akka.net/milestone/93?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 465  | 321  | Gregorius Soedharmo |
+| 1       | 22   | 2    | Aaron Stannard      |
+
+#### 1.5.10 July 26th 2023 ####
+
+Akka.NET v1.5.10 is a maintenance release with a minor API change.
+
+* [Persistence.TCK: Add constructor overload that takes ActorSystemSetup argument](https://github.com/akkadotnet/akka.net/pull/6850)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.10, click here](https://github.com/akkadotnet/akka.net/milestone/92?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 70   | 12   | Gregorius Soedharmo |
+
 #### 1.5.9 July 18th 2023 ####
 
 Akka.NET v1.5.9 is a maintenance release that introduces some performance improvements and internal code cleanup/modernization.
