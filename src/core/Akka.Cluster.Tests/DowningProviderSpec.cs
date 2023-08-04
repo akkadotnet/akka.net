@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -94,14 +93,12 @@ namespace Akka.Cluster.Tests
         {
             var config = ConfigurationFactory.ParseString(
                 @"akka.cluster.downing-provider-class = ""Akka.Cluster.Tests.DummyDowningProvider, Akka.Cluster.Tests""");
-            using (var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig)))
-            {
-                var downingProvider = Cluster.Get(system).DowningProvider;
-                downingProvider.Should().BeOfType<DummyDowningProvider>();
-                AwaitCondition(() =>
-                    ((DummyDowningProvider)downingProvider).ActorPropsAccessed.Value,
-                    TimeSpan.FromSeconds(3));
-            }
+            using var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig));
+            var downingProvider = Cluster.Get(system).DowningProvider;
+            downingProvider.Should().BeOfType<DummyDowningProvider>();
+            AwaitCondition(() =>
+                ((DummyDowningProvider)downingProvider).ActorPropsAccessed.Value,
+                TimeSpan.FromSeconds(3));
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
