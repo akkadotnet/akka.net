@@ -208,3 +208,10 @@ In `Directory.Build.props`:
     </ItemGroup>
 </Project>
 ```
+
+Note, in order to log more than 6 parameters you need to explicitly create ```object[]``` and pass your arguments into this. It was done in order to eliminate large numbers of accidental ```object[]``` allocations that were created implicitly through the params keyword AND to eliminate the large amount of boxing that occurred whenever value types (struct) were logged:
+
+```csharp
+var @params = new[]{arg1, arg2, arg3, arg4, arg5, arg6, arg7};
+loggingAdapter.Log(format, @params);
+```
