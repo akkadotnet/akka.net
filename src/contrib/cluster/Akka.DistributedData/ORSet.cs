@@ -722,13 +722,11 @@ namespace Akka.DistributedData
             {
                 if (thisDot != null)
                 {
-                    using (var e = thisDot.VersionEnumerator)
-                    {
-                        var allContains = true;
-                        while (e.MoveNext()) allContains &= deleteDotNodes.Contains(e.Current.Key);
-                        if (allContains)
-                            newElementsMap = ElementsMap.Remove(elem);
-                    }
+                    using var e = thisDot.VersionEnumerator;
+                    var allContains = true;
+                    while (e.MoveNext()) allContains &= deleteDotNodes.Contains(e.Current.Key);
+                    if (allContains)
+                        newElementsMap = ElementsMap.Remove(elem);
                 }
             }
 
