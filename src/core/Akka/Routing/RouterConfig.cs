@@ -129,6 +129,11 @@ namespace Akka.Routing
 
         
         public override bool Equals(object obj) => Equals(obj as RouterConfig);
+
+        public override int GetHashCode()
+        {
+            return GetType().GetHashCode(); 
+        }
     }
 
     /// <summary>

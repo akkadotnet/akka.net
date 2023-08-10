@@ -23,7 +23,9 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public abstract class VersionVector : IReplicatedData<VersionVector>, IReplicatedDataSerialization, IRemovedNodePruning<VersionVector>, IEquatable<VersionVector>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public enum Ordering
         {

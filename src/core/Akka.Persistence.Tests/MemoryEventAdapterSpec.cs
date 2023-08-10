@@ -27,7 +27,9 @@ namespace Akka.Persistence.Tests
         }
 
         [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         public sealed class Tagged : IJournalModel, IEquatable<IJournalModel>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         {
             public object Payload { get; private set; }
             public ISet<string> Tags { get; private set; }
@@ -50,7 +52,9 @@ namespace Akka.Persistence.Tests
         }
 
         [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         public sealed class NotTagged : IJournalModel, IEquatable<IJournalModel>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         {
             public object Payload { get; private set; }
             public ISet<string> Tags { get { return new HashSet<string>(); } }
@@ -74,7 +78,9 @@ namespace Akka.Persistence.Tests
         public interface IDomainEvent { }
 
         [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         public sealed class TaggedDataChanged : IDomainEvent, IEquatable<TaggedDataChanged>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         {
             public readonly ISet<string> Tags;
             public readonly int Value;
@@ -97,7 +103,9 @@ namespace Akka.Persistence.Tests
         }
 
         [Serializable]
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         public sealed class UserDataChanged : IDomainEvent, IEquatable<UserDataChanged>
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
         {
             public readonly string CountryCode;
             public readonly int Age;
