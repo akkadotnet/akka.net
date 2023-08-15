@@ -11,12 +11,12 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Internal;
-using Get = Akka.DistributedData.Get;
 
 namespace Akka.Cluster.Sharding
 {
@@ -25,11 +25,14 @@ namespace Akka.Cluster.Sharding
     using ShardId = String;
 
     /// <summary>
+    /// INTERNAL API
+    /// 
     /// This actor creates children shard actors on demand that it is told to be responsible for.
     /// The shard actors in turn create entity actors on demand.
     /// It delegates messages targeted to other shards to the responsible
     /// <see cref="ShardRegion"/> actor on other nodes.
     /// </summary>
+    [InternalStableApi]
     public sealed class ShardRegion : ActorBase, IWithTimers
     {
         #region messages

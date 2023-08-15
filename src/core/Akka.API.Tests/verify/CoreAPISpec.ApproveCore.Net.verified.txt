@@ -2195,6 +2195,11 @@ namespace Akka.Annotations
     {
         public InternalApiAttribute() { }
     }
+    [System.AttributeUsageAttribute(System.AttributeTargets.Module | System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Enum | System.AttributeTargets.Constructor | System.AttributeTargets.Method | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Interface | System.AttributeTargets.All, AllowMultiple=false, Inherited=true)]
+    public sealed class InternalStableApiAttribute : System.Attribute
+    {
+        public InternalStableApiAttribute() { }
+    }
 }
 namespace Akka.Configuration
 {
@@ -3196,7 +3201,7 @@ namespace Akka.Dispatch.SysMsg
         public Suspend() { }
         public override string ToString() { }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalStableApiAttribute()]
     public abstract class SystemMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Dispatch.SysMsg.ISystemMessage
     {
         protected SystemMessage() { }
@@ -5332,6 +5337,7 @@ namespace Akka.Util
         public static int StringHash(string s) { }
         public static int SymmetricHash<T>(System.Collections.Generic.IEnumerable<T> xs, uint seed) { }
     }
+    [Akka.Annotations.InternalStableApiAttribute()]
     public struct Option<T>
     {
         public static readonly Akka.Util.Option<T> None;

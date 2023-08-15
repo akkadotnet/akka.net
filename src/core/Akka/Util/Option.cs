@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Akka.Annotations;
 
 namespace Akka.Util
 {
@@ -17,6 +18,7 @@ namespace Akka.Util
     /// Useful where distinguishing between null (or zero, or false) and uninitialized is significant.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalStableApi]
     public readonly struct Option<T>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
