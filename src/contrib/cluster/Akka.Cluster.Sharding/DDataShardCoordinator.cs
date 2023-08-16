@@ -206,6 +206,7 @@ namespace Akka.Cluster.Sharding
                         return true;
 
                     case RememberEntitiesLoadTimeout _:
+                        Log.Debug("{0}: Remember entities load timeout, retrying", TypeName);
                         // repeat until successful
                         GetAllRememberedShards();
                         return true;
