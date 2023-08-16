@@ -133,11 +133,11 @@ namespace Akka.Streams.Tests.Dsl
                 var c = this.CreateManualSubscriberProbe<int>();
                 
                 Source.From(Enumerable.Range(1, 5))
-                    .SelectAsync(3, async n =>
+                    .SelectAsync(4, async n =>
                     {
-                        await Task.Yield();
                         if (n == 4)
                             throw new TestException("err1");
+                        await Task.Delay(10.Seconds());
 
                         return n;
                     })
@@ -146,25 +146,8 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
 
-                foreach (var value in Enumerable.Range(1, 4))
-                {
-                    var msg = await c.ExpectNextOrErrorAsync();
-                    switch (msg)
-                    {
-                        case int element:
-                            element.Should().Be(value);
-                            break;
-                        
-                        case AggregateException exception:
-                            exception.InnerException!.Message.Should().Be("err1");
-                            return;
-                        
-                        default:
-                            Assert.Fail($"Expecting {value} or AggregateException but received {msg}");
-                            break;
-                    }
-                }
-                Assert.Fail("Expecting AggregateException to be thrown but none was encountered");
+                var exception = await c.ExpectErrorAsync();
+                exception.InnerException!.Message.Should().Be("err1");
             }, Materializer).ShouldCompleteWithin(RemainingOrDefault);
         }
 
