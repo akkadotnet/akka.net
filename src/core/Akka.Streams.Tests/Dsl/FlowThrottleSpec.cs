@@ -351,7 +351,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(1, 2, 3, 4, 5)                                                                             
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);;
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
@@ -367,7 +367,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(1, 2, 3, 4, 5)                                                                             
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);;
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
@@ -391,7 +391,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(list[3])
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);;
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
@@ -566,7 +566,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(1, 2, 3, 4, 5)
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);;
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
