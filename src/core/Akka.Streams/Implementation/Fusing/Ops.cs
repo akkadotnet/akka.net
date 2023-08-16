@@ -2571,9 +2571,10 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPush()
             {
+                var message = Grab(_stage.In);
                 try
                 {
-                    var task = _stage._mapFunc(Grab(_stage.In));
+                    var task = _stage._mapFunc(message);
                     var holder = new Holder<TOut>(NotYetThere, _taskCallback);
                     _buffer.Enqueue(holder);
 
@@ -2590,8 +2591,21 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 catch (Exception e)
                 {
-                    if (_decider(e) == Directive.Stop)
-                        FailStage(e);
+                    var strategy = _decider(e);
+                    Log.Error(e, "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}", message, strategy);
+                    switch (strategy)
+                    {
+                        case Directive.Stop:
+                            FailStage(e);
+                            break;
+                        
+                        case Directive.Resume:
+                        case Directive.Restart:
+                            break;
+                        
+                        default:
+                            throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", e);
+                    }
                 }
                 if (Todo < _stage._parallelism && !HasBeenPulled(_stage.In))
                     TryPull(_stage.In);
@@ -2644,10 +2658,31 @@ namespace Akka.Streams.Implementation.Fusing
             private void HolderCompleted(Holder<TOut> holder)
             {
                 var element = holder.Element;
-                if (!element.IsSuccess && _decider(element.Exception) == Directive.Stop)
-                    FailStage(element.Exception);
-                else if (IsAvailable(_stage.Out))
-                    PushOne();
+                if (element.IsSuccess)
+                {
+                    if (IsAvailable(_stage.Out))
+                        PushOne();
+                    return;
+                }
+                
+                var exception = element.Exception;
+                var strategy = _decider(exception);
+                Log.Error(exception, "An exception occured inside SelectAsync while executing Task. Supervision strategy: {0}", strategy);
+                switch (strategy)
+                {
+                    case Directive.Stop:
+                        FailStage(exception);
+                        break;
+                    
+                    case Directive.Resume:
+                    case Directive.Restart:
+                        if (IsAvailable(_stage.Out))
+                            PushOne();
+                        break;
+                    
+                    default:
+                        throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", exception);
+                }
             }
 
             public override string ToString() => $"SelectAsync.Logic(buffer={_buffer})";
