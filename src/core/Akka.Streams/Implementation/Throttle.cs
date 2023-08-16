@@ -7,8 +7,10 @@
 
 using System;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
+using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
 
@@ -29,16 +31,20 @@ namespace Akka.Streams.Implementation
             private readonly Throttle<T> _stage;
             private readonly TickTimeTokenBucket _tokenBucket;
             private readonly bool _enforcing;
+            private readonly Decider _decider;
 
             private bool _willStop;
             private Option<T> _currentElement;
 
-            public Logic(Throttle<T> stage) : base(stage.Shape)
+            public Logic(Throttle<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
                 _tokenBucket = new TickTimeTokenBucket(stage._maximumBurst, stage._ticksBetweenTokens);
                 _enforcing = stage._mode == ThrottleMode.Enforcing;
 
+                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+                
                 SetHandler(_stage.Inlet, this);
                 SetHandler(_stage.Outlet, this);
             }
@@ -46,18 +52,41 @@ namespace Akka.Streams.Implementation
             public void OnPush()
             {
                 var element = Grab(_stage.Inlet);
-                var cost = _stage._costCalculation(element);
-                var delayTicks = _tokenBucket.Offer(cost);
-
-                if (delayTicks == 0)
-                    Push(_stage.Outlet, element);
-                else
+                try
                 {
-                    if (_enforcing)
-                        throw new OverflowException("Maximum throttle throughput exceeded.");
+                    var cost = _stage._costCalculation(element);
+                    var delayTicks = _tokenBucket.Offer(cost);
 
-                    _currentElement = element;
-                    ScheduleOnce(TimerName, TimeSpan.FromTicks(delayTicks));
+                    if (delayTicks == 0)
+                        Push(_stage.Outlet, element);
+                    else
+                    {
+                        if (_enforcing)
+                            throw new OverflowException("Maximum throttle throughput exceeded.");
+
+                        _currentElement = element;
+                        ScheduleOnce(TimerName, TimeSpan.FromTicks(delayTicks));
+                    }
+                }
+                catch (Exception e)
+                {
+                    var strategy = _decider(e);
+                    Log.Error(e, "An exception occured inside Throttle while calculating cost for element [{0}]. Supervision strategy: {1}", element, strategy);
+                    switch (strategy)
+                    {
+                        case Directive.Stop:
+                            FailStage(e);
+                            break;
+                        
+                        case Directive.Resume:
+                        case Directive.Restart:
+                            if (!HasBeenPulled(_stage.Inlet))
+                                TryPull(_stage.Inlet);
+                            break;
+                        
+                        default:
+                            throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", e);
+                    }
                 }
             }
 
@@ -119,7 +148,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="inheritedAttributes">TBD</param>
         /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
         /// TBD
