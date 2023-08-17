@@ -82,7 +82,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public object ConsistentHashKey { get; private set; }
+            public object ConsistentHashKey { get; }
             /// <summary>
             /// TBD
             /// </summary>
@@ -232,19 +232,19 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public string Dispatcher { get; private set; }
+            public string Dispatcher { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public string Resolver { get; private set; }
+            public string Resolver { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public Config ResolverConfig { get; private set; }
+            public Config ResolverConfig { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public string ProviderObjectName { get; private set; }
+            public string ProviderObjectName { get; }
         }
         
         private readonly ExtendedActorSystem _system;
@@ -293,14 +293,14 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public DnsSettings Settings { get; private set; }
+        public DnsSettings Settings { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public DnsBase Cache { get; private set; }
+        public DnsBase Cache { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public IDnsProvider Provider { get; private set; }
+        public IDnsProvider Provider { get; }
     }
 }

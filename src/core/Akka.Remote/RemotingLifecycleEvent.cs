@@ -165,7 +165,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public Exception Cause { get; private set; }
+        public Exception Cause { get; }
 
         private readonly LogLevel _level;
         /// <summary>
@@ -217,7 +217,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public IList<Address> ListenAddresses { get; private set; }
+        public IList<Address> ListenAddresses { get; }
 
         /// <summary>
         /// TBD
@@ -274,7 +274,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public Exception Cause { get; private set; }
+        public Exception Cause { get; }
 
         /// <summary>
         /// TBD
@@ -314,12 +314,12 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public Address Address { get; private set; }
+        public Address Address { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public int Uid { get; private set; }
+        public int Uid { get; }
 
         /// <summary>
         /// TBD
@@ -363,12 +363,12 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public Address LocalAddress { get; private set; }
+        public Address LocalAddress { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Address RemoteAddress { get; private set; }
+        public Address RemoteAddress { get; }
 
         /// <summary>
         /// TBD
@@ -399,12 +399,12 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorSystem System { get; private set; }
+        public ActorSystem System { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public ILoggingAdapter Log { get; private set; }
+        public ILoggingAdapter Log { get; }
 
         /// <summary>
         /// TBD

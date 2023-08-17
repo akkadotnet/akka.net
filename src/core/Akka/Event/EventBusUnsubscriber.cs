@@ -100,7 +100,7 @@ namespace Akka.Event
             /// <summary>
             /// The actor we're going to deathwatch and automatically unsubscribe
             /// </summary>
-            public IActorRef Actor { get; private set; }
+            public IActorRef Actor { get; }
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace Akka.Event
             /// <summary>
             /// The actor we're no longer going to death watch.
             /// </summary>
-            public IActorRef Actor { get; private set; }
+            public IActorRef Actor { get; }
         }
     }
 }

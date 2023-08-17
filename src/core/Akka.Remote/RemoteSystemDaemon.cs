@@ -49,25 +49,25 @@ namespace Akka.Remote
         ///     Gets the props.
         /// </summary>
         /// <value>The props.</value>
-        public Props Props { get; private set; }
+        public Props Props { get; }
 
         /// <summary>
         ///     Gets the deploy.
         /// </summary>
         /// <value>The deploy.</value>
-        public Deploy Deploy { get; private set; }
+        public Deploy Deploy { get; }
 
         /// <summary>
         ///     Gets the path.
         /// </summary>
         /// <value>The path.</value>
-        public string Path { get; private set; }
+        public string Path { get; }
 
         /// <summary>
         ///     Gets the supervisor.
         /// </summary>
         /// <value>The supervisor.</value>
-        public IActorRef Supervisor { get; private set; }
+        public IActorRef Supervisor { get; }
     }
 
     /// <summary>

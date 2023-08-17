@@ -26,7 +26,7 @@ namespace Akka.Remote.Tests
                 Seq = seq;
             }
 
-            public SeqNo Seq { get; private set; }
+            public SeqNo Seq { get; }
 
             public string Body { get; private set; }
 

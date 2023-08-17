@@ -132,7 +132,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public ByteString Payload { get; private set; }
+        public ByteString Payload { get; }
 
         
         public override string ToString()
@@ -309,7 +309,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// The Actor to notify about <see cref="IAssociationEvent"/> messages.
         /// </summary>
-        public IActorRef Actor { get; private set; }
+        public IActorRef Actor { get; }
 
         /// <summary>
         /// Notify the Actor about an <see cref="IAssociationEvent"/>.

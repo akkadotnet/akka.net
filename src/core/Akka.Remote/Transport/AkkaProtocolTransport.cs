@@ -100,7 +100,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public AkkaProtocolSettings Settings { get; private set; }
+        public AkkaProtocolSettings Settings { get; }
 
         /// <summary>
         /// TBD
@@ -308,17 +308,17 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Address RemoteAddress { get; private set; }
+        public Address RemoteAddress { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public TaskCompletionSource<AssociationHandle> StatusCompletionSource { get; private set; }
+        public TaskCompletionSource<AssociationHandle> StatusCompletionSource { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public int? RefuseUid { get; private set; }
+        public int? RefuseUid { get; }
     }
 
     /// <summary>
@@ -340,12 +340,12 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Address Origin { get; private set; }
+        public Address Origin { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public int Uid { get; private set; }
+        public int Uid { get; }
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
@@ -505,7 +505,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public AssociationHandle Handle { get; private set; }
+        public AssociationHandle Handle { get; }
     }
 
     /// <summary>
@@ -525,7 +525,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public IHandleEventListener Listener { get; private set; }
+        public IHandleEventListener Listener { get; }
     }
 
     /// <summary>
@@ -558,17 +558,17 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Address RemoteAddress { get; private set; }
+        public Address RemoteAddress { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public TaskCompletionSource<AssociationHandle> StatusCompletionSource { get; private set; }
+        public TaskCompletionSource<AssociationHandle> StatusCompletionSource { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Transport Transport { get; private set; }
+        public Transport Transport { get; }
     }
 
     /// <summary>
@@ -590,12 +590,12 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public TaskCompletionSource<AssociationHandle> StatusCompletionSource { get; private set; }
+        public TaskCompletionSource<AssociationHandle> StatusCompletionSource { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public AssociationHandle WrappedHandle { get; private set; }
+        public AssociationHandle WrappedHandle { get; }
     }
 
     /// <summary>
@@ -617,12 +617,12 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public IAssociationEventListener AssociationEventListener { get; private set; }
+        public IAssociationEventListener AssociationEventListener { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public AssociationHandle WrappedHandle { get; private set; }
+        public AssociationHandle WrappedHandle { get; }
     }
 
     /// <summary>
@@ -646,17 +646,17 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Task<IHandleEventListener> HandlerListener { get; private set; }
+        public Task<IHandleEventListener> HandlerListener { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public AssociationHandle WrappedHandle { get; private set; }
+        public AssociationHandle WrappedHandle { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Queue<ByteString> Queue { get; private set; }
+        public Queue<ByteString> Queue { get; }
     }
 
     /// <summary>
@@ -678,12 +678,12 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public IHandleEventListener Listener { get; private set; }
+        public IHandleEventListener Listener { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public AssociationHandle WrappedHandle { get; private set; }
+        public AssociationHandle WrappedHandle { get; }
     }
 
     /// <summary>
@@ -703,7 +703,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public string ErrorMessage { get; private set; }
+        public string ErrorMessage { get; }
 
         /// <inheritdoc/>
         public override string ToString()

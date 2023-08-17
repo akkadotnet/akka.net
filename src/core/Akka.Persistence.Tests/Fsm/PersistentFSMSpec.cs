@@ -877,7 +877,7 @@ namespace Akka.Persistence.Tests.Fsm
             Item = item;
         }
 
-        public Item Item { get; private set; }
+        public Item Item { get; }
     }
 
     internal class Buy
@@ -907,7 +907,7 @@ namespace Akka.Persistence.Tests.Fsm
             Item = item;
         }
 
-        public Item Item { get; private set; }
+        public Item Item { get; }
     }
 
     internal class OrderExecuted : IDomainEvent

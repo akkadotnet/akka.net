@@ -818,7 +818,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public int Uid { get; private set; }
+            public int Uid { get; }
 
             /// <summary>
             /// TBD
@@ -1712,12 +1712,12 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public AkkaProtocolHandle ProtocolHandle { get; private set; }
+            public AkkaProtocolHandle ProtocolHandle { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef ReplyTo { get; private set; }
+            public IActorRef ReplyTo { get; }
         }
 
         /// <summary>
@@ -1810,7 +1810,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public AkkaProtocolHandle ProtocolHandle { get; private set; }
+            public AkkaProtocolHandle ProtocolHandle { get; }
         }
 
         /// <summary>
@@ -1832,12 +1832,12 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef Writer { get; private set; }
+            public IActorRef Writer { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef ReplyTo { get; private set; }
+            public IActorRef ReplyTo { get; }
         }
 
         /// <summary>
@@ -1877,7 +1877,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public Ack Ack { get; private set; }
+            public Ack Ack { get; }
         }
 
         private const string AckIdleTimerName = "AckIdleTimer";

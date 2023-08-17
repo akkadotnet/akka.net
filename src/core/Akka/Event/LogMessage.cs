@@ -33,7 +33,7 @@ namespace Akka.Event
         /// <summary>
         /// Gets the format string of this log message.
         /// </summary>
-        public string Format { get; private set; }
+        public string Format { get; }
 
         /// <summary>
         /// Initializes an instance of the LogMessage with the specified formatter, format and args.

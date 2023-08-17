@@ -22,7 +22,7 @@ namespace Akka.Cluster.Metrics.Serialization
     /// </summary>
     public sealed partial class NodeMetrics
     {
-        public Actor.Address Address { get; private set; }
+        public Actor.Address Address { get; }
         
         /// <summary>
         /// Creates new instance of <see cref="NodeMetrics"/>

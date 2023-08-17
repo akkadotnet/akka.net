@@ -18,7 +18,7 @@ namespace Akka.Remote
         /// <summary>
         /// The HOCON for the failure detector.
         /// </summary>
-        public Config TransportFailureDetectorConfig { get; private set; }
+        public Config TransportFailureDetectorConfig { get; }
 
         /// <summary>
         /// The failure detection implementation class FQN.

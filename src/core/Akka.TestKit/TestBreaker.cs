@@ -22,19 +22,19 @@ namespace Akka.TestKit
         /// <summary>
         /// TBD
         /// </summary>
-        public CountdownEvent HalfOpenLatch { get; private set; }
+        public CountdownEvent HalfOpenLatch { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public CountdownEvent OpenLatch { get; private set; }
+        public CountdownEvent OpenLatch { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public CountdownEvent ClosedLatch { get; private set; }
+        public CountdownEvent ClosedLatch { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public CircuitBreaker Instance { get; private set; }
+        public CircuitBreaker Instance { get; }
 
         /// <summary>
         /// TBD

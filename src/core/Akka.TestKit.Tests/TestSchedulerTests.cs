@@ -143,7 +143,7 @@ namespace Akka.TestKit.Tests
 
         class CancelableMessage
         {
-            public TimeSpan ScheduleOffset { get; set; }
+            public TimeSpan ScheduleOffset { get; }
             public int Id { get; set; }
 
             public CancelableMessage(TimeSpan scheduleOffset, int id = 1)
@@ -157,8 +157,8 @@ namespace Akka.TestKit.Tests
 
         class ScheduleOnceMessage
         {
-            public TimeSpan ScheduleOffset { get; set; }
-            public int Id { get; set; }
+            public TimeSpan ScheduleOffset { get; }
+            public int Id { get; }
 
             public ScheduleOnceMessage(TimeSpan scheduleOffset, int id = 1)
             {
@@ -169,8 +169,8 @@ namespace Akka.TestKit.Tests
 
         class RescheduleMessage
         {
-            public TimeSpan InitialOffset { get; set; }
-            public TimeSpan ScheduleOffset { get; set; }
+            public TimeSpan InitialOffset { get; }
+            public TimeSpan ScheduleOffset { get; }
             public int Id { get; set; }
 
             public RescheduleMessage(TimeSpan initialOffset, TimeSpan scheduleOffset, int id = 1)

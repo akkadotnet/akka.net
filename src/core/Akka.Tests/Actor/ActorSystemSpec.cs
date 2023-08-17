@@ -376,7 +376,7 @@ namespace Akka.Tests.Actor
             System = system;
         }
 
-        public ActorSystem System { get; private set; }
+        public ActorSystem System { get; }
     }
 
     public class TestExtension : ExtensionIdProvider<TestExtensionImpl>
@@ -394,7 +394,7 @@ namespace Akka.Tests.Actor
             System = system;
         }
 
-        public ActorSystem System { get; private set; }
+        public ActorSystem System { get; }
     }
 
     public class FailingTestExtension : ExtensionIdProvider<FailingTestExtensionImpl>
@@ -451,10 +451,10 @@ namespace Akka.Tests.Actor
             throw new NotImplementedException();
         }
 
-        public DateTimeOffset Now { get; private set; }
-        public TimeSpan MonotonicClock { get; private set; }
-        public TimeSpan HighResMonotonicClock { get; private set; }
-        public IAdvancedScheduler Advanced { get; private set; }
+        public DateTimeOffset Now { get; }
+        public TimeSpan MonotonicClock { get; }
+        public TimeSpan HighResMonotonicClock { get; }
+        public IAdvancedScheduler Advanced { get; }
     }
 
     public class Wave : ReceiveActor

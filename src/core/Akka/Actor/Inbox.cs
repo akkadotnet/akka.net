@@ -56,11 +56,11 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public TimeSpan Deadline { get; private set; }
+        public TimeSpan Deadline { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef Client { get; private set; }
+        public IActorRef Client { get; }
         /// <summary>
         /// TBD
         /// </summary>
@@ -94,7 +94,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public TimeSpan Deadline { get; private set; }
+        public TimeSpan Deadline { get; }
         /// <summary>
         /// TBD
         /// </summary>
@@ -102,7 +102,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef Client { get; private set; }
+        public IActorRef Client { get; }
         /// <summary>
         /// TBD
         /// </summary>
@@ -437,7 +437,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef Receiver { get; private set; }
+        public IActorRef Receiver { get; }
         
         /// <summary>
         /// Make the inbox’s actor watch the <paramref name="subject"/> actor such that 

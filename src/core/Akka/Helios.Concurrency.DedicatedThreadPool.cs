@@ -63,12 +63,12 @@ namespace Helios.Concurrency
         /// <summary>
         /// The total number of threads to run in this thread pool.
         /// </summary>
-        public int NumThreads { get; private set; }
+        public int NumThreads { get; }
 
         /// <summary>
         /// The type of threads to run in this thread pool.
         /// </summary>
-        public ThreadType ThreadType { get; private set; }
+        public ThreadType ThreadType { get; }
 
         /// <summary>
         /// Interval to check for thread deadlocks.
@@ -81,17 +81,17 @@ namespace Helios.Concurrency
         /// <summary>
         /// TBD
         /// </summary>
-        public string Name { get; private set; }
+        public string Name { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Action<Exception> ExceptionHandler { get; private set; }
+        public Action<Exception> ExceptionHandler { get; }
 
         /// <summary>
         /// Gets the thread stack size, 0 represents the default stack size.
         /// </summary>
-        public int ThreadMaxStackSize { get; private set; }
+        public int ThreadMaxStackSize { get; }
     }
 
     /// <summary>
@@ -305,7 +305,7 @@ namespace Helios.Concurrency
         /// <summary>
         /// TBD
         /// </summary>
-        public DedicatedThreadPoolSettings Settings { get; private set; }
+        public DedicatedThreadPoolSettings Settings { get; }
 
         private readonly ThreadPoolWorkQueue _workQueue;
         private readonly PoolWorker[] _workers;

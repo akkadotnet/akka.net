@@ -353,7 +353,7 @@ namespace Akka.Persistence.Tests
 
     public class RestartMessage
     {
-        public object Message { get; private set; }
+        public object Message { get; }
 
         public RestartMessage(object message)
         {

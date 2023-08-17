@@ -117,12 +117,12 @@ namespace Akka.Persistence.Sql.Common
         /// <summary>
         /// Schema name, where table corresponding to snapshot store is placed.
         /// </summary>
-        public string SchemaName { get; private set; }
+        public string SchemaName { get; }
 
         /// <summary>
         /// Name of the table corresponding to snapshot store.
         /// </summary>
-        public string TableName { get; private set; }
+        public string TableName { get; }
 
         /// <summary>
         /// Flag determining in in case of snapshot store table missing, they should be automatically initialized.

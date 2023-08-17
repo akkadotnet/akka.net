@@ -207,7 +207,7 @@ namespace Akka.Remote.TestKit
                 Channel = channel;
             }
 
-            public IChannel Channel { get; private set; }
+            public IChannel Channel { get; }
         }
 
         int _initialParticipants;

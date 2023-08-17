@@ -45,7 +45,7 @@ namespace Akka.Remote.TestKit
                 Name = name;
             }
 
-            public RoleName Name { get; private set; }
+            public RoleName Name { get; }
         }
 
         public sealed class Data
@@ -66,13 +66,13 @@ namespace Akka.Remote.TestKit
                 Clients = clients;
             }
 
-            public ImmutableHashSet<Controller.NodeInfo> Clients { get; private set; }
+            public ImmutableHashSet<Controller.NodeInfo> Clients { get; }
 
-            public string Barrier { get; private set; }
+            public string Barrier { get; }
 
-            public ImmutableHashSet<IActorRef> Arrived { get; private set; }
+            public ImmutableHashSet<IActorRef> Arrived { get; }
 
-            public Deadline Deadline { get; private set; }
+            public Deadline Deadline { get; }
 
             public Data Copy(ImmutableHashSet<Controller.NodeInfo> clients = null, string barrier = null,
                 ImmutableHashSet<IActorRef> arrived = null, Deadline deadline = null)
@@ -143,7 +143,7 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
             private bool Equals(BarrierTimeoutException other)
             {
@@ -195,7 +195,7 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
             private bool Equals(FailedBarrierException other)
             {
@@ -248,9 +248,9 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
-            public Controller.NodeInfo Node { get; private set; }
+            public Controller.NodeInfo Node { get; }
 
             private bool Equals(DuplicateNodeException other)
             {
@@ -307,11 +307,11 @@ namespace Akka.Remote.TestKit
                 Barrier = barrier;
             }
 
-            public string Barrier { get; private set; }
+            public string Barrier { get; }
 
-            public IActorRef Client { get; private set; }
+            public IActorRef Client { get; }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
             private bool Equals(WrongBarrierException other)
             {
@@ -369,7 +369,7 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
             private bool Equals(BarrierEmptyException other)
             {
@@ -422,9 +422,9 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
-            public RoleName Client { get; private set; }
+            public RoleName Client { get; }
 
             private bool Equals(ClientLostException other)
             {

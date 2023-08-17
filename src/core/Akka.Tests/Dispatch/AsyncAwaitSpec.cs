@@ -268,7 +268,7 @@ namespace Akka.Tests.Dispatch
 
     public class RestartMessage
     {
-        public object Message { get; private set; }
+        public object Message { get; }
 
         public RestartMessage(object message)
         {

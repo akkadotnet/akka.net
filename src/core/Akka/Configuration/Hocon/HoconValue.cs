@@ -65,7 +65,7 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// The list of elements inside this HOCON value
         /// </summary>
-        public List<IHoconElement> Values { get; private set; }
+        public List<IHoconElement> Values { get; }
 
         /// <summary>
         /// Marker for values were merged during fallback attaching

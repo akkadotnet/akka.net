@@ -26,12 +26,12 @@ namespace Akka.Actor
         /// <summary>
         /// Gets the anchor.
         /// </summary>
-        public IActorRef Anchor { get; private set; }
+        public IActorRef Anchor { get; }
 
         /// <summary>
         /// Gets the elements.
         /// </summary>
-        public SelectionPathElement[] Path { get; private set; }
+        public SelectionPathElement[] Path { get; }
 
         /// <summary>
         /// A string representation of all of the elements in the <see cref="ActorSelection"/> path,

@@ -20,7 +20,7 @@ namespace Akka.Benchmarks
         private sealed class BenchmarkLogAdapter : LoggingAdapterBase
         {
             public int CurrentLogs { get; private set; }
-            public LogEvent[] AllLogs { get; private set; }
+            public LogEvent[] AllLogs { get; }
 
             private readonly string _logSource;
             private readonly Type _logClass;

@@ -148,8 +148,8 @@ namespace Akka.IO
                 Until = until;
             }
 
-            public Dns.Resolved Answer { get; private set; }
-            public long Until { get; private set; }
+            public Dns.Resolved Answer { get; }
+            public long Until { get; }
 
             public bool IsValid(long clock)
             {
@@ -165,8 +165,8 @@ namespace Akka.IO
                 Until = until;
             }
 
-            public string Name { get; private set; }
-            public long Until { get; private set; }
+            public string Name { get; }
+            public long Until { get; }
 
             public bool IsValid(long clock)
             {

@@ -144,12 +144,12 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public HeartbeatHistory History { get; private set; }
+            public HeartbeatHistory History { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public long? TimeStamp { get; private set; }
+            public long? TimeStamp { get; }
         }
 
         private readonly AtomicReference<AccrualState> _state;

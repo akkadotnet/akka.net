@@ -25,7 +25,7 @@ namespace Akka.Persistence.Tests
     {
         public class Cmd
         {
-            public string Payload { get; private set; }
+            public string Payload { get; }
 
             public Cmd(string payload)
             {
@@ -35,7 +35,7 @@ namespace Akka.Persistence.Tests
 
         public class DeleteSnapshot
         {
-            public int SequenceNr { get; private set; }
+            public int SequenceNr { get; }
 
             public DeleteSnapshot(int sequenceNr)
             {
@@ -45,7 +45,7 @@ namespace Akka.Persistence.Tests
 
         public class DeleteSnapshots
         {
-            public SnapshotSelectionCriteria Criteria { get; private set; }
+            public SnapshotSelectionCriteria Criteria { get; }
 
             public DeleteSnapshots(SnapshotSelectionCriteria criteria)
             {

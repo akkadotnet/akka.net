@@ -410,7 +410,7 @@ namespace Akka.Tests.Actor.Stash
             {
                 return !(a == b);
             }
-            public string Cargo { get; private set; }
+            public string Cargo { get; }
         }
     }
 }

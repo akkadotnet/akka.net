@@ -75,7 +75,7 @@ namespace Akka.Tests.Routing
                 }
             }
 
-            public ListenerSupport Listeners { get; private set; }
+            public ListenerSupport Listeners { get; }
         }
 
         public class ListenerActor : UntypedActor, IListeners
@@ -109,7 +109,7 @@ namespace Akka.Tests.Routing
                 }
             }
 
-            public ListenerSupport Listeners { get; private set; }
+            public ListenerSupport Listeners { get; }
         }
 
 

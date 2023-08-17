@@ -1476,7 +1476,7 @@ namespace Akka.Cluster.Tests.SBR
 
         internal abstract class Setup
         {
-            public IActorRef A { get; private set; }
+            public IActorRef A { get; }
 
             public Setup(
                 SplitBrainResolverSpec owner,

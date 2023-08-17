@@ -26,7 +26,7 @@ namespace Akka.Tests.Actor
                 Child = child;
             }
 
-            public string Child { get; private set; }
+            public string Child { get; }
         }
 
         public interface IQuery { }
@@ -38,7 +38,7 @@ namespace Akka.Tests.Actor
                 Path = path;
             }
 
-            public IEnumerable<string> Path { get; private set; }
+            public IEnumerable<string> Path { get; }
         }
 
         public sealed class LookupString : IQuery
@@ -48,7 +48,7 @@ namespace Akka.Tests.Actor
                 Path = path;
             }
 
-            public string Path { get; private set; }
+            public string Path { get; }
         }
 
         public sealed class LookupPath : IQuery
@@ -58,7 +58,7 @@ namespace Akka.Tests.Actor
                 Path = path;
             }
 
-            public ActorPath Path { get; private set; }
+            public ActorPath Path { get; }
         }
 
         public sealed class GetSender : IQuery
@@ -68,7 +68,7 @@ namespace Akka.Tests.Actor
                 To = to;
             }
 
-            public IActorRef To { get; private set; }
+            public IActorRef To { get; }
         }
 
         public static readonly Props P = Props.Create<Node>();

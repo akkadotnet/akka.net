@@ -297,7 +297,7 @@ namespace Akka.Tests.Actor
 
         internal class FailedSupervisorStrategy : OneForOneStrategy
         {
-            public IActorRef TestActor { get; private set; }
+            public IActorRef TestActor { get; }
 
             public FailedSupervisorStrategy(IActorRef testActor) : base(DefaultDecider)
             {
@@ -443,7 +443,7 @@ namespace Akka.Tests.Actor
                 Ref = @ref;
             }
 
-            public IActorRef Ref { get; private set; }
+            public IActorRef Ref { get; }
         }
 
         internal struct U
@@ -454,7 +454,7 @@ namespace Akka.Tests.Actor
                 Ref = @ref;
             }
 
-            public IActorRef Ref { get; private set; }
+            public IActorRef Ref { get; }
         }
         internal struct FF
         {
@@ -464,7 +464,7 @@ namespace Akka.Tests.Actor
                 Fail = fail;
             }
 
-            public Failed Fail { get; private set; }
+            public Failed Fail { get; }
         }
 
         internal struct Latches : INoSerializationVerificationNeeded

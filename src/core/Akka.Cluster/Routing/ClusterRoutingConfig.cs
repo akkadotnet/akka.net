@@ -758,7 +758,7 @@ namespace Akka.Cluster.Routing
         /// <summary>
         /// TBD
         /// </summary>
-        public new ClusterRouterGroupSettings Settings { get; private set; }
+        public new ClusterRouterGroupSettings Settings { get; }
 
         /// <summary>
         /// TBD
@@ -870,7 +870,7 @@ namespace Akka.Cluster.Routing
         /// <summary>
         /// TBD
         /// </summary>
-        public new ClusterRouterPoolSettings Settings { get; private set; }
+        public new ClusterRouterPoolSettings Settings { get; }
 
         /// <summary>
         /// TBD

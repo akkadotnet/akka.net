@@ -68,15 +68,15 @@ namespace Akka.Dispatch
             /// <summary>
             /// TBD
             /// </summary>
-            public bool Valid { get; private set; }
+            public bool Valid { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public bool Exists { get; private set; }
+            public bool Exists { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public Config Config { get; private set; }
+            public Config Config { get; }
         }
 
         /// <summary>
@@ -102,20 +102,20 @@ namespace Akka.Dispatch
             /// <summary>
             /// TBD
             /// </summary>
-            public bool Valid { get; private set; }
+            public bool Valid { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public bool Exists { get; private set; }
+            public bool Exists { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public Config Config { get; private set; }
+            public Config Config { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public string Value { get; private set; }
+            public string Value { get; }
         }
 
         static readonly IPathEntry InvalidPathEntry = new ValuePathEntry(false, true);

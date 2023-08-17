@@ -16,7 +16,7 @@ namespace Samples.Cluster.Transformation
                 Text = text;
             }
 
-            public string Text { get; private set; }
+            public string Text { get; }
 
             public override string ToString()
             {
@@ -31,7 +31,7 @@ namespace Samples.Cluster.Transformation
                 Text = text;
             }
 
-            public string Text { get; private set; }
+            public string Text { get; }
 
             public override string ToString()
             {
@@ -47,7 +47,7 @@ namespace Samples.Cluster.Transformation
                 Reason = reason;
             }
 
-            public string Reason { get; private set; }
+            public string Reason { get; }
 
             public TransformationJob Job { get; private set; }
 

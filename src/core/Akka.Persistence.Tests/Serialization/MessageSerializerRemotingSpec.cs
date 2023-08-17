@@ -70,7 +70,7 @@ akka {
 
     public class MyPayload
     {
-        public string Data { get; private set; }
+        public string Data { get; }
 
         public MyPayload(string data)
         {

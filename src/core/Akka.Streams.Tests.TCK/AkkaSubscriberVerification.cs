@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.TCK
             Materializer = ActorMaterializer.Create(System, ActorMaterializerSettings.Create(System));
         }
 
-        protected ActorSystem System { get; private set; }
+        protected ActorSystem System { get; }
 
         protected ActorMaterializer Materializer { get; private set; }
         
@@ -73,7 +73,7 @@ namespace Akka.Streams.Tests.TCK
             Materializer = ActorMaterializer.Create(System, ActorMaterializerSettings.Create(System));
         }
 
-        protected ActorSystem System { get; private set; }
+        protected ActorSystem System { get; }
 
         protected ActorMaterializer Materializer { get; private set; }
 

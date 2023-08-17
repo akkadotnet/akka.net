@@ -28,7 +28,7 @@ namespace Akka.Tests.Actor
 
         internal class PlugActor : ActorBase
         {
-            public List<string> PluginMessages { get; private set; }
+            public List<string> PluginMessages { get; }
             public PlugActor()
             {
                 PluginMessages = new List<string>();

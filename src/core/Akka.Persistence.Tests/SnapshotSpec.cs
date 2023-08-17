@@ -191,7 +191,7 @@ namespace Akka.Persistence.Tests
                 Metadata = metadata;
             }
 
-            public SnapshotMetadata Metadata { get; private set; }
+            public SnapshotMetadata Metadata { get; }
         }
 
         public sealed class DeleteMany
@@ -201,7 +201,7 @@ namespace Akka.Persistence.Tests
                 Criteria = criteria;
             }
 
-            public SnapshotSelectionCriteria Criteria { get; private set; }
+            public SnapshotSelectionCriteria Criteria { get; }
         }
 
         internal class DeleteSnapshotTestActor : LoadSnapshotTestActor

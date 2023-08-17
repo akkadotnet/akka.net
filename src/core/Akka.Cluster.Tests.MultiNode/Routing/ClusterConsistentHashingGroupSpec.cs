@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 Messages = messages;
             }
 
-            public HashSet<object> Messages { get; private set; }
+            public HashSet<object> Messages { get; }
         }
 
         public class Destination : UntypedActor

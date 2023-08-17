@@ -24,9 +24,9 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
 {
     public class TestConductorSpecConfig : MultiNodeConfig
     {
-        public RoleName Master { get; private set; }
+        public RoleName Master { get; }
 
-        public RoleName Slave { get; private set; }
+        public RoleName Slave { get; }
 
         public TestConductorSpecConfig()
         {

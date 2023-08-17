@@ -224,7 +224,7 @@ namespace Akka.Actor
         ///     Gets the system.
         /// </summary>
         /// <value>The system.</value>
-        public ActorSystem System { get; private set; }
+        public ActorSystem System { get; }
 
         /// <summary>
         ///     Gets the configuration.
@@ -257,7 +257,7 @@ namespace Akka.Actor
         ///     Gets the provider class.
         /// </summary>
         /// <value>The provider class.</value>
-        public string ProviderClass { get; private set; }
+        public string ProviderClass { get; }
 
         /// <summary>
         ///     Gets the supervisor strategy class.
@@ -446,9 +446,9 @@ namespace Akka.Actor
         /// </summary>
         public TimeSpan SchedulerShutdownTimeout { get; private set; }
 
-        public bool CoordinatedShutdownTerminateActorSystem { get; private set; }
+        public bool CoordinatedShutdownTerminateActorSystem { get; }
 
-        public bool CoordinatedShutdownRunByActorSystemTerminate { get; private set; }
+        public bool CoordinatedShutdownRunByActorSystemTerminate { get; }
 
         public override string ToString()
         {

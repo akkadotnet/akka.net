@@ -42,7 +42,7 @@ namespace Akka.Remote
         /// <summary>
         /// The <see cref="DateTime"/> that the deadline is due.
         /// </summary>
-        public DateTime When { get; private set; }
+        public DateTime When { get; }
 
         /// <summary>
         /// <para>

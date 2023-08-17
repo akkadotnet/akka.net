@@ -136,9 +136,9 @@ namespace Akka.Pattern
         //akka.io implementation is to use nested static classes and access parent member variables
         //.Net static nested classes do not have access to parent member variables -- so we configure the states here and
         //swap them above
-        private AtomicState Closed { get; set; }
-        private AtomicState Open { get; set; }
-        private AtomicState HalfOpen { get; set; }
+        private AtomicState Closed { get; }
+        private AtomicState Open { get; }
+        private AtomicState HalfOpen { get; }
 
         /// <summary>
         /// Create a new CircuitBreaker

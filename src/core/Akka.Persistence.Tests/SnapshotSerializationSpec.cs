@@ -31,7 +31,7 @@ namespace Akka.Persistence.Tests
                 Id = id;
             }
 
-            public string Id { get; private set; }
+            public string Id { get; }
 
             protected bool Equals(
                 SnapshotTypeWithAFullyQualifiedNameLongerThan255BytesXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

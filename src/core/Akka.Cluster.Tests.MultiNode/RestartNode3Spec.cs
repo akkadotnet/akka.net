@@ -21,9 +21,9 @@ namespace Akka.Cluster.Tests.MultiNode
 {
     public class RestartNode3SpecConfig : MultiNodeConfig
     {
-        public RoleName First { get; private set; }
-        public RoleName Second { get; private set; }
-        public RoleName Third { get; private set; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
 
         public RestartNode3SpecConfig()
         {

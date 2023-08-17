@@ -943,12 +943,12 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public Directive DefaultDirective { get; private set; }
+        public Directive DefaultDirective { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public KeyValuePair<Type, Directive>[] Pairs { get; private set; }
+        public KeyValuePair<Type, Directive>[] Pairs { get; }
 
         /// <summary>
         /// Determines which <see cref="Directive"/> to use for the specified <paramref name="cause"/>.

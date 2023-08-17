@@ -153,7 +153,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Address Address { get; private set; }
+        public Address Address { get; }
     }
 
     /// <summary>
@@ -175,12 +175,12 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Address Address { get; private set; }
+        public Address Address { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public DisassociateInfo Reason { get; private set; }
+        public DisassociateInfo Reason { get; }
     }
 
     /// <summary>
@@ -230,12 +230,12 @@ namespace Akka.Remote.Transport
             /// <summary>
             /// TBD
             /// </summary>
-            public Address Origin { get; private set; }
+            public Address Origin { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public ThrottlerHandle ThrottlerHandle { get; private set; }
+            public ThrottlerHandle ThrottlerHandle { get; }
         }
 
         /// <summary>
@@ -257,12 +257,12 @@ namespace Akka.Remote.Transport
             /// <summary>
             /// TBD
             /// </summary>
-            public AssociationHandle AssociationHandle { get; private set; }
+            public AssociationHandle AssociationHandle { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public TaskCompletionSource<AssociationHandle> StatusPromise { get; private set; }
+            public TaskCompletionSource<AssociationHandle> StatusPromise { get; }
         }
 
         /// <summary>
@@ -284,12 +284,12 @@ namespace Akka.Remote.Transport
             /// <summary>
             /// TBD
             /// </summary>
-            public IHandleEventListener HandleEventListener { get; private set; }
+            public IHandleEventListener HandleEventListener { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public ThrottleMode Mode { get; private set; }
+            public ThrottleMode Mode { get; }
         }
 
         /// <summary>
@@ -309,7 +309,7 @@ namespace Akka.Remote.Transport
             /// <summary>
             /// TBD
             /// </summary>
-            public ThrottlerHandle ThrottlerHandle { get; private set; }
+            public ThrottlerHandle ThrottlerHandle { get; }
         }
 
         /// <summary>
@@ -329,7 +329,7 @@ namespace Akka.Remote.Transport
             /// <summary>
             /// TBD
             /// </summary>
-            public IHandleEventListener HandleEventListener { get; private set; }
+            public IHandleEventListener HandleEventListener { get; }
         }
 
         #endregion
@@ -1033,7 +1033,7 @@ namespace Akka.Remote.Transport
             /// <summary>
             /// TBD
             /// </summary>
-            public ThrottlerHandle Handle { get; private set; }
+            public ThrottlerHandle Handle { get; }
         }
 
         /// <summary>
@@ -1053,7 +1053,7 @@ namespace Akka.Remote.Transport
             /// <summary>
             /// TBD
             /// </summary>
-            public DisassociateInfo FailReason { get; private set; }
+            public DisassociateInfo FailReason { get; }
         }
 
         #endregion

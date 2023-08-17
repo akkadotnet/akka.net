@@ -42,8 +42,8 @@ public sealed class EventSourcedProducerQueueSpec : AkkaSpec
 
     private static readonly AtomicCounter _pidCounter = new(0);
     private string NextPersistenceId() => $"p-{_pidCounter.IncrementAndGet()}";
-    public TestProbe JournalOperationsProbe { get; private set; }
-    public TestProbe StateProbe { get; private set; }
+    public TestProbe JournalOperationsProbe { get; }
+    public TestProbe StateProbe { get; }
 
     [Fact]
     public async Task EventSourcedDurableProducerQueue_must_persist_MessageSent()

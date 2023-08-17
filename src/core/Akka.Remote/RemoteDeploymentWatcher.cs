@@ -64,11 +64,11 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef Actor { get; private set; }
+            public IActorRef Actor { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public IInternalActorRef Supervisor { get; private set; }
+            public IInternalActorRef Supervisor { get; }
         }
     }
 }

@@ -73,7 +73,7 @@ namespace Akka.Persistence.Tests
                 Data = data;
             }
 
-            public object Data { get; private set; }
+            public object Data { get; }
 
             public override string ToString()
             {
@@ -88,7 +88,7 @@ namespace Akka.Persistence.Tests
                 Data = data;
             }
 
-            public object Data { get; private set; }
+            public object Data { get; }
 
             public override string ToString()
             {
@@ -108,8 +108,8 @@ namespace Akka.Persistence.Tests
                 Data = data;
             }
 
-            public TestLatch Latch { get; private set; }
-            public object Data { get; private set; }
+            public TestLatch Latch { get; }
+            public object Data { get; }
         }
 
         internal class Delete
@@ -119,7 +119,7 @@ namespace Akka.Persistence.Tests
                 ToSequenceNr = toSequenceNr;
             }
 
-            public long ToSequenceNr { get; private set; }
+            public long ToSequenceNr { get; }
 
             public override string ToString()
             {

@@ -25,8 +25,8 @@ namespace Akka.Persistence.Tests
 
         public class Persist : ICommand
         {
-            public int Id { get; private set; }
-            public IList<object> Messages { get; private set; }
+            public int Id { get; }
+            public IList<object> Messages { get; }
 
             public Persist(int id, params object[] messages)
             {
@@ -58,8 +58,8 @@ namespace Akka.Persistence.Tests
 
         public class PersistAsync : ICommand
         {
-            public int Id { get; private set; }
-            public IList<object> Messages { get; private set; }
+            public int Id { get; }
+            public IList<object> Messages { get; }
 
             public PersistAsync(int id, params object[] messages)
             {
@@ -91,7 +91,7 @@ namespace Akka.Persistence.Tests
 
         public class Multi : ICommand
         {
-            public IList<ICommand> Commands { get; private set; }
+            public IList<ICommand> Commands { get; }
 
             public Multi(params ICommand[] commands)
             {
@@ -101,7 +101,7 @@ namespace Akka.Persistence.Tests
 
         public class Echo : ICommand
         {
-            public int Id { get; private set; }
+            public int Id { get; }
 
             public Echo(int id)
             {
@@ -111,7 +111,7 @@ namespace Akka.Persistence.Tests
 
         public class Fail : ICommand
         {
-            public Exception Exception { get; private set; }
+            public Exception Exception { get; }
 
             public Fail(Exception exception)
             {
@@ -121,8 +121,8 @@ namespace Akka.Persistence.Tests
 
         public class Done : ICommand
         {
-            public int Id { get; private set; }
-            public int Sub { get; private set; }
+            public int Id { get; }
+            public int Sub { get; }
 
             public Done(int id, int sub)
             {
@@ -138,7 +138,7 @@ namespace Akka.Persistence.Tests
 
         public class PreStart : ICommand
         {
-            public string Name { get; private set; }
+            public string Name { get; }
 
             public PreStart(string name)
             {
@@ -148,7 +148,7 @@ namespace Akka.Persistence.Tests
 
         public class PreRestart : ICommand
         {
-            public string Name { get; private set; }
+            public string Name { get; }
 
             public PreRestart(string name)
             {
@@ -158,7 +158,7 @@ namespace Akka.Persistence.Tests
 
         public class PostRestart : ICommand
         {
-            public string Name { get; private set; }
+            public string Name { get; }
 
             public PostRestart(string name)
             {
@@ -168,7 +168,7 @@ namespace Akka.Persistence.Tests
 
         public class PostStop : ICommand
         {
-            public string Name { get; private set; }
+            public string Name { get; }
 
             public PostStop(string name)
             {
@@ -288,8 +288,8 @@ namespace Akka.Persistence.Tests
 
         public class JournalProbe : IExtension
         {
-            public TestProbe Probe { get; private set; }
-            public IActorRef Ref { get; private set; }
+            public TestProbe Probe { get; }
+            public IActorRef Ref { get; }
 
             public JournalProbe(ExtendedActorSystem system)
             {
@@ -331,7 +331,7 @@ akka.persistence.snapshot-store.plugin = ""akka.persistence.no-snapshot-store"""
 
         public class Msgs
         {
-            public IList<object> Messages { get; private set; }
+            public IList<object> Messages { get; }
 
             public Msgs(params object[] messages)
             {

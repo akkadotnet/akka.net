@@ -18,13 +18,13 @@ namespace Akka.Cluster.Tests.MultiNode
 {
     public class ClientDowningNodeThatIsUnreachableMultiNodeConfig : MultiNodeConfig
     {
-        public RoleName First { get; private set; }
+        public RoleName First { get; }
 
-        public RoleName Second { get; private set; }
+        public RoleName Second { get; }
 
-        public RoleName Third { get; private set; }
+        public RoleName Third { get; }
 
-        public RoleName Fourth { get; private set; }
+        public RoleName Fourth { get; }
 
         public ClientDowningNodeThatIsUnreachableMultiNodeConfig(bool failureDetectorPuppet)
         {

@@ -333,22 +333,22 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Address OriginalLocalAddress { get; private set; }
+        public Address OriginalLocalAddress { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Address OriginalRemoteAddress { get; private set; }
+        public Address OriginalRemoteAddress { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public AssociationHandle WrappedHandle { get; private set; }
+        public AssociationHandle WrappedHandle { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected SchemeAugmenter SchemeAugmenter { get; private set; }
+        protected SchemeAugmenter SchemeAugmenter { get; }
 
         /// <summary>
         /// TBD
@@ -410,7 +410,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public IAssociationEventListener Listener { get; private set; }
+        public IAssociationEventListener Listener { get; }
     }
 
     /// <summary>
@@ -459,12 +459,12 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Address ListenAddress { get; private set; }
+        public Address ListenAddress { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Task<IAssociationEventListener> UpstreamListener { get; private set; }
+        public Task<IAssociationEventListener> UpstreamListener { get; }
     }
 
     /// <summary>

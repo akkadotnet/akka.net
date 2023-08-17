@@ -67,7 +67,7 @@ namespace Akka.Routing
         /// This is the same as the <see cref="ConsistentHashKey"/>
         /// </remarks>
         /// </summary>
-        public object HashKey { get; private set; }
+        public object HashKey { get; }
 
         /// <summary>
         /// The consistent hash key of the envelope.
@@ -276,12 +276,12 @@ namespace Akka.Routing
         /// <summary>
         /// TBD
         /// </summary>
-        public Routee Routee { get; private set; }
+        public Routee Routee { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Address SelfAddress { get; private set; }
+        public Address SelfAddress { get; }
 
         /// <inheritdoc/>
         public override string ToString()
@@ -675,7 +675,7 @@ namespace Akka.Routing
         /// <summary>
         /// Virtual nodes used in the <see cref="ConsistentHash{T}"/>.
         /// </summary>
-        public int VirtualNodesFactor { get; private set; }
+        public int VirtualNodesFactor { get; }
 
         /// <summary>
         /// Retrieves the actor paths used by this router during routee selection.

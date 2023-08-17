@@ -19,7 +19,7 @@ namespace Akka.Persistence.Tests
     {
         internal class DeleteTo
         {
-            public long N { get; private set; }
+            public long N { get; }
 
             public DeleteTo(long n)
             {

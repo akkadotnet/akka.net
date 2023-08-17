@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.TCK
                 ActorMaterializerSettings.Create(System).WithInputBuffer(512, 512));
         }
 
-        protected ActorSystem System { get; private set; }
+        protected ActorSystem System { get; }
 
         protected ActorMaterializer Materializer { get; private set; }
 

@@ -170,9 +170,9 @@ namespace Akka.Remote.Serialization
             _epochs.AsSpan().Fill(_epoch - evictAgeThreshold);
         }
 
-        public int Capacity { get; private set; }
+        public int Capacity { get; }
 
-        public int EvictAgeThreshold { get; private set; }
+        public int EvictAgeThreshold { get; }
 
         private readonly int _mask;
 

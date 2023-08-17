@@ -75,12 +75,12 @@ namespace Akka.Tests.Serialization
             {
                 Contents = contents;
             }
-            public T Contents { get;private set; }
+            public T Contents { get; }
         }
         public class ImmutableMessageWithPrivateCtor
         {
-            public string Foo { get; private set; }
-            public string Bar { get; private set; }
+            public string Foo { get; }
+            public string Bar { get; }
 
             protected ImmutableMessageWithPrivateCtor()
             {
@@ -116,8 +116,8 @@ namespace Akka.Tests.Serialization
 
         public class ImmutableMessage
         {
-            public string Foo { get;private set; }
-            public string Bar { get;private set; }
+            public string Foo { get; }
+            public string Bar { get; }
 
             public ImmutableMessage()
             {

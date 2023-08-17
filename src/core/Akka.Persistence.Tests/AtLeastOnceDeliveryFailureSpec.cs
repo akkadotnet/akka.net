@@ -54,7 +54,7 @@ namespace Akka.Persistence.Tests
                 Ints = ints;
             }
 
-            public int[] Ints { get; private set; }
+            public int[] Ints { get; }
         }
 
         internal struct Ack
@@ -65,7 +65,7 @@ namespace Akka.Persistence.Tests
                 I = i;
             }
 
-            public int I { get; private set; }
+            public int I { get; }
         }
 
         internal struct Msg
@@ -77,8 +77,8 @@ namespace Akka.Persistence.Tests
                 DeliveryId = deliveryId;
             }
 
-            public int I { get; private set; }
-            public long DeliveryId { get; private set; }
+            public int I { get; }
+            public long DeliveryId { get; }
         }
 
         internal struct Confirm
@@ -90,8 +90,8 @@ namespace Akka.Persistence.Tests
                 DeliveryId = deliveryId;
             }
 
-            public int I { get; private set; }
-            public long DeliveryId { get; private set; }
+            public int I { get; }
+            public long DeliveryId { get; }
         }
 
         internal interface IEvt { }
@@ -104,7 +104,7 @@ namespace Akka.Persistence.Tests
                 I = i;
             }
 
-            public int I { get; private set; }
+            public int I { get; }
         }
 
         internal struct MsgConfirmed : IEvt
@@ -116,7 +116,7 @@ namespace Akka.Persistence.Tests
                 I = i;
             }
 
-            public long DeliveryId { get; private set; }
+            public long DeliveryId { get; }
             public int I { get; private set; }
         }
 
@@ -232,7 +232,7 @@ namespace Akka.Persistence.Tests
                 // mute logging
             }
 
-            public IActorRef Probe { get; private set; }
+            public IActorRef Probe { get; }
             public List<int> State { get; set; }
         }
 
@@ -271,7 +271,7 @@ namespace Akka.Persistence.Tests
                 });
             }
 
-            public IActorRef Probe { get; private set; }
+            public IActorRef Probe { get; }
             public List<int> State { get; set; }
         }
 

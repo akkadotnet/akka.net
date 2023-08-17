@@ -72,13 +72,13 @@ namespace Akka.Remote
         /// Gets the local address to use.
         /// </summary>
         /// <value>The local address to use.</value>
-        public Address LocalAddressToUse { get; private set; }
+        public Address LocalAddressToUse { get; }
 
         /// <summary>
         /// Gets the remote.
         /// </summary>
         /// <value>The remote.</value>
-        internal RemoteTransport Remote { get; private set; }
+        internal RemoteTransport Remote { get; }
 
         /// <summary>
         /// Gets the parent.

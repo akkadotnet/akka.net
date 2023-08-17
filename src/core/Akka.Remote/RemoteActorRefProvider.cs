@@ -158,7 +158,7 @@ namespace Akka.Remote
         /// <summary>
         /// The remoting settings
         /// </summary>
-        public RemoteSettings RemoteSettings { get; private set; }
+        public RemoteSettings RemoteSettings { get; }
 
         /* these are only available after Init() is called */
 
@@ -664,7 +664,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public RemoteTransport Transport { get; private set; }
+            public RemoteTransport Transport { get; }
 
             /// <summary>
             /// TBD
@@ -674,7 +674,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public IInternalActorRef RemoteDaemon { get; private set; }
+            public IInternalActorRef RemoteDaemon { get; }
         }
 
         #endregion

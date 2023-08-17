@@ -95,7 +95,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                         $"singletonProxy-{Cluster.SelfAddress.Port ?? 0}");
             }
 
-            public IActorRef Proxy { get; private set; }
+            public IActorRef Proxy { get; }
 
             public void TestProxy(string msg)
             {

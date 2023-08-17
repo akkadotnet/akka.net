@@ -73,22 +73,22 @@ namespace Akka.Dispatch
         /// <summary>
         /// TBD
         /// </summary>
-        public EventStream EventStream { get; private set; }
+        public EventStream EventStream { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IScheduler Scheduler { get; private set; }
+        public IScheduler Scheduler { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Settings Settings { get; private set; }
+        public Settings Settings { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Mailboxes Mailboxes { get; private set; }
+        public Mailboxes Mailboxes { get; }
     }
 
     /// <summary>
@@ -111,12 +111,12 @@ namespace Akka.Dispatch
         /// <summary>
         /// Executor-specific configuration
         /// </summary>
-        public Config Config { get; private set; }
+        public Config Config { get; }
 
         /// <summary>
         /// The system prerequisites needed for this dispatcher to do its job
         /// </summary>
-        public IDispatcherPrerequisites Prerequisites { get; private set; }
+        public IDispatcherPrerequisites Prerequisites { get; }
     }
 
     internal sealed class ChannelExecutorConfigurator : ExecutorServiceConfigurator
@@ -297,12 +297,12 @@ channel-executor.priority = normal");
         /// <summary>
         /// System-wide configuration
         /// </summary>
-        public Config Config { get; private set; }
+        public Config Config { get; }
 
         /// <summary>
         /// The system prerequisites needed for this dispatcher to do its job
         /// </summary>
-        public IDispatcherPrerequisites Prerequisites { get; private set; }
+        public IDispatcherPrerequisites Prerequisites { get; }
 
         /// <summary>
         /// Returns a <see cref="Dispatcher"/> instance.
@@ -410,7 +410,7 @@ channel-executor.priority = normal");
         /// <summary>
         /// The configurator used to configure this message dispatcher.
         /// </summary>
-        public MessageDispatcherConfigurator Configurator { get; private set; }
+        public MessageDispatcherConfigurator Configurator { get; }
 
         private long _inhabitantsDoNotCallMeDirectly;
         private int _shutdownScheduleDoNotCallMeDirectly;

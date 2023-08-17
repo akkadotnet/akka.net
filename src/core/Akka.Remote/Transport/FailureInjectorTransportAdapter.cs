@@ -98,7 +98,7 @@ namespace Akka.Remote.Transport
             /// <summary>
             /// TBD
             /// </summary>
-            public IGremlinMode Mode { get; private set; }
+            public IGremlinMode Mode { get; }
         }
 
         /// <summary>
@@ -120,12 +120,12 @@ namespace Akka.Remote.Transport
             /// <summary>
             /// TBD
             /// </summary>
-            public Address RemoteAddress { get; private set; }
+            public Address RemoteAddress { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public IGremlinMode Mode { get; private set; }
+            public IGremlinMode Mode { get; }
         }
 
         /// <summary>
@@ -170,12 +170,12 @@ namespace Akka.Remote.Transport
             /// <summary>
             /// TBD
             /// </summary>
-            public double OutboundDropP { get; private set; }
+            public double OutboundDropP { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public double InboundDropP { get; private set; }
+            public double InboundDropP { get; }
         }
 
 #endregion

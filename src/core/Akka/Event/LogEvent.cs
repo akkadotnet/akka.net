@@ -59,12 +59,12 @@ namespace Akka.Event
         /// <summary>
         /// The timestamp that this event occurred.
         /// </summary>
-        public DateTime Timestamp { get; private set; }
+        public DateTime Timestamp { get; }
 
         /// <summary>
         /// The thread where this event occurred.
         /// </summary>
-        public Thread Thread { get; private set; }
+        public Thread Thread { get; }
 
         /// <summary>
         /// The source that generated this event.

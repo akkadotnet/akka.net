@@ -32,7 +32,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public long RawValue { get; private set; }
+        public long RawValue { get; }
 
         /// <summary>
         /// Checks if this sequence number is an immediate successor of the provided one.
@@ -307,12 +307,12 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public SeqNo CumulativeAck { get; private set; }
+        public SeqNo CumulativeAck { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public SortedSet<SeqNo> Nacks { get; private set; }
+        public SortedSet<SeqNo> Nacks { get; }
 
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
@@ -421,7 +421,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public SeqNo MaxSeq { get; private set; }
+        public SeqNo MaxSeq { get; }
 
         /// <summary>
         /// Processes an incoming acknowledgement and returns a new buffer with only unacknowledged elements remaining.

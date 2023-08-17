@@ -23,7 +23,7 @@ namespace Akka.Cluster.Metrics.Serialization
     [InternalApi]
     public sealed partial class MetricsGossip
     {
-        public IImmutableSet<NodeMetrics> Nodes { get; private set; } = ImmutableHashSet<NodeMetrics>.Empty;
+        public IImmutableSet<NodeMetrics> Nodes { get; } = ImmutableHashSet<NodeMetrics>.Empty;
 
         /// <summary>
         /// Empty metrics gossip

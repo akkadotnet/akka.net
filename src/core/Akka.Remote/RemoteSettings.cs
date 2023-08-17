@@ -90,7 +90,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public Config Config { get; private set; }
+        public Config Config { get; }
 
         /// <summary>
         /// TBD

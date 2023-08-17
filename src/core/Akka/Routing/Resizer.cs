@@ -310,14 +310,14 @@ namespace Akka.Routing
         ///           default UnboundedMailbox is O(N) operation.</li>
         /// </ul>
         /// </summary>
-        public int PressureThreshold { get; private set; }
+        public int PressureThreshold { get; }
 
         /// <summary>
         /// Percentage to increase capacity whenever all routees are busy.
         /// For example, 0.2 would increase 20% (rounded up), i.e. if current
         /// capacity is 6 it will request an increase of 2 more routees.
         /// </summary>
-        public double RampupRate { get; private set; }
+        public double RampupRate { get; }
 
         /// <summary>
         /// Minimum fraction of busy routees before backing off.
@@ -328,7 +328,7 @@ namespace Akka.Routing
         ///
         /// Use 0.0 or negative to avoid removal of routees.
         /// </summary>
-        public double BackoffThreshold { get; private set; }
+        public double BackoffThreshold { get; }
 
         /// <summary>
         /// Fraction of routees to be removed when the resizer reaches the
@@ -336,13 +336,13 @@ namespace Akka.Routing
         /// For example, 0.1 would decrease 10% (rounded up), i.e. if current
         /// capacity is 9 it will request an decrease of 1 routee.
         /// </summary>
-        public double BackoffRate { get; private set; }
+        public double BackoffRate { get; }
 
         /// <summary>
         /// Number of messages between resize operation.
         /// Use 1 to resize before each message.
         /// </summary>
-        public int MessagesPerResize { get; private set; }
+        public int MessagesPerResize { get; }
 
         
         public bool Equals(DefaultResizer other)

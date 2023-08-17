@@ -37,7 +37,7 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public Address Address { get; private set; }
+            public Address Address { get; }
         }
 
         private sealed class InitTimeout

@@ -42,8 +42,8 @@ namespace Akka.Remote.Tests.MultiNode
                 Route = route;
             }
 
-            public int N { get; private set; }
-            public List<IActorRef> Route { get; private set; }
+            public int N { get; }
+            public List<IActorRef> Route { get; }
         }
 
         public class Postman : UntypedActor

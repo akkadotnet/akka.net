@@ -48,7 +48,7 @@ namespace Akka.Tests.Routing
 
             public object Key { get { return ConsistentHashKey; } }
 
-            public object ConsistentHashKey { get; private set; }
+            public object ConsistentHashKey { get; }
         }
 
         public sealed class MsgKey
@@ -71,7 +71,7 @@ namespace Akka.Tests.Routing
 
             public string Data { get; private set; }
 
-            public object Key { get; private set; }
+            public object Key { get; }
         }
 
         #endregion

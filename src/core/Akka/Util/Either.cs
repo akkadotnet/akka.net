@@ -39,12 +39,12 @@ namespace Akka.Util
         /// <summary>
         /// TBD
         /// </summary>
-        protected TB Right { get; private set; }
+        protected TB Right { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected TA Left { get; private set; }
+        protected TA Left { get; }
 
         /// <summary>
         /// TBD
@@ -233,7 +233,7 @@ namespace Akka.Util
         /// <summary>
         /// TBD
         /// </summary>
-        public T Value { get; private set; }
+        public T Value { get; }
 
         /// <summary>
         /// TBD
@@ -310,7 +310,7 @@ namespace Akka.Util
         /// <summary>
         /// TBD
         /// </summary>
-        public T Value { get; private set; }
+        public T Value { get; }
 
         /// <summary>
         /// TBD

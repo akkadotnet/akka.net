@@ -96,7 +96,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public MessageDispatcher Dispatcher { get; private set; }
+        public MessageDispatcher Dispatcher { get; }
         /// <summary>
         /// TBD
         /// </summary>
@@ -137,7 +137,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public IInternalActorRef Parent { get; private set; }
+        public IInternalActorRef Parent { get; }
         /// <summary>
         /// TBD
         /// </summary>

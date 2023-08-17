@@ -31,7 +31,7 @@ namespace Akka.Persistence.Serialization
         /// <summary>
         /// TBD
         /// </summary>
-        public object Data { get; private set; }
+        public object Data { get; }
 
        
         private bool Equals(Snapshot other)

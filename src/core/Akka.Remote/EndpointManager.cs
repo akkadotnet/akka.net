@@ -131,7 +131,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public TaskCompletionSource<IList<ProtocolTransportAddressPair>> AddressesPromise { get; private set; }
+            public TaskCompletionSource<IList<ProtocolTransportAddressPair>> AddressesPromise { get; }
         }
 
         /// <summary>
@@ -167,17 +167,17 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public object Message { get; private set; }
+            public object Message { get; }
 
             /// <summary>
             /// Can be null!
             /// </summary>
-            public IActorRef SenderOption { get; private set; }
+            public IActorRef SenderOption { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public RemoteActorRef Recipient { get; private set; }
+            public RemoteActorRef Recipient { get; }
 
             /// <summary>
             /// TBD
@@ -231,12 +231,12 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public Address RemoteAddress { get; private set; }
+            public Address RemoteAddress { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public int? Uid { get; private set; }
+            public int? Uid { get; }
         }
 
         /// <summary>
@@ -256,7 +256,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public object Cmd { get; private set; }
+            public object Cmd { get; }
         }
 
         /// <summary>
@@ -307,13 +307,14 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public TaskCompletionSource<IList<ProtocolTransportAddressPair>> AddressesPromise { get; private set; }
+            public TaskCompletionSource<IList<ProtocolTransportAddressPair>> AddressesPromise { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
             public IList<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)> Results
-            { get; private set; }
+            { get;
+            }
         }
 
         /// <summary>
@@ -335,12 +336,12 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public TaskCompletionSource<IList<ProtocolTransportAddressPair>> AddressesPromise { get; private set; }
+            public TaskCompletionSource<IList<ProtocolTransportAddressPair>> AddressesPromise { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public Exception Cause { get; private set; }
+            public Exception Cause { get; }
         }
 
         /// <summary>
@@ -413,12 +414,12 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public int Uid { get; private set; }
+            public int Uid { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public AckedReceiveBuffer<Message> Buffer { get; private set; }
+            public AckedReceiveBuffer<Message> Buffer { get; }
 
             public bool Equals(ResendState other)
             {

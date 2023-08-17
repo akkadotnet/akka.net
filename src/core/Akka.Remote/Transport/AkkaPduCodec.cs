@@ -64,7 +64,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public HandshakeInfo Info { get; private set; }
+        public HandshakeInfo Info { get; }
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public DisassociateInfo Reason { get; private set; }
+        public DisassociateInfo Reason { get; }
     }
 
     /// <summary>
@@ -111,7 +111,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public ByteString Bytes { get; private set; }
+        public ByteString Bytes { get; }
     }
 
     /// <summary>
@@ -164,7 +164,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public SeqNo Seq { get; private set; }
+        public SeqNo Seq { get; }
     }
 
     /// <summary>

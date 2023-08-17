@@ -382,7 +382,7 @@ namespace Akka.Tests.Actor
                 Sender = sender;
             }
 
-            public IActorRef Sender { get; set; }
+            public IActorRef Sender { get; }
         }
 
         private class ReplyActor : ActorBase

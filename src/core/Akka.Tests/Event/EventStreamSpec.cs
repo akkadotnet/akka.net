@@ -254,7 +254,7 @@ namespace Akka.Tests.Event
 
         public class SetTarget
         {
-            public IActorRef Ref { get; private set; }
+            public IActorRef Ref { get; }
 
             public SetTarget(IActorRef @ref)
             {

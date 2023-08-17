@@ -424,12 +424,12 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public Props Props { get; private set; }
+        public Props Props { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string Name { get; private set; }
+        public string Name { get; }
     }
 
     /// <summary>

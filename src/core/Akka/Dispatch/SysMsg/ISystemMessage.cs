@@ -332,19 +332,19 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the actor.
         /// </summary>
         /// <value>The actor.</value>
-        public IActorRef Actor { get; private set; }
+        public IActorRef Actor { get; }
 
         /// <summary>
         ///     Gets a value indicating whether [existence confirmed].
         /// </summary>
         /// <value><c>true</c> if [existence confirmed]; otherwise, <c>false</c>.</value>
-        public bool ExistenceConfirmed { get; private set; }
+        public bool ExistenceConfirmed { get; }
 
         /// <summary>
         ///     Gets a value indicating whether [address terminated].
         /// </summary>
         /// <value><c>true</c> if [address terminated]; otherwise, <c>false</c>.</value>
-        public bool AddressTerminated { get; private set; }
+        public bool AddressTerminated { get; }
 
         
         public override string ToString()
@@ -423,13 +423,13 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets a value indicating whether this <see cref="Supervise" /> is asynchronous.
         /// </summary>
         /// <value><c>true</c> if asynchronous; otherwise, <c>false</c>.</value>
-        public bool Async { get; private set; }
+        public bool Async { get; }
 
         /// <summary>
         ///     Gets the child.
         /// </summary>
         /// <value>The child.</value>
-        public IActorRef Child { get; private set; }
+        public IActorRef Child { get; }
 
         /// <summary>
         /// TBD
@@ -660,7 +660,7 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the cause.
         /// </summary>
         /// <value>The cause.</value>
-        public Exception Cause { get; private set; }
+        public Exception Cause { get; }
 
         /// <summary>
         /// TBD
@@ -750,7 +750,7 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the child.
         /// </summary>
         /// <value>The child.</value>
-        public IActorRef Child { get; private set; }
+        public IActorRef Child { get; }
 
 
         /// <summary>
@@ -781,7 +781,7 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the reason.
         /// </summary>
         /// <value>The reason.</value>
-        public Exception Reason { get; private set; }
+        public Exception Reason { get; }
 
 
         /// <summary>
