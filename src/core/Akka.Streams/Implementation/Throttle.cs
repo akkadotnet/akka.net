@@ -52,21 +52,10 @@ namespace Akka.Streams.Implementation
             public void OnPush()
             {
                 var element = Grab(_stage.Inlet);
+                int cost;
                 try
                 {
-                    var cost = _stage._costCalculation(element);
-                    var delayTicks = _tokenBucket.Offer(cost);
-
-                    if (delayTicks == 0)
-                        Push(_stage.Outlet, element);
-                    else
-                    {
-                        if (_enforcing)
-                            throw new OverflowException("Maximum throttle throughput exceeded.");
-
-                        _currentElement = element;
-                        ScheduleOnce(TimerName, TimeSpan.FromTicks(delayTicks));
-                    }
+                    cost = _stage._costCalculation(element);
                 }
                 catch (Exception e)
                 {
@@ -76,17 +65,30 @@ namespace Akka.Streams.Implementation
                     {
                         case Directive.Stop:
                             FailStage(e);
-                            break;
+                            return;
                         
                         case Directive.Resume:
                         case Directive.Restart:
                             if (!HasBeenPulled(_stage.Inlet))
                                 TryPull(_stage.Inlet);
-                            break;
+                            return;
                         
                         default:
                             throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", e);
                     }
+                }
+                
+                var delayTicks = _tokenBucket.Offer(cost);
+
+                if (delayTicks == 0)
+                    Push(_stage.Outlet, element);
+                else
+                {
+                    if (_enforcing)
+                        throw new OverflowException("Maximum throttle throughput exceeded.");
+
+                    _currentElement = element;
+                    ScheduleOnce(TimerName, TimeSpan.FromTicks(delayTicks));
                 }
             }
 
